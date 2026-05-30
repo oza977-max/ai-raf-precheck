@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Risk Appetite Framework — Template</title>
+<style>
+  :root{
+    --paper:#fffff8; --ink:#111111; --text:#1b1b18; --soft:#555550; --mute:#8a8a80;
+    --rule:#d8d6c6; --hair:#ebe9da; --strong:#33332c;
+    --brand:#33332c;
+    --accent:#2d2a27;
+    --green:#2f6b46; --greenT:#eef4ee; --amber:#7d5a10; --amberT:#f6f1e0;
+    --red:#8f2a2a; --redT:#f6ece9;
+    --tierC:#8f2a2a; --tierH:#7d5a10; --tierM:#33475e; --tierL:#2f6b46;
+    --serif:"ET Book","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+    --mono:"Consolas","SF Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);font-family:var(--serif);color:var(--text);
+    line-height:1.6;-webkit-font-smoothing:antialiased;font-size:16px;}
+  .page{
+    background:var(--paper);max-width:820px;margin:0 auto;padding:56px 72px 60px;
+    border-bottom:1px solid var(--hair);position:relative;
+  }
+  .header-bar{
+    display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:1px;color:var(--mute);text-transform:uppercase;
+    border-bottom:1px solid var(--brand);padding-bottom:8px;margin-bottom:30px;
+  }
+  h1{font-size:1.85rem;font-weight:600;color:var(--accent);margin:0 0 20px;letter-spacing:-0.01em;line-height:1.2;}
+  h2{font-size:1.2rem;font-weight:400;font-style:italic;color:var(--ink);
+    margin:30px 0 10px;border-bottom:1px solid var(--rule);padding-bottom:4px;}
+  h3{font-size:0.82rem;font-weight:700;color:var(--ink);margin:20px 0 7px;
+    text-transform:uppercase;letter-spacing:0.06em;}
+  p{font-size:1rem;margin:0 0 12px;max-width:660px;}
+  .lead{font-size:1.06rem;font-style:italic;color:var(--soft);max-width:660px;}
+  ul,ol{font-size:1rem;margin:0 0 14px;padding-left:22px;max-width:660px;}
+  li{margin-bottom:6px;}
+  .small{font-size:0.8rem;color:var(--soft);}
+  b{font-weight:600;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:8.5px;letter-spacing:0.5px;
+    padding:2px 7px;border-radius:2px;text-transform:uppercase;font-weight:600;vertical-align:middle;}
+  .t-accept{background:var(--greenT);color:var(--green);border:1px solid #c6d8ca;}
+  .t-tolerate{background:var(--amberT);color:var(--amber);border:1px solid #ddd0a6;}
+  .t-reject{background:var(--redT);color:var(--red);border:1px solid #ddbdb6;}
+  table{width:100%;border-collapse:collapse;margin:14px 0 22px;font-family:var(--serif);}
+  th{background:none;color:var(--ink);font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;
+    text-align:left;padding:6px 14px 6px 0;font-weight:700;vertical-align:bottom;border-bottom:2px solid var(--strong);}
+  td{font-size:0.85rem;padding:7px 14px 7px 0;border-bottom:1px solid var(--hair);
+    vertical-align:top;color:var(--text);line-height:1.5;}
+  tr:last-child td{border-bottom:2px solid var(--strong);}
+  tr:nth-child(even) td{background:#f7f7ec;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .dim td:first-child,.reg td:first-child{font-weight:700;color:var(--accent);}
+  .callout{border-left:2px solid var(--accent);background:none;padding:2px 0 2px 16px;margin:16px 0;font-size:0.92rem;color:var(--soft);max-width:660px;}
+  .callout b{color:var(--ink);}
+  .prohib{border-left:2px solid var(--red);background:none;padding:2px 0 2px 16px;margin:16px 0;font-size:0.92rem;color:var(--soft);max-width:660px;}
+  .prohib b{color:var(--red);}
+  .overlay{border-left:2px dashed var(--amber);background:none;padding:2px 0 2px 16px;margin:14px 0;
+    font-size:0.8rem;color:var(--amber);max-width:660px;}
+  .overlay b{font-family:var(--mono);font-size:8.5px;letter-spacing:1px;display:block;margin-bottom:2px;text-transform:uppercase;}
+  .toc ol{list-style:none;padding:0;counter-reset:toc;max-width:660px;}
+  .toc li{counter-increment:toc;padding:8px 0;border-bottom:1px solid var(--hair);font-size:1rem;display:flex;}
+  .toc li::before{content:counter(toc,decimal-leading-zero);font-family:var(--mono);font-size:0.72rem;color:var(--mute);margin-right:16px;min-width:24px;}
+  .cover{background:none;color:var(--text);text-align:left;padding:120px 72px 118px;border-top:3px solid var(--brand);border-bottom:1px solid var(--rule);}
+  .cover .mark{width:34px;height:34px;background:var(--brand);margin-bottom:30px;}
+  .cover h1{color:var(--accent);font-size:2.6rem;margin-bottom:16px;line-height:1.15;}
+  .cover .sub{font-size:1.15rem;color:var(--soft);font-style:italic;margin-bottom:54px;max-width:600px;}
+  .cover .meta{font-family:var(--mono);font-size:0.66rem;letter-spacing:1.5px;color:var(--mute);text-transform:uppercase;line-height:2.1;}
+  .dash{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0;}
+  .card{border:1px solid var(--rule);padding:14px 16px;background:none;}
+  .card .lbl{font-family:var(--mono);font-size:0.62rem;letter-spacing:1px;color:var(--mute);text-transform:uppercase;margin-bottom:8px;}
+  .stat{font-size:1.7rem;font-weight:600;color:var(--accent);}
+  .pill{display:inline-block;font-family:var(--mono);font-size:0.6rem;padding:1px 7px;border-radius:8px;background:var(--hair);color:var(--soft);margin-right:4px;}
+  .tier-c{color:var(--tierC);font-weight:700;}
+  .tier-h{color:var(--tierH);font-weight:700;}
+  .tier-m{color:var(--tierM);font-weight:700;}
+  .tier-l{color:var(--tierL);font-weight:700;}
+  .appetite-line{font-size:0.9rem;color:var(--soft);border-left:2px solid var(--brand);padding:3px 0 3px 14px;margin:8px 0 18px;max-width:none;}
+  .db-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;margin:8px 0 14px;}
+  .kpanel{border:1px solid var(--rule);padding:12px 16px 14px;}
+  .kpanel-wide{grid-column:1 / -1;}
+  .kpanel-h{font-family:var(--mono);font-size:0.6rem;letter-spacing:1px;color:var(--mute);text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid var(--hair);padding-bottom:5px;}
+  .kpanel-note{font-size:0.7rem;color:var(--mute);font-style:italic;margin-top:10px;line-height:1.4;}
+  .bl{display:grid;grid-template-columns:150px 1fr 78px;align-items:center;gap:12px;margin:7px 0;}
+  .bl-label{font-size:0.8rem;}
+  .bl-track{position:relative;height:13px;display:flex;}
+  .bl-seg{flex:1;}
+  .bl-seg.s1{background:#c9c7b4;} .bl-seg.s2{background:#d8d6c4;} .bl-seg.s3{background:#e6e4d6;} .bl-seg.s4{background:#f0efe4;}
+  .bl-marker{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent);}
+  .bl-marker::after{content:"";position:absolute;top:-5px;left:-3px;border:4px solid transparent;border-top-color:var(--accent);}
+  .bl-val{font-size:0.72rem;font-weight:700;text-align:right;color:var(--accent);}
+  .bl-scale{display:grid;grid-template-columns:150px 1fr 78px;gap:12px;margin-top:7px;}
+  .bl-scale-inner{display:flex;justify-content:space-between;font-size:0.58rem;color:var(--mute);text-transform:uppercase;letter-spacing:0.5px;}
+  .bg{display:grid;grid-template-columns:142px 1fr;align-items:center;gap:12px;margin:10px 0;}
+  .bg-label{font-size:0.76rem;line-height:1.25;}
+  .bg-label small{display:block;font-size:0.62rem;color:var(--mute);}
+  .bg-track{position:relative;height:16px;display:flex;}
+  .bg-range{height:100%;}
+  .bg-r1{background:#e6e4d6;} .bg-r2{background:#cdcab4;} .bg-r3{background:#a9a78f;}
+  .bg-measure{position:absolute;top:5px;height:6px;background:var(--accent);left:0;}
+  .bg-target{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);}
+  .tier-row{display:grid;grid-template-columns:13px 1fr auto;gap:10px;align-items:center;font-size:0.8rem;margin:8px 0;}
+  .tier-dot{width:11px;height:11px;border-radius:50%;}
+  .dot-c{background:var(--tierC);} .dot-h{background:var(--tierH);} .dot-m{background:var(--tierM);} .dot-l{background:var(--tierL);}
+  .tier-ct{font-family:var(--mono);font-size:0.7rem;color:var(--mute);}
+  @media print{
+    body{background:#fff;font-size:11pt;}
+    .page{margin:0;max-width:none;padding:36px 44px;page-break-after:always;border-bottom:none;}
+    .no-print{display:none;}
+  }
+  .printbtn{position:fixed;top:16px;right:16px;background:var(--accent);color:#fff;border:none;
+    padding:9px 16px;font-family:var(--mono);font-size:10px;letter-spacing:1px;cursor:pointer;border-radius:2px;z-index:99;}
+</style>
+</head>
+<body>
+
+<button class="printbtn no-print" onclick="window.print()">PRINT / PDF</button>
+
+<!-- ═══ COVER ═══ -->
+<div class="page cover">
+  <div class="mark"></div>
+  <div class="meta">[FIRM] · Risk Management · Second Line of Defence</div>
+  <h1>AI Risk Appetite Framework</h1>
+  <div class="sub">An AI Risk Appetite Supplement to the firm-wide Risk Appetite Framework</div>
+  <div class="meta">
+    Version 1.0 · Working Draft · For Internal Use Only<br>
+    Owner: AI Risk (2LoD) · [DATE]<br>
+    Classification: Restricted
+  </div>
+</div>
+
+<!-- ═══ TOC ═══ -->
+<div class="page">
+  <div class="header-bar"><span>AI Risk Appetite Framework</span><span>v1.0 · Restricted</span></div>
+  <h1>Contents</h1>
+  <div class="callout">
+    The <b>Executive Dashboard</b> (§2) is the one-page Board-grade summary. The <b>Appetite Register</b> (§6) is the binding content. Supporting research, taxonomy, scoring methodology, and governance detail sit behind. Dashed overlay markers identify where existing firm RAF, MRM, and Operational Risk policy content should be inserted to complete the document.
+  </div>
+  <div class="toc">
+    <ol>
+      <li>Executive Summary</li>
+      <li>Executive Dashboard</li>
+      <li>Regulatory Landscape</li>
+      <li>AI Risk Taxonomy — Six Dimensions</li>
+      <li>Classification &amp; Materiality Tiering</li>
+      <li>AI Risk Appetite Register</li>
+      <li>Agentic AI — Specific Appetite</li>
+      <li>KRI Register and Thresholds</li>
+      <li>Verification &amp; Assurance</li>
+      <li>Incident Response and Escalation</li>
+      <li>Governance and Three Lines of Defence</li>
+      <li>Implementation Roadmap</li>
+    </ol>
+    <p class="small" style="margin-top:14px;">Appendix A — Regulatory References &nbsp;·&nbsp; Appendix B — Glossary &nbsp;·&nbsp; Appendix C — Change Log</p>
+  </div>
+</div>
+
+<!-- ═══ 1. EXEC SUMMARY ═══ -->
+<div class="page">
+  <div class="header-bar"><span>1 · Executive Summary</span><span>v1.0 · Restricted</span></div>
+  <h1>1. Executive Summary</h1>
+  <p>Regulators across every jurisdiction relevant to a global financial institution — MAS, FCA/PRA, BaFin, FSB, FSA Japan, and the US agencies under SR 26-2 — have moved from principles to enforceable, and in places divergent, expectations on AI risk. The convergent message remains: AI risk is not a standalone governance exercise but a set of risk dimensions integrated into the existing Risk Appetite Framework, calibrated against use-case materiality, and owned at Board level.</p>
+  <p>The most significant feature of the current regulatory landscape is divergence. In April 2026 the US agencies issued SR 26-2, superseding SR 11-7 and SR 21-8 and <b>explicitly excluding generative and agentic AI</b> from model risk scope pending a separate Request for Information (RFI). The UK PRA (SS1/23) takes the opposite, technology-agnostic position; Canada's OSFI E-23 is broader still. A global firm can no longer rely on a single definition of "model." This framework therefore adopts a <b>triple-track classification</b> that is jurisdiction-aware by design.</p>
+  <p>This supplement maps AI-specific tolerances to the firm's existing Operational Risk, Model Risk, Technology Risk, and Conduct Risk categories. The Appetite Register (§6) is binding; §7–§12 cover agentic AI, verification, incident response, governance, and implementation. Appetite is differentiated by a four-tier materiality model (Critical / High / Medium / Low) using Impact-dominant, rules-based assignment.</p>
+  <h2>How to use this template</h2>
+  <ul>
+    <li>All <span style="color:var(--amber);font-family:var(--mono);font-size:0.85rem;">[FIRM]</span> placeholders must be replaced with the adopting organisation's name, entity references, and legal structure.</li>
+    <li>Dashed overlay boxes identify content that must be completed by the firm — existing policy cross-references, committee names, live inventory data, and calibrated KRI thresholds.</li>
+    <li>The Appetite Register (§6) contains representative use cases only; replace with the firm's actual AI inventory.</li>
+    <li>Jurisdiction coverage in §3 is illustrative for a global financial institution; trim to the regimes applicable to the adopting firm.</li>
+  </ul>
+</div>
+
+<!-- ═══ 2. DASHBOARD ═══ -->
+<div class="page">
+  <div class="header-bar"><span>2 · Executive Dashboard</span><span>v1.0 · Restricted</span></div>
+  <h1>2. Executive Dashboard</h1>
+  <p class="lead">One screen for the Board Risk Committee — appetite posture, headline indicators, and the exposures needing attention, at a glance.</p>
+
+  <div class="appetite-line">[FIRM] accepts AI risk that demonstrably enhances client service, risk management, and operational efficiency, where it is classified, controlled, and reversible — with <b>zero tolerance</b> for AI-driven regulatory breach, undisclosed client / MNPI data in external systems, and irreversible autonomous action without human accountability.</div>
+
+  <div class="db-grid">
+
+    <div class="kpanel kpanel-wide">
+      <div class="kpanel-h">Appetite by risk dimension</div>
+      <div class="bl"><span class="bl-label">Performance &amp; Model</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:62%"></span></span><span class="bl-val">Tolerate</span></div>
+      <div class="bl"><span class="bl-label">Data &amp; Privacy</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:60%"></span></span><span class="bl-val">Tolerate</span></div>
+      <div class="bl"><span class="bl-label">Technology &amp; Resilience</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:62%"></span></span><span class="bl-val">Tolerate</span></div>
+      <div class="bl"><span class="bl-label">Conduct &amp; Fairness</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:16%"></span></span><span class="bl-val">Low / Zero</span></div>
+      <div class="bl"><span class="bl-label">Third-Party &amp; Concentration</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:58%"></span></span><span class="bl-val">Tolerate</span></div>
+      <div class="bl"><span class="bl-label">Autonomy &amp; Agentic</span><span class="bl-track"><span class="bl-seg s1"></span><span class="bl-seg s2"></span><span class="bl-seg s3"></span><span class="bl-seg s4"></span><span class="bl-marker" style="left:38%"></span></span><span class="bl-val">Constrained</span></div>
+      <div class="bl-scale"><span></span><span class="bl-scale-inner"><span>Reject</span><span>Constrain</span><span>Tolerate</span><span>Accept</span></span><span></span></div>
+    </div>
+
+    <div class="kpanel">
+      <div class="kpanel-h">Materiality tiers in force</div>
+      <div class="tier-row"><span class="tier-dot dot-c"></span><span><b>Critical</b> · Board / CRO; full validation</span><span class="tier-ct">[ # ]</span></div>
+      <div class="tier-row"><span class="tier-dot dot-h"></span><span><b>High</b> · AI Gov Cttee + Model Risk</span><span class="tier-ct">[ # ]</span></div>
+      <div class="tier-row"><span class="tier-dot dot-m"></span><span><b>Medium</b> · 2LoD review, documented</span><span class="tier-ct">[ # ]</span></div>
+      <div class="tier-row"><span class="tier-dot dot-l"></span><span><b>Low</b> · Fast Track, 1LoD self-attest</span><span class="tier-ct">[ # ]</span></div>
+      <div class="kpanel-note">Counts [ # ] populate from the live AI inventory.</div>
+    </div>
+
+    <div class="kpanel">
+      <div class="kpanel-h">Headline KRI status</div>
+      <div class="bg"><span class="bg-label">Model drift vs validation<small>lower is better</small></span><span class="bg-track"><span class="bg-range bg-r1" style="width:37.5%"></span><span class="bg-range bg-r2" style="width:25%"></span><span class="bg-range bg-r3" style="width:37.5%"></span><span class="bg-measure" style="width:26%"></span><span class="bg-target" style="left:37.5%"></span></span></div>
+      <div class="bg"><span class="bg-label">Output-quality shortfall<small>vs target · lower is better</small></span><span class="bg-track"><span class="bg-range bg-r1" style="width:42%"></span><span class="bg-range bg-r2" style="width:42%"></span><span class="bg-range bg-r3" style="width:16%"></span><span class="bg-measure" style="width:17%"></span><span class="bg-target" style="left:42%"></span></span></div>
+      <div class="bg"><span class="bg-label">Single-provider concentration<small>vs limit · lower is better</small></span><span class="bg-track"><span class="bg-range bg-r1" style="width:64%"></span><span class="bg-range bg-r2" style="width:16%"></span><span class="bg-range bg-r3" style="width:20%"></span><span class="bg-measure" style="width:44%"></span><span class="bg-target" style="left:80%"></span></span></div>
+      <div class="kpanel-note">Bands are the §8 green / amber / red ranges; bars and current readings populate from the live KRI register — shown illustratively. │ = appetite limit.</div>
+    </div>
+
+    <div class="kpanel kpanel-wide">
+      <div class="kpanel-h">Top exposures requiring Board attention</div>
+      <table>
+        <tr><th>Exposure</th><th>Current state</th><th>Appetite position</th></tr>
+        <tr><td>Regulatory divergence post SR 26-2</td><td>US excludes GenAI from MRM; UK includes. Global inconsistency.</td><td>Apply highest applicable standard; triple-track classification.</td></tr>
+        <tr><td>Foundation-model concentration</td><td>Reliance on a small number of frontier providers.</td><td>Dual-provider capability required for Critical / High use cases.</td></tr>
+        <tr><td>Silent model substitution</td><td>Hosted models updated by vendors without notice; validation goes stale.</td><td>Version pinning + output fingerprinting; zero tolerance for unmonitored change.</td></tr>
+        <tr><td>Agentic autonomy</td><td>No regulator has specific guidance; capability advancing faster than controls.</td><td>No Level 4 autonomy outside bounded, reversible domains.</td></tr>
+      </table>
+    </div>
+
+  </div>
+
+  <p class="small"><b>Reading the appetite strips:</b> the marker shows where the firm's appetite sits on a Reject → Accept scale. <b>Accept</b> — within appetite, standard controls; <b>Tolerate</b> — within appetite only with the §6 mandatory controls; <b>Constrain / Low–Zero</b> — permitted only in tightly bounded, reversible conditions; <b>Do not accept</b> — outside appetite.</p>
+
+  <div class="overlay"><b>Firm overlay required</b>Populate tier counts, KRI measure bars, and open AI incidents from the live register at each reporting cycle.</div>
+</div>
+
+<!-- ═══ 3. REGULATORY ═══ -->
+<div class="page">
+  <div class="header-bar"><span>3 · Regulatory Landscape</span><span>v1.0 · Restricted</span></div>
+  <h1>3. Regulatory Landscape</h1>
+  <p>The defining feature of the current landscape is divergence. The "is AI a model?" question now has different answers in different jurisdictions. A global firm must operate to the highest applicable standard rather than any single regime.</p>
+  <table class="reg">
+    <tr><th>Regime</th><th>Jurisdiction</th><th>Position on GenAI</th><th>Implication for appetite</th></tr>
+    <tr><td>SR 26-2</td><td>US (Fed/OCC/FDIC)</td><td>Excluded from MRM; separate RFI pending</td><td>Governance vacuum; do not rely on MRM exclusion — apply AI Governance track minimum.</td></tr>
+    <tr><td>SS1/23</td><td>UK (PRA)</td><td>Included; technology-agnostic</td><td>Most demanding. Sets the ceiling for global use cases.</td></tr>
+    <tr><td>E-23</td><td>Canada (OSFI)</td><td>Very broad, conditional definition</td><td>A model is any technique (incl. AI/ML) whose output is used in a decision or risk control — among the most expansive MRM scopes. Applies to Canadian entities (effective 2027).</td></tr>
+    <tr><td>EU AI Act</td><td>European Union</td><td>Parallel "high-risk system" regime</td><td>Credit, employment = high-risk (Annex III); Articles 9/13/17 obligations. Per the Digital Omnibus (provisional agreement May 2026): Annex III obligations deferred to Dec 2027; Art. 50(2) transparency to Dec 2026 for systems on-market before Aug 2026.</td></tr>
+    <tr><td>FEAT / TRM</td><td>Singapore (MAS)</td><td>Principles-based; covers AI in decisions</td><td>Mandatory explainability and human accountability.</td></tr>
+    <tr><td>DORA</td><td>EU</td><td>AI as critical ICT where applicable</td><td>Third-party concentration; incident reporting includes AI.</td></tr>
+    <tr><td>FSA Japan</td><td>Japan</td><td>Guidelines tightening through 2026</td><td>Explainability and audit trail requirements.</td></tr>
+  </table>
+  <div class="callout"><b>Operating rule.</b> Where a use case touches multiple jurisdictions, the most demanding applicable standard governs. A system may be Track III in the US and Track II in the UK; the inventory entry and classification logic remain consistent across both.</div>
+  <div class="overlay"><b>Firm overlay required</b>Map each jurisdiction to the legal entities and booking models in scope, and reference the firm's existing regulatory inventory. Remove regimes not applicable to the firm's footprint.</div>
+</div>
+
+<!-- ═══ 4. TAXONOMY ═══ -->
+<div class="page">
+  <div class="header-bar"><span>4 · AI Risk Taxonomy</span><span>v1.0 · Restricted</span></div>
+  <h1>4. AI Risk Taxonomy — Six Dimensions</h1>
+  <p>AI risk is decomposed into six dimensions, each mapped to an existing firm risk category so that appetite sits within established envelopes rather than in a parallel structure.</p>
+  <table class="dim">
+    <tr><th>Dimension</th><th>Covers</th><th>Maps to existing category</th></tr>
+    <tr><td>Performance &amp; Model</td><td>Accuracy, hallucination, drift, explainability, fitness for purpose</td><td>Model Risk</td></tr>
+    <tr><td>Data &amp; Privacy</td><td>Leakage, residency, PII, MNPI, training-data exposure, zone breaches</td><td>Operational / Data Risk</td></tr>
+    <tr><td>Technology, Cyber &amp; Resilience</td><td>Availability, prompt injection, supply-chain, failover, perimeter integrity</td><td>Technology / Cyber Risk</td></tr>
+    <tr><td>Conduct &amp; Fairness</td><td>Bias, client harm, MiFID II / MAR, market abuse, IP infringement</td><td>Conduct Risk</td></tr>
+    <tr><td>Third-Party &amp; Concentration</td><td>Vendor dependence, model concentration, hyperscaler concentration, exit</td><td>Operational / Third-Party Risk</td></tr>
+    <tr><td>Autonomy &amp; Agentic</td><td>Action scope, human oversight level, reversibility, tool-use risk</td><td>Operational Risk (new sub-category)</td></tr>
+  </table>
+  <div class="overlay"><b>Firm overlay required</b>Confirm mapping against the firm's current Level 1 / Level 2 risk taxonomy; reconcile the autonomy sub-category which has no existing home in most frameworks.</div>
+</div>
+
+<!-- ═══ 5. CLASSIFICATION & TIERING ═══ -->
+<div class="page">
+  <div class="header-bar"><span>5 · Classification &amp; Tiering</span><span>v1.0 · Restricted</span></div>
+  <h1>5. Classification &amp; Materiality Tiering</h1>
+
+  <h2>Triple-track classification</h2>
+  <p>Every AI system is assigned to one of three governance tracks. Traditional ML is universally in model risk scope; the contested category is generative and agentic AI, which splits by use.</p>
+  <table>
+    <tr><th>Track</th><th>Population</th><th>Regime</th></tr>
+    <tr><td><b>I — Traditional MRM</b></td><td>Statistical/quantitative models: regression, GBM, scorecards, VaR, IRB</td><td>Full model validation, monitoring, conceptual soundness — all jurisdictions</td></tr>
+    <tr><td><b>II — AI on MRM</b></td><td>GenAI/agentic producing a quantitative output for a material decision, or replacing a Track I system</td><td>Full MRM plus AI-specific controls (grounding, drift, fingerprinting)</td></tr>
+    <tr><td><b>III — AI Governance</b></td><td>GenAI/agentic that informs but does not decide — narrative, productivity, augmentation</td><td>Inventory, tier, HITL, sampling, perimeter — documented, lighter than full MRM. Where the governing jurisdiction applies a technology-agnostic MRM standard (e.g. UK SS1/23), Track III is supplemented with that standard's obligations; track assignment never reduces the jurisdictional minimum (see §3 operating rule).</td></tr>
+  </table>
+  <p class="small">Classification test, applied in order: (0) autonomy Level 4 on irreversible, client- or market-facing actions → outside appetite, do not classify (see §7); (1) traditional quantitative model → Track I; (2) quantitative output into a regulated decision → Track II; (3) replaces a prior model → Track II; (4) autonomy Level 3+, or human override rate &lt;5% at registration → Track II. All "no" → Track III. Annual re-classification; trigger-based on autonomy change, use-case expansion, or jurisdictional update.</p>
+
+  <h2>Materiality tiering — Impact-dominant</h2>
+  <p>Tier is assigned by rules, not multiplication. Impact dominates: a high-impact use case cannot be down-tiered by low complexity or low reliance.</p>
+  <table>
+    <tr><th>Tier</th><th>Trigger (Impact-dominant)</th><th>Approval</th><th>Validation</th></tr>
+    <tr><td class="tier-c">Critical</td><td>Regulated decision, capital, client financial outcome, or external-facing at scale</td><td>CRO + Board committee</td><td>Full validation + ongoing monitoring</td></tr>
+    <tr><td class="tier-h">High</td><td>Material internal decision, risk measurement input, or confidential data at scale</td><td>AI Governance Cttee + Model Risk</td><td>Independent 2LoD validation</td></tr>
+    <tr><td class="tier-m">Medium</td><td>Analytical support, client-adjacent, limited blast radius</td><td>2LoD review</td><td>Documented design review + sampling</td></tr>
+    <tr><td class="tier-l">Low</td><td>Internal productivity, no regulated decision, low data sensitivity</td><td>Fast Track</td><td>1LoD self-attestation</td></tr>
+  </table>
+  <div class="prohib"><b>EU AI Act override.</b> Any use case classified as high-risk under EU AI Act Annex III (e.g. credit scoring, employment) is assigned <b>Critical</b> regardless of the internal tiering outcome.</div>
+  <p class="small">Fast Track (Low tier) relies on 1LoD self-attestation, but the Low-tier population is subject to periodic 2LoD sampling and audit; registering a use case as Low to avoid oversight is treated as a conduct matter, not a classification choice.</p>
+</div>
+
+<!-- ═══ 6. APPETITE REGISTER ═══ -->
+<div class="page">
+  <div class="header-bar"><span>6 · Appetite Register</span><span>v1.0 · Restricted · BINDING</span></div>
+  <h1>6. AI Risk Appetite Register</h1>
+  <p class="lead">The binding content. Appetite by representative use case, expressed as Accept / Tolerate-with-controls / Do-not-accept.</p>
+  <table>
+    <tr><th>Use case</th><th>Tier</th><th>Track</th><th>Position</th><th>Mandatory controls</th></tr>
+    <tr><td>Internal productivity copilot (no client data)</td><td class="tier-l">Low</td><td>III</td><td><span class="tag t-accept">Accept</span></td><td>Zone A only; output logging</td></tr>
+    <tr><td>Regulatory change monitoring &amp; drafting</td><td class="tier-m">Medium</td><td>III</td><td><span class="tag t-accept">Accept</span></td><td>Human review before filing; grounding verification (§9)</td></tr>
+    <tr><td>Counterparty document summarisation</td><td class="tier-h">High</td><td>III</td><td><span class="tag t-tolerate">Tolerate</span></td><td>Zone B; citation resolution (§9); sampling</td></tr>
+    <tr><td>AI-assisted credit analysis (input to decision)</td><td class="tier-c">Critical</td><td>II</td><td><span class="tag t-tolerate">Tolerate</span></td><td>Full validation; mandatory human decision; + Track II baseline (below)</td></tr>
+    <tr><td>AI-enhanced market-risk scenario synthesis</td><td class="tier-h">High</td><td>II</td><td><span class="tag t-tolerate">Tolerate</span></td><td>Explainability; 2LoD validation; drift monitoring; + Track II baseline (below)</td></tr>
+    <tr><td>Read-only agentic workflow (data retrieval)</td><td class="tier-m">Medium</td><td>III</td><td><span class="tag t-tolerate">Tolerate</span></td><td>Minimal permissions; tool-call logging; kill switch</td></tr>
+    <tr><td>Client-facing chatbot</td><td class="tier-c">Critical</td><td>III</td><td><span class="tag t-tolerate">Tolerate</span></td><td>Escalation path; conduct testing; transcript audit</td></tr>
+    <tr><td>Fully autonomous trading decision</td><td class="tier-c">Critical</td><td>—</td><td><span class="tag t-reject">Do not accept</span></td><td>Outside appetite</td></tr>
+    <tr><td>Autonomous lending decision (no human)</td><td class="tier-c">Critical</td><td>—</td><td><span class="tag t-reject">Do not accept</span></td><td>Outside appetite</td></tr>
+    <tr><td>Any external system processing MNPI</td><td class="tier-c">Critical</td><td>—</td><td><span class="tag t-reject">Do not accept</span></td><td>Zone C only; prohibited externally</td></tr>
+  </table>
+  <p class="small"><b>Track II baseline</b> (applies to every Track II system): version pinning + output fingerprinting, with zero tolerance for unmonitored vendor model change (see §9). &nbsp;<b>Zones:</b> A = open cloud, B = private/controlled cloud, C = on-premises only (see §4 / Glossary). &nbsp;Register entries are subject to the §5 re-classification triggers (annual; or on autonomy, use-case, or jurisdiction change).</p>
+  <div class="overlay"><b>Firm overlay required</b>Replace representative use cases with the firm's live AI inventory entries; attach owner, platform, Track, and current status to each.</div>
+</div>
+
+<!-- ═══ 7. AGENTIC ═══ -->
+<div class="page">
+  <div class="header-bar"><span>7 · Agentic AI</span><span>v1.0 · Restricted</span></div>
+  <h1>7. Agentic AI — Specific Appetite</h1>
+  <p>Agentic systems act rather than merely predict. No regulator has issued specific guidance, and existing MRM was designed for predictive systems. The firm therefore applies a precautionary, autonomy-graded appetite.</p>
+  <table>
+    <tr><th>Autonomy level</th><th>Definition</th><th>Appetite</th></tr>
+    <tr><td>Level 0</td><td>Human decides; AI provides data only</td><td><span class="tag t-accept">Accept</span></td></tr>
+    <tr><td>Level 1</td><td>AI recommends; human approves each action</td><td><span class="tag t-accept">Accept</span></td></tr>
+    <tr><td>Level 2</td><td>AI acts; human monitors in real time</td><td><span class="tag t-tolerate">Tolerate</span></td></tr>
+    <tr><td>Level 3</td><td>AI acts; human audits ex-post</td><td><span class="tag t-tolerate">Tolerate (bounded, reversible only)</span></td></tr>
+    <tr><td>Level 4</td><td>Fully autonomous — outside appetite for irreversible, client- or market-facing actions; bounded, fully-reversible autonomy is governed as Level 3</td><td><span class="tag t-reject">Do not accept</span></td></tr>
+  </table>
+  <div class="prohib"><b>Hard constraints for all agentic systems.</b> No agent may exceed its assigned task, acquire permissions beyond it, loop indefinitely, or take an irreversible action without human approval. In implementation: minimal-permission default (read before write, write before execute); action-level approval gates by consequence; recursion and loop limits; complete tool-call logging; kill switch and graceful degradation by design. Irreversible actions require Level 1 or below regardless of tier.</div>
+</div>
+
+<!-- ═══ 8. KRI ═══ -->
+<div class="page">
+  <div class="header-bar"><span>8 · KRI Register</span><span>v1.0 · Restricted</span></div>
+  <h1>8. KRI Register and Thresholds</h1>
+  <p>Key Risk Indicators by dimension. Thresholds are <b>illustrative pending firm calibration</b> against actual loss data, volume, and risk appetite envelopes — they are not standards to be copied.</p>
+  <table>
+    <tr><th>Dimension</th><th>KRI</th><th>Green</th><th>Amber</th><th>Red</th></tr>
+    <tr><td>Performance</td><td>Output quality (sampled accuracy)</td><td>&ge; target</td><td>−5%</td><td>−10% → revalidate</td></tr>
+    <tr><td>Performance</td><td>Model drift since validation</td><td>&lt; 3%</td><td>3–5%</td><td>&gt; 5%</td></tr>
+    <tr><td>Data</td><td>Zone violations (attempted)</td><td>0 successful</td><td>—</td><td>any successful</td></tr>
+    <tr><td>Data</td><td>PII/MNPI in Zone A output</td><td>0</td><td>—</td><td>any</td></tr>
+    <tr><td>Technology</td><td>Prompt-injection detection rate</td><td>monitored</td><td>rising</td><td>successful bypass</td></tr>
+    <tr><td>Conduct</td><td>Fairness metric (where applicable)</td><td>within ±tol</td><td>drift</td><td>breach</td></tr>
+    <tr><td>Conduct</td><td>IP / third-party content infringement in output (sampled)</td><td>0 flagged</td><td>review</td><td>confirmed instance</td></tr>
+    <tr><td>Third-Party</td><td>Single-provider spend concentration</td><td>within limit</td><td>approaching</td><td>over limit</td></tr>
+    <tr><td>Third-Party</td><td>Silent substitution (fingerprint change)</td><td>0 unreviewed</td><td>—</td><td>any unreviewed</td></tr>
+    <tr><td>Autonomy</td><td>Human override rate (HITL use cases)</td><td>&gt; 5%</td><td>1–5%</td><td>&lt; 1% → reclassify (see §5)</td></tr>
+  </table>
+  <div class="callout"><b>Calibration caveat.</b> Thresholds above are placeholders. Each must be set deliberately by the firm using its own loss experience and volume, approved through the RAF governance process, and reviewed annually.</div>
+</div>
+
+<!-- ═══ 9. VERIFICATION ═══ -->
+<div class="page">
+  <div class="header-bar"><span>9 · Verification &amp; Assurance</span><span>v1.0 · Restricted</span></div>
+  <h1>9. Verification &amp; Assurance</h1>
+  <p>Classical model validation assumes deterministic output checkable against ground truth. Generative AI defies this — output is text with no obvious back-test. This is the central reason SR 26-2 excluded GenAI from MRM. The framework addresses verification explicitly rather than treating it as solved.</p>
+  <h2>Three verification modes</h2>
+  <table>
+    <tr><th>Mode</th><th>Applies to</th><th>Method</th></tr>
+    <tr><td>Grounding</td><td>RAG, synthesis, summarisation</td><td>Every claim must resolve to a retrievable source; citation-confidence scoring; failed grounding falls back to human review</td></tr>
+    <tr><td>Behavioural</td><td>Recommendation, classification, routing</td><td>Continuous sampling against human ground truth; disagreement triage; concept-drift detection</td></tr>
+    <tr><td>Adversarial</td><td>All systems, periodic</td><td>Structured red-teaming: injection, jailbreak, exfil, role confusion; quarterly minimum, pre-launch for Track II</td></tr>
+  </table>
+  <h2>Grounding verification — implementation requirements</h2>
+  <p>For RAG, synthesis, and summarisation systems, the grounding control requires a structured, claim-level verification process. The firm's implementation must satisfy the following minimum requirements.</p>
+  <table>
+    <tr><th>Requirement</th><th>Standard</th><th>Failure disposition</th></tr>
+    <tr><td>Claim-level resolution</td><td>Each factual or analytical assertion in the output is matched to a specific, retrievable source passage; match must be semantically sufficient, not merely lexically proximate</td><td>Unresolved claim → flagged; output returned to human review or suppressed before use in a decision</td></tr>
+    <tr><td>Confidence scoring</td><td>Resolution confidence is assessed per claim: High (direct support), Medium (inferential), Low (weak or indirect). Aggregate score determines escalation</td><td>Aggregate below firm-defined threshold → escalate to human before output is used</td></tr>
+    <tr><td>Citation attachment</td><td>Verified claims carry explicit citations in output (source ID, chunk reference, confidence tier); unverified output is marked as such</td><td>Output presented to end-user without citations is a grounding control failure — incident-class event under §10</td></tr>
+    <tr><td>Audit logging</td><td>Resolution chain is logged per output: claim, source, confidence, timestamp, model version. Log is immutable and available to 2LoD on demand</td><td>Absent log treated as unverifiable assurance; recorded as control gap at next validation cycle</td></tr>
+  </table>
+  <div class="callout"><b>Grounding verification and Track II validation.</b> For Track II systems, grounding logs form part of the validation evidence package. A system that resolves claims correctly against its corpus but whose corpus is itself incomplete or stale fails on coverage grounds — grounding verification tests resolution fidelity, not source completeness; the latter is a separate validation obligation.</div>
+  <div class="prohib"><b>Silent substitution.</b> Hosted models are updated by vendors without notice, invalidating prior validation overnight. Output fingerprinting against a fixed probe set detects this. A step-change in aggregate grounding confidence scores against a stable corpus is also a behavioural indicator of silent substitution and triggers a fingerprinting check. Zero tolerance for unmonitored model change on Track II systems.</div>
+  <p class="small">Verification is distinct from monitoring. Monitoring asks whether behaviour is consistent with the past; verification asks whether output is true and grounded. A model can pass consistency checks while drifting from ground truth, and can be consistent yet consistently wrong. Both are required; neither substitutes for the other.</p>
+  <div class="overlay"><b>Firm overlay required</b>Specify the firm's chosen tooling or methodology for grounding verification and name it here; define the confidence threshold that triggers human escalation; confirm audit log retention period and access controls.</div>
+</div>
+
+<!-- ═══ 10. INCIDENT ═══ -->
+<div class="page">
+  <div class="header-bar"><span>10 · Incident Response</span><span>v1.0 · Restricted</span></div>
+  <h1>10. Incident Response and Escalation</h1>
+  <p>AI incidents differ from conventional operational incidents in failure mode and detection. The framework defines AI-specific incident types and an escalation ladder tied to materiality tier.</p>
+  <table>
+    <tr><th>Incident type</th><th>Example</th><th>Initial escalation</th></tr>
+    <tr><td>Data leakage</td><td>Confidential/MNPI data reaches an external model</td><td>Immediate — CISO + AI Risk + Legal</td></tr>
+    <tr><td>Hallucination event</td><td>Fabricated output reaches a decision or client</td><td>Use-case owner + 2LoD</td></tr>
+    <tr><td>Bias / conduct event</td><td>Discriminatory or non-compliant output</td><td>Conduct + Compliance + AI Risk</td></tr>
+    <tr><td>Security event</td><td>Successful prompt injection or jailbreak</td><td>Immediate — Security + AI Risk</td></tr>
+    <tr><td>Autonomy event</td><td>Agent acts outside authorised scope</td><td>Immediate — kill switch + AI Risk + owner</td></tr>
+    <tr><td>Model change event</td><td>Unreviewed vendor substitution detected</td><td>AI Risk — freeze affected use cases</td></tr>
+  </table>
+  <div class="overlay"><b>Firm overlay required</b>Integrate with the firm's existing operational-incident taxonomy, severity ratings, and regulatory notification timelines (DORA, MAS, FCA SUP 15A).</div>
+</div>
+
+<!-- ═══ 11. GOVERNANCE ═══ -->
+<div class="page">
+  <div class="header-bar"><span>11 · Governance &amp; 3LoD</span><span>v1.0 · Restricted</span></div>
+  <h1>11. Governance and Three Lines of Defence</h1>
+  <table>
+    <tr><th>Line</th><th>Role for AI</th><th>Key responsibilities</th></tr>
+    <tr><td><b>1LoD</b><br>Business &amp; Technology</td><td>Build &amp; operate within appetite</td><td>Develop use cases; register in inventory; operate controls; self-attest Low tier</td></tr>
+    <tr><td><b>2LoD</b><br>AI Risk</td><td>Oversight &amp; challenge</td><td>Own this framework; classify &amp; tier; validate Track I/II; set &amp; monitor KRIs; approve Medium+; run red-teams</td></tr>
+    <tr><td><b>3LoD</b><br>Internal Audit</td><td>Independent assurance</td><td>Audit the framework's operation; specifically test 1LoD/2LoD separation in shared AI infrastructure</td></tr>
+  </table>
+  <div class="callout"><b>On the dual-mandate conflict.</b> Where a firm operates both "AI in Risk" (build) and "AI Risk" (govern), these must sit in separate reporting lines within Risk, with 1LoD-equivalent build teams distinct from 2LoD governance. 3LoD audit is specifically scoped to test that this separation holds in practice — the control is structural, and is verified, not assumed.</div>
+  <div class="callout"><b>Multi-platform concentration.</b> Where the firm operates AI systems across more than one cloud or model provider, third-party concentration appetite applies per provider, with tighter limits where the firm is a deployer rather than developer.</div>
+  <div class="callout"><b>2LoD resourcing.</b> The 2LoD mandate above — classify and tier every system, validate Track I/II, set and monitor KRIs, approve Medium+ use cases, run red-teams — presumes adequate, ring-fenced headcount and validation capability. The framework is only as strong as the second line that operates it; under-resourcing it is the most likely cause of failure.</div>
+  <div class="overlay"><b>Firm overlay required</b>Map to existing committees (AI Governance Committee, Model Risk Committee, Board Risk Committee); insert RACI and decision rights.</div>
+</div>
+
+<!-- ═══ 12. ROADMAP ═══ -->
+<div class="page">
+  <div class="header-bar"><span>12 · Implementation Roadmap</span><span>v1.0 · Restricted</span></div>
+  <h1>12. Implementation Roadmap</h1>
+  <table>
+    <tr><th>Phase</th><th>Window</th><th>Observable when complete</th></tr>
+    <tr><td>1 — Foundation</td><td>0–12 mo</td><td>RAF supplement approved; inventory non-empty &amp; growing; three-zone perimeter enforced; triple-track classification applied at registration; Fast Track operational; EU AI Act Art. 50(2) transparency addressed for applicable systems</td></tr>
+    <tr><td>2 — Integration</td><td>12–24 mo</td><td>Standard Track live; Zone B in production; HITL protocols documented with measured override rates; KRIs in quarterly reporting; first read-only agents</td></tr>
+    <tr><td>3 — Augmentation</td><td>24–36 mo</td><td>Level 3 autonomy for a bounded use case with ex-post audit; Zone C on-prem live; verification automated; vendor concentration tracked</td></tr>
+    <tr><td>4 — Native</td><td>36+ mo</td><td>RAF recalibrates on estate change; monitoring self-escalates; governance overhead per AI dollar declining</td></tr>
+  </table>
+  <div class="callout">The maturity curve is a sequencing principle, not a timeline. Phase 1 cannot be skipped without paying the retrofitting cost later; Phase 4 cannot be rushed — the capability and governance judgement it requires accumulate only through operating experience.</div>
+</div>
+
+<!-- ═══ APPENDICES ═══ -->
+<div class="page">
+  <div class="header-bar"><span>Appendices</span><span>v1.0 · Restricted</span></div>
+  <h1>Appendix A — Regulatory References</h1>
+  <ul>
+    <li>SR 26-2 (US Fed/OCC/FDIC, Apr 2026) — revised model risk management guidance; supersedes SR 11-7 and SR 21-8; generative and agentic AI placed outside MRM scope pending a separate RFI.</li>
+    <li>SS1/23 (UK PRA) — model risk management principles; technology-agnostic.</li>
+    <li>OSFI E-23 (Canada) — enterprise-wide model risk management.</li>
+    <li>EU AI Act — Regulation (EU) 2024/1689; Annex III high-risk systems; Articles 9, 13, 17. Digital Omnibus (provisional agreement May 2026): Annex III high-risk obligations deferred to Dec 2027; Art. 50(2) transparency to Dec 2026 for systems on-market before Aug 2026.</li>
+    <li>MAS FEAT Principles &amp; TRM Guidelines (Singapore).</li>
+    <li>DORA — Digital Operational Resilience Act (EU); ICT third-party risk.</li>
+    <li>FSA Japan — AI governance guidelines.</li>
+    <li>FSB / BCBS — emerging work on AI/ML in credit and systemic risk.</li>
+  </ul>
+
+  <h1 style="margin-top:34px;">Appendix B — Glossary</h1>
+  <table>
+    <tr><th>Term</th><th>Definition</th></tr>
+    <tr><td>RAF</td><td>Risk Appetite Framework — firm-wide articulation of risk the firm will assume to meet strategic objectives.</td></tr>
+    <tr><td>MRM</td><td>Model Risk Management — the firm's framework for validating, monitoring, and governing models (e.g. SR 26-2, SS1/23).</td></tr>
+    <tr><td>1LoD / 2LoD</td><td>First and second lines of defence — 1LoD (business &amp; technology) builds and operates within appetite; 2LoD (AI Risk) sets appetite and provides independent oversight and challenge.</td></tr>
+    <tr><td>FEAT</td><td>Fairness, Ethics, Accountability and Transparency — MAS (Singapore) principles for the responsible use of AI in finance.</td></tr>
+    <tr><td>RAG</td><td>Retrieval-augmented generation — grounding model output in retrieved source documents at inference time.</td></tr>
+    <tr><td>PII</td><td>Personally identifiable information.</td></tr>
+    <tr><td>3LoD</td><td>Three Lines of Defence — 1LoD operates within appetite; 2LoD oversees and challenges; 3LoD provides independent assurance.</td></tr>
+    <tr><td>Track I/II/III</td><td>Triple-track AI classification — traditional MRM, AI on MRM, AI Governance.</td></tr>
+    <tr><td>Zone A/B/C</td><td>Data perimeter zones — open cloud, private cloud, on-premises only.</td></tr>
+    <tr><td>Grounding</td><td>Verification that each AI claim resolves to a retrievable source. See §9 for implementation requirements.</td></tr>
+    <tr><td>Claim resolution</td><td>The process of matching each factual or analytical assertion in AI output to a specific, semantically sufficient source passage; the core mechanism of grounding verification.</td></tr>
+    <tr><td>Citation confidence</td><td>A per-claim assessment of source-match strength — High (direct support), Medium (inferential), Low (weak or indirect) — used to determine whether output is released, escalated, or suppressed.</td></tr>
+    <tr><td>Silent substitution</td><td>Vendor updating a hosted model without notice, invalidating prior validation.</td></tr>
+    <tr><td>HITL</td><td>Human-in-the-loop — human review/approval within an AI workflow.</td></tr>
+    <tr><td>MNPI</td><td>Material non-public information.</td></tr>
+    <tr><td>GBM</td><td>Gradient Boosted Machine — a machine-learning model built from sequential decision trees; common in credit scoring and market risk.</td></tr>
+    <tr><td>Output fingerprinting</td><td>Comparing a model's responses to a fixed probe set over time to detect silent vendor model changes.</td></tr>
+    <tr><td>RFI</td><td>Request for Information — a preliminary US regulatory step that gathers views but creates no binding requirement.</td></tr>
+    <tr><td>SUP 15A</td><td>FCA supervisory rule requiring firms to notify the FCA of material operational incidents.</td></tr>
+    <tr><td>COE</td><td>Centre of Excellence — a firm-designated team responsible for AI platform governance, tooling standards, and deployment oversight for a given infrastructure cluster.</td></tr>
+  </table>
+
+  <h1 style="margin-top:34px;">Appendix C — Change Log</h1>
+  <table>
+    <tr><th>Version</th><th>Date</th><th>Author</th><th>Change summary</th></tr>
+    <tr><td style="font-weight:700;">1.0</td><td>[DATE]</td><td>AI Risk (2LoD)</td><td>Initial release as organisation-neutral template. Six-dimension taxonomy; impact-dominant materiality tiering; triple-track classification; appetite register; KRI register; grounding verification requirements; agentic appetite; incident response; governance; roadmap.</td></tr>
+  </table>
+</div>
+
+</body>
+</html>
