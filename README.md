@@ -1,10 +1,12 @@
 # AIGate
 
-**AI Risk Appetite Pre-Check Engine for banks.**
+**The live conformance layer between a bank's risk appetite and its actual running AI estate.**
 
-A developer describes an AI tool they want to build. AIGate asks a handful of targeted questions, evaluates the use case against the bank's risk rules, and returns a clear answer: approved / approved with these controls / rejected — with the exact reason, documented and on record.
+AIGate doesn't approve a description of an AI system. It proves the real system stays inside the rules the bank set — continuously, not once at approval time.
 
-Replaces multi-hundred-question intake forms and three-month committee cycles with a consistent, auditable verdict in minutes.
+A developer provides their AI tool's artifacts (code, deployment config, IaC). AIGate reads what the system actually does, asks only the questions the artifacts don't already answer, evaluates against the bank's machine-readable Risk Appetite Framework, and returns a verdict: approved / approved with these controls / rejected — with the exact regulatory reasoning chain, documented and on record.
+
+Replaces self-attested intake forms that run to hundreds of questions and months-long committee cycles with evidence-backed governance that keeps working after approval.
 
 ---
 

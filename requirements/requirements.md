@@ -163,9 +163,9 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ### CS — Control Solve
 
-**CS-1 (Must):** When a use case is in appetite but requires controls, the system shall compute the minimal set of controls from the policy file's control library that satisfies all tripped invariants simultaneously.
+**CS-1 (Must):** When a use case is in appetite but requires controls, the system shall compute the control set that satisfies all tripped invariants while maintaining a configurable safety margin from the appetite boundary. "Minimal" means smallest set that achieves the required margin — not closest to the line.
 
-> Fit criterion: The system does not output a fixed list of all possible controls. It outputs the smallest combination of controls that resolves every invariant violation. If multiple minimal sets exist, the system outputs the one with the lowest implementation burden (as defined in the policy file's control library).
+> Fit criterion: The policy file defines a `safety_margin` parameter (default: 10% of the distance from the boundary). The system solves for the smallest control set that satisfies all invariants AND keeps the use case inside the margin. If no such set exists within the margin but one exists inside appetite, the verdict is "Approved with controls — boundary proximity warning." A use case approved at the margin is explicitly flagged as higher-revocation-risk than one with headroom. Optimising for minimum controls without margin optimises for developer convenience at the cost of governance resilience.
 
 **CS-2 (Must):** If no combination of controls from the library can satisfy all tripped invariants, the system shall return a *Rejected* verdict with the specific unsatisfiable invariant(s) identified.
 
@@ -207,6 +207,14 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: The data model for a verdict record includes a `status` field (Approved / Amber / Breached / Revoked) and a `status_updated_at` timestamp. In MVP, status is set at verdict time and not updated automatically. V2 connects live KRI feeds.
 
+**VD-7 (Must):** The verdict data model shall include a `conditions` block — the KRI values, behavioural bounds, and control verification states that the approval is conditional on. This is the hypothesis the runtime eventually tests against.
+
+> Fit criterion: The `conditions` block is populated at verdict time with the specific bounds: e.g. `model_drift_threshold: 5%`, `override_rate_minimum: 5%`, `zone: B`, `model_version: pinned`. In MVP these are static records. V2 uses them as the monitoring target. This schema cannot be retrofitted — it must be in the data model from V1.
+
+**VD-8 (Must):** The verdict shall produce a plain-English reasoning trace that a non-technical auditor can follow without developer assistance or knowledge of the policy schema.
+
+> Fit criterion: The reasoning trace reads as prose: "This use case was classified Track II because it produces a credit score that feeds a lending decision (SS1/23 §3.4 — 'quantitative outputs in material decisions require validation'). It was forced to Critical tier because it operates on EU borrowers and credit scoring is an Annex III high-risk use case under the EU AI Act. The following controls are required to bring it within appetite: [list]." An auditor can follow this trace and verify each step against the cited regulatory text without opening the policy YAML.
+
 ---
 
 ### LC — Use Case Lifecycle
@@ -225,13 +233,23 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **LC-4 (Must):** The tier and track of a use case shall be re-evaluated when: (a) the policy file is updated, (b) a regulatory pack is updated, (c) the use case's scope or autonomy level changes, or (d) annual re-classification is triggered.
 
+**LC-5 (Must):** Re-evaluation queues from policy or regulatory pack changes shall be prioritised and triaged automatically. Critical and High tier use cases are surfaced first. Low tier use cases that are unaffected by the changed provisions are auto-carried-forward without human review.
+
+> Fit criterion: A major regulatory pack update does not dump the entire inventory onto the 2LoD team's review queue. The system determines which use cases are affected by the specific provisions that changed, surfaces Critical/High tier affected use cases for immediate review, and auto-carries Low tier unaffected use cases. The triage decision is recorded in the audit trail. Untriaged queue items are flagged as a risk, not silently accumulating.
+
+**LC-6 (Must):** AIGate shall be submitted as a use case under its own pre-check. The resulting verdict — including tier, track, required controls, and reasoning chain — shall be stored in the inventory register and kept current.
+
+> Fit criterion: The AIGate system appears in the AI inventory register with a verdict produced by AIGate's own evaluation engine. If AIGate cannot satisfy its own gates, the gates are reconsidered. This is not a formality — it is a live test of whether the rules are honest and complete.
+
 > Fit criterion: Re-evaluation produces a new verdict record linked to the original. The register shows the current verdict and flags use cases whose verdict has changed since the last review.
 
 ---
 
 ### RG — Register & Inventory
 
-**RG-1 (Must):** The system shall maintain a persistent AI inventory register of all submitted use cases, their current lifecycle stage, tier, track, verdict, and assigned controls.
+**RG-1 (Must):** The system shall store the AI inventory as a **graph**, not a flat list. Use cases are nodes. Models, platforms, data flows, and controls are shared nodes connected to the use cases that depend on them. Shared infrastructure components appear once and are referenced by multiple use case nodes.
+
+> Fit criterion: The underlying data model is a graph structure. The UI may present it as a list, but queries like "which use cases share this vendor model?" and "what is the blast radius if this platform approval is withdrawn?" are answerable without full-table scans. This is a non-negotiable data model decision — it cannot be retrofitted from a flat store after V1.
 
 > Fit criterion: The register persists across sessions. All use cases submitted since the bank started using the tool are visible in the register (subject to access control).
 
@@ -249,7 +267,39 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **RG-5 (Could):** The register shall be exportable in a machine-readable format (CSV or JSON) for import into external risk reporting tools.
 
+**RG-6 (Should):** The estate graph shall be queryable for concentration and blast-radius analysis. At minimum: "which use cases share this model/vendor?", "which use cases would be affected if this platform approval changes?", "what is the total blast radius of a change to this shared component?"
+
+> Fit criterion: A 2LoD user can run a blast-radius query on any shared component and receive a list of affected use cases with their tiers and current statuses. This query completes without manual cross-referencing of the register.
+
+**RG-7 (Should):** The system shall maintain a periodic sampling cadence where a configurable percentage of approved Low and Medium tier use cases are flagged for human re-review, independent of any KRI breach or regulatory update.
+
+> Fit criterion: Sampling exists as a mechanism for detecting systematic rule error — a wrong activation condition that consistently approves things it should not. The sampling rate is configurable (default: 10% of Low tier, 5% of Medium tier, annually). Sampled use cases are added to the 2LoD review queue with the reason "periodic sample — systematic rule check."
+
 > Fit criterion: Export produces a complete snapshot of the register at the time of export, with all fields included.
+
+---
+
+### OB — Observed Reality Binding
+
+**OB-1 (Must):** For use cases where a code repository, infrastructure-as-code file, or deployment manifest is provided, the system shall derive graph attributes from those artifacts and treat them as authoritative over self-attested values.
+
+> Fit criterion: An artifact-derived attribute (e.g. cloud zone read from a Terraform file) overrides a self-attested value for the same attribute. The verdict records which attributes were artifact-derived and which were self-attested. A use case with artifact-derived attributes is marked as higher-confidence than one that is entirely self-attested.
+
+**OB-2 (Must):** The system shall flag discrepancies between self-attested values and artifact-derived values as contradictions requiring resolution before evaluation proceeds.
+
+> Fit criterion: If a developer attests "Zone B — private cloud" but the IaC file shows an OpenAI API endpoint with no private network routing, the system flags: "Attested zone contradicts deployment artifact. Resolve before evaluation." Extends UC-5 to cover artifact contradictions, not just self-description contradictions.
+
+**OB-3 (Should):** The system shall read deployment manifests and infrastructure config files to verify: claimed data zone, cloud region, model endpoint (and whether it is pinned or floating), and declared tool/action permissions.
+
+> Fit criterion: For a use case providing a deployment manifest, the system extracts zone, model endpoint, and tool permissions directly. Self-attestation of these fields is not required if the artifact is present. The artifact version read is recorded in the audit trail.
+
+**OB-4 (Should):** The system shall read model configuration and tool-use permission files to verify the autonomy level claimed in the data-flow graph.
+
+> Fit criterion: If a use case claims "Level 1 autonomy — human approves each action" but the model config shows auto-execution of write operations, the system flags the contradiction. Cannot detect omissions not present in the artifact — this limitation is stated explicitly in the verdict.
+
+**OB-5 (Must):** The verdict shall state explicitly, for every material attribute, whether the value was artifact-derived or self-attested. Self-attested attributes are labelled as such in the audit trail.
+
+> Fit criterion: The verdict output distinguishes: "Data zone: Zone B — **verified from deployment manifest v1.3**" vs "Autonomy level: L1 — **self-attested, not verified by artifact**." A regulator can see immediately which claims have machine-backed evidence and which rely on the developer's word.
 
 ---
 
@@ -363,6 +413,10 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ## 5. Non-Functional Requirements
 
+**NF-10 (Must):** A named role shall own the translation-fidelity gap — the responsibility for verifying that the YAML activation conditions in the policy file faithfully encode the board-approved prose RAF. A periodic attestation ("the encoded rules match the board-approved RAF as of this date") shall be required and stored.
+
+> Fit criterion: The policy file includes a `translation_attestation` block: attested_by, role, date, and a reference to the board-approved RAF version it was checked against. A policy file without a current attestation (within a configurable period, default 12 months) produces verdicts marked "translation fidelity unattested."
+
 **NF-7 (Must):** The system shall not autonomously assert that a regulatory determination is authoritative. Every rule in a regulatory pack must be traceable to a primary source citation (RA-7) and a human reviewer sign-off. The reviewer signs off on the affected rules only — those citing changed regulatory text — not the whole pack on every update (RA-10).
 
 > Fit criterion: A pack rule without a primary source citation (RA-7) or without a reviewer sign-off is invalid. A verdict relying on an unsigned or uncited rule is flagged as provisional with an explicit warning: *"This verdict relies on [rule ID], which has not been signed off against a primary regulatory source."*
@@ -382,8 +436,12 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 **NF-2 (Must):** The audit trail shall be immutable. No verdict, attestation, correction, or lifecycle event can be deleted or modified after it is recorded.
 
 > Fit criterion: The audit trail is append-only. There is no delete or edit function for audit records. Historical records are readable but not writable.
+>
+> **V1 honest limitation:** NF-2 and NF-3 are directly contradictory for a client-side deployment. A local file or browser store is editable by definition — true immutability requires a server-backed, append-only store. V1 is therefore honestly positioned as **provisional / proof-of-concept grade** for audit purposes. Any deployment intended to produce a regulator-defensible audit trail requires V1.5 (append-only server store, even if minimal). This must be stated clearly to any bank deploying V1 as a system of record.
 
 **NF-3 (Must):** No use case data shall leave the user's local environment in the MVP. The engine runs entirely client-side.
+
+> Fit criterion: For MVP, no network requests are made during evaluation. The LLM-powered graph extraction uses a locally configured API key; if not configured, the system falls back to structured form intake. All data persists locally. See NF-2 for the honest implication of this constraint on audit-trail immutability.
 
 > Fit criterion: For MVP, no network requests are made during evaluation. The LLM-powered graph extraction (UC-3) uses a locally configured API key; if not configured, the system falls back to a structured form intake. All data persists locally.
 
