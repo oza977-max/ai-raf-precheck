@@ -335,21 +335,45 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: The regulatory timeline view lists known upcoming dates with the anticipated impact on the inventory, based on current use case classifications.
 
+**RA-7 (Must):** Every rule in a regulatory override pack shall cite its primary source — the exact regulatory text it derives from — including the document name, section or article reference, and verbatim text relied upon.
+
+> Fit criterion: A rule cannot be added to a pack without a `source` block containing: `document` (e.g. "SS1/23"), `section` (e.g. "§3.4"), and `text` (the verbatim passage). A pack that contains rules without source citations is invalid and rejected on load. Example: `Track II if quantitative output into a regulated decision — derived from SS1/23 §3.4: "models that produce quantitative outputs used in material decisions require independent validation."`
+
+**RA-8 (Must):** Every rule in a regulatory override pack shall carry a confidence score reflecting the clarity of the regulatory text and the degree of interpretive judgment required: High (unambiguous text, multiple reviewers agree), Medium (judgment involved, text is ambiguous), or Low (contested or genuinely unclear territory).
+
+> Fit criterion: The confidence score is declared in the rule definition. A pack without confidence scores on all rules is invalid. The score is set by the human reviewer at sign-off, not computed automatically.
+
+**RA-9 (Must):** The verdict shall display the full reasoning chain for every regulatory override that fired: the primary source text, the rule derived from it, and how the rule applies to the specific use case. The bank shall be able to verify the reasoning against the original regulatory text without asking the product owner.
+
+> Fit criterion: For every regulatory override in a verdict, the output shows: document name, section, verbatim text, derived rule, and the specific graph attribute that triggered it. Example: *"EU AI Act Annex III §5(b) states: 'AI systems used for creditworthiness assessment are high-risk.' This use case produces a credit score — forced to Critical tier."*
+
+**RA-10 (Must):** When a regulatory pack is updated, the system shall identify which rules cite regulatory text that has changed, and surface only those rules for human review. Rules citing unchanged text do not require re-review.
+
+> Fit criterion: The pack update workflow produces a diff showing: old text, new text, affected rules, and proposed rule changes. The human reviewer reviews and signs off only the affected rules — not the entire pack. Rules not citing any changed section are automatically carried forward with their existing sign-off.
+
+**RA-11 (Must):** Verdicts that rely on Medium confidence rules shall carry an explicit caveat naming the rule and the nature of the ambiguity. Verdicts that rely on Low confidence rules shall route to the bank's legal team for determination before the verdict is considered final.
+
+> Fit criterion: A verdict with at least one Medium confidence rule displays: *"This verdict relies on [rule ID], which involves interpretive judgment. Confidence: Medium. Verify this reasoning with your compliance team before relying on it."* A verdict with a Low confidence rule displays: *"[Rule ID] covers contested regulatory territory. This verdict is provisional — your legal team must determine the applicable interpretation before it is final."*
+
+**RA-12 (Should):** When a bank overrides a central pack interpretation at the local level, the override shall cite the competing regulatory text and record the bank's reasoning. Silent overrides — changing a rule without citing the source — are not permitted.
+
+> Fit criterion: A local override entry requires: the competing source text, the bank's interpretation, the name and role of the person making the determination, and a date. An override without these fields is rejected on load. The audit trail for any verdict relying on a local override shows both the central interpretation and the bank's override with full provenance.
+
 ---
 
 ## 5. Non-Functional Requirements
 
-**NF-7 (Must):** The system shall not autonomously interpret regulations or assert that a regulatory determination is authoritative without a named human reviewer having approved the relevant pack version.
+**NF-7 (Must):** The system shall not autonomously assert that a regulatory determination is authoritative. Every rule in a regulatory pack must be traceable to a primary source citation (RA-7) and a human reviewer sign-off. The reviewer signs off on the affected rules only — those citing changed regulatory text — not the whole pack on every update (RA-10).
 
-> Fit criterion: Every regulatory override pack file includes a `signed_by` field (name and role of the person who approved the interpretation) and a `signed_date` field. A pack without these fields is treated as draft and produces a provisional verdict. The verdict display flags provisional packs explicitly: "This verdict relies on a draft regulatory pack that has not been signed off by a qualified reviewer."
+> Fit criterion: A pack rule without a primary source citation (RA-7) or without a reviewer sign-off is invalid. A verdict relying on an unsigned or uncited rule is flagged as provisional with an explicit warning: *"This verdict relies on [rule ID], which has not been signed off against a primary regulatory source."*
 
-**NF-8 (Must):** The system shall record the effective date and signing metadata of every regulatory pack version in the verdict audit trail, so that a bank can demonstrate to a regulator which human-approved interpretation was in force at the time of each verdict.
+**NF-8 (Must):** The verdict audit trail shall record, for every regulatory rule that fired: the primary source document, section, and verbatim text; the derived rule; the confidence score; the reviewer name, role, and sign-off date; and whether a local bank override was applied.
 
-> Fit criterion: The audit trail entry for a verdict includes, for each regulatory pack applied: pack name, pack version, effective date, signed_by name and role, signed_date. If the pack was unsigned (draft), this is recorded as "provisional — unsigned."
+> Fit criterion: A regulator asking "why was this classified Track II?" receives: the exact SS1/23 section text, the rule derived from it, the confidence score, who reviewed it and when, and any bank-level override on top. The full reasoning chain is in the record — not just a version number.
 
-**NF-9 (Should):** The system shall display a warning when a regulatory pack's effective date is older than a configurable staleness threshold (default: 12 months), prompting the bank to verify whether the pack reflects current regulatory expectations.
+**NF-9 (Should):** The system shall display a staleness warning when the regulatory text a rule cites has been superseded or when a pack rule has not been re-reviewed within a configurable threshold (default: 12 months). The warning names the specific rule and section, not just the pack.
 
-> Fit criterion: A pack older than the staleness threshold displays a visible warning on every verdict that relied on it: "The [jurisdiction] pack was last reviewed [date]. Verify it reflects current regulatory guidance before relying on this verdict."
+> Fit criterion: *"Rule PE-JUR-UK-3 cites SS1/23 §3.4, last reviewed May 2025. Verify this section has not been amended before relying on this verdict."* The warning is at rule level — a pack where most rules are current but one section is stale surfaces only the stale rule, not a blanket pack warning.
 
 **NF-1 (Must):** The evaluation engine shall be deterministic. The same confirmed data-flow graph evaluated against the same version of the policy file shall always produce the same verdict.
 

@@ -34,25 +34,32 @@ Using the starter config verbatim without review is an implicit governance decis
 
 ## How regulatory grounding works — and its limits
 
-AIGate evaluates use cases against **regulatory override packs** — structured files encoding the rules from SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, and FSA Japan. These packs drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers triggers EU AI Act Annex III's forced-Critical classification.
+AIGate evaluates use cases against **regulatory override packs** — structured rule files for SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, and FSA Japan. These drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers with credit-scoring characteristics triggers EU AI Act Annex III's forced-Critical classification.
 
-**But regulations evolve. The packs must evolve with them.**
+**Regulations evolve. This is the hardest problem in the product.**
 
-The SR 26-2 RFI will land (probably late 2026) and change the US position on generative AI in MRM. EU AI Act Annex III obligations take effect December 2027. OSFI E-23 becomes effective January 2027. Supervisory statements, dear CEO letters, and implementing acts change the picture continuously.
+SR 26-2 RFI will land and change the US position on generative AI. EU AI Act Annex III obligations take effect December 2027. OSFI E-23 becomes effective January 2027. Supervisory statements and implementing acts change the picture continuously. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability.
 
-**AIGate does not interpret regulations autonomously. It cannot.** A bank that tells its regulator "our AI interpreted SS1/23 and classified this use case accordingly" does not have a defensible answer. A qualified human — lawyer, senior risk professional — must stand behind every regulatory determination.
+### How AIGate approaches this
 
-The intended model is:
+**Every rule cites its primary source — the verbatim regulatory text it derives from.**
 
-1. **Monitor** — track key regulatory sources for new publications
-2. **Draft** — propose pack updates with the specific rules that need changing
-3. **Human review and sign-off** — a qualified person reviews, approves, and signs the update with their name and date
-4. **Version and distribute** — the signed update is versioned; subscribing banks receive it
-5. **Re-evaluate** — the engine re-runs the estate against the updated pack and produces a diff
+Not: *"Track II if quantitative output into a regulated decision"*
 
-The LLM assists with steps 1 and 2. A human owns steps 3 and 4. **That is what makes it regulator-defensible.**
+But: *"Track II — derived from SS1/23 §3.4: 'models that produce quantitative outputs used in material decisions require independent validation.' Confidence: High."*
 
-For banks using the starter config: the pack versions shipped with AIGate reflect regulatory positions as of the date in each pack file's metadata. Review the effective dates. If a pack is older than the last significant regulatory development in that jurisdiction, treat it as provisional until it is updated.
+This means:
+- The verdict shows you the exact regulatory text behind every decision. You can verify it yourself against the source.
+- When a regulation changes, only the rules citing the changed sections need review — not the whole pack.
+- Ambiguous rules carry a confidence score (High / Medium / Low) so you know where solid ground is and where judgment is required.
+
+**Every rule requires a human reviewer sign-off** — name, role, date — against the primary source text. AIGate does not interpret regulations autonomously. A bank that tells the PRA "our AI interpreted SS1/23" does not have a defensible answer. A qualified person must stand behind every regulatory determination. AIGate makes that accountability traceable and minimal in effort: reviewers sign off only on rules citing changed text, not the whole pack every time.
+
+**Verdicts show the full reasoning chain:** regulatory text → derived rule → verdict. A regulator asking "why was this Track II?" sees the SS1/23 section, the rule, and who reviewed it — not just a version number.
+
+**When a bank disagrees with the central interpretation**, they can override locally — but they must cite the competing text and record their reasoning. Silent overrides are not permitted.
+
+**What this does not solve:** genuine legal ambiguity. When regulatory text is contested, AIGate flags the rule as Low confidence and routes to the bank's legal team. It does not pretend to resolve what qualified lawyers disagree about. That is the honest boundary of what a tool can do.
 
 ---
 
