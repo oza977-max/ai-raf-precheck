@@ -253,6 +253,42 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ---
 
+### PV — Platform & Vendor Envelope
+
+**PV-1 (Must):** The policy file shall support an approved-platform registry. Each entry records its approved envelope — maximum data class, exposure level, autonomy level, jurisdiction set, and network zone — together with the controls the platform approval already satisfies.
+
+> Fit criterion: A platform entry expresses, for example: `Azure OpenAI (internal zone) — approved for data class ≤ Internal, exposure ≤ internal-only, autonomy ≤ L2, UK/EU; satisfies controls C-ENC-1, C-ACC-2, C-LOG-1, C-RES-3.` The registry is part of the versioned policy structure.
+
+**PV-2 (Must):** The policy file shall support an approved-vendor/model registry, structured identically to the platform registry. Each entry records the vendor or model's approved envelope and the controls its approval satisfies.
+
+> Fit criterion: A use case using a model on the registry within its envelope inherits the model's cleared controls. A use case using a model not on the registry is treated as a new vendor (see PV-5).
+
+**PV-3 (Must):** During evaluation, the system shall determine whether the use case's risk envelope (drawn from the confirmed data-flow graph) sits inside the envelope of its declared platform and vendor/model. Inheritance is per-dimension and conditional — controls are inherited only for dimensions where the use case fits inside the approved envelope.
+
+> Fit criterion: If a use case runs on a platform approved for data class ≤ Internal but the use case touches MNPI, the platform's data-handling controls are not inherited for that dimension; the relevant invariants are evaluated as if no platform clearance existed for them. The policy schema shall support declaring control clusters as coupled — if any dimension in a coupled cluster is exceeded, all controls in that cluster fall away (not just the exceeded dimension's controls).
+
+**PV-4 (Must):** The system shall ask intake questions only for the residual — risk dimensions not covered by an inherited envelope, plus genuinely use-case-specific dimensions (purpose, data class confirmation, output exposure, human oversight, fairness, explainability obligations). Questions whose answers are determined by inherited envelope controls shall not be asked.
+
+> Fit criterion: Refines UC-4. A low-risk use case on a fully covering approved platform using an approved model within envelope is asked only use-case-intrinsic questions. The question budget is reduced by whatever the envelope covers, not a fixed list.
+
+**PV-5 (Must):** When a use case declares a platform or vendor/model not present in the approved registry, the system shall route it to the full vendor/platform risk process as a triggered downstream review and shall not inherit any controls for the unapproved component.
+
+> Fit criterion: An unapproved vendor produces a verdict including "full vendor risk assessment required" as a mandatory downstream step (consistent with CS-3). The verdict names the unapproved component explicitly.
+
+**PV-6 (Must):** The verdict and audit trail shall record the full inheritance chain: which platform and vendor/model were declared, which envelope each was approved for, which controls were inherited, and which dimensions fell outside the envelope and were evaluated directly.
+
+> Fit criterion: If a regulator asks "was data residency assessed for this use case?", the audit trail answers: "inherited from Platform X approval vN, cleared for UK/EU residency; use case is within that envelope." Inheritance is never asserted without the chain that justifies it. Extends VD-4 and VD-5.
+
+**PV-7 (Must):** When a platform or vendor approval changes — envelope narrows or approval is withdrawn — the system shall re-evaluate all use cases that inherited from it and flag any whose inherited controls are no longer valid.
+
+> Fit criterion: If Platform X's approval is narrowed to exclude EU jurisdictions, every use case that inherited EU coverage from Platform X is flagged for re-evaluation, with the affected dimension named. Extends LC-4 re-evaluation triggers and RG-4 diff mechanics.
+
+**PV-8 (Should):** The starter policy file shall ship with a small set of example platform and vendor envelope entries, illustrating the envelope structure and at least one over-envelope case, so a bank can see the inheritance mechanics working before defining its own registry.
+
+> Fit criterion: A bank installing the tool can run a sample use case demonstrating inheritance (fits envelope, questions reduced) and a sample demonstrating the envelope breaking (exceeds envelope, questions return), without first building its own registry.
+
+---
+
 ### CF — Configuration
 
 **CF-1 (Must):** The bank's Risk Appetite Framework shall be expressed as a human-readable YAML or JSON policy file stored locally within the project. The file defines all invariants, tier rules, track rules, hard lines, control library, KRI thresholds, role assignments, and tier-to-workflow mappings.
@@ -373,6 +409,9 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 - **OQ-3:** What is the minimal viable 2LoD review mechanism for High/Critical tier use cases in MVP (LC-3)? Options: status flag in register, email link, simple password-gated view. Deferred to `/gvm-tech-spec`.
 - **OQ-4:** Should the similarity check for duplicate detection (UC-2) use LLM-based semantic comparison or keyword/tag matching in MVP? Semantic is more accurate; keyword is simpler and offline-capable. Deferred to `/gvm-tech-spec`.
 - **OQ-5:** What is the exact format for the audit trail export? Needed to confirm compatibility with the bank's existing risk reporting tools. Deferred to user confirmation before `/gvm-tech-spec`.
+- **OQ-PV-1:** How is an envelope expressed for ordinal dimensions (data class, autonomy — needs ≤ ceiling semantics) versus set dimensions (jurisdiction — needs subset semantics)? The policy schema must support both. Deferred to `/gvm-tech-spec`.
+- **OQ-PV-2:** When a use case exceeds a platform envelope on one dimension, is the correct behaviour partial inheritance (inherit fitting dimensions, evaluate exceeded ones) or full fallback? PV-3 specifies per-dimension partial inheritance with coupled-cluster support as the default. Needs validation against a real bank's control dependencies before V1 ships — some controls may be tightly coupled such that exceeding one dimension should invalidate a whole cluster.
+- **OQ-PV-3:** For firms without envelope-scoped platform approvals, should the tool offer a lightweight "define your platform envelope" onboarding flow, or degrade to asking the full question set until envelopes are defined? Affects time-to-value for less mature firms. Deferred to user confirmation.
 - **OQ-6:** Who maintains regulatory override packs, and how are updates distributed? Three options exist: (1) the product owner maintains packs centrally and distributes updates to banks — aligns with the recurring subscription revenue model described in the viability risk assessment; (2) the bank's 2LoD team maintains their own packs — feasible but creates staleness risk if the bank misses a regulatory change; (3) hybrid — the product owner ships pack updates as a baseline and the bank can override locally for jurisdiction-specific interpretations. Option 1 is the most defensible from a regulator-quality standpoint and the strongest commercial lever; options 2 and 3 are fallbacks for banks that require full control over their policy files. This decision affects the V2 distribution model, pricing, and the update mechanism for RA-4 and RA-5. Must be resolved before V2 design begins.
 
 ---
@@ -425,6 +464,14 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 | RA-4 | Regulatory | Re-evaluation diff on pack update | Should |
 | RA-5 | Regulatory | Stale assessment flag | Should |
 | RA-6 | Regulatory | Regulatory timeline view | Could |
+| PV-1 | Platform & Vendor | Approved-platform registry with envelopes & satisfied controls | Must |
+| PV-2 | Platform & Vendor | Approved-vendor/model registry with envelopes | Must |
+| PV-3 | Platform & Vendor | Per-dimension envelope-fit check & conditional inheritance | Must |
+| PV-4 | Platform & Vendor | Ask only residual questions (refines UC-4) | Must |
+| PV-5 | Platform & Vendor | New vendor/platform routes to full review, no inheritance | Must |
+| PV-6 | Platform & Vendor | Inheritance chain recorded in verdict & audit trail | Must |
+| PV-7 | Platform & Vendor | Re-evaluate inheritors when an approval changes | Must |
+| PV-8 | Platform & Vendor | Starter registry with example envelopes | Should |
 | NF-1 | Non-Functional | Deterministic evaluation | Must |
 | NF-2 | Non-Functional | Immutable audit trail | Must |
 | NF-3 | Non-Functional | No data leaves tool (MVP) | Must |
