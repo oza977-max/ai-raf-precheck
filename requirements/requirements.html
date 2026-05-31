@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIGate — Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Table of Contents Navigation -->
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#expert-panel">Expert Panel</a></li>
+                <li><a href="#purpose">Purpose & Vision</a></li>
+                <li><a href="#target-users">Target Users</a></li>
+                <li><a href="#journeys">User Journeys</a></li>
+                <li><a href="#functional">Functional Requirements</a>
+                    <ul>
+                        <li><a href="#uc">UC — Use Case Intake</a></li>
+                        <li><a href="#pe">PE — Policy Engine</a></li>
+                        <li><a href="#cs">CS — Control Solve</a></li>
+                        <li><a href="#vd">VD — Verdict & Certificate</a></li>
+                        <li><a href="#lc">LC — Lifecycle</a></li>
+                        <li><a href="#rg">RG — Register & Inventory</a></li>
+                        <li><a href="#cf">CF — Configuration</a></li>
+                        <li><a href="#ra">RA — Regulatory Alignment</a></li>
+                    </ul>
+                </li>
+                <li><a href="#nf">Non-Functional Requirements</a></li>
+                <li><a href="#assumptions">Assumptions</a></li>
+                <li><a href="#constraints">Constraints</a></li>
+                <li><a href="#out-of-scope">Out of Scope</a></li>
+                <li><a href="#open-questions">Open Questions</a></li>
+                <li><a href="#index">Requirements Index</a></li>
+                <li><a href="#priority-model">Priority Model</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <h1>AI Risk Appetite Pre-Check Engine<br>Requirements</h1>
+
+            <div class="metadata">
+                <strong>Version:</strong> 1.0<br>
+                <strong>Date:</strong> May 2026<br>
+                <strong>Status:</strong> Draft — awaiting approval<br>
+                <strong>Owner:</strong> Kshitij Oza
+            </div>
+
+            <!-- Expert Panel -->
+            <section id="expert-panel">
+                <h2>Expert Panel</h2>
+
+                <table class="expert-table">
+                    <thead>
+                        <tr>
+                            <th>Expert</th>
+                            <th>Work</th>
+                            <th>Role in This Document</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Karl Wiegers</td>
+                            <td><em>Software Requirements</em> (3rd ed.)</td>
+                            <td>Requirements classification, MoSCoW prioritisation, ID structure</td>
+                        </tr>
+                        <tr>
+                            <td>Gause & Weinberg</td>
+                            <td><em>Exploring Requirements</em></td>
+                            <td>Probing, ambiguity resolution, safety net audit</td>
+                        </tr>
+                        <tr>
+                            <td>Jeff Patton</td>
+                            <td><em>User Story Mapping</em></td>
+                            <td>User journey discovery, now/later slicing</td>
+                        </tr>
+                        <tr>
+                            <td>Alan Cooper</td>
+                            <td><em>About Face</em> (4th ed.)</td>
+                            <td>Persona definition, goal-directed requirements</td>
+                        </tr>
+                        <tr>
+                            <td>Clayton Christensen / Bob Moesta</td>
+                            <td><em>Competing Against Luck</em> / <em>Demand-Side Sales 101</em></td>
+                            <td>Job statement, push/pull framing</td>
+                        </tr>
+                        <tr>
+                            <td>Suzanne & James Robertson</td>
+                            <td><em>Mastering the Requirements Process</em> (3rd ed.)</td>
+                            <td>Non-functional categories, fit criteria</td>
+                        </tr>
+                        <tr>
+                            <td>NIST</td>
+                            <td><em>AI Risk Management Framework (AI RMF 1.0)</em></td>
+                            <td>Govern/Map/Measure/Manage framing; trustworthiness characteristics</td>
+                        </tr>
+                        <tr>
+                            <td>EU AI Act</td>
+                            <td><em>Regulation (EU) 2024/1689</em></td>
+                            <td>Annex III high-risk classification; transparency obligations</td>
+                        </tr>
+                        <tr>
+                            <td>Federal Reserve / OCC / FDIC</td>
+                            <td><em>SR 26-2</em> (2026)</td>
+                            <td>US MRM scope; triple-track rationale</td>
+                        </tr>
+                        <tr>
+                            <td>PRA</td>
+                            <td><em>SS1/23</em> (2023)</td>
+                            <td>Technology-agnostic MRM; jurisdiction ceiling</td>
+                        </tr>
+                        <tr>
+                            <td>MAS</td>
+                            <td><em>FEAT Principles</em> (2019)</td>
+                            <td>Fairness, accountability, transparency requirements</td>
+                        </tr>
+                        <tr>
+                            <td>OSFI</td>
+                            <td><em>Guideline E-23</em> (eff. 2027)</td>
+                            <td>Broadest-definition MRM; Canadian entity override</td>
+                        </tr>
+                        <tr>
+                            <td>Philippa Girling</td>
+                            <td><em>Operational Risk Management</em> (2nd ed.)</td>
+                            <td>KRI design; three lines of defence</td>
+                        </tr>
+                        <tr>
+                            <td>Stuart Russell</td>
+                            <td><em>Human Compatible</em></td>
+                            <td>Agentic AI control; corrigibility; minimal footprint</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Purpose & Vision -->
+            <section id="purpose">
+                <h2>Purpose & Vision</h2>
+
+                <h3>Job Statement</h3>
+                <p>When a business team wants to deploy an AI tool at the bank, we want to know immediately whether it is within our risk appetite and what conditions apply — so we can govern AI adoption at scale without the Second Line of Defence becoming the bottleneck.</p>
+
+                <h3>The Problem It Solves</h3>
+                <p>Banks today assess AI use cases through manual processes — Word documents, committee meetings, bespoke memos. A single assessment can take months and run to hundreds of questions, regardless of whether the use case is a low-risk internal copilot or a critical credit-scoring system. The process is slow (blocking AI adoption), inconsistent (two identical use cases can receive different outcomes from different reviewers), and gameable (self-attested intake is rarely challenged). The Second Line spends its time on process rather than judgement.</p>
+
+                <h3>What Changes</h3>
+                <p>A developer describes their AI use case in plain language. The engine extracts a structured data-flow graph, detects any inconsistencies, asks only the questions this specific use case needs, and evaluates the confirmed graph against the bank's machine-readable Risk Appetite Framework. Within minutes, the result is: <em>in appetite / in appetite with these controls / rejected</em>, with the exact reason, the specific invariant that tripped, and the minimal set of controls that satisfies it. The verdict is attested, versioned, and permanently on record.</p>
+
+                <h3>Why This Is Not a Chatbot and Not a Big Four Deliverable</h3>
+                <p>The evaluation is deterministic — the same use case against the same policy always produces the same verdict. Every verdict is traceable to a specific rule in the bank's own RAF. Corrections and re-evaluations are recorded in an immutable audit trail. The bank's rules drive the outcome; the engine enforces them consistently.</p>
+            </section>
+
+            <!-- Target Users -->
+            <section id="target-users">
+                <h2>Target Users</h2>
+
+                <div class="persona">
+                    <h4>Primary Persona — Priya, Head of AI Governance (2LoD)</h4>
+                    <p>Priya leads the AI risk function at a mid-sized UK bank. She has a team of three. Her firm is deploying AI tools at a rate her team cannot manually review. She sits on the AI Governance Committee and reports to the CRO. Her primary frustration: she finds out about AI tools when they are already built and being used. By then, fixing governance gaps is expensive and disruptive.</p>
+                    <p><strong>End goal:</strong> Every AI use case at the bank has a defensible, consistent, auditable governance record — without her team manually reviewing each one.</p>
+                    <p><strong>Experience goal:</strong> She wants to feel in control of the AI estate, not permanently behind it.</p>
+                </div>
+
+                <div class="persona">
+                    <h4>Secondary Persona — James, AI Developer (1LoD)</h4>
+                    <p>James is a developer on the trading desk who builds internal AI tools. He is technically capable but has no risk management background. His frustration: he doesn't know if his idea is viable until three months of work and a committee meeting later. He wants to know on day one.</p>
+                    <p><strong>End goal:</strong> Fast, clear guidance on whether his idea is going to fly and exactly what he needs to build to make it compliant.</p>
+                    <p><strong>Experience goal:</strong> He wants to feel like governance is helping him ship faster, not blocking him.</p>
+                </div>
+            </section>
+
+            <!-- User Journeys -->
+            <section id="journeys">
+                <h2>User Journeys</h2>
+
+                <div class="journey">
+                    <h4>Journey 1 — Developer Submits a New Use Case (James)</h4>
+                    <ol>
+                        <li>James has an idea — an AI that reads incoming client emails and drafts replies for the RM team.</li>
+                        <li>He opens the pre-check engine and types a two-sentence description.</li>
+                        <li>The engine checks for duplicate or similar use cases already in the inventory.</li>
+                        <li>If none found, it extracts a preliminary data-flow graph and shows James what it understood.</li>
+                        <li>It asks 3–8 targeted questions based on the risk signals it detected (client data, external-facing output).</li>
+                        <li>James answers; the engine detects a potential contradiction ("you said no client data, but your description includes client emails") and asks him to resolve it.</li>
+                        <li>James confirms the corrected graph — this is his attestation.</li>
+                        <li>The engine evaluates and returns a verdict: <em>Approved with controls — High tier, Track III</em>.</li>
+                        <li>James sees exactly which rule was the binding constraint and what three controls he must implement.</li>
+                        <li>The verdict is saved to the register. Priya's team can see it.</li>
+                    </ol>
+                </div>
+
+                <div class="journey">
+                    <h4>Journey 2 — 2LoD Reviews the Register (Priya)</h4>
+                    <ol>
+                        <li>Priya opens the register view. She sees all use cases across all teams, their tiers, statuses, and verdicts.</li>
+                        <li>She filters by Critical and High tier to focus attention.</li>
+                        <li>She clicks into a High-tier use case and reviews the full audit trail: description, confirmed graph, questions asked, answers given, verdict reasoning, controls assigned.</li>
+                        <li>She is satisfied the verdict is defensible. No action needed.</li>
+                    </ol>
+                </div>
+
+                <div class="journey">
+                    <h4>Journey 3 — Regulatory Pack Updated, Estate Re-evaluated</h4>
+                    <ol>
+                        <li>EU AI Act Annex III obligations come into force (December 2027).</li>
+                        <li>The bank's 2LoD team updates the EU AI Act regulatory pack in the policy file.</li>
+                        <li>The engine re-evaluates all approved use cases in the inventory against the updated pack.</li>
+                        <li>A diff is produced: <em>"8 use cases changed tier. 2 now require Critical-tier controls. 1 fell out of appetite."</em></li>
+                        <li>Priya reviews the affected use cases and initiates remediation for the 3 that need action.</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Functional Requirements -->
+            <section id="functional">
+                <h2>Functional Requirements</h2>
+
+                <!-- UC — Use Case Intake -->
+                <section id="uc">
+                    <h3>UC — Use Case Intake</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall accept a plain-language description of an AI use case as the primary intake mechanism. The submitter types a free-text description of what the AI tool does, what data it touches, and what actions it takes. No structured form required at submission.</p>
+                        <div class="fit-criterion">A description of 1–5 sentences is sufficient to initiate the intake flow. The system does not require field-by-field form completion at this stage.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Before beginning intake questions, the system shall check the existing AI inventory for duplicate or substantially similar use cases and surface any matches to the submitter.</p>
+                        <div class="fit-criterion">If a match is found with similarity above a configurable threshold, the system presents the existing use case(s) with their tier, track, and verdict. The submitter may adopt the existing classification or confirm their use case is genuinely new.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall extract a structured data-flow graph from the free-text description using an LLM. The graph shall represent: input data nodes (with data class labels), processing nodes (AI model, autonomy level, data zone), output nodes (action type, exposure level), and the edges between them.</p>
+                        <div class="fit-criterion">The extracted graph is presented to the submitter for review before any questions are asked. The submitter can see and correct the graph before confirming.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall ask targeted follow-up questions based on the risk signals detected in the extracted graph. The number of questions shall be proportionate to the risk profile of the use case.</p>
+                        <div class="fit-criterion">A Low-tier use case shall require no more than 5 follow-up questions. A Critical-tier use case shall require no more than 15. The system shall never present a fixed list of all possible questions regardless of use case type.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall detect internal contradictions between the free-text description and the answers to follow-up questions, and surface them to the submitter for resolution before graph confirmation.</p>
+                        <div class="fit-criterion">If the submitter answers a question in a way that contradicts a prior statement (e.g., "no client data" contradicted by "the tool reads client call notes"), the system flags the contradiction with the specific conflicting statements and requires resolution before proceeding.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall require the submitter to explicitly confirm the final data-flow graph before evaluation begins. This confirmation is the submitter's attestation — it is timestamped, attributed to the submitter, and permanently recorded in the audit trail.</p>
+                        <div class="fit-criterion">Evaluation cannot begin without an explicit confirmation action. The confirmation records: submitter identity, timestamp, graph version confirmed, and any corrections made from the initial extraction.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">UC-7</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall allow the submitter to correct any node in the extracted graph before confirmation. Each correction shall be recorded (what changed, from what, to what, by whom, when).</p>
+                        <div class="fit-criterion">If a submitter corrects a node (e.g., changes data class from "Internal" to "MNPI"), the correction is recorded alongside the original extraction. The audit trail shows both the original LLM-extracted value and the human-corrected value.</div>
+                    </div>
+                </section>
+
+                <!-- PE — Policy Engine -->
+                <section id="pe">
+                    <h3>PE — Policy Engine</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall evaluate the confirmed data-flow graph against the bank's RAF invariants and return a verdict: <em>Approved</em>, <em>Approved with controls</em>, or <em>Rejected</em>.</p>
+                        <div class="fit-criterion">The evaluation is deterministic — the same confirmed graph against the same policy version always produces the same verdict. No probabilistic outputs.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall classify every use case into one of three governance tracks using the ordered classification test from the bank's policy file: Track I (Traditional MRM), Track II (AI on MRM), Track III (AI Governance).</p>
+                        <div class="fit-criterion">Track assignment follows the ordered rules in the policy file and short-circuits at the first matching rule. The track assigned and the rule that matched are included in the verdict output.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall assign a materiality tier (Critical / High / Medium / Low) using impact-dominant rules from the policy file. A high-impact trigger shall always result in Critical or High regardless of low complexity or low reliance scores.</p>
+                        <div class="fit-criterion">Tier assignment is rule-based, not multiplicative. The tier-triggering rule is named explicitly in the verdict output.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall evaluate hard lines first, before any control solving. A use case that trips a hard line shall receive an immediate <em>Rejected</em> verdict. No control set can bring a hard-line violation into appetite.</p>
+                        <div class="fit-criterion">Hard lines include (at minimum): Level 4 autonomy on irreversible client/market-facing actions; any external system processing MNPI; fully autonomous trading or lending decisions. Hard lines are configurable in the policy file.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall apply jurisdiction override packs based on the jurisdictions the use case touches. The most demanding applicable standard governs.</p>
+                        <div class="fit-criterion">A use case touching UK entities applies SS1/23 (technology-agnostic MRM) as the ceiling. A use case touching EU entities with Annex III characteristics (e.g., credit scoring) is forced to Critical tier regardless of the internal tiering outcome. Override packs are configurable and versioned independently of the main policy file.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">When a use case spans multiple jurisdictions, the system shall apply the most demanding applicable standard across all jurisdictions. Track and tier assignments shall never be reduced below the jurisdictional minimum.</p>
+                        <div class="fit-criterion">A use case that is Track III under SR 26-2 (US) but Track II under SS1/23 (UK) shall be classified as Track II when the use case touches UK entities.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-7</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The bank's Risk Appetite Framework shall be expressed as a human-readable, versioned YAML/JSON policy file. All invariants, tier rules, track rules, hard lines, control library, and KRI thresholds are defined in this file.</p>
+                        <div class="fit-criterion">A technically capable risk manager can read and edit the policy file without developer assistance. Changes to the policy file produce a new version. The version in force at the time of each verdict is recorded in the audit trail.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">PE-8</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall ship with a starter policy file pre-loaded with the AI Risk Appetite template rules. Banks customise this file for their own tier names, committee names, thresholds, and use cases.</p>
+                        <div class="fit-criterion">A bank can be operational — submitting use cases and receiving verdicts — without creating a policy file from scratch. The starter file covers all six risk dimensions, triple-track classification, impact-dominant tiering, hard lines, control library, and the seven jurisdiction override packs.</div>
+                    </div>
+                </section>
+
+                <!-- CS — Control Solve -->
+                <section id="cs">
+                    <h3>CS — Control Solve</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CS-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">When a use case is in appetite but requires controls, the system shall compute the minimal set of controls from the policy file's control library that satisfies all tripped invariants simultaneously.</p>
+                        <div class="fit-criterion">The system does not output a fixed list of all possible controls. It outputs the smallest combination of controls that resolves every invariant violation. If multiple minimal sets exist, the system outputs the one with the lowest implementation burden (as defined in the policy file's control library).</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CS-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">If no combination of controls from the library can satisfy all tripped invariants, the system shall return a <em>Rejected</em> verdict with the specific unsatisfiable invariant(s) identified.</p>
+                        <div class="fit-criterion">A <em>Rejected</em> verdict names the invariant(s) that cannot be resolved and explains why no control set addresses them (e.g., "this use case requires Level 4 autonomy on an irreversible client-facing action, which is a hard line outside appetite").</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CS-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall include any downstream reviews triggered by the use case's characteristics — InfoSec review, vendor risk assessment, cloud security approval, or other bank-configured processes — as mandatory steps separate from the AI risk pre-check.</p>
+                        <div class="fit-criterion">Triggered downstream reviews are listed as required next steps in the verdict, with the policy rule that triggered each one named. The pre-check is complete; the downstream reviews are additional obligations, not part of the pre-check evaluation.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CS-4</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall include a residual risk margin showing how close to the appetite boundary the use case sits after controls are applied.</p>
+                        <div class="fit-criterion">A use case sitting close to the boundary (within a configurable margin) is flagged as "proximity warning" — it is in appetite but a minor change in behaviour could move it out. This feeds the ongoing monitoring signal (V2).</div>
+                    </div>
+                </section>
+
+                <!-- VD — Verdict & Certificate -->
+                <section id="vd">
+                    <h3>VD — Verdict & Certificate</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall state clearly and prominently: <em>Approved</em>, <em>Approved with controls</em>, or <em>Rejected</em> — with the tier and track assigned.</p>
+                        <div class="fit-criterion">The verdict status, tier, and track are visible without scrolling on any standard screen. No jargon the submitter cannot interpret without a glossary.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall show the exact invariant that was the binding constraint — the specific rule in the policy file that determined the outcome — and the specific path in the data-flow graph that triggered it.</p>
+                        <div class="fit-criterion">The submitter can read the verdict and understand precisely why the outcome is what it is, without asking a risk manager to interpret it. Example: <em>"Client email data (classified as potential MNPI) flows to an external model in Zone A. Policy rule PE-DATA-3 prohibits MNPI from flowing outside Zone C."</em></div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall allow the submitter to contest the reasoning by correcting graph nodes they believe were misclassified. A correction triggers a re-evaluation. Both the original verdict and the corrected verdict are permanently recorded.</p>
+                        <div class="fit-criterion">A correction is not a deletion of the original verdict. The audit trail shows: original graph, original verdict, correction made, corrector identity, timestamp, and revised verdict. The correction is the submitter's attestation that their correction is accurate.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Every verdict shall be permanently recorded in an immutable audit trail. No verdict, correction, or attestation can be deleted or modified after the fact.</p>
+                        <div class="fit-criterion">The audit trail for a use case includes: all versions of the data-flow graph, all questions asked and answers given, all corrections made, the policy file version in force, the regulatory pack versions in force, and the verdict at each stage. The audit trail is available to 2LoD on demand.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The verdict record shall include the version of the policy file and the version of each regulatory pack that was active at the time of evaluation.</p>
+                        <div class="fit-criterion">If the policy file or a regulatory pack is updated after a verdict is issued, the existing verdict record is unchanged. The record shows the rules that were in force when it was made — not the current rules.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">VD-6</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The verdict shall carry a living status field that can be updated when KRI conditions change after approval (V2 — live KRI monitoring). For MVP, the status field exists in the data model but is set only at verdict time.</p>
+                        <div class="fit-criterion">The data model for a verdict record includes a <code>status</code> field (Approved / Amber / Breached / Revoked) and a <code>status_updated_at</code> timestamp. In MVP, status is set at verdict time and not updated automatically. V2 connects live KRI feeds.</div>
+                    </div>
+                </section>
+
+                <!-- LC — Use Case Lifecycle -->
+                <section id="lc">
+                    <h3>LC — Use Case Lifecycle</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">LC-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Every use case shall have a lifecycle stage: <em>Idea → Exploring → Pre-checked → Approved → In Production → Monitored → Retired</em>.</p>
+                        <div class="fit-criterion">The stage is visible on every use case record in the register. Stage transitions are recorded with timestamp and actor.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">LC-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The tier assigned by the engine shall determine the governance process the use case must follow after the pre-check.</p>
+                        <div class="fit-criterion">Low tier → self-service, verdict is final on submitter confirmation. Medium tier → 2LoD notified, verdict is provisionally approved, 2LoD has a configurable window to object. High / Critical tier → 2LoD must actively approve before the use case can advance to <em>Approved</em> stage. Tier-to-workflow mapping is configurable in the policy file.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">LC-3</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">For Medium, High, and Critical tier use cases, the system shall support a 2LoD review step where the risk manager can approve, reject, or request corrections to the verdict before it becomes final.</p>
+                        <div class="fit-criterion">The 2LoD review action (approve / reject / request correction) is recorded in the audit trail with the reviewer's identity and timestamp. For MVP, this can be a simple status update in the register — a full workflow notification system is V2.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">LC-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The tier and track of a use case shall be re-evaluated when: (a) the policy file is updated, (b) a regulatory pack is updated, (c) the use case's scope or autonomy level changes, or (d) annual re-classification is triggered.</p>
+                        <div class="fit-criterion">Re-evaluation produces a new verdict record linked to the original. The register shows the current verdict and flags use cases whose verdict has changed since the last review.</div>
+                    </div>
+                </section>
+
+                <!-- RG — Register & Inventory -->
+                <section id="rg">
+                    <h3>RG — Register & Inventory</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall maintain a persistent AI inventory register of all submitted use cases, their current lifecycle stage, tier, track, verdict, and assigned controls.</p>
+                        <div class="fit-criterion">The register persists across sessions. All use cases submitted since the bank started using the tool are visible in the register (subject to access control).</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The full register — all use cases from all teams — shall be visible to 2LoD and above. Submitters (1LoD) shall see their own use cases and verdicts only.</p>
+                        <div class="fit-criterion">Access to the full register is controlled by role configuration in the policy file. The 2LoD role has read access to all records. The 1LoD role has read/write access to their own records only.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-3</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The register shall support filtering and search by: tier, track, lifecycle stage, jurisdiction, submitting team, verdict status, and date range.</p>
+                        <div class="fit-criterion">A 2LoD user can filter the register to show only Critical-tier use cases that are currently <em>Pre-checked</em> (awaiting approval) across all teams.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-4</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">When the policy file or a regulatory pack is updated, the system shall re-evaluate all active use cases in the register and produce a diff showing which use cases changed tier, track, or appetite position.</p>
+                        <div class="fit-criterion">The diff output names each affected use case, its previous verdict, and its new verdict. Use cases that fall out of appetite are highlighted. The diff is saved as a versioned record alongside the policy update.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-5</span>
+                            <span class="priority-chip priority-could">Could</span>
+                        </div>
+                        <p class="requirement-text">The register shall be exportable in a machine-readable format (CSV or JSON) for import into external risk reporting tools.</p>
+                        <div class="fit-criterion">Export produces a complete snapshot of the register at the time of export, with all fields included.</div>
+                    </div>
+                </section>
+
+                <!-- CF — Configuration -->
+                <section id="cf">
+                    <h3>CF — Configuration</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CF-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The bank's Risk Appetite Framework shall be expressed as a human-readable YAML or JSON policy file stored locally within the project. The file defines all invariants, tier rules, track rules, hard lines, control library, KRI thresholds, role assignments, and tier-to-workflow mappings.</p>
+                        <div class="fit-criterion">The policy file can be opened and edited in any text editor. Changes are tracked via the project's version control system (git).</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CF-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall ship with a pre-populated starter policy file derived from the AI Risk Appetite Supplement template. The starter file is functional out of the box — no configuration required to begin evaluating use cases.</p>
+                        <div class="fit-criterion">A bank can install the tool and immediately submit a use case using the starter config. The first customisation step is editing the file to replace <code>[FIRM]</code> placeholders with the bank's own names, not starting from scratch.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CF-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The policy file shall be versioned. Each change to the file produces a new version. The version in force at the time of each verdict is recorded in the verdict's audit trail.</p>
+                        <div class="fit-criterion">The policy file includes a <code>version</code> field that is incremented on each change. The versioning is compatible with git version control.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">CF-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Regulatory override packs (SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan) shall be stored as separate, versioned files within the policy structure. Packs can be updated independently of the main policy file.</p>
+                        <div class="fit-criterion">Updating the EU AI Act pack does not require editing the main policy file. Each pack file has its own version. The verdict audit trail records the version of each pack in force at evaluation time.</div>
+                    </div>
+                </section>
+
+                <!-- RA — Regulatory Alignment -->
+                <section id="ra">
+                    <h3>RA — Regulatory Alignment</h3>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall correctly identify the applicable regulatory frameworks for a use case based on the jurisdictions specified in the data-flow graph, and apply them during evaluation.</p>
+                        <div class="fit-criterion">A use case specifying UK and EU jurisdictions activates SS1/23 and EU AI Act override packs. A use case specifying US only activates SR 26-2. Jurisdiction selection is part of the intake flow.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">When multiple jurisdictions apply, the system shall apply the most demanding applicable standard as the governing standard. Track and tier assignments shall never be reduced below any applicable jurisdictional minimum.</p>
+                        <div class="fit-criterion">A use case that is Track III under SR 26-2 (US) but Track II under SS1/23 (because it is technology-agnostic MRM) shall be classified as Track II. The governing standard and the rule it imposed are named in the verdict.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The audit trail for every verdict shall record the version of each regulatory pack that was active at the time of evaluation.</p>
+                        <div class="fit-criterion">If a bank is audited and the regulator asks "was this use case assessed against SS1/23?", the audit trail answers yes — specifically which version of the SS1/23 pack, on which date.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-4</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">When a regulatory pack is updated, the system shall re-evaluate all active use cases in the inventory against the updated pack and produce a diff showing which use cases are affected.</p>
+                        <div class="fit-criterion">The diff identifies: use cases that changed tier or track, use cases that fell out of appetite, and use cases that now require additional controls. The diff is presented to 2LoD for action.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-5</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The system shall flag use cases whose regulatory pack version at last evaluation is older than the current pack version — indicating the use case may need re-evaluation.</p>
+                        <div class="fit-criterion">The register view shows a "stale regulatory assessment" indicator on use cases evaluated against an older pack version. The indicator does not change the verdict — it prompts re-evaluation.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RA-6</span>
+                            <span class="priority-chip priority-could">Could</span>
+                        </div>
+                        <p class="requirement-text">The system shall provide a regulatory timeline view showing upcoming regulatory obligation dates (EU AI Act Annex III December 2027, OSFI E-23 January 2027, SR 26-2 RFI outcome) and which use cases in the inventory are likely to be affected.</p>
+                        <div class="fit-criterion">The regulatory timeline view lists known upcoming dates with the anticipated impact on the inventory, based on current use case classifications.</div>
+                    </div>
+                </section>
+            </section>
+
+            <!-- Non-Functional Requirements -->
+            <section id="nf">
+                <h2>Non-Functional Requirements</h2>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The evaluation engine shall be deterministic. The same confirmed data-flow graph evaluated against the same version of the policy file shall always produce the same verdict.</p>
+                    <div class="fit-criterion">Given identical inputs (graph + policy version), the output is identical on every run. No randomness, sampling, or model temperature affects the core evaluation.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The audit trail shall be immutable. No verdict, attestation, correction, or lifecycle event can be deleted or modified after it is recorded.</p>
+                    <div class="fit-criterion">The audit trail is append-only. There is no delete or edit function for audit records. Historical records are readable but not writable.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">No use case data shall leave the user's local environment in the MVP. The engine runs entirely client-side.</p>
+                    <div class="fit-criterion">For MVP, no network requests are made during evaluation. The LLM-powered graph extraction (UC-3) uses a locally configured API key; if not configured, the system falls back to a structured form intake. All data persists locally.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-4</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The application shall run in any modern browser (Chrome, Firefox, Safari, Edge — latest two major versions) with no installation required beyond opening the application.</p>
+                    <div class="fit-criterion">The application loads from a local file or simple web server. No npm install, no Docker, no configuration beyond the policy YAML and an optional LLM API key.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-5</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">A verdict shall be produced within 30 seconds of the submitter confirming the data-flow graph.</p>
+                    <div class="fit-criterion">The policy engine evaluation (excluding LLM-powered intake steps) completes within 5 seconds. Total time from graph confirmation to verdict display does not exceed 30 seconds on a standard laptop.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">NF-6</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The policy file shall be human-readable without specialist tooling. YAML is the preferred format.</p>
+                    <div class="fit-criterion">A risk manager with no programming background can read the policy file and understand what each rule means. Comments are supported in the file format.</div>
+                </div>
+            </section>
+
+            <!-- Assumptions -->
+            <section id="assumptions">
+                <h2>Assumptions</h2>
+                <ul>
+                    <li>The bank's risk function has at least one person with sufficient domain knowledge to review and customise the starter policy file.</li>
+                    <li>The regulatory frameworks referenced in the starter policy file (SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan) are applicable to global financial institutions; banks operating in a single jurisdiction will trim the policy file to their relevant regimes.</li>
+                    <li>MVP users are internal professionals (risk managers and developers). Consumer accessibility requirements (WCAG) do not apply to MVP.</li>
+                    <li>The LLM used for graph extraction (UC-3) is accessed via a bank-configured API key. The bank is responsible for data handling compliance for any data sent to the LLM provider.</li>
+                    <li>"Minimal control set" means the smallest combination of controls in the policy file's control library that satisfies all invariants — not the cheapest or easiest to implement. Cost-weighting of controls is a V2 feature.</li>
+                    <li>Typical street practice runs to hundreds of intake questions, with separate depth for PoC and production assessments. The pre-check is not intended to replace all of those — it owns the AI risk appetite evaluation and triggers the other required reviews (InfoSec, vendor, cloud, FinOps) as outputs.</li>
+                </ul>
+            </section>
+
+            <!-- Constraints -->
+            <section id="constraints">
+                <h2>Constraints</h2>
+                <ul>
+                    <li><strong>Regulator quality.</strong> Every verdict must be traceable to a written policy rule, inputs must be attested, the audit trail must be immutable, and the verdict must be reproducible. A tool that produces non-defensible outputs is worse than no tool.</li>
+                    <li><strong>Bank's RAF is sacrosanct.</strong> The engine reads the bank's own rules. It does not impose an external framework. The starter config is a starting point, not a mandate.</li>
+                    <li><strong>No sensitive data leaves the tool (MVP).</strong> Client data, MNPI, and confidential business information must not be transmitted to external services during evaluation. The MVP is client-side.</li>
+                    <li><strong>Jurisdiction-aware by design.</strong> A use case operating in multiple jurisdictions must receive the verdict appropriate to the most demanding applicable standard — automatically, without manual selection.</li>
+                    <li><strong>MVP is client-side, no backend.</strong> No server, no database, no authentication infrastructure for V1. Policy is a file. Register is a file. This keeps it demoable, forkable, and deployable without IT involvement.</li>
+                </ul>
+            </section>
+
+            <!-- Out of Scope -->
+            <section id="out-of-scope">
+                <h2>Out of Scope (MVP)</h2>
+                <ul>
+                    <li><strong>Board/CRO dashboard</strong> (V2) — the §2 executive dashboard from the RAF template showing aggregate appetite posture and headline KRIs across the full estate.</li>
+                    <li><strong>Stakeholder notifications</strong> (V2) — automated email, Teams, or Slack notifications to 2LoD and configured stakeholders when a use case is submitted or its status changes.</li>
+                    <li><strong>Full 2LoD approval workflow</strong> (V2) — formal review-and-approve workflow with task assignment, deadlines, and escalation paths for High/Critical tier use cases.</li>
+                    <li><strong>Live KRI monitoring</strong> (V2) — continuous monitoring of KRI conditions that automatically updates a verdict's status when a threshold is breached.</li>
+                    <li><strong>Control evidence binding</strong> (V2) — linking each required control in a verdict to proof the control actually exists (config, log, attestation).</li>
+                    <li><strong>CI/CD pipeline enforcement</strong> (V2) — blocking deployment when code does not implement the controls mandated by the pre-check verdict.</li>
+                    <li><strong>RAF import wizard</strong> (V2) — guided translation of an existing bank RAF from Word/PDF into the engine's policy schema.</li>
+                    <li><strong>Shadow AI discovery</strong> (V2) — network scanning or procurement gates to detect AI systems deployed without going through the pre-check.</li>
+                    <li><strong>Integrations</strong> (V2) — connectors to ServiceNow, Jira, MLflow, model registries, Azure AI Foundry, Bedrock.</li>
+                    <li><strong>Multi-tenant hosted SaaS</strong> (V2) — shared hosted deployment with per-bank isolation.</li>
+                    <li><strong>Multi-hundred-question assessment replacement</strong> — the pre-check owns AI risk appetite evaluation. InfoSec, vendor, cloud, and FinOps assessments remain separate processes; the pre-check triggers them as required but does not replace them.</li>
+                </ul>
+            </section>
+
+            <!-- Open Questions -->
+            <section id="open-questions">
+                <h2>Open Questions</h2>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">OQ-1</span>
+                    </div>
+                    <p class="requirement-text">What LLM provider should be used for graph extraction (UC-3) in the MVP? Options: OpenAI, Anthropic, local model. Affects data handling, cost, and offline capability. Deferred to `/gvm-tech-spec`.</p>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">OQ-2</span>
+                    </div>
+                    <p class="requirement-text">How should the register persist in the client-side MVP? Options: localStorage, local JSON file, IndexedDB. Deferred to `/gvm-tech-spec`.</p>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">OQ-3</span>
+                    </div>
+                    <p class="requirement-text">What is the minimal viable 2LoD review mechanism for High/Critical tier use cases in MVP (LC-3)? Options: status flag in register, email link, simple password-gated view. Deferred to `/gvm-tech-spec`.</p>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">OQ-4</span>
+                    </div>
+                    <p class="requirement-text">Should the similarity check for duplicate detection (UC-2) use LLM-based semantic comparison or keyword/tag matching in MVP? Semantic is more accurate; keyword is simpler and offline-capable. Deferred to `/gvm-tech-spec`.</p>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">OQ-5</span>
+                    </div>
+                    <p class="requirement-text">What is the exact format for the audit trail export? Needed to confirm compatibility with the bank's existing risk reporting tools. Deferred to user confirmation before `/gvm-tech-spec`.</p>
+                </div>
+            </section>
+
+            <!-- Requirements Index -->
+            <section id="index">
+                <h2>Requirements Index</h2>
+
+                <table class="index-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Domain</th>
+                            <th>Summary</th>
+                            <th>Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="must">
+                            <td><span class="req-id">UC-1</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Accept free-text use case description</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-2</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Duplicate detection before intake</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-3</span></td>
+                            <td>Use Case Intake</td>
+                            <td>LLM extracts data-flow graph</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-4</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Risk-proportionate follow-up questions (≤15 for Critical)</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-5</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Contradiction detection</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-6</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Graph confirmation / attestation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">UC-7</span></td>
+                            <td>Use Case Intake</td>
+                            <td>Correction recording</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-1</span></td>
+                            <td>Policy Engine</td>
+                            <td>Deterministic graph evaluation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-2</span></td>
+                            <td>Policy Engine</td>
+                            <td>Triple-track classification</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-3</span></td>
+                            <td>Policy Engine</td>
+                            <td>Impact-dominant materiality tiering</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-4</span></td>
+                            <td>Policy Engine</td>
+                            <td>Hard line detection (immediate reject)</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-5</span></td>
+                            <td>Policy Engine</td>
+                            <td>Jurisdiction override packs</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-6</span></td>
+                            <td>Policy Engine</td>
+                            <td>Most demanding standard governs</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-7</span></td>
+                            <td>Policy Engine</td>
+                            <td>YAML policy file</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">PE-8</span></td>
+                            <td>Policy Engine</td>
+                            <td>Starter config pre-loaded</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CS-1</span></td>
+                            <td>Control Solve</td>
+                            <td>Minimal control set computation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CS-2</span></td>
+                            <td>Control Solve</td>
+                            <td>Reject when no control set satisfies</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CS-3</span></td>
+                            <td>Control Solve</td>
+                            <td>Triggered downstream reviews in verdict</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">CS-4</span></td>
+                            <td>Control Solve</td>
+                            <td>Residual risk margin</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">VD-1</span></td>
+                            <td>Verdict</td>
+                            <td>Clear verdict display</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">VD-2</span></td>
+                            <td>Verdict</td>
+                            <td>Exact invariant and graph path shown</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">VD-3</span></td>
+                            <td>Verdict</td>
+                            <td>Correction flow with re-evaluation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">VD-4</span></td>
+                            <td>Verdict</td>
+                            <td>Immutable audit trail</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">VD-5</span></td>
+                            <td>Verdict</td>
+                            <td>Policy and pack version recorded</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">VD-6</span></td>
+                            <td>Verdict</td>
+                            <td>Living status field in data model</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">LC-1</span></td>
+                            <td>Lifecycle</td>
+                            <td>Use case stages</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">LC-2</span></td>
+                            <td>Lifecycle</td>
+                            <td>Tier-driven governance process</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">LC-3</span></td>
+                            <td>Lifecycle</td>
+                            <td>2LoD review step for Medium/High/Critical</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">LC-4</span></td>
+                            <td>Lifecycle</td>
+                            <td>Re-evaluation triggers</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">RG-1</span></td>
+                            <td>Register</td>
+                            <td>Persistent AI inventory register</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">RG-2</span></td>
+                            <td>Register</td>
+                            <td>Role-based register access</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RG-3</span></td>
+                            <td>Register</td>
+                            <td>Filter and search</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RG-4</span></td>
+                            <td>Register</td>
+                            <td>Policy change diff</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="could">
+                            <td><span class="req-id">RG-5</span></td>
+                            <td>Register</td>
+                            <td>Export to CSV/JSON</td>
+                            <td><span class="priority-chip priority-could">Could</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CF-1</span></td>
+                            <td>Configuration</td>
+                            <td>YAML policy file</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CF-2</span></td>
+                            <td>Configuration</td>
+                            <td>Starter config pre-loaded</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CF-3</span></td>
+                            <td>Configuration</td>
+                            <td>Policy file versioning</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">CF-4</span></td>
+                            <td>Configuration</td>
+                            <td>Versioned regulatory pack files</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">RA-1</span></td>
+                            <td>Regulatory</td>
+                            <td>Jurisdiction-based pack activation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">RA-2</span></td>
+                            <td>Regulatory</td>
+                            <td>Most demanding standard governs</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">RA-3</span></td>
+                            <td>Regulatory</td>
+                            <td>Pack version in audit trail</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RA-4</span></td>
+                            <td>Regulatory</td>
+                            <td>Re-evaluation diff on pack update</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RA-5</span></td>
+                            <td>Regulatory</td>
+                            <td>Stale assessment flag</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="could">
+                            <td><span class="req-id">RA-6</span></td>
+                            <td>Regulatory</td>
+                            <td>Regulatory timeline view</td>
+                            <td><span class="priority-chip priority-could">Could</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">NF-1</span></td>
+                            <td>Non-Functional</td>
+                            <td>Deterministic evaluation</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">NF-2</span></td>
+                            <td>Non-Functional</td>
+                            <td>Immutable audit trail</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">NF-3</span></td>
+                            <td>Non-Functional</td>
+                            <td>No data leaves tool (MVP)</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">NF-4</span></td>
+                            <td>Non-Functional</td>
+                            <td>Runs in modern browser, no install</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">NF-5</span></td>
+                            <td>Non-Functional</td>
+                            <td>Verdict within 30 seconds</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="must">
+                            <td><span class="req-id">NF-6</span></td>
+                            <td>Non-Functional</td>
+                            <td>Human-readable policy file</td>
+                            <td><span class="priority-chip priority-must">Must</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Priority Model -->
+            <section id="priority-model">
+                <h2>Priority Model</h2>
+                <ul>
+                    <li><strong>Must</strong> — Without this, the product fails its core purpose. Present at launch.</li>
+                    <li><strong>Should</strong> — High value; included unless time or complexity prevents it. Strong candidate for MVP if feasible.</li>
+                    <li><strong>Could</strong> — Useful enhancement; included only if Musts and Shoulds are complete with capacity remaining.</li>
+                    <li><strong>Won't (this version)</strong> — Explicitly deferred to V2. Captured to prevent scope creep, not to dismiss the idea.</li>
+                </ul>
+            </section>
+
+            <footer>
+                Developed using the Grounded Vibe Methodology
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Sticky TOC highlighting
+        const sections = document.querySelectorAll('main section');
+        const tocLinks = document.querySelectorAll('.toc-nav a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
