@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVM Initialisation Report — AI Risk Appetite Pre-Check Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px;
+            background-color: #fffff8;
+        }
+
+        body {
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+            color: #333;
+            background-color: #fffff8;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            margin: 0 auto;
+            max-width: 1200px;
+        }
+
+        nav.toc {
+            position: sticky;
+            top: 0;
+            width: 200px;
+            padding: 2rem 1.5rem 2rem 2rem;
+            font-size: 0.95rem;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid #e8e8e8;
+        }
+
+        nav.toc h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #666;
+        }
+
+        nav.toc ul {
+            list-style: none;
+        }
+
+        nav.toc li {
+            margin-bottom: 0.5rem;
+        }
+
+        nav.toc a {
+            text-decoration: none;
+            color: #666;
+            transition: color 0.2s;
+            display: block;
+            padding-left: 0.5rem;
+            border-left: 2px solid transparent;
+        }
+
+        nav.toc a:hover {
+            color: #333;
+            border-left-color: #333;
+        }
+
+        nav.toc a.active {
+            color: #333;
+            font-weight: 500;
+            border-left-color: #333;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem 4rem;
+            max-width: 960px;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            margin-top: 2rem;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-style: italic;
+            font-weight: 400;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            border-top: 1px solid #e8e8e8;
+            padding-top: 1.5rem;
+        }
+
+        h2:first-of-type {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 1.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        strong {
+            font-weight: 600;
+        }
+
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            margin: 1.5rem 0 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        .metadata-item {
+            border-left: 2px solid #e8e8e8;
+            padding-left: 1rem;
+        }
+
+        .metadata-item label {
+            display: block;
+            color: #888;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .metadata-item value {
+            display: block;
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            margin: 1.5rem 0 2rem 0;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            background-color: #fff;
+            color: #333;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f7f7f2;
+        }
+
+        .status-canonical {
+            background-color: #f0f7f0 !important;
+        }
+
+        .status-established {
+            background-color: #fff !important;
+        }
+
+        .status-recognised {
+            background-color: #fdf8f0 !important;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: #16a765;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-left: 0.5rem;
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-intro {
+            color: #555;
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .regulatory-table {
+            margin: 2rem 0;
+        }
+
+        .regulatory-table td:nth-child(2),
+        .regulatory-table td:nth-child(3) {
+            text-align: left;
+        }
+
+        .roster-item {
+            line-height: 1.5;
+        }
+
+        .roster-tier {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .roster-file {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e8e8e8;
+            text-align: center;
+            color: #999;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .pipeline {
+            background-color: #f9f9f7;
+            padding: 1.5rem;
+            border-left: 2px solid #e8e8e8;
+            margin: 1.5rem 0;
+            font-family: "Monaco", "Courier New", monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .domain-table {
+            margin: 1.5rem 0;
+        }
+
+        .domain-table tr {
+            vertical-align: top;
+        }
+
+        .domain-table td:first-child {
+            font-weight: 600;
+            width: 120px;
+            padding-right: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            nav.toc {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e8e8e8;
+                padding: 2rem;
+            }
+
+            main {
+                padding: 2rem;
+            }
+
+            .metadata {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+            }
+
+            .metadata {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#executive-summary">Executive Summary</a></li>
+                <li><a href="#tier-1">Process Experts (Tier 1)</a></li>
+                <li><a href="#tier-2b">Industry Domain (Tier 2b)</a></li>
+                <li><a href="#roster">Expert Roster</a></li>
+                <li><a href="#activation">Activation Log</a></li>
+                <li><a href="#next-steps">Next Steps</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <h1>GVM Initialisation Report</h1>
+            <h1 style="font-size: 1.8rem; font-weight: 400; margin-top: 0.5rem; margin-bottom: 1.5rem;">AI Risk Appetite Pre-Check Engine</h1>
+
+            <div class="metadata">
+                <div class="metadata-item">
+                    <label>Date</label>
+                    <value>May 2026</value>
+                </div>
+                <div class="metadata-item">
+                    <label>Project</label>
+                    <value>ai-raf-precheck</value>
+                </div>
+                <div class="metadata-item">
+                    <label>Domain</label>
+                    <value>Financial Services</value>
+                </div>
+                <div class="metadata-item">
+                    <label>Focus</label>
+                    <value>AI Risk Governance</value>
+                </div>
+            </div>
+
+            <h2 id="executive-summary">Executive Summary</h2>
+
+            <p class="section-intro">The GVM has been initialised for the AI Risk Appetite Pre-Check Engine — a tool that models AI use cases as data-flow graphs and evaluates them against a bank's machine-readable Risk Appetite Framework (RAF), returning: in/out of appetite, what invariant was violated, the binding constraint, and the minimal control set.</p>
+
+            <p><strong>Business domain:</strong> Financial Services — AI Risk Governance. A deeply regulated, multi-jurisdictional domain with rapidly evolving regulatory expectations.</p>
+
+            <p><strong>Critical gap filled:</strong> No AI Governance industry domain file existed in GVM's reference library. File created at <code style="font-family: monospace; font-size: 0.9em; background-color: #f9f9f7; padding: 0.1em 0.3em;">~/.claude/skills/gvm-design-system/references/industry/ai-governance.md</code> covering NIST AI RMF, EU AI Act, SR 26-2, SS1/23, MAS FEAT, OSFI E-23, Cathy O'Neil, Stuart Russell, and Virginia Eubanks.</p>
+
+            <h2 id="tier-1">Process Experts (Tier 1)</h2>
+
+            <p class="section-intro">Tier 1 defaults confirmed without modification. All Tier 1 experts are appropriate for this regulated domain.</p>
+
+            <p><strong>Key roles:</strong></p>
+            <ul>
+                <li><strong>Clements:</strong> Specification decomposition for the multi-dimensional policy engine</li>
+                <li><strong>Brown (C4):</strong> Architecture visualisation</li>
+                <li><strong>Fairbanks:</strong> Risk-driven depth calibration</li>
+                <li><strong>Beck:</strong> Outside-in TDD for every invariant in the policy engine</li>
+                <li><strong>Fowler:</strong> Pragmatic, maintainable implementation</li>
+            </ul>
+
+            <h2 id="tier-2b">Industry Domain (Tier 2b)</h2>
+
+            <p class="section-intro">Five domain files activated: model-risk, operational-risk, credit-risk, market-risk, and newly created ai-governance.</p>
+
+            <h3 style="font-size: 1.1rem; font-style: normal; font-weight: 600; margin-top: 1.5rem; margin-bottom: 1rem;">Domain Coverage</h3>
+
+            <table class="domain-table">
+                <tr>
+                    <td><strong>AI Governance</strong></td>
+                    <td><strong>Core (NEW)</strong> — NIST AI RMF, EU AI Act, SR 26-2, SS1/23, MAS FEAT, OSFI E-23, O'Neil, Russell, Eubanks</td>
+                </tr>
+                <tr>
+                    <td><strong>Model Risk</strong></td>
+                    <td><strong>Core</strong> — Derman, Molnar, Taleb, SR 11-7</td>
+                </tr>
+                <tr>
+                    <td><strong>Operational Risk</strong></td>
+                    <td><strong>Core</strong> — Girling, Chapelle, Lam, COSO</td>
+                </tr>
+                <tr>
+                    <td><strong>Credit Risk</strong></td>
+                    <td><strong>Supporting</strong> — Annex III high-risk use cases</td>
+                </tr>
+                <tr>
+                    <td><strong>Market Risk</strong></td>
+                    <td><strong>Supporting</strong> — Trading prohibition hard lines</td>
+                </tr>
+            </table>
+
+            <h3 style="font-size: 1.1rem; font-style: normal; font-weight: 600; margin-top: 2rem; margin-bottom: 1rem;">Regulatory Divergence</h3>
+
+            <table class="regulatory-table">
+                <thead>
+                    <tr>
+                        <th>Framework</th>
+                        <th>Position on GenAI</th>
+                        <th>Implication</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SR 26-2</strong> (US, 2026)</td>
+                        <td>Excluded from MRM pending RFI</td>
+                        <td>Track III AI Governance minimum applies</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SS1/23</strong> (UK, 2023)</td>
+                        <td>Included — technology-agnostic</td>
+                        <td>Most demanding; ceiling for global firms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OSFI E-23</strong> (Canada, 2027)</td>
+                        <td>Included — broadest definition</td>
+                        <td>Canadian entities face most inclusive scope</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EU AI Act</strong> (EU, 2024)</td>
+                        <td>Parallel regime — high-risk system classification</td>
+                        <td>Annex III → forced Critical tier</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MAS FEAT</strong> (Singapore)</td>
+                        <td>Principles-based — decisions in scope</td>
+                        <td>Explainability and accountability mandatory</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="roster">Expert Roster Summary</h2>
+
+            <p class="description"><strong>31 experts active</strong> | <strong>9 newly added</strong> (all in new ai-governance.md) | <strong>22 existing</strong> | <strong>0 unscored</strong></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Expert / Framework</th>
+                        <th>Tier</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>NIST AI RMF 1.0</strong></td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>EU AI Act</strong> — Regulation (EU) 2024/1689</td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>Federal Reserve/OCC/FDIC</strong> — SR 26-2 (2026)</td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>PRA</strong> — SS1/23 (2023)</td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>MAS</strong> — FEAT Principles</td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>OSFI</strong> — Guideline E-23</td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>Cathy O'Neil</strong> — <em>Weapons of Math Destruction</em></td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>Stuart Russell</strong> — <em>Human Compatible</em></td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>Virginia Eubanks</strong> — <em>Automating Inequality</em></td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>ai-governance.md <span class="badge">New</span></td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>Kent Beck</strong> — <em>TDD: By Example</em></td>
+                        <td>1</td>
+                        <td>Canonical</td>
+                        <td>Existing</td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>Martin Fowler</strong> — <em>PEAA + Refactoring</em></td>
+                        <td>1</td>
+                        <td>Canonical</td>
+                        <td>Existing</td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>Emanuel Derman</strong> — <em>Models.Behaving.Badly</em></td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>Existing</td>
+                    </tr>
+                    <tr class="status-established">
+                        <td class="roster-item"><strong>Philippa Girling</strong> — <em>Operational Risk Management</em> (2nd ed.)</td>
+                        <td>2b</td>
+                        <td>Established</td>
+                        <td>Existing</td>
+                    </tr>
+                    <tr class="status-canonical">
+                        <td class="roster-item"><strong>COSO</strong> — <em>ERM 2017</em></td>
+                        <td>2b</td>
+                        <td>Canonical</td>
+                        <td>Existing</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="activation">Activation Log</h2>
+
+            <p class="section-intro">Initialised at <code style="font-family: monospace; font-size: 0.9em; background-color: #f9f9f7; padding: 0.1em 0.3em;">~/.claude/gvm/expert-activations.csv</code>. 20 entries written. First project.</p>
+
+            <h2 id="next-steps">Next Steps</h2>
+
+            <p><strong>Immediate:</strong> Run <code style="font-family: monospace; font-size: 0.9em; background-color: #f9f9f7; padding: 0.1em 0.3em;">/gvm-requirements</code></p>
+
+            <h3 style="font-size: 1.1rem; font-style: normal; font-weight: 600; margin-top: 1.5rem; margin-bottom: 1rem;">Full Pipeline</h3>
+
+            <div class="pipeline">/gvm-requirements → /gvm-test-cases → /gvm-tech-spec → /gvm-design-review → /gvm-walking-skeleton → /gvm-build → /gvm-code-review → /gvm-test → /gvm-doc-write → /gvm-doc-review → /gvm-deploy</div>
+
+            <h3 style="font-size: 1.1rem; font-style: normal; font-weight: 600; margin-top: 1.5rem; margin-bottom: 1rem;">Key Design Decision</h3>
+
+            <p>How the engine handles the <em>intake problem</em> — ensuring the data-flow graph constructed from a use case description is trustworthy, not just what the developer said.</p>
+
+            <footer>Developed using the Grounded Vibe Methodology</footer>
+        </main>
+    </div>
+</body>
+</html>

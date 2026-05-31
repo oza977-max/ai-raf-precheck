@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Brief — AI Risk Appetite Pre-Check Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        aside {
+            position: sticky;
+            top: 0;
+            width: 200px;
+            height: 100vh;
+            padding: 2rem 1.5rem;
+            background-color: #fafaf8;
+            border-right: 1px solid #e0ddd8;
+            overflow-y: auto;
+        }
+
+        aside h3 {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #666;
+            margin-bottom: 1.2rem;
+        }
+
+        aside nav ul {
+            list-style: none;
+        }
+
+        aside nav li {
+            margin-bottom: 0.8rem;
+        }
+
+        aside nav a {
+            font-size: 13px;
+            color: #555;
+            text-decoration: none;
+            border-left: 2px solid transparent;
+            padding-left: 0.8rem;
+            display: block;
+            transition: all 0.2s ease;
+        }
+
+        aside nav a:hover {
+            color: #222;
+            border-left-color: #8b7355;
+        }
+
+        main {
+            flex: 1;
+            padding: 3rem;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+            color: #222;
+        }
+
+        .meta {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid #e0ddd8;
+            padding-bottom: 1rem;
+        }
+
+        .meta p {
+            margin-bottom: 0.3rem;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            font-style: italic;
+            font-weight: 400;
+            margin-top: 2.5rem;
+            margin-bottom: 1.2rem;
+            color: #333;
+        }
+
+        h2:first-of-type {
+            margin-top: 0;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1.8rem;
+            margin-bottom: 0.8rem;
+            color: #333;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1.2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.8rem 0;
+            font-size: 14px;
+        }
+
+        thead {
+            background-color: #fafaf8;
+            border-bottom: 1px solid #999;
+        }
+
+        th {
+            padding: 0.8rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #555;
+        }
+
+        td {
+            padding: 0.8rem;
+            border: none;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f7f7f2;
+        }
+
+        tbody tr:hover {
+            background-color: #f0ebe3;
+        }
+
+        strong {
+            font-weight: 600;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e0ddd8;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+        }
+
+        @media (max-width: 1024px) {
+            aside {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e0ddd8;
+                padding: 1.5rem;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            aside nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            aside nav li {
+                margin-bottom: 0;
+            }
+
+            main {
+                padding: 2rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+            }
+
+            p {
+                text-align: left;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 0.6rem 0.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside>
+            <h3>Contents</h3>
+            <nav>
+                <ul>
+                    <li><a href="#problem">Problem Statement</a></li>
+                    <li><a href="#solution">Proposed Solution</a></li>
+                    <li><a href="#value">Value Proposition</a></li>
+                    <li><a href="#landscape">Existing Landscape</a></li>
+                    <li><a href="#shape">Solution Shape</a></li>
+                    <li><a href="#stakeholders">Stakeholders & Users</a></li>
+                    <li><a href="#constraints">Constraints</a></li>
+                    <li><a href="#outcomes">Possible Outcomes</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main>
+            <h1>Application Brief — AI Risk Appetite Pre-Check Engine</h1>
+
+            <div class="meta">
+                <p><strong>Date:</strong> May 2026</p>
+                <p><strong>Prepared by:</strong> Kshitij Oza</p>
+                <p><strong>Status:</strong> Draft — for review</p>
+            </div>
+
+            <h2 id="problem">1. Problem Statement</h2>
+
+            <p>Banks are deploying AI faster than their risk frameworks can absorb it. Every business line wants generative AI. Every competitor is adopting it. But the Second Line of Defence (2LoD) — the risk function that governs AI adoption — is drowning.</p>
+
+            <p>The specific challenge is threefold:</p>
+
+            <h3>Bottleneck.</h3>
+            <p>Risk managers review AI tools the same way they reviewed spreadsheet models: Word documents, committee meetings, bespoke memos. A single use case can take three months to clear.</p>
+
+            <h3>Inconsistency.</h3>
+            <p>Because each review is a human judgment call, two identical use cases submitted by different teams can receive different outcomes. There is no canonical, repeatable answer to "is this in appetite?"</p>
+
+            <h3>Blind spots.</h3>
+            <p>Self-attested intake is gameable. A developer who says "internal productivity tool, no client data" when the tool actually summarises client calls and feeds into regulated records will pass most manual reviews.</p>
+
+            <h2 id="solution">2. Proposed Solution</h2>
+
+            <p>A pre-check engine that sits between "I have an idea for an AI tool" and "we build it."</p>
+
+            <p>The use case is modelled as a data-flow graph. The bank's RAF is expressed as invariants over that graph. The engine returns: in/out of appetite, what tripped, the binding constraint, and the minimal control set — or reject.</p>
+
+            <p>The engine issues an attested certificate per use case — a living object with a status that can self-revoke if KRI conditions are breached after approval.</p>
+
+            <h2 id="value">3. Value Proposition</h2>
+
+            <p>For the CRO: AI risk review stops being the bottleneck. Every use case has an auditable verdict derived from the bank's own rules. For the 2LoD team: the engine handles mechanical classification; the team focuses on edge cases and policy. For the business: clear, fast answers on day one.</p>
+
+            <p>Key differentiator: not a one-time snapshot. The certificate stays green only while the controls hold.</p>
+
+            <h2 id="landscape">4. Existing Landscape</h2>
+
+            <p>Manual frameworks (Word / Big 4): expensive, slow, non-repeatable, stale. Horizontal AI governance tools (Credo AI, Holistic AI, ModelOp, Arthur): general-purpose, do not speak RAF/3LoD/MRM natively, not jurisdiction-aware at the SS1/23 vs SR 26-2 level.</p>
+
+            <h2 id="shape">5. High-Level Solution Shape</h2>
+
+            <ul>
+                <li><strong>Type:</strong> Web application (MVP: client-side local; V2: hosted SaaS / bank-controlled deployment)</li>
+                <li><strong>Users:</strong> CRO/Head of AI Risk (2LoD), AI developers (1LoD), Internal Audit (3LoD)</li>
+                <li><strong>Scale:</strong> Team → department → enterprise-wide</li>
+                <li><strong>Connects to:</strong> bank's RAF (config file), AI use case register, regulatory content packs (SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT), and (V2) live KRI feeds</li>
+            </ul>
+
+            <h2 id="stakeholders">6. Stakeholders and Users</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Relationship to product</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CRO / Board Risk Committee</td>
+                        <td>Approval authority; audience for register and certificate evidence</td>
+                    </tr>
+                    <tr>
+                        <td>Head of AI Risk (2LoD)</td>
+                        <td>Owner and primary operator</td>
+                    </tr>
+                    <tr>
+                        <td>AI developers / 1LoD</td>
+                        <td>Submit use cases; consume verdicts</td>
+                    </tr>
+                    <tr>
+                        <td>Internal Audit (3LoD)</td>
+                        <td>Consume certificate evidence</td>
+                    </tr>
+                    <tr>
+                        <td>Regulators</td>
+                        <td>Consume attested register on request</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2 id="constraints">7. Constraints</h2>
+
+            <ul>
+                <li>Regulator quality or not at all — traceable, attested, immutable, reproducible</li>
+                <li>Bank's RAF is sacrosanct — engine reads the bank's own rules</li>
+                <li>No sensitive data leaves the tool (MVP: local)</li>
+                <li>Jurisdiction-aware by design</li>
+                <li>MVP: client-side, no backend, policy as a file</li>
+            </ul>
+
+            <h2 id="outcomes">8. Possible Outcomes</h2>
+
+            <p>Approval authority may: Approve / Approve with conditions / Absorb into existing project / Defer / Decline.</p>
+
+            <footer>Developed using the Grounded Vibe Methodology</footer>
+        </main>
+    </div>
+</body>
+</html>
