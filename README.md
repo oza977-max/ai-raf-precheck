@@ -32,6 +32,30 @@ Using the starter config verbatim without review is an implicit governance decis
 
 ---
 
+## How regulatory grounding works — and its limits
+
+AIGate evaluates use cases against **regulatory override packs** — structured files encoding the rules from SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, and FSA Japan. These packs drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers triggers EU AI Act Annex III's forced-Critical classification.
+
+**But regulations evolve. The packs must evolve with them.**
+
+The SR 26-2 RFI will land (probably late 2026) and change the US position on generative AI in MRM. EU AI Act Annex III obligations take effect December 2027. OSFI E-23 becomes effective January 2027. Supervisory statements, dear CEO letters, and implementing acts change the picture continuously.
+
+**AIGate does not interpret regulations autonomously. It cannot.** A bank that tells its regulator "our AI interpreted SS1/23 and classified this use case accordingly" does not have a defensible answer. A qualified human — lawyer, senior risk professional — must stand behind every regulatory determination.
+
+The intended model is:
+
+1. **Monitor** — track key regulatory sources for new publications
+2. **Draft** — propose pack updates with the specific rules that need changing
+3. **Human review and sign-off** — a qualified person reviews, approves, and signs the update with their name and date
+4. **Version and distribute** — the signed update is versioned; subscribing banks receive it
+5. **Re-evaluate** — the engine re-runs the estate against the updated pack and produces a diff
+
+The LLM assists with steps 1 and 2. A human owns steps 3 and 4. **That is what makes it regulator-defensible.**
+
+For banks using the starter config: the pack versions shipped with AIGate reflect regulatory positions as of the date in each pack file's metadata. Review the effective dates. If a pack is older than the last significant regulatory development in that jurisdiction, treat it as provisional until it is updated.
+
+---
+
 ## What AIGate does not do
 
 - It does not write your risk appetite for you. It enforces the one you give it.

@@ -339,6 +339,18 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ## 5. Non-Functional Requirements
 
+**NF-7 (Must):** The system shall not autonomously interpret regulations or assert that a regulatory determination is authoritative without a named human reviewer having approved the relevant pack version.
+
+> Fit criterion: Every regulatory override pack file includes a `signed_by` field (name and role of the person who approved the interpretation) and a `signed_date` field. A pack without these fields is treated as draft and produces a provisional verdict. The verdict display flags provisional packs explicitly: "This verdict relies on a draft regulatory pack that has not been signed off by a qualified reviewer."
+
+**NF-8 (Must):** The system shall record the effective date and signing metadata of every regulatory pack version in the verdict audit trail, so that a bank can demonstrate to a regulator which human-approved interpretation was in force at the time of each verdict.
+
+> Fit criterion: The audit trail entry for a verdict includes, for each regulatory pack applied: pack name, pack version, effective date, signed_by name and role, signed_date. If the pack was unsigned (draft), this is recorded as "provisional — unsigned."
+
+**NF-9 (Should):** The system shall display a warning when a regulatory pack's effective date is older than a configurable staleness threshold (default: 12 months), prompting the bank to verify whether the pack reflects current regulatory expectations.
+
+> Fit criterion: A pack older than the staleness threshold displays a visible warning on every verdict that relied on it: "The [jurisdiction] pack was last reviewed [date]. Verify it reflects current regulatory guidance before relying on this verdict."
+
 **NF-1 (Must):** The evaluation engine shall be deterministic. The same confirmed data-flow graph evaluated against the same version of the policy file shall always produce the same verdict.
 
 > Fit criterion: Given identical inputs (graph + policy version), the output is identical on every run. No randomness, sampling, or model temperature affects the core evaluation.
