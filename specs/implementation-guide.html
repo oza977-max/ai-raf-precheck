@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Implementation Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; color: #111; background: #fffff8; line-height: 1.6; padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto; }
+    h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; color: #111; }
+    h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+    h4 { font-size: 1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.4rem; color: #444; }
+    p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 780px; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    .subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+    .date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+    nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+    nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+    nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; transition: color 0.15s; }
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h4 { padding-left: 1.4rem; font-size: 0.74rem; color: #aaa; }
+    main { margin-left: 260px; max-width: 1000px; }
+    table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; line-height: 1.5; width: auto; min-width: 480px; }
+    thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; color: #111; }
+    tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+    caption { font-style: italic; font-size: 0.88rem; color: #666; text-align: left; margin-bottom: 0.4rem; }
+    code { font-family: "Menlo", "Consolas", "Monaco", monospace; font-size: 0.88rem; background: #f0f0e8; padding: 0.1rem 0.35rem; border-radius: 2px; }
+    pre { background: #f0f0e8; padding: 1rem 1.2rem; border-radius: 3px; overflow-x: auto; margin: 1rem 0 1.5rem; max-width: 860px; }
+    pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+    .chunk { background: #f7f7f0; border-left: 3px solid #669; padding: 0.8rem 1rem; margin: 1.2rem 0; max-width: 860px; }
+    .chunk-id { font-size: 0.75rem; font-weight: 600; color: #669; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+    .gvm-attribution { font-size: 0.75rem; color: #999; font-style: italic; text-align: center; margin-top: 3rem; margin-bottom: 0; max-width: none; }
+    @media (max-width: 1200px) { nav.toc { position: static; width: 100%; max-height: none; border-right: none; border-bottom: 1px solid #ddd; padding: 1rem 0; margin-bottom: 2rem; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <h1>AIGate — Implementation Guide</h1>
+    <p class="subtitle">Phase-chunk decomposition, dependency network, wiring matrix, and build phases P1–P7 (16 chunks total)</p>
+    <p class="date">June 2026</p>
+
+    <!-- PLACEHOLDER: Expert Panel -->
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Work</th>
+          <th>Role in This Document</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mike Cohn</td>
+          <td><em>Agile Estimating and Planning</em> (Prentice Hall 2005); <em>User Stories Applied</em> (Addison-Wesley 2004)</td>
+          <td>INVEST chunk sizing; vertical slicing; dependency-aware sequencing</td>
+        </tr>
+        <tr>
+          <td>Martin Kleppmann</td>
+          <td><em>Designing Data-Intensive Applications</em> (O'Reilly 2017)</td>
+          <td>Share-nothing parallel execution; interface contracts at chunk boundaries</td>
+        </tr>
+        <tr>
+          <td>Andrew Hunt &amp; David Thomas</td>
+          <td><em>The Pragmatic Programmer</em> (20th anniversary ed., Addison-Wesley 2019)</td>
+          <td>Walking skeleton; tracer bullets; DRY</td>
+        </tr>
+        <tr>
+          <td>Kent Beck</td>
+          <td><em>Test-Driven Development: By Example</em> (Addison-Wesley 2002)</td>
+          <td>TDD at every chunk; test co-location rule</td>
+        </tr>
+        <tr>
+          <td>Frederick Brooks</td>
+          <td><em>The Mythical Man-Month</em> (Addison-Wesley 1995)</td>
+          <td>Conceptual integrity across all slices</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- PLACEHOLDER: Dependency Matrix -->
+    <h2 id="dependency-matrix">Dependency Matrix</h2>
+    <p>Each chunk is tagged: <strong>depends on</strong> / <strong>enables</strong> / <strong>parallel with</strong>.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Chunk</th>
+          <th>Title</th>
+          <th>Depends on</th>
+          <th>Enables</th>
+          <th>Parallel with</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>P1-C01</td>
+          <td>Project scaffold + walking skeleton</td>
+          <td>—</td>
+          <td>Everything</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P2-C01</td>
+          <td>Policy loader + Zod validation</td>
+          <td>P1-C01</td>
+          <td>P3-C01, P4-C01, P5-C01</td>
+          <td>P2-C02</td>
+        </tr>
+        <tr>
+          <td>P2-C02</td>
+          <td>IndexedDB stores (audit + register)</td>
+          <td>P1-C01</td>
+          <td>P3-C01, P4-C01, P5-C01</td>
+          <td>P2-C01</td>
+        </tr>
+        <tr>
+          <td>P3-C01</td>
+          <td>Evaluation engine — 8-step pipeline</td>
+          <td>P2-C01</td>
+          <td>P3-C02, P4-C01</td>
+          <td>P3-C02 (after C01)</td>
+        </tr>
+        <tr>
+          <td>P3-C02</td>
+          <td>Greedy set-cover control solver</td>
+          <td>P3-C01</td>
+          <td>P4-C01</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P4-C01</td>
+          <td>Intake flow — LLM graph extraction + state machine</td>
+          <td>P2-C01, P2-C02, P3-C01, P3-C02</td>
+          <td>P4-C02</td>
+          <td>P5-C01</td>
+        </tr>
+        <tr>
+          <td>P4-C02</td>
+          <td>Intake flow — structured form fallback (UC-3a)</td>
+          <td>P4-C01</td>
+          <td>P4-C03</td>
+          <td>P5-C01</td>
+        </tr>
+        <tr>
+          <td>P4-C03</td>
+          <td>Question generation + contradiction detection</td>
+          <td>P4-C01</td>
+          <td>P4-C04</td>
+          <td>P5-C01</td>
+        </tr>
+        <tr>
+          <td>P4-C04</td>
+          <td>Attestation + confirmation → evaluation</td>
+          <td>P4-C03, P3-C01, P3-C02</td>
+          <td>P5-C01, P5-C02</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P5-C01</td>
+          <td>Verdict display + correction flow</td>
+          <td>P4-C04, P2-C02</td>
+          <td>P5-C02</td>
+          <td>P5-C02 (after P5-C01 API)</td>
+        </tr>
+        <tr>
+          <td>P5-C02</td>
+          <td>Plain-English reasoning trace (VD-8)</td>
+          <td>P5-C01</td>
+          <td>P6-C01</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P6-C01</td>
+          <td>Register view — 1LoD + 2LoD + role access</td>
+          <td>P2-C02, P4-C04</td>
+          <td>P6-C02</td>
+          <td>P6-C02 (after API)</td>
+        </tr>
+        <tr>
+          <td>P6-C02</td>
+          <td>Lifecycle stage + tier routing + policy re-eval trigger</td>
+          <td>P6-C01, P3-C01</td>
+          <td>P7-C01</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P7-C01</td>
+          <td>AIGate self-assessment seed</td>
+          <td>P6-C01, P3-C01, P3-C02, P2-C02</td>
+          <td>P7-C02</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P7-C02</td>
+          <td>Export (RG-5) + parity check script</td>
+          <td>P6-C01, P7-C01</td>
+          <td>P7-C03</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>P7-C03</td>
+          <td>Integration closure + product startup verification</td>
+          <td>All chunks</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- PLACEHOLDER: Dependency Network -->
+    <h2 id="dependency-network">ASCII Dependency Network</h2>
+    <p>Two tracks: <strong>Engine track</strong> (top) and <strong>UI track</strong> (bottom). Cross-links show where they join.</p>
+    <pre><code>ENGINE TRACK
+───────────────────────────────────────────────────────────
+P1-C01  →  P2-C01  →  P3-C01  →  P3-C02  ──────────────────────────┐
+           |                                                          |
+           └──→  P2-C02  ──────────────────────────────────────┐     |
+                                                                |     |
+UI TRACK                                                        ↓     ↓
+───────────────────────────────────────────────────────────────
+           P4-C01  →  P4-C02  →  P4-C03  →  P4-C04  →  P5-C01  →  P5-C02
+           ↑                                    ↑
+           └── requires P2-C01, P2-C02 ─────────┘
+           └── requires P3-C01, P3-C02 ─────────┘
+
+REGISTER TRACK
+───────────────────────────────────────────────────────────────
+                                             P6-C01  →  P6-C02  →  P7-C01  →  P7-C02  →  P7-C03
+                                             ↑
+                                             └── requires P2-C02, P4-C04</code></pre>
+    <p><strong>Parallel opportunities:</strong></p>
+    <ul>
+      <li>P2-C01 ∥ P2-C02 (policy loader and IndexedDB stores share no files)</li>
+      <li>After P4-C04: P5-C01 can begin; P6-C01 can begin in parallel (share no source files until integration)</li>
+    </ul>
+
+    <!-- PLACEHOLDER: Critical Path -->
+    <h2 id="critical-path">Critical Path</h2>
+    <p>The longest sequential chain determines minimum build time:</p>
+    <pre><code>P1-C01 → P2-C01 → P3-C01 → P3-C02 → P4-C01 → P4-C03 → P4-C04 → P5-C01 → P5-C02 → P6-C01 → P6-C02 → P7-C01 → P7-C02 → P7-C03</code></pre>
+    <p>14 chunks on the critical path. P2-C02 and P4-C02 are off the critical path — they can be built in parallel without blocking the main sequence.</p>
+
+    <!-- PLACEHOLDER: Wiring Matrix -->
+    <h2 id="wiring-matrix">Wiring Matrix</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Build Phases -->
+    <h2 id="build-phases">Build Phases</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Claude-Specific Chunking Rules -->
+    <h2 id="claude-specific-chunking">Claude-Specific Chunking Rules</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Test Co-location Rule -->
+    <h2 id="test-colocations">Test Co-location Rule</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Parallel Work Identification -->
+    <h2 id="parallel-work">Parallel Work Identification</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Integration Closure Verification -->
+    <h2 id="integration-closure">Integration Closure Verification</h2>
+    <p><em>Content to be added</em></p>
+
+    <!-- PLACEHOLDER: Changelog -->
+    <h2 id="changelog">Changelog</h2>
+    <p><em>Content to be added</em></p>
+
+    <p class="gvm-attribution">Generated by the Grounded Vibe Methodology (GVM). Built with Claude Code.</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) current.el.classList.add('active');
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIGate — Architecture Overview</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body { font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; color: #111; background: #fffff8; line-height: 1.6; padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto; }
+h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; color: #111; }
+h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 780px; }
+ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+.subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+.date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; transition: color 0.15s; }
+nav.toc a:hover { color: #111; }
+nav.toc a.active { color: #111; font-weight: 600; }
+nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+main { margin-left: 260px; max-width: 1000px; }
+table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; line-height: 1.5; width: auto; min-width: 480px; }
+thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; color: #111; }
+tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 2px solid #333; }
+tbody tr:nth-child(even) { background: #f9f9f4; }
+caption { font-style: italic; font-size: 0.88rem; color: #666; text-align: left; margin-bottom: 0.4rem; }
+code { font-family: "Menlo", "Consolas", "Monaco", monospace; font-size: 0.88rem; background: #f0f0e8; padding: 0.1rem 0.35rem; border-radius: 2px; }
+pre { background: #f0f0e8; padding: 1rem 1.2rem; border-radius: 3px; overflow-x: auto; margin: 1rem 0 1.5rem; max-width: 860px; }
+pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+.gvm-attribution { font-size: 0.75rem; color: #999; font-style: italic; text-align: center; margin-top: 3rem; margin-bottom: 0; max-width: none; }
+@media (max-width: 1200px) { nav.toc { position: static; width: 100%; max-height: none; border-right: none; border-bottom: 1px solid #ddd; padding: 1rem 0; margin-bottom: 2rem; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <h1>AIGate — Architecture Overview</h1>
+    <p class="subtitle">System context, container diagram, key decisions (ADR-001–009), quality attributes, domain spec index, and conceptual integrity review</p>
+    <p class="date">June 2026</p>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Work</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Paul Clements</td>
+          <td><em>Documenting Software Architectures</em> (2nd ed., Addison-Wesley 2010)</td>
+          <td>View decomposition; context/container framing</td>
+        </tr>
+        <tr>
+          <td>Simon Brown</td>
+          <td><em>Software Architecture for Developers</em>, C4 Model (c4model.com)</td>
+          <td>C4 Level 1 (context) and Level 2 (container) diagrams</td>
+        </tr>
+        <tr>
+          <td>Frederick Brooks</td>
+          <td><em>The Mythical Man-Month</em> (Addison-Wesley 1995)</td>
+          <td>Conceptual integrity review — coherence across all six specs</td>
+        </tr>
+        <tr>
+          <td>Bass, Clements, Kazman</td>
+          <td><em>Software Architecture in Practice</em> (4th ed., Addison-Wesley 2021)</td>
+          <td>Quality attribute summary; architectural tactics</td>
+        </tr>
+        <tr>
+          <td>Michael Keeling</td>
+          <td><em>Design It!</em> (Pragmatic Bookshelf 2017)</td>
+          <td>ADR summary; cross-cutting decision coherence</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="system-context">System Context (C4 Level 1)</h2>
+    <p>AIGate is a browser-only single-page application. There is no server, no database server, and no backend API. All state lives in IndexedDB inside the user's browser. The Anthropic API is the only external system.</p>
+
+    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                        AIGate System                            │
+│                                                                 │
+│  [1LoD Developer / AI Submitter]                                │
+│    → Describes AI use case in plain language                    │
+│    → Reviews extracted graph                                    │
+│    → Confirms and receives verdict                              │
+│                                                                 │
+│  [2LoD Risk Manager]                                            │
+│    → Reviews register across all teams                          │
+│    → Approves High/Critical tier verdicts                       │
+│    → Runs blast-radius queries on shared components             │
+│                                                                 │
+│  [Anthropic API]                           (external)           │
+│    ← LLM graph extraction (UC-3)                                │
+│    ← Plain-English reasoning trace (VD-8)                       │
+│                                                                 │
+│  [Bank's RAF policy YAML]                  (local file / paste) │
+│    ← Loaded by user; governs all evaluations                    │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+
+    <h3>User roles</h3>
+    <ul>
+      <li><strong>1LoD (James)</strong> — AI project developer. Submits use cases. Sees own use cases only. Cannot approve his own high-tier verdict.</li>
+      <li><strong>2LoD (Priya)</strong> — Risk manager. Sees full register. Approves Medium/High/Critical tier verdicts. Edits policy file and runs impact diffs.</li>
+    </ul>
+
+    <h3>External dependencies</h3>
+    <ul>
+      <li><strong>Anthropic API</strong> — called only at two points: graph extraction (<code>src/llm/graph-extractor.ts</code>) and reasoning trace generation (<code>src/llm/reasoning-trace.ts</code>). The evaluation engine never calls the LLM. Both calls require an API key configured by the user; the system degrades gracefully (structured form fallback, template reasoning trace) when no key is present.</li>
+      <li><strong>Bank's policy YAML</strong> — the source of truth for all risk appetite rules. Not served by AIGate; the bank loads it as a file upload or paste. Version-stamped in every verdict record.</li>
+    </ul>
+
+    <h2 id="container-diagram">Container Diagram (C4 Level 2)</h2>
+    <p>Five logical containers inside the browser:</p>
+
+    <pre><code>Browser (localhost / served from dist/)
+│
+├── React SPA (Vite + TypeScript strict)
+│   ├── IntakeFlow.tsx        — 9-state intake wizard
+│   ├── VerdictDisplay.tsx    — Verdict + correction flow
+│   ├── RegisterView.tsx      — Register + filtering + export
+│   └── PolicyEditor.tsx      — Policy file load + version display
+│
+├── Evaluation Engine (pure TypeScript, no UI)
+│   ├── src/engine/evaluate.ts          — 8-step deterministic pipeline
+│   ├── src/engine/question-generator.ts — Risk-proportionate questions
+│   ├── src/engine/contradiction.ts      — Contradiction detection
+│   └── src/engine/workflow-router.ts    — Tier-to-workflow routing
+│
+├── IndexedDB (via idb library)
+│   ├── aigate-audit / audit_events      — Append-only audit trail
+│   └── aigate-register / register_nodes — Graph inventory
+│               / register_edges
+│
+├── LLM Bridge (Anthropic SDK, dangerouslyAllowBrowser)
+│   ├── src/llm/graph-extractor.ts       — UC-3 graph extraction
+│   └── src/llm/reasoning-trace.ts       — VD-8 plain-English trace
+│
+└── Policy Loader (js-yaml + Zod)
+    └── src/store/policy.ts              — Parse, validate, version YAML</code></pre>
+
+    <h3>Data flows</h3>
+    <ol>
+      <li><strong>Intake → Engine:</strong> <code>IntakeFlow.tsx</code> calls <code>evaluate(graph, policy)</code> after attestation. The engine is a pure function — no async, no LLM, no I/O.</li>
+      <li><strong>Engine → Audit:</strong> The verdict is written to <code>audit_events</code> via <code>audit.append()</code> immediately after evaluation.</li>
+      <li><strong>Engine → Register:</strong> The use case node and edge graph are written to <code>register_nodes</code> / <code>register_edges</code> on first confirmation.</li>
+      <li><strong>LLM Bridge → Audit:</strong> The reasoning trace is written into the <code>verdict_produced</code> audit event after the separate LLM call.</li>
+      <li><strong>Policy Loader → Engine:</strong> The loaded <code>PolicyFile</code> object is passed into every <code>evaluate()</code> call. The engine reads it on each call; there is no caching that could produce stale evaluations.</li>
+    </ol>
+
+    <h2 id="key-architectural-decisions">Key Architectural Decisions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ADR</th>
+          <th>Decision</th>
+          <th>Rationale</th>
+          <th>Spec</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ADR-001</td>
+          <td>React 18 + Vite 5 + TypeScript 5 strict</td>
+          <td>Proven SPA stack; strict TypeScript prevents the class of runtime errors common in policy-logic code</td>
+          <td>cross-cutting</td>
+        </tr>
+        <tr>
+          <td>ADR-002</td>
+          <td>Minimal condition language (gte/lte/in/not_in/exact) — not OPA/Rego</td>
+          <td>Full policy language is over-engineered for a bank-controlled YAML config; a bank risk manager must be able to edit it without developer assistance</td>
+          <td>policy-schema</td>
+        </tr>
+        <tr>
+          <td>ADR-003</td>
+          <td>OQ-PV-1 envelope semantics: ordinal ceiling, not set subset</td>
+          <td>Risk appetite envelopes express maximum exposure; "≤ Zone C" is the correct read, not "one of {Zone C}"</td>
+          <td>policy-schema</td>
+        </tr>
+        <tr>
+          <td>ADR-004</td>
+          <td>Greedy set-cover control solver — not SAT</td>
+          <td>Control libraries are small and human-curated; greedy is within log-factor of optimal, auditable, and runs in milliseconds</td>
+          <td>evaluation-engine</td>
+        </tr>
+        <tr>
+          <td>ADR-005</td>
+          <td>Sequential pipeline — not rule engine</td>
+          <td>Evaluation order (hard lines before tier before controls) is a hard regulatory requirement, not configuration</td>
+          <td>evaluation-engine</td>
+        </tr>
+        <tr>
+          <td>ADR-006</td>
+          <td>IndexedDB append-only audit store — not localStorage</td>
+          <td>Structured data, no 5MB limit, <code>add()</code> semantics prevent overwrites; V1 provisional immutability documented honestly</td>
+          <td>verdict-audit</td>
+        </tr>
+        <tr>
+          <td>ADR-007</td>
+          <td>LLM reasoning trace post-evaluation — not engine-native prose</td>
+          <td>Engine must be deterministic (NF-1); LLM prose is grounded by passing all structured verdict data verbatim</td>
+          <td>verdict-audit</td>
+        </tr>
+        <tr>
+          <td>ADR-008</td>
+          <td>Adjacency list graph register in IndexedDB</td>
+          <td>RG-1 non-retrofittable; blast-radius queries require O(edges) traversal, not O(use_cases × components)</td>
+          <td>register-lifecycle</td>
+        </tr>
+        <tr>
+          <td>ADR-009</td>
+          <td>localStorage role toggle — not real auth</td>
+          <td>OQ-3 resolution; V1 is proof-of-concept grade; clearly provisional; V1.5 adds server-side session</td>
+          <td>register-lifecycle</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="quality-attributes">Quality Attributes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Quality Attribute</th>
+          <th>ASR</th>
+          <th>Tactic (Bass/Clements/Kazman)</th>
+          <th>Where enforced</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Determinism</strong></td>
+          <td>NF-1</td>
+          <td>Pure function with no randomness; no LLM in the engine</td>
+          <td><code>evaluation-engine.md §3</code></td>
+        </tr>
+        <tr>
+          <td><strong>Auditability</strong></td>
+          <td>NF-2, NF-8</td>
+          <td>Append-only event log; full provenance in every verdict event</td>
+          <td><code>verdict-audit.md §4</code></td>
+        </tr>
+        <tr>
+          <td><strong>Transparency</strong></td>
+          <td>VD-1, VD-2, VD-8</td>
+          <td>Plain-English reasoning trace; binding constraint display; policy rule citations</td>
+          <td><code>verdict-audit.md §5, §7</code></td>
+        </tr>
+        <tr>
+          <td><strong>Graceful degradation</strong></td>
+          <td>NF-3, UC-3a</td>
+          <td>Structured form fallback when no API key; template reasoning trace fallback</td>
+          <td><code>intake-flow.md §5</code>; <code>verdict-audit.md §7</code></td>
+        </tr>
+        <tr>
+          <td><strong>Offline first</strong></td>
+          <td>NF-3</td>
+          <td>No server dependency; policy loaded locally; LLM is optional</td>
+          <td>cross-cutting</td>
+        </tr>
+        <tr>
+          <td><strong>Schema evolution safety</strong></td>
+          <td>RG-1, VD-7</td>
+          <td>Non-retrofittable graph model and conditions block specified in V1 data model</td>
+          <td><code>register-lifecycle.md §4</code>; <code>verdict-audit.md §4.1</code></td>
+        </tr>
+        <tr>
+          <td><strong>Role-based access</strong></td>
+          <td>RG-2, LC-2</td>
+          <td>Query-layer filtering; 2LoD approval gate on High/Critical verdicts</td>
+          <td><code>register-lifecycle.md §5, §7</code></td>
+        </tr>
+        <tr>
+          <td><strong>Performance</strong></td>
+          <td>NF-5</td>
+          <td>Greedy solver O(n×m); pure synchronous engine; &lt; 200ms for realistic policy files</td>
+          <td><code>evaluation-engine.md §4</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="domain-spec-index">Domain Spec Index</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Spec</th>
+          <th>File</th>
+          <th>Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cross-cutting</td>
+          <td><code>cross-cutting.md</code></td>
+          <td>Tech stack (React 18 + Vite + TypeScript strict), project structure, error handling conventions, module boundary rules, development conventions. Every domain spec references this.</td>
+        </tr>
+        <tr>
+          <td>Policy Schema</td>
+          <td><code>policy-schema.md</code></td>
+          <td>YAML structure for the bank's RAF: invariants, dimension conditions, jurisdiction packs, control library, platform/vendor registry. Defines the minimal condition language (ADR-002) and envelope semantics (ADR-003).</td>
+        </tr>
+        <tr>
+          <td>Evaluation Engine</td>
+          <td><code>evaluation-engine.md</code></td>
+          <td>8-step deterministic pipeline from <code>DataFlowGraph</code> to <code>Verdict</code>. Greedy set-cover control solver (ADR-004). Sequential pipeline architecture (ADR-005). The engine is a pure function — no LLM, no I/O.</td>
+        </tr>
+        <tr>
+          <td>Intake Flow</td>
+          <td><code>intake-flow.md</code></td>
+          <td>9-state intake wizard from free-text description to confirmed graph. LLM graph extraction (UC-3) with structured form fallback (UC-3a). Question generation, contradiction detection, attestation.</td>
+        </tr>
+        <tr>
+          <td>Verdict & Audit</td>
+          <td><code>verdict-audit.md</code></td>
+          <td>Verdict display (VD-1–8), append-only audit store (NF-2), correction flow (VD-3), confidence caveats (RA-11), LLM reasoning trace (VD-8). ADR-006 (append-only store) and ADR-007 (post-evaluation trace).</td>
+        </tr>
+        <tr>
+          <td>Register & Lifecycle</td>
+          <td><code>register-lifecycle.md</code></td>
+          <td>Graph-based AI inventory (RG-1, non-retrofittable), role-based access (RG-2), lifecycle stage machine (LC-1), tier-to-workflow routing (LC-2), policy update re-evaluation trigger (LC-4), AIGate self-assessment (LC-6).</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="conceptual-integrity-review">Conceptual Integrity Review (Brooks)</h2>
+    <blockquote style="border-left: 4px solid #ddd; padding-left: 1.2rem; margin: 1.5rem 0; font-style: italic; color: #555;">
+      "I will contend that conceptual integrity is the most important consideration in system design. It is better to have a system omit certain anomalous features and improvements, but to reflect one set of design ideas, than to have one that contains many good but independent and uncoordinated ideas." — Frederick Brooks
+    </blockquote>
+
+    <h3>Central design idea</h3>
+    <p>A use case is a data-flow graph. The bank's appetite is a set of typed conditions on that graph. The engine is a deterministic function that maps (graph, policy) → verdict. Everything else — the intake wizard, the audit trail, the register, the reasoning trace — is scaffolding for this core function.</p>
+
+    <h3>Coherence assessment across specs</h3>
+    <ol>
+      <li><strong>The <code>DataFlowGraph</code> type flows cleanly through all specs.</strong> Defined in <code>intake-flow.md</code>, consumed by <code>evaluation-engine.md</code>, referenced by <code>verdict-audit.md</code>, stored by <code>register-lifecycle.md</code>. One type, four consumers, no divergence.</li>
+      <li><strong>The LLM boundary is consistent.</strong> The engine never calls the LLM (NF-1). The two LLM call sites (<code>graph-extractor.ts</code>, <code>reasoning-trace.ts</code>) are in <code>src/llm/</code> and are explicitly bounded. No other spec introduces an LLM call. The fallback pattern (no API key → graceful degradation) is the same in both sites.</li>
+      <li><strong>The audit trail is the single source of truth for everything that happened.</strong> Every domain spec that generates events writes to <code>audit.ts</code> using the <code>AuditEvent</code> discriminated union. There is no secondary state store that could diverge from the audit trail. The register derives its <code>UseCaseSummary</code> view from audit events — it does not maintain independent state.</li>
+      <li><strong>Provisional limitations are consistently documented.</strong> NF-2 (immutable audit trail) is V1 proof-of-concept grade and documented as such in both <code>verdict-audit.md</code> and <code>register-lifecycle.md</code>. The role access control (ADR-009) is consistently labelled provisional. These are honest V1 constraints, not deferred decisions.</li>
+      <li><strong>One design inconsistency identified and resolved:</strong> The <code>lifecycle_stage_changed</code> event is written by <code>register.ts</code> and also audited in <code>audit.ts</code>. The spec resolves this by having <code>register.updateLifecycleStage()</code> call <code>audit.append()</code> internally — there is one write path, not two. Callers never call audit directly for lifecycle events.</li>
+    </ol>
+
+    <h3>Verdict</h3>
+    <p>The system coheres as a single design. The core abstraction (graph → verdict) is consistent across all six specs. The scaffolding (intake, audit, register) does not deviate from or contradict the core. The V1 limitations are consistently positioned.</p>
+
+    <h2 id="v1-scope-and-limitations">V1 Scope and Honest Limitations</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>V1 State</th>
+          <th>V2 Plan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Audit immutability</td>
+          <td>Application-layer only (IndexedDB <code>add()</code>); editable at OS level</td>
+          <td>Append-only server-backed event store (even a minimal SQLite)</td>
+        </tr>
+        <tr>
+          <td>Role-based access</td>
+          <td>localStorage toggle; no real auth</td>
+          <td>Server-side session; password or SSO gate</td>
+        </tr>
+        <tr>
+          <td>2LoD notification</td>
+          <td>Badge in register view</td>
+          <td>Email / Slack notification on High/Critical verdict</td>
+        </tr>
+        <tr>
+          <td>Re-evaluation triage (LC-5)</td>
+          <td>All active use cases queued on policy update</td>
+          <td>Automated determination of affected vs unaffected use cases</td>
+        </tr>
+        <tr>
+          <td>Living status (VD-6)</td>
+          <td>Field exists in data model; not updated automatically</td>
+          <td>Live KRI feed integration</td>
+        </tr>
+        <tr>
+          <td>Blast-radius query</td>
+          <td>IndexedDB index-based traversal in-browser</td>
+          <td>Queryable graph export to external risk reporting tools</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>V1 is honestly positioned as a <strong>proof-of-concept grade</strong> deployment. A bank that needs a regulator-defensible system of record requires V1.5 (server-backed audit store). The value proposition of V1 is: deterministic, transparent, auditable governance <em>logic</em>, running as a self-contained tool that can be evaluated before any infrastructure commitment.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+(function () {
+  const toc = document.getElementById('toc');
+  const headings = document.querySelectorAll('h2[id], h3[id]');
+  const links = [];
+  headings.forEach(function (h) {
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+    links.push({ el: a, target: h });
+  });
+  function onScroll() {
+    let current = links[0];
+    for (let i = 0; i < links.length; i++) {
+      if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+    }
+    links.forEach(function (l) { l.el.classList.remove('active'); });
+    if (current) current.el.classList.add('active');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+  </script>
+</body>
+</html>

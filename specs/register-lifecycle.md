@@ -1,0 +1,471 @@
+# AIGate — Register & Lifecycle Specification
+
+**Version:** 1.0  
+**Date:** June 2026  
+**Status:** Draft  
+**Covers:** RG-1 through RG-5, LC-1 through LC-4, LC-6 — graph-based inventory register, role-based access, tier-to-workflow routing, re-evaluation triggers, AIGate self-assessment
+
+---
+
+## Expert Panel
+
+| Expert | Work | Role in This Document |
+|--------|------|-----------------------|
+| Martin Kleppmann | *Designing Data-Intensive Applications* (O'Reilly 2017) | Graph data model design; adjacency list representation; derived views |
+| Martin Fowler | *Patterns of Enterprise Application Architecture* (Addison-Wesley 2002) | Repository pattern for register store; derived read views |
+| Michael Keeling | *Design It!* (Pragmatic Bookshelf 2017) | ADR-008 and ADR-009; ASR identification |
+| George Fairbanks | *Just Enough Software Architecture* (Marshall & Brainerd 2010) | Graph model non-retrofittability risk |
+| Dan Vanderkam | *Effective TypeScript* (2nd ed., O'Reilly 2024) | Graph node discriminated unions; type-safe adjacency list |
+| Alan Cooper | *About Face* (4th ed., Wiley 2014) | Register view design for Priya (2LoD) — filtering, blast-radius queries |
+
+---
+
+## 1. Purpose
+
+This spec defines:
+- The graph data model for the AI inventory register — graph stored in IndexedDB, not a flat list (RG-1 — non-retrofittable)
+- Adjacency list representation for shared nodes: models, platforms, vendors (RG-1)
+- Role-based access: 1LoD sees own records, 2LoD sees all (RG-2)
+- Register views: filtering, search, export (RG-3, RG-5)
+- Policy-update re-evaluation trigger: queues all active use cases (LC-4, RG-4)
+- Lifecycle stage machine: Idea → Retired (LC-1)
+- Tier-to-workflow routing: Low=self-service, Medium=2LoD-notify, High/Critical=2LoD-approve (LC-2)
+- AIGate self-assessment: AIGate appears in its own register (LC-6)
+
+Verdict storage is handled by `src/store/audit.ts` (see `verdict-audit.md`). This spec covers the register store (`src/store/register.ts`) — the live state of use cases and their derived summaries.
+
+---
+
+## 2. Architecturally Significant Requirements
+
+| ASR | Requirement | Architectural Impact |
+|---|---|---|
+| Graph data model is non-retrofittable | RG-1 | Must be an adjacency list in IndexedDB from V1; cannot be added to a flat model later |
+| Role access must filter at query layer | RG-2 | `getAll()` accepts `role` parameter; never loads all records then filters in-memory |
+| Re-evaluation trigger queues all active cases | LC-4 | Policy version change writes a `re_evaluation_queued` event to every active use case |
+| Lifecycle stage is the governance source of truth | LC-1 | Stage transitions are the primary audit events that drive 2LoD queues |
+| AIGate self-assessment must be a real evaluation | LC-6 | Not a stub — AIGate must run its own engine on its own graph and store the result |
+| Tier-to-workflow routing is policy-configurable | LC-2 | The routing table lives in the policy file, not hardcoded in the UI |
+
+---
+
+## 3. Design Decisions
+
+### ADR-008 — Graph register: adjacency list in IndexedDB
+
+**Context:** RG-1 requires a graph data model (non-negotiable, cannot be retrofitted). Use cases share nodes: multiple use cases may share the same vendor model, platform, or data zone. Blast-radius queries ("which use cases share this vendor?") must be answerable without full-table scans. V1 is browser-only.
+
+**Options considered:**
+1. **Flat list of use case records** — each use case is a self-contained JSON record. Simple, but RG-1 explicitly rejects this. Blast-radius queries require full scan and client-side joins. Rejected by requirements.
+2. **Adjacency list in IndexedDB** — two object stores: `use_cases` (node records) and `graph_edges` (directed edges between nodes). Shared components (models, platforms) appear as their own node records referenced by edges. Graph traversal is O(edges) not O(use_cases × components). Queryable with IndexedDB indexes.
+3. **In-memory graph only (no persistence)** — trivially lost on page reload. Rejected.
+4. **External graph database (e.g., Dexie Addon)** — no established browser-based graph query layer that is stable and dependency-light. Adjacency list with application-layer traversal is standard for this scale.
+
+**Decision:** Adjacency list in IndexedDB via `idb`. Two object stores: `register_nodes` and `register_edges`. Indexes on `node_type`, `use_case_id`, and `to_node_id` enable the queries RG-1 through RG-6 require.
+
+**Consequences:** Application-layer graph traversal for blast-radius queries. For V1's expected inventory size (tens to low hundreds of use cases), O(edges) traversal is negligible. V2 could add a materialised adjacency cache if performance degrades.
+
+---
+
+### ADR-009 — Role access: localStorage toggle with query-layer filtering
+
+**Context:** RG-2 requires 1LoD to see only their own records and 2LoD to see all. There is no real authentication in V1 (cross-cutting spec, OQ-3 resolution). The role mechanism must be simple, auditable, and clearly provisional.
+
+**Options considered:**
+1. **No role separation** — single view. Rejected: RG-2 is a Must requirement.
+2. **localStorage toggle `aigate:role` = '1LoD' | '2LoD'** — user sets role on first use; register queries filter by role. Simple, zero-config, clearly provisional. Used in cross-cutting spec.
+3. **Password-gated 2LoD view** — adds friction without real security; still insecure. Not meaningfully better than option 2 for a V1 proof-of-concept.
+
+**Decision:** localStorage toggle with query-layer filtering. The `RegisterStore.getAll(role, actorId)` function applies the role filter at the query level — it does not load all records and filter in-memory. For 1LoD, the IndexedDB index on `submitted_by` is used; for 2LoD, no filter is applied.
+
+**Consequences:** Not a real access control mechanism. A 1LoD user who knows the code could set `localStorage['aigate:role'] = '2LoD'` and see all records. V1 is honest proof-of-concept grade. V1.5 adds proper auth (even a simple server-side session).
+
+---
+
+## 4. Graph Data Model
+
+### 4.1 Node types
+
+```typescript
+// src/store/register.ts
+
+export type RegisterNodeType =
+  | 'use_case'
+  | 'ai_model'          // A specific model (e.g. GPT-4, claude-sonnet-4-6)
+  | 'platform'          // Approved platform (e.g. Azure OpenAI)
+  | 'vendor'            // Vendor (e.g. OpenAI, Anthropic)
+  | 'data_source'       // Named data source (e.g. "Client CRM")
+  | 'control';          // An applied control from the control library
+
+export interface RegisterNode {
+  node_id: string;                // UUID v4
+  node_type: RegisterNodeType;
+  label: string;                  // Human-readable name
+  created_at: string;             // ISO 8601
+  metadata: RegisterNodeMetadata; // Discriminated by node_type
+}
+
+export type RegisterNodeMetadata =
+  | { node_type: 'use_case'; submitted_by: string; lifecycle_stage: LifecycleStage; current_verdict_id: string | null; tier: Tier | null; track: Track | null }
+  | { node_type: 'ai_model'; model_id: string; vendor: string; is_approved: boolean }
+  | { node_type: 'platform'; platform_id: string; approved_envelope_summary: string }
+  | { node_type: 'vendor'; vendor_name: string; approval_status: 'approved' | 'unapproved' | 'pending' }
+  | { node_type: 'data_source'; data_class: DataClass; data_zone: DataZone }
+  | { node_type: 'control'; control_id: string; burden: 1 | 2 | 3 | 4 | 5 };
+```
+
+### 4.2 Edge types
+
+```typescript
+export type RegisterEdgeType =
+  | 'uses_model'          // use_case → ai_model
+  | 'runs_on_platform'    // use_case → platform
+  | 'provided_by_vendor'  // ai_model → vendor
+  | 'consumes_data_from'  // use_case → data_source
+  | 'requires_control';   // use_case → control (controls assigned by verdict)
+
+export interface RegisterEdge {
+  edge_id: string;        // UUID v4
+  from_node_id: string;
+  to_node_id: string;
+  edge_type: RegisterEdgeType;
+  created_at: string;
+}
+```
+
+### 4.3 IndexedDB schema
+
+Two object stores in the `aigate-register` database (version 1):
+
+**`register_nodes`** — keyPath: `node_id`  
+Indexes:
+- `by_type` on `node_type` (multi-entry: false) — for `getAll('use_case')` queries
+- `by_submitted_by` on `metadata.submitted_by` (multi-entry: false) — for 1LoD role filter
+
+**`register_edges`** — keyPath: `edge_id`  
+Indexes:
+- `by_from_node` on `from_node_id` — for "which components does use case X use?"
+- `by_to_node` on `to_node_id` — for blast-radius queries: "which use cases use component Y?"
+
+### 4.4 Graph traversal — blast-radius query
+
+```typescript
+// src/store/register.ts
+export async function getBlastRadius(componentNodeId: string): Promise<RegisterNode[]> {
+  // Index on to_node_id — O(use cases that reference this component)
+  const edges = await db.getAllFromIndex('register_edges', 'by_to_node', componentNodeId);
+  const useCaseNodeIds = edges.map(e => e.from_node_id);
+  return Promise.all(useCaseNodeIds.map(id => db.get('register_nodes', id)));
+}
+```
+
+This query is O(edges from this node) — not a full table scan. For a shared model used by 50 use cases, it reads 50 edge records, not all register records.
+
+---
+
+## 5. RegisterStore Interface (`src/store/register.ts`)
+
+```typescript
+export interface RegisterStore {
+  // Write
+  addNode(node: RegisterNode): Promise<void>;
+  addEdge(edge: RegisterEdge): Promise<void>;
+  updateUseCaseVerdictSummary(useCaseId: string, summary: UseCaseSummary): Promise<void>;
+  updateLifecycleStage(useCaseId: string, stage: LifecycleStage, actor: string): Promise<void>;
+
+  // Read — role-filtered
+  getUseCases(role: 'all' | string): Promise<UseCaseSummary[]>;
+  // role='all' → 2LoD; role=actorId → 1LoD, filtered by submitted_by
+
+  getUseCase(useCaseId: string): Promise<UseCaseSummary | undefined>;
+  getGraph(useCaseId: string): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }>;
+  getBlastRadius(componentNodeId: string): Promise<RegisterNode[]>;
+
+  // Export (RG-5)
+  exportAll(): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }>;
+}
+
+export interface UseCaseSummary {
+  use_case_id: string;
+  label: string;
+  submitted_by: string;
+  submitted_at: string;
+  lifecycle_stage: LifecycleStage;
+  tier: Tier | null;
+  track: Track | null;
+  current_verdict_status: 'approved' | 'approved_with_controls' | 'rejected' | 'provisional' | null;
+  last_evaluated_at: string | null;
+  policy_version_at_evaluation: string | null;
+  stale_assessment: boolean;  // True if active pack versions differ from evaluation-time versions
+}
+```
+
+---
+
+## 6. Lifecycle Stage Machine (LC-1)
+
+```
+STAGES:
+  Idea           ← Use case created but not yet submitted for evaluation
+  Exploring      ← Intake flow started but not confirmed
+  Pre-checked    ← Verdict produced; awaiting 2LoD action (if Medium/High/Critical)
+  Approved       ← Low: self-service final. Medium/High/Critical: 2LoD approved.
+  In_Production  ← Use case is live
+  Monitored      ← Live with active KRI monitoring (V2)
+  Retired        ← Use case decommissioned
+
+TRANSITIONS (all recorded in audit trail via verdict-audit.md AuditEvent):
+  Idea           → Exploring         (intake flow started)
+  Exploring      → Idea              (intake abandoned — timeout or user exits)
+  Exploring      → Pre-checked       (verdict produced)
+  Pre-checked    → Pre-checked       (correction + re-evaluation)
+  Pre-checked    → Approved          (Low tier: automatic; Medium/High/Critical: 2LoD approved)
+  Pre-checked    → Rejected          (terminal for this version — submitter must re-submit with changes)
+  Approved       → In_Production     (submitter marks as deployed)
+  In_Production  → Monitored         (V2 — KRI feeds connected)
+  In_Production  → Pre-checked       (re-evaluation triggered: LC-4)
+  Monitored      → Pre-checked       (re-evaluation triggered)
+  Any            → Retired           (2LoD retires use case)
+```
+
+```typescript
+export type LifecycleStage =
+  | 'idea'
+  | 'exploring'
+  | 'pre_checked'
+  | 'approved'
+  | 'in_production'
+  | 'monitored'
+  | 'retired';
+```
+
+Stage transitions are written to the audit trail (via `audit.ts` `lifecycle_stage_changed` event — see `verdict-audit.md §4.3`). The register store's `updateLifecycleStage()` updates `register_nodes` AND calls `audit.append()` to record the transition event. Both writes happen in the same `async` call; they are not wrapped in a transaction (IndexedDB transactions span one object store at a time in `idb`; partial write risk is acknowledged as a V1 limitation).
+
+---
+
+## 7. Tier-to-Workflow Routing (LC-2)
+
+The routing logic is defined in the policy file, not hardcoded. The `tier_workflows` section of the policy file specifies:
+
+```yaml
+tier_workflows:
+  low:
+    governance_path: self_service
+    verdict_is_final: true
+    twoLoD_notification: false
+    twoLoD_approval_required: false
+  medium:
+    governance_path: notify
+    verdict_is_final: false
+    twoLoD_notification: true
+    twoLoD_approval_required: false
+    twoLoD_review_window_days: 5   # 2LoD has 5 days to object; auto-approves if no action
+  high:
+    governance_path: approve
+    verdict_is_final: false
+    twoLoD_notification: true
+    twoLoD_approval_required: true
+  critical:
+    governance_path: approve
+    verdict_is_final: false
+    twoLoD_notification: true
+    twoLoD_approval_required: true
+```
+
+The `src/engine/workflow-router.ts` function reads this section after a verdict is produced and determines the next lifecycle action:
+
+```typescript
+export function routeToWorkflow(
+  tier: Tier,
+  policy: PolicyFile
+): WorkflowAction
+
+export interface WorkflowAction {
+  lifecycle_stage: LifecycleStage;  // What stage the use case moves to
+  requires_twoLoD_action: boolean;
+  auto_approves_after_days: number | null;
+  notification_message: string;     // For 2LoD notification display
+}
+```
+
+For V1, "2LoD notification" means the register view shows a badge on the use case in the 2LoD view. A full workflow notification system (email, Slack) is V2.
+
+---
+
+## 8. Re-evaluation Trigger (LC-4)
+
+When the policy file is updated (`src/store/policy.ts` saves a new version), a `re_evaluation_queued` audit event is appended for every active use case (any use case in `approved`, `in_production`, or `pre_checked` stage). The register view shows a "Policy updated — re-evaluation required" badge on affected records.
+
+```typescript
+// src/store/policy.ts — called when policy file is saved
+export async function onPolicyUpdated(
+  newVersion: string,
+  register: RegisterStore,
+  audit: AuditStore
+): Promise<void> {
+  const activeCases = await register.getUseCases('all');
+  const active = activeCases.filter(uc =>
+    ['approved', 'in_production', 'pre_checked'].includes(uc.lifecycle_stage)
+  );
+
+  for (const uc of active) {
+    await audit.append({
+      event_id: uuidv4(),
+      use_case_id: uc.use_case_id,
+      event_type: 'lifecycle_stage_changed',
+      occurred_at: new Date().toISOString(),
+      actor: 'system',
+      payload: {
+        type: 'lifecycle_stage_changed',
+        from_stage: uc.lifecycle_stage,
+        to_stage: 'pre_checked'
+      }
+    });
+    await register.updateLifecycleStage(uc.use_case_id, 'pre_checked', 'system');
+  }
+}
+```
+
+This follows the policy: re-evaluation is triggered for all active cases; triage (LC-5 — determining which are affected vs unaffected by the specific changed provisions) is a V2 feature. In V1, all active cases are queued.
+
+---
+
+## 9. AIGate Self-Assessment (LC-6)
+
+AIGate must appear in its own register as a submitted use case with a verdict produced by its own evaluation engine. This is not a stub or a fixture — it is a real evaluation.
+
+**Seeded use case record:**
+
+```typescript
+// src/seeds/aigate-self-assessment.ts
+export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
+  id: 'aigate-self-assessment',
+  version: 1,
+  intake_method: 'structured_form',
+  extracted_at: '2026-06-01T00:00:00Z',
+  input_nodes: [{
+    id: 'in-1',
+    label: 'User-described AI use case (text)',
+    data_class: 'internal',
+    data_zone: 'zone_b'
+  }],
+  processing_nodes: [{
+    id: 'proc-1',
+    label: 'AIGate evaluation engine + LLM graph extraction',
+    model_type: 'nlp_text_generation',
+    autonomy_level: 1,          // Human confirms graph before evaluation
+    data_zone: 'zone_b',
+    vendor: 'Anthropic'
+  }],
+  output_nodes: [{
+    id: 'out-1',
+    label: 'Structured risk verdict (in-appetite / out-of-appetite)',
+    action_type: 'recommendation',
+    exposure: 'internal_only',
+    decision_bindingness: 'advisory',
+    reversibility: 'reversible'
+  }],
+  edges: [
+    { from: 'in-1', to: 'proc-1' },
+    { from: 'proc-1', to: 'out-1' }
+  ]
+};
+```
+
+On first launch (when the register is empty), `src/seeds/aigate-self-assessment.ts` is called to:
+1. Insert the AIGate use case as a `RegisterNode` with `node_type: 'use_case'`
+2. Insert the Anthropic vendor node and `provided_by_vendor` edge
+3. Run `evaluate(AIGATE_USE_CASE_GRAPH, policy)` against the loaded policy
+4. Store the resulting `Verdict` in the audit trail via `audit.append()`
+5. Update the lifecycle stage to `approved` (AIGate satisfies its own gates — or the policy is reconsidered)
+
+If the policy changes after this initial seeding, the AIGate use case is queued for re-evaluation along with all other active use cases (LC-4 trigger applies).
+
+---
+
+## 10. Register View (`src/components/RegisterView.tsx`)
+
+### 10.1 1LoD view
+
+Shows only the current user's use cases. Columns: Use Case Name, Tier, Track, Status, Last Evaluated, Policy Version. No filtering controls — list is short enough to be readable as-is for a single submitter.
+
+### 10.2 2LoD view
+
+Shows all use cases across all teams. Columns: Use Case Name, Submitter, Tier, Track, Status, Last Evaluated, Policy Version, Stale. Filter chips: Tier, Track, Stage, Verdict Status. Search bar: full-text over use case name.
+
+A "Stale" badge appears on use cases where `stale_assessment: true` (the policy or pack versions have changed since the verdict was issued).
+
+The "Policy updated" banner appears at the top of the 2LoD view when any active use case has a `re_evaluation_queued` audit event more recent than its last `verdict_produced` event.
+
+### 10.3 Export (RG-5)
+
+The "Export JSON" button in the 2LoD view calls `register.exportAll()` and triggers a browser file download. The exported JSON is:
+```json
+{
+  "exported_at": "ISO 8601",
+  "nodes": [ ...RegisterNode[] ],
+  "edges": [ ...RegisterEdge[] ]
+}
+```
+
+---
+
+## 11. Integration Points
+
+| Integrates with | Direction | Contract |
+|---|---|---|
+| `src/store/audit.ts` | Bidirectional | Lifecycle events written to audit trail; register reads audit events for `VerdictSummary` |
+| `src/engine/evaluate.ts` | Consumes | `evaluate(graph, policy)` → `Verdict` |
+| `src/engine/workflow-router.ts` | Consumes | Verdict + policy → `WorkflowAction` |
+| `src/store/policy.ts` | Consumes events from | Policy version change triggers `onPolicyUpdated()` |
+| `IntakeFlow.tsx` | Writes to register | New use case node added on first graph confirmation |
+| `VerdictDisplay.tsx` | Reads from register | `UseCaseSummary` for stage badge in verdict header |
+| `src/seeds/aigate-self-assessment.ts` | Writes to register + audit | Called once on first launch (empty register) |
+
+---
+
+## 12. Error Handling & Edge Cases
+
+| Case | Handling |
+|---|---|
+| `addNode()` with duplicate `node_id` | IndexedDB `add()` throws; caller catches and logs — idempotent seed calls must check before inserting |
+| `onPolicyUpdated()` fails mid-loop (e.g. quota exceeded) | Partial re-evaluation queue written; next app launch detects uncompleted queue via audit event scan |
+| Graph traversal on empty register | `getBlastRadius()` returns `[]`; UI shows "No use cases found using this component" |
+| AIGate self-assessment graph violates own gates | `evaluate()` returns `rejected`; the seed stores this result; the UI flags it as a governance alert: "AIGate does not satisfy its own controls — policy review required" |
+| 1LoD user has no submitted use cases | `getUseCases(actorId)` returns `[]`; RegisterView shows "No use cases submitted yet" with a link to start intake |
+| IndexedDB `register` database missing (first launch) | `openDB()` creates it with the schema migration; seeding runs immediately after |
+
+---
+
+## 13. Requirement Traceability
+
+| Requirement | Coverage |
+|---|---|
+| RG-1 | §4 — adjacency list graph model; §4.3 IndexedDB schema; ADR-008 |
+| RG-2 | §5 `getUseCases(role)` — query-layer filtering; ADR-009 |
+| RG-3 | §10.2 filter chips and search bar |
+| RG-4 | §8 — `onPolicyUpdated()` queues re-evaluation for all active cases |
+| RG-5 | §10.3 — `exportAll()` → JSON download |
+| LC-1 | §6 — lifecycle stage machine and transitions |
+| LC-2 | §7 — `workflow-router.ts`; policy-configurable `tier_workflows` |
+| LC-4 | §8 — policy update re-evaluation trigger |
+| LC-6 | §9 — AIGate self-assessment seeding |
+
+---
+
+## 14. Test Case References
+
+| Test cases | Spec section |
+|---|---|
+| TC-RG-1-01, TC-RG-1-02 | §4 graph model; §4.4 blast-radius traversal |
+| TC-RG-2-01, TC-RG-2-02 | §5 `getUseCases(role)` role filtering |
+| TC-RG-3-01 | §10.2 filter chips |
+| TC-RG-5-01 | §10.3 export |
+| TC-LC-1-01, TC-LC-1-02 | §6 lifecycle stage machine |
+| TC-LC-2-01, TC-LC-2-02, TC-LC-2-03 | §7 tier-to-workflow routing |
+| TC-LC-4-01 | §8 policy update trigger |
+| TC-LC-4-02 | §9 AIGate self-assessment |
+
+---
+
+*Developed using the Grounded Vibe Methodology*

@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Verdict & Audit Specification</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; color: #111; background: #fffff8; line-height: 1.6; padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto; }
+    h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; color: #111; }
+    h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+    p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 780px; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    .subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+    .date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+    nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+    nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+    nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; transition: color 0.15s; }
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    main { margin-left: 260px; max-width: 1000px; }
+    table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; line-height: 1.5; width: auto; min-width: 480px; }
+    thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; color: #111; }
+    tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+    caption { font-style: italic; font-size: 0.88rem; color: #666; text-align: left; margin-bottom: 0.4rem; }
+    code { font-family: "Menlo", "Consolas", "Monaco", monospace; font-size: 0.88rem; background: #f0f0e8; padding: 0.1rem 0.35rem; border-radius: 2px; }
+    pre { background: #f0f0e8; padding: 1rem 1.2rem; border-radius: 3px; overflow-x: auto; margin: 1rem 0 1.5rem; max-width: 860px; }
+    pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+    details.adr { background: #f7f7f0; border-left: 3px solid #669; padding: 0; margin: 1rem 0 1.2rem; max-width: 860px; }
+    details.adr summary { padding: 0.8rem 1rem; cursor: pointer; list-style: none; }
+    details.adr summary::-webkit-details-marker { display: none; }
+    details.adr summary::before { content: '\25B8 '; font-size: 0.85rem; color: #999; }
+    details.adr[open] summary::before { content: '\25BE '; }
+    .adr-id { font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.5rem; }
+    .adr-title { font-weight: 600; color: #333; }
+    .adr-status { font-size: 0.75rem; color: #999; font-style: italic; margin-left: 0.5rem; }
+    .adr-body { padding: 0 1rem 0.8rem; border-top: 1px solid #e0e0e0; }
+    .adr-body h4 { font-size: 0.85rem; font-weight: 600; color: #666; margin: 0.6rem 0 0.3rem; }
+    .gvm-attribution { font-size: 0.75rem; color: #999; font-style: italic; text-align: center; margin-top: 3rem; margin-bottom: 0; max-width: none; }
+    @media (max-width: 1200px) { nav.toc { position: static; width: 100%; max-height: none; border-right: none; border-bottom: 1px solid #ddd; padding: 1rem 0; margin-bottom: 2rem; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <h1>AIGate — Verdict &amp; Audit Specification</h1>
+    <p class="subtitle">Verdict display, append-only audit trail, correction flow, confidence caveats, and plain-English reasoning trace (VD-1 through VD-8, NF-2, NF-8, RA-11)</p>
+    <p class="date">June 2026</p>
+
+    <!-- Expert Panel -->
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Work</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UI/UX Designer</td>
+          <td>Verdict display, user interaction patterns</td>
+          <td>Designs verdict layout, ensures plain-language output, validates accessibility</td>
+        </tr>
+        <tr>
+          <td>Backend Architect</td>
+          <td>Audit trail storage, correction mechanics</td>
+          <td>Designs immutable event log, append-only writes, efficient retrieval</td>
+        </tr>
+        <tr>
+          <td>Risk/Compliance Lead</td>
+          <td>Audit trail integrity, regulatory traceability</td>
+          <td>Ensures non-repudiation, timestamps, and chain-of-custody for verdicts</td>
+        </tr>
+        <tr>
+          <td>Data Scientist</td>
+          <td>Confidence scoring, reasoning trace</td>
+          <td>Translates model outputs into human-readable explanations</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Purpose -->
+    <h2 id="purpose">Purpose</h2>
+    <ul>
+      <li>Define how verdicts are displayed to risk officers with clarity on confidence and key decision drivers</li>
+      <li>Specify an append-only audit trail that captures all verdict changes, reasoning, and corrections for regulatory compliance</li>
+      <li>Detail the correction flow for adjusting verdicts post-issuance without destroying audit history</li>
+      <li>Provide templates for plain-English reasoning traces that explain model decisions to non-technical users</li>
+      <li>Ensure integration with Policy Schema and Evaluation Engine while maintaining data integrity across the system</li>
+    </ul>
+
+    <!-- Architecturally Significant Requirements -->
+    <h2 id="architecturally-significant-requirements">Architecturally Significant Requirements</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ASR</th>
+          <th>Requirement</th>
+          <th>Architectural Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VD-1</td>
+          <td>Verdicts display result, confidence interval, and key drivers</td>
+          <td>Requires separation of verdict presentation layer from evaluation logic; needs confidence scoring in evaluation engine</td>
+        </tr>
+        <tr>
+          <td>VD-2</td>
+          <td>Audit trail is append-only, immutable, with full history visible</td>
+          <td>Demands event-sourced storage; rules out simple record overwrites; mandates timestamp and versioning</td>
+        </tr>
+        <tr>
+          <td>VD-3</td>
+          <td>Corrections create new audit events, linking to original verdict</td>
+          <td>Requires linked-list or event-chain structure; parent–child references; amendment reason capture</td>
+        </tr>
+        <tr>
+          <td>VD-4</td>
+          <td>Reasoning traces map evaluation steps to human-readable explanations</td>
+          <td>Calls for inline reasoning generation during evaluation; two-phase output (structured + narrative)</td>
+        </tr>
+        <tr>
+          <td>NF-2</td>
+          <td>Audit retrieval &lt; 200ms for single verdict, &lt; 2s for 1000-verdict range query</td>
+          <td>Demands indexed storage (timestamp, intake-id, case-id); rules out full scans; favors time-series DB or partitioned storage</td>
+        </tr>
+        <tr>
+          <td>NF-8</td>
+          <td>Confidence caveat text generated from interval, historical accuracy, data freshness</td>
+          <td>Requires metadata pipeline feeding evaluation engine; caveat rules authored separately from model</td>
+        </tr>
+        <tr>
+          <td>RA-11</td>
+          <td>Audit trail tamper-evidence via cryptographic hash chain</td>
+          <td>Mandates SHA-256 or stronger hashing of event sequence; stored hash visible in UI or audit logs</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Design Decisions -->
+    <h2 id="design-decisions">Design Decisions</h2>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-006</span>
+        <span class="adr-title">Event-Sourced Audit Trail with Hash Chain</span>
+        <span class="adr-status">Approved</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>Regulatory compliance requires tamper-proof, append-only verdict records. Overwriting fields erases history; corrections must be traceable. A simple "update verdict" table fails audit and legal discovery.</p>
+
+        <h4>Decision</h4>
+        <p>Use event sourcing: each verdict, correction, and state change is an immutable <code>AuditEvent</code>. Events chain via cryptographic hash (SHA-256 of prior event + current data). Corrections link to the original verdict by <code>parentVerdictId</code> and include <code>amendmentReason</code>.</p>
+
+        <h4>Rationale</h4>
+        <ul>
+          <li>Audit trail is queryable, searchable, and legally defensible.</li>
+          <li>Hash chain prevents silent tampering—any change to an old event breaks the chain.</li>
+          <li>Supports both "show full history" (compliance) and "latest state" (user-facing) queries.</li>
+          <li>Enables correction flow without destroying original verdict.</li>
+        </ul>
+
+        <h4>Consequences</h4>
+        <ul>
+          <li>Storage cost increases (every verdict + all corrections stored); requires TTL or archive strategy for old events.</li>
+          <li>Verdict display must compute "current state" from event log (latest non-superseded event).</li>
+          <li>Performance: indexed timestamp + intake-id queries keep retrieval sub-2s for large ranges.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-007</span>
+        <span class="adr-title">Inline Reasoning Trace Generation During Evaluation</span>
+        <span class="adr-status">Approved</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>Risk officers need to understand <em>why</em> the engine approved or rejected a deal. Post-hoc explanation is opaque and expensive; tracing the decision path in real-time is feasible but adds latency.</p>
+
+        <h4>Decision</h4>
+        <p>Evaluation engine captures reasoning as it executes: which controls fired, which policies matched, which confidence factors applied. A <code>ReasoningTrace</code> object annotates each control result with plain-English templates (e.g., "Control X applied because [Factor Y met threshold Z]"). Templates are authored separately from model logic and can be updated without code changes.</p>
+
+        <h4>Rationale</h4>
+        <ul>
+          <li>Reasoning is authoritative—generated from actual decision path, not guessed afterward.</li>
+          <li>Plain-English templates make output understandable to non-technical users.</li>
+          <li>Separating templates from logic enables non-engineers to refine explanations.</li>
+          <li>Reasoning trace is captured in audit trail, supporting historical queries ("why was this approved on June 1?").</li>
+        </ul>
+
+        <h4>Consequences</h4>
+        <ul>
+          <li>Evaluation engine must instrument control callbacks; modest CPU overhead (~5–10%).</li>
+          <li>Template authoring is a new operational task; changes to templates require coordination with risk team.</li>
+          <li>Storage: reasoning trace can be 2–5x verdict size; needs compression or separate storage tier.</li>
+        </ul>
+      </div>
+    </details>
+
+    <!-- Data Models -->
+    <h2 id="data-models">Data Models</h2>
+
+    <h3 id="verdictconditions">4.1 VerdictConditions</h3>
+    <pre><code>interface VerdictConditions {
+  intakeId: string;                    // Link to Policy Schema intake
+  caseId: string;                      // Associated case/application ID
+  evaluationTimestamp: number;         // Unix ms when evaluation ran
+  evaluationEngineVersion: string;     // Version of Evaluation Engine
+  evaluationInputHash: string;         // SHA-256(intake data + policy rules)
+  verdictType: 'in-appetite' | 'out-of-appetite' | 'review-required';
+  confidenceInterval: {
+    lower: number;                     // e.g., 0.82
+    upper: number;                     // e.g., 0.91
+    methodology: string;               // 'bootstrap' | 'bayesian' | ...
+  };
+  violatedControls: string[];          // Control IDs that failed
+  appliedControls: string[];           // Control IDs that passed
+  minimalControlSet: string[];         // Recommended additions to bring in-appetite
+  suspiciousFactors: Array&lt;{
+    factor: string;                    // e.g., "Negative news sentiment"
+    severity: 'low' | 'medium' | 'high';
+    evidence: string;                  // Brief explanation
+  }&gt;;
+}
+</code></pre>
+
+    <h3 id="confidencecaveat">4.2 ConfidenceCaveat</h3>
+    <pre><code>interface ConfidenceCaveat {
+  caveats: string[];                   // Array of caveat messages
+  generatedAt: number;                 // Timestamp when caveat text was generated
+  factors: {
+    confidenceScore: number;           // 0–1
+    intervalWidth: number;             // upper - lower
+    dataFreshness: number;             // Days since intake data refreshed
+    historicalAccuracy: number;        // % of past predictions correct
+  };
+  caveatRules: Array&lt;{
+    rule: string;                      // Rule ID (e.g., "CAVEAT_WIDE_INTERVAL")
+    triggered: boolean;
+    message: string;                   // Template text if triggered
+  }&gt;;
+}
+
+// Caveat text templates (authored by risk team)
+const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
+  WIDE_INTERVAL: "Confidence interval is wide (>0.15); consider supplementary controls.",
+  STALE_DATA: "Intake data is {{daysOld}} days old; refreshing may improve accuracy.",
+  LOW_SCORE: "Confidence below 0.85; this verdict is borderline.",
+};
+</code></pre>
+
+    <h3 id="auditevent">4.3 AuditEvent</h3>
+    <pre><code>interface AuditEvent {
+  eventId: string;                     // UUID
+  eventType: 'verdict-issued' | 'verdict-corrected' | 'audit-query' | 'audit-export';
+  timestamp: number;                   // Unix ms
+  actor: {
+    userId: string;
+    role: string;                      // 'system' | 'risk-officer' | 'compliance-admin'
+  };
+  verdict?: VerdictConditions;         // Set for 'verdict-issued'
+  correction?: {
+    parentVerdictId: string;           // ID of verdict being amended
+    oldVerdictType: string;
+    newVerdictType: string;
+    amendmentReason: string;
+    supportingDoc: string;             // e.g., URL to amendment request
+  };
+  reasoningTrace?: ReasoningTrace;     // Explanation of decision
+  priorEventHash: string;              // SHA-256 of prior event (hash chain)
+  eventHash: string;                   // SHA-256(eventType + verdict + correction + timestamp + priorEventHash)
+  metadata: {
+    policyVersionId: string;           // Policy rules version
+    intakeVersionId: string;           // Intake schema version
+  };
+}
+</code></pre>
+
+    <h3 id="auditstoreinterface">4.4 AuditStore Interface</h3>
+    <pre><code>interface AuditStore {
+  // Append: insert new audit event (auto-compute eventHash)
+  append(event: Omit&lt;AuditEvent, 'eventId' | 'eventHash'&gt;): Promise&lt;AuditEvent&gt;;
+
+  // Retrieve: get latest verdict state for intake
+  getLatestVerdict(intakeId: string): Promise&lt;VerdictConditions | null&gt;;
+
+  // History: retrieve all events for an intake
+  getVerdictHistory(intakeId: string): Promise&lt;AuditEvent[]&gt;;
+
+  // Range query: events between timestamps
+  queryByTimeRange(
+    startMs: number,
+    endMs: number,
+    filters?: { intakeId?: string; eventType?: string }
+  ): Promise&lt;AuditEvent[]&gt;;
+
+  // Integrity check: verify hash chain
+  verifyHashChain(startEventId: string, endEventId: string): Promise&lt;boolean&gt;;
+
+  // Export: export audit trail for compliance
+  exportAuditLog(
+    startMs: number,
+    endMs: number,
+    format: 'json' | 'csv'
+  ): Promise&lt;Buffer&gt;;
+}
+
+// IndexedDB schema (browser-side caching)
+const AUDIT_DB_SCHEMA = {
+  stores: {
+    events: {
+      keyPath: 'eventId',
+      indexes: [
+        { name: 'timestamp', unique: false },
+        { name: 'intakeId', unique: false },
+        { name: 'caseId', unique: false },
+        { name: 'timestamp-intakeId', multiEntry: false }, // Composite
+      ],
+    },
+  },
+};
+
+// Server: PostgreSQL partitioned by month
+// CREATE TABLE audit_events (
+//   event_id UUID PRIMARY KEY,
+//   event_type TEXT NOT NULL,
+//   timestamp BIGINT NOT NULL,
+//   intake_id TEXT,
+//   case_id TEXT,
+//   verdict JSONB,
+//   correction JSONB,
+//   reasoning_trace JSONB,
+//   prior_event_hash VARCHAR(256),
+//   event_hash VARCHAR(256) NOT NULL,
+//   FOREIGN KEY (prior_event_hash) REFERENCES audit_events(event_hash)
+// ) PARTITION BY RANGE (timestamp);
+// CREATE INDEX idx_audit_timestamp ON audit_events(timestamp);
+// CREATE INDEX idx_audit_intake ON audit_events(intake_id, timestamp);
+</code></pre>
+
+    <!-- Verdict Display -->
+    <h2 id="verdict-display">Verdict Display</h2>
+
+    <h3 id="display-layout">5.1 Layout</h3>
+    <pre>[Verdict Card]
+┌─────────────────────────────────────────┐
+│ Intake ID: [ID]  │  Case: [Case]        │
+├─────────────────────────────────────────┤
+│ VERDICT: [IN-APPETITE] ✓                │
+│ Confidence: 87% [0.82–0.91]             │
+├─────────────────────────────────────────┤
+│ Key Drivers:                            │
+│  ✓ Passed control: Low debt ratio       │
+│  ✓ Passed control: Positive sentiment   │
+│  ⚠ Caveat: Data is 5 days old           │
+├─────────────────────────────────────────┤
+│ [Expand Reasoning] [Download] [Correct] │
+└─────────────────────────────────────────┘
+    </pre>
+
+    <h3 id="verdict-badge">5.2 Verdict Badge</h3>
+    <p>A large, color-coded badge displays the verdict type:</p>
+    <ul>
+      <li><strong>In-Appetite:</strong> Green checkmark, "IN-APPETITE"</li>
+      <li><strong>Out-of-Appetite:</strong> Red X, "OUT-OF-APPETITE", lists violated controls</li>
+      <li><strong>Review Required:</strong> Yellow triangle, "REVIEW REQUIRED", lists suspicious factors</li>
+    </ul>
+
+    <h3 id="confidence-display">5.3 Confidence Display</h3>
+    <p>Confidence is shown as a percentage (e.g., 87%) with an interval below (0.82–0.91). The percentage is the midpoint of the interval. A horizontal bar chart shows the interval visually, with shading for the inner quartile.</p>
+
+    <h3 id="reasoning-expander">5.4 Reasoning Expander</h3>
+    <p>Clicking "Expand Reasoning" shows the plain-English trace of each control and decision step. Steps are hierarchical; users can collapse/expand each section. Timestamps and policy versions are shown in a footer.</p>
+
+    <!-- Correction Flow -->
+    <h2 id="correction-flow">Correction Flow</h2>
+
+    <h3 id="correction-initiation">6.1 Correction Initiation</h3>
+    <p>A risk officer clicks "Correct Verdict" on a verdict card. A modal opens asking for:</p>
+    <ul>
+      <li>New verdict type (in-appetite / out-of-appetite / review-required)</li>
+      <li>Amendment reason (free text, max 500 chars)</li>
+      <li>Supporting document link (optional)</li>
+    </ul>
+
+    <h3 id="correction-processing">6.2 Correction Processing</h3>
+    <pre><code>async function correctVerdict(
+  originalVerdictId: string,
+  newVerdictType: 'in-appetite' | 'out-of-appetite' | 'review-required',
+  amendmentReason: string,
+  supportingDoc?: string,
+  actor: Actor
+): Promise&lt;AuditEvent&gt; {
+  // 1. Retrieve original verdict from audit log
+  const originalEvent = await auditStore.getVerdictById(originalVerdictId);
+  if (!originalEvent) throw new Error('Verdict not found');
+
+  // 2. Create correction event
+  const correctionEvent: Omit&lt;AuditEvent, 'eventId' | 'eventHash'&gt; = {
+    eventType: 'verdict-corrected',
+    timestamp: Date.now(),
+    actor,
+    correction: {
+      parentVerdictId: originalVerdictId,
+      oldVerdictType: originalEvent.verdict!.verdictType,
+      newVerdictType,
+      amendmentReason,
+      supportingDoc: supportingDoc || '',
+    },
+    priorEventHash: originalEvent.eventHash,
+    metadata: {
+      policyVersionId: originalEvent.metadata.policyVersionId,
+      intakeVersionId: originalEvent.metadata.intakeVersionId,
+    },
+  };
+
+  // 3. Append to audit store (auto-generates eventHash and eventId)
+  const newEvent = await auditStore.append(correctionEvent);
+
+  // 4. Emit audit log event for compliance monitoring
+  await emitAuditNotification({
+    type: 'verdict-corrected',
+    intakeId: originalEvent.verdict!.intakeId,
+    originalVerdictId,
+    correctionId: newEvent.eventId,
+    actor: actor.userId,
+  });
+
+  return newEvent;
+}
+</code></pre>
+
+    <h3 id="correction-display">6.3 Correction Display</h3>
+    <p>Once corrected, the verdict card shows a "Corrected" badge with a link to view the amendment reason and prior history. The audit trail shows both the original and correction events, with the correction appearing as a child of the original in the event hierarchy.</p>
+
+    <!-- Reasoning Trace Generator -->
+    <h2 id="reasoning-trace-generator">Reasoning Trace Generator</h2>
+
+    <h3 id="reasoning-interface">7.1 ReasoningTrace Interface</h3>
+    <pre><code>interface ReasoningTrace {
+  traceId: string;                      // UUID
+  steps: ReasoningStep[];
+  summary: string;                      // One-paragraph executive summary
+  generatedAt: number;                  // Unix ms
+}
+
+interface ReasoningStep {
+  stepId: string;
+  stepType: 'control-evaluation' | 'policy-check' | 'factor-assessment';
+  title: string;                        // e.g., "Debt Ratio Control"
+  status: 'pass' | 'fail' | 'neutral';
+  narrative: string;                    // Plain-English explanation
+  evidence: Array&lt;{
+    key: string;                        // e.g., "debt_ratio_value"
+    value: any;
+    unit?: string;                      // e.g., "%"
+    threshold?: string;                 // e.g., "&lt; 0.40"
+  }&gt;;
+  childSteps?: ReasoningStep[];         // Nested steps
+}
+</code></pre>
+
+    <h3 id="reasoning-generation">7.2 Reasoning Generation</h3>
+    <p>During evaluation, the engine instruments each control and policy check with a callback that populates <code>ReasoningStep</code> objects. The callback receives the control name, input data, and result. A template engine translates this into plain English using pre-authored rules (e.g., "If debt ratio &lt; 0.40, output 'Debt ratio is acceptable at {{value}}%'").</p>
+
+    <h3 id="reasoning-code-snippet">7.3 Code Snippet: Template Engine</h3>
+    <pre><code>function generateNarrative(
+  stepType: string,
+  controlName: string,
+  evidence: Record&lt;string, any&gt;,
+  result: 'pass' | 'fail'
+): string {
+  const templates = REASONING_TEMPLATES[controlName] || REASONING_TEMPLATES['default'];
+  const template = templates[result];
+
+  // Simple interpolation: replace {{key}} with evidence[key]
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) =&gt; {
+    return evidence[key]?.toString() || 'N/A';
+  });
+}
+
+const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&gt;&gt; = {
+  'debt-ratio': {
+    pass: 'Debt ratio is {{debtRatio}}%, which is below the threshold of {{threshold}}%.',
+    fail: 'Debt ratio is {{debtRatio}}%, exceeding the threshold of {{threshold}}%.',
+  },
+  'sentiment-check': {
+    pass: 'Sentiment analysis shows {{sentiment}} score; no red flags detected.',
+    fail: 'Sentiment analysis flagged negative sentiment ({{sentiment}} score). {{flaggedTopics}}',
+  },
+  'default': {
+    pass: 'Control {{name}} evaluated successfully.',
+    fail: 'Control {{name}} triggered a violation.',
+  },
+};
+</code></pre>
+
+    <!-- API Boundary: Verdict Record -->
+    <h2 id="api-boundary-verdict-record">API Boundary — Verdict Record</h2>
+
+    <pre><code>interface VerdictRecord {
+  // Public facing; returned by GET /verdicts/:intakeId
+  intakeId: string;
+  caseId: string;
+  verdict: 'in-appetite' | 'out-of-appetite' | 'review-required';
+  confidence: {
+    midpoint: number;                  // e.g., 0.865
+    lower: number;                     // e.g., 0.82
+    upper: number;                     // e.g., 0.91
+  };
+  confidenceCaveat: ConfidenceCaveat;
+  keyDrivers: Array&lt;{
+    type: 'pass' | 'fail' | 'warning';
+    controlName: string;
+    brief: string;
+  }&gt;;
+  issuedAt: number;                    // Verdict timestamp
+  isCorrected: boolean;                // True if newer correction exists
+  correctionId?: string;               // ID of latest correction event
+
+  // Conditional: if isCorrected=true, show amendment details
+  amendment?: {
+    amendmentReason: string;
+    amendedAt: number;
+    amendedBy: string;
+  };
+}
+</code></pre>
+
+    <!-- Integration Points -->
+    <h2 id="integration-points">Integration Points</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>System</th>
+          <th>Interface</th>
+          <th>Data Flow</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Policy Schema</td>
+          <td><code>PolicyRegistry.getPolicies(intakeId)</code></td>
+          <td>Verdict spec retrieves policy version at evaluation time; audit event stores policyVersionId</td>
+        </tr>
+        <tr>
+          <td>Evaluation Engine</td>
+          <td><code>evaluate(intake, policies) → EvaluationResult + ReasoningTrace</code></td>
+          <td>Evaluation engine generates VerdictConditions and ReasoningTrace; Verdict spec wraps and stores both</td>
+        </tr>
+        <tr>
+          <td>Intake Flow</td>
+          <td><code>IntakeForm.onSubmit → evaluate(intake) → VerdictRecord</code></td>
+          <td>After intake submission, Verdict spec returns VerdictRecord for display</td>
+        </tr>
+        <tr>
+          <td>Compliance API</td>
+          <td><code>GET /audit/events?startMs=X&amp;endMs=Y</code></td>
+          <td>AuditStore exposes queryByTimeRange for compliance audits</td>
+        </tr>
+        <tr>
+          <td>UI (React)</td>
+          <td><code>VerdictCard, ReasoningModal, CorrectionModal components</code></td>
+          <td>Verdict spec provides VerdictRecord JSON; UI renders verdict badge, confidence, caveats, reasoning</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Error Handling & Edge Cases -->
+    <h2 id="error-handling-edge-cases">Error Handling &amp; Edge Cases</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Behavior</th>
+          <th>Stored Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Evaluation engine fails mid-run</td>
+          <td>Return error to user; do NOT append incomplete event to audit trail</td>
+          <td>No verdict record created; user retries intake</td>
+        </tr>
+        <tr>
+          <td>Hash chain verification fails</td>
+          <td>Log alert; block further amendments; escalate to compliance</td>
+          <td>Audit store marks chain as "broken"; prevents new corrections</td>
+        </tr>
+        <tr>
+          <td>Correction submitted for non-existent verdict</td>
+          <td>Return 404; do NOT create orphaned correction event</td>
+          <td>No audit trail entry; user sees "verdict not found" message</td>
+        </tr>
+        <tr>
+          <td>Confidence interval is very wide (&gt; 0.30)</td>
+          <td>Issue caveat; still display verdict, but flag uncertainty</td>
+          <td>ConfidenceCaveat.WIDE_INTERVAL triggered; shown in UI</td>
+        </tr>
+        <tr>
+          <td>Multiple corrections on same verdict</td>
+          <td>Each creates new audit event; latest non-superseded event is "current"</td>
+          <td>Audit trail shows chain of amendments with parent references</td>
+        </tr>
+        <tr>
+          <td>Intake data is &gt; 30 days old</td>
+          <td>Issue data freshness caveat; display verdict but recommend refresh</td>
+          <td>ConfidenceCaveat.STALE_DATA triggered; days since refresh shown</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Requirement Traceability -->
+    <h2 id="requirement-traceability">Requirement Traceability</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Requirement ID</th>
+          <th>Requirement Statement</th>
+          <th>Addressed By</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VD-1</td>
+          <td>Verdict displays result, confidence, key drivers</td>
+          <td>Verdict Display section (5.1–5.4); VerdictRecord interface</td>
+        </tr>
+        <tr>
+          <td>VD-2</td>
+          <td>Audit trail is append-only, immutable</td>
+          <td>ADR-006; AuditStore interface; hash chain</td>
+        </tr>
+        <tr>
+          <td>VD-3</td>
+          <td>Corrections create audit events; link to original</td>
+          <td>Correction Flow section (6.1–6.3); AuditEvent.correction</td>
+        </tr>
+        <tr>
+          <td>VD-4</td>
+          <td>Reasoning traces map evaluation steps to plain English</td>
+          <td>ADR-007; ReasoningTrace interface; template engine</td>
+        </tr>
+        <tr>
+          <td>VD-5</td>
+          <td>Verdict display supports bulk export for reports</td>
+          <td>AuditStore.exportAuditLog()</td>
+        </tr>
+        <tr>
+          <td>VD-6</td>
+          <td>UI shows confidence interval visually</td>
+          <td>Verdict Display section (5.3); VerdictRecord.confidence</td>
+        </tr>
+        <tr>
+          <td>VD-7</td>
+          <td>Correction flow validates amendment reason</td>
+          <td>Correction Flow section (6.2); correctionEvent requires amendmentReason</td>
+        </tr>
+        <tr>
+          <td>VD-8</td>
+          <td>Verdict history is queryable by intake, case, time range</td>
+          <td>AuditStore interface; multiple query methods</td>
+        </tr>
+        <tr>
+          <td>NF-2</td>
+          <td>Audit retrieval &lt; 200ms single, &lt; 2s for 1000-verdict range</td>
+          <td>AuditStore schema; indexed on timestamp, intakeId</td>
+        </tr>
+        <tr>
+          <td>NF-8</td>
+          <td>Caveat text generated from confidence, accuracy, freshness</td>
+          <td>ConfidenceCaveat interface; caveat rules; template system</td>
+        </tr>
+        <tr>
+          <td>RA-11</td>
+          <td>Audit trail tamper-evidence via hash chain</td>
+          <td>ADR-006; AuditEvent.eventHash, priorEventHash; verifyHashChain()</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Test Case References -->
+    <h2 id="test-case-references">Test Case References</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Test ID</th>
+          <th>Test Name</th>
+          <th>Requirement</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VD-T1</td>
+          <td>Verdict issued and stored with full conditions</td>
+          <td>VD-1, VD-2</td>
+        </tr>
+        <tr>
+          <td>VD-T2</td>
+          <td>Confidence interval calculated and displayed</td>
+          <td>VD-1, VD-6</td>
+        </tr>
+        <tr>
+          <td>VD-T3</td>
+          <td>Caveat text generated for wide interval</td>
+          <td>NF-8, VD-4</td>
+        </tr>
+        <tr>
+          <td>VD-T4</td>
+          <td>Correction creates linked audit event</td>
+          <td>VD-3, VD-7</td>
+        </tr>
+        <tr>
+          <td>VD-T5</td>
+          <td>Hash chain verification passes after append</td>
+          <td>RA-11</td>
+        </tr>
+        <tr>
+          <td>VD-T6</td>
+          <td>Query audit trail by intake; &lt; 200ms</td>
+          <td>VD-8, NF-2</td>
+        </tr>
+        <tr>
+          <td>VD-T7</td>
+          <td>Range query 1000 verdicts; &lt; 2s</td>
+          <td>VD-8, NF-2</td>
+        </tr>
+        <tr>
+          <td>VD-T8</td>
+          <td>Reasoning trace rendered in UI; all steps visible</td>
+          <td>VD-4</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) current.el.classList.add('active');
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

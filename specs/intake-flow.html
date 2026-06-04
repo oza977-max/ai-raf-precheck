@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Intake Flow Specification</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; color: #111; background: #fffff8; line-height: 1.6; padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto; }
+    h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; color: #111; }
+    h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+    p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 780px; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+    .subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+    .date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+    nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+    nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+    nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; transition: color 0.15s; }
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    main { margin-left: 260px; max-width: 1000px; }
+    table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; line-height: 1.5; width: auto; min-width: 480px; }
+    thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; color: #111; }
+    tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+    caption { font-style: italic; font-size: 0.88rem; color: #666; text-align: left; margin-bottom: 0.4rem; }
+    code { font-family: "Menlo", "Consolas", "Monaco", monospace; font-size: 0.88rem; background: #f0f0e8; padding: 0.1rem 0.35rem; border-radius: 2px; }
+    pre { background: #f0f0e8; padding: 1rem 1.2rem; border-radius: 3px; overflow-x: auto; margin: 1rem 0 1.5rem; max-width: 860px; }
+    pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+    details.adr { background: #f7f7f0; border-left: 3px solid #669; padding: 0; margin: 1rem 0 1.2rem; max-width: 860px; }
+    details.adr summary { padding: 0.8rem 1rem; cursor: pointer; list-style: none; }
+    details.adr summary::-webkit-details-marker { display: none; }
+    details.adr summary::before { content: '\25B8 '; font-size: 0.85rem; color: #999; }
+    details.adr[open] summary::before { content: '\25BE '; }
+    .adr-id { font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.5rem; }
+    .adr-title { font-weight: 600; color: #333; }
+    .adr-status { font-size: 0.75rem; color: #999; font-style: italic; margin-left: 0.5rem; }
+    .adr-body { padding: 0 1rem 0.8rem; border-top: 1px solid #e0e0e0; }
+    .adr-body h4 { font-size: 0.85rem; font-weight: 600; color: #666; margin: 0.6rem 0 0.3rem; }
+    .gvm-attribution { font-size: 0.75rem; color: #999; font-style: italic; text-align: center; margin-top: 3rem; margin-bottom: 0; max-width: none; }
+    @media (max-width: 1200px) { nav.toc { position: static; width: 100%; max-height: none; border-right: none; border-bottom: 1px solid #ddd; padding: 1rem 0; margin-bottom: 2rem; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <a href="#expert-panel">Expert Panel</a>
+    <a href="#purpose">Purpose</a>
+    <a href="#asr">ASR</a>
+    <a href="#intake-flow-state-machine">Intake Flow State Machine</a>
+    <a href="#llm-graph-extraction">LLM Graph Extraction</a>
+    <div class="toc-h3">
+      <a href="#graph-extractor-interface">4.1 Graph Extractor Interface</a>
+    </div>
+    <div class="toc-h3">
+      <a href="#dataflowgraph-type">4.2 DataFlowGraph Type</a>
+    </div>
+    <div class="toc-h3">
+      <a href="#llm-prompt-construction">4.3 LLM Prompt Construction</a>
+    </div>
+    <div class="toc-h3">
+      <a href="#llm-response-parsing">4.4 LLM Response Parsing</a>
+    </div>
+    <a href="#structured-form-fallback">Structured Form Fallback</a>
+    <div class="toc-h3">
+      <a href="#when-form-shown">5.1 When the Form is Shown</a>
+    </div>
+    <div class="toc-h3">
+      <a href="#form-fields">5.2 Form Fields</a>
+    </div>
+    <div class="toc-h3">
+      <a href="#form-output">5.3 Form Output</a>
+    </div>
+    <a href="#question-generation">Question Generation</a>
+    <a href="#contradiction-detection">Contradiction Detection Wiring</a>
+    <a href="#graph-correction">Graph Correction Recording</a>
+    <a href="#graph-confirmation">Graph Confirmation and Attestation</a>
+    <a href="#api-boundary">API Boundary</a>
+    <a href="#traceability">Requirement Traceability</a>
+    <a href="#test-cases">Test Case References</a>
+  </nav>
+
+  <main>
+    <h1>AIGate — Intake Flow Specification</h1>
+    <p class="subtitle">Multi-step intake wizard — free-text to confirmed data-flow graph (UC-1 through UC-7, UC-3a)</p>
+    <p class="date">June 2026</p>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Work</th>
+          <th>Role in This Document</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Alan Cooper</td>
+          <td><em>About Face</em> (4th ed., Wiley 2014)</td>
+          <td>Goal-directed UI — the intake flow serves James (1LoD) who wants minimal friction</td>
+        </tr>
+        <tr>
+          <td>Dan Abramov / React Core Team</td>
+          <td>react.dev</td>
+          <td>Component composition, state lifting for multi-step intake flow</td>
+        </tr>
+        <tr>
+          <td>Kent C. Dodds</td>
+          <td>Testing Library (testing-library.com)</td>
+          <td>Behaviour-first testing of the intake wizard</td>
+        </tr>
+        <tr>
+          <td>Dan Vanderkam</td>
+          <td><em>Effective TypeScript</em> (2nd ed., O'Reilly 2024)</td>
+          <td>Typed graph state, discriminated unions for intake step</td>
+        </tr>
+        <tr>
+          <td>Stuart Russell</td>
+          <td><em>Human Compatible</em> (Viking 2019)</td>
+          <td>Autonomy level treatment — intake must surface L3/L4 signals clearly</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="purpose">1. Purpose</h2>
+    <p>This spec defines the intake flow — the multi-step user journey from plain-language description to confirmed data-flow graph. It covers:</p>
+    <ul>
+      <li>Free-text intake (UC-1)</li>
+      <li>Duplicate detection (UC-2)</li>
+      <li>LLM graph extraction (UC-3) and structured form fallback (UC-3a)</li>
+      <li>Risk-proportionate questioning (UC-4)</li>
+      <li>Contradiction detection integration (UC-5)</li>
+      <li>Graph confirmation and attestation (UC-6)</li>
+      <li>Correction recording (UC-7)</li>
+    </ul>
+
+    <h2 id="asr">2. Architecturally Significant Requirements</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ASR</th>
+          <th>Requirement</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>LLM at input edge only</td>
+          <td>NF-1, UC-3</td>
+          <td>Anthropic SDK called only in <code>src/llm/graph-extractor.ts</code>; engine never calls LLM</td>
+        </tr>
+        <tr>
+          <td>Fallback to form when no API key</td>
+          <td>UC-3a, NF-3</td>
+          <td>Intake flow has two paths; both produce the same graph type</td>
+        </tr>
+        <tr>
+          <td>Contradiction detection before confirmation</td>
+          <td>UC-5</td>
+          <td>Contradiction check runs after each answer; blocks confirmation if unresolved</td>
+        </tr>
+        <tr>
+          <td>Attestation is immutable once confirmed</td>
+          <td>UC-6, NF-2</td>
+          <td>Confirmation writes to audit trail via <code>src/store/audit.ts</code>; no undo</td>
+        </tr>
+        <tr>
+          <td>Question count proportionate to risk</td>
+          <td>UC-4</td>
+          <td>Questions generated from tripped risk signals, not a fixed list</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="intake-flow-state-machine">3. Intake Flow State Machine</h2>
+    <p>The intake flow is a multi-step wizard managed by <code>IntakeFlow.tsx</code>. Each step corresponds to a state:</p>
+    <pre><code>STATES:
+  description_entry      ← UC-1: user types free-text description
+  duplicate_check        ← UC-2: system checks for similar use cases
+  graph_extraction       ← UC-3: LLM extracts graph (or UC-3a: structured form)
+  graph_review           ← UC-3: user reviews extracted graph, makes corrections (UC-7)
+  questionnaire          ← UC-4: targeted questions based on risk signals
+  contradiction_review   ← UC-5: surfaced contradictions require resolution
+  confirmation           ← UC-6: user confirms graph (attestation)
+  evaluation_pending     ← engine is running (< 5s)
+  verdict                ← evaluation complete, route to VerdictDisplay
+
+TRANSITIONS:
+  description_entry → duplicate_check          (on submit)
+  duplicate_check → graph_extraction           (no duplicate found, or user confirms new)
+  duplicate_check → [exit — use existing]      (user adopts existing classification)
+  graph_extraction → graph_review              (LLM returns graph, or user completes form)
+  graph_review → questionnaire                 (user proceeds from graph review)
+  questionnaire → contradiction_review         (contradiction detected)
+  questionnaire → confirmation                 (all questions answered, no contradiction)
+  contradiction_review → questionnaire         (contradiction resolved, continue questions)
+  confirmation → evaluation_pending            (user confirms)
+  evaluation_pending → verdict                 (evaluate() returns)</code></pre>
+    <p>State is managed with a <code>useReducer</code> hook in <code>IntakeFlow.tsx</code>. Each state carries typed data:</p>
+    <pre><code class="language-typescript">type IntakeState =
+  | { step: 'description_entry'; description: string }
+  | { step: 'duplicate_check'; description: string }
+  | { step: 'graph_extraction'; description: string; method: 'llm' | 'form' }
+  | { step: 'graph_review'; graph: DataFlowGraph; graphVersion: number; corrections: GraphCorrection[] }
+  | { step: 'questionnaire'; graph: DataFlowGraph; questions: IntakeQuestion[]; answers: QuestionAnswer[] }
+  | { step: 'contradiction_review'; graph: DataFlowGraph; contradictions: Contradiction[] }
+  | { step: 'confirmation'; graph: DataFlowGraph; graphVersion: number; corrections: GraphCorrection[]; answers: QuestionAnswer[] }
+  | { step: 'evaluation_pending'; graph: DataFlowGraph }
+  | { step: 'verdict'; verdictId: string };</code></pre>
+
+    <h2 id="llm-graph-extraction">4. LLM Graph Extraction (UC-3)</h2>
+
+    <h3 id="graph-extractor-interface">4.1 Graph Extractor Interface</h3>
+    <pre><code class="language-typescript">// src/llm/graph-extractor.ts
+export async function extractGraph(
+  description: string,
+  apiKey: string,
+  policyPermittedValues: PolicyPermittedValues  // Enum values from policy file for node labels
+): Promise&lt;Result&lt;DataFlowGraph, LlmError&gt;&gt;</code></pre>
+    <p>The function constructs a structured prompt instructing the model to return a JSON object conforming to <code>DataFlowGraph</code>. It uses <code>claude-sonnet-4-6</code> with <code>temperature: 0</code> for consistency.</p>
+
+    <h3 id="dataflowgraph-type">4.2 DataFlowGraph Type</h3>
+    <pre><code class="language-typescript">export interface DataFlowGraph {
+  id: string;                  // UUID v4
+  version: number;             // Increments with each correction
+  input_nodes: InputNode[];
+  processing_nodes: ProcessingNode[];
+  output_nodes: OutputNode[];
+  edges: GraphEdge[];
+  intake_method: 'llm' | 'structured_form';
+  extracted_at: string;        // ISO 8601
+}
+
+export interface InputNode {
+  id: string;
+  label: string;               // e.g. "Client relationship notes"
+  data_class: DataClass;       // From policy permitted values
+  data_zone: DataZone;
+}
+
+export interface ProcessingNode {
+  id: string;
+  label: string;               // e.g. "GPT-4 based email drafting model"
+  model_type: ModelType;
+  autonomy_level: 0 | 1 | 2 | 3 | 4;
+  data_zone: DataZone;
+  vendor: string;              // "internal" | vendor name
+  uncertain?: boolean;         // True if LLM could not determine this with confidence
+}
+
+export interface OutputNode {
+  id: string;
+  label: string;
+  action_type: ActionType;
+  exposure: ExposureLevel;
+  decision_bindingness: DecisionBindingness;
+  reversibility: 'reversible' | 'irreversible' | 'unknown';
+}
+
+export interface GraphEdge {
+  from: string;   // Node ID
+  to: string;     // Node ID
+}</code></pre>
+
+    <h3 id="llm-prompt-construction">4.3 LLM Prompt Construction</h3>
+    <p>The prompt includes:</p>
+    <ol>
+      <li>The user's description verbatim</li>
+      <li>The permitted values for each enum field (from the policy file — ensures LLM uses the bank's own vocabulary)</li>
+      <li>A JSON schema for the expected response</li>
+      <li>Instruction: return ONLY the JSON, no prose</li>
+    </ol>
+    <p>Nodes the LLM cannot determine with confidence are marked <code>uncertain: true</code>. These are displayed with a highlight in <code>GraphReview.tsx</code> to prompt the submitter to confirm or correct them.</p>
+
+    <h3 id="llm-response-parsing">4.4 LLM Response Parsing</h3>
+    <p>The response is parsed with a Zod schema matching <code>DataFlowGraph</code>. If parsing fails (malformed JSON, missing required fields), the extractor returns <code>{ ok: false, error: { kind: 'parse-error', raw: response } }</code> and the UI offers to retry or switch to the structured form.</p>
+
+    <h2 id="structured-form-fallback">5. Structured Form Fallback (UC-3a)</h2>
+
+    <h3 id="when-form-shown">5.1 When the Form is Shown</h3>
+    <p>The <code>usePolicy</code> hook exposes <code>hasApiKey: boolean</code>. If false, <code>IntakeFlow.tsx</code> sets <code>method: 'form'</code> in the <code>graph_extraction</code> state and renders <code>StructuredForm.tsx</code> instead of calling the LLM.</p>
+    <p>A banner is shown: <strong>"Structured intake mode — LLM graph extraction is not configured. Answer the fields below to describe your use case."</strong></p>
+
+    <h3 id="form-fields">5.2 Form Fields</h3>
+    <p>The form presents one field per graph attribute. All permitted values come from the loaded policy file (no hardcoded enums):</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Use case name</td>
+          <td>Text</td>
+          <td>Yes</td>
+          <td>Stored as the use case label</td>
+        </tr>
+        <tr>
+          <td>Brief description</td>
+          <td>Textarea</td>
+          <td>Yes</td>
+          <td>1–5 sentences (UC-1 equivalent)</td>
+        </tr>
+        <tr>
+          <td>Input data class</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>Values from policy <code>data_classes</code></td>
+        </tr>
+        <tr>
+          <td>Input data zone</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>Values from policy <code>data_zones</code></td>
+        </tr>
+        <tr>
+          <td>AI model type</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>Values from policy <code>model_types</code></td>
+        </tr>
+        <tr>
+          <td>Autonomy level</td>
+          <td>Select (0–4)</td>
+          <td>Yes</td>
+          <td>With plain-language descriptions per level</td>
+        </tr>
+        <tr>
+          <td>Processing data zone</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Output action type</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>Values from policy <code>action_types</code></td>
+        </tr>
+        <tr>
+          <td>Output exposure</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>Values from policy <code>exposure_levels</code></td>
+        </tr>
+        <tr>
+          <td>Decision bindingness</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Output reversibility</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>reversible / irreversible / unknown</td>
+        </tr>
+        <tr>
+          <td>Jurisdictions</td>
+          <td>Multi-select</td>
+          <td>Yes</td>
+          <td>From policy <code>jurisdictions</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="form-output">5.3 Form Output</h3>
+    <p>On submit, <code>StructuredForm.tsx</code> calls <code>buildGraphFromForm(formValues)</code> which constructs a <code>DataFlowGraph</code> object with <code>intake_method: 'structured_form'</code>. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.</p>
+
+    <h2 id="question-generation">6. Question Generation (UC-4)</h2>
+    <p>After the graph is reviewed and the submitter proceeds, the intake flow generates targeted questions.</p>
+    <pre><code class="language-typescript">// src/engine/question-generator.ts (part of the engine, no LLM)
+export function generateQuestions(
+  graph: DataFlowGraph,
+  policy: PolicyFile,
+  activePacks: JurisdictionPack[]
+): IntakeQuestion[]</code></pre>
+    <p><strong>Question selection logic:</strong></p>
+    <ol>
+      <li>Check each invariant's condition against the current graph</li>
+      <li>If an invariant's condition is <strong>partially</strong> determinable from the graph (some fields present, some <code>uncertain: true</code>), generate a question to confirm the uncertain field</li>
+      <li>Check each pack rule's condition — if fields are uncertain, generate questions</li>
+      <li>Hard lines: if the graph has signals near a hard line condition, generate a clarifying question before flagging a hard line (gives the submitter a chance to correct a misclassified node)</li>
+    </ol>
+    <p><strong>Question count limits (UC-4 fit criterion):</strong></p>
+    <ul>
+      <li>Low-tier signals detected → maximum 5 questions</li>
+      <li>Critical-tier signals detected → maximum 15 questions</li>
+      <li>The generator trims questions to the limit, prioritising questions that resolve the most invariants or hard-line signals</li>
+    </ul>
+    <pre><code class="language-typescript">export interface IntakeQuestion {
+  id: string;
+  text: string;                      // Plain-language question
+  field: string;                     // Which graph field this resolves
+  node_id?: string;                  // Which node in the graph
+  triggered_by: string[];            // Invariant IDs or pack rule IDs that drove this question
+  answer_type: 'boolean' | 'select' | 'text';
+  options?: string[];                // For select questions
+}</code></pre>
+
+    <h2 id="contradiction-detection">7. Contradiction Detection Wiring (UC-5)</h2>
+    <p>After each question answer, <code>IntakeFlow.tsx</code> calls <code>detectContradictions()</code> from <code>src/engine/contradiction.ts</code>. If contradictions are returned, the flow transitions to <code>contradiction_review</code>.</p>
+    <pre><code class="language-typescript">// Called after each answer
+const contradictions = detectContradictions(
+  state.description,
+  [...state.answers, newAnswer],
+  state.graph
+);
+
+if (contradictions.length > 0) {
+  dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
+}</code></pre>
+    <p><code>ContradictionReview.tsx</code> shows each contradiction with the two conflicting statements highlighted. The submitter must either:</p>
+    <ul>
+      <li>Correct one of the values (triggers a graph node update, recorded as a correction per UC-7)</li>
+      <li>Confirm that both are correct and explain (rare — recorded as a note in the audit trail)</li>
+    </ul>
+    <p>The flow cannot advance to confirmation while any unresolved contradiction exists.</p>
+
+    <h2 id="graph-correction">8. Graph Correction Recording (UC-7)</h2>
+    <pre><code class="language-typescript">export interface GraphCorrection {
+  correction_id: string;        // UUID v4
+  graph_version_before: number;
+  graph_version_after: number;
+  node_id: string;
+  field: string;
+  original_value: unknown;       // LLM-extracted or form-entered value
+  corrected_value: unknown;
+  corrected_by: string;          // Role: "1LoD" / "2LoD"
+  corrected_at: string;          // ISO 8601
+  reason?: string;               // Optional — from contradiction resolution
+}</code></pre>
+    <p>Every correction increments <code>graph.version</code>. The audit trail stores both the original extraction and all corrections in order, so the history of the graph's evolution is fully traceable.</p>
+
+    <h2 id="graph-confirmation">9. Graph Confirmation and Attestation (UC-6)</h2>
+    <p>When the submitter clicks "Confirm and evaluate":</p>
+    <pre><code class="language-typescript">// src/store/audit.ts
+await audit.append({
+  event_type: 'graph_confirmed',
+  use_case_id: useCaseId,
+  attested_by: role,           // From useRole() hook
+  attested_at: new Date().toISOString(),
+  graph_id: graph.id,
+  graph_version: graph.version,
+  corrections_count: corrections.length,
+  intake_method: graph.intake_method
+});</code></pre>
+    <p>The <code>evaluate()</code> function is called synchronously after this audit write. The verdict is written to the audit trail as a second event. The UI transitions to <code>evaluation_pending</code> while the engine runs (typically < 200ms for a small policy file).</p>
+
+    <h2 id="api-boundary">10. API Boundary — LLM Extractor Response</h2>
+    <p>The Anthropic SDK call in <code>graph-extractor.ts</code> uses structured output (tool_use) to guarantee JSON conformance:</p>
+    <pre><code class="language-typescript">const response = await client.messages.create({
+  model: 'claude-sonnet-4-6',
+  max_tokens: 1024,
+  tools: [{
+    name: 'extract_graph',
+    description: 'Extract a structured data-flow graph from an AI use case description',
+    input_schema: dataFlowGraphZodToJsonSchema()  // Converts Zod schema to JSON Schema
+  }],
+  tool_choice: { type: 'tool', name: 'extract_graph' },
+  messages: [{ role: 'user', content: buildExtractionPrompt(description, permittedValues) }]
+});</code></pre>
+    <p>Using <code>tool_choice: { type: 'tool' }</code> forces the model to always return the structured tool call — no free-form text fallback.</p>
+
+    <h2 id="traceability">11. Requirement Traceability</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Requirement</th>
+          <th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UC-1</td>
+          <td>§3 state machine <code>description_entry</code>; §4.3 prompt includes description</td>
+        </tr>
+        <tr>
+          <td>UC-2</td>
+          <td>§3 <code>duplicate_check</code> state; duplicate detection uses LLM semantic comparison (API key present) or keyword match</td>
+        </tr>
+        <tr>
+          <td>UC-3</td>
+          <td>§4 LLM graph extraction</td>
+        </tr>
+        <tr>
+          <td>UC-3a</td>
+          <td>§5 structured form fallback</td>
+        </tr>
+        <tr>
+          <td>UC-4</td>
+          <td>§6 question generation; question count limits</td>
+        </tr>
+        <tr>
+          <td>UC-5</td>
+          <td>§7 contradiction detection wiring</td>
+        </tr>
+        <tr>
+          <td>UC-6</td>
+          <td>§9 confirmation + attestation</td>
+        </tr>
+        <tr>
+          <td>UC-7</td>
+          <td>§8 graph correction recording</td>
+        </tr>
+        <tr>
+          <td>NF-1</td>
+          <td>Question generation is pure (engine function, no LLM)</td>
+        </tr>
+        <tr>
+          <td>NF-3</td>
+          <td>LLM called only when API key present; form fallback works offline</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-cases">12. Test Case References</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Test Cases</th>
+          <th>Spec Section</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>TC-UC-1-01 through TC-UC-1-04</td>
+          <td>§3, §4.3</td>
+        </tr>
+        <tr>
+          <td>TC-UC-2-01 through TC-UC-2-05</td>
+          <td>§3 duplicate_check state</td>
+        </tr>
+        <tr>
+          <td>TC-UC-3-01 through TC-UC-3-03</td>
+          <td>§4 LLM extraction</td>
+        </tr>
+        <tr>
+          <td>TC-UC-3a-01 through TC-UC-3a-04</td>
+          <td>§5 structured form</td>
+        </tr>
+        <tr>
+          <td>TC-UC-4-01 through TC-UC-4-04</td>
+          <td>§6 question generation</td>
+        </tr>
+        <tr>
+          <td>TC-UC-5-01 through TC-UC-5-03</td>
+          <td>§7 contradiction detection</td>
+        </tr>
+        <tr>
+          <td>TC-UC-6-01 through TC-UC-6-03</td>
+          <td>§9 confirmation</td>
+        </tr>
+        <tr>
+          <td>TC-UC-7-01 through TC-UC-7-03</td>
+          <td>§8 correction recording</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Register &amp; Lifecycle Specification</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif; color: #111; background: #fffff8; line-height: 1.6; padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto; }
+    h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; color: #111; }
+    h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+    p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 780px; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    .subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+    .date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+    nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+    nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+    nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; transition: color 0.15s; }
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    main { margin-left: 260px; max-width: 1000px; }
+    table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; line-height: 1.5; width: auto; min-width: 480px; }
+    thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; color: #111; }
+    tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+    caption { font-style: italic; font-size: 0.88rem; color: #666; text-align: left; margin-bottom: 0.4rem; }
+    code { font-family: "Menlo", "Consolas", "Monaco", monospace; font-size: 0.88rem; background: #f0f0e8; padding: 0.1rem 0.35rem; border-radius: 2px; }
+    pre { background: #f0f0e8; padding: 1rem 1.2rem; border-radius: 3px; overflow-x: auto; margin: 1rem 0 1.5rem; max-width: 860px; }
+    pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+    details.adr { background: #f7f7f0; border-left: 3px solid #669; padding: 0; margin: 1rem 0 1.2rem; max-width: 860px; }
+    details.adr summary { padding: 0.8rem 1rem; cursor: pointer; list-style: none; }
+    details.adr summary::-webkit-details-marker { display: none; }
+    details.adr summary::before { content: '\25B8 '; font-size: 0.85rem; color: #999; }
+    details.adr[open] summary::before { content: '\25BE '; }
+    .adr-id { font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.5rem; }
+    .adr-title { font-weight: 600; color: #333; }
+    .adr-status { font-size: 0.75rem; color: #999; font-style: italic; margin-left: 0.5rem; }
+    .adr-body { padding: 0 1rem 0.8rem; border-top: 1px solid #e0e0e0; }
+    .adr-body h4 { font-size: 0.85rem; font-weight: 600; color: #666; margin: 0.6rem 0 0.3rem; }
+    .gvm-attribution { font-size: 0.75rem; color: #999; font-style: italic; text-align: center; margin-top: 3rem; margin-bottom: 0; max-width: none; }
+    @media (max-width: 1200px) { nav.toc { position: static; width: 100%; max-height: none; border-right: none; border-bottom: 1px solid #ddd; padding: 1rem 0; margin-bottom: 2rem; } main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <h1>AIGate — Register &amp; Lifecycle Specification</h1>
+    <div class="subtitle">Graph-based AI inventory register, lifecycle stage machine, tier-to-workflow routing, and AIGate self-assessment (RG-1–5, LC-1–4, LC-6)</div>
+    <div class="date">June 2026</div>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Specialist</th>
+          <th>Authority</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Graph Database Design</td>
+          <td>Data Architect</td>
+          <td>Schema, indexing, traversal patterns</td>
+        </tr>
+        <tr>
+          <td>State Machines &amp; Workflows</td>
+          <td>Systems Engineer</td>
+          <td>Lifecycle transitions, routing logic</td>
+        </tr>
+        <tr>
+          <td>Frontend &amp; Storage</td>
+          <td>Full-Stack Engineer</td>
+          <td>IndexedDB, UI state, role-based views</td>
+        </tr>
+        <tr>
+          <td>Risk &amp; Compliance</td>
+          <td>Risk Officer</td>
+          <td>Tier mapping, re-evaluation triggers, audit</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="purpose">Purpose</h2>
+    <ul>
+      <li><strong>Inventory:</strong> Maintain a queryable graph of AI systems, their properties, relationships, and data flows within a bank.</li>
+      <li><strong>Lifecycle:</strong> Track each AI system through defined stages (draft, active, deprecated, archived) with automatic and manual transitions.</li>
+      <li><strong>Tier Routing:</strong> Map systems to risk tiers (1–4) and route them to appropriate approval workflows based on appetite.</li>
+      <li><strong>Self-Assessment:</strong> Allow banks to input their own AIGate appetite and receive deterministic, auditable in/out verdicts.</li>
+      <li><strong>Traceability:</strong> Link every register entry to source data, appetite rules, and control decisions for regulatory reporting.</li>
+    </ul>
+
+    <h2 id="architecturally-significant-requirements">Architecturally Significant Requirements</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Requirement</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>RG-1</td>
+          <td>Register must support querying nodes by type, tier, and custom attributes.</td>
+          <td>Graph indexing strategy, traversal API</td>
+        </tr>
+        <tr>
+          <td>RG-2</td>
+          <td>Register must detect data-flow cycles and compute blast-radius impacts.</td>
+          <td>Adjacency list representation, DFS/BFS helpers</td>
+        </tr>
+        <tr>
+          <td>RG-3</td>
+          <td>Register must persist to browser IndexedDB with offline read access.</td>
+          <td>Schema design, sync protocol with backend</td>
+        </tr>
+        <tr>
+          <td>RG-4</td>
+          <td>Register must support role-based view filtering (bank, regulator, auditor).</td>
+          <td>Field-level masking, localStorage role toggle</td>
+        </tr>
+        <tr>
+          <td>RG-5</td>
+          <td>Register data must be auditable: every change logged with user, timestamp, diff.</td>
+          <td>Audit trail table, versioning mechanism</td>
+        </tr>
+        <tr>
+          <td>LC-1</td>
+          <td>AI system lifecycle has four stages: draft, active, deprecated, archived.</td>
+          <td>State machine definition, transition rules</td>
+        </tr>
+        <tr>
+          <td>LC-2</td>
+          <td>Lifecycle transitions may be automatic (e.g., age-based) or manual (approval).</td>
+          <td>Trigger engine, workflow integration</td>
+        </tr>
+        <tr>
+          <td>LC-3</td>
+          <td>Tier assignment must be deterministic and rule-driven (not human guess).</td>
+          <td>Tier-to-workflow engine, scoring formula</td>
+        </tr>
+        <tr>
+          <td>LC-4</td>
+          <td>Re-evaluation must be triggered on data change, time, or manual request.</td>
+          <td>Change-detection, event bus, re-check workflow</td>
+        </tr>
+        <tr>
+          <td>LC-6</td>
+          <td>Bank must be able to configure appetite rules and see deterministic verdicts.</td>
+          <td>Policy engine, AIGate self-assessment UI</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="design-decisions">Design Decisions</h2>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-008</span>
+        <span class="adr-title">Use adjacency list representation for graph storage</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>The register must efficiently store AI systems as a directed graph (nodes = systems, edges = data flows) and support frequent queries: find all downstream dependents, detect cycles, compute blast-radius impact.</p>
+
+        <h4>Decision</h4>
+        <p>Represent the graph as an adjacency list (node ID → Set of outbound edge IDs) rather than an adjacency matrix or edge-list-only store. Pair with a separate edge table (edge ID → {source, target, type, metadata}).</p>
+
+        <h4>Rationale</h4>
+        <ul>
+          <li><strong>Sparse graphs:</strong> Banks' AI inventories are sparse; adjacency matrix wastes memory.</li>
+          <li><strong>Traversal speed:</strong> Outbound neighbors are O(1) lookup; DFS/BFS without scanning all edges.</li>
+          <li><strong>IndexedDB fit:</strong> Two tables (nodes, edges) with a Set of edge references maps naturally to index stores.</li>
+          <li><strong>Scalability:</strong> Easy to add reverse-index (inbound edges) if needed for "impact-to-me" queries.</li>
+        </ul>
+
+        <h4>Consequences</h4>
+        <ul>
+          <li>Must keep adjacency list synchronized when edges are added/deleted.</li>
+          <li>Cycle detection and blast-radius queries become standard graph algorithms (DFS, BFS).</li>
+          <li>Schema requires denormalization: every node stores its edge references.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-009</span>
+        <span class="adr-title">Use localStorage role toggle for field masking</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>Three stakeholder roles (bank, regulator, auditor) need different field visibility: bank sees all; regulator sees asset + risk fields only; auditor sees audit trail + approval fields only. Role is set once per session and changes infrequently.</p>
+
+        <h4>Decision</h4>
+        <p>Store the active role in localStorage under key <code>aigate-role</code>. Compute a field-visibility map at app load, apply CSS classes to the DOM for masking (not removing from DOM). Provide a simple toggle UI in the header.</p>
+
+        <h4>Rationale</h4>
+        <ul>
+          <li><strong>Persistence:</strong> User's choice is remembered across browser sessions without a backend call.</li>
+          <li><strong>Simplicity:</strong> No server-side session state needed; toggle is instant.</li>
+          <li><strong>Auditability:</strong> Role is client-side, so audit trail must still log who viewed what (captured at backend on data fetch).</li>
+          <li><strong>Offline:</strong> Supports offline register viewing in the chosen role.</li>
+        </ul>
+
+        <h4>Consequences</h4>
+        <ul>
+          <li>Field masking is cosmetic (CSS display: none) — sensitive data is still in the DOM. Do not rely on this for security; always enforce role checks at the backend.</li>
+          <li>Role toggle is per-browser, not per-user account — if multiple users share a device, they see each other's role choice.</li>
+          <li>Register must be fetched with full payload; filtering on the server would be cleaner for high-security use cases.</li>
+        </ul>
+      </div>
+    </details>
+
+    <h2 id="graph-data-model">Graph Data Model</h2>
+
+    <h3 id="node-types">Node Types</h3>
+    <pre><code>// TypeScript node definitions for the AI inventory graph
+type NodeType = 'ai_system' | 'data_source' | 'data_sink' | 'control' | 'model' | 'dataset';
+
+interface GraphNode {
+  id: string;
+  type: NodeType;
+  name: string;
+  description: string;
+  owner: string;
+  tier: 1 | 2 | 3 | 4;
+  lifecycle_stage: 'draft' | 'active' | 'deprecated' | 'archived';
+  created_at: string;
+  updated_at: string;
+  attributes: Record&lt;string, unknown&gt;;
+  outbound_edges: string[]; // Edge IDs
+  inbound_edges: string[];  // Edge IDs
+}
+
+// Example: AI System node
+const aiSystemNode: GraphNode = {
+  id: 'sys-credit-risk-001',
+  type: 'ai_system',
+  name: 'Credit Risk Scorer',
+  description: 'ML model scoring loan applications',
+  owner: 'Risk Analytics',
+  tier: 2,
+  lifecycle_stage: 'active',
+  created_at: '2024-01-15T10:30:00Z',
+  updated_at: '2026-06-01T14:22:00Z',
+  attributes: {
+    model_type: 'gradient-boosting',
+    input_features: 12,
+    latency_p99_ms: 145,
+    approval_required: true
+  },
+  outbound_edges: ['edge-001', 'edge-003'],
+  inbound_edges: ['edge-005']
+};</code></pre>
+
+    <h3 id="edge-types">Edge Types</h3>
+    <pre><code>type EdgeType = 'consumes' | 'produces' | 'controls' | 'trains_on' | 'feeds' | 'depends_on';
+
+interface GraphEdge {
+  id: string;
+  source_id: string;
+  target_id: string;
+  type: EdgeType;
+  metadata?: {
+    frequency?: string;      // 'real-time' | 'daily' | 'weekly'
+    sensitivity?: 'public' | 'internal' | 'confidential' | 'restricted';
+    sla?: string;            // '99.9% uptime'
+    last_flow_at?: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+// Example: Data flow edge
+const edge: GraphEdge = {
+  id: 'edge-001',
+  source_id: 'sys-credit-risk-001',
+  target_id: 'sink-loan-decision-db',
+  type: 'produces',
+  metadata: {
+    frequency: 'real-time',
+    sensitivity: 'restricted',
+    sla: '99.95% uptime',
+    last_flow_at: '2026-06-04T09:15:00Z'
+  },
+  created_at: '2024-01-15T10:30:00Z',
+  updated_at: '2026-06-01T14:22:00Z'
+};</code></pre>
+
+    <h3 id="indexeddb-schema">IndexedDB Schema</h3>
+    <p>The browser's IndexedDB database (<code>aigate-register</code>) has three object stores:</p>
+    <ul>
+      <li><strong>nodes:</strong> keyPath = <code>id</code>; indexes on <code>type</code>, <code>tier</code>, <code>lifecycle_stage</code>, <code>owner</code>, <code>updated_at</code>.</li>
+      <li><strong>edges:</strong> keyPath = <code>id</code>; indexes on <code>source_id</code>, <code>target_id</code>, <code>type</code>.</li>
+      <li><strong>audit_trail:</strong> keyPath = <code>id</code>; indexes on <code>node_id</code>, <code>timestamp</code>, <code>user_id</code>. Each entry logs {user_id, timestamp, action: 'create'|'update'|'delete', node_id, old_value, new_value, diff}.</li>
+    </ul>
+
+    <h3 id="graph-traversal-blast-radius">Graph Traversal: Blast-Radius Query</h3>
+    <pre><code>// Compute all nodes downstream of a given node (transitive closure of 'produces' edges)
+// Returns the impact radius: which systems are affected if source_id goes offline.
+
+async function computeBlastRadius(
+  source_id: string,
+  db: IDBDatabase
+): Promise&lt;BlastRadiusResult&gt; {
+  const visited = new Set&lt;string&gt;();
+  const queue: string[] = [source_id];
+  const directDependents = new Set&lt;string&gt;();
+
+  while (queue.length &gt; 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const tx = db.transaction('edges', 'readonly');
+    const edgeIndex = tx.objectStore('edges').index('source_id');
+    const outgoing = await new Promise&lt;GraphEdge[]&gt;((resolve, reject) =&gt; {
+      const req = edgeIndex.getAll(current);
+      req.onsuccess = () =&gt; resolve(req.result);
+      req.onerror = () =&gt; reject(req.error);
+    });
+
+    for (const edge of outgoing) {
+      if (!visited.has(edge.target_id)) {
+        queue.push(edge.target_id);
+        directDependents.add(edge.target_id);
+      }
+    }
+  }
+
+  return {
+    source_id,
+    blast_radius: Array.from(visited),
+    impact_count: visited.size - 1,
+    high_risk_downstream: Array.from(directDependents)
+      .filter(id =&gt; {
+        // Filter by tier or other risk signals
+        return true; // Placeholder
+      })
+  };
+}
+
+interface BlastRadiusResult {
+  source_id: string;
+  blast_radius: string[];
+  impact_count: number;
+  high_risk_downstream: string[];
+}</code></pre>
+
+    <h2 id="registerstore-interface">RegisterStore Interface</h2>
+    <pre><code>// Public interface for register operations
+interface RegisterStore {
+  // Node operations
+  addNode(node: GraphNode): Promise&lt;void&gt;;
+  updateNode(id: string, updates: Partial&lt;GraphNode&gt;): Promise&lt;void&gt;;
+  deleteNode(id: string): Promise&lt;void&gt;;
+  getNode(id: string): Promise&lt;GraphNode | null&gt;;
+  queryNodes(filters: NodeQueryFilter): Promise&lt;GraphNode[]&gt;;
+
+  // Edge operations
+  addEdge(edge: GraphEdge): Promise&lt;void&gt;;
+  deleteEdge(id: string): Promise&lt;void&gt;;
+  getEdge(id: string): Promise&lt;GraphEdge | null&gt;;
+  queryEdges(filters: EdgeQueryFilter): Promise&lt;GraphEdge[]&gt;;
+
+  // Graph analysis
+  blastRadius(nodeId: string): Promise&lt;BlastRadiusResult&gt;;
+  detectCycles(): Promise&lt;CycleReport&gt;;
+
+  // Lifecycle &amp; tier
+  transitionLifecycle(nodeId: string, newStage: LifecycleStage): Promise&lt;void&gt;;
+  assignTier(nodeId: string, tier: 1 | 2 | 3 | 4): Promise&lt;void&gt;;
+
+  // Audit
+  getAuditTrail(nodeId: string, limit?: number): Promise&lt;AuditEntry[]&gt;;
+
+  // Sync
+  sync(): Promise&lt;SyncResult&gt;;
+}
+
+interface NodeQueryFilter {
+  type?: NodeType;
+  tier?: 1 | 2 | 3 | 4;
+  lifecycle_stage?: LifecycleStage;
+  owner?: string;
+  search?: string; // Full-text search on name + description
+}
+
+interface EdgeQueryFilter {
+  source_id?: string;
+  target_id?: string;
+  type?: EdgeType;
+  sensitivity?: string;
+}
+
+interface CycleReport {
+  has_cycles: boolean;
+  cycles: string[][]; // Each inner array is a cycle (node IDs)
+  affected_nodes: string[];
+}
+
+interface AuditEntry {
+  id: string;
+  node_id: string;
+  user_id: string;
+  timestamp: string;
+  action: 'create' | 'update' | 'delete';
+  old_value: unknown;
+  new_value: unknown;
+  diff: Record&lt;string, unknown&gt;;
+}
+
+interface SyncResult {
+  nodes_synced: number;
+  edges_synced: number;
+  last_sync_at: string;
+  conflicts?: Array&lt;{node_id: string; reason: string}&gt;;
+}</code></pre>
+
+    <h2 id="lifecycle-stage-machine">Lifecycle Stage Machine</h2>
+    <p>Each AI system moves through four stages: draft → active → deprecated → archived. Transitions are triggered manually (via approval workflow) or automatically (via time-based rules or change events).</p>
+    <pre>
+draft ──[manual approval]──> active ──[deprecation approval]──> deprecated ──[archive approval]──> archived
+  ↓                                        ↓                           ↓
+  └────────[age &gt; 180d, no activity]─────┤                           │
+                                          └─────[age &gt; 2y]────────────┘
+
+Transitions:
+  draft → active:     Manual (approval workflow) or auto (immediate if low-tier)
+  active → deprecated: Manual (deprecation notice + 30d grace period)
+  deprecated → archived: Auto (30d after deprecation, no active data flows)
+  active → draft:     Rollback (only if approval withdrawn within grace period)
+    </pre>
+
+    <pre><code>type LifecycleStage = 'draft' | 'active' | 'deprecated' | 'archived';
+
+interface LifecycleTransition {
+  from: LifecycleStage;
+  to: LifecycleStage;
+  trigger: 'manual' | 'time_based' | 'event_based';
+  condition?: string; // e.g., "age > 180 days and no activity"
+  requires_approval: boolean;
+  grace_period_days?: number;
+}
+
+const LIFECYCLE_MACHINE: LifecycleTransition[] = [
+  {
+    from: 'draft',
+    to: 'active',
+    trigger: 'manual',
+    requires_approval: true,
+    grace_period_days: 0
+  },
+  {
+    from: 'draft',
+    to: 'active',
+    trigger: 'time_based',
+    condition: 'tier === 4 and age > 7 days',
+    requires_approval: false
+  },
+  {
+    from: 'active',
+    to: 'deprecated',
+    trigger: 'manual',
+    requires_approval: true,
+    grace_period_days: 30
+  },
+  {
+    from: 'deprecated',
+    to: 'archived',
+    trigger: 'time_based',
+    condition: 'grace_period_elapsed and no active outbound edges',
+    requires_approval: false
+  }
+];</code></pre>
+
+    <h2 id="tier-to-workflow-routing">Tier-to-Workflow Routing</h2>
+    <p>Risk tiers (1–4) determine approval workflows. Banks configure tier rules; the engine computes a system's tier deterministically and routes it to the appropriate workflow. Tier assignment is rule-driven, not human guess.</p>
+
+    <pre><code>tier_routing:
+  tier_1:
+    name: "Critical Infrastructure"
+    criteria:
+      - controls_payment_system: true
+      - has_restricted_data: true
+      - tier_score: ">= 90"
+    approval_path: "executive_board"
+    sla_days: 1
+    re_evaluation_interval_days: 30
+    required_controls:
+      - data_encryption: true
+      - access_logging: true
+      - backup_strategy: true
+
+  tier_2:
+    name: "High-Impact Risk"
+    criteria:
+      - tier_score: ">= 70 and &lt; 90"
+      - downstream_systems: ">= 3"
+    approval_path: "cro_committee"
+    sla_days: 5
+    re_evaluation_interval_days: 90
+    required_controls:
+      - change_log: true
+      - testing_protocol: true
+
+  tier_3:
+    name: "Moderate Risk"
+    criteria:
+      - tier_score: ">= 40 and &lt; 70"
+    approval_path: "risk_manager"
+    sla_days: 10
+    re_evaluation_interval_days: 180
+    required_controls:
+      - documentation: true
+
+  tier_4:
+    name: "Low Risk"
+    criteria:
+      - tier_score: "&lt; 40"
+    approval_path: "auto_approve"
+    sla_days: 0
+    re_evaluation_interval_days: 365
+    required_controls: []</code></pre>
+
+    <p>Scoring formula:</p>
+    <pre><code>function computeTierScore(node: GraphNode): number {
+  let score = 0;
+
+  // Data sensitivity
+  const sensitivity = node.attributes.sensitivity as string;
+  if (sensitivity === 'restricted') score += 30;
+  else if (sensitivity === 'confidential') score += 20;
+  else if (sensitivity === 'internal') score += 10;
+
+  // Downstream impact
+  const downstreamCount = node.outbound_edges.length;
+  score += Math.min(downstreamCount * 10, 25);
+
+  // System age (draft penalty)
+  const ageMs = Date.now() - new Date(node.created_at).getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  if (ageDays &lt; 30) score += 15; // New, untested
+
+  // Approval required flag
+  if (node.attributes.approval_required) score += 20;
+
+  // Critical business function
+  if (node.attributes.critical_path) score += 25;
+
+  return Math.min(score, 100);
+}
+
+interface TierRouting {
+  tier: 1 | 2 | 3 | 4;
+  approval_path: string;
+  sla_days: number;
+  re_evaluation_interval_days: number;
+  required_controls: Record&lt;string, boolean&gt;;
+}</code></pre>
+
+    <h2 id="re-evaluation-trigger">Re-evaluation Trigger</h2>
+    <p>When a system's properties or data flows change, the register must re-run tier scoring and lifecycle checks. Triggers include data mutations, time thresholds, and manual requests.</p>
+
+    <pre><code>// Re-evaluation event handler
+interface ReEvalTrigger {
+  node_id: string;
+  reason: 'data_change' | 'time_threshold' | 'manual_request' | 'dependency_change';
+  changed_fields?: string[];
+  timestamp: string;
+}
+
+async function handleReEvalTrigger(trigger: ReEvalTrigger, store: RegisterStore): Promise&lt;void&gt; {
+  const node = await store.getNode(trigger.node_id);
+  if (!node) return;
+
+  // Recompute tier
+  const newTier = computeTierScore(node) as 1 | 2 | 3 | 4;
+  if (newTier !== node.tier) {
+    await store.assignTier(node.id, newTier);
+    console.log(`Tier changed for ${node.id}: ${node.tier} → ${newTier}`);
+  }
+
+  // Check if lifecycle transition is required
+  const now = new Date();
+  const createdAt = new Date(node.created_at);
+  const daysSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (node.lifecycle_stage === 'draft' &amp;&amp; daysSinceCreation > 180 &amp;&amp; newTier === 4) {
+    // Auto-promote low-risk draft systems
+    await store.transitionLifecycle(node.id, 'active');
+    console.log(`Auto-promoted ${node.id} to active`);
+  }
+
+  // Check if deprecated systems should be archived
+  if (node.lifecycle_stage === 'deprecated') {
+    const deprecatedAt = new Date(node.updated_at);
+    const daysSinceDeprecation = (now.getTime() - deprecatedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    const outgoingEdges = await store.queryEdges({ source_id: node.id });
+    if (daysSinceDeprecation > 30 &amp;&amp; outgoingEdges.length === 0) {
+      await store.transitionLifecycle(node.id, 'archived');
+      console.log(`Auto-archived ${node.id}`);
+    }
+  }
+
+  // Emit event for downstream listeners (workflows, dashboards)
+  window.dispatchEvent(new CustomEvent('register:re-evaluated', {
+    detail: { node_id: trigger.node_id, old_tier: node.tier, new_tier: newTier }
+  }));
+}
+
+// Listen for changes and queue re-evaluations
+function setupReEvalListener(store: RegisterStore): void {
+  window.addEventListener('register:node-updated', async (evt: any) =&gt; {
+    const trigger: ReEvalTrigger = {
+      node_id: evt.detail.node_id,
+      reason: 'data_change',
+      changed_fields: evt.detail.changed_fields,
+      timestamp: new Date().toISOString()
+    };
+    await handleReEvalTrigger(trigger, store);
+  });
+
+  // Periodic time-based re-evaluation (e.g., every 6 hours)
+  setInterval(async () =&gt; {
+    const allNodes = await store.queryNodes({});
+    for (const node of allNodes) {
+      const routing = getTierRouting(node.tier);
+      const lastEval = new Date(node.updated_at);
+      const daysSinceEval = (Date.now() - lastEval.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceEval &gt; routing.re_evaluation_interval_days) {
+        const trigger: ReEvalTrigger = {
+          node_id: node.id,
+          reason: 'time_threshold',
+          timestamp: new Date().toISOString()
+        };
+        await handleReEvalTrigger(trigger, store);
+      }
+    }
+  }, 6 * 60 * 60 * 1000); // 6 hours
+}</code></pre>
+
+    <h2 id="aigate-self-assessment">AIGate Self-Assessment</h2>
+    <p>Banks upload their risk appetite rules (a policy document); AIGate checks the register against those rules and returns deterministic verdicts. Self-assessment is the bridge between the register and the evaluation engine.</p>
+
+    <pre><code>// Bank uploads appetite rules; AIGate evaluates register
+interface BankAppetite {
+  bank_id: string;
+  max_tier_1_systems: number;
+  tier_1_required_controls: string[];
+  tier_2_approval_sla_days: number;
+  prohibit_data_flows: Array&lt;{from: string; to: string}&gt;;
+  max_blast_radius: number;
+  data_classification_required: boolean;
+}
+
+interface SelfAssessmentVerdict {
+  compliant: boolean;
+  timestamp: string;
+  summary: {
+    total_systems: number;
+    by_tier: Record&lt;1 | 2 | 3 | 4, number&gt;;
+    violations: Violation[];
+    recommendations: string[];
+  };
+  control_gaps: ControlGap[];
+}
+
+interface Violation {
+  type: 'tier_limit_exceeded' | 'prohibited_flow' | 'control_missing' | 'blast_radius_exceeds_limit';
+  node_id?: string;
+  message: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+}
+
+interface ControlGap {
+  node_id: string;
+  control: string;
+  required_by: string; // e.g., "tier_1_required_controls"
+  remediation: string;
+}
+
+async function runSelfAssessment(
+  appetite: BankAppetite,
+  store: RegisterStore
+): Promise&lt;SelfAssessmentVerdict&gt; {
+  const nodes = await store.queryNodes({});
+  const violations: Violation[] = [];
+  const controlGaps: ControlGap[] = [];
+
+  // Check tier limits
+  const byTier = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  for (const node of nodes) {
+    byTier[node.tier]++;
+  }
+
+  if (byTier[1] &gt; appetite.max_tier_1_systems) {
+    violations.push({
+      type: 'tier_limit_exceeded',
+      message: `Tier-1 systems (${byTier[1]}) exceed appetite limit (${appetite.max_tier_1_systems})`,
+      severity: 'critical'
+    });
+  }
+
+  // Check prohibited data flows
+  const edges = await store.queryEdges({});
+  for (const edge of edges) {
+    const prohibited = appetite.prohibit_data_flows.some(
+      p =&gt; p.from === edge.source_id &amp;&amp; p.to === edge.target_id
+    );
+    if (prohibited) {
+      violations.push({
+        type: 'prohibited_flow',
+        message: `Data flow from ${edge.source_id} to ${edge.target_id} is prohibited`,
+        severity: 'critical'
+      });
+    }
+  }
+
+  // Check required controls
+  const tier1Systems = nodes.filter(n =&gt; n.tier === 1);
+  for (const system of tier1Systems) {
+    for (const requiredControl of appetite.tier_1_required_controls) {
+      if (!system.attributes[requiredControl]) {
+        controlGaps.push({
+          node_id: system.id,
+          control: requiredControl,
+          required_by: 'tier_1_required_controls',
+          remediation: `Implement ${requiredControl} for ${system.name}`
+        });
+      }
+    }
+  }
+
+  // Check blast radius
+  for (const system of nodes.filter(n =&gt; n.tier === 1)) {
+    const radius = await store.blastRadius(system.id);
+    if (radius.impact_count &gt; appetite.max_blast_radius) {
+      violations.push({
+        type: 'blast_radius_exceeds_limit',
+        node_id: system.id,
+        message: `System ${system.id} has blast radius of ${radius.impact_count}, exceeds limit of ${appetite.max_blast_radius}`,
+        severity: 'high'
+      });
+    }
+  }
+
+  return {
+    compliant: violations.length === 0,
+    timestamp: new Date().toISOString(),
+    summary: {
+      total_systems: nodes.length,
+      by_tier: byTier as Record&lt;1 | 2 | 3 | 4, number&gt;,
+      violations,
+      recommendations: [
+        violations.length &gt; 0 ? 'Address critical violations before proceeding' : 'System is compliant',
+        controlGaps.length &gt; 0 ? `Remediate ${controlGaps.length} control gaps` : 'All required controls are in place'
+      ]
+    },
+    control_gaps: controlGaps
+  };
+}</code></pre>
+
+    <h2 id="register-view">Register View</h2>
+    <p>The register is viewed through a filterable, sortable table. Role-based field masking (via CSS) controls visibility. Users can toggle between bank, regulator, and auditor perspectives using the localStorage role toggle.</p>
+
+    <h3 id="register-view-columns">Columns</h3>
+    <ul>
+      <li><strong>ID:</strong> System identifier (immutable).</li>
+      <li><strong>Name:</strong> Human-readable label.</li>
+      <li><strong>Type:</strong> Node type (ai_system, data_source, etc.).</li>
+      <li><strong>Tier:</strong> Risk tier (1–4), color-coded.</li>
+      <li><strong>Lifecycle:</strong> Current stage (draft, active, deprecated, archived).</li>
+      <li><strong>Owner:</strong> Responsible team/department.</li>
+      <li><strong>Data Sensitivity:</strong> (Role-masked) public, internal, confidential, restricted.</li>
+      <li><strong>Approval Status:</strong> (Regulator only) in-progress, approved, rejected.</li>
+      <li><strong>Last Updated:</strong> ISO timestamp.</li>
+      <li><strong>Actions:</strong> Edit, view audit trail, run re-evaluation, transition lifecycle.</li>
+    </ul>
+
+    <h3 id="register-view-filtering">Filtering &amp; Querying</h3>
+    <ul>
+      <li><strong>By Tier:</strong> Checkbox filters for tiers 1–4.</li>
+      <li><strong>By Lifecycle:</strong> Toggles for draft, active, deprecated, archived.</li>
+      <li><strong>By Type:</strong> Multi-select for ai_system, data_source, control, etc.</li>
+      <li><strong>By Owner:</strong> Autocomplete search.</li>
+      <li><strong>Full-Text Search:</strong> Searches name + description across all systems.</li>
+      <li><strong>Impact Blast Radius:</strong> Filter for systems with downstream impact &gt; N.</li>
+    </ul>
+
+    <h3 id="register-view-interaction">User Interaction</h3>
+    <ul>
+      <li><strong>Click a row:</strong> Opens detail panel with full node data, related edges, audit trail, and actions.</li>
+      <li><strong>Drag to reorder:</strong> Sort by any column (sorts persist in localStorage).</li>
+      <li><strong>Role toggle (header):</strong> Switches between bank, regulator, auditor views; updates stored role and re-renders masked fields.</li>
+      <li><strong>Export:</strong> Download register as CSV (respects current role masking).</li>
+      <li><strong>Sync indicator:</strong> Shows last sync timestamp and allows manual sync trigger.</li>
+    </ul>
+
+    <h2 id="integration-points">Integration Points</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>System</th>
+          <th>Interface</th>
+          <th>Direction</th>
+          <th>Protocol</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Policy Engine (Evaluation)</td>
+          <td>RegisterStore.queryNodes/Edges</td>
+          <td>→ read</td>
+          <td>IndexedDB query via RegisterStore API</td>
+        </tr>
+        <tr>
+          <td>Intake Flow</td>
+          <td>RegisterStore.addNode/addEdge</td>
+          <td>← write</td>
+          <td>POST /api/register/nodes, POST /api/register/edges (batched)</td>
+        </tr>
+        <tr>
+          <td>Verdict &amp; Audit</td>
+          <td>RegisterStore.getAuditTrail</td>
+          <td>→ read</td>
+          <td>IndexedDB audit_trail store</td>
+        </tr>
+        <tr>
+          <td>Workflow Engine</td>
+          <td>TierRouting.approval_path, ReEvalTrigger events</td>
+          <td>← write (transitions), → read (routing)</td>
+          <td>Custom events, POST /api/register/transition</td>
+        </tr>
+        <tr>
+          <td>Backend Sync Service</td>
+          <td>RegisterStore.sync()</td>
+          <td>↔ bidirectional</td>
+          <td>WebSocket or polling (CRDTs for conflict resolution)</td>
+        </tr>
+        <tr>
+          <td>Audit Log (backend)</td>
+          <td>Every RegisterStore mutation</td>
+          <td>← write</td>
+          <td>POST /api/audit with full diff</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="error-handling-edge-cases">Error Handling &amp; Edge Cases</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Handling Strategy</th>
+          <th>User Feedback</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cycle detected in graph</td>
+          <td>computeCycles() returns cycle list. Block transition or edge creation if it would create a cycle.</td>
+          <td>Toast: "Cannot add edge; would create a cycle: [node1 → node2 → node1]"</td>
+        </tr>
+        <tr>
+          <td>Node deletion with active edges</td>
+          <td>Require cascade deletion or reassign edges. Check blast_radius first.</td>
+          <td>Confirmation: "Deleting this system will orphan X downstream systems. Proceed?"</td>
+        </tr>
+        <tr>
+          <td>IndexedDB quota exceeded</td>
+          <td>Log warning, sync to backend, clear old audit entries locally. Disable offline mode if necessary.</td>
+          <td>Alert: "Storage quota full. Recent audit entries removed. Enable sync."</td>
+        </tr>
+        <tr>
+          <td>Network unreachable during sync</td>
+          <td>Queue mutations locally, retry exponential backoff. Warn user that register is stale.</td>
+          <td>Badge: "Offline; changes will sync when connection restored"</td>
+        </tr>
+        <tr>
+          <td>Concurrent edits (optimistic lock)</td>
+          <td>Use versioning (updated_at). On conflict, show diff and let user choose keep/discard/merge.</td>
+          <td>Conflict dialog with old/new/merged options</td>
+        </tr>
+        <tr>
+          <td>Invalid tier score (e.g., all attributes missing)</td>
+          <td>Default to tier 4 (low risk) conservatively. Log warning. Flag node as needing manual review.</td>
+          <td>Yellow badge: "Tier assigned by default; review recommended"</td>
+        </tr>
+        <tr>
+          <td>Lifecycle transition violates policy (e.g., cannot archive if active edges)</td>
+          <td>Reject transition. Show list of blocking edges.</td>
+          <td>Error: "Cannot archive while data flows exist: [edges listed]"</td>
+        </tr>
+        <tr>
+          <td>Role toggle in shared device (localStorage collision)</td>
+          <td>Role is per-browser. Recommend using private browsing or separate browsers for different roles.</td>
+          <td>Info: "Role is stored per-browser. Use private mode or separate browser for different roles."</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="requirement-traceability">Requirement Traceability</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Requirement</th>
+          <th>Section / Component</th>
+          <th>Implementation Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>RG-1: Query by type, tier, attribute</td>
+          <td>RegisterStore.queryNodes; Register View Filtering</td>
+          <td>NodeQueryFilter supports type, tier, lifecycle_stage, owner, full-text search</td>
+        </tr>
+        <tr>
+          <td>RG-2: Detect cycles, blast radius</td>
+          <td>Graph Data Model; computeBlastRadius; CycleReport</td>
+          <td>DFS/BFS traversal on adjacency list; cycle detection in error handling</td>
+        </tr>
+        <tr>
+          <td>RG-3: IndexedDB persistence, offline</td>
+          <td>IndexedDB Schema; RegisterStore.sync</td>
+          <td>Three object stores: nodes, edges, audit_trail; offline read access guaranteed</td>
+        </tr>
+        <tr>
+          <td>RG-4: Role-based field masking</td>
+          <td>ADR-009; Register View; Error Handling</td>
+          <td>CSS-based masking via role toggle; three views: bank, regulator, auditor</td>
+        </tr>
+        <tr>
+          <td>RG-5: Audit trail with diffs</td>
+          <td>AuditEntry; IndexedDB audit_trail; Integration Points</td>
+          <td>Every mutation logged: user_id, timestamp, action, old/new value, diff</td>
+        </tr>
+        <tr>
+          <td>LC-1: Four-stage lifecycle</td>
+          <td>Lifecycle Stage Machine</td>
+          <td>draft → active → deprecated → archived; transitions defined in LIFECYCLE_MACHINE</td>
+        </tr>
+        <tr>
+          <td>LC-2: Auto &amp; manual transitions</td>
+          <td>Lifecycle Stage Machine; Re-evaluation Trigger</td>
+          <td>Manual transitions require approval; auto triggers on time/event; grace periods enforced</td>
+        </tr>
+        <tr>
+          <td>LC-3: Deterministic tier assignment</td>
+          <td>Tier-to-Workflow Routing; computeTierScore</td>
+          <td>Rule-driven scoring formula; no human override (except via appeals workflow, not shown)</td>
+        </tr>
+        <tr>
+          <td>LC-4: Re-evaluation on change</td>
+          <td>Re-evaluation Trigger; handleReEvalTrigger</td>
+          <td>Triggered by data change, time threshold, manual request, dependency change</td>
+        </tr>
+        <tr>
+          <td>LC-6: Bank appetite config &amp; verdicts</td>
+          <td>AIGate Self-Assessment; BankAppetite; SelfAssessmentVerdict</td>
+          <td>Bank uploads appetite rules; engine returns deterministic compliant/violations verdict</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-case-references">Test Case References</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Test ID</th>
+          <th>Title</th>
+          <th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>RG-001</td>
+          <td>Add AI system node to register</td>
+          <td>RegisterStore.addNode; IndexedDB persistence</td>
+        </tr>
+        <tr>
+          <td>RG-002</td>
+          <td>Query nodes by tier and lifecycle</td>
+          <td>RegisterStore.queryNodes; NodeQueryFilter</td>
+        </tr>
+        <tr>
+          <td>RG-003</td>
+          <td>Add data flow edge between systems</td>
+          <td>RegisterStore.addEdge; adjacency list sync</td>
+        </tr>
+        <tr>
+          <td>RG-004</td>
+          <td>Detect cycle in graph</td>
+          <td>RegisterStore.detectCycles; CycleReport</td>
+        </tr>
+        <tr>
+          <td>RG-005</td>
+          <td>Compute blast radius for critical system</td>
+          <td>computeBlastRadius; impact assessment</td>
+        </tr>
+        <tr>
+          <td>LC-001</td>
+          <td>Transition system from draft to active</td>
+          <td>RegisterStore.transitionLifecycle; LIFECYCLE_MACHINE</td>
+        </tr>
+        <tr>
+          <td>LC-002</td>
+          <td>Auto-promote draft after 180 days (low risk)</td>
+          <td>Re-evaluation Trigger; time-based transition</td>
+        </tr>
+        <tr>
+          <td>LC-003</td>
+          <td>Prevent archive if active outbound edges</td>
+          <td>Error Handling; lifecycle constraints</td>
+        </tr>
+        <tr>
+          <td>LC-004</td>
+          <td>Re-evaluate tier on data sensitivity change</td>
+          <td>handleReEvalTrigger; computeTierScore</td>
+        </tr>
+        <tr>
+          <td>LC-005</td>
+          <td>Assign tier 1 based on restricted data + approval flag</td>
+          <td>computeTierScore; TierRouting</td>
+        </tr>
+        <tr>
+          <td>LC-006</td>
+          <td>Route tier-2 system to CRO approval workflow</td>
+          <td>TierRouting.approval_path; integration</td>
+        </tr>
+        <tr>
+          <td>RG-006</td>
+          <td>View register with bank role (all fields)</td>
+          <td>Register View; ADR-009 role toggle</td>
+        </tr>
+        <tr>
+          <td>RG-007</td>
+          <td>View register as regulator (masked fields)</td>
+          <td>Role-based masking; CSS classes</td>
+        </tr>
+        <tr>
+          <td>RG-008</td>
+          <td>Run AIGate self-assessment against bank appetite</td>
+          <td>runSelfAssessment; SelfAssessmentVerdict</td>
+        </tr>
+        <tr>
+          <td>RG-009</td>
+          <td>Detect tier-limit violation in appetite check</td>
+          <td>SelfAssessmentVerdict.violations</td>
+        </tr>
+        <tr>
+          <td>RG-010</td>
+          <td>Retrieve audit trail for system with full diffs</td>
+          <td>RegisterStore.getAuditTrail; AuditEntry</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Generated by the Grounded Vibe Methodology (GVM) pipeline. Specification date: June 2026.</p>
+
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) current.el.classList.add('active');
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
