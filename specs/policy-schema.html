@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Policy Schema Specification</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 780px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 780px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+      max-width: 1000px;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Code Blocks ── */
+    pre {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 1rem;
+      margin: 1rem 0 1.2rem;
+      overflow-x: auto;
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      max-width: 860px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: 0.85rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── ADR (Architecture Decision Record) ── */
+    details.adr {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0;
+      margin: 1rem 0 1.2rem;
+      max-width: 860px;
+    }
+
+    details.adr summary {
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    details.adr summary::-webkit-details-marker { display: none; }
+
+    details.adr summary::before {
+      content: '\25B8 ';
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    details.adr[open] summary::before {
+      content: '\25BE ';
+    }
+
+    .adr-id {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.5rem;
+    }
+
+    .adr-title {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .adr-status {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      margin-left: 0.5rem;
+    }
+
+    .adr-body {
+      padding: 0 1rem 0.8rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .adr-body h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin: 0.6rem 0 0.3rem;
+    }
+
+    .adr-body p {
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">June 2026 — Living Document</p>
+    <h1>AIGate — Policy Schema Specification</h1>
+    <p class="subtitle">Exact schema definitions for policy files, jurisdiction packs, and validation rules.</p>
+
+    <h2 id="overview">Overview</h2>
+    <p><strong>Version:</strong> 1.0<br>
+    <strong>Date:</strong> June 2026<br>
+    <strong>Status:</strong> Draft<br>
+    <strong>Covers:</strong> YAML policy file schema, jurisdiction override pack schema, validation rules, versioning, starter config structure, translation attestation, control library schema, OQ-PV-1 envelope semantics</p>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <caption>Table 1 — Expert contributors and their grounding authority</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Martin Kleppmann</td><td><em>Designing Data-Intensive Applications</em> (O'Reilly 2017)</td><td>Schema evolution, forward/backward compatibility, data model fit</td></tr>
+        <tr><td>Michael Keeling</td><td><em>Design It!</em> (Pragmatic Bookshelf 2017)</td><td>ADR-style decision capture for schema choices</td></tr>
+        <tr><td>Dan Vanderkam</td><td><em>Effective TypeScript</em> (2nd ed., O'Reilly 2024)</td><td>TypeScript interface definitions matching the YAML schema</td></tr>
+        <tr><td>NIST</td><td><em>AI Risk Management Framework (AI RMF 1.0)</em></td><td>AI governance schema grounding</td></tr>
+        <tr><td>SS1/23</td><td>PRA <em>Model Risk Management Principles</em> (2023)</td><td>Pack rule structure, confidence scoring</td></tr>
+        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Annex III hard-line classification</td></tr>
+        <tr><td>SR 26-2</td><td>Fed/OCC/FDIC <em>Model Risk Management</em> (2026)</td><td>Track III assignment, GenAI governance</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="purpose">Purpose</h2>
+    <p>This spec defines the exact schema for:</p>
+    <ol>
+      <li><code>policy/appetite.yaml</code> — the main policy file the bank customises</li>
+      <li><code>policy/packs/*.yaml</code> — jurisdiction override pack files</li>
+      <li>The TypeScript interfaces that correspond to each schema</li>
+      <li>Validation rules enforced by <code>src/engine/policy-loader.ts</code> (CF-5)</li>
+      <li>The starter config pre-population strategy (PE-8, CF-2)</li>
+    </ol>
+    <p>The policy file is the bank's Risk Appetite Framework expressed in machine-readable form. Every verdict traces back to a rule in this file.</p>
+
+    <h2 id="asrs">Architecturally Significant Requirements</h2>
+    <table>
+      <caption>Table 2 — ASRs driving the policy schema design</caption>
+      <thead>
+        <tr><th>ASR</th><th>Requirement</th><th>Impact</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Policy file human-readable</td><td>CF-1, NF-6</td><td>YAML with inline comments; no minification</td></tr>
+        <tr><td>Policy versioned</td><td>CF-3</td><td><code>version</code> field incremented on each change; recorded in every verdict</td></tr>
+        <tr><td>Pack independence</td><td>CF-4</td><td>Packs are separate files; updating one pack doesn't change the main file version</td></tr>
+        <tr><td>Validation at load time</td><td>CF-5</td><td>Invalid policy = evaluation disabled; exact field named in error</td></tr>
+        <tr><td>Primary source citation per rule</td><td>RA-7</td><td>Every pack rule has a <code>source</code> block — no source = invalid</td></tr>
+        <tr><td>Confidence scoring</td><td>RA-8</td><td>Every pack rule has <code>confidence: High | Medium | Low</code></td></tr>
+        <tr><td>Human sign-off per rule</td><td>NF-7</td><td>Pack rules need <code>reviewer_name</code>, <code>reviewer_role</code>, <code>sign_off_date</code></td></tr>
+        <tr><td>Translation attestation</td><td>NF-10</td><td>Main policy file has <code>translation_attestation</code> block</td></tr>
+        <tr><td>Control library resolves invariants</td><td>CS-1, CS-2</td><td>Each control declares which invariants it resolves + burden score</td></tr>
+        <tr><td>Envelope semantics</td><td>OQ-PV-1, PV-1–3</td><td>Ordinal (≤ ceiling) and set (⊆ subset) dimensions (V2+ schema, declare now)</td></tr>
+        <tr><td>Schema evolution</td><td>Kleppmann Ch. 4</td><td>Forward compatibility: unknown fields are ignored; required fields are enforced</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="main-policy-schema">Main Policy File Schema</h2>
+
+    <h3 id="top-level-structure">Top-level structure</h3>
+    <pre><code># policy/appetite.yaml
+# AIGate Risk Appetite Framework — [FIRM] Bank
+# Edit this file to configure your organisation's AI risk appetite.
+# Fields marked [FIRM] must be replaced before use in production.
+
+version: "1.0"                    # Increment on every change
+policy_id: "RAF-001"              # Stable identifier across versions
+firm_name: "[FIRM]"               # Your organisation name
+
+translation_attestation:
+  attested_by: "[FIRM] — 2LoD Lead"
+  role: "Head of AI Governance"
+  date: "2026-05-01"
+  raf_version_checked: "Board-approved AI RAF v2.1 (dated 2026-04-15)"
+
+hard_lines: [...]                 # Use cases always Rejected — no controls apply
+tracks: [...]                     # Ordered track classification rules
+tiers: [...]                      # Impact-dominant materiality tiering
+invariants: [...]                 # RAF rules evaluated against the graph
+controls: [...]                   # Control library
+kri_thresholds: {...}             # Six KRI dimension thresholds
+jurisdictions: [...]              # Maps jurisdiction codes to pack files
+roles:
+  "1LoD": { access: "own" }
+  "2LoD": { access: "all" }
+tier_workflow:
+  Critical: "2LoD-approve"
+  High: "2LoD-approve"
+  Medium: "2LoD-notify"
+  Low: "self-service"
+safety_margin: 0.10               # 10% safety margin for control solver (CS-1)</code></pre>
+
+    <h3 id="hard-lines-schema">Hard lines schema</h3>
+    <pre><code>hard_lines:
+  - id: "HL-001"
+    description: "Level 4 autonomy on irreversible client-facing actions"
+    condition:
+      autonomy_level: { gte: 4 }
+      output_reversibility: "irreversible"
+      exposure: { in: ["client-facing", "market-facing"] }
+    reason: "No control set can bring fully autonomous, irreversible, client-facing AI within appetite."
+    regulatory_basis: "SS1/23 §3.8; SR 26-2 §IV"
+
+  - id: "HL-002"
+    description: "MNPI flowing to any external Zone A system"
+    condition:
+      data_class: { in: ["MNPI"] }
+      data_zone: { in: ["Zone A external"] }
+    reason: "MNPI outside Zone C violates market abuse prevention requirements."
+    regulatory_basis: "MAR Article 8; MiFID II"
+
+  - id: "HL-003"
+    description: "Fully autonomous lending or credit decisions (no HITL)"
+    condition:
+      autonomy_level: { gte: 4 }
+      decision_type: { in: ["lending", "credit"] }
+      hitl: false
+    reason: "EU AI Act Annex III §5(b) + Consumer Credit Directive require human oversight on credit decisions."
+    regulatory_basis: "EU AI Act Annex III §5(b); Consumer Credit Directive 2023/2225"</code></pre>
+
+    <p><strong>Hard line condition operators:</strong></p>
+    <ul>
+      <li><code>{ gte: N }</code> — greater than or equal (numeric)</li>
+      <li><code>{ lte: N }</code> — less than or equal (numeric)</li>
+      <li><code>{ in: [...] }</code> — value is member of set</li>
+      <li><code>{ not_in: [...] }</code> — value is not member of set</li>
+      <li>Bare value (e.g., <code>hitl: false</code>) — exact match</li>
+    </ul>
+    <p>All conditions in a hard line are ANDed. A hard line trips when ALL conditions match.</p>
+
+    <h3 id="track-rules">Track classification rules</h3>
+    <pre><code>tracks:
+  - id: "TRACK-I"
+    name: "Track I — Traditional MRM"
+    description: "Traditional statistical/mathematical models producing quantitative outputs for material decisions"
+    conditions:
+      - field: "model_type"
+        value: { in: ["statistical", "mathematical", "econometric", "traditional-ml"] }
+      - field: "output_type"
+        value: { in: ["quantitative", "score", "rating", "forecast"] }
+      - field: "decision_bindingness"
+        value: { in: ["material", "binding"] }
+    short_circuit: true           # Stop evaluating further tracks if this matches
+    regulatory_basis: "SS1/23 §3.4; SR 26-2 §II.A"
+
+  - id: "TRACK-II"
+    name: "Track II — AI on MRM"
+    description: "ML/AI models within MRM scope under the applicable jurisdiction ceiling"
+    conditions:
+      - field: "model_type"
+        value: { in: ["ml", "deep-learning", "llm", "generative-ai"] }
+      - field: "output_type"
+        value: { in: ["quantitative", "score", "recommendation"] }
+      - field: "decision_bindingness"
+        value: { in: ["material", "binding", "advisory"] }
+    short_circuit: true
+    regulatory_basis: "SS1/23 §3.4 (technology-agnostic); OSFI E-23 §2.1"
+
+  - id: "TRACK-III"
+    name: "Track III — AI Governance"
+    description: "Generative and agentic AI outside MRM scope (SR 26-2 exclusion); governed by AI Governance Track"
+    conditions:
+      - field: "model_type"
+        value: { in: ["llm", "generative-ai", "agentic"] }
+      - field: "decision_bindingness"
+        value: { in: ["non-binding", "draft", "assist"] }
+    short_circuit: true
+    regulatory_basis: "SR 26-2 §III.C (GenAI excluded from MRM pending RFI)"</code></pre>
+
+    <p>Track rules are evaluated in order. <strong>First match wins</strong> (short-circuit). A use case that matches no rule is flagged as an evaluation error requiring manual classification.</p>
+
+    <h3 id="tier-rules">Tier rules (impact-dominant)</h3>
+    <pre><code>tiers:
+  - id: "TIER-CRITICAL"
+    name: "Critical"
+    description: "Highest materiality — requires 2LoD approval + full model validation pipeline"
+    triggers:                     # ANY trigger fires → Critical (impact-dominant, not multiplicative)
+      - field: "decision_type"
+        value: { in: ["credit-decision", "lending-decision", "fraud-detection"] }
+        regulatory_basis: "EU AI Act Annex III §5(b); OSFI E-23 §4.2"
+      - field: "exposure"
+        value: { in: ["market-facing", "systemic"] }
+      - field: "data_class"
+        value: "MNPI"
+        and:
+          field: "autonomy_level"
+          value: { gte: 3 }
+
+  - id: "TIER-HIGH"
+    name: "High"
+    triggers:
+      - field: "exposure"
+        value: { in: ["client-facing", "regulatory-reporting"] }
+      - field: "autonomy_level"
+        value: { gte: 3 }
+      - field: "data_class"
+        value: { in: ["Client PII", "MNPI"] }
+
+  - id: "TIER-MEDIUM"
+    name: "Medium"
+    triggers:
+      - field: "exposure"
+        value: { in: ["internal-shared", "cross-team"] }
+      - field: "autonomy_level"
+        value: { in: [2] }
+
+  - id: "TIER-LOW"
+    name: "Low"
+    triggers:
+      - field: "exposure"
+        value: "internal-only"
+        and:
+          field: "data_class"
+          value: { in: ["Public", "Internal"] }
+          and:
+            field: "autonomy_level"
+            value: { lte: 1 }</code></pre>
+
+    <p>Tier evaluation: rules evaluated top-to-bottom. <strong>First matching trigger determines the tier</strong> (impact-dominant). A use case matching a Critical trigger is Critical regardless of other factors.</p>
+
+    <h3 id="invariants-schema">Invariants schema</h3>
+    <pre><code>invariants:
+  - id: "INV-DATA-01"
+    description: "Client PII must not flow to an external model endpoint without encryption in transit"
+    condition:
+      data_class: { in: ["Client PII"] }
+      data_zone: { in: ["Zone A external", "Zone B cloud"] }
+    required_controls: ["CTRL-ENC-01"]
+    severity: "High"
+
+  - id: "INV-ZONE-01"
+    description: "MNPI must remain within Zone C or Zone B private"
+    condition:
+      data_class: "MNPI"
+      data_zone: { not_in: ["Zone C internal", "Zone B private"] }
+    required_controls: []         # No control resolves this — hard line HL-002 catches it first
+    severity: "Critical"</code></pre>
+
+    <h3 id="control-library">Control library schema</h3>
+    <pre><code>controls:
+  - id: "CTRL-ENC-01"
+    name: "Encryption in transit (TLS 1.3+)"
+    description: "All data in transit to external endpoints must use TLS 1.3 or higher"
+    resolves: ["INV-DATA-01", "INV-ZONE-03"]   # Which invariants this control satisfies
+    burden: 1                     # 1=low, 5=high — used by solver for tie-breaking (CS-1)
+    verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
+    platform_satisfies:           # Platforms whose approval already satisfies this control
+      - "azure-openai-internal"
+      - "azure-openai-eu"
+
+  - id: "CTRL-HITL-02"
+    name: "Human review before action execution (HITL L2)"
+    description: "Every action proposed by the AI must be reviewed and approved by a human before execution"
+    resolves: ["INV-AUTO-01", "INV-AUTO-02"]
+    burden: 3
+    verification: "UI shows human approval step; audit trail records approval identity and timestamp"
+    platform_satisfies: []
+
+  - id: "CTRL-LOG-01"
+    name: "Full tool-call logging with kill switch"
+    description: "All tool invocations logged to append-only store; kill switch disables execution within 1 hour"
+    resolves: ["INV-AGENT-01", "INV-AGENT-02"]
+    burden: 2
+    verification: "Log store is append-only; kill-switch procedure documented and tested"
+    platform_satisfies: ["azure-openai-internal"]</code></pre>
+
+    <h3 id="kri-thresholds">KRI thresholds</h3>
+    <pre><code>kri_thresholds:
+  performance:
+    drift_threshold_pct: 5.0       # % performance degradation triggers amber
+    override_rate_min_pct: 5.0     # Min human override rate (too low = rubber-stamp risk)
+    override_rate_max_pct: 80.0    # Max override rate (too high = model useless)
+  data_privacy:
+    pii_incident_threshold: 0       # Any PII incident → immediate review
+  technology:
+    model_version_staleness_days: 90
+  conduct:
+    bias_disparity_threshold_pct: 3.0
+  third_party_concentration:
+    single_vendor_share_pct: 60.0
+  autonomy:
+    level_4_approval_required: true</code></pre>
+
+    <h3 id="jurisdiction-registry">Jurisdiction registry</h3>
+    <pre><code>jurisdictions:
+  - code: "UK"
+    name: "United Kingdom"
+    pack_file: "packs/ss1-23.yaml"
+  - code: "US"
+    name: "United States"
+    pack_file: "packs/sr-26-2.yaml"
+  - code: "EU"
+    name: "European Union"
+    pack_file: "packs/eu-ai-act.yaml"
+  - code: "CA"
+    name: "Canada"
+    pack_file: "packs/osfi-e23.yaml"
+  - code: "SG"
+    name: "Singapore"
+    pack_file: "packs/mas-feat.yaml"
+  - code: "EU-DORA"
+    name: "EU (DORA — digital operational resilience)"
+    pack_file: "packs/dora.yaml"
+  - code: "JP"
+    name: "Japan"
+    pack_file: "packs/fsa-japan.yaml"</code></pre>
+
+    <h2 id="jurisdiction-pack-schema">Jurisdiction Pack Schema</h2>
+
+    <p>Each pack file follows a strict schema. A pack that deviates from this schema is <strong>invalid and rejected on load</strong> (CF-5, RA-7).</p>
+
+    <pre><code># policy/packs/ss1-23.yaml
+pack_id: "SS1-23"
+version: "2.0"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Supervisory Statement SS1/23 — Model Risk Management Principles for Banks"
+effective_date: "2023-05-17"
+reviewer_name: "[FIRM] — Regulatory Affairs Lead"
+reviewer_role: "Head of Model Risk"
+sign_off_date: "2026-05-01"
+
+rules:
+  - id: "SS1-UK-TRACK-01"
+    title: "Technology-agnostic MRM inclusion — Track II ceiling"
+    source:
+      document: "SS1/23"
+      section: "§3.4"
+      text: "Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique (statistical, machine learning, or otherwise)."
+    effect:
+      type: "track_floor"
+      minimum_track: "II"
+      condition:
+        output_type: { in: ["quantitative", "score", "recommendation"] }
+        decision_bindingness: { in: ["material", "binding", "advisory"] }
+    confidence: "High"
+    reviewer_name: "[FIRM] — Regulatory Affairs Lead"
+    reviewer_role: "Head of Model Risk"
+    sign_off_date: "2026-05-01"
+
+  - id: "SS1-UK-TIER-01"
+    title: "Model risk appetite quantification"
+    source:
+      document: "SS1/23"
+      section: "§2.1"
+      text: "Firms must define and quantify their appetite for model risk, including for AI and ML models."
+    effect:
+      type: "required_control"
+      control_id: "CTRL-RAF-01"
+      condition:
+        track: { in: ["II", "III"] }
+    confidence: "High"
+    reviewer_name: "[FIRM] — Regulatory Affairs Lead"
+    reviewer_role: "Head of Model Risk"
+    sign_off_date: "2026-05-01"</code></pre>
+
+    <h3 id="pack-rule-effects">Pack rule effects</h3>
+    <table>
+      <caption>Table 3 — Pack rule effect types and their semantics</caption>
+      <thead>
+        <tr><th>Effect type</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>track_floor</code></td><td>Sets a minimum track — use case cannot be below this track when this rule fires</td></tr>
+        <tr><td><code>tier_floor</code></td><td>Sets a minimum tier (e.g., EU AI Act Annex III forces Critical)</td></tr>
+        <tr><td><code>required_control</code></td><td>Adds a specific control to the required set</td></tr>
+        <tr><td><code>hard_line</code></td><td>Treats matching use cases as hard-line rejected (pack-level hard lines)</td></tr>
+        <tr><td><code>required_review</code></td><td>Adds a downstream review requirement</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="pack-validation">Pack validation rules (enforced by policy-loader.ts)</h3>
+
+    <p>Every rule in a pack <strong>must</strong> have:</p>
+    <ul>
+      <li><code>id</code> — unique within the pack, format <code>{PACK-CODE}-{CATEGORY}-{NN}</code></li>
+      <li><code>source.document</code> — the regulation name</li>
+      <li><code>source.section</code> — the article/section number</li>
+      <li><code>source.text</code> — verbatim regulatory text (not paraphrased)</li>
+      <li><code>confidence</code> — <code>High | Medium | Low</code></li>
+      <li><code>reviewer_name</code> — name of the human reviewer</li>
+      <li><code>reviewer_role</code> — role of the reviewer</li>
+      <li><code>sign_off_date</code> — ISO 8601 date</li>
+    </ul>
+    <p>A rule missing any of these fields causes the entire pack to be <strong>rejected on load</strong>. The error message identifies the pack ID and the missing field.</p>
+
+    <h2 id="typescript-interfaces">TypeScript Interfaces</h2>
+
+    <p>These interfaces live in <code>src/engine/types.ts</code> and are the canonical type definitions. Zod schemas (in <code>src/engine/policy-loader.ts</code>) are generated from these interfaces and used for runtime validation.</p>
+
+    <pre><code>// src/engine/types.ts
+
+export type Track = 'I' | 'II' | 'III';
+export type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
+export type Confidence = 'High' | 'Medium' | 'Low';
+export type EffectType = 'track_floor' | 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
+
+export interface PolicyFile {
+  version: string;
+  policy_id: string;
+  firm_name: string;
+  translation_attestation: TranslationAttestation;
+  hard_lines: HardLine[];
+  tracks: TrackRule[];
+  tiers: TierRule[];
+  invariants: Invariant[];
+  controls: Control[];
+  kri_thresholds: KriThresholds;
+  jurisdictions: JurisdictionEntry[];
+  roles: Record<string, RoleConfig>;
+  tier_workflow: Record<Tier, WorkflowType>;
+  safety_margin: number;
+}
+
+export interface TranslationAttestation {
+  attested_by: string;
+  role: string;
+  date: string;          // ISO 8601
+  raf_version_checked: string;
+}
+
+export interface HardLine {
+  id: string;
+  description: string;
+  condition: Condition;
+  reason: string;
+  regulatory_basis: string;
+}
+
+export interface Control {
+  id: string;
+  name: string;
+  description: string;
+  resolves: string[];           // Invariant IDs
+  burden: 1 | 2 | 3 | 4 | 5;
+  verification: string;
+  platform_satisfies: string[]; // Platform IDs whose approval satisfies this control
+}
+
+export interface JurisdictionPack {
+  pack_id: string;
+  version: string;
+  jurisdiction: string;
+  regulator: string;
+  document: string;
+  effective_date: string;
+  reviewer_name: string;
+  reviewer_role: string;
+  sign_off_date: string;
+  rules: PackRule[];
+}
+
+export interface PackRule {
+  id: string;
+  title: string;
+  source: {
+    document: string;
+    section: string;
+    text: string;
+  };
+  effect: PackRuleEffect;
+  confidence: Confidence;
+  reviewer_name: string;
+  reviewer_role: string;
+  sign_off_date: string;
+}
+
+export type PackRuleEffect =
+  | { type: 'track_floor'; minimum_track: Track; condition: Condition }
+  | { type: 'tier_floor'; minimum_tier: Tier; condition: Condition }
+  | { type: 'required_control'; control_id: string; condition: Condition }
+  | { type: 'hard_line'; condition: Condition; reason: string }
+  | { type: 'required_review'; review_type: string; condition: Condition };</code></pre>
+
+    <h2 id="validation-rules">Validation Rules (policy-loader.ts)</h2>
+
+    <p>The loader performs these checks on every load. All checks must pass before the policy is marked valid.</p>
+
+    <h3 id="main-policy-checks">Main policy file checks</h3>
+    <table>
+      <caption>Table 4 — Policy file validation checks</caption>
+      <thead>
+        <tr><th>Check</th><th>Error if failed</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>version</code> field present and non-empty</td><td><code>policy-invalid: version field missing</code></td></tr>
+        <tr><td><code>firm_name</code> not <code>[FIRM]</code> (warn but don't block)</td><td>Warning only: <code>firm_name is still [FIRM] placeholder</code></td></tr>
+        <tr><td><code>translation_attestation</code> block present</td><td><code>policy-invalid: translation_attestation block missing</code></td></tr>
+        <tr><td><code>hard_lines</code> array present (may be empty)</td><td><code>policy-invalid: hard_lines section missing</code></td></tr>
+        <tr><td><code>controls</code> array non-empty</td><td><code>policy-invalid: controls section is empty — at least one control required</code></td></tr>
+        <tr><td><code>tracks</code> array has at least one rule</td><td><code>policy-invalid: tracks section has no rules</code></td></tr>
+        <tr><td><code>tiers</code> array has at least one rule</td><td><code>policy-invalid: tiers section has no rules</code></td></tr>
+        <tr><td><code>tier_workflow</code> maps all four tiers</td><td><code>policy-invalid: tier_workflow missing entry for [tier]</code></td></tr>
+        <tr><td><code>safety_margin</code> between 0.0 and 1.0</td><td><code>policy-invalid: safety_margin must be 0.0–1.0</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="pack-file-checks">Pack file checks (per pack)</h3>
+    <table>
+      <caption>Table 5 — Pack file validation checks</caption>
+      <thead>
+        <tr><th>Check</th><th>Error if failed</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Each rule has <code>source.document</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.document</code></td></tr>
+        <tr><td>Each rule has <code>source.section</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.section</code></td></tr>
+        <tr><td>Each rule has <code>source.text</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.text</code></td></tr>
+        <tr><td>Each rule has <code>confidence</code> of <code>High | Medium | Low</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] invalid confidence value</code></td></tr>
+        <tr><td>Each rule has <code>reviewer_name</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing reviewer_name</code></td></tr>
+        <tr><td>Each rule has <code>sign_off_date</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing sign_off_date</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="validation-output">Validation output (TypeScript)</h3>
+    <pre><code>export type PolicyValidationResult =
+  | { valid: true; policy: PolicyFile; packs: Map<string, JurisdictionPack>; warnings: string[] }
+  | { valid: false; errors: PolicyValidationError[]; warnings: string[] };
+
+export interface PolicyValidationError {
+  kind: 'policy-invalid' | 'pack-invalid';
+  field: string;
+  reason: string;
+  packId?: string;   // Set for pack errors
+}</code></pre>
+
+    <h2 id="versioning">Versioning Strategy (Kleppmann — Schema Evolution)</h2>
+
+    <h3 id="policy-versioning">Policy file versioning</h3>
+    <ul>
+      <li><code>version</code> field is a semver string (<code>"1.0"</code>, <code>"1.1"</code>, <code>"2.0"</code>)</li>
+      <li><strong>Banks increment manually</strong> — AIGate does not auto-increment on save (MVP)</li>
+      <li>Every verdict stores the <code>version</code> at time of evaluation; historical verdicts are immutable</li>
+    </ul>
+
+    <h3 id="pack-versioning">Pack file versioning</h3>
+    <ul>
+      <li>Each pack has its own <code>version</code> field independent of the main policy</li>
+      <li>Pack updates do not change the main policy <code>version</code></li>
+      <li>Verdicts store <code>pack_versions: { "SS1-23": "2.0", "EU-AI-ACT": "1.1", ... }</code></li>
+    </ul>
+
+    <h3 id="forward-compatibility">Forward compatibility (Kleppmann Ch. 4)</h3>
+    <ul>
+      <li><strong>Unknown fields are ignored</strong> on load — a newer schema field added by the product team does not break an older policy file</li>
+      <li><strong>Required fields are enforced</strong> — if a new required field is added in a future schema version, old policy files without it produce a validation error with a clear upgrade instruction</li>
+      <li>Schema version is tracked in the <code>PolicyFile</code> interface via a <code>schema_version</code> field (added at V1.5 when the schema stabilises)</li>
+    </ul>
+
+    <h2 id="adrs">Architecture Decision Records</h2>
+
+    <details class="adr" id="adr-002">
+      <summary>
+        <span class="adr-id">ADR-002</span>
+        <span class="adr-title">Condition Language Design</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>Conditions in hard lines, track rules, tier rules, and pack rule effects use a minimal embedded condition language with four operators: <code>gte</code>, <code>lte</code>, <code>in</code>, <code>not_in</code>, and bare equality. No scripting, no arbitrary expressions.</p>
+
+        <h4>Context</h4>
+        <p>Conditions need to express things like "autonomy ≥ 4 AND exposure is client-facing." The alternatives are: (a) a rich expression language (Rego/OPA, CEL, JSONLogic); (b) a minimal operator set; (c) code-evaluated conditions (JavaScript functions in YAML).</p>
+
+        <h4>Options considered</h4>
+        <ol style="max-width: none;">
+          <li><strong>OPA/Rego</strong> — powerful, auditable, but requires a Rego runtime in the browser. Significant bundle size. Overkill for the bounded condition set AIGate needs.</li>
+          <li><strong>JSONLogic</strong> — compact JSON-encoded logic; browser-native; operator set is richer than needed. Less human-readable in YAML context.</li>
+          <li><strong>Minimal operator set</strong> (<code>gte</code>, <code>lte</code>, <code>in</code>, <code>not_in</code>, bare equality, <code>and</code>) — sufficient for all current requirements. Human-readable. Easy to validate. No external runtime.</li>
+        </ol>
+
+        <h4>Decision</h4>
+        <p>Minimal operator set (Option 3). The condition language covers all cases in the current requirements. If a future requirement needs richer logic, this decision can be revisited with an ADR superseding this one.</p>
+
+        <h4>Consequences</h4>
+        <p><code>policy-loader.ts</code> implements a simple condition evaluator (~100 lines). All conditions are statically analyzable (no eval, no dynamic code). Security: no injection risk from policy file contents.</p>
+      </div>
+    </details>
+
+    <details class="adr" id="adr-003">
+      <summary>
+        <span class="adr-id">ADR-003</span>
+        <span class="adr-title">OQ-PV-1 — Envelope Dimension Semantics (V2 schema, declared now)</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>Platform and vendor envelope dimensions use two semantic models: ordinal dimensions use <code>≤ ceiling</code> semantics; set dimensions use <code>⊆ subset</code> semantics. Both are expressed in the YAML schema now, even though envelope inheritance (PV-1 through PV-7) ships in V2+.</p>
+
+        <h4>Context</h4>
+        <p>OQ-PV-1 asks how to express that a platform is approved for "data class ≤ Internal" (an ordinal ceiling) vs "jurisdictions ⊆ {UK, EU}" (a set subset). Getting this wrong at the schema level means a retrofit when PV features ship.</p>
+
+        <h4>Decision</h4>
+        <pre><code># Platform envelope — declared in main policy file under platforms[] (V2+)
+platforms:
+  - id: "azure-openai-internal"
+    name: "Azure OpenAI (Internal Zone)"
+    envelope:
+      data_class:
+        type: "ordinal_ceiling"
+        max_value: "Internal"             # data_class ≤ Internal
+        order: ["Public", "Internal", "Confidential", "Client PII", "MNPI"]
+      autonomy_level:
+        type: "ordinal_ceiling"
+        max_value: 2                      # autonomy_level ≤ L2
+      jurisdictions:
+        type: "set_subset"
+        allowed: ["UK", "EU"]            # jurisdiction ⊆ {UK, EU}
+      data_zone:
+        type: "exact"
+        value: "Zone B private"          # exact match
+    satisfies_controls: ["CTRL-ENC-01", "CTRL-ACC-02", "CTRL-LOG-01", "CTRL-RES-03"]</code></pre>
+
+        <h4>Consequences</h4>
+        <p>The <code>platforms[]</code> section is present in the schema from V1 but the engine does not process it (it's parsed and stored but the envelope-matching logic ships in V2+). This avoids a schema migration when V2+ ships.</p>
+      </div>
+    </details>
+
+    <h2 id="starter-config">Starter Config Pre-Population (PE-8, CF-2)</h2>
+
+    <p>The starter <code>policy/appetite.yaml</code> ships pre-populated with:</p>
+
+    <table>
+      <caption>Table 6 — Starter config pre-population</caption>
+      <thead>
+        <tr><th>Section</th><th>Pre-populated content</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>hard_lines</code></td><td>3 starter hard lines (HL-001 through HL-003 above) covering the most common absolute rejects</td></tr>
+        <tr><td><code>tracks</code></td><td>3 track rules (Track I, II, III) using the RAF extraction (A–H rulebook)</td></tr>
+        <tr><td><code>tiers</code></td><td>4 tier rules with the impact-dominant triggers from the RAF</td></tr>
+        <tr><td><code>invariants</code></td><td>8 starter invariants covering data zone, MNPI, autonomy, agentic tool-calling, conduct/fairness, explainability</td></tr>
+        <tr><td><code>controls</code></td><td>12 starter controls (encryption, HITL, logging, grounding, fingerprinting, drift monitoring, red-teaming, tool-call logging + kill switch, conduct testing, sampling, output validation, zone enforcement)</td></tr>
+        <tr><td><code>kri_thresholds</code></td><td>Default thresholds for all 6 KRI dimensions</td></tr>
+        <tr><td><code>jurisdictions</code></td><td>All 7 pack files referenced</td></tr>
+        <tr><td><code>tier_workflow</code></td><td>Default mappings</td></tr>
+        <tr><td><code>translation_attestation</code></td><td>Placeholder with <code>[FIRM]</code> markers</td></tr>
+      </tbody>
+    </table>
+
+    <p>The starter config is derived directly from <code>grounding/raf-extraction.md</code> (sections A through H). A bank installing AIGate can evaluate its first use case without modifying the file — the <code>[FIRM]</code> markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).</p>
+
+    <h2 id="integration-points">Integration Points</h2>
+
+    <table>
+      <caption>Table 7 — How this spec integrates with other documents</caption>
+      <thead>
+        <tr><th>Integrated with</th><th>What this spec provides</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>evaluation-engine.md</code></td><td><code>PolicyFile</code>, <code>JurisdictionPack</code>, condition evaluation logic, hard line definitions</td></tr>
+        <tr><td><code>verdict-audit.md</code></td><td><code>version</code> + <code>pack_versions</code> fields for audit trail (VD-5, RA-3)</td></tr>
+        <tr><td><code>intake-flow.md</code></td><td>Permitted field values for structured form (UC-3a) drawn from policy enums</td></tr>
+        <tr><td><code>register-lifecycle.md</code></td><td><code>tier_workflow</code> mapping drives LC-2 governance process routing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="requirement-traceability">Requirement Traceability</h2>
+
+    <table>
+      <caption>Table 8 — All requirements traced to spec sections</caption>
+      <thead>
+        <tr><th>Requirement</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>PE-7</td><td>§3.1 top-level schema + §6 validation</td></tr>
+        <tr><td>PE-8</td><td>§10 starter config</td></tr>
+        <tr><td>CF-1</td><td>§3.1 YAML with inline comments</td></tr>
+        <tr><td>CF-2</td><td>§10 starter config</td></tr>
+        <tr><td>CF-3</td><td>§7 versioning strategy</td></tr>
+        <tr><td>CF-4</td><td>§4 + §7 pack independence</td></tr>
+        <tr><td>CF-5</td><td>§6 validation rules + <code>PolicyValidationResult</code> type</td></tr>
+        <tr><td>RA-7</td><td>§4 pack rule source citation requirement</td></tr>
+        <tr><td>RA-8</td><td>§4 confidence field requirement</td></tr>
+        <tr><td>NF-6</td><td>§3.1 human-readable YAML with comments</td></tr>
+        <tr><td>NF-7</td><td>§4 reviewer sign-off fields</td></tr>
+        <tr><td>NF-10</td><td>§3.1 translation_attestation block</td></tr>
+        <tr><td>OQ-PV-1</td><td>§9 ADR-003 envelope semantics</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-case-references">Test Case References</h2>
+
+    <table>
+      <caption>Table 9 — Test cases grounding each spec section</caption>
+      <thead>
+        <tr><th>Test cases</th><th>Spec section</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>TC-CF-5-01, TC-CF-5-02, TC-CF-5-03</td><td>§6 validation rules</td></tr>
+        <tr><td>TC-CF-3-01</td><td>§7 versioning</td></tr>
+        <tr><td>TC-CF-4-01</td><td>§7 pack independence</td></tr>
+        <tr><td>TC-PE-8-01, TC-PE-8-02</td><td>§10 starter config</td></tr>
+        <tr><td>TC-RA-7-01, TC-RA-7-02</td><td>§4 pack rule source citation</td></tr>
+        <tr><td>TC-RA-8-01</td><td>§4 confidence field</td></tr>
+        <tr><td>TC-NF-7-01</td><td>§4 reviewer sign-off</td></tr>
+        <tr><td>TC-NF-10-01</td><td>§3.1 translation_attestation</td></tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

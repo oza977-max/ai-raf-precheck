@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Evaluation Engine Specification</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 780px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 780px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+      max-width: 1000px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+      max-width: 780px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #f7f7f0;
+      padding: 1rem;
+      overflow-x: auto;
+      border-left: 3px solid #ccc;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      max-width: 780px;
+    }
+
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    /* Inline code */
+    p code, li code {
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── ADR (Architecture Decision Record) ── */
+    details.adr {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0;
+      margin: 1rem 0 1.2rem;
+      max-width: 860px;
+    }
+
+    details.adr summary {
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    details.adr summary::-webkit-details-marker { display: none; }
+
+    details.adr summary::before {
+      content: '\25B8 ';
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    details.adr[open] summary::before {
+      content: '\25BE ';
+    }
+
+    .adr-id {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.5rem;
+    }
+
+    .adr-title {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .adr-status {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      margin-left: 0.5rem;
+    }
+
+    .adr-body {
+      padding: 0 1rem 0.8rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .adr-body h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin: 0.6rem 0 0.3rem;
+    }
+
+    .adr-body p {
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">June 2026 — Living Document</p>
+    <h1>AIGate — Evaluation Engine Specification</h1>
+    <p class="subtitle">Pure-function core engine that takes a confirmed data-flow graph and loaded policy, returning a deterministic verdict with minimal control set solving and full regulatory traceability.</p>
+
+    <h2 id="metadata">Document Metadata</h2>
+    <table>
+      <caption>Table 1 — Specification metadata</caption>
+      <thead>
+        <tr><th>Property</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Version</td><td>1.0</td></tr>
+        <tr><td>Date</td><td>June 2026</td></tr>
+        <tr><td>Status</td><td>Draft</td></tr>
+        <tr><td>Covers</td><td>Evaluation pipeline, hard-line detection, track/tier assignment, jurisdiction override, control solver, determinism guarantee, reasoning trace</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <p>This specification is grounded in the following expert authorities:</p>
+    <table>
+      <caption>Table 2 — Expert panel</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Martin Kleppmann</td><td><em>Designing Data-Intensive Applications</em> (O'Reilly 2017)</td><td>Data flow, determinism, share-nothing evaluation</td></tr>
+        <tr><td>George Fairbanks</td><td><em>Just Enough Software Architecture</em> (Marshall &amp; Brainerd 2010)</td><td>Risk-driven depth — control solver is the novel/risky part</td></tr>
+        <tr><td>Kent Beck</td><td><em>Test-Driven Development: By Example</em> (Addison-Wesley 2002)</td><td>TDD discipline — deterministic engine = ideal TDD target</td></tr>
+        <tr><td>Stuart Russell</td><td><em>Human Compatible</em> (Viking 2019)</td><td>Agentic AI control, corrigibility, minimal footprint</td></tr>
+        <tr><td>SS1/23</td><td>PRA <em>Model Risk Management Principles</em> (2023)</td><td>Track II ceiling, technology-agnostic MRM</td></tr>
+        <tr><td>SR 26-2</td><td>Fed/OCC/FDIC <em>Model Risk Management</em> (2026)</td><td>Track III assignment, GenAI governance</td></tr>
+        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Annex III forced-Critical tier</td></tr>
+        <tr><td>OSFI E-23</td><td><em>Enterprise-Wide Model Risk Management</em> (eff. 2027)</td><td>Broadest model definition — Canadian entity override</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="purpose">Purpose</h2>
+    <p>This spec defines the evaluation engine — the pure-function core of AIGate. It takes a confirmed data-flow graph and a loaded policy (main file + active packs) and returns a deterministic verdict. No LLM calls. No randomness. No external state.</p>
+    <p><strong>Implementation files:</strong></p>
+    <ul>
+      <li><code>src/engine/evaluator.ts</code> — main pipeline</li>
+      <li><code>src/engine/control-solver.ts</code> — minimal control set solver</li>
+      <li><code>src/engine/jurisdiction.ts</code> — pack application and most-demanding-standard merge</li>
+      <li><code>src/engine/contradiction.ts</code> — contradiction detection (UC-5, OB-2)</li>
+      <li><code>src/engine/types.ts</code> — shared types (defined in policy-schema spec)</li>
+    </ul>
+
+    <h2 id="asr">Architecturally Significant Requirements</h2>
+    <table>
+      <caption>Table 3 — ASR to architectural impact mapping</caption>
+      <thead>
+        <tr><th>ASR</th><th>Requirement</th><th>Architectural Impact</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Deterministic verdict</td><td>NF-1, PE-1</td><td>Engine is a pure function: <code>evaluate(graph, policy) → Verdict</code>. No side effects, no randomness, no time-dependent logic.</td></tr>
+        <tr><td>Hard lines evaluated first</td><td>PE-4</td><td>Evaluation order is enforced — hard lines before control solving</td></tr>
+        <tr><td>Most demanding standard governs</td><td>PE-6, RA-2</td><td>Jurisdiction merge step takes the maximum across all active packs</td></tr>
+        <tr><td>Minimal control set with safety margin</td><td>CS-1</td><td>Solver minimises burden while maintaining configurable headroom from appetite boundary</td></tr>
+        <tr><td>Unsatisfiable invariant named on reject</td><td>CS-2</td><td>Rejected verdict must name the invariant and explain why no control resolves it</td></tr>
+        <tr><td>Verdict within 30 seconds</td><td>NF-5</td><td>Engine evaluation (excluding LLM) must complete in &lt; 5 seconds; solver complexity must be bounded</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evaluation-pipeline">Evaluation Pipeline</h2>
+
+    <h3 id="pipeline-overview">Pipeline Overview</h3>
+    <p>The evaluation engine executes in a strict sequence. Each step can only access data produced by prior steps — no backward references. This is the determinism guarantee (Kleppmann: data flows forward, no cycles).</p>
+    <pre><code>evaluate(graph: DataFlowGraph, policy: LoadedPolicy): Result&lt;Verdict, EngineError&gt;
+
+Step 1: Resolve active jurisdiction packs
+Step 2: Evaluate hard lines → immediate Rejected if any trip
+Step 3: Assign track (ordered rules, short-circuit at first match)
+Step 4: Assign tier (impact-dominant rules, highest tier wins)
+Step 5: Apply jurisdiction overrides → upgrade track/tier to jurisdictional minimum
+Step 6: Evaluate invariants against the graph → collect tripped invariants
+Step 7: Solve for minimal control set satisfying all tripped invariants + safety margin
+Step 8: If no set satisfies → Rejected + name unsatisfiable invariant
+Step 9: Assemble and return Verdict</code></pre>
+    <p><strong>This order is non-negotiable.</strong> Changing evaluation order requires code-level review and explicit architectural decision.</p>
+
+    <h3 id="step-1-jurisdiction">Step 1 — Jurisdiction Pack Resolution</h3>
+    <pre><code>resolveActivePacks(
+  jurisdictions: string[],          // from graph
+  jurisdictionRegistry: JurisdictionEntry[],
+  loadedPacks: Map&lt;string, JurisdictionPack&gt;
+): JurisdictionPack[]</code></pre>
+    <p>For each jurisdiction code in the graph, look up the corresponding pack file in the registry and return the loaded pack object. If a jurisdiction code has no registered pack, include a warning in the verdict (not an error — unknown jurisdiction = no override applied).</p>
+
+    <h3 id="step-2-hardlines">Step 2 — Hard Line Evaluation</h3>
+    <pre><code>evaluateHardLines(
+  graph: DataFlowGraph,
+  hardLines: HardLine[]
+): HardLineResult
+
+type HardLineResult =
+  | { tripped: false }
+  | { tripped: true; hardLineId: string; reason: string; regulatoryBasis: string }</code></pre>
+    <p>Hard lines are evaluated in order. <strong>First trip returns immediately</strong> — no need to evaluate all hard lines. The reason and regulatory basis from the hard line definition are passed through to the verdict.</p>
+    <p>If a hard line trips, <code>evaluate()</code> returns immediately with:</p>
+    <pre><code>{
+  status: 'rejected',
+  reason: 'hard-line',
+  hardLineId: 'HL-001',
+  bindingConstraint: 'HL-001',
+  bindingPath: &lt;path from graph that triggered the condition&gt;,
+  ...
+}</code></pre>
+    <p>No control solving occurs. No jurisdiction overrides are applied (they cannot un-reject a hard line).</p>
+
+    <h3 id="step-3-track">Step 3 — Track Assignment</h3>
+    <pre><code>assignTrack(
+  graph: DataFlowGraph,
+  trackRules: TrackRule[]
+): TrackAssignment
+
+interface TrackAssignment {
+  track: Track;
+  ruleId: string;    // The rule that matched
+  ruleName: string;
+}</code></pre>
+    <p>Track rules are evaluated in order. <strong>First match returns</strong> (short-circuit). If no rule matches, the function returns an <code>EngineError</code> of kind <code>'no-track-match'</code> — this is a policy configuration error, not a use case rejection.</p>
+
+    <h3 id="step-4-tier">Step 4 — Tier Assignment</h3>
+    <pre><code>assignTier(
+  graph: DataFlowGraph,
+  tierRules: TierRule[]
+): TierAssignment
+
+interface TierAssignment {
+  tier: Tier;
+  triggeringRuleId: string;
+  triggeringField: string;
+  triggeringValue: unknown;
+}</code></pre>
+    <p>All tier rules are evaluated. Each trigger in each rule is checked against the graph. <strong>The highest tier whose trigger fires is returned</strong> (impact-dominant). Tier hierarchy: Critical &gt; High &gt; Medium &gt; Low.</p>
+    <p>If no tier rule triggers, the default is Low (a use case with no high-impact signals is Low by default).</p>
+
+    <h3 id="step-5-jurisdiction-overrides">Step 5 — Jurisdiction Overrides</h3>
+    <pre><code>applyJurisdictionOverrides(
+  baseTrack: Track,
+  baseTier: Tier,
+  graph: DataFlowGraph,
+  activePacks: JurisdictionPack[]
+): JurisdictionOverrideResult
+
+interface JurisdictionOverrideResult {
+  finalTrack: Track;
+  finalTier: Tier;
+  appliedOverrides: AppliedOverride[];   // Which pack rules fired and what they changed
+}</code></pre>
+    <p>For each active pack, evaluate each rule's condition against the graph. Collect all <code>track_floor</code> and <code>tier_floor</code> effects that fire.</p>
+    <p><strong>Most demanding standard governs (PE-6, RA-2):</strong></p>
+    <ul>
+      <li><code>finalTrack</code> = maximum(baseTrack, all track_floor values) where I &lt; II &lt; III in restrictiveness (Track I is most demanding)</li>
+      <li><code>finalTier</code> = maximum(baseTier, all tier_floor values) where Low &lt; Medium &lt; High &lt; Critical</li>
+    </ul>
+    <pre><code>const TRACK_ORDER: Record&lt;Track, number&gt; = { 'I': 3, 'II': 2, 'III': 1 };
+const TIER_ORDER: Record&lt;Tier, number&gt; = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+
+// Track override: choose the HIGHER governance burden (higher TRACK_ORDER value)
+finalTrack = maxBy(allTracks, t =&gt; TRACK_ORDER[t]);
+
+// Tier override: choose the HIGHER tier
+finalTier = maxBy(allTiers, t =&gt; TIER_ORDER[t]);</code></pre>
+    <p>Applied overrides are recorded in the verdict for full traceability (VD-2, RA-9).</p>
+
+    <h3 id="step-6-invariants">Step 6 — Invariant Evaluation</h3>
+    <pre><code>evaluateInvariants(
+  graph: DataFlowGraph,
+  invariants: Invariant[]
+): TrippedInvariant[]
+
+interface TrippedInvariant {
+  invariantId: string;
+  description: string;
+  graphPath: string;    // e.g. "client_email_data → external_model_zone_a"
+}</code></pre>
+    <p>All invariants are evaluated against the graph. All tripped invariants are collected (not short-circuit — we need the complete set for the solver). The graph path that triggered each invariant is recorded for the verdict's <code>bindingPath</code> (VD-2).</p>
+
+    <h3 id="step-7-8-solver">Steps 7 &amp; 8 — Control Solver</h3>
+    <p>See §4 below.</p>
+
+    <h3 id="step-9-verdict">Step 9 — Verdict Assembly</h3>
+    <pre><code>interface Verdict {
+  id: string;                          // UUID v4
+  use_case_id: string;
+  status: 'approved' | 'approved_with_controls' | 'rejected';
+  tier: Tier;
+  track: Track;
+  binding_constraint: string;          // ID of the rule/invariant that determined the outcome
+  binding_path: string;                // Graph path that triggered the binding constraint
+  controls: string[];                  // Control IDs required
+  downstream_reviews: string[];        // Triggered downstream review types
+  conditions: VerdictConditions;       // VD-7: hypothesis schema for V2 monitoring
+  policy_version: string;
+  pack_versions: Record&lt;string, string&gt;;
+  applied_overrides: AppliedOverride[];
+  confidence_caveats: ConfidenceCaveat[];  // Medium/Low confidence rules that fired (RA-11)
+  living_status: 'approved' | 'amber' | 'breached' | 'revoked';
+  living_status_updated_at: string;    // ISO 8601
+  attested_by: string;
+  attested_at: string;
+  graph_version: number;
+  corrections: VerdictCorrection[];
+}</code></pre>
+    <p><strong>Status determination:</strong></p>
+    <ul>
+      <li><code>rejected</code> if any hard line tripped OR control solver returned no satisfying set</li>
+      <li><code>approved_with_controls</code> if tripped invariants exist AND a satisfying control set was found</li>
+      <li><code>approved</code> if no invariants tripped after jurisdiction overrides</li>
+    </ul>
+
+    <h2 id="control-solver">Control Solver (CS-1, CS-2)</h2>
+
+    <h3 id="solver-problem">Problem Statement</h3>
+    <p>Given:</p>
+    <ul>
+      <li>A set of tripped invariants T = {t₁, t₂, ..., tₙ}</li>
+      <li>A control library C = {c₁, c₂, ..., cₘ} where each cᵢ has <code>resolves: string[]</code> (invariant IDs it satisfies) and <code>burden: 1..5</code></li>
+      <li>A safety margin parameter <code>margin</code> (default 0.10, meaning the solver must satisfy all invariants with 10% headroom)</li>
+      <li>Controls already inherited from approved platforms P ⊆ C</li>
+    </ul>
+    <p><strong>Find:</strong> the smallest subset S ⊆ (C \ P) such that:</p>
+    <ol>
+      <li>For every invariant tᵢ ∈ T: (∃ cⱼ ∈ S ∪ P such that tᵢ ∈ cⱼ.resolves)</li>
+      <li>The total burden of S is minimised</li>
+      <li>If multiple sets of equal size exist, choose the one with the lowest total burden</li>
+    </ol>
+    <p>If no such S exists: return the unsatisfiable invariant (the one no control in C covers).</p>
+
+    <h3 id="solver-algorithm">Algorithm (Greedy, Bounded Complexity)</h3>
+    <p>The control library is small (O(100) controls at most). A greedy set-cover with burden tie-breaking is O(n × m) where n = invariants, m = controls. This is well within the 5-second budget for any realistic policy file.</p>
+    <pre><code>FUNCTION solve(trippedInvariants, controlLibrary, inheritedControls, margin):
+
+  unsatisfied = trippedInvariants
+  selected = []
+
+  // Remove invariants already satisfied by inherited controls
+  FOR each invariant IN unsatisfied:
+    IF any inherited control resolves it:
+      REMOVE invariant from unsatisfied
+
+  // Greedy: at each step, pick the control that resolves the most unsatisfied invariants
+  // Tie-break: lower burden wins
+  WHILE unsatisfied is not empty:
+    candidates = controls that resolve at least one invariant in unsatisfied
+
+    IF candidates is empty:
+      RETURN { satisfiable: false, unsatisfiableInvariant: first(unsatisfied) }
+
+    best = argmax(candidates, score=|resolved ∩ unsatisfied|, tiebreak=min(burden))
+    selected.append(best)
+    unsatisfied = unsatisfied MINUS best.resolves
+
+  RETURN { satisfiable: true, controls: selected }</code></pre>
+    <p><strong>Safety margin application:</strong> After finding the minimal set, the solver checks whether the use case sits within the safety margin. In MVP, the margin is applied as a flag: if the use case is approved but no control provides headroom above the minimum (all invariants are satisfied at exactly 0 headroom), the verdict includes <code>boundary_proximity: true</code> (VD-6 / CS-4). Full margin-aware solving is V1.5.</p>
+
+    <h3 id="solver-unsatisfiable">Unsatisfiable Invariant Naming (CS-2)</h3>
+    <p>When <code>candidates is empty</code> at any iteration, the unsatisfiable invariant is returned with:</p>
+    <ul>
+      <li><code>invariantId</code>: the invariant ID</li>
+      <li><code>reason</code>: assembled from the invariant's description and the fact that no control in the library covers it</li>
+      <li><code>path</code>: the graph path that triggered it (from Step 6)</li>
+    </ul>
+    <p>The verdict status is <code>rejected</code> with <code>reason: 'unsatisfiable-invariant'</code>.</p>
+
+    <h3 id="solver-hardlines">Hard-Line Interaction</h3>
+    <p>Hard lines (Step 2) are evaluated <strong>before</strong> the solver. Hard-line violations produce <code>reason: 'hard-line'</code>, not <code>reason: 'unsatisfiable-invariant'</code>. The distinction matters for the user-facing verdict message.</p>
+
+    <h2 id="contradiction-detection">Contradiction Detection (UC-5, OB-2)</h2>
+    <p>Contradiction detection runs <strong>during intake</strong> (not in the evaluation pipeline). It is invoked by the intake flow after each question answer, not by <code>evaluate()</code>. It is included in this spec because it shares graph and condition types.</p>
+    <pre><code>detectContradictions(
+  description: string,
+  answers: QuestionAnswer[],
+  graph: DataFlowGraph
+): Contradiction[]
+
+interface Contradiction {
+  statement1: string;    // The original claim (from description or prior answer)
+  statement2: string;    // The contradicting answer
+  field: string;         // Which graph field is implicated
+  resolveOptions: ContradictionResolution[];
+}</code></pre>
+    <p><strong>Contradiction patterns detected:</strong></p>
+    <ol>
+      <li><strong>Description says X, answer says not-X</strong> — e.g., "no client data" in description but "yes" to "does the tool process client relationship notes?"</li>
+      <li><strong>Two answers contradict each other</strong> — e.g., "autonomy L1 (human approves each action)" combined with "tool can execute write operations without confirmation"</li>
+      <li><strong>Artifact vs self-attestation (OB-2)</strong> — detected in intake-flow spec</li>
+    </ol>
+
+    <h2 id="reasoning-trace">Reasoning Trace Structure (VD-8)</h2>
+    <p>The reasoning trace is assembled after <code>evaluate()</code> completes. It is not produced by the engine — it is produced by <code>src/llm/reasoning-trace.ts</code> which takes the <code>Verdict</code> object and calls the LLM to generate prose. The engine's job is to populate the verdict with enough structured data to make the trace generation deterministic and grounded.</p>
+    <p><strong>Verdict fields that ground the trace:</strong></p>
+    <pre><code>// These fields provide the structured facts the LLM uses for the trace
+interface VerdictTraceData {
+  track: Track;
+  trackRuleId: string;           // e.g. "TRACK-II"
+  trackRuleName: string;         // e.g. "Technology-agnostic MRM inclusion"
+  tier: Tier;
+  tierTriggeringRuleId: string;
+  tierTriggeringField: string;
+  appliedOverrides: AppliedOverride[];  // Each with source, section, verbatim text
+  controls: string[];
+  bindingConstraint: string;
+  bindingPath: string;
+  confidenceCaveats: ConfidenceCaveat[];  // For RA-11
+}</code></pre>
+    <p>The LLM prompt for reasoning trace construction includes all of these structured fields verbatim and asks the model to write prose that references them — not to interpret or infer. This keeps the trace grounded and auditable (NF-8).</p>
+
+    <h2 id="determinism">Determinism Guarantee (NF-1)</h2>
+    <p>The engine guarantees determinism through:</p>
+    <ol>
+      <li><strong>Pure function</strong>: <code>evaluate(graph, policy)</code> has no side effects and no access to external state (no Date.now(), no Math.random(), no localStorage reads)</li>
+      <li><strong>Sorted inputs</strong>: Before evaluation, all arrays (invariants, controls, hard lines, pack rules) are sorted by ID to eliminate ordering non-determinism from YAML load order</li>
+      <li><strong>No LLM in the evaluation path</strong>: The Anthropic SDK is never called within <code>evaluate()</code> or any function it calls</li>
+      <li><strong>Deterministic solver</strong>: The greedy algorithm is deterministic when tie-breaking is deterministic (lowest burden, then alphabetical by control ID)</li>
+    </ol>
+    <p><strong>Test strategy for NF-1 (TC-NF-1-01, TC-PE-1-01):</strong> Run <code>evaluate()</code> 20 times on the same (graph, policy) pair and assert the result is identical. Include borderline cases (use cases where tier assignment depends on a single field).</p>
+
+    <h2 id="adr-section">Architecture Decision Records</h2>
+
+    <details class="adr" id="adr-004">
+      <summary>
+        <span class="adr-id">ADR-004</span>
+        <span class="adr-title">Greedy Set-Cover vs SAT Solver for Control Solving</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>The control solver uses a greedy set-cover algorithm with burden tie-breaking. Not a SAT solver.</p>
+
+        <h4>Context</h4>
+        <p>The control solver is a set-cover problem (NP-complete in general). Options:</p>
+        <ol>
+          <li><strong>SAT solver</strong> (e.g., a Boolean satisfiability solver) — optimal for large instances; overkill for a control library bounded at O(100) items</li>
+          <li><strong>Greedy set-cover</strong> — O(n×m); produces near-optimal results; simple to implement and audit; runs in milliseconds for any realistic policy file</li>
+          <li><strong>Exhaustive search</strong> — O(2^m); infeasible for m &gt; 20 controls</li>
+        </ol>
+
+        <h4>Rationale</h4>
+        <p>Greedy set-cover. The control library is small and human-curated — exact optimality is less important than auditability and speed. Greedy results are within a log-factor of optimal for set-cover, which is indistinguishable in practice for control libraries of this size.</p>
+
+        <h4>Consequences</h4>
+        <p>Very occasionally, the greedy solver may not return the globally minimal set (e.g., if two controls each resolve 2 invariants but a single control resolves 3). This is acceptable — the solver documentation notes this limitation. If needed, a branch-and-bound upgrade can be added as a V2 enhancement without changing the API.</p>
+      </div>
+    </details>
+
+    <details class="adr" id="adr-005">
+      <summary>
+        <span class="adr-id">ADR-005</span>
+        <span class="adr-title">Evaluation Order Enforcement</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>The evaluation pipeline is implemented as a sequential function with explicit typed results at each step. Not a rule engine, not a declarative policy language.</p>
+
+        <h4>Context</h4>
+        <p>Alternative approaches:</p>
+        <ol>
+          <li><strong>Declarative rule engine</strong> (Drools, CLIPS-style) — configurable evaluation order; complex dependency model; harder to reason about; not appropriate for a client-side browser application</li>
+          <li><strong>Sequential pipeline with typed intermediate results</strong> — evaluation order is baked into code; each step can only access outputs from prior steps; easy to test and audit</li>
+        </ol>
+
+        <h4>Rationale</h4>
+        <p>Sequential pipeline. The evaluation order (PE-4 through PE-6, §3.1 above) is a hard requirement, not a configuration. Embedding it in code rather than a rule engine makes it auditable and testable with standard unit tests.</p>
+
+        <h4>Consequences</h4>
+        <p>Adding a new evaluation step requires a code change. This is a feature, not a limitation — it means the evaluation order is visible in code review and cannot be silently changed via policy file modification.</p>
+      </div>
+    </details>
+
+    <h2 id="integration-points">Integration Points</h2>
+    <table>
+      <caption>Table 4 — Integration points with other specifications</caption>
+      <thead>
+        <tr><th>Integrated with</th><th>What this spec provides</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>policy-schema.md</code></td><td>Consumes <code>PolicyFile</code>, <code>JurisdictionPack</code>, condition evaluation types</td></tr>
+        <tr><td><code>intake-flow.md</code></td><td><code>detectContradictions()</code> called during intake; <code>evaluate()</code> called after graph confirmation</td></tr>
+        <tr><td><code>verdict-audit.md</code></td><td><code>Verdict</code> type is the primary output; stored to IndexedDB by the audit store</td></tr>
+        <tr><td><code>register-lifecycle.md</code></td><td>Re-evaluation (LC-4) calls <code>evaluate()</code> with updated policy; result updates the register</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="requirement-traceability">Requirement Traceability</h2>
+    <table>
+      <caption>Table 5 — Requirement traceability to spec sections</caption>
+      <thead>
+        <tr><th>Requirement</th><th>Coverage</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>PE-1</td><td>§3.1 pure function; §7 determinism guarantee</td></tr>
+        <tr><td>PE-2</td><td>§3.4 track assignment</td></tr>
+        <tr><td>PE-3</td><td>§3.5 tier assignment</td></tr>
+        <tr><td>PE-4</td><td>§3.3 hard line evaluation; §4.4 hard-line/solver interaction</td></tr>
+        <tr><td>PE-5</td><td>§3.6 jurisdiction override</td></tr>
+        <tr><td>PE-6</td><td>§3.6 most-demanding-standard logic</td></tr>
+        <tr><td>CS-1</td><td>§4 control solver; §4.2 algorithm</td></tr>
+        <tr><td>CS-2</td><td>§4.3 unsatisfiable invariant naming</td></tr>
+        <tr><td>CS-3</td><td>§3.9 downstream_reviews in verdict</td></tr>
+        <tr><td>NF-1</td><td>§7 determinism guarantee</td></tr>
+        <tr><td>NF-5</td><td>§2 ASR table; §4.2 O(n×m) complexity bound</td></tr>
+        <tr><td>UC-5</td><td>§5 contradiction detection</td></tr>
+        <tr><td>VD-2</td><td>§3.9 binding_constraint + binding_path in verdict</td></tr>
+        <tr><td>VD-7</td><td>§3.9 conditions block in verdict</td></tr>
+        <tr><td>VD-8</td><td>§6 reasoning trace structure</td></tr>
+        <tr><td>RA-2</td><td>§3.6 most-demanding-standard implementation</td></tr>
+        <tr><td>RA-9</td><td>§6 trace grounded in structured verdict data</td></tr>
+        <tr><td>RA-11</td><td>§3.9 confidence_caveats field; verdict assembly</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-case-references">Test Case References</h2>
+    <table>
+      <caption>Table 6 — Test case coverage by spec section</caption>
+      <thead>
+        <tr><th>Test Cases</th><th>Spec Section</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>TC-NF-1-01, TC-PE-1-01, TC-PE-1-02</td><td>§7 determinism; §3.1 pipeline</td></tr>
+        <tr><td>TC-PE-2-01 through TC-PE-2-03</td><td>§3.4 track assignment</td></tr>
+        <tr><td>TC-PE-3-01 through TC-PE-3-03</td><td>§3.5 tier assignment</td></tr>
+        <tr><td>TC-PE-4-01 through TC-PE-4-03</td><td>§3.3 hard line evaluation</td></tr>
+        <tr><td>TC-PE-5-01, TC-PE-5-02</td><td>§3.6 jurisdiction override</td></tr>
+        <tr><td>TC-PE-6-01, TC-PE-6-02</td><td>§3.6 most-demanding-standard</td></tr>
+        <tr><td>TC-CS-1-01, TC-CS-1-02</td><td>§4 control solver</td></tr>
+        <tr><td>TC-CS-2-01</td><td>§4.3 unsatisfiable</td></tr>
+        <tr><td>TC-CS-3-01, TC-CS-3-02</td><td>§3.9 downstream_reviews</td></tr>
+        <tr><td>TC-UC-5-01 through TC-UC-5-03</td><td>§5 contradiction detection</td></tr>
+        <tr><td>TC-VD-8-01</td><td>§6 reasoning trace</td></tr>
+        <tr><td>TC-RA-2-01</td><td>§3.6 jurisdiction override</td></tr>
+        <tr><td>TC-RA-11-01, TC-RA-11-02</td><td>§3.9 confidence_caveats</td></tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

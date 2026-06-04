@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Cross-Cutting Specification</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-top: 1.2rem;
+      margin-bottom: 0.4rem;
+      color: #555;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 780px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 780px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+      max-width: 1000px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 780px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── ADR (Architecture Decision Record) ── */
+    details.adr {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0;
+      margin: 1rem 0 1.2rem;
+      max-width: 860px;
+    }
+
+    details.adr summary {
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    details.adr summary::-webkit-details-marker { display: none; }
+
+    details.adr summary::before {
+      content: '\25B8 ';
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    details.adr[open] summary::before {
+      content: '\25BE ';
+    }
+
+    .adr-id {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.5rem;
+    }
+
+    .adr-title {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .adr-status {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      margin-left: 0.5rem;
+    }
+
+    .adr-body {
+      padding: 0 1rem 0.8rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .adr-body h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin: 0.6rem 0 0.3rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Code Blocks ── */
+    pre {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 1rem;
+      margin: 1.2rem 0;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      max-width: 860px;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      color: #111;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">June 2026 — Living Document</p>
+    <h1>AIGate — Cross-Cutting Specification</h1>
+    <p class="subtitle">Tech stack, project structure, module conventions, error handling, TypeScript standards, testing approach, and build configuration.</p>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <caption>Table 1 — Expert roster and grounding sources</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dan Vanderkam</td>
+          <td><em>Effective TypeScript</em> (2nd ed., O'Reilly 2024)</td>
+          <td>TypeScript standards — strict typing, discriminated unions, interface design</td>
+        </tr>
+        <tr>
+          <td>Dan Abramov / React Core Team</td>
+          <td>react.dev</td>
+          <td>React conventions — component composition, state lifting, unidirectional data flow</td>
+        </tr>
+        <tr>
+          <td>Kent C. Dodds</td>
+          <td>Testing Library (testing-library.com)</td>
+          <td>Testing conventions — behaviour-first, user-interaction testing</td>
+        </tr>
+        <tr>
+          <td>Kent Beck</td>
+          <td><em>Test-Driven Development: By Example</em> (Addison-Wesley 2002)</td>
+          <td>TDD discipline — red-green-refactor, test-first</td>
+        </tr>
+        <tr>
+          <td>Andrew Hunt &amp; David Thomas</td>
+          <td><em>The Pragmatic Programmer</em> (20th anniversary ed., 2019)</td>
+          <td>DRY, no hardcoded secrets, tracer bullets</td>
+        </tr>
+        <tr>
+          <td>Martin Fowler</td>
+          <td><em>Patterns of Enterprise Application Architecture</em> (Addison-Wesley 2002)</td>
+          <td>Module boundaries, anti-bloat, Repository pattern</td>
+        </tr>
+        <tr>
+          <td>Robert C. Martin</td>
+          <td><em>Clean Code</em> (Prentice Hall 2008)</td>
+          <td>Single responsibility, error handling, naming</td>
+        </tr>
+        <tr>
+          <td>Mike Cohn</td>
+          <td><em>Agile Estimating and Planning</em> (Prentice Hall 2005)</td>
+          <td>Vertical slicing — first runnable slice governs chunk ordering</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="asr">Architecturally Significant Requirements Addressed</h2>
+    <table>
+      <caption>Table 2 — ASRs forcing architectural decisions</caption>
+      <thead>
+        <tr><th>ASR</th><th>Requirement</th><th>Decision forced</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Client-side only</td>
+          <td>NF-3, NF-4</td>
+          <td>No server, no backend — everything in the browser</td>
+        </tr>
+        <tr>
+          <td>Deterministic engine</td>
+          <td>NF-1, PE-1</td>
+          <td>Engine is a pure function — no LLM in evaluation path</td>
+        </tr>
+        <tr>
+          <td>LLM at edges only</td>
+          <td>UC-3, NF-1</td>
+          <td>Anthropic SDK used only for graph extraction and reasoning trace</td>
+        </tr>
+        <tr>
+          <td>No install for end users</td>
+          <td>NF-4</td>
+          <td>Build output is a <code>dist/</code> folder served by any static server</td>
+        </tr>
+        <tr>
+          <td>TypeScript strict</td>
+          <td>(stack constraint)</td>
+          <td>Strict mode, no <code>any</code>, discriminated unions for domain types</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="tech-stack">Tech Stack</h2>
+
+    <details class="adr" id="adr-001">
+      <summary>
+        <span class="adr-id">ADR-001</span>
+        <span class="adr-title">React + Vite + TypeScript as the application framework</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>AIGate is a browser-only governance tool (NF-3, NF-4). No backend. Must run from a <code>dist/</code> folder served by any static server or opened via <code>file://</code> with a local web server. The intake flow, graph editing UI, and register view are sufficiently complex to benefit from a component model. No server-side rendering — all components are client components.</p>
+
+        <h4>Options Considered</h4>
+        <ol>
+          <li><strong>Vanilla TypeScript + Vite</strong> — zero framework overhead, but complex multi-step flows (intake wizard, graph editor, register) require significant hand-rolled UI plumbing. Increases build time substantially.</li>
+          <li><strong>React + Vite + TypeScript</strong> — standard React 18 component model; Vite builds to a static <code>dist/</code>; Testing Library for behaviour-first tests; well-understood patterns.</li>
+          <li><strong>Preact + Vite + TypeScript</strong> — 3kb bundle vs ~45kb React. Acceptable trade-off but less ecosystem support and not preferred by stack constraints.</li>
+        </ol>
+
+        <h4>Decision</h4>
+        <p>React + Vite + TypeScript. The component model is proportionate to the UI complexity. Bundle size is not a constraint for a local governance tool.</p>
+
+        <h4>Consequences</h4>
+        <p>All components are client components (no RSC). State managed with React's built-in hooks + Zustand for cross-component state (register, verdict). No SSR complexity.</p>
+      </div>
+    </details>
+
+    <h3 id="core-library-choices">Core Library Choices</h3>
+    <table>
+      <caption>Table 3 — Selected libraries and rationale</caption>
+      <thead>
+        <tr><th>Concern</th><th>Library</th><th>Version</th><th>Rationale</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>YAML parsing</td>
+          <td><code>js-yaml</code></td>
+          <td>^4.1</td>
+          <td>De-facto standard; types included via <code>@types/js-yaml</code></td>
+        </tr>
+        <tr>
+          <td>IndexedDB</td>
+          <td><code>idb</code></td>
+          <td>^8.0</td>
+          <td>Typed Promise wrapper over IndexedDB; used by WHATWG; OQ-2 resolution</td>
+        </tr>
+        <tr>
+          <td>Form management</td>
+          <td><code>react-hook-form</code></td>
+          <td>^7.x</td>
+          <td>Performance-first; minimal re-renders; Zod integration</td>
+        </tr>
+        <tr>
+          <td>Schema validation</td>
+          <td><code>zod</code></td>
+          <td>^3.x</td>
+          <td>Runtime validation + TypeScript type inference from schema</td>
+        </tr>
+        <tr>
+          <td>LLM integration</td>
+          <td><code>@anthropic-ai/sdk</code></td>
+          <td>^0.39+</td>
+          <td>Browser-compatible (<code>dangerouslyAllowBrowser: true</code>); model: <code>claude-sonnet-4-6</code></td>
+        </tr>
+        <tr>
+          <td>ID generation</td>
+          <td><code>uuid</code></td>
+          <td>^9.x</td>
+          <td>RFC 4122; v4 for use case IDs, verdict IDs</td>
+        </tr>
+        <tr>
+          <td>State management</td>
+          <td><code>zustand</code></td>
+          <td>^4.x</td>
+          <td>Minimal cross-component store; no boilerplate</td>
+        </tr>
+        <tr>
+          <td>Testing</td>
+          <td><code>vitest</code> + <code>@testing-library/react</code></td>
+          <td>latest</td>
+          <td>Vite-native test runner; Testing Library for behaviour-first tests</td>
+        </tr>
+        <tr>
+          <td>YAML diff (for pack updates)</td>
+          <td><code>deep-diff</code></td>
+          <td>^1.0</td>
+          <td>For RA-10 diff mechanics (V1.5) — include schema now</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>No UI component library.</strong> AIGate uses custom components styled with plain CSS. The Tufte/Few design system (from the requirements + health report HTML) sets the visual language. No Tailwind, no MUI, no Radix — keeps the bundle lean and the styling deterministic.</p>
+
+    <h2 id="project-structure">Project Structure</h2>
+
+    <pre><code>aigate/                         # Project root
+├── index.html                  # Vite entry point
+├── vite.config.ts              # Vite config (base: './' for file:// compatibility)
+├── tsconfig.json               # TypeScript strict mode
+├── package.json
+├── policy/                     # Policy files (user-editable, not bundled)
+│   ├── appetite.yaml           # Main policy file (starter config)
+│   └── packs/
+│       ├── sr-26-2.yaml
+│       ├── ss1-23.yaml
+│       ├── eu-ai-act.yaml
+│       ├── osfi-e23.yaml
+│       ├── mas-feat.yaml
+│       ├── dora.yaml
+│       └── fsa-japan.yaml
+├── src/
+│   ├── main.tsx                # React entry point
+│   ├── App.tsx                 # Root component + router
+│   ├── engine/                 # Policy engine — pure functions, no React
+│   │   ├── policy-loader.ts    # Parse + validate YAML policy + packs
+│   │   ├── evaluator.ts        # Main evaluation pipeline (PE-1 through PE-6)
+│   │   ├── control-solver.ts   # Minimal control set solver (CS-1, CS-2)
+│   │   ├── jurisdiction.ts     # Jurisdiction override pack application
+│   │   ├── contradiction.ts    # Graph contradiction detection (UC-5, OB-2)
+│   │   └── types.ts            # Shared engine types (Graph, Verdict, Policy, etc.)
+│   ├── llm/                    # LLM boundary — only caller of Anthropic SDK
+│   │   ├── graph-extractor.ts  # UC-3: description → data-flow graph
+│   │   ├── reasoning-trace.ts  # VD-8: verdict → plain-English trace
+│   │   └── client.ts           # Anthropic SDK wrapper (API key management)
+│   ├── store/                  # Persistence
+│   │   ├── db.ts               # IndexedDB schema + idb setup
+│   │   ├── register.ts         # Use case register (graph model) — RG-1
+│   │   └── audit.ts            # Append-only audit trail — NF-2, VD-4
+│   ├── ui/                     # React components
+│   │   ├── intake/             # UC-1 through UC-7, UC-3a
+│   │   │   ├── IntakeFlow.tsx
+│   │   │   ├── GraphReview.tsx
+│   │   │   ├── QuestionnaireStep.tsx
+│   │   │   └── StructuredForm.tsx  # UC-3a fallback
+│   │   ├── verdict/            # VD-1 through VD-8
+│   │   │   ├── VerdictDisplay.tsx
+│   │   │   ├── ReasoningTrace.tsx
+│   │   │   └── CorrectionFlow.tsx
+│   │   ├── register/           # RG-1 through RG-5
+│   │   │   ├── RegisterView.tsx
+│   │   │   └── UseCaseDetail.tsx
+│   │   ├── settings/           # CF-5, API key
+│   │   │   └── SettingsPanel.tsx
+│   │   └── shared/             # Reusable components
+│   │       ├── PriorityChip.tsx
+│   │       ├── StatusBadge.tsx
+│   │       └── AuditTrail.tsx
+│   └── hooks/                  # Custom hooks
+│       ├── usePolicy.ts        # Load + validate policy file
+│       ├── useRegister.ts      # Register CRUD via IndexedDB
+│       └── useRole.ts          # Role context (1LoD / 2LoD)
+├── public/                     # Static assets
+└── dist/                       # Build output (gitignored)
+</code></pre>
+
+    <p><strong>Key structural rule:</strong> <code>src/engine/</code> has zero React imports. It is pure TypeScript. This enforces the determinism requirement (NF-1) — the engine is testable in isolation without React render infrastructure. The <code>src/llm/</code> directory is the only place the Anthropic SDK is imported.</p>
+
+    <h2 id="typescript-standards">TypeScript Standards</h2>
+
+    <ul>
+      <li><strong>Strict mode enabled</strong> in <code>tsconfig.json</code>: <code>strict: true</code>, <code>noImplicitAny: true</code>, <code>strictNullChecks: true</code></li>
+      <li><strong>Discriminated unions</strong> for all domain status types:
+        <pre><code>type VerdictStatus = 'approved' | 'approved_with_controls' | 'rejected';
+type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
+type Track = 'I' | 'II' | 'III';
+type LifecycleStage = 'Idea' | 'Exploring' | 'Pre-checked' | 'Approved' | 'In Production' | 'Monitored' | 'Retired';</code></pre>
+      </li>
+      <li><strong>No <code>any</code></strong> — use <code>unknown</code> + type guard functions for external data (YAML parse results, LLM responses)</li>
+      <li><strong>Interfaces for shared domain objects</strong> (Policy, Graph, Verdict, UseCase, AuditRecord) — placed in <code>src/engine/types.ts</code></li>
+      <li><strong>Zod schemas</strong> for all external boundaries (YAML policy parse, LLM response parse, IndexedDB read) — Zod schema IS the runtime validator AND the TypeScript type source</li>
+    </ul>
+
+    <h2 id="error-handling">Error Handling Conventions</h2>
+
+    <h3 id="engine-errors">Engine Errors</h3>
+    <p>The engine uses a <code>Result&lt;T, E&gt;</code> pattern (no exceptions in the evaluation path):</p>
+    <pre><code>type Result&lt;T, E = EngineError&gt; =
+  | { ok: true; value: T }
+  | { ok: false; error: E };
+
+type EngineError =
+  | { kind: 'policy-invalid'; field: string; reason: string }
+  | { kind: 'hard-line-tripped'; invariantId: string; path: string }
+  | { kind: 'no-control-set'; unsatisfiableInvariant: string }
+  | { kind: 'jurisdiction-conflict'; packs: string[]; reason: string };</code></pre>
+    <p>Engine functions never throw — they return <code>Result</code>. The UI layer handles <code>ok: false</code> cases.</p>
+
+    <h3 id="llm-errors">LLM Errors</h3>
+    <p>LLM calls can fail (network, rate limit, invalid key). The <code>src/llm/client.ts</code> wraps all SDK calls in try/catch and returns <code>Result&lt;T, LlmError&gt;</code>. If any LLM call fails, the UI falls back to the structured form (UC-3a) or flags the error — it never propagates an unhandled exception.</p>
+
+    <h3 id="policy-load-errors">Policy Load Errors (CF-5)</h3>
+    <p>Policy validation errors are surfaced at startup via the <code>usePolicy</code> hook. If the policy is invalid, the hook returns <code>{ valid: false, errors: PolicyValidationError[] }</code> and the App renders an error screen naming each invalid field. Evaluation is disabled until the error is resolved.</p>
+
+    <h3 id="ui-errors">UI Errors</h3>
+    <p>React error boundaries at the route level. Each major view (intake, verdict, register) has its own error boundary. Errors are shown as user-readable messages, never as stack traces.</p>
+
+    <h2 id="testing-conventions">Testing Conventions</h2>
+
+    <h3 id="test-locations">Test Locations</h3>
+    <p>Tests co-located with source:</p>
+    <pre><code>src/engine/evaluator.ts
+src/engine/evaluator.test.ts   ← same directory</code></pre>
+
+    <h3 id="test-layers">Test Layers</h3>
+    <table>
+      <caption>Table 4 — Test layers and approaches</caption>
+      <thead>
+        <tr><th>Layer</th><th>What to test</th><th>How</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Engine (pure functions)</td>
+          <td>Evaluation correctness, solver correctness, jurisdiction logic</td>
+          <td>Vitest unit tests — no React, no mocks</td>
+        </tr>
+        <tr>
+          <td>LLM boundary</td>
+          <td>Graph extraction + reasoning trace</td>
+          <td>Mock Anthropic SDK; test prompt construction and response parsing</td>
+        </tr>
+        <tr>
+          <td>Store</td>
+          <td>IndexedDB read/write, append-only constraint</td>
+          <td>Vitest with fake-indexeddb</td>
+        </tr>
+        <tr>
+          <td>UI components</td>
+          <td>User interactions, form flows, verdict display</td>
+          <td>Testing Library — find by role/label, simulate user events</td>
+        </tr>
+        <tr>
+          <td>Integration</td>
+          <td>Full intake → evaluation → verdict → register cycle</td>
+          <td>Vitest + Testing Library + mocked LLM</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="test-rules">Key Rules</h3>
+    <ul>
+      <li>Write the failing test first (TDD discipline for engine functions)</li>
+      <li>Test the public interface, not internals — <code>evaluator.test.ts</code> tests <code>evaluate(graph, policy)</code>, not internal helper functions</li>
+      <li>No <code>any</code> in test assertions — typed assertions against typed results</li>
+      <li><code>describe</code> block names describe the scenario; <code>it</code> names describe the expected behaviour</li>
+    </ul>
+
+    <h2 id="module-boundaries">Module Boundary Rules</h2>
+
+    <p><strong>Rule 1 — Engine is a pure island:</strong> <code>src/engine/*</code> imports only from <code>src/engine/types.ts</code> and standard TypeScript types. No React, no idb, no Anthropic SDK, no browser APIs.</p>
+
+    <p><strong>Rule 2 — LLM boundary is isolated:</strong> <code>src/llm/*</code> is the only place the Anthropic SDK is imported. Nothing in <code>src/engine/*</code> or <code>src/store/*</code> calls the LLM.</p>
+
+    <p><strong>Rule 3 — Store is persistence-only:</strong> <code>src/store/*</code> handles IndexedDB reads and writes. No evaluation logic, no LLM calls, no React imports.</p>
+
+    <p><strong>Rule 4 — UI is presentation-only:</strong> <code>src/ui/*</code> renders state and calls engine/store functions. No evaluation logic inline in components. Business logic lives in engine or store.</p>
+
+    <p><strong>Dependency direction:</strong> <code>ui → store</code>, <code>ui → engine</code>, <code>ui → llm</code>. Never: <code>engine → ui</code>, <code>store → engine</code>, <code>llm → store</code>.</p>
+
+    <h2 id="vite-configuration">Vite Configuration</h2>
+
+    <pre><code>// vite.config.ts
+export default {
+  base: './',           // Relative paths — required for file:// compatibility (NF-4)
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom'],
+          'engine': ['js-yaml', 'uuid'],
+        }
+      }
+    }
+  }
+}</code></pre>
+
+    <p><code>base: './'</code> is critical — without it, Vite generates absolute paths (<code>/assets/...</code>) that break when opened from a local file system.</p>
+
+    <h2 id="api-key-management">API Key Management</h2>
+
+    <p>The Anthropic API key is stored in <code>localStorage</code> under the key <code>aigate:api-key</code>. It is:</p>
+    <ul>
+      <li>Never hardcoded or committed to git (<code>.gitignore</code> does not apply — it's in the browser)</li>
+      <li>Never sent to any server other than <code>api.anthropic.com</code> (via the SDK)</li>
+      <li>Displayed as a masked input (<code>type="password"</code>) in the Settings panel</li>
+      <li>Read by <code>src/llm/client.ts</code> at call time — not stored in React state</li>
+    </ul>
+
+    <p>The <code>dangerouslyAllowBrowser: true</code> flag in the Anthropic SDK is used explicitly because the user has been informed that their key choice determines data handling (per NF-3 and the README). This flag is deliberate, not a security oversight.</p>
+
+    <h2 id="role-context">Role Context</h2>
+
+    <p>There is no authentication in MVP (NF-4 / no-backend constraint). Role is a configurable toggle stored in <code>localStorage</code> under <code>aigate:role</code>, with values <code>'1LoD'</code> or <code>'2LoD'</code>. The <code>useRole</code> hook reads this value. The Settings panel provides a role selector.</p>
+
+    <p>This is explicitly a governance-tool trust model: the tool trusts the user to select their role honestly. True authentication is V2.</p>
+
+    <h2 id="requirement-traceability">Requirement Traceability</h2>
+
+    <table>
+      <caption>Table 5 — Requirements covered by this specification</caption>
+      <thead>
+        <tr><th>Requirements Covered</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>NF-1, PE-1</td>
+          <td>Engine pure function convention enforces determinism</td>
+        </tr>
+        <tr>
+          <td>NF-3</td>
+          <td>No backend; API key in localStorage; no outbound calls except user's API key</td>
+        </tr>
+        <tr>
+          <td>NF-4</td>
+          <td><code>base: './'</code> in Vite config; runs from local file</td>
+        </tr>
+        <tr>
+          <td>CF-5</td>
+          <td>Policy validation at startup; <code>usePolicy</code> hook; error screen on invalid policy</td>
+        </tr>
+        <tr>
+          <td>UC-3a</td>
+          <td><code>StructuredForm.tsx</code> — fallback when no API key configured</td>
+        </tr>
+        <tr>
+          <td>OQ-1</td>
+          <td>Anthropic <code>claude-sonnet-4-6</code> — resolved</td>
+        </tr>
+        <tr>
+          <td>OQ-2</td>
+          <td><code>idb</code> library for IndexedDB — resolved</td>
+        </tr>
+        <tr>
+          <td>OQ-3</td>
+          <td>Role toggle in <code>localStorage</code> + Settings panel — resolved (minimal 2LoD mechanism)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="open-questions-resolved">Open Questions Resolved</h2>
+
+    <table>
+      <caption>Table 6 — Open questions and resolutions</caption>
+      <thead>
+        <tr><th>OQ</th><th>Resolution</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>OQ-1 (LLM provider)</td>
+          <td>Anthropic <code>claude-sonnet-4-6</code>; fallback to structured form if no key</td>
+        </tr>
+        <tr>
+          <td>OQ-2 (Register persistence)</td>
+          <td>IndexedDB via <code>idb</code> library</td>
+        </tr>
+        <tr>
+          <td>OQ-3 (2LoD mechanism)</td>
+          <td>Role toggle in localStorage + Settings panel; role-filtered register view</td>
+        </tr>
+        <tr>
+          <td>OQ-4 (Duplicate detection)</td>
+          <td>LLM semantic comparison if API key present; exact-match + tag fallback otherwise</td>
+        </tr>
+        <tr>
+          <td>OQ-5 (Audit export format)</td>
+          <td>JSON primary; CSV secondary (RG-5)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
