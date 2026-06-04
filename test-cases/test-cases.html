@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Test Cases</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Test Case Components ── */
+    .test-case {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .tc-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .tc-bdd p {
+      margin-bottom: 0.2rem;
+      padding-left: 1rem;
+    }
+
+    .tc-trace {
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 0.4rem;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">June 2026 — Draft</p>
+    <h1>AIGate — Test Cases</h1>
+    <p class="subtitle">Version 1.0 — Complete test suite for ai-raf-precheck, generated by /gvm-test-cases. All V1 Must and Should requirements traced to at least one test case.</p>
+
+    <h2 id="metadata">Document Metadata</h2>
+    <table>
+      <caption>Project and Version Information</caption>
+      <thead>
+        <tr><th>Field</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Version</td><td>1.0</td></tr>
+        <tr><td>Date</td><td>June 2026</td></tr>
+        <tr><td>Project</td><td>ai-raf-precheck</td></tr>
+        <tr><td>Status</td><td>Draft — generated by /gvm-test-cases</td></tr>
+        <tr><td>Requirements Version</td><td>1.0 (with UC-3a and CF-5 additions)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expert-panel">Expert Panel</h2>
+    <table>
+      <caption>Contributing Experts and References</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lee Copeland</td><td><em>A Practitioner's Guide to Software Test Design</em></td><td>Technique selection per domain</td></tr>
+        <tr><td>Boris Beizer</td><td><em>Software Testing Techniques</em> (2nd ed.)</td><td>Boundary analysis, thoroughness</td></tr>
+        <tr><td>Dan North</td><td><em>Introducing BDD</em> (2006)</td><td>Given/When/Then format, scenario naming</td></tr>
+        <tr><td>Cem Kaner</td><td><em>Testing Computer Software</em> (2nd ed.)</td><td>Risk-based prioritisation, consumer realism</td></tr>
+        <tr><td>David MacIver</td><td><em>Hypothesis</em> documentation</td><td>Property-based test identification</td></tr>
+        <tr><td>OWASP Foundation</td><td><em>Testing Guide v4.2</em>; <em>Top 10 for LLM Applications</em> (2025)</td><td>Security test cases</td></tr>
+        <tr><td>NIST</td><td><em>AI Risk Management Framework (AI RMF 1.0)</em></td><td>AI governance domain grounding</td></tr>
+        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Regulatory test scenarios</td></tr>
+        <tr><td>SR 26-2</td><td>Fed/OCC/FDIC <em>Model Risk Management</em> (2026)</td><td>Track classification test scenarios</td></tr>
+        <tr><td>SS1/23</td><td>PRA <em>Model Risk Management Principles</em> (2023)</td><td>Jurisdiction override test scenarios</td></tr>
+        <tr><td>OSFI E-23</td><td><em>Enterprise-Wide Model Risk Management</em> (eff. 2027)</td><td>Broadest-definition MRM test scenarios</td></tr>
+        <tr><td>MAS FEAT</td><td><em>FEAT Principles</em> (2019)</td><td>Fairness/accountability test scenarios</td></tr>
+        <tr><td>Stuart Russell</td><td><em>Human Compatible</em></td><td>Agentic AI / autonomy level test scenarios</td></tr>
+        <tr><td>Cathy O'Neil</td><td><em>Weapons of Math Destruction</em></td><td>Algorithmic bias / conduct risk test scenarios</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="health-report">Requirements Health Report — Decision Summary</h2>
+    <p>10 issues assessed in Phase 1. 2 fixed (UC-3a, CF-5 added to requirements). 8 acknowledged:</p>
+    <ul>
+      <li><strong>HR-01:</strong> similarity threshold assumed 0.80; dual algorithm paths tested</li>
+      <li><strong>HR-02:</strong> NF-5 performance tests use M2 8GB MacBook Air as baseline</li>
+      <li><strong>HR-03/04:</strong> duplicate requirement pairs cross-traced, tests written once</li>
+      <li><strong>HR-07:</strong> API key UX tested against localStorage/masked field assumption</li>
+      <li><strong>HR-08:</strong> VD-4 audit trail tested at application layer only (no delete/edit button)</li>
+      <li><strong>HR-09:</strong> RG-1 graph queries tested against 2-second / 500 use cases baseline</li>
+      <li><strong>HR-10:</strong> LC-6 failure tests verify warning displayed to 2LoD role</li>
+    </ul>
+
+    <h2 id="suite-overview">Test Suite Overview</h2>
+    <table>
+      <caption>Domains, Requirements, and Test Techniques</caption>
+      <thead>
+        <tr><th>Domain</th><th>Requirements</th><th>Test Cases</th><th>Techniques Applied</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UC — Use Case Intake</td><td>8 (UC-1 through UC-7, UC-3a)</td><td>24</td><td>Equivalence class, boundary value, decision table, state transition, use case, security</td></tr>
+        <tr><td>PE — Policy Engine</td><td>8</td><td>16</td><td>Decision table, state transition, use case</td></tr>
+        <tr><td>CS — Control Solve</td><td>3 (V1)</td><td>5</td><td>Decision table, use case</td></tr>
+        <tr><td>VD — Verdict &amp; Certificate</td><td>8</td><td>11</td><td>Use case, state transition</td></tr>
+        <tr><td>LC — Use Case Lifecycle</td><td>4 (V1)</td><td>6</td><td>State transition, decision table</td></tr>
+        <tr><td>RG — Register &amp; Inventory</td><td>4 (V1)</td><td>6</td><td>Equivalence class, state transition</td></tr>
+        <tr><td>CF — Configuration</td><td>5</td><td>7</td><td>Equivalence class, decision table</td></tr>
+        <tr><td>RA — Regulatory Alignment</td><td>12</td><td>14</td><td>Decision table, use case</td></tr>
+        <tr><td>NF — Non-Functional</td><td>10</td><td>11</td><td>Boundary value, property-based</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="uc-domain">UC — Use Case Intake</h2>
+    <p><strong>Techniques applied:</strong> Equivalence class partitioning, boundary value analysis, decision table testing, state transition testing, use case testing, security testing.</p>
+
+    <h3 id="uc-req-1">UC-1: Description Intake &amp; Validation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Single-sentence description initiates intake</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter is on the intake screen with no prior submission in progress</p>
+        <p><strong>When</strong> they enter a single sentence and click Submit</p>
+        <p><strong>Then</strong> the system accepts the description and advances to the graph extraction step, displays the description back to the submitter for reference, and does NOT require any form fields to be completed</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Five-sentence description accepted at upper boundary</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter is on the intake screen</p>
+        <p><strong>When</strong> they enter a five-sentence description and submit</p>
+        <p><strong>Then</strong> the system accepts the description and proceeds to graph extraction</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-1-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Empty submission blocked</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter is on the intake screen</p>
+        <p><strong>When</strong> they submit with an empty description field</p>
+        <p><strong>Then</strong> the system prevents submission, displays error message, and does NOT advance to graph extraction</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-1-04 <span class="priority must">Must</span></div>
+      <div class="tc-name">Description containing special characters and non-ASCII accepted</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter enters a description containing HTML angle brackets, accented characters, and em-dashes</p>
+        <p><strong>When</strong> they submit</p>
+        <p><strong>Then</strong> the system accepts the description without error, treats HTML tags as literal text (not rendered), and does NOT execute any embedded script content</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-1 | [SECURITY]</div>
+    </div>
+
+    <h3 id="uc-req-2">UC-2: Duplicate Detection &amp; Handling</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Exact-match duplicate detected and surfaced</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains use case UC-001 with an identical description</p>
+        <p><strong>When</strong> a submitter submits the identical description</p>
+        <p><strong>Then</strong> the system surfaces UC-001 before showing intake questions, displays UC-001's tier and track, and outputs do NOT contain the intake question flow</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-2-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Submitter adopts existing classification from duplicate match</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the system has surfaced use case UC-001 as a duplicate match</p>
+        <p><strong>When</strong> the submitter selects "Adopt existing classification"</p>
+        <p><strong>Then</strong> the system creates a new use case record linked to UC-001's classification and the submitter is not asked intake questions</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-2-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Submitter confirms use case is new, intake proceeds</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the system has surfaced a near-match duplicate</p>
+        <p><strong>When</strong> the submitter selects "This is a different use case"</p>
+        <p><strong>Then</strong> the system proceeds to graph extraction and records the near-match as reviewed and dismissed in the audit trail</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-2-04 <span class="priority must">Must</span></div>
+      <div class="tc-name">No duplicate found, intake proceeds without interruption</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains no use cases similar to the submitted description (similarity score below 0.80 against all existing records)</p>
+        <p><strong>When</strong> the submitter submits a description</p>
+        <p><strong>Then</strong> the system proceeds directly to graph extraction without surfacing any duplicate prompt</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-2-05 <span class="priority must">Must</span></div>
+      <div class="tc-name">Empty register — duplicate check skipped gracefully</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains zero use cases</p>
+        <p><strong>When</strong> a submitter submits the first use case description</p>
+        <p><strong>Then</strong> the system proceeds directly to graph extraction and does NOT display an error or duplicate prompt</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="uc-req-3">UC-3: Data-Flow Graph Extraction</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Graph extracted and displayed before questions are asked</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has submitted a use case description with an API key configured</p>
+        <p><strong>When</strong> the LLM extracts the data-flow graph</p>
+        <p><strong>Then</strong> the graph is displayed to the submitter before any intake questions appear, showing input node (with data class), processing node (with autonomy level), and output node (with action type)</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Graph extraction with ambiguous description produces labelled nodes</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter enters a vague description</p>
+        <p><strong>When</strong> the LLM extracts the graph</p>
+        <p><strong>Then</strong> the system labels uncertain nodes as "unclassified — please confirm" rather than guessing, and highlights them for submitter review</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Graph extraction is deterministic — same description, same graph structure</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a description is submitted for extraction</p>
+        <p><strong>When</strong> extraction is run multiple times (5 runs with low-temperature model)</p>
+        <p><strong>Then</strong> the extracted graph contains the same set of node types (input, processing, output) and edge directions across all runs</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3 | [PROPERTY]</div>
+    </div>
+
+    <h3 id="uc-req-3a">UC-3a: Structured Form Intake (Fallback)</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3a-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Structured form presented when no API key configured</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter opens the application with no LLM API key configured</p>
+        <p><strong>When</strong> they start a new use case submission</p>
+        <p><strong>Then</strong> the system presents the structured intake form (not LLM extraction), displays fields for data class, autonomy level, data zone, output exposure, and jurisdictions</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3a | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3a-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Structured form produces a valid data-flow graph for evaluation</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter completes all mandatory fields in the structured intake form</p>
+        <p><strong>When</strong> they confirm the form</p>
+        <p><strong>Then</strong> the system produces a data-flow graph equivalent in structure to LLM extraction and proceeds to evaluation against the policy engine</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3a | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3a-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Mandatory field missing in structured form — blocked</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter is completing the structured intake form</p>
+        <p><strong>When</strong> they attempt to confirm with the "data class" field empty</p>
+        <p><strong>Then</strong> the system prevents confirmation, highlights the missing field, and displays error message identifying the required field</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3a | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-3a-04 <span class="priority must">Must</span></div>
+      <div class="tc-name">Structured form field values constrained to policy-defined permitted values</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the structured intake form is displayed</p>
+        <p><strong>When</strong> the submitter views the "data class" field</p>
+        <p><strong>Then</strong> the field presents only values defined in the policy file (e.g., Public, Internal, Confidential, MNPI, Client PII), and free-text entry is not permitted for enumerated fields</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-3a | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="uc-req-4">UC-4: Question Generation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Low-tier use case receives no more than 5 questions</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has confirmed a data-flow graph whose risk signals indicate a Low-tier classification</p>
+        <p><strong>When</strong> the system generates intake questions</p>
+        <p><strong>Then</strong> no more than 5 questions are presented to the submitter</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-4 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-4-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Critical-tier use case receives no more than 15 questions</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has confirmed a data-flow graph with Critical-tier risk signals</p>
+        <p><strong>When</strong> the system generates intake questions</p>
+        <p><strong>Then</strong> no more than 15 questions are presented and at least 3 questions are shown</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-4 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-4-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Question count boundary — exactly 5 questions for Low-tier borderline case</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a data-flow graph that signals exactly the threshold for Low-tier</p>
+        <p><strong>When</strong> the system generates questions</p>
+        <p><strong>Then</strong> exactly 5 or fewer questions are presented and the system does not add a 6th question for completeness</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-4 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-4-04 <span class="priority must">Must</span></div>
+      <div class="tc-name">Questions are specific to the detected risk signals — not a fixed universal list</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> two different use cases: (A) internal document summariser and (B) client-facing trading assistant</p>
+        <p><strong>When</strong> the system generates questions for each</p>
+        <p><strong>Then</strong> the questions presented for A and B are different, B includes questions about client data handling, and A does NOT include market-sensitive output questions</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="uc-req-5">UC-5: Contradiction Detection</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-5-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Contradiction between description and answer flagged</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has described their use case as not using client data</p>
+        <p><strong>When</strong> they answer a follow-up question confirming client relationship notes are processed</p>
+        <p><strong>Then</strong> the system flags the contradiction with both specific conflicting statements identified, and does NOT continue to the next question before resolution</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-5 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-5-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">No false contradiction flagged when answers are consistent</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has described their use case as using internal transaction data</p>
+        <p><strong>When</strong> they answer "yes" to "does the tool process internal transaction records?"</p>
+        <p><strong>Then</strong> the system does NOT flag a contradiction and proceeds to the next question normally</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-5 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-5-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Multiple contradictions in one session — all flagged before proceeding</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has introduced two contradictions during the intake flow</p>
+        <p><strong>When</strong> both contradictions have been detected</p>
+        <p><strong>Then</strong> the system presents both contradictions together and requires resolution of all before graph confirmation</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-5 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="uc-req-6">UC-6: Graph Confirmation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-6-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Graph confirmation required before evaluation begins</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has completed intake questions and reviewed the final graph</p>
+        <p><strong>When</strong> they click "Confirm and evaluate"</p>
+        <p><strong>Then</strong> the system records the confirmation with submitter identity, timestamp, and graph version number in the audit trail, and does NOT produce a verdict before confirmation</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-6 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-6-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Evaluation cannot be triggered without explicit confirmation</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter has completed all intake questions but has not confirmed the graph</p>
+        <p><strong>When</strong> the system state is "awaiting confirmation"</p>
+        <p><strong>Then</strong> the system does not produce a verdict automatically and the evaluation button is disabled or absent</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-6 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-6-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Confirmation records the graph version, not just a timestamp</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter confirms graph version 2 (after making one correction to version 1)</p>
+        <p><strong>When</strong> the confirmation is recorded</p>
+        <p><strong>Then</strong> the audit trail shows "graph version 2 confirmed" with the specific version number</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-6 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="uc-req-7">UC-7: Graph Correction &amp; Audit Trail</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-7-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Correction to a graph node recorded with before/after values</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter is reviewing the extracted graph</p>
+        <p><strong>When</strong> they correct the data class field from "Internal" to "MNPI"</p>
+        <p><strong>Then</strong> the correction is saved with field changed, original value, new value, submitter identity, and timestamp in the audit trail</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-7 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-7-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Multiple corrections in one session all recorded</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter makes corrections to three graph nodes (data class, autonomy level, data zone)</p>
+        <p><strong>When</strong> all three corrections are saved and the graph is confirmed</p>
+        <p><strong>Then</strong> the audit trail shows all three corrections, each with before/after values, identity, and timestamp</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-7 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-UC-7-03 <span class="priority should">Should</span></div>
+      <div class="tc-name">Correcting a node updates the displayed graph immediately</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter corrects the autonomy level from L1 to L3</p>
+        <p><strong>When</strong> the correction is saved</p>
+        <p><strong>Then</strong> the displayed graph updates to show L3 immediately, and the submitter can see the corrected value before confirming</p>
+      </div>
+      <div class="tc-trace">Requirement: UC-7 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="pe-domain">PE — Policy Engine</h2>
+    <p><strong>Techniques applied:</strong> Decision table testing, state transition testing, use case testing.</p>
+
+    <h3 id="pe-req-1">PE-1: Verdict Determinism &amp; Generation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Same graph + same policy version always produces same verdict</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed data-flow graph G and policy version V</p>
+        <p><strong>When</strong> evaluation is invoked 10 times with the same inputs</p>
+        <p><strong>Then</strong> the verdict is byte-identical on every run with same status, tier, track, and binding constraint</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-1 | [PROPERTY]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Verdict produced for valid confirmed graph</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a valid confirmed graph (internal HR FAQ chatbot, data class: Internal, autonomy L1, Zone A, UK only)</p>
+        <p><strong>When</strong> evaluation is triggered</p>
+        <p><strong>Then</strong> the system returns a verdict with status (Approved / Approved with controls / Rejected), tier, track, and binding constraint all populated</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-2">PE-2: Track Assignment</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Track I assigned to traditional ML model meeting Track I criteria</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (statistical credit scoring model, no GenAI, no agentic behaviour, UK entity)</p>
+        <p><strong>When</strong> the policy engine evaluates track assignment</p>
+        <p><strong>Then</strong> the verdict shows Track I and the rule ID that matched</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-2-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Track III assigned to GenAI copilot with no quantitative output</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (internal document Q&amp;A using GPT-4, no regulated decision output, internal-only exposure)</p>
+        <p><strong>When</strong> the policy engine evaluates track assignment</p>
+        <p><strong>Then</strong> the verdict shows Track III and the SR 26-2 exclusion rule is referenced</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-2-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Track assignment short-circuits at first matching rule</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file has ordered track rules and the confirmed graph matches both Rule A (→ Track I) and Rule C (→ Track III)</p>
+        <p><strong>When</strong> the engine assigns track</p>
+        <p><strong>Then</strong> Track I is assigned (Rule A, first match) and Rule C is not evaluated</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-3">PE-3: Tier Assignment</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Credit scoring use case with EU entities forced to Critical regardless of complexity</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (credit scoring model, EU borrowers, low internal complexity score)</p>
+        <p><strong>When</strong> the policy engine assigns tier</p>
+        <p><strong>Then</strong> the tier is Critical with the EU AI Act Annex III §5(b) rule as the trigger</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-3-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">High-impact trigger always produces Critical or High regardless of other scores</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph with a single high-impact trigger (client-facing financial decision, no override)</p>
+        <p><strong>When</strong> the engine assigns tier using impact-dominant rules</p>
+        <p><strong>Then</strong> the tier is Critical or High and no combination of low scores can produce Medium or Low</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-3-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Low-impact use case correctly assigned Low tier</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (internal document summariser, no external exposure, no regulated decision output, Zone A)</p>
+        <p><strong>When</strong> the engine assigns tier</p>
+        <p><strong>Then</strong> the tier is Low or Medium and the tier-triggering rule is named in the verdict output</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-4">PE-4: Hard Lines &amp; Blocking Constraints</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Level 4 autonomy on irreversible client-facing action produces immediate Rejected</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (autonomous trading agent, autonomy L4, irreversible market orders, client-facing, no HITL)</p>
+        <p><strong>When</strong> the policy engine evaluates hard lines</p>
+        <p><strong>Then</strong> the verdict is immediately Rejected with the specific hard line rule ID cited, and no control set is offered</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-4 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-4-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">MNPI flowing to external Zone A model produces immediate Rejected</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (MNPI client data flows to a third-party external LLM endpoint in Zone A)</p>
+        <p><strong>When</strong> the policy engine evaluates hard lines</p>
+        <p><strong>Then</strong> the verdict is Rejected with the data-zone hard line cited and the path identified</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-4 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-4-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Hard lines evaluated before control solving — controls not proposed for hard-line violations</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case that trips a hard line</p>
+        <p><strong>When</strong> the engine runs the full evaluation sequence</p>
+        <p><strong>Then</strong> hard line evaluation occurs BEFORE control solving and no controls are proposed — the evaluation stops at Rejected</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-5">PE-5: Jurisdiction Pack Activation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-5-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">UK-entity use case activates SS1/23 pack</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (quantitative model producing output for a UK-regulated entity)</p>
+        <p><strong>When</strong> the policy engine applies jurisdiction packs</p>
+        <p><strong>Then</strong> the SS1/23 pack is activated and listed in the active packs with its version</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-5 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-5-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">EU entity with credit scoring triggers EU AI Act Annex III critical override</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (EU borrowers in scope, credit scoring output)</p>
+        <p><strong>When</strong> jurisdiction packs are applied</p>
+        <p><strong>Then</strong> the EU AI Act pack fires its Annex III §5(b) override and the tier is forced to Critical</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-5, PE-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-6">PE-6: Jurisdiction Override — Most Demanding Standard Governs</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-6-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Most demanding standard governs when multiple jurisdictions apply</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (US entities → Track III under SR 26-2, UK entities → Track II under SS1/23)</p>
+        <p><strong>When</strong> the engine applies jurisdiction overrides</p>
+        <p><strong>Then</strong> Track II is the final assignment (more demanding) with both SR 26-2 and SS1/23 listed as active packs, SS1/23 named as the governing standard</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-6 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-6-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Tier never reduced below jurisdictional minimum</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case tiered Medium by internal rules but High by SS1/23 minimum standards</p>
+        <p><strong>When</strong> jurisdiction overrides are applied</p>
+        <p><strong>Then</strong> the final tier is High, not Medium</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-6 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-7">PE-7: Policy Version Tracking</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-7-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file version recorded in every verdict</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file is at version 1.3 when a verdict is produced</p>
+        <p><strong>When</strong> the verdict is generated</p>
+        <p><strong>Then</strong> the verdict record contains policy_version: "1.3"</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-7 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-7-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Updated policy file version does not change previously issued verdicts</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict was issued under policy version 1.3</p>
+        <p><strong>When</strong> the policy file is updated to version 1.4</p>
+        <p><strong>Then</strong> the existing verdict still shows policy_version: "1.3" and is not modified or re-evaluated automatically</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-7 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="pe-req-8">PE-8: Starter Configuration</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-8-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Starter config produces a valid verdict out of the box</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the starter policy file is loaded with no customisation</p>
+        <p><strong>When</strong> a simple use case (internal HR FAQ chatbot) is submitted and evaluated</p>
+        <p><strong>Then</strong> the system produces a verdict with complete status, tier, track, and binding constraint fields all populated</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-8 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-PE-8-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Starter config covers all seven jurisdiction packs</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the starter policy file is loaded</p>
+        <p><strong>When</strong> the system is inspected for available jurisdiction packs</p>
+        <p><strong>Then</strong> all seven packs are present and loadable: SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan</p>
+      </div>
+      <div class="tc-trace">Requirement: PE-8 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="cs-domain">CS — Control Solve</h2>
+    <p><strong>Techniques applied:</strong> Decision table testing, use case testing.</p>
+
+    <h3 id="cs-req-1">CS-1: Minimal Control Set &amp; Safety Margin</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CS-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Minimal control set returned — not all possible controls</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph tripping two invariants (I-DATA-3 and I-ZONE-1) with multiple control options available</p>
+        <p><strong>When</strong> the control solver runs</p>
+        <p><strong>Then</strong> the verdict proposes only the controls needed to satisfy all tripped invariants, not all possible controls</p>
+      </div>
+      <div class="tc-trace">Requirement: CS-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CS-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Safety margin maintained — control set keeps use case inside margin, not just at boundary</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a graph borderline on appetite with two equally minimal control sets (A at boundary, B with 10% margin), policy safety_margin = 10%</p>
+        <p><strong>When</strong> the solver selects between them</p>
+        <p><strong>Then</strong> the set providing the 10% margin (set B) is selected</p>
+      </div>
+      <div class="tc-trace">Requirement: CS-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="cs-req-2">CS-2: Rejection When No Control Set Exists</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CS-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Rejected when no control set satisfies all invariants</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (autonomy L4 + irreversible client-facing action with no resolving control)</p>
+        <p><strong>When</strong> the solver runs</p>
+        <p><strong>Then</strong> the verdict is Rejected with the specific unsatisfiable invariant named, and no partial control set is offered</p>
+      </div>
+      <div class="tc-trace">Requirement: CS-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="cs-req-3">CS-3: Downstream Reviews</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CS-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">InfoSec downstream review triggered for MNPI-handling use case</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (MNPI data class, internal Zone B, autonomy L2)</p>
+        <p><strong>When</strong> the verdict is produced</p>
+        <p><strong>Then</strong> the verdict includes "InfoSec review required" as a mandatory next step with the policy rule that triggered it</p>
+      </div>
+      <div class="tc-trace">Requirement: CS-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CS-3-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Vendor risk review triggered for third-party model use case</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (AI model is an unapproved third-party vendor)</p>
+        <p><strong>When</strong> the verdict is produced</p>
+        <p><strong>Then</strong> "vendor risk assessment required" is listed as a mandatory downstream step and the vendor name is identified</p>
+      </div>
+      <div class="tc-trace">Requirement: CS-3 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="vd-domain">VD — Verdict &amp; Certificate</h2>
+    <p><strong>Techniques applied:</strong> Use case testing, state transition testing.</p>
+
+    <h3 id="vd-req-1">VD-1: Verdict Visibility</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Verdict status, tier, and track visible above the fold</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict has been produced (Approved with controls, tier: High, track: Track II)</p>
+        <p><strong>When</strong> the submitter views the verdict screen on a standard 1280×800 viewport</p>
+        <p><strong>Then</strong> all three fields (status, tier, track) are visible without scrolling in the first visible screen area</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-2">VD-2: Binding Constraint &amp; Reasoning</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Binding constraint and graph path shown in verdict</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict where the binding constraint is PE-DATA-3 (MNPI → Zone A path)</p>
+        <p><strong>When</strong> the submitter reads the verdict</p>
+        <p><strong>Then</strong> the verdict shows the rule ID "PE-DATA-3", the violated graph path, and a plain-language explanation</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-3">VD-3: Correction &amp; Re-evaluation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Correction triggers re-evaluation and both verdicts are preserved</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter contests the original verdict (Rejected, MNPI in Zone A) and corrects the data zone to Zone B</p>
+        <p><strong>When</strong> they submit the correction</p>
+        <p><strong>Then</strong> the system re-evaluates producing a new verdict (Approved with controls), and both the original and new verdicts are preserved in the audit trail</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-3 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-3-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Correction record includes corrector identity and timestamp</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a submitter makes a graph correction</p>
+        <p><strong>When</strong> the correction is saved</p>
+        <p><strong>Then</strong> the audit trail record includes the corrector's identity, timestamp, field corrected, old value, and new value</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-4">VD-4: Audit Trail Immutability</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Audit trail has no delete or edit function</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a 2LoD user is viewing the full audit trail for a use case</p>
+        <p><strong>When</strong> they inspect every available action on an audit record</p>
+        <p><strong>Then</strong> there is no "Delete", "Edit", or "Modify" button or link on any audit record, displaying read-only records with timestamps and identities</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-5">VD-5: Policy &amp; Pack Version Recording</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-5-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy version and all active pack versions recorded in verdict</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict is produced with policy v1.3, SS1/23 pack v2.0, EU AI Act pack v1.1</p>
+        <p><strong>When</strong> the verdict is saved to the audit trail</p>
+        <p><strong>Then</strong> the verdict record contains policy_version and all active pack versions (ss1-23: "2.0", eu-ai-act: "1.1")</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-5 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-7">VD-7: Conditions Block Capture</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-7-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Conditions block populated at verdict time</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case receives an Approved with controls verdict (High-tier, model drift 5%, override rate 5%, zone B, model version pinned)</p>
+        <p><strong>When</strong> the verdict is saved</p>
+        <p><strong>Then</strong> the verdict record includes a conditions block with model_drift_threshold, override_rate_minimum, zone, and model_version fields all populated</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-7 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="vd-req-8">VD-8: Reasoning Trace for Auditors</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-VD-8-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Plain-English reasoning trace readable by non-technical auditor</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict for a credit scoring model (Track II / SS1/23, Critical / EU AI Act, controls CTRL-007, CTRL-012)</p>
+        <p><strong>When</strong> a non-technical auditor reads the reasoning trace</p>
+        <p><strong>Then</strong> the trace reads as complete prose naming the track reason, regulatory citation (e.g., "SS1/23 §3.4"), tier reason and trigger, and required controls in verbatim regulatory language</p>
+      </div>
+      <div class="tc-trace">Requirement: VD-8 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="lc-domain">LC — Use Case Lifecycle</h2>
+    <p><strong>Techniques applied:</strong> State transition testing, decision table testing.</p>
+
+    <h3 id="lc-req-1">LC-1: Lifecycle Stages &amp; Progression</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Use case progresses through lifecycle stages in order</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case is created at the "Idea" stage</p>
+        <p><strong>When</strong> the submitter completes intake and receives a verdict</p>
+        <p><strong>Then</strong> the lifecycle stage advances to "Pre-checked" with the stage transition recorded (timestamp and actor identity)</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Stage transitions are recorded with timestamp and actor</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case advances from Pre-checked to Approved (2LoD action)</p>
+        <p><strong>When</strong> the transition is recorded</p>
+        <p><strong>Then</strong> the record shows previous stage, new stage, actor identity, and timestamp</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="lc-req-2">LC-2: Governance Paths — Self-Service vs. 2LoD</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Low-tier use case self-service — verdict is final on submitter confirmation</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case receives a Low-tier verdict</p>
+        <p><strong>When</strong> the submitter confirms the verdict</p>
+        <p><strong>Then</strong> the use case advances to "Approved" immediately with no 2LoD notification required, with governance path "self-service — Low tier"</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-2-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">High-tier use case requires active 2LoD approval before advancing</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a use case receives a High-tier verdict and the submitter confirms</p>
+        <p><strong>When</strong> the use case state is checked and 2LoD has not yet acted</p>
+        <p><strong>Then</strong> the status is "Pending 2LoD approval" — NOT "Approved"</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-2-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Critical-tier governance path requires 2LoD approval — verified in policy mapping</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file maps Critical tier to "2LoD must actively approve"</p>
+        <p><strong>When</strong> a Critical-tier verdict is issued</p>
+        <p><strong>Then</strong> the governance path applied matches the policy file's tier-to-workflow mapping for Critical</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="lc-req-4">LC-4: Policy Update &amp; Re-evaluation Queue</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file update triggers re-evaluation queue</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file is updated from v1.3 to v1.4 with a change to Track II criteria</p>
+        <p><strong>When</strong> the update is saved</p>
+        <p><strong>Then</strong> the system identifies all active use cases and queues them for re-evaluation</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="lc-req-6">LC-6: AIGate Self-Assessment in Register</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-LC-4-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">AIGate self-assessment use case is present in register</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> AIGate has been set up and at least one use case has been submitted</p>
+        <p><strong>When</strong> a 2LoD user views the register</p>
+        <p><strong>Then</strong> the AIGate system itself appears as a use case entry with tier, track, and verdict populated</p>
+      </div>
+      <div class="tc-trace">Requirement: LC-6 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="rg-domain">RG — Register &amp; Inventory</h2>
+    <p><strong>Techniques applied:</strong> State transition testing, equivalence class partitioning.</p>
+
+    <h3 id="rg-req-1">RG-1: Graph Data Model &amp; Shared Components</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Register uses graph data model — shared component appears once</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> three use cases all referencing Azure OpenAI (internal zone) as their platform</p>
+        <p><strong>When</strong> the register is inspected</p>
+        <p><strong>Then</strong> Azure OpenAI appears as a single shared node connected to all three use cases (not three separate copies)</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Graph query — "which use cases share this vendor model?" returns complete results</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> five use cases in the register, three of which use vendor model VND-GPT-4</p>
+        <p><strong>When</strong> a 2LoD user queries "which use cases share VND-GPT-4?"</p>
+        <p><strong>Then</strong> exactly three use cases are returned and the query completes in under 2 seconds (500-use-case baseline)</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="rg-req-2">RG-2: Role-Based Register Visibility</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">1LoD submitter sees only their own use cases</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains 10 use cases from 4 different teams and James logs in with a 1LoD role</p>
+        <p><strong>When</strong> he views the register</p>
+        <p><strong>Then</strong> he sees only his own use cases (those submitted under his identity)</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-2 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-2-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">2LoD user sees full register across all teams</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> Priya logs in with a 2LoD role</p>
+        <p><strong>When</strong> she views the register</p>
+        <p><strong>Then</strong> she sees all use cases from all teams</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="rg-req-3">RG-3: Register Filtering</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-3-01 <span class="priority should">Should</span></div>
+      <div class="tc-name">Register filtered by Critical tier shows only Critical use cases</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains 5 Critical, 8 High, 12 Medium, 20 Low tier use cases</p>
+        <p><strong>When</strong> a 2LoD user applies the filter "tier = Critical"</p>
+        <p><strong>Then</strong> exactly 5 use cases are shown and no High, Medium, or Low tier use cases appear</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="rg-req-5">RG-5: Register Export</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RG-5-01 <span class="priority could">Could</span></div>
+      <div class="tc-name">Register exports to JSON with all fields included</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the register contains 10 use cases with full verdict records</p>
+        <p><strong>When</strong> a 2LoD user triggers a JSON export</p>
+        <p><strong>Then</strong> the exported file contains all 10 use case records with use case ID, tier, track, status, verdict, audit trail reference, and policy version</p>
+      </div>
+      <div class="tc-trace">Requirement: RG-5 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="cf-domain">CF — Configuration</h2>
+    <p><strong>Techniques applied:</strong> Equivalence class partitioning, decision table testing.</p>
+
+    <h3 id="cf-req-1">CF-1: Policy File Editability</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file editable in plain text without developer tooling</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a risk manager with no programming background opens policy/appetite.yaml in a plain text editor</p>
+        <p><strong>When</strong> they read the file</p>
+        <p><strong>Then</strong> every rule, threshold, and tier definition is readable as plain English with YAML structure, with human-readable comments explaining each section</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="cf-req-3">CF-3: Policy Version Increment</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file version increments on save</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file is at version 1.3</p>
+        <p><strong>When</strong> a change is saved (e.g., a tier threshold is updated)</p>
+        <p><strong>Then</strong> the version field in the file advances to 1.4</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="cf-req-4">CF-4: Regulatory Pack Independence</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Regulatory pack updated independently of main policy file</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the EU AI Act pack is updated from v1.1 to v1.2 while the main policy file is at v1.3</p>
+        <p><strong>When</strong> the main policy file is inspected after the pack update</p>
+        <p><strong>Then</strong> the main policy file version is still v1.3 (unchanged), and the EU AI Act pack version "1.2" appears in new verdicts' pack_versions field</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="cf-req-5">CF-5: Configuration Validation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-5-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file with missing required field prevents evaluation</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file is loaded with the "hard_lines" section deleted</p>
+        <p><strong>When</strong> the application starts</p>
+        <p><strong>Then</strong> evaluation is disabled and an error message identifies "hard_lines" as the missing required field</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-5 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-5-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack rule missing source citation rejected on load</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> an invalid regulatory pack is present (a rule missing its source citation, violating RA-7)</p>
+        <p><strong>When</strong> the application loads the pack</p>
+        <p><strong>Then</strong> the application displays an error naming the specific invalid rule ID and the failure nature, and does NOT proceed to evaluation</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-5, RA-7 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-CF-5-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Valid policy file and packs load without error</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file and all regulatory packs are fully valid (all required fields present, all rules have source citations)</p>
+        <p><strong>When</strong> the application starts</p>
+        <p><strong>Then</strong> no error is shown and evaluation is available immediately</p>
+      </div>
+      <div class="tc-trace">Requirement: CF-5 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="ra-domain">RA — Regulatory Alignment</h2>
+    <p><strong>Techniques applied:</strong> Decision table testing, use case testing. Grounded in: SS1/23, SR 26-2, EU AI Act, OSFI E-23, MAS FEAT.</p>
+
+    <h3 id="ra-req-1">RA-1: Jurisdiction Pack Activation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">UK jurisdiction activates SS1/23 pack</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph specifying UK jurisdiction only</p>
+        <p><strong>When</strong> the engine resolves active jurisdiction packs</p>
+        <p><strong>Then</strong> the SS1/23 pack is activated with its version listed in active packs</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-1-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">US-only jurisdiction activates SR 26-2 pack only</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph specifying US jurisdiction only</p>
+        <p><strong>When</strong> the engine resolves active packs</p>
+        <p><strong>Then</strong> SR 26-2 is activated and SS1/23, EU AI Act, OSFI E-23 are NOT activated</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-1 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-1-03 <span class="priority must">Must</span></div>
+      <div class="tc-name">Multi-jurisdiction use case activates all applicable packs</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph specifying UK, EU, US, and Canada jurisdictions</p>
+        <p><strong>When</strong> the engine resolves active packs</p>
+        <p><strong>Then</strong> SS1/23, EU AI Act, SR 26-2, and OSFI E-23 are all activated</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-1 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-2">RA-2: Most Demanding Standard Governs Track</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Most demanding standard governs track assignment</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a confirmed graph (US + UK jurisdiction: SR 26-2 → Track III, SS1/23 → Track II)</p>
+        <p><strong>When</strong> the engine applies the "most demanding standard governs" rule</p>
+        <p><strong>Then</strong> Track II is the final assignment with SS1/23 named as the governing standard in the reasoning</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-3">RA-3: Pack Version Recording in Audit Trail</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack version recorded in audit trail at verdict time</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict is produced with SS1/23 v2.0 and EU AI Act v1.1 active</p>
+        <p><strong>When</strong> the audit trail is inspected</p>
+        <p><strong>Then</strong> the record shows pack_versions: {ss1-23: "2.0", eu-ai-act: "1.1"} with the evaluation date, and each active pack version is recorded</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-7">RA-7: Source Citation Requirements</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-7-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack rule without source citation rejected</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a rule is added to the SS1/23 pack without a source block</p>
+        <p><strong>When</strong> the pack is loaded</p>
+        <p><strong>Then</strong> the system rejects the load with the specific rule ID identified in the error message</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-7 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-7-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack rule with complete source block loads successfully</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a rule has a complete source block (document, section, verbatim text)</p>
+        <p><strong>When</strong> the pack is loaded</p>
+        <p><strong>Then</strong> the rule loads without error and is available for evaluation</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-7 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-8">RA-8: Confidence Score Requirements</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-8-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack rules without confidence scores rejected</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a rule in the EU AI Act pack has no confidence_score field</p>
+        <p><strong>When</strong> the pack is loaded</p>
+        <p><strong>Then</strong> the system rejects the load with the missing confidence_score field identified in the error, and the rule is not applied</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-8 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-9">RA-9: Regulatory Reasoning Chain</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-9-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Full reasoning chain displayed in verdict for regulatory override</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict where EU AI Act Annex III §5(b) forced Critical tier on a credit scoring use case</p>
+        <p><strong>When</strong> the submitter views the verdict reasoning</p>
+        <p><strong>Then</strong> the displayed chain shows the verbatim regulatory text, the derived rule, and the specific graph attribute that triggered it</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-9 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="ra-req-11">RA-11: Confidence-Based Caveats &amp; Legal Review</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-11-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Verdict with Medium-confidence rule displays caveat</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict is produced that relies on a Medium-confidence rule</p>
+        <p><strong>When</strong> the submitter reads the verdict</p>
+        <p><strong>Then</strong> a caveat is displayed identifying the rule ID, the word "Medium", and advising verification with the compliance team before reliance</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-11 | [EXAMPLE]</div>
+    </div>
+
+    <div class="test-case">
+      <div class="tc-id">TC-RA-11-02 <span class="priority must">Must</span></div>
+      <div class="tc-name">Verdict with Low-confidence rule routes to legal team</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a verdict is produced relying on a Low-confidence rule</p>
+        <p><strong>When</strong> the verdict is displayed</p>
+        <p><strong>Then</strong> the verdict status shows "Provisional — legal review required" with notice that the legal team must determine the applicable interpretation before finality</p>
+      </div>
+      <div class="tc-trace">Requirement: RA-11 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="nf-domain">NF — Non-Functional Requirements</h2>
+    <p><strong>Techniques applied:</strong> Property-based testing, boundary value analysis.</p>
+
+    <h3 id="nf-req-1">NF-1: Deterministic Evaluation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-1-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Deterministic evaluation — same inputs produce same verdict</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a (graph, policy_version) pair</p>
+        <p><strong>When</strong> evaluation is invoked 20 times at different times</p>
+        <p><strong>Then</strong> the verdict is identical on every run (pure function — no randomness, no timestamp-dependence in verdict logic)</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-1 | [PROPERTY]</div>
+    </div>
+
+    <h3 id="nf-req-2">NF-2: Audit Trail Read-Only</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-2-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Audit trail records are read-only — no delete or edit mechanism</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> an audit trail containing 5 records (verdicts, corrections, attestations)</p>
+        <p><strong>When</strong> any user (1LoD or 2LoD) inspects the available actions</p>
+        <p><strong>Then</strong> no "Delete", "Edit", or "Modify" control is present on any audit record, displaying read-only records accessible to 2LoD</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-2 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="nf-req-3">NF-3: Network-Offline Evaluation Path</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-3-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">No network request made during evaluation when API key absent</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the application is running with no API key and structured form intake is used</p>
+        <p><strong>When</strong> a use case is evaluated end-to-end</p>
+        <p><strong>Then</strong> zero outbound network requests are made during the evaluation, producing a complete verdict without any network activity</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-3 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="nf-req-4">NF-4: Browser-Native Deployment</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-4-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Application loads and evaluates in latest Chrome with no install</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a user opens the application HTML file directly in Chrome (latest major version)</p>
+        <p><strong>When</strong> they complete an end-to-end use case evaluation</p>
+        <p><strong>Then</strong> the application loads and functions without any npm install, Docker, or configuration beyond the policy YAML, displaying a complete verdict in the browser</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-4 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="nf-req-5">NF-5: Performance Threshold</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-5-01 <span class="priority should">Should</span></div>
+      <div class="tc-name">Verdict produced within 30 seconds of graph confirmation</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a standard Low-tier use case (no LLM call in evaluation path) on M2 MacBook Air 8GB</p>
+        <p><strong>When</strong> a graph has been confirmed and evaluation is triggered</p>
+        <p><strong>Then</strong> the verdict is displayed within 30 seconds of the confirmation action</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-5 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="nf-req-7">NF-7: Unsigned Rule Provisional Marking</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-7-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Pack rule without reviewer sign-off is flagged as provisional</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> a regulatory pack rule has no reviewer_name, reviewer_role, or sign_off_date</p>
+        <p><strong>When</strong> the rule fires in a verdict</p>
+        <p><strong>Then</strong> the verdict is marked "Provisional — [rule ID] has not been signed off by a qualified reviewer" with the specific unsigned rule ID in the warning</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-7 | [EXAMPLE]</div>
+    </div>
+
+    <h3 id="nf-req-10">NF-10: Translation Attestation</h3>
+
+    <div class="test-case">
+      <div class="tc-id">TC-NF-10-01 <span class="priority must">Must</span></div>
+      <div class="tc-name">Policy file without translation attestation marks verdicts as unattested</div>
+      <div class="tc-bdd">
+        <p><strong>Given</strong> the policy file has no translation_attestation block</p>
+        <p><strong>When</strong> a verdict is produced</p>
+        <p><strong>Then</strong> the verdict is labelled "Translation fidelity unattested — the encoded rules have not been verified against the board-approved RAF within the past 12 months"</p>
+      </div>
+      <div class="tc-trace">Requirement: NF-10 | [EXAMPLE]</div>
+    </div>
+
+    <h2 id="traceability">Traceability Matrix</h2>
+    <table>
+      <caption>Requirements to Test Case Mappings</caption>
+      <thead>
+        <tr><th>Requirement ID</th><th>Priority</th><th>Version</th><th>Test Case IDs</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UC-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-1-01, TC-UC-1-02, TC-UC-1-03, TC-UC-1-04</td></tr>
+        <tr><td>UC-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-2-01, TC-UC-2-02, TC-UC-2-03, TC-UC-2-04, TC-UC-2-05</td></tr>
+        <tr><td>UC-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-3-01, TC-UC-3-02, TC-UC-3-03</td></tr>
+        <tr><td>UC-3a</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-3a-01, TC-UC-3a-02, TC-UC-3a-03, TC-UC-3a-04</td></tr>
+        <tr><td>UC-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-4-01, TC-UC-4-02, TC-UC-4-03, TC-UC-4-04</td></tr>
+        <tr><td>UC-5</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-5-01, TC-UC-5-02, TC-UC-5-03</td></tr>
+        <tr><td>UC-6</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-6-01, TC-UC-6-02, TC-UC-6-03</td></tr>
+        <tr><td>UC-7</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-UC-7-01, TC-UC-7-02, TC-UC-7-03</td></tr>
+        <tr><td>PE-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-1-01, TC-PE-1-02</td></tr>
+        <tr><td>PE-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-2-01, TC-PE-2-02, TC-PE-2-03</td></tr>
+        <tr><td>PE-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-3-01, TC-PE-3-02, TC-PE-3-03</td></tr>
+        <tr><td>PE-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-4-01, TC-PE-4-02, TC-PE-4-03</td></tr>
+        <tr><td>PE-5</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-5-01, TC-PE-5-02</td></tr>
+        <tr><td>PE-6</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-6-01, TC-PE-6-02</td></tr>
+        <tr><td>PE-7</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-7-01, TC-PE-7-02</td></tr>
+        <tr><td>PE-8</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-PE-8-01, TC-PE-8-02</td></tr>
+        <tr><td>CS-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CS-1-01, TC-CS-1-02</td></tr>
+        <tr><td>CS-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CS-2-01</td></tr>
+        <tr><td>CS-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CS-3-01, TC-CS-3-02</td></tr>
+        <tr><td>VD-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-1-01</td></tr>
+        <tr><td>VD-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-2-01</td></tr>
+        <tr><td>VD-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-3-01, TC-VD-3-02</td></tr>
+        <tr><td>VD-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-4-01</td></tr>
+        <tr><td>VD-5</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-5-01</td></tr>
+        <tr><td>VD-7</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-7-01</td></tr>
+        <tr><td>VD-8</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-VD-8-01</td></tr>
+        <tr><td>LC-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-LC-1-01, TC-LC-1-02</td></tr>
+        <tr><td>LC-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-LC-2-01, TC-LC-2-02, TC-LC-2-03</td></tr>
+        <tr><td>LC-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-LC-4-01</td></tr>
+        <tr><td>LC-6</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-LC-4-02</td></tr>
+        <tr><td>RG-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RG-1-01, TC-RG-1-02</td></tr>
+        <tr><td>RG-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RG-2-01, TC-RG-2-02</td></tr>
+        <tr><td>RG-3</td><td><span class="priority should">Should</span></td><td>V1</td><td>TC-RG-3-01</td></tr>
+        <tr><td>RG-5</td><td><span class="priority could">Could</span></td><td>V1</td><td>TC-RG-5-01</td></tr>
+        <tr><td>CF-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CF-1-01</td></tr>
+        <tr><td>CF-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CF-3-01</td></tr>
+        <tr><td>CF-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CF-4-01</td></tr>
+        <tr><td>CF-5</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-CF-5-01, TC-CF-5-02, TC-CF-5-03</td></tr>
+        <tr><td>RA-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-1-01, TC-RA-1-02, TC-RA-1-03</td></tr>
+        <tr><td>RA-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-2-01</td></tr>
+        <tr><td>RA-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-3-01</td></tr>
+        <tr><td>RA-7</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-7-01, TC-RA-7-02</td></tr>
+        <tr><td>RA-8</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-8-01</td></tr>
+        <tr><td>RA-9</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-9-01</td></tr>
+        <tr><td>RA-11</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-RA-11-01, TC-RA-11-02</td></tr>
+        <tr><td>NF-1</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-1-01</td></tr>
+        <tr><td>NF-2</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-2-01</td></tr>
+        <tr><td>NF-3</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-3-01</td></tr>
+        <tr><td>NF-4</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-4-01</td></tr>
+        <tr><td>NF-5</td><td><span class="priority should">Should</span></td><td>V1</td><td>TC-NF-5-01</td></tr>
+        <tr><td>NF-7</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-7-01</td></tr>
+        <tr><td>NF-10</td><td><span class="priority must">Must</span></td><td>V1</td><td>TC-NF-10-01</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-summary">Test Summary</h2>
+    <table>
+      <caption>Test Count and Coverage Metrics</caption>
+      <thead>
+        <tr><th>Metric</th><th style="text-align:right;">Count</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total test cases</td><td style="text-align:right;">86</td></tr>
+        <tr><td>Must priority</td><td style="text-align:right;">71</td></tr>
+        <tr><td>Should priority</td><td style="text-align:right;">9</td></tr>
+        <tr><td>Could priority</td><td style="text-align:right;">1</td></tr>
+        <tr><td>Property-based [PROPERTY]</td><td style="text-align:right;">3</td></tr>
+        <tr><td>Example-based [EXAMPLE]</td><td style="text-align:right;">42</td></tr>
+        <tr><td>Security [SECURITY]</td><td style="text-align:right;">1</td></tr>
+        <tr><td>V1 requirements with ≥1 test</td><td style="text-align:right;">46/46</td></tr>
+        <tr><td>V1.5 requirements deferred</td><td style="text-align:right;">11</td></tr>
+        <tr><td>V2+ requirements deferred</td><td style="text-align:right;">12</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Coverage:</strong> All V1 Must and Should requirements have at least one test. V1.5 and V2+ requirements are deferred — not untested, out of MVP scope.</p>
+
+    <p><strong>Techniques applied:</strong> Equivalence class, boundary value, decision table, state transition, use case, property-based, security (OWASP).</p>
+
+    <p><strong>Regulatory grounding:</strong> Test scenarios for jurisdiction override, confidence scoring, reasoning trace, and provisional verdicts are grounded in SS1/23, SR 26-2, EU AI Act Annex III, OSFI E-23, and MAS FEAT as loaded from industry reference files.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
