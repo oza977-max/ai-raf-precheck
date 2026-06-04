@@ -8,6 +8,18 @@
 
 ---
 
+## Version Guide
+
+This document contains requirements for all stages of AIGate. Each requirement in the index is tagged:
+
+- **V1** — Build this. The core product: intake, policy engine, verdict, basic register, YAML config.
+- **V1.5** — First credible deployment (adds append-only store, artifact binding, basic 2LoD workflow). Not a new product — V1 + the minimum to be a system of record.
+- **V2+** — Documented and safe but not built yet. Continuous monitoring, estate graph queries, CI/CD enforcement, full PV platform registry.
+
+**If you are reading this to understand what AIGate V1 does:** read only the V1 rows in the Requirements Index. Everything else is future work, not current scope.
+
+---
+
 ## Expert Panel
 
 | Expert | Work | Role in This Document |
@@ -512,66 +524,87 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ## 10. Requirements Index
 
-| ID | Domain | Summary | Priority |
-|----|--------|---------|----------|
-| UC-1 | Use Case Intake | Accept free-text use case description | Must |
-| UC-2 | Use Case Intake | Duplicate detection before intake | Must |
-| UC-3 | Use Case Intake | LLM extracts data-flow graph | Must |
-| UC-4 | Use Case Intake | Risk-proportionate follow-up questions (≤15 for Critical) | Must |
-| UC-5 | Use Case Intake | Contradiction detection | Must |
-| UC-6 | Use Case Intake | Graph confirmation / attestation | Must |
-| UC-7 | Use Case Intake | Correction recording | Must |
-| PE-1 | Policy Engine | Deterministic graph evaluation | Must |
-| PE-2 | Policy Engine | Triple-track classification | Must |
-| PE-3 | Policy Engine | Impact-dominant materiality tiering | Must |
-| PE-4 | Policy Engine | Hard line detection (immediate reject) | Must |
-| PE-5 | Policy Engine | Jurisdiction override packs | Must |
-| PE-6 | Policy Engine | Most demanding standard governs | Must |
-| PE-7 | Policy Engine | YAML policy file | Must |
-| PE-8 | Policy Engine | Starter config pre-loaded | Must |
-| CS-1 | Control Solve | Minimal control set computation | Must |
-| CS-2 | Control Solve | Reject when no control set satisfies | Must |
-| CS-3 | Control Solve | Triggered downstream reviews in verdict | Must |
-| CS-4 | Control Solve | Residual risk margin | Should |
-| VD-1 | Verdict | Clear verdict display | Must |
-| VD-2 | Verdict | Exact invariant and graph path shown | Must |
-| VD-3 | Verdict | Correction flow with re-evaluation | Must |
-| VD-4 | Verdict | Immutable audit trail | Must |
-| VD-5 | Verdict | Policy and pack version recorded | Must |
-| VD-6 | Verdict | Living status field in data model | Should |
-| LC-1 | Lifecycle | Use case stages | Must |
-| LC-2 | Lifecycle | Tier-driven governance process | Must |
-| LC-3 | Lifecycle | 2LoD review step for Medium/High/Critical | Should |
-| LC-4 | Lifecycle | Re-evaluation triggers | Must |
-| RG-1 | Register | Persistent AI inventory register | Must |
-| RG-2 | Register | Role-based register access | Must |
-| RG-3 | Register | Filter and search | Should |
-| RG-4 | Register | Policy change diff | Should |
-| RG-5 | Register | Export to CSV/JSON | Could |
-| CF-1 | Configuration | YAML policy file | Must |
-| CF-2 | Configuration | Starter config pre-loaded | Must |
-| CF-3 | Configuration | Policy file versioning | Must |
-| CF-4 | Configuration | Versioned regulatory pack files | Must |
-| RA-1 | Regulatory | Jurisdiction-based pack activation | Must |
-| RA-2 | Regulatory | Most demanding standard governs | Must |
-| RA-3 | Regulatory | Pack version in audit trail | Must |
-| RA-4 | Regulatory | Re-evaluation diff on pack update | Should |
-| RA-5 | Regulatory | Stale assessment flag | Should |
-| RA-6 | Regulatory | Regulatory timeline view | Could |
-| PV-1 | Platform & Vendor | Approved-platform registry with envelopes & satisfied controls | Must |
-| PV-2 | Platform & Vendor | Approved-vendor/model registry with envelopes | Must |
-| PV-3 | Platform & Vendor | Per-dimension envelope-fit check & conditional inheritance | Must |
-| PV-4 | Platform & Vendor | Ask only residual questions (refines UC-4) | Must |
-| PV-5 | Platform & Vendor | New vendor/platform routes to full review, no inheritance | Must |
-| PV-6 | Platform & Vendor | Inheritance chain recorded in verdict & audit trail | Must |
-| PV-7 | Platform & Vendor | Re-evaluate inheritors when an approval changes | Must |
-| PV-8 | Platform & Vendor | Starter registry with example envelopes | Should |
-| NF-1 | Non-Functional | Deterministic evaluation | Must |
-| NF-2 | Non-Functional | Immutable audit trail | Must |
-| NF-3 | Non-Functional | No data leaves tool (MVP) | Must |
-| NF-4 | Non-Functional | Runs in modern browser, no install | Must |
-| NF-5 | Non-Functional | Verdict within 30 seconds | Should |
-| NF-6 | Non-Functional | Human-readable policy file | Must |
+| ID | Domain | Summary | Priority | Version |
+|----|--------|---------|----------|---------|
+| UC-1 | Intake | Accept free-text description | Must | **V1** |
+| UC-2 | Intake | Duplicate detection before intake | Must | **V1** |
+| UC-3 | Intake | LLM extracts data-flow graph | Must | **V1** |
+| UC-4 | Intake | Risk-proportionate questions (≤15 Critical) | Must | **V1** |
+| UC-5 | Intake | Contradiction detection | Must | **V1** |
+| UC-6 | Intake | Graph confirmation / attestation | Must | **V1** |
+| UC-7 | Intake | Correction recording | Must | **V1** |
+| PE-1 | Policy Engine | Deterministic graph evaluation | Must | **V1** |
+| PE-2 | Policy Engine | Triple-track classification | Must | **V1** |
+| PE-3 | Policy Engine | Impact-dominant materiality tiering | Must | **V1** |
+| PE-4 | Policy Engine | Hard line detection (immediate reject) | Must | **V1** |
+| PE-5 | Policy Engine | Jurisdiction override packs | Must | **V1** |
+| PE-6 | Policy Engine | Most demanding standard governs | Must | **V1** |
+| PE-7 | Policy Engine | YAML policy file | Must | **V1** |
+| PE-8 | Policy Engine | Starter config pre-loaded | Must | **V1** |
+| CS-1 | Control Solve | Control set with safety margin | Must | **V1** |
+| CS-2 | Control Solve | Reject when no set satisfies | Must | **V1** |
+| CS-3 | Control Solve | Triggered downstream reviews | Must | **V1** |
+| CS-4 | Control Solve | Residual risk margin display | Should | V1.5 |
+| VD-1 | Verdict | Clear verdict display | Must | **V1** |
+| VD-2 | Verdict | Exact invariant and graph path shown | Must | **V1** |
+| VD-3 | Verdict | Correction flow with re-evaluation | Must | **V1** |
+| VD-4 | Verdict | Immutable audit trail | Must | **V1** |
+| VD-5 | Verdict | Policy and pack version recorded | Must | **V1** |
+| VD-6 | Verdict | Living status field in data model | Should | **V1** |
+| VD-7 | Verdict | Conditions block (hypothesis schema) | Must | **V1** |
+| VD-8 | Verdict | Plain-English reasoning trace | Must | **V1** |
+| LC-1 | Lifecycle | Use case stages | Must | **V1** |
+| LC-2 | Lifecycle | Tier-driven governance process | Must | **V1** |
+| LC-3 | Lifecycle | 2LoD review step | Should | V1.5 |
+| LC-4 | Lifecycle | Re-evaluation triggers | Must | **V1** |
+| LC-5 | Lifecycle | Re-evaluation triage | Must | V2+ |
+| LC-6 | Lifecycle | AIGate passes its own pre-check | Must | **V1** |
+| OB-1 | Observed Reality | Artifact attributes authoritative | Must | V1.5 |
+| OB-2 | Observed Reality | Artifact contradiction detection | Must | V1.5 |
+| OB-3 | Observed Reality | Read deployment manifests | Should | V2+ |
+| OB-4 | Observed Reality | Read model config for autonomy | Should | V2+ |
+| OB-5 | Observed Reality | Label artifact vs self-attested | Must | V1.5 |
+| PV-1 | Platform & Vendor | Platform registry with envelopes | Must | V2+ |
+| PV-2 | Platform & Vendor | Vendor/model registry | Must | V2+ |
+| PV-3 | Platform & Vendor | Per-dimension envelope inheritance | Must | V2+ |
+| PV-4 | Platform & Vendor | Ask only residual questions | Must | V2+ |
+| PV-5 | Platform & Vendor | New vendor → full review, no inheritance | Must | V2+ |
+| PV-6 | Platform & Vendor | Inheritance chain in audit trail | Must | V2+ |
+| PV-7 | Platform & Vendor | Re-evaluate on approval change | Must | V2+ |
+| PV-8 | Platform & Vendor | Starter registry with examples | Should | V2+ |
+| RG-1 | Register | AI inventory (graph data model) | Must | **V1** |
+| RG-2 | Register | Role-based access | Must | **V1** |
+| RG-3 | Register | Filter and search | Should | **V1** |
+| RG-4 | Register | Policy change diff | Should | V1.5 |
+| RG-5 | Register | Export CSV/JSON | Could | **V1** |
+| RG-6 | Register | Blast-radius queries | Should | V2+ |
+| RG-7 | Register | Periodic sampling cadence | Should | V2+ |
+| CF-1 | Configuration | YAML policy file | Must | **V1** |
+| CF-2 | Configuration | Starter config pre-loaded | Must | **V1** |
+| CF-3 | Configuration | Policy file versioning | Must | **V1** |
+| CF-4 | Configuration | Versioned regulatory packs | Must | **V1** |
+| RA-1 | Regulatory | Jurisdiction pack activation | Must | **V1** |
+| RA-2 | Regulatory | Most demanding standard governs | Must | **V1** |
+| RA-3 | Regulatory | Pack version in audit trail | Must | **V1** |
+| RA-4 | Regulatory | Re-evaluation diff on pack update | Should | V1.5 |
+| RA-5 | Regulatory | Stale assessment flag | Should | V1.5 |
+| RA-6 | Regulatory | Regulatory timeline view | Could | V2+ |
+| RA-7 | Regulatory | Primary source citation per rule | Must | **V1** |
+| RA-8 | Regulatory | Confidence scoring per rule | Must | **V1** |
+| RA-9 | Regulatory | Full reasoning chain in verdict | Must | **V1** |
+| RA-10 | Regulatory | Pack updates: review changed sections only | Should | V1.5 |
+| RA-11 | Regulatory | Medium/Low confidence caveat | Must | **V1** |
+| RA-12 | Regulatory | Bank overrides cite competing text | Should | V1.5 |
+| NF-1 | Non-Functional | Deterministic evaluation | Must | **V1** |
+| NF-2 | Non-Functional | Immutable audit trail (V1 = provisional) | Must | **V1** |
+| NF-3 | Non-Functional | No data leaves tool | Must | **V1** |
+| NF-4 | Non-Functional | Runs in browser, no install | Must | **V1** |
+| NF-5 | Non-Functional | Verdict within 30 seconds | Should | **V1** |
+| NF-6 | Non-Functional | Human-readable policy file | Must | **V1** |
+| NF-7 | Non-Functional | Pack rules require human sign-off | Must | **V1** |
+| NF-8 | Non-Functional | Full reasoning chain in audit trail | Must | **V1** |
+| NF-9 | Non-Functional | Staleness warning at rule level | Should | V1.5 |
+| NF-10 | Non-Functional | Translation-fidelity attestation | Must | **V1** |
 
 ---
 
