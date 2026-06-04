@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Requirements Health Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111; background: #fffff8; line-height: 1.6;
+      padding: 2rem 1rem 6rem; max-width: 1480px; margin: 0 auto;
+    }
+    h1 { font-size: 2.4rem; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+    h2 { font-size: 1.5rem; font-weight: 400; font-style: italic; margin-top: 3rem; margin-bottom: 1rem; border-bottom: 1px solid #ccc; padding-bottom: 0.3rem; }
+    h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.6rem; color: #333; }
+    p, li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.8rem; max-width: 640px; }
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+    .subtitle { font-size: 1.1rem; font-style: italic; color: #555; margin-bottom: 2.5rem; max-width: 640px; }
+    .date { font-size: 0.9rem; color: #888; margin-bottom: 0.2rem; }
+    nav.toc { position: fixed; top: 2rem; left: 2rem; width: 220px; max-height: calc(100vh - 4rem); overflow-y: auto; background: #fffff8; border-right: 2px solid #ddd; padding: 1rem 1rem 1rem 0; font-size: 0.82rem; line-height: 1.6; z-index: 100; }
+    nav.toc .toc-title { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 0.6rem; }
+    nav.toc a { color: #555; text-decoration: none; display: block; padding: 0.15rem 0; }
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    main { margin-left: 260px; }
+    table { border-collapse: collapse; margin: 1.5rem 0 2rem; font-size: 0.92rem; width: auto; min-width: 480px; }
+    thead th { text-align: left; font-weight: 600; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 2px solid #333; }
+    tbody td { padding: 0.45rem 1rem 0.45rem 0; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+    .health-issue { background: #fff8f0; border-left: 3px solid #e8a850; padding: 0.8rem 1rem; margin: 1rem 0 1.5rem; max-width: 640px; }
+    .health-issue.high { border-left-color: #c0392b; background: #fff5f5; }
+    .health-issue.medium { border-left-color: #e8a850; background: #fff8f0; }
+    .health-issue.low { border-left-color: #aaa; background: #f9f9f4; }
+    .issue-id { font-size: 0.78rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+    .issue-name { font-weight: 600; margin-bottom: 0.4rem; }
+    .severity { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 2px; vertical-align: middle; margin-left: 0.4rem; }
+    .severity.high { background: #c0392b; color: #fff; }
+    .severity.medium { background: #e8a850; color: #fff; }
+    .severity.low { background: #aaa; color: #fff; }
+    .fix-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 2px; background: #c0392b; color: #fff; margin-left: 0.4rem; }
+    .gvm-attribution { font-style: italic; color: #aaa; font-size: 0.85rem; text-align: center; margin-top: 4rem; }
+    @media (max-width: 1200px) {
+      nav.toc { position: static; width: 100%; border-right: none; border-bottom: 1px solid #ddd; margin-bottom: 2rem; }
+      main { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">June 2026</p>
+    <h1>AIGate — Requirements Health Report</h1>
+    <p class="subtitle">Phase 1 quality gate for /gvm-test-cases — assessing testability, consistency, and coverage gaps before test generation begins.</p>
+
+    <h2 id="experts">Expert Panel</h2>
+    <table>
+      <thead><tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr></thead>
+      <tbody>
+        <tr><td>Lee Copeland</td><td><em>A Practitioner's Guide to Software Test Design</em></td><td>Testability assessment — identifying untestable requirements</td></tr>
+        <tr><td>Cem Kaner</td><td><em>Testing Computer Software</em> (2nd ed.)</td><td>Risk-based triage — severity and priority of each issue</td></tr>
+        <tr><td>Boris Beizer</td><td><em>Software Testing Techniques</em> (2nd ed.)</td><td>Missing coverage detection — error guessing, edge cases</td></tr>
+        <tr><td>NIST</td><td><em>AI Risk Management Framework (AI RMF 1.0)</em></td><td>AI governance domain grounding</td></tr>
+        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Regulatory compliance domain grounding</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="summary">Summary</h2>
+    <p>10 issues found. 2 inconsistencies, 4 untestable/missing fit criteria, 4 missing requirements. None block test generation outright — all are resolved or acknowledged below.</p>
+    <table>
+      <thead><tr><th>Issue</th><th>Severity</th><th>Type</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>HR-01 — "Substantially similar" undefined (UC-2)</td><td>Medium</td><td>Untestable</td><td>Acknowledge</td></tr>
+        <tr><td>HR-02 — "Standard laptop" undefined (NF-5)</td><td>Low</td><td>Untestable</td><td>Acknowledge</td></tr>
+        <tr><td>HR-03 — CF-1 / PE-7 near-duplicate</td><td>Low</td><td>Duplicate</td><td>Acknowledge</td></tr>
+        <tr><td>HR-04 — PE-5/6 / RA-1/2 near-duplicate</td><td>Low</td><td>Duplicate</td><td>Acknowledge</td></tr>
+        <tr><td>HR-05 — Missing fallback form requirement</td><td><strong>High</strong></td><td>Missing</td><td><strong>Fix recommended</strong></td></tr>
+        <tr><td>HR-06 — Missing policy validation requirement</td><td><strong>High</strong></td><td>Missing</td><td><strong>Fix recommended</strong></td></tr>
+        <tr><td>HR-07 — Missing API key config requirement</td><td>Medium</td><td>Missing</td><td>Acknowledge</td></tr>
+        <tr><td>HR-08 — NF-2 / VD-4 inconsistency</td><td><strong>High</strong></td><td>Inconsistency</td><td>Acknowledge (known)</td></tr>
+        <tr><td>HR-09 — RG-1 missing performance criterion</td><td>Low</td><td>Untestable</td><td>Acknowledge</td></tr>
+        <tr><td>HR-10 — LC-6 missing failure behaviour</td><td>Medium</td><td>Missing</td><td>Acknowledge</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="issues">Issues</h2>
+
+    <div class="health-issue medium" id="hr-01">
+      <div class="issue-id">HR-01 <span class="severity medium">Medium</span></div>
+      <div class="issue-name">"Substantially similar" undefined — UC-2</div>
+      <p>UC-2 requires duplicate detection above "a configurable threshold" but neither the default threshold nor the algorithm (semantic vs keyword, per OQ-4) is specified. Tests cannot have concrete pass/fail criteria until OQ-4 is resolved.</p>
+      <p><strong>Suggestion:</strong> Add to UC-2: "Default threshold: 0.80. Algorithm: LLM-based semantic comparison if API key present; keyword/tag match otherwise."</p>
+    </div>
+
+    <div class="health-issue low" id="hr-02">
+      <div class="issue-id">HR-02 <span class="severity low">Low</span></div>
+      <div class="issue-name">"Standard laptop" undefined — NF-5</div>
+      <p>The 30-second verdict target is measurable, but "standard laptop" lacks a hardware definition. Performance tests cannot be written against an undefined baseline.</p>
+      <p><strong>Suggestion:</strong> Define as MacBook Air M-series or equivalent (8GB RAM), or state that the test machine is the baseline.</p>
+    </div>
+
+    <div class="health-issue low" id="hr-03">
+      <div class="issue-id">HR-03 <span class="severity low">Low</span></div>
+      <div class="issue-name">CF-1 / PE-7 near-duplicate — policy file requirement</div>
+      <p>Both require a human-readable versioned YAML policy file. Intentional — PE-7 frames it as engine behaviour; CF-1 frames it as configuration. Tests written once, cross-traced to both IDs.</p>
+    </div>
+
+    <div class="health-issue low" id="hr-04">
+      <div class="issue-id">HR-04 <span class="severity low">Low</span></div>
+      <div class="issue-name">PE-5/6 / RA-1/2 near-duplicate — jurisdiction logic</div>
+      <p>PE-5 and PE-6 specify jurisdiction override logic from the engine's perspective; RA-1 and RA-2 cover the same from the regulatory compliance frame. Intentional dual-frame. Tests cross-traced.</p>
+    </div>
+
+    <div class="health-issue high" id="hr-05">
+      <div class="issue-id">HR-05 <span class="severity high">High</span> <span class="fix-badge">Fix Recommended</span></div>
+      <div class="issue-name">Missing requirement: fallback form intake (no API key path)</div>
+      <p>UC-3 describes only the LLM extraction path. The handoff document, CLAUDE.md, and NF-3 all reference a fallback to structured form intake when no API key is configured — but no requirement covers what the form contains, which fields are mandatory, or how the output maps to a data-flow graph.</p>
+      <p><strong>Suggestion:</strong> Add UC-3a: "When no LLM API key is configured, the system shall present a structured intake form covering the minimum graph attributes required for evaluation. The form output shall produce a data-flow graph equivalent to LLM extraction."</p>
+    </div>
+
+    <div class="health-issue high" id="hr-06">
+      <div class="issue-id">HR-06 <span class="severity high">High</span> <span class="fix-badge">Fix Recommended</span></div>
+      <div class="issue-name">Missing requirement: policy file validation and load failure handling</div>
+      <p>RA-7 states invalid packs are "rejected on load" — but no requirement specifies what happens: does the application refuse to start? Show an error screen? Which field is named in the error? NF-1 requires deterministic evaluation, which depends on the policy file being in a known-valid state.</p>
+      <p><strong>Suggestion:</strong> Add CF-5: "The system shall validate the policy file on load. If validation fails, it shall display an explicit error identifying the invalid rule or field and prevent evaluation until resolved."</p>
+    </div>
+
+    <div class="health-issue medium" id="hr-07">
+      <div class="issue-id">HR-07 <span class="severity medium">Medium</span></div>
+      <div class="issue-name">Missing requirement: API key configuration UX</div>
+      <p>NF-3 says the user supplies their own key but no requirement describes the configuration mechanism, storage location, or what is shown when the key is absent or invalid. Affects UC-3, UC-2 semantic path, and the fallback path.</p>
+      <p><strong>Suggestion:</strong> Add NF-11: "The system shall provide a configuration screen for the LLM API key, stored in localStorage, displayed masked. If absent or invalid, fall back to structured intake (UC-3a) and keyword duplicate detection."</p>
+    </div>
+
+    <div class="health-issue high" id="hr-08">
+      <div class="issue-id">HR-08 <span class="severity high">High</span></div>
+      <div class="issue-name">Inconsistency: NF-2 provisional audit trail vs VD-4 absolute claim</div>
+      <p>NF-2 honestly states V1 audit trail is "provisional / proof-of-concept grade." VD-4 states audit records "cannot be deleted or modified after the fact" — an absolute claim unachievable in a client-side deployment. Tests will verify application-layer immutability only; the inconsistency is known and documented.</p>
+      <p><strong>Disposition:</strong> Acknowledge. VD-4 tests pass if the application has no delete/edit function. V1 verdicts are labelled "Provisional audit trail."</p>
+    </div>
+
+    <div class="health-issue low" id="hr-09">
+      <div class="issue-id">HR-09 <span class="severity low">Low</span></div>
+      <div class="issue-name">Missing performance criterion — RG-1 graph queries</div>
+      <p>RG-1 requires graph queries to be "answerable without full-table scans" but sets no latency target. Assumed default for tests: under 2 seconds on a register of 500 use cases.</p>
+    </div>
+
+    <div class="health-issue medium" id="hr-10">
+      <div class="issue-id">HR-10 <span class="severity medium">Medium</span></div>
+      <div class="issue-name">Missing failure behaviour — LC-6 self-assessment</div>
+      <p>LC-6 requires AIGate to pass its own pre-check, stating "if it cannot satisfy its own gates, the gates are reconsidered." The process for "reconsidering the gates" is unspecified. Tests will verify: self-assessment use case exists in register, and that a Rejected result triggers a visible warning to the 2LoD role.</p>
+    </div>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('h2, h3').forEach(h => {
+      if (!h.id) return;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+  </script>
+</body>
+</html>

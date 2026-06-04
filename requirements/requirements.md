@@ -119,6 +119,12 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: The extracted graph is presented to the submitter for review before any questions are asked. The submitter can see and correct the graph before confirming.
 
+**UC-3a (Must):** When no LLM API key is configured, the system shall present a structured intake form as a fallback to UC-3. The form shall collect the minimum graph attributes required for evaluation: data class of inputs, autonomy level, data zone, output exposure type, and applicable jurisdictions. The form output shall produce a data-flow graph in the same structure as LLM extraction.
+
+> Fit criterion: A user with no API key configured can complete the full intake flow using the structured form and receive a verdict. The form presents each graph attribute as a labelled field with permitted values from the policy file. The resulting graph is marked "structured form intake" in the audit trail (not "LLM-extracted"). The system transitions to structured form intake without error and without requiring the user to configure an API key first.
+
+> Health report: Added via HR-05 resolution (June 2026). Surfaced during /gvm-test-cases Phase 1 — the fallback path was referenced in CLAUDE.md and NF-3 but had no requirement.
+
 **UC-4 (Must):** The system shall ask targeted follow-up questions based on the risk signals detected in the extracted graph. The number of questions shall be proportionate to the risk profile of the use case.
 
 > Fit criterion: A Low-tier use case shall require no more than 5 follow-up questions. A Critical-tier use case shall require no more than 15. The system shall never present a fixed list of all possible questions regardless of use case type.
@@ -369,6 +375,12 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: Updating the EU AI Act pack does not require editing the main policy file. Each pack file has its own version. The verdict audit trail records the version of each pack in force at evaluation time.
 
+**CF-5 (Must):** The system shall validate the policy file and all loaded regulatory packs on startup. If validation fails, the system shall display an explicit error message identifying the specific invalid field or rule, and prevent use case evaluation until the error is resolved.
+
+> Fit criterion: If the policy file is missing a required field (e.g. `version`, `hard_lines`, `controls`), is malformed YAML, or contains a pack rule lacking a `source` citation block (per RA-7), the system displays: "Policy file invalid — [field/rule ID]: [reason]. Evaluation is disabled until this is resolved." The error is shown on the main screen. The system does not silently fall back to a default policy or proceed with partial evaluation. If the file is valid, startup proceeds normally with no error shown.
+
+> Health report: Added via HR-06 resolution (June 2026). Surfaced during /gvm-test-cases Phase 1 — RA-7 references "rejected on load" but the load-failure behaviour was unspecified.
+
 ---
 
 ### RA — Regulatory Alignment
@@ -529,6 +541,7 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 | UC-1 | Intake | Accept free-text description | Must | **V1** |
 | UC-2 | Intake | Duplicate detection before intake | Must | **V1** |
 | UC-3 | Intake | LLM extracts data-flow graph | Must | **V1** |
+| UC-3a | Intake | Structured form fallback (no API key) | Must | **V1** |
 | UC-4 | Intake | Risk-proportionate questions (≤15 Critical) | Must | **V1** |
 | UC-5 | Intake | Contradiction detection | Must | **V1** |
 | UC-6 | Intake | Graph confirmation / attestation | Must | **V1** |
@@ -583,6 +596,7 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 | CF-2 | Configuration | Starter config pre-loaded | Must | **V1** |
 | CF-3 | Configuration | Policy file versioning | Must | **V1** |
 | CF-4 | Configuration | Versioned regulatory packs | Must | **V1** |
+| CF-5 | Configuration | Policy file validation on load | Must | **V1** |
 | RA-1 | Regulatory | Jurisdiction pack activation | Must | **V1** |
 | RA-2 | Regulatory | Most demanding standard governs | Must | **V1** |
 | RA-3 | Regulatory | Pack version in audit trail | Must | **V1** |
