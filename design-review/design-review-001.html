@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGate — Design Review 001</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-light: #555;
+    --bg: #faf8f4;
+    --rule: #ddd;
+    --critical-bg: #fff0f0;
+    --critical-border: #c0392b;
+    --important-bg: #fff8ec;
+    --important-border: #e67e22;
+    --minor-bg: #f4f8ff;
+    --minor-border: #3498db;
+    --tag-critical: #c0392b;
+    --tag-important: #e67e22;
+    --tag-minor: #3498db;
+    --tag-fixed: #27ae60;
+    --mono: "SF Mono", "Fira Mono", "Consolas", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--bg);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 32px 96px;
+  }
+  h1 { font-size: 1.9rem; font-weight: normal; letter-spacing: -0.02em; margin-bottom: 4px; }
+  h2 { font-size: 1.2rem; font-weight: bold; margin: 48px 0 16px; letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 2px solid var(--ink); padding-bottom: 6px; }
+  h3 { font-size: 1rem; font-weight: bold; margin: 32px 0 8px; }
+  p { margin-bottom: 12px; }
+  code { font-family: var(--mono); font-size: 0.85em; background: #eee; padding: 1px 4px; border-radius: 2px; }
+  pre { font-family: var(--mono); font-size: 0.82em; background: #eee; padding: 12px 16px; border-radius: 4px; overflow-x: auto; margin: 12px 0; }
+  ul, ol { margin: 8px 0 12px 24px; }
+  li { margin-bottom: 4px; }
+  hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
+
+  .meta { color: var(--ink-light); font-size: 0.9rem; margin-bottom: 40px; }
+  .meta span { margin-right: 24px; }
+
+  /* Severity tags */
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .tag-critical { background: var(--tag-critical); color: #fff; }
+  .tag-important { background: var(--tag-important); color: #fff; }
+  .tag-minor { background: var(--tag-minor); color: #fff; }
+  .tag-fixed { background: var(--tag-fixed); color: #fff; }
+  .tag-source { background: #eee; color: var(--ink-light); }
+
+  /* Finding cards */
+  .finding {
+    border-left: 4px solid var(--rule);
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .finding.critical { background: var(--critical-bg); border-left-color: var(--critical-border); }
+  .finding.important { background: var(--important-bg); border-left-color: var(--important-border); }
+  .finding.minor { background: var(--minor-bg); border-left-color: var(--minor-border); }
+
+  .finding-id {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-light);
+    margin-bottom: 6px;
+  }
+  .finding-title { font-weight: bold; font-size: 1.0rem; margin-bottom: 10px; }
+  .finding-section { margin-top: 10px; }
+  .finding-section strong { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-light); }
+
+  /* Summary table */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th { text-align: left; padding: 8px 12px; background: var(--ink); color: #fff; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
+  td code { font-size: 0.8em; }
+
+  /* Triage worksheet */
+  .triage-row { display: grid; grid-template-columns: 80px 1fr 160px; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 0.9rem; }
+  .triage-row:first-child { font-weight: bold; font-size: 0.78rem; text-transform: uppercase; color: var(--ink-light); }
+  .triage-id { font-family: var(--mono); font-size: 0.82rem; }
+  .triage-options { display: flex; gap: 8px; flex-wrap: wrap; }
+  .triage-btn {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    background: #fff;
+    color: var(--ink-light);
+  }
+  .triage-btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .callout { background: #fffff0; border: 1px solid #e0d070; border-radius: 4px; padding: 14px 18px; margin: 20px 0; font-size: 0.92rem; }
+  .callout strong { color: #7a6000; }
+
+  .theme-block { border: 1px solid var(--rule); border-radius: 4px; padding: 14px 18px; margin: 12px 0; }
+  .theme-block h4 { font-size: 0.95rem; margin-bottom: 6px; }
+  .theme-block ul { margin-bottom: 0; }
+
+  .stat-row { display: flex; gap: 24px; margin: 16px 0; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 2.2rem; font-weight: bold; line-height: 1; }
+  .stat-num.critical { color: var(--tag-critical); }
+  .stat-num.important { color: var(--tag-important); }
+  .stat-num.minor { color: var(--tag-minor); }
+  .stat-label { font-size: 0.78rem; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .capture-recapture { background: #f0f4ff; border: 1px solid #c0ccee; border-radius: 4px; padding: 16px 20px; margin: 20px 0; font-size: 0.9rem; }
+
+  @media print {
+    body { background: white; }
+    .triage-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>AIGate — Design Review 001</h1>
+<div class="meta">
+  <span>Commit: <code>ffa9067</code></span>
+  <span>Reviewed: June 2026</span>
+  <span>Round: R1 (first review)</span>
+  <span>Threshold: Liberal (R1)</span>
+</div>
+
+<div class="callout">
+  <strong>Before /gvm-build starts.</strong> This review covers the 8 specs at <code>specs/</code> plus the requirements, test cases, and grounding chain. No implementation code exists yet. Every finding is a spec defect, not a code bug — fixing them now costs minutes; fixing them after build starts costs days.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ EXECUTIVE SUMMARY -->
+
+<h2>Executive Summary</h2>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num critical">16</div><div class="stat-label">Critical</div></div>
+  <div class="stat"><div class="stat-num important">20</div><div class="stat-label">Important</div></div>
+  <div class="stat"><div class="stat-num minor">7</div><div class="stat-label">Minor</div></div>
+  <div class="stat"><div class="stat-num" style="color:#666">3</div><div class="stat-label">Sources</div></div>
+</div>
+
+<p>Three independent sources were used: Panel A (Requirements Coverage — Wiegers + Cohn), Panel B (Interface Contracts — Keeling + Newman + Kleppmann), and the Fable repository review (hostile PRA/Fed-quality stance). The cross-source overlap is high, which elevates confidence in the findings.</p>
+
+<div class="capture-recapture">
+  <strong>Capture-recapture estimate.</strong> Panel A found ~8 distinct issues. Panel B found ~15. Fable found ~22. Cross-panel overlap (same defect caught by ≥2 sources): approximately 11 findings. Lincoln-Petersen estimate of total defect pool: (8 × 15) / 6 ≈ 20 in the requirements/interface space alone; the Fable review extends substantially into grounding fidelity and policy semantics. Estimated uncaught rate at 3 sources: ~15%. This review is capture-complete for Critical severity.
+</div>
+
+<h3>Five themes requiring decisions before build</h3>
+
+<div class="theme-block">
+  <h4>Theme 1 — The rules themselves have no owner and are already drifted</h4>
+  <ul>
+    <li>No implementation chunk authors the starter policy and 7 jurisdiction packs</li>
+    <li>4 material grounding drift points already in specs (missing track rules, missing hard lines, MNPI Zone B, no scale attribute)</li>
+    <li>Placeholder reviewer sign-offs pass CF-5 validation — NF-7 is toothless</li>
+    <li>"Verbatim" citations are almost certainly paraphrased</li>
+  </ul>
+</div>
+
+<div class="theme-block">
+  <h4>Theme 2 — Interface contract chaos blocks implementation</h4>
+  <ul>
+    <li>4 inconsistent vocabularies already in the repo; <code>tier_workflow</code> vs <code>tier_workflows</code> key mismatch; <code>Confidence</code> capitalisation mismatch; <code>VerdictSummary</code>/<code>UseCaseSummary</code> contradiction; <code>DataClass</code>/<code>DataZone</code> undefined</li>
+    <li>LC-6 seed graph vocabulary crashes the engine on first launch</li>
+  </ul>
+</div>
+
+<div class="theme-block">
+  <h4>Theme 3 — Three V1 Musts are unimplementable as written</h4>
+  <ul>
+    <li>CS-1 safety margin: no metric over boolean conditions</li>
+    <li>TC-PE-1-01 byte-identical determinism: <code>evaluate()</code> returns UUID + timestamps</li>
+    <li>UC-4 question budget: requires a tier that doesn't exist yet at question-generation time</li>
+  </ul>
+</div>
+
+<div class="theme-block">
+  <h4>Theme 4 — Two architectural contradictions in the evaluation pipeline</h4>
+  <ul>
+    <li>Tier semantics: first-match (policy-schema §3.4) vs highest-wins (evaluation-engine §3.5) — a one-line YAML reorder silently changes every verdict</li>
+    <li><code>track_floor</code> over categorical tracks: supplement vs reclassify unresolved; routes GenAI into MRM-regression regime</li>
+  </ul>
+</div>
+
+<div class="theme-block">
+  <h4>Theme 5 — V1 contradicts the product's own credibility definition</h4>
+  <ul>
+    <li>Design vision: artifact binding is "the irreducible V1 bet." Requirements + specs: zero OB work in V1.</li>
+    <li>LC-6 self-assessment: benign seed + auto-approve = the conduct-matter gaming pattern, applied to the flagship honesty mechanism</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CRITICAL FINDINGS -->
+
+<h2>Critical Findings</h2>
+<p style="color:var(--ink-light); font-size:0.9rem; margin-bottom:24px;">Must be resolved before /gvm-build starts. A Critical finding means the system, as specced, cannot be built correctly — or can be built but will be wrong in a way that defeats its core purpose.</p>
+
+<!-- C-01 -->
+<div class="finding critical">
+  <div class="finding-id">C-01 <span class="tag tag-source">Panel B · 1-B · 2-B</span></div>
+  <div class="finding-title"><code>tier_workflow</code> vs <code>tier_workflows</code>: key name, shape, and casing all diverge — LC-2 governance routing completely broken</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>policy-schema.md:88,433</code> defines <code>tier_workflow: Record&lt;Tier, WorkflowType&gt;</code> (singular, flat string map, capitalised keys: <code>Critical/High/Medium/Low</code>). <code>register-lifecycle.md:252</code> references <code>tier_workflows</code> (plural) and describes a rich object with <code>governance_path</code>, <code>verdict_is_final</code>, <code>twoLoD_notification</code>, <code>twoLoD_approval_required</code>, <code>twoLoD_review_window_days</code>. Tier key casing also differs: capitalised vs lowercase. <code>workflow-router.ts</code> receives a <code>PolicyFile</code> and must access <code>policy.tier_workflows</code> — that property doesn't exist on the type as defined. LC-2's approval gate cannot be implemented.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Define one <code>TierWorkflowConfig</code> interface with all five fields in <code>policy-schema.md §3.4</code>. Update <code>PolicyFile.tier_workflows</code> (plural) to <code>Record&lt;Lowercase&lt;Tier&gt;, TierWorkflowConfig&gt;</code>. Update all YAML examples and every reference in <code>register-lifecycle.md</code> and <code>cross-cutting.md</code>.</p>
+  </div>
+</div>
+
+<!-- C-02 -->
+<div class="finding critical">
+  <div class="finding-id">C-02 <span class="tag tag-source">Panel B · 1-A</span></div>
+  <div class="finding-title"><code>Confidence</code> capitalised in policy-schema vs lowercase <code>ConfidenceLevel</code> in verdict-audit — RA-11 confidence caveats silently fail</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>policy-schema.md:416</code>: <code>PackRule.confidence: 'High' | 'Medium' | 'Low'</code> (capitalised). <code>verdict-audit.md:110</code>: <code>ConfidenceCaveat.confidence: 'high' | 'medium' | 'low'</code> (lowercase). The engine reads <code>PackRule.confidence</code> and writes <code>ConfidenceCaveat.confidence</code> — strict TypeScript will produce a compile error or a silent type mismatch. RA-11 confidence display would either fail to compile or silently produce no caveat.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Standardise on lowercase across all specs. Change <code>PackRule.confidence</code> to <code>'high' | 'medium' | 'low'</code>. Update all YAML examples. One canonical type: <code>type ConfidenceLevel = 'high' | 'medium' | 'low'</code> in <code>cross-cutting.md §4</code>.</p>
+  </div>
+</div>
+
+<!-- C-03 -->
+<div class="finding critical">
+  <div class="finding-id">C-03 <span class="tag tag-source">Panel B · 2-A</span></div>
+  <div class="finding-title"><code>VerdictSummary</code> and <code>UseCaseSummary</code> both claim to live in <code>src/store/register.ts</code> with contradictory field names — <code>register.ts</code> cannot be implemented</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>verdict-audit.md §8</code> defines <code>VerdictSummary</code>. <code>register-lifecycle.md §5</code> defines <code>UseCaseSummary</code>. Both are attributed to <code>src/store/register.ts</code>. Equivalent fields have different names: <code>current_status</code> vs <code>current_verdict_status</code>, <code>last_verdict_at</code> vs <code>last_evaluated_at</code>, <code>policy_version</code> vs <code>policy_version_at_evaluation</code>. Also: <code>living_status</code> has no <code>'provisional'</code> value, but a Low-confidence verdict sets <code>current_status: 'provisional'</code>.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Consolidate to one type. <code>UseCaseSummary</code> (in <code>register-lifecycle.md</code>) is the canonical register type. Delete <code>VerdictSummary</code> from <code>verdict-audit.md §8</code> and replace its references with <code>UseCaseSummary</code>. Reconcile all field names. Add <code>'provisional'</code> to <code>living_status</code> union or remove it from the Low-confidence verdict path.</p>
+  </div>
+</div>
+
+<!-- C-04 -->
+<div class="finding critical">
+  <div class="finding-id">C-04 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">Two of five grounding hard lines not encoded — autonomous trading and irreversible-at-L2 both pass all three starter hard lines</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>raf-extraction.md §B</code> (confirmed in <code>ai-raf-template.html §7</code>) lists five hard lines. The starter config encodes three. Missing: <em>"fully autonomous trading decision → Do not accept"</em> and <em>"irreversible actions require autonomy Level 1 or below regardless of tier."</em> Starter HL-003 covers only <code>decision_type in [lending, credit]</code>. An autonomous trading agent or an L2+ system taking irreversible actions passes all starter hard lines.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add to <code>policy-schema.md §3.2</code> and starter config: <code>HL-004</code> (<code>autonomy_level: { gte: 4 }, decision_type: { in: ["trading"] }</code>) and <code>HL-005</code> (<code>output_reversibility: "irreversible", autonomy_level: { gte: 2 }</code>). Add TC-PE-4-04 and TC-PE-4-05 to test-cases.</p>
+  </div>
+</div>
+
+<!-- C-05 -->
+<div class="finding critical">
+  <div class="finding-id">C-05 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">Track classification rules 3 and 4 absent — agentic AI systems systematically under-classified (Track III instead of Track II)</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>raf-extraction.md §C</code> defines five track classification rules. The starter config only implements three. Missing: Rule 3 ("replaces a prior model → Track II") and Rule 4 ("autonomy Level 3+, or human override rate &lt; 5% at registration → Track II"). A GenAI agentic system at autonomy L3 producing narrative output classifies as Track III under the starter rules but Track II under the board-approved RAF — skipping the additional MRM controls Track II requires.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add <code>TRACK-II-REPLACE</code> and <code>TRACK-II-AUTONOMY</code> track rules to <code>policy-schema.md §3.3</code>, ordered before <code>TRACK-III</code>. Add <code>replaces_prior_model: boolean</code> to <code>ProcessingNode</code> in <code>intake-flow.md §4.2</code>. Add two test cases. Decide and document override-rate-at-registration: either add <code>expected_override_rate</code> to intake or explicitly defer to V2 monitoring.</p>
+  </div>
+</div>
+
+<!-- C-06 -->
+<div class="finding critical">
+  <div class="finding-id">C-06 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">No <code>scale</code> attribute on <code>OutputNode</code> — client-facing chatbot (canonical Critical example) mis-tiers as High, skipping CRO/Board approval</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>raf-extraction.md §A</code> lists "Scale / blast radius" as a cross-cutting property. The starter Critical-tier trigger (<code>policy-schema.md §3.4</code>) cannot be implemented because neither <code>DataFlowGraph</code> nor <code>OutputNode</code> carries a <code>scale</code> attribute. The grounding's §E example (client-facing chatbot = Critical) tiers as High under the starter rules because <code>exposure: client-facing</code> alone only triggers TIER-HIGH. Also missing from §D: "capital" and "client financial outcome" as Critical triggers.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add <code>scale: 'limited' | 'at_scale'</code> to <code>OutputNode</code> in <code>intake-flow.md §4.2</code> and the UC-3a structured form. Add Critical trigger: <code>exposure in [client-facing, market-facing] AND scale = at_scale</code> to <code>policy-schema.md §3.4</code>. Add "capital" and "client financial outcome" triggers. Add test asserting the §E chatbot example tiers Critical.</p>
+  </div>
+</div>
+
+<!-- C-07 -->
+<div class="finding critical">
+  <div class="finding-id">C-07 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">Tier semantics contradiction — first-match (policy-schema) vs highest-wins (evaluation-engine) — a one-line YAML reorder silently changes every verdict</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>policy-schema.md §3.4</code>: "rules evaluated top-to-bottom, first matching trigger determines the tier." <code>evaluation-engine.md §3.5</code>: "all tier rules are evaluated, the highest tier whose trigger fires is returned." These differ whenever tiers are reordered in the (bank-editable) YAML. A bank listing Low first would down-tier every use case — a one-line edit silently altering the firm's appetite with no error.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Standardise on <strong>highest-tier-wins</strong> (order-independent, matches impact-dominance). Delete the first-match sentence from <code>policy-schema.md §3.4</code>. Add a property test: permuting the <code>tiers</code> array never changes any verdict.</p>
+  </div>
+</div>
+
+<!-- C-08 -->
+<div class="finding critical">
+  <div class="finding-id">C-08 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title"><code>track_floor</code> over categorical tracks is semantically wrong — routes GenAI systems into a traditional MRM regime, losing AI-specific controls; plus a thinking-aloud artifact shipped in the spec</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>evaluation-engine.md §3.6</code> applies <code>track_floor</code> using <code>TRACK_ORDER = {I: 3, II: 2, III: 1}</code>. Tracks are governance regimes by model type, not ordered severity. "Upgrading" a GenAI Track III system to Track I (Traditional MRM) loses the AI-specific controls Track III requires. Track II is arguably more demanding than Track I. The grounding's model is <em>supplement</em> (Track III + jurisdictional obligations), not reclassify. Additionally, the spec ships with an unedited <em>"Wait —"</em> thinking-aloud paragraph in §3.6 that should never have been in a committed spec.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Replace <code>track_floor</code> with a <code>supplement_obligations</code> effect: a pack adds required controls and validation obligations to the assigned track, never changes the track assignment. Update <code>policy-schema.md §4</code> and <code>evaluation-engine.md §3.6</code>. Delete the "Wait —" paragraph and replace with the decided rule. If track reassignment is genuinely intended, amend <code>raf-extraction.md §C</code> first with regulatory justification.</p>
+  </div>
+</div>
+
+<!-- C-09 -->
+<div class="finding critical">
+  <div class="finding-id">C-09 <span class="tag tag-source">Fable · Task 3 · Panel B · 1-G</span></div>
+  <div class="finding-title">No canonical attribute vocabulary — four inconsistent vocabularies already in the repo; LC-6 seed graph crashes the engine on first launch</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p>Exact-string conditions with no canonical enum: policy uses <code>"Internal"</code>/<code>"Zone B private"</code>/<code>model_type: "llm"</code>; test cases use <code>"Zone B"</code>; grounding uses <code>A/B/C</code>; the LC-6 seed graph uses <code>'internal'</code>, <code>'zone_b'</code>, <code>'nlp_text_generation'</code>, <code>'internal_only'</code> (lowercase snake_case). <code>'nlp_text_generation'</code> matches no track rule → engine throws a <code>no-track-match</code> error on first launch. Every vocabulary mismatch is a silently non-firing rule — deterministic and quietly wrong.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add <code>§3.0 "Canonical attribute vocabulary"</code> to <code>policy-schema.md</code> defining closed enums for <code>data_class</code>, <code>data_zone</code>, <code>model_type</code>, <code>exposure</code>, <code>decision_bindingness</code>, <code>action_type</code>, <code>decision_type</code>, <code>output_reversibility</code>. Enforce in CF-5 validation. Constrain LLM extractor JSON schema to these enums. Rewrite LC-6 seed graph with canonical values.</p>
+  </div>
+</div>
+
+<!-- C-10 -->
+<div class="finding critical">
+  <div class="finding-id">C-10 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">LC-6 self-assessment is engineered to pass — benign seed + auto-approve is the conduct-matter gaming pattern, applied to the flagship honesty mechanism</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>register-lifecycle.md §9</code> seeds AIGate's self-assessment with the most benign value on every axis (autonomy 1, internal-only, reversible, advisory) and step 5 auto-sets lifecycle to <code>approved</code>. The design vision explicitly states AIGate "is a High or Critical use case under its own framework." LC-2 requires active 2LoD approval for High/Critical. The product's flagship honesty mechanism is specified as the exact gaming pattern (optimistic self-attestation to dodge oversight) the RAF calls a conduct matter.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Set the seed graph to honest values (<code>decision_bindingness: material</code> — the verdict drives governance decisions; LLM extraction processes submitter input, so data class is bounded by intake content). Let the engine assign tier. Route through <code>workflow-router.ts</code> like any other use case — if it lands High/Critical, it waits at <code>pre_checked</code> for 2LoD approval. This is the live integration test LC-6 promises.</p>
+  </div>
+</div>
+
+<!-- C-11 -->
+<div class="finding critical">
+  <div class="finding-id">C-11 <span class="tag tag-source">Fable · Task 2</span></div>
+  <div class="finding-title">No implementation chunk owns starter policy + pack authoring — the highest-risk artifacts have no owner, no review gate, and no correctness tests</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p>No chunk in <code>implementation-guide.md</code> authors the starter <code>appetite.yaml</code> and seven jurisdiction packs. The walking-skeleton smoke test (P7-C03) assumes a starter config that nothing in the plan produces. In practice Claude will generate it inline during a build chunk with zero adversarial verification. Task 1 findings show the spec-level translation has already drifted in four places before generation has started.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add chunk <strong>P2-C03 "Starter policy + pack authoring"</strong> to <code>implementation-guide.md §1</code> with three gates: (a) generated <code>appetite.yaml</code> diffed rule-by-rule against <code>raf-extraction.md §B–H</code> by a human, diff record committed; (b) every <code>source.text</code> field in a pack copy-pasted by a human from the primary regulatory document (URL + retrieval date recorded, never generated); (c) NF-10 <code>translation_attestation</code> signed only after (a) completes.</p>
+  </div>
+</div>
+
+<!-- C-12 -->
+<div class="finding critical">
+  <div class="finding-id">C-12 <span class="tag tag-source">Fable · Task 2</span></div>
+  <div class="finding-title">Placeholder reviewer sign-offs pass CF-5 validation — NF-7's human-review gate is toothless</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>policy-schema.md §6</code> CF-5 checks only field presence. A pack with <code>reviewer_name: "[FIRM] — Regulatory Affairs Lead"</code> and a pre-filled <code>sign_off_date</code> (as the spec's own SS1/23 example does) passes validation and produces non-provisional verdicts. NF-7's core claim — "a qualified human stands behind every regulatory determination" — is unenforceable as specified. A machine-generated pack with fictional sign-offs is indistinguishable from a reviewed one.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add to <code>policy-schema.md §6</code>: any <code>reviewer_name</code> matching the <code>[FIRM]</code> placeholder pattern → rule treated as <strong>unsigned</strong> → verdict flagged provisional per NF-7. Extend the same check to <code>sign_off_date</code> default values. Add TC-NF-7-02 covering placeholder sign-offs.</p>
+  </div>
+</div>
+
+<!-- C-13 -->
+<div class="finding critical">
+  <div class="finding-id">C-13 <span class="tag tag-source">Fable · Task 2</span></div>
+  <div class="finding-title">"Verbatim" regulatory citations in spec examples are unverified and almost certainly paraphrased — violating RA-7 inside the document that defines RA-7</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p>RA-7's fit criterion requires "verbatim text, not paraphrased." The spec's own SS1/23 example pack rule contains <em>"Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique…"</em> — this sentence does not appear literally in SS1/23. RA-9/VD-8 promise auditors can "verify the reasoning against the original regulatory text." Paraphrased citations that don't exist in the source make the citation architecture confident-looking fabrication.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add to RA-7's fit criterion: <code>source</code> must carry <code>source_url</code> and <code>retrieved_date</code>; pack-authoring chunk (C-11) must verify each quote by exact string match against the retrieved document. Mark all current example quotes <code>[ILLUSTRATIVE — NOT VERBATIM]</code>.</p>
+  </div>
+</div>
+
+<!-- C-14 -->
+<div class="finding critical">
+  <div class="finding-id">C-14 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">V1 contradicts the product's own credibility definition — artifact binding is "the irreducible V1 bet" per design vision; specs contain zero OB work</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p><code>design-vision.md</code> sequencing section: artifact binding (OB) is "the irreducible bet — must have in V1 to be credible; self-attested only = convincing demo, not a deployable product." The requirements index puts OB-1/OB-2/OB-5 at V1.5 and OB-3/OB-4 at V2+. Intake-flow spec and implementation guide contain zero artifact-handling work. V1 as specified is, by the project's own definition, a demo — and the README's "reads what the system actually does" claim is false for V1.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Make one explicit decision in <code>design-vision.md</code>: either (a) pull OB-1/OB-2/OB-5 into V1 for one artifact type (Terraform is the cheapest: parse HCL for endpoint hostnames and network config) and add a P4-C05 chunk; or (b) amend the sequencing section to explicitly position V1 as engine-validation proof-of-concept, V1.5 as first credible product, and rewrite the README headline. Either is fine — the contradiction is what's broken.</p>
+  </div>
+</div>
+
+<!-- C-15 -->
+<div class="finding critical">
+  <div class="finding-id">C-15 <span class="tag tag-source">Fable · Task 6 · Panel B</span></div>
+  <div class="finding-title">Security coverage is one XSS test against a system with four distinct attack surfaces — prompt injection, API key exfiltration, LLM steering, and YAML prototype pollution all untested</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p>The test suite has one security test (TC-UC-1-04) against a system that: (a) feeds attacker-influenceable free text into an LLM whose output becomes attested governance data; (b) stores the Anthropic API key in <code>localStorage</code> with <code>dangerouslyAllowBrowser</code>; (c) renders LLM-generated prose and bank-editable policy <code>description</code> strings in the UI; (d) loads externally-sourced YAML with no authenticity check. A description crafted to steer the extractor toward benign classifications defeats intake entirely — and contradiction detection can't fire if extraction was steered.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Add to test-cases: TC-UC-3-04 [SECURITY] — steering instructions in description yield a graph reflecting content, not instructions; TC-VD-8-02 [SECURITY] — reasoning trace and policy descriptions rendered as text, never HTML; TC-CF-5-04 [SECURITY] — pack with <code>__proto__</code>/duplicate-key YAML rejected by Zod; TC-NF-11-01 — API key never present in register/audit exports; TC-ADR-009-01 — localStorage role toggle labelled "not access control" in the UI. Specify in <code>intake-flow.md §3</code> that the LLM prompt includes an explicit system instruction that user input is data, not instruction.</p>
+  </div>
+</div>
+
+<!-- C-16 -->
+<div class="finding critical">
+  <div class="finding-id">C-16 <span class="tag tag-source">Fable · Task 4</span></div>
+  <div class="finding-title">OQ-6 pack maintenance unresolved for V1 — verbatim-text requirement makes this a V1 question, not a V2 deferral</div>
+  <div class="finding-section"><strong>What's wrong</strong>
+    <p>OQ-6 is deferred to "before V2," but RA-7's verbatim-text requirement means someone must acquire, verify, and sign the regulatory text in the seven starter packs before the first verdict is defensible. Option 1 (central maintenance) implies a distribution and signing mechanism the no-backend V1 architecture cannot host. This is the monoculture risk (L-4), the translation-fidelity gap (L-5), and the determinism-is-not-correctness problem (L-2) compounded.</p>
+  </div>
+  <div class="finding-section"><strong>Fix</strong>
+    <p>Split OQ-6: resolve <strong>OQ-6a now</strong> ("who authors and signs the V1 starter packs" → the P2-C03 chunk from C-11, signed by a named human) and keep OQ-6b (ongoing distribution model) for V2. Record the split in <code>requirements.md §9</code>.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ IMPORTANT FINDINGS -->
+
+<h2>Important Findings</h2>
+<p style="color:var(--ink-light); font-size:0.9rem; margin-bottom:24px;">Should be resolved before /gvm-build starts, or explicitly deferred with a documented decision. An Important finding means the system can be built but will have a hole that a developer will resolve arbitrarily.</p>
+
+<!-- I-01 -->
+<div class="finding important">
+  <div class="finding-id">I-01 <span class="tag tag-source">Panel A · P1-01 · Fable · Task 3</span></div>
+  <div class="finding-title">CS-1 Must/V1 — safety margin mathematically undefined over boolean conditions; spec already downgraded it but test didn't follow</div>
+  <p>CS-1 is V1 Must. <code>evaluation-engine.md §4.2</code> says "full margin-aware solving is V1.5" and only sets a <code>boundary_proximity: true</code> flag. But TC-CS-1-02 requires the solver to choose between sets based on margin. A V1 Must requirement is unimplementable as written and its test will fail against the specced behaviour. "Margin" language on a boolean condition has no underlying metric.</p>
+  <p><strong>Fix:</strong> Rewrite CS-1: "the solver returns the minimal burden-weighted set; the verdict carries <code>boundary_proximity: true</code> when any satisfied invariant has zero redundant coverage." Demote margin-based set selection to V1.5 with a defined metric. Rewrite TC-CS-1-02 against the flag.</p>
+</div>
+
+<!-- I-02 -->
+<div class="finding important">
+  <div class="finding-id">I-02 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">Determinism contract broken — <code>evaluate()</code> returns <code>id: UUID v4</code>, <code>attested_at</code>, and <code>living_status_updated_at</code>; TC-PE-1-01 demands byte-identical verdicts</div>
+  <p><code>evaluation-engine.md §7</code> forbids <code>Date.now()</code>/<code>Math.random()</code> inside <code>evaluate()</code>. But §3.9's <code>Verdict</code> (the function's return value) includes a UUID v4 and timestamps. TC-PE-1-01 demands byte-identical output across 10 runs. Either the engine breaks its own purity rule or the property test can never pass.</p>
+  <p><strong>Fix:</strong> Split the type. <code>evaluate()</code> returns a pure <code>EvaluationResult</code> (status/tier/track/constraints/controls/conditions — byte-identical). The caller wraps it into a <code>Verdict</code> envelope adding <code>id</code>/timestamps/attestation. Point TC-PE-1-01 and TC-NF-1-01 at <code>EvaluationResult</code>.</p>
+</div>
+
+<!-- I-03 -->
+<div class="finding important">
+  <div class="finding-id">I-03 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title"><code>DataFlowGraph</code> missing <code>jurisdictions</code> field — the type the whole system pivots on cannot carry the attribute the jurisdiction engine requires</div>
+  <p><code>evaluation-engine.md</code> Step 1 reads "jurisdictions: string[] from graph." The intake form collects jurisdictions. But <code>DataFlowGraph</code> in <code>intake-flow.md §4.2</code> has no <code>jurisdictions</code> field. Step 1 would silently receive <code>undefined</code>; all pack resolution and jurisdiction override logic is unreachable.</p>
+  <p><strong>Fix:</strong> Add <code>jurisdictions: string[]</code> to <code>DataFlowGraph</code> in <code>intake-flow.md §4.2</code>. Specify how the LLM extraction path obtains it (extracted with <code>uncertain: true</code> default + mandatory confirmation question, since jurisdiction is rarely inferable from a two-sentence description).</p>
+</div>
+
+<!-- I-04 -->
+<div class="finding important">
+  <div class="finding-id">I-04 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">INV-ZONE-01 permits MNPI in Zone B private — directly contradicts the board-approved appetite</div>
+  <p>Starter invariant INV-ZONE-01: <code>not_in: ["Zone C internal", "Zone B private"]</code> — permits MNPI in Zone B private. The grounding (<code>raf-extraction.md §B/§E</code>, <code>ai-raf-template.html §6</code>): "MNPI is Zone C only; prohibited externally." The engine will approve MNPI processing in private cloud, which the board-approved appetite prohibits. This is the silent translation drift NF-10 exists to prevent, already present before a line of code is written.</p>
+  <p><strong>Fix:</strong> Change INV-ZONE-01 condition to <code>data_zone: { not_in: ["Zone C internal"] }</code>, OR — if Zone B tolerance is genuinely intended — change <code>raf-extraction.md §B</code> and the HTML first, then the spec, with the change recorded as a translation-attestation event.</p>
+</div>
+
+<!-- I-05 -->
+<div class="finding important">
+  <div class="finding-id">I-05 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">KRI schema flattens green/amber/red bands to scalar thresholds — <code>VerdictConditions</code> schema cannot express the monitoring data it's designed to hold</div>
+  <p><code>policy-schema.md §3.7</code> flattens the grounding's three-band structure into single scalar thresholds (e.g. <code>drift_threshold_pct: 5.0</code>). VD-7's <code>conditions</code> block is explicitly the "cannot be retrofitted" hypothesis schema for V2 monitoring. Shipping V1 with a schema that cannot express amber states forces exactly the retrofit the design forbids.</p>
+  <p><strong>Fix:</strong> Restructure each KRI as <code>{ green: …, amber: …, red: … }</code> bands: <code>model_drift: { amber_pct: 3.0, red_pct: 5.0 }</code>. Mirror in <code>VerdictConditions</code> (<code>verdict-audit.md §4.1</code>).</p>
+</div>
+
+<!-- I-06 -->
+<div class="finding important">
+  <div class="finding-id">I-06 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">UC-4 question budget depends on tier — but tier doesn't exist at question-generation time; pre-tier signal classifier is unspecified</div>
+  <p><code>intake-flow.md §6</code>: question budget is tier-dependent ("Low ≤5, Critical ≤15"). Tier is assigned in evaluation Step 4, after confirmation. The spec hand-waves "Low-tier signals detected" without defining the pre-tier signal classifier, which is itself a shadow tiering pass nobody has specified. TC-UC-4-01/02 cannot be implemented or pass deterministically without it.</p>
+  <p><strong>Fix:</strong> Specify that the generator runs <code>assignTier()</code> on the provisional graph (uncertain fields treated as worst-case) to get the question budget, and records the provisional tier in the audit trail as <code>question_budget_basis</code>.</p>
+</div>
+
+<!-- I-07 -->
+<div class="finding important">
+  <div class="finding-id">I-07 <span class="tag tag-source">Fable · Task 3</span></div>
+  <div class="finding-title">UC-2 duplicate detection leaks cross-team metadata — RG-2 says 1LoD cannot see other teams' use cases</div>
+  <p>Surfacing "UC-001: tier High, Track III, Approved with controls" to a 1LoD submitter leaks another team's use case metadata. RG-2 says they must not see it. No spec addresses which corpus the similarity check runs against per role. Either duplicate detection only sees the submitter's own records (defeating its purpose) or it leaks cross-team data (violating RG-2).</p>
+  <p><strong>Fix:</strong> Add to UC-2's fit criterion: duplicate check runs against the full register but surfaces to 1LoD only a redacted match ("a similar use case exists — tier High; contact 2LoD to adopt its classification") with full detail visible to 2LoD. Specify in <code>intake-flow.md §3</code> and add a test.</p>
+</div>
+
+<!-- I-08 -->
+<div class="finding important">
+  <div class="finding-id">I-08 <span class="tag tag-source">Panel B · 1-F · 2-E · Fable · Task 3</span></div>
+  <div class="finding-title"><code>re_evaluation_queued</code> event missing from <code>AuditEventType</code> — register banner never fires; policy save regresses production use cases to <code>pre_checked</code></div>
+  <p><code>register-lifecycle.md §8</code> references <code>re_evaluation_queued</code> in prose and UI badge logic. <code>onPolicyUpdated()</code> actually writes <code>event_type: 'lifecycle_stage_changed'</code> with <code>to_stage: 'pre_checked'</code>. <code>re_evaluation_queued</code> is absent from the <code>AuditEventType</code> union. The banner never fires. Worse: <em>every</em> active use case advances to <code>pre_checked</code> on any policy save — a comment-fix in the YAML revokes approved status across the production estate.</p>
+  <p><strong>Fix:</strong> Add <code>re_evaluation_queued</code> to the <code>AuditEventType</code> union. On policy save, append that event <em>without</em> changing lifecycle stage. Stage transitions to <code>pre_checked</code> only when a human triggers the re-run or the re-run verdict differs from the stored one. Document this explicitly as the V1 simplification of LC-5.</p>
+</div>
+
+<!-- I-09 -->
+<div class="finding important">
+  <div class="finding-id">I-09 <span class="tag tag-source">Fable · Task 6</span></div>
+  <div class="finding-title">Multi-node condition semantics unspecified — "reads emails, summarises, second agent drafts replies" is Journey 1 and the engine has no rule for which node's attributes fire</div>
+  <p>Every condition example uses a single linear chain. <code>evaluation-engine.md §3</code> never specifies whether a condition matches any-node, all-nodes, or per-path. Journey 1 (email reading + summarisation + reply drafting) involves at minimum two <code>ProcessingNode</code>s with different <code>autonomy_level</code> values. TC-UC-4-01/02 and TC-PE-1-01 cannot be implemented correctly without this rule.</p>
+  <p><strong>Fix:</strong> Specify in <code>evaluation-engine.md §3</code>: a condition over a node attribute matches if <strong>any</strong> node on <strong>any</strong> input→output path satisfies it, with the matching path recorded as <code>binding_path</code>. Add TC-PE-1-03 (multi-node graph, condition fires on second processing node) and TC-PE-2-06 (<code>no-track-match</code> → engine error surfaced, not a silent default).</p>
+</div>
+
+<!-- I-10 -->
+<div class="finding important">
+  <div class="finding-id">I-10 <span class="tag tag-source">Fable · Task 6</span></div>
+  <div class="finding-title">Three <code>[PROPERTY]</code> tests are repetition tests, not property-based tests — determinism is the headline claim; the strong versions go untested</div>
+  <p>The property tests verify stability under <em>fixed inputs</em> — this catches <code>Math.random()</code> but not order-dependence, missing-rule coverage, or monotonicity violations. Genuine properties are available and cheap over the closed enum vocabulary (C-09).</p>
+  <p><strong>Fix:</strong> Add fast-check generators over the canonical vocabulary and four genuine properties: (1) jurisdiction monotonicity — adding a jurisdiction never lowers tier; (2) impact dominance — mutating non-trigger fields never demotes a Critical verdict; (3) hard-line supremacy — any graph matching a hard line yields <code>rejected</code> regardless of all other fields; (4) solver soundness — every tripped invariant is resolved by some control in the returned set; plus the tier-order-independence property from C-07.</p>
+</div>
+
+<!-- I-11 -->
+<div class="finding important">
+  <div class="finding-id">I-11 <span class="tag tag-source">Panel B · 1-C</span></div>
+  <div class="finding-title"><code>VerdictTraceData</code> missing fields; <code>ControlDetail</code> type never defined; <code>Verdict.controls: string[]</code> vs <code>VerdictTraceData.controls_required: ControlDetail[]</code> unresolvable</div>
+  <p><code>evaluation-engine.md §6</code>: <code>VerdictTraceData</code> is missing <code>trackRuleId</code>/<code>trackRuleName</code> (present in narrative, absent from interface). <code>Verdict.binding_constraint</code> (snake_case) vs <code>VerdictTraceData.binding_constraint_id</code> — mapping unspecified. <code>Verdict.controls: string[]</code> vs <code>VerdictTraceData.controls_required: ControlDetail[]</code> — <code>ControlDetail</code> type never defined anywhere.</p>
+  <p><strong>Fix:</strong> Define <code>ControlDetail</code> type in <code>evaluation-engine.md §6</code>. Add <code>trackRuleId</code>/<code>trackRuleName</code> to <code>VerdictTraceData</code>. Reconcile <code>binding_constraint</code> field name and specify the mapping from <code>HardLineResult</code>.</p>
+</div>
+
+<!-- I-12 -->
+<div class="finding important">
+  <div class="finding-id">I-12 <span class="tag tag-source">Panel B · 1-E</span></div>
+  <div class="finding-title"><code>AuditEventPayload</code> for <code>graph_confirmed</code> missing identity fields required by UC-6 (submitter identity + timestamp permanently recorded)</div>
+  <p><code>verdict-audit.md:145</code>: <code>graph_confirmed</code> payload is <code>{ type, graph_id, graph_version, corrections_count }</code>. Missing: <code>attested_by</code>, <code>attested_at</code>, <code>intake_method</code> — which <code>intake-flow.md §9</code> writes. UC-6 is a regulatory requirement. This breaks at TypeScript compile time.</p>
+  <p><strong>Fix:</strong> Add <code>attested_by: string</code>, <code>attested_at: string</code>, <code>intake_method: 'llm' | 'structured_form'</code> to the <code>graph_confirmed</code> payload in <code>verdict-audit.md §4.3</code>.</p>
+</div>
+
+<!-- I-13 -->
+<div class="finding important">
+  <div class="finding-id">I-13 <span class="tag tag-source">Panel B · 1-G · Fable · Task 3</span></div>
+  <div class="finding-title"><code>DataClass</code> and <code>DataZone</code> types referenced throughout but never defined in any spec</div>
+  <p>Both types appear in <code>intake-flow.md §4.2</code>, in the structured form fields, and in the LC-6 seed graph. Neither is defined in any spec. They are part of the C-09 vocabulary problem but are also a standalone type-definition gap — any developer starting from the spec cannot know the allowed values.</p>
+  <p><strong>Fix:</strong> Define both in the canonical vocabulary spec section (C-09 fix). <code>DataClass</code> and <code>DataZone</code> should be TypeScript <code>const</code> enums exported from <code>src/types/policy.ts</code> per <code>cross-cutting.md §4</code>.</p>
+</div>
+
+<!-- I-14 -->
+<div class="finding important">
+  <div class="finding-id">I-14 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">Traceability coverage claim is false — VD-6 has no test; LC-6 rejection warning is recorded as resolved but the test doesn't exist</div>
+  <p>The health report claims "V1 requirements with ≥1 test: 46/46." VD-6 (Should, V1) has no test — TC-VD-7-01 does not assert <code>status</code>/<code>status_updated_at</code> fields. HR-10 claims a test verifying the LC-6 rejection warning; TC-LC-4-02 checks register presence only, not the 2LoD warning banner. The QA artifact misstates its own coverage.</p>
+  <p><strong>Fix:</strong> Add TC-VD-6-01 (verdict record contains <code>living_status</code> and <code>living_status_updated_at</code> populated at verdict time) and TC-LC-6-02 (seeded self-assessment forced to Rejected → 2LoD warning banner displayed). Correct the Test Summary counts. Rename TC-LC-4-02 to TC-LC-6-01.</p>
+</div>
+
+<!-- I-15 -->
+<div class="finding important">
+  <div class="finding-id">I-15 <span class="tag tag-source">Panel A · P2-02</span></div>
+  <div class="finding-title"><code>question-generator.ts</code> and <code>workflow-router.ts</code> absent from <code>cross-cutting.md</code> project structure</div>
+  <p><code>cross-cutting.md</code> <code>src/engine/</code> list (lines 97–103) omits both files. Both are referenced in other specs. A developer building from <code>cross-cutting.md</code> as the project structure authority won't know where to put them.</p>
+  <p><strong>Fix:</strong> Add both to the <code>src/engine/</code> list in <code>cross-cutting.md §3</code> with one-line descriptions matching their spec references.</p>
+</div>
+
+<!-- I-16 -->
+<div class="finding important">
+  <div class="finding-id">I-16 <span class="tag tag-source">Panel A · P2-04</span></div>
+  <div class="finding-title"><code>PolicyEditor.tsx</code> (<code>architecture-overview.md:70</code>) vs <code>SettingsPanel.tsx</code> (<code>cross-cutting.md:126</code>) — name conflict or orphan component</div>
+  <p>Two different names for what appears to be the same component (policy file load + version display). A developer will implement one and the other spec reference will point to a non-existent file.</p>
+  <p><strong>Fix:</strong> Decide the canonical name, update both specs. <code>PolicyLoader.tsx</code> or <code>PolicyPanel.tsx</code> avoids confusion with a full-featured policy editor (which this is not in V1).</p>
+</div>
+
+<!-- I-17 -->
+<div class="finding important">
+  <div class="finding-id">I-17 <span class="tag tag-source">Panel A · P1-02</span></div>
+  <div class="finding-title">LC-4 three of four re-evaluation trigger paths unspecified — pack updates (V1 scope, Journey 3) have no design</div>
+  <p><code>register-lifecycle.md:296</code> only implements trigger (a): policy-file update. Triggers (b) pack updates, (c) scope/autonomy change, and (d) annual re-classification have no design. Pack update trigger is V1 scope and essential for Journey 3 (EU AI Act update workflow).</p>
+  <p><strong>Fix:</strong> Add triggers (b)–(d) to <code>register-lifecycle.md §8</code>. At minimum, define the event type and the lifecycle state transition for each. Pack update trigger must integrate with the jurisdiction pack loading path.</p>
+</div>
+
+<!-- I-18 -->
+<div class="finding important">
+  <div class="finding-id">I-18 <span class="tag tag-source">Fable · Task 5</span></div>
+  <div class="finding-title">AIGate's own model-risk exposure unassessed — the engine + LLM extraction layer is squarely in MRM scope under OSFI E-23 and SS1/23</div>
+  <p>Under OSFI E-23's broadest definition and SS1/23's technology-agnostic standard, the pre-check engine plus its LLM extraction layer is in MRM scope. LC-6 self-classification doesn't answer the harder challenge: is the engine itself subject to independent validation at the standard it enforces on others? Also: AIGate hardcodes a single vendor (<code>claude-sonnet-4-6</code>) with no self-fingerprinting, while shipping a control library whose marquee control is output fingerprinting.</p>
+  <p><strong>Fix:</strong> Add a feasibility paragraph to <code>risk-assessment.md</code>: AIGate's deterministic engine requires conceptual-soundness validation (the NF-10 attestation — name it as MRM-equivalent); the LLM extraction layer requires Track III behavioural-verification controls (sampling of extracted graphs vs human-built ground truth). LC-6's verdict should list these as its required controls. Add V1.5 item: fixed probe-description set regression-tested on every model version change.</p>
+</div>
+
+<!-- I-19 -->
+<div class="finding important">
+  <div class="finding-id">I-19 <span class="tag tag-source">Fable · Task 2</span></div>
+  <div class="finding-title">Translation hop 1 (HTML → extraction) unattested; NF-10 attestation target is circular</div>
+  <p>NF-10 attests "Board-approved AI RAF v2.1" but everything in the chain cites only <code>raf-extraction.md</code>. A regulator asking "show me the YAML rule that encodes §6 row 7 of your board-approved RAF" must traverse two undocumented translations done by different processes at different times.</p>
+  <p><strong>Fix:</strong> Add a <code>derived_from</code> block to <code>raf-extraction.md</code>'s header (HTML file hash + date + reviewer). Extend NF-10's <code>translation_attestation</code> schema with <code>extraction_version_checked</code>. State in NF-10's fit criterion that the attestation target is the HTML/board RAF, with the extraction as an intermediate artifact.</p>
+</div>
+
+<!-- I-20 -->
+<div class="finding important">
+  <div class="finding-id">I-20 <span class="tag tag-source">Fable · Task 4</span></div>
+  <div class="finding-title">OQ-PV-2 unresolved — <code>platforms</code>/<code>vendor_models</code> absent from starter config but ADR-003 says schema "present in V1"</div>
+  <p>ADR-003 declares the envelope schema "present in the schema from V1." The starter config section (§10) omits <code>platforms</code>/<code>vendor_model_registry</code>. Either the schema ships in V1 (then the starter config table is wrong and the loader must parse-and-ignore it) or it doesn't (then ADR-003's "no migration" claim fails).</p>
+  <p><strong>Fix:</strong> Add <code>platforms: []</code> and <code>vendor_models: []</code> as optional, parsed-but-inert sections to <code>policy-schema.md §3.1</code> and §10, with a loader rule "present but not evaluated in V1." Move OQ-PV-2's validation gate explicitly to the V2 entry criteria.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ MINOR FINDINGS -->
+
+<h2>Minor Findings</h2>
+<p style="color:var(--ink-light); font-size:0.9rem; margin-bottom:24px;">Fix before shipping if possible. Individually cosmetic; collectively they signal machine-assembled documents without a final human pass.</p>
+
+<div class="finding minor">
+  <div class="finding-id">M-01 <span class="tag tag-source">Panel A · P1-04</span></div>
+  <div class="finding-title">NF-10 staleness validation absent — <code>translation_attestation.date</code> not checked against the 12-month window</div>
+  <p><code>policy-schema.md §5</code> checks for <code>[FIRM]</code> placeholder but not for <code>translation_attestation.date</code> staleness. NF-10's fit criterion requires a configurable 12-month window. Add a validation rule: if <code>now() - translation_attestation.date > staleness_window_months</code>, treat attestation as expired and flag verdicts provisional.</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-02 <span class="tag tag-source">Panel A · P1-05</span></div>
+  <div class="finding-title">VD-3 correction attestation missing — <code>GraphCorrection.corrected_by</code> is a role string, not an attestation event</div>
+  <p><code>corrected_by: '1LoD' | '2LoD'</code> is only a role. VD-3 says correction is "the submitter's attestation" — no explicit attestation step analogous to <code>graph_confirmed</code> is specified. Add a <code>correction_attested</code> event to <code>AuditEventType</code> with <code>attested_by</code> and <code>attested_at</code>.</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-03 <span class="tag tag-source">Panel A · P1-06</span></div>
+  <div class="finding-title">Private browsing handling absent from <code>register-lifecycle.md §12</code> — <code>verdict-audit.md §10</code> handles it for audit store but register spec does not</div>
+  <p>Add an equivalent private-browsing degradation note to <code>register-lifecycle.md §12</code>: register is unavailable in private browsing; use case can still proceed through intake and evaluation, but register persistence requires a persistent storage context.</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-04 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">TC-UC-3-03 title contradicts its own assertion — "Graph extraction is <strong>not</strong> deterministic" while the property asserts consistency</div>
+  <p>Retitle to "Graph extraction is structurally consistent — same description produces same graph structure." Either populate or delete the <code>[Trace: not-yet-traced]</code> annotations (the matrix is the trace; the per-test annotation is redundant).</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-05 <span class="tag tag-source">Fable · Task 1</span></div>
+  <div class="finding-title">Requirements document cosmetic defects — LC-5 Must/V2+, orphaned criteria, NF ordering</div>
+  <p>LC-5 is tagged Must yet versioned V2+ (Must = "present at launch" per the priority model). LC-6 contains a fit criterion belonging to LC-4. RG-1 and RG-7 each carry orphaned fit criteria. NF-3 has its fit criterion duplicated. The NF section is ordered NF-10, NF-7–9, NF-1–6. Re-tag LC-5 as Should/V2+; move the orphaned criteria; deduplicate NF-3; renumber NF-1 first.</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-06 <span class="tag tag-source">Panel A · P2-07</span></div>
+  <div class="finding-title"><code>stale_assessment: boolean</code> in <code>UseCaseSummary</code> is V1.5 scope (RA-5) but included in V1 data model with no V1 computation logic</div>
+  <p>Either add the staleness computation logic to V1 or annotate the field <code>// always false in V1; computed in V1.5</code> and add a note in <code>register-lifecycle.md §5</code>.</p>
+</div>
+
+<div class="finding minor">
+  <div class="finding-id">M-07 <span class="tag tag-source">Panel A · P2-08</span></div>
+  <div class="finding-title"><code>ContradictionReview.tsx</code> referenced in <code>intake-flow.md:259</code> but absent from <code>cross-cutting.md</code> project structure under <code>src/ui/intake/</code></div>
+  <p>Add <code>ContradictionReview.tsx</code> to the <code>src/ui/intake/</code> list in <code>cross-cutting.md §3</code>.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TRIAGE WORKSHEET -->
+
+<h2>Triage Worksheet</h2>
+<p style="margin-bottom: 16px; font-size: 0.9rem; color: var(--ink-light);">Work through each Critical and Important finding. Dispositions: <strong>Fix now</strong> (update spec before build), <strong>Accept risk</strong> (document the decision), <strong>Defer</strong> (explicitly to V1.5 with a reason).</p>
+
+<div class="triage-row">
+  <div>ID</div>
+  <div>Summary</div>
+  <div>Disposition</div>
+</div>
+
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-01</div>
+  <div><code>tier_workflow</code> key/shape/casing mismatch — LC-2 broken</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-02</div>
+  <div><code>Confidence</code> capitalisation mismatch — RA-11 silent fail</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-03</div>
+  <div><code>VerdictSummary</code>/<code>UseCaseSummary</code> contradiction</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-04</div>
+  <div>Missing HL-004 (trading) and HL-005 (irreversible at L2)</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-05</div>
+  <div>Track rules 3+4 absent — agentic AI under-classified</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-06</div>
+  <div>No <code>scale</code> attribute — client-facing chatbot mis-tiers as High</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-07</div>
+  <div>Tier semantics: first-match vs highest-wins</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-08</div>
+  <div><code>track_floor</code> over categorical tracks + "Wait —" artifact in spec</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-09</div>
+  <div>No canonical vocabulary — 4 inconsistent vocabs; LC-6 seed crashes</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-10</div>
+  <div>LC-6 self-assessment rigged — benign seed + auto-approve</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-11</div>
+  <div>No chunk owns starter policy + pack authoring</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-12</div>
+  <div>Placeholder sign-offs pass CF-5 — NF-7 toothless</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-13</div>
+  <div>"Verbatim" citations unverified/paraphrased — RA-7 violated in RA-7's own doc</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-14</div>
+  <div>V1 contradicts design vision credibility definition — zero OB work</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-15</div>
+  <div>Security: prompt injection, API key, LLM steering, YAML pollution untested</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-critical">CRIT</span> C-16</div>
+  <div>OQ-6 pack maintenance unresolved — RA-7 makes it a V1 question</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+
+<hr>
+
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-01</div>
+  <div>CS-1 safety margin unimplementable — boolean conditions have no metric</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-02</div>
+  <div>Determinism: UUID + timestamps break byte-identical test</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-03</div>
+  <div><code>DataFlowGraph</code> missing <code>jurisdictions</code> field</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-04</div>
+  <div>INV-ZONE-01 permits MNPI in Zone B — appetite drift</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-05</div>
+  <div>KRI schema cannot express green/amber/red — VerdictConditions non-retrofittable</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-06</div>
+  <div>UC-4 question budget: pre-tier classifier unspecified</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-07</div>
+  <div>UC-2 duplicate check leaks cross-team data per RG-2</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-08</div>
+  <div><code>re_evaluation_queued</code> missing — policy save regresses production to pre_checked</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-09</div>
+  <div>Multi-node condition semantics unspecified</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-10</div>
+  <div>Property tests are repetition tests — strong determinism properties absent</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-11</div>
+  <div><code>ControlDetail</code> undefined; <code>VerdictTraceData</code> fields missing</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-12</div>
+  <div><code>graph_confirmed</code> payload missing identity fields — UC-6 compile error</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-13</div>
+  <div><code>DataClass</code>/<code>DataZone</code> types never defined</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-14</div>
+  <div>Traceability claim false — VD-6 and LC-6 untested</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-15</div>
+  <div><code>question-generator.ts</code>/<code>workflow-router.ts</code> absent from project structure</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-16</div>
+  <div><code>PolicyEditor.tsx</code> vs <code>SettingsPanel.tsx</code> name conflict</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-17</div>
+  <div>LC-4 three trigger paths (pack update, scope change, annual) unspecified</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-18</div>
+  <div>AIGate's own MRM exposure unassessed; single-vendor dependency</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-19</div>
+  <div>Translation hop 1 (HTML → extraction) unattested</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+<div class="triage-row">
+  <div class="triage-id"><span class="tag tag-important">IMP</span> I-20</div>
+  <div>OQ-PV-2: <code>platforms</code>/<code>vendor_models</code> absent but ADR-003 says V1</div>
+  <div class="triage-options">
+    <button class="triage-btn">Fix now</button>
+    <button class="triage-btn">Accept risk</button>
+    <button class="triage-btn">Defer</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ CALIBRATION -->
+
+<h2>Calibration Notes (R1)</h2>
+
+<table>
+  <tr><th>Metric</th><th>Value</th></tr>
+  <tr><td>Round</td><td>R1 — first review, liberal threshold applied</td></tr>
+  <tr><td>Sources</td><td>3: Panel A (Requirements Coverage), Panel B (Interface Contracts), Fable repository review</td></tr>
+  <tr><td>Critical findings</td><td>16</td></tr>
+  <tr><td>Important findings</td><td>20</td></tr>
+  <tr><td>Minor findings</td><td>7</td></tr>
+  <tr><td>Borderline findings elevated</td><td>4 (Panel A P1-05/P1-06/P2-07; Panel B 1-I — all included at R1 liberal threshold)</td></tr>
+  <tr><td>Cross-source overlap</td><td>~11 findings caught by ≥2 sources (C-08 tier semantics, C-09 vocabulary, I-01 CS-1, I-08 re_evaluation_queued, I-02 determinism, I-04 MNPI Zone B, others)</td></tr>
+  <tr><td>Estimated uncaught rate</td><td>~15% (Panel C Structural Soundness and Panel D Implementability were not run)</td></tr>
+  <tr><td>Panels not run</td><td>C (Structural Soundness — Bass/Kazman, Fowler, Brooks, Fairbanks, Anderson/OWASP) and D (Implementability — McConnell, Hunt&Thomas, Cohn, stack specialists). Fable covered the majority of their expected findings.</td></tr>
+</table>
+
+<p style="font-size: 0.85rem; color: var(--ink-light); margin-top: 16px;">R2 anchor examples for calibration: C-07 (tier first-match vs highest-wins) = true Critical — a one-line YAML edit silently changes every verdict. I-05 (KRI green/amber/red schema) = true Important — non-retrofittable by VD-7's own rules. M-05 (requirements ordering) = true Minor — cosmetic but signals assembly quality.</p>
+
+<hr>
+<p style="font-size: 0.8rem; color: var(--ink-light);">AIGate Design Review 001 · Commit <code>ffa9067</code> · GVM /gvm-design-review · R1 liberal threshold · Three sources</p>
+
+</body>
+</html>
