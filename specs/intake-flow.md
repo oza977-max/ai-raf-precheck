@@ -63,7 +63,7 @@ STATES:
 TRANSITIONS:
   description_entry → duplicate_check          (on submit)
   duplicate_check → graph_extraction           (no duplicate found, or user confirms new)
-  duplicate_check → [exit — use existing]      (user adopts existing classification)
+  duplicate_check → [exit — use existing]      (user adopts existing classification — 1LoD sees only "a similar use case exists — tier High; contact 2LoD to adopt its classification"; full detail 2LoD only per RG-2)
   graph_extraction → graph_review              (LLM returns graph, or user completes form)
   graph_review → questionnaire                 (user proceeds from graph review)
   questionnaire → contradiction_review         (contradiction detected)
@@ -343,7 +343,7 @@ Using `tool_choice: { type: 'tool' }` forces the model to always return the stru
 | Requirement | Coverage |
 |---|---|
 | UC-1 | §3 state machine `description_entry`; §4.3 prompt includes description |
-| UC-2 | §3 `duplicate_check` state; duplicate detection uses LLM semantic comparison (API key present) or keyword match |
+| UC-2 | §3 `duplicate_check` state; 1LoD sees only redacted match ("a similar use case exists — tier High; contact 2LoD to adopt its classification"); full match detail is 2LoD-only (RG-2) |
 | UC-3 | §4 LLM graph extraction |
 | UC-3a | §5 structured form fallback |
 | UC-4 | §6 question generation; question count limits |

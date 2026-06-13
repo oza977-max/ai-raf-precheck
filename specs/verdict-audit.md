@@ -90,9 +90,15 @@ The `conditions` block is the hypothesis schema for V2 monitoring. Populated at 
 ```typescript
 // src/types/verdict.ts (extends evaluation-engine.md §3.9)
 
+export interface KriBand {
+  green: { lte?: number; gte?: number };
+  amber: { lte?: number; gte?: number };
+  red:   { gt?: number; lt?: number };
+}
+
 export interface VerdictConditions {
-  model_drift_threshold?: number;      // e.g. 0.05 = 5% drift triggers amber
-  override_rate_minimum?: number;      // e.g. 0.05 = human override rate must stay >= 5%
+  drift_band?: KriBand;                // Performance drift % bands for this use case
+  override_rate_band?: KriBand;        // Human override rate bands
   approved_zone: DataZone;             // Use case must stay in this zone
   model_version_pinned?: string;       // If set, this exact version approved; updates require re-evaluation
   max_autonomy_level: 0 | 1 | 2 | 3 | 4;  // Approved autonomy ceiling
@@ -128,6 +134,7 @@ export type AuditEventType =
   | 'graph_corrected'          // VD-3 correction
   | 'verdict_corrected'        // Re-evaluation after correction
   | 'lifecycle_stage_changed'  // LC-1 transitions
+  | 're_evaluation_queued'     // Policy/pack saved — re-eval queued; stage does NOT change here
   | 'twoloD_reviewed'          // LC-3 2LoD action
   | 'reasoning_trace_generated'; // VD-8 LLM call completed
 

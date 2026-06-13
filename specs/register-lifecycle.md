@@ -294,7 +294,7 @@ For V1, "2LoD notification" means the register view shows a badge on the use cas
 
 ## 8. Re-evaluation Trigger (LC-4)
 
-When the policy file is updated (`src/store/policy.ts` saves a new version), a `re_evaluation_queued` audit event is appended for every active use case (any use case in `approved`, `in_production`, or `pre_checked` stage). The register view shows a "Policy updated — re-evaluation required" badge on affected records.
+When the policy file is updated (`src/store/policy.ts` saves a new version), a `re_evaluation_queued` audit event is appended for every active use case (any use case in `approved`, `in_production`, or `pre_checked` stage). **The lifecycle stage does NOT change on policy save** — it moves to `pre_checked` only when a human triggers re-run or the re-evaluation produces a changed verdict. The register view shows a "Policy updated — re-evaluation required" badge on affected records.
 
 ```typescript
 // src/store/policy.ts — called when policy file is saved
@@ -309,19 +309,19 @@ export async function onPolicyUpdated(
   );
 
   for (const uc of active) {
+    // Append re_evaluation_queued — does NOT change lifecycle stage
     await audit.append({
       event_id: uuidv4(),
       use_case_id: uc.use_case_id,
-      event_type: 'lifecycle_stage_changed',
+      event_type: 're_evaluation_queued',
       occurred_at: new Date().toISOString(),
       actor: 'system',
       payload: {
-        type: 'lifecycle_stage_changed',
-        from_stage: uc.lifecycle_stage,
-        to_stage: 'pre_checked'
+        type: 're_evaluation_queued',
+        policy_version: newVersion
       }
     });
-    await register.updateLifecycleStage(uc.use_case_id, 'pre_checked', 'system');
+    // Stage moves to pre_checked only on human-triggered re-run or changed verdict
   }
 }
 ```
