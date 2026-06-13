@@ -142,9 +142,11 @@ interface TierAssignment {
 }
 ```
 
-All tier rules are evaluated. Each trigger in each rule is checked against the graph. **The highest tier whose trigger fires is returned** (impact-dominant). Tier hierarchy: Critical > High > Medium > Low.
+All tier rules are evaluated. Each trigger in each rule is checked against the graph. **The highest tier whose trigger fires is returned** (impact-dominant, order-independent). Tier hierarchy: Critical > High > Medium > Low.
 
 If no tier rule triggers, the default is Low (a use case with no high-impact signals is Low by default).
+
+**Property test:** permuting the `tiers` array must never change any verdict. TC-PE-3-01 covers this invariant.
 
 ### 3.6 Step 5 — Jurisdiction overrides
 
@@ -165,21 +167,20 @@ interface JurisdictionOverrideResult {
 
 For each active pack, evaluate each rule's condition against the graph. Collect all `track_floor` and `tier_floor` effects that fire.
 
-**Most demanding standard governs (PE-6, RA-2):**
-- `finalTrack` = maximum(baseTrack, all track_floor values) where I < II < III is the ordering (Track I is most demanding)
-- `finalTier` = maximum(baseTier, all tier_floor values) where Low < Medium < High < Critical
+**Most demanding standard governs (PE-6, RA-2) — supplement model:**
 
-Wait — track ordering for "most demanding": Track I is traditional MRM (most restrictive), Track III is AI Governance (least restrictive). So Track I > Track II > Track III in terms of governance burden. The override floor means: if a pack demands Track I, a use case that would be Track III is upgraded to Track I.
+Pack rules with `supplement_obligations` effect add required controls and validation obligations to the assigned track; they never reduce the track below the jurisdictional minimum. A Track III use case under SS1/23 retains Track III classification but inherits the SS1/23 MRM obligation set. Track classification is unchanged; obligations are additive.
 
 ```typescript
 const TRACK_ORDER: Record<Track, number> = { 'I': 3, 'II': 2, 'III': 1 };
 const TIER_ORDER: Record<Tier, number> = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
 
-// Track override: choose the HIGHER governance burden (higher TRACK_ORDER value)
-finalTrack = maxBy(allTracks, t => TRACK_ORDER[t]);
-
 // Tier override: choose the HIGHER tier
 finalTier = maxBy(allTiers, t => TIER_ORDER[t]);
+
+// Track: supplement_obligations rules ADD to the obligation set; track classification is unchanged
+// (track_floor effect type is removed — use supplement_obligations in pack rules)
+appliedObligations = collectSupplementObligations(activePacks, graph);
 ```
 
 Applied overrides are recorded in the verdict for full traceability (VD-2, RA-9).
@@ -201,16 +202,19 @@ interface TrippedInvariant {
 
 All invariants are evaluated against the graph. All tripped invariants are collected (not short-circuit — we need the complete set for the solver). The graph path that triggered each invariant is recorded for the verdict's `bindingPath` (VD-2).
 
+**Multi-node condition semantics:** a condition over a node attribute matches if ANY node on ANY input→output path satisfies it. The matching path is recorded as `binding_path`. Tests: TC-PE-1-03 (multi-node graph), TC-PE-2-06 (`no-track-match` error surfaced).
+
 ### 3.8 Step 7 + 8 — Control solver
 
 See §4 below.
 
 ### 3.9 Step 9 — Verdict assembly
 
+`evaluate()` returns a pure `EvaluationResult` — byte-identical across runs for the same inputs. The caller wraps it in a `Verdict` envelope adding `id`, timestamps, and attestation. TC-PE-1-01 / TC-NF-1-01 point at `EvaluationResult`.
+
 ```typescript
-interface Verdict {
-  id: string;                          // UUID v4
-  use_case_id: string;
+// Pure result — deterministic, no identity or time fields
+interface EvaluationResult {
   status: 'approved' | 'approved_with_controls' | 'rejected';
   tier: Tier;
   track: Track;
@@ -223,6 +227,13 @@ interface Verdict {
   pack_versions: Record<string, string>;
   applied_overrides: AppliedOverride[];
   confidence_caveats: ConfidenceCaveat[];  // Medium/Low confidence rules that fired (RA-11)
+  boundary_proximity: boolean;         // True if any satisfied invariant has zero redundant coverage (CS-1)
+}
+
+// Envelope — added by caller, never by evaluate()
+interface Verdict extends EvaluationResult {
+  id: string;                          // UUID v4 — added by caller
+  use_case_id: string;
   living_status: 'approved' | 'amber' | 'breached' | 'revoked';
   living_status_updated_at: string;    // ISO 8601
   attested_by: string;
