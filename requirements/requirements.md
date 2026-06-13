@@ -175,7 +175,7 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **PE-8 (Must):** The system shall ship with a starter policy file pre-loaded with the AI Risk Appetite template rules (from `grounding/raf-extraction.md`). Banks customise this file for their own tier names, committee names, thresholds, and use cases.
 
-> Fit criterion: A bank can be operational — submitting use cases and receiving verdicts — without creating a policy file from scratch. The starter file covers all six risk dimensions, triple-track classification, impact-dominant tiering, hard lines, control library, and the seven jurisdiction override packs.
+> Fit criterion: A bank can be operational — submitting use cases and receiving verdicts — without creating a policy file from scratch. The starter file covers all six risk dimensions, triple-track classification, impact-dominant tiering, hard lines, and the control library. The starter file includes the wave-1 jurisdiction packs (home-regulator pack, most demanding applicable ceiling, and one further pack the pilot use cases touch); remaining packs are authored on first need using `grounding/PACK-AUTHORING.md`.
 
 ---
 
@@ -251,15 +251,15 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **LC-4 (Must):** The tier and track of a use case shall be re-evaluated when: (a) the policy file is updated, (b) a regulatory pack is updated, (c) the use case's scope or autonomy level changes, or (d) annual re-classification is triggered.
 
-**LC-5 (Must):** Re-evaluation queues from policy or regulatory pack changes shall be prioritised and triaged automatically. Critical and High tier use cases are surfaced first. Low tier use cases that are unaffected by the changed provisions are auto-carried-forward without human review.
+> Fit criterion: Re-evaluation produces a new verdict record linked to the original. The register shows the current verdict and flags use cases whose verdict has changed since the last review.
 
-> Fit criterion: A major regulatory pack update does not dump the entire inventory onto the 2LoD team's review queue. The system determines which use cases are affected by the specific provisions that changed, surfaces Critical/High tier affected use cases for immediate review, and auto-carries Low tier unaffected use cases. The triage decision is recorded in the audit trail. Untriaged queue items are flagged as a risk, not silently accumulating.
+**LC-5 (Should / V2+):** Re-evaluation queues from policy or regulatory pack changes shall be prioritised and triaged automatically. Critical and High tier use cases are surfaced first. Low tier use cases that are unaffected by the changed provisions are auto-carried-forward without human review.
+
+> Fit criterion: A major regulatory pack update does not dump the entire inventory onto the 2LoD team's review queue. The system determines which use cases are affected by the specific provisions that changed, surfaces Critical/High tier affected use cases for immediate review, and auto-carries Low tier unaffected use cases. The triage decision is recorded in the audit trail. Untriaged queue items are flagged as a risk, not silently accumulating. *(V1 behaviour: all active cases are queued with a `re_evaluation_queued` event; triage is manual.)*
 
 **LC-6 (Must):** AIGate shall be submitted as a use case under its own pre-check. The resulting verdict — including tier, track, required controls, and reasoning chain — shall be stored in the inventory register and kept current.
 
 > Fit criterion: The AIGate system appears in the AI inventory register with a verdict produced by AIGate's own evaluation engine. If AIGate cannot satisfy its own gates, the gates are reconsidered. This is not a formality — it is a live test of whether the rules are honest and complete.
-
-> Fit criterion: Re-evaluation produces a new verdict record linked to the original. The register shows the current verdict and flags use cases whose verdict has changed since the last review.
 
 ---
 
@@ -365,7 +365,7 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **CF-2 (Must):** The system shall ship with a pre-populated starter policy file derived from the AI Risk Appetite Supplement template (`grounding/raf-extraction.md`). The starter file is functional out of the box — no configuration required to begin evaluating use cases.
 
-> Fit criterion: A bank can install the tool and immediately submit a use case using the starter config. The first customisation step is editing the file to replace `[FIRM]` placeholders with the bank's own names, not starting from scratch.
+> Fit criterion: A bank can install the tool and immediately submit a use case using the starter config. The first customisation step is editing the file to replace `[FIRM]` placeholders with the bank's own names, not starting from scratch. The starter file covers the wave-1 jurisdiction packs; remaining packs are authored on first need using `grounding/PACK-AUTHORING.md`.
 
 **CF-3 (Must):** The policy file shall be versioned. Each change to the file produces a new version. The version in force at the time of each verdict is recorded in the verdict's audit trail.
 
@@ -387,7 +387,7 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **RA-1 (Must):** The system shall correctly identify the applicable regulatory frameworks for a use case based on the jurisdictions specified in the data-flow graph, and apply them during evaluation.
 
-> Fit criterion: A use case specifying UK and EU jurisdictions activates SS1/23 and EU AI Act override packs. A use case specifying US only activates SR 26-2. Jurisdiction selection is part of the intake flow.
+> Fit criterion: A use case specifying UK and EU jurisdictions activates SS1/23, EU AI Act, and DORA override packs (selecting "EU" activates both `eu-ai-act.yaml` and `dora.yaml` — DORA is not a separately selectable jurisdiction code). A use case specifying US only activates SR 26-2. Jurisdiction selection is part of the intake flow.
 
 **RA-2 (Must):** When multiple jurisdictions apply, the system shall apply the most demanding applicable standard as the governing standard. Track and tier assignments shall never be reduced below any applicable jurisdictional minimum.
 
@@ -522,11 +522,11 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 ## 9. Open Questions
 
-- **OQ-1:** What LLM provider should be used for graph extraction (UC-3) in the MVP? Options: OpenAI, Anthropic, local model. Affects data handling, cost, and offline capability. Deferred to `/gvm-tech-spec`.
-- **OQ-2:** How should the register persist in the client-side MVP? Options: localStorage, local JSON file, IndexedDB. Deferred to `/gvm-tech-spec`.
-- **OQ-3:** What is the minimal viable 2LoD review mechanism for High/Critical tier use cases in MVP (LC-3)? Options: status flag in register, email link, simple password-gated view. Deferred to `/gvm-tech-spec`.
-- **OQ-4:** Should the similarity check for duplicate detection (UC-2) use LLM-based semantic comparison or keyword/tag matching in MVP? Semantic is more accurate; keyword is simpler and offline-capable. Deferred to `/gvm-tech-spec`.
-- **OQ-5:** What is the exact format for the audit trail export? Needed to confirm compatibility with the bank's existing risk reporting tools. Deferred to user confirmation before `/gvm-tech-spec`.
+- **OQ-1:** ~~Deferred to `/gvm-tech-spec`.~~ **Resolved** — Anthropic claude-sonnet-4-6 with `temperature: 0`; API key configured by the bank. See `specs/cross-cutting.md` OQ-1 resolution.
+- **OQ-2:** ~~Deferred to `/gvm-tech-spec`.~~ **Resolved** — IndexedDB via `idb` library; two databases (`aigate-audit`, `aigate-register`). See `specs/cross-cutting.md` OQ-2 resolution.
+- **OQ-3:** ~~Deferred to `/gvm-tech-spec`.~~ **Resolved** — localStorage role toggle (`aigate:role`); 2LoD sees all records. V1 honest limitation: not real auth. See `specs/cross-cutting.md` OQ-3 resolution.
+- **OQ-4:** ~~Deferred to `/gvm-tech-spec`.~~ **Resolved** — LLM semantic comparison when API key present; keyword match fallback offline. See `specs/cross-cutting.md` OQ-4 resolution.
+- **OQ-5:** ~~Deferred to user confirmation.~~ **Resolved** — JSON export: `{ exported_at, nodes: RegisterNode[], edges: RegisterEdge[] }`. See `specs/cross-cutting.md` OQ-5 resolution.
 - **OQ-PV-1:** How is an envelope expressed for ordinal dimensions (data class, autonomy — needs ≤ ceiling semantics) versus set dimensions (jurisdiction — needs subset semantics)? The policy schema must support both. Deferred to `/gvm-tech-spec`.
 - **OQ-PV-2:** When a use case exceeds a platform envelope on one dimension, is the correct behaviour partial inheritance (inherit fitting dimensions, evaluate exceeded ones) or full fallback? PV-3 specifies per-dimension partial inheritance with coupled-cluster support as the default. Needs validation against a real bank's control dependencies before V1 ships — some controls may be tightly coupled such that exceeding one dimension should invalidate a whole cluster.
 - **OQ-PV-3:** For firms without envelope-scoped platform approvals, should the tool offer a lightweight "define your platform envelope" onboarding flow, or degrade to asking the full question set until envelopes are defined? Affects time-to-value for less mature firms. Deferred to user confirmation.

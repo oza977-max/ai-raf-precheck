@@ -63,7 +63,7 @@ STATES:
 TRANSITIONS:
   description_entry → duplicate_check          (on submit)
   duplicate_check → graph_extraction           (no duplicate found, or user confirms new)
-  duplicate_check → [exit — use existing]      (user adopts existing classification)
+  duplicate_check → [exit — use existing]      (user adopts existing classification — 1LoD sees only "a similar use case exists — tier High; contact 2LoD to adopt its classification"; full detail 2LoD only per RG-2)
   graph_extraction → graph_review              (LLM returns graph, or user completes form)
   graph_review → questionnaire                 (user proceeds from graph review)
   questionnaire → contradiction_review         (contradiction detected)
@@ -115,6 +115,7 @@ export interface DataFlowGraph {
   processing_nodes: ProcessingNode[];
   output_nodes: OutputNode[];
   edges: GraphEdge[];
+  jurisdictions: string[];     // Jurisdiction codes active for this use case (extracted with uncertain: true default + mandatory confirmation question)
   intake_method: 'llm' | 'structured_form';
   extracted_at: string;        // ISO 8601
 }
@@ -133,6 +134,7 @@ export interface ProcessingNode {
   autonomy_level: 0 | 1 | 2 | 3 | 4;
   data_zone: DataZone;
   vendor: string;              // "internal" | vendor name
+  replaces_prior_model: boolean;  // TRACK-II-REPLACE trigger (RAF §5 rule 3)
   uncertain?: boolean;         // True if LLM could not determine this with confidence
 }
 
@@ -143,6 +145,7 @@ export interface OutputNode {
   exposure: ExposureLevel;
   decision_bindingness: DecisionBindingness;
   reversibility: 'reversible' | 'irreversible' | 'unknown';
+  scale: 'limited' | 'at_scale';  // TIER-CRITICAL trigger when client-/market-facing at scale
 }
 
 export interface GraphEdge {
@@ -192,6 +195,8 @@ The form presents one field per graph attribute. All permitted values come from 
 | Output exposure | Select | Yes | Values from policy `exposure_levels` |
 | Decision bindingness | Select | Yes | |
 | Output reversibility | Select | Yes | reversible / irreversible / unknown |
+| Output scale | Select | Yes | limited / at_scale |
+| Replaces prior model | Boolean | Yes | Drives TRACK-II-REPLACE (RAF §5 rule 3) |
 | Jurisdictions | Multi-select | Yes | From policy `jurisdictions` |
 
 ### 5.3 Form output
@@ -220,9 +225,13 @@ export function generateQuestions(
 3. Check each pack rule's condition — if fields are uncertain, generate questions
 4. Hard lines: if the graph has signals near a hard line condition, generate a clarifying question before flagging a hard line (gives the submitter a chance to correct a misclassified node)
 
-**Question count limits (UC-4 fit criterion):**
-- Low-tier signals detected → maximum 5 questions
-- Critical-tier signals detected → maximum 15 questions
+**Question budget (UC-4 fit criterion):**
+
+The generator first runs `assignTier()` on the provisional graph (uncertain fields treated worst-case — assumed most demanding value) to determine the tier-based budget. The provisional tier is recorded in the audit trail as `question_budget_basis`.
+
+- Provisional tier Low → maximum 5 questions
+- Provisional tier Medium → maximum 10 questions
+- Provisional tier High or Critical → maximum 15 questions
 - The generator trims questions to the limit, prioritising questions that resolve the most invariants or hard-line signals
 
 ```typescript
@@ -334,7 +343,7 @@ Using `tool_choice: { type: 'tool' }` forces the model to always return the stru
 | Requirement | Coverage |
 |---|---|
 | UC-1 | §3 state machine `description_entry`; §4.3 prompt includes description |
-| UC-2 | §3 `duplicate_check` state; duplicate detection uses LLM semantic comparison (API key present) or keyword match |
+| UC-2 | §3 `duplicate_check` state; 1LoD sees only redacted match ("a similar use case exists — tier High; contact 2LoD to adopt its classification"); full match detail is 2LoD-only (RG-2) |
 | UC-3 | §4 LLM graph extraction |
 | UC-3a | §5 structured form fallback |
 | UC-4 | §6 question generation; question count limits |

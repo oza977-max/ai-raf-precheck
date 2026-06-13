@@ -54,6 +54,66 @@ The policy file is the bank's Risk Appetite Framework expressed in machine-reada
 
 ## 3. Main Policy File Schema
 
+### 3.0 Canonical attribute vocabulary
+
+All condition values in hard lines, track rules, tier rules, invariants, and pack rule effects **must** use the closed enums below. CF-5 validation rejects any condition value outside this vocabulary. The LLM extractor's JSON schema uses these as `enum` constraints; structured form selects come from the same source.
+
+```typescript
+// Canonical enums — src/engine/types.ts
+
+export type DataClass =
+  | 'Public'
+  | 'Internal'
+  | 'Confidential'
+  | 'Client PII'
+  | 'MNPI';
+
+export type DataZone =
+  | 'Zone A'        // External / public internet
+  | 'Zone B'        // Cloud / managed third-party
+  | 'Zone C';       // Internal only (MNPI boundary)
+
+export type ModelType =
+  | 'statistical'
+  | 'traditional-ml'
+  | 'ml'
+  | 'deep-learning'
+  | 'llm'
+  | 'generative-ai'
+  | 'agentic';
+
+export type Exposure =
+  | 'internal-only'
+  | 'internal-shared'
+  | 'client-facing'
+  | 'market-facing';
+
+export type DecisionBindingness =
+  | 'non-binding'
+  | 'advisory'
+  | 'material'
+  | 'binding';
+
+// Derived from grounding/raf-extraction.md §A and §E
+export type ActionType =
+  | 'read'
+  | 'draft'
+  | 'recommend'
+  | 'execute'
+  | 'trade'
+  | 'approve';
+
+export type DecisionType =
+  | 'credit-decision'
+  | 'lending-decision'
+  | 'fraud-detection'
+  | 'trading'
+  | 'pricing'
+  | 'hiring'
+  | 'regulatory-reporting'
+  | 'operational';
+```
+
 ### 3.1 Top-level structure
 
 ```yaml
@@ -119,6 +179,22 @@ hard_lines:
       hitl: false
     reason: "EU AI Act Annex III §5(b) + Consumer Credit Directive require human oversight on credit decisions."
     regulatory_basis: "EU AI Act Annex III §5(b); Consumer Credit Directive 2023/2225"
+
+  - id: "HL-004"
+    description: "Fully autonomous trading decisions"
+    condition:
+      autonomy_level: { gte: 4 }
+      decision_type: { in: ["trading"] }
+    reason: "Fully autonomous trading decisions with no human oversight are outside appetite at any tier."
+    regulatory_basis: "RAF §5 rule; MiFID II Article 17"
+
+  - id: "HL-005"
+    description: "Irreversible action above autonomy L1"
+    condition:
+      output_reversibility: "irreversible"
+      autonomy_level: { gte: 2 }
+    reason: "Irreversible actions require Level 1 or below regardless of tier."
+    regulatory_basis: "HTML §7 — Irreversible actions require Level 1 or below regardless of tier"
 ```
 
 **Hard line condition operators:**
@@ -160,6 +236,25 @@ tracks:
     short_circuit: true
     regulatory_basis: "SS1/23 §3.4 (technology-agnostic); OSFI E-23 §2.1"
   
+  - id: "TRACK-II-REPLACE"
+    name: "Track II — Replaces prior model"
+    description: "Any use case that replaces a prior model is subject to Track II regardless of model type"
+    conditions:
+      - field: "replaces_prior_model"
+        value: true
+    short_circuit: true
+    regulatory_basis: "RAF §5 rule 3"
+
+  - id: "TRACK-II-AUTONOMY"
+    name: "Track II — High autonomy"
+    description: "Use cases with autonomy level ≥ 3 are subject to Track II"
+    conditions:
+      - field: "autonomy_level"
+        value: { gte: 3 }
+    short_circuit: true
+    regulatory_basis: "RAF §5 rule 4"
+    note: "Override-rate-at-registration clause of rule 4 is deferred to V2 monitoring."
+
   - id: "TRACK-III"
     name: "Track III — AI Governance"
     description: "Generative and agentic AI outside MRM scope (SR 26-2 exclusion); governed by AI Governance Track"
@@ -192,6 +287,16 @@ tiers:
         and:
           field: "autonomy_level"
           value: { gte: 3 }
+      - description: "Client- or market-facing at scale"
+        conditions:
+          - field: "exposure"
+            value: { in: ["client-facing", "market-facing"] }
+          - field: "scale"
+            value: "at_scale"
+        regulatory_basis: "grounding/raf-extraction.md §D"
+      - field: "decision_type"
+        value: { in: ["capital", "client financial outcome"] }
+        regulatory_basis: "grounding/raf-extraction.md §D"
   
   - id: "TIER-HIGH"
     name: "High"
@@ -224,7 +329,7 @@ tiers:
             value: { lte: 1 }
 ```
 
-Tier evaluation: rules evaluated top-to-bottom. **First matching trigger determines the tier** (impact-dominant). A use case matching a Critical trigger is Critical regardless of other factors.
+Tier evaluation: **highest-tier-wins, order-independent**. All tier triggers are evaluated; the highest matching tier is assigned. Permuting the `tiers` array never changes any verdict. A use case matching a Critical trigger is Critical regardless of other factors.
 
 ### 3.5 Invariants schema
 
@@ -239,10 +344,10 @@ invariants:
     severity: "High"
   
   - id: "INV-ZONE-01"
-    description: "MNPI must remain within Zone C or Zone B private"
+    description: "MNPI must remain within Zone C"
     condition:
       data_class: "MNPI"
-      data_zone: { not_in: ["Zone C internal", "Zone B private"] }
+      data_zone: { not_in: ["Zone C internal"] }
     required_controls: []         # No control resolves this — hard line HL-002 catches it first
     severity: "Critical"
 ```
@@ -283,17 +388,18 @@ controls:
 ```yaml
 kri_thresholds:
   performance:
-    drift_threshold_pct: 5.0       # % performance degradation triggers amber
-    override_rate_min_pct: 5.0     # Min human override rate (too low = rubber-stamp risk)
-    override_rate_max_pct: 80.0    # Max override rate (too high = model useless)
+    drift_pct:        { green: { lte: 3.0 }, amber: { lte: 7.0 }, red: { gt: 7.0 } }
+    override_rate_pct:
+      low_risk:       { green: { gte: 5.0, lte: 40.0 }, amber: { lte: 80.0 }, red: { gt: 80.0 } }
+      high_risk:      { green: { gte: 5.0, lte: 20.0 }, amber: { lte: 50.0 }, red: { gt: 50.0 } }
   data_privacy:
-    pii_incident_threshold: 0       # Any PII incident → immediate review
+    pii_incident_count: { green: 0, amber: { lte: 2 }, red: { gt: 2 } }
   technology:
-    model_version_staleness_days: 90
+    model_version_staleness_days: { green: { lte: 60 }, amber: { lte: 120 }, red: { gt: 120 } }
   conduct:
-    bias_disparity_threshold_pct: 3.0
+    bias_disparity_pct: { green: { lte: 1.5 }, amber: { lte: 3.0 }, red: { gt: 3.0 } }
   third_party_concentration:
-    single_vendor_share_pct: 60.0
+    single_vendor_share_pct: { green: { lte: 40.0 }, amber: { lte: 60.0 }, red: { gt: 60.0 } }
   autonomy:
     level_4_approval_required: true
 ```
@@ -304,26 +410,25 @@ kri_thresholds:
 jurisdictions:
   - code: "UK"
     name: "United Kingdom"
-    pack_file: "packs/ss1-23.yaml"
+    pack_files: ["packs/ss1-23.yaml"]
   - code: "US"
     name: "United States"
-    pack_file: "packs/sr-26-2.yaml"
+    pack_files: ["packs/sr-26-2.yaml"]
   - code: "EU"
     name: "European Union"
-    pack_file: "packs/eu-ai-act.yaml"
+    pack_files: ["packs/eu-ai-act.yaml", "packs/dora.yaml"]   # Selecting EU activates both; DORA is not a separate jurisdiction
   - code: "CA"
     name: "Canada"
-    pack_file: "packs/osfi-e23.yaml"
+    pack_files: ["packs/osfi-e23.yaml"]
   - code: "SG"
     name: "Singapore"
-    pack_file: "packs/mas-feat.yaml"
-  - code: "EU-DORA"
-    name: "EU (DORA — digital operational resilience)"
-    pack_file: "packs/dora.yaml"
+    pack_files: ["packs/mas-feat.yaml"]
   - code: "JP"
     name: "Japan"
-    pack_file: "packs/fsa-japan.yaml"
+    pack_files: ["packs/fsa-japan.yaml"]
 ```
+
+**DORA modeling note:** DORA is not a separately selectable jurisdiction code. Selecting `EU` activates both `eu-ai-act.yaml` and `dora.yaml`. The `pack_files` field is an array to support this pattern; RA-1 fit criterion updated accordingly.
 
 ---
 
@@ -349,7 +454,7 @@ rules:
     source:
       document: "SS1/23"
       section: "§3.4"
-      text: "Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique (statistical, machine learning, or otherwise)."
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during P2-C03] Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique (statistical, machine learning, or otherwise)."
     effect:
       type: "track_floor"
       minimum_track: "II"
@@ -366,7 +471,7 @@ rules:
     source:
       document: "SS1/23"
       section: "§2.1"
-      text: "Firms must define and quantify their appetite for model risk, including for AI and ML models."
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during P2-C03] Firms must define and quantify their appetite for model risk, including for AI and ML models."
     effect:
       type: "required_control"
       control_id: "CTRL-RAF-01"
@@ -415,6 +520,8 @@ export type Track = 'I' | 'II' | 'III';
 export type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
 export type Confidence = 'High' | 'Medium' | 'Low';
 export type EffectType = 'track_floor' | 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
+export type Scale = 'limited' | 'at_scale';  // Added to OutputNode (intake-flow.md §4.2) and UC-3a form
+// Note: replaces_prior_model: boolean is added to ProcessingNode (intake-flow.md §4.2) and UC-3a form
 
 export interface PolicyFile {
   version: string;
@@ -478,6 +585,8 @@ export interface PackRule {
     document: string;
     section: string;
     text: string;
+    source_url: string;      // URL to the primary source document
+    retrieved_date: string;  // ISO 8601 date the document was retrieved
   };
   effect: PackRuleEffect;
   confidence: Confidence;
@@ -522,6 +631,10 @@ The loader performs these checks on every load. All checks must pass before the 
 | Each rule has `confidence` of `High | Medium | Low` | `pack-invalid: [pack-id] rule [rule-id] invalid confidence value` |
 | Each rule has `reviewer_name` | `pack-invalid: [pack-id] rule [rule-id] missing reviewer_name` |
 | Each rule has `sign_off_date` | `pack-invalid: [pack-id] rule [rule-id] missing sign_off_date` |
+| Each rule has `source.source_url` | `pack-invalid: [pack-id] rule [rule-id] missing source.source_url` |
+| Each rule has `source.retrieved_date` | `pack-invalid: [pack-id] rule [rule-id] missing source.retrieved_date` |
+| `reviewer_name` does not contain `[FIRM]` or match a placeholder pattern | Rule treated as UNSIGNED → verdicts relying on it flagged provisional per NF-7 |
+| All condition values conform to §3.0 canonical vocabulary | `pack-invalid: [pack-id] rule [rule-id] condition value [value] is not in canonical vocabulary for [field]` |
 
 ### Validation output (TypeScript)
 

@@ -88,5 +88,6 @@ Full documentation: `requirements/requirements.html`
 ## Project status
 
 Currently in requirements and design phase. Built using the [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
+V1 is an internal engine-validation proof-of-concept; artifact binding and the system-of-record audit store arrive in V1.5.
 
 *Developed using the Grounded Vibe Methodology*
