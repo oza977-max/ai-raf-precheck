@@ -334,7 +334,7 @@ This follows the policy: re-evaluation is triggered for all active cases; triage
 
 AIGate must appear in its own register as a submitted use case with a verdict produced by its own evaluation engine. This is not a stub or a fixture — it is a real evaluation.
 
-**Seeded use case record:**
+**Seeded use case record (canonical vocabulary — honest values):**
 
 ```typescript
 // src/seeds/aigate-self-assessment.ts
@@ -343,27 +343,30 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
   version: 1,
   intake_method: 'structured_form',
   extracted_at: '2026-06-01T00:00:00Z',
+  jurisdictions: ['UK'],        // Adjust to deployment jurisdiction
   input_nodes: [{
     id: 'in-1',
     label: 'User-described AI use case (text)',
-    data_class: 'internal',
-    data_zone: 'zone_b'
+    data_class: 'Internal',     // Canonical: intake content is internal data; not assumed lower
+    data_zone: 'Zone B'         // Canonical: cloud-hosted LLM processing
   }],
   processing_nodes: [{
     id: 'proc-1',
-    label: 'AIGate evaluation engine + LLM graph extraction',
-    model_type: 'nlp_text_generation',
-    autonomy_level: 1,          // Human confirms graph before evaluation
-    data_zone: 'zone_b',
-    vendor: 'Anthropic'
+    label: 'AIGate evaluation engine + LLM graph extraction (Anthropic claude-sonnet-4-6)',
+    model_type: 'llm',          // Canonical: LLM for graph extraction
+    autonomy_level: 1,          // Human confirms graph before evaluation fires
+    data_zone: 'Zone B',
+    vendor: 'Anthropic',
+    replaces_prior_model: false
   }],
   output_nodes: [{
     id: 'out-1',
-    label: 'Structured risk verdict (in-appetite / out-of-appetite)',
-    action_type: 'recommendation',
-    exposure: 'internal_only',
-    decision_bindingness: 'advisory',
-    reversibility: 'reversible'
+    label: 'Structured governance verdict (approved / approved_with_controls / rejected)',
+    action_type: 'recommend',   // Canonical: verdict drives governance decisions
+    exposure: 'internal-only',
+    decision_bindingness: 'material',  // Honest: the verdict drives governance decisions
+    reversibility: 'reversible',
+    scale: 'limited'            // Internal pilot — limited scale
   }],
   edges: [
     { from: 'in-1', to: 'proc-1' },
@@ -377,7 +380,7 @@ On first launch (when the register is empty), `src/seeds/aigate-self-assessment.
 2. Insert the Anthropic vendor node and `provided_by_vendor` edge
 3. Run `evaluate(AIGATE_USE_CASE_GRAPH, policy)` against the loaded policy
 4. Store the resulting `Verdict` in the audit trail via `audit.append()`
-5. Update the lifecycle stage to `approved` (AIGate satisfies its own gates — or the policy is reconsidered)
+5. Route the result through `workflow-router.ts` like any other use case — **no auto-approve**. If the engine assigns High or Critical, the use case sits at `pre_checked` until the 2LoD role approves. The register view shows a prominent warning: **"AIGate self-assessment pending 2LoD approval — verdicts are provisional until cleared."**
 
 If the policy changes after this initial seeding, the AIGate use case is queued for re-evaluation along with all other active use cases (LC-4 trigger applies).
 
@@ -464,7 +467,8 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | TC-LC-1-01, TC-LC-1-02 | §6 lifecycle stage machine |
 | TC-LC-2-01, TC-LC-2-02, TC-LC-2-03 | §7 tier-to-workflow routing |
 | TC-LC-4-01 | §8 policy update trigger |
-| TC-LC-4-02 | §9 AIGate self-assessment |
+| TC-LC-6-01 | §9 AIGate self-assessment — normal evaluation path (renamed from TC-LC-4-02) |
+| TC-LC-6-02 | §9 AIGate self-assessment — forced-Reject test policy produces prominent 2LoD warning |
 
 ---
 
