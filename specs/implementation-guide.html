@@ -124,6 +124,13 @@
           <td>P2-C01</td>
         </tr>
         <tr>
+          <td>P2-C03</td>
+          <td>Starter policy + jurisdiction pack authoring (HUMAN-LED — see grounding/PACK-AUTHORING.md)</td>
+          <td>P2-C01</td>
+          <td>P3-C01, P7-C01</td>
+          <td>—</td>
+        </tr>
+        <tr>
           <td>P3-C01</td>
           <td>Evaluation engine — 8-step pipeline</td>
           <td>P2-C01</td>
@@ -252,31 +259,663 @@ REGISTER TRACK
 
     <!-- PLACEHOLDER: Wiring Matrix -->
     <h2 id="wiring-matrix">Wiring Matrix</h2>
-    <p><em>Content to be added</em></p>
+    <p>Every entry point, its consumed modules, the chunk that owns the call site, and the chunk whose failing test demanded the producer.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Entry point</th>
+          <th>Consumed modules</th>
+          <th>Wiring chunk</th>
+          <th>Demanded by</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>IntakeFlow.tsx</code> (UC-3 path)</td>
+          <td><code>src/llm/graph-extractor.ts</code>, <code>src/engine/question-generator.ts</code>, <code>src/engine/contradiction.ts</code>, <code>src/store/audit.ts</code></td>
+          <td>P4-C01</td>
+          <td>P4-C04 (intake acceptance test: confirmed graph → verdict)</td>
+        </tr>
+        <tr>
+          <td><code>IntakeFlow.tsx</code> (UC-3a path)</td>
+          <td><code>src/components/StructuredForm.tsx</code>, <code>buildGraphFromForm()</code>, <code>src/engine/question-generator.ts</code></td>
+          <td>P4-C02</td>
+          <td>P4-C04 (intake acceptance test: form path → verdict)</td>
+        </tr>
+        <tr>
+          <td><code>evaluate.ts</code> (engine entry)</td>
+          <td><code>evaluateHardLines()</code>, <code>assignJurisdiction()</code>, <code>assignTier()</code>, <code>assignTrack()</code>, <code>solvControls()</code>, <code>assembleVerdict()</code></td>
+          <td>P3-C01</td>
+          <td>P4-C04 (verdict acceptance test: evaluate(graph, policy) → Verdict)</td>
+        </tr>
+        <tr>
+          <td><code>solvControls()</code></td>
+          <td><code>greedy-solver.ts</code></td>
+          <td>P3-C02</td>
+          <td>P3-C01 (engine pipeline test: approved-with-controls verdict requires solver)</td>
+        </tr>
+        <tr>
+          <td><code>reasoning-trace.ts</code></td>
+          <td>Anthropic SDK, <code>VerdictTraceData</code></td>
+          <td>P5-C02</td>
+          <td>P5-C01 (verdict display test: reasoning trace section renders prose)</td>
+        </tr>
+        <tr>
+          <td><code>AuditStore.append()</code></td>
+          <td><code>idb</code> library, <code>aigate-audit</code> database</td>
+          <td>P2-C02</td>
+          <td>P4-C04 (audit acceptance test: verdict_produced event written after evaluation)</td>
+        </tr>
+        <tr>
+          <td><code>RegisterStore.addNode()</code> / <code>addEdge()</code></td>
+          <td><code>idb</code> library, <code>aigate-register</code> database</td>
+          <td>P2-C02</td>
+          <td>P6-C01 (register acceptance test: use case appears in register after intake)</td>
+        </tr>
+        <tr>
+          <td><code>RegisterView.tsx</code> (2LoD)</td>
+          <td><code>RegisterStore.getUseCases('all')</code>, <code>getBlastRadius()</code></td>
+          <td>P6-C01</td>
+          <td>P6-C02 (lifecycle test: stage badge visible in register)</td>
+        </tr>
+        <tr>
+          <td><code>RegisterView.tsx</code> (export)</td>
+          <td><code>RegisterStore.exportAll()</code></td>
+          <td>P7-C02</td>
+          <td>P7-C01 (AIGate self-assessment test: AIGate entry present in export)</td>
+        </tr>
+        <tr>
+          <td><code>onPolicyUpdated()</code></td>
+          <td><code>RegisterStore.getUseCases('all')</code>, <code>AuditStore.append()</code>, <code>RegisterStore.updateLifecycleStage()</code></td>
+          <td>P6-C02</td>
+          <td>P6-C02 (re-evaluation test: all active cases queued on policy update)</td>
+        </tr>
+        <tr>
+          <td><code>workflow-router.ts</code></td>
+          <td>Policy <code>tier_workflows</code> config</td>
+          <td>P6-C02</td>
+          <td>P6-C01 (register test: Low-tier verdict shows self-service final)</td>
+        </tr>
+        <tr>
+          <td><code>aigate-self-assessment.ts</code> (seed)</td>
+          <td><code>AIGATE_USE_CASE_GRAPH</code>, <code>evaluate()</code>, <code>AuditStore.append()</code>, <code>RegisterStore.addNode()</code></td>
+          <td>P7-C01</td>
+          <td>P7-C01 (self-assessment test: AIGate appears in register with valid verdict)</td>
+        </tr>
+        <tr>
+          <td><code>PolicyEditor.tsx</code></td>
+          <td><code>src/store/policy.ts</code>, js-yaml, Zod schema</td>
+          <td>P2-C01</td>
+          <td>P3-C01 (engine test: evaluate() receives a loaded PolicyFile)</td>
+        </tr>
+        <tr>
+          <td><code>src/engine/question-generator.ts</code></td>
+          <td><code>DataFlowGraph</code>, <code>PolicyFile</code>, <code>JurisdictionPack[]</code> — internal engine module</td>
+          <td>P4-C03</td>
+          <td>P4-C03 (question generation test: uncertain nodes generate targeted questions)</td>
+        </tr>
+        <tr>
+          <td><code>src/engine/contradiction.ts</code></td>
+          <td><code>DataFlowGraph</code>, <code>QuestionAnswer[]</code> — internal engine module</td>
+          <td>P4-C03</td>
+          <td>P4-C03 (contradiction test: conflicting answers transition to contradiction_review)</td>
+        </tr>
+        <tr>
+          <td><code>scripts/spec-parity-check.py</code></td>
+          <td>Reads <code>specs/*.md</code> — no runtime consumer</td>
+          <td>P7-C02</td>
+          <td>Demanded by: internal helper, no consumer demanded — rationale: cross-spec parity tool used by CI and /gvm-design-review; not a runtime entry point</td>
+        </tr>
+      </tbody>
+    </table>
 
     <!-- PLACEHOLDER: Build Phases -->
     <h2 id="build-phases">Build Phases</h2>
-    <p><em>Content to be added</em></p>
+
+    <!-- Phase 1 -->
+    <h3 id="phase-1-walking-skeleton">Phase 1 — Walking Skeleton</h3>
+    <p><strong>Goal:</strong> End-to-end wired boundary. No real logic — stubs return hardcoded values. Proves the architecture works before any domain chunk fills it in.</p>
+    <p><strong>MVP-1 note:</strong> Phase 1 delivers a runnable product: the user can type a description, click through the intake wizard, see a hardcoded verdict, and view it in the register. The skeleton is interactive and end-to-end — not a page template.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P1-C01</div>
+      <h4>Project scaffold + walking skeleton</h4>
+      <p><strong>Spec reference:</strong> <code>cross-cutting.md</code> — project structure, toolchain, module boundaries<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> nothing (everything depends on this)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li>Vite 5 + React 18 + TypeScript 5 strict project created with <code>npm create vite@latest</code></li>
+        <li><code>tsconfig.json</code> with <code>strict: true</code>, <code>noUncheckedIndexedAccess: true</code></li>
+        <li>Directory structure: <code>src/engine/</code>, <code>src/llm/</code>, <code>src/store/</code>, <code>src/components/</code>, <code>src/types/</code>, <code>src/seeds/</code></li>
+        <li>Stub implementations wired end-to-end:
+          <ul>
+            <li><code>src/engine/evaluate.ts</code> — accepts graph + policy, returns a hardcoded <code>Verdict</code> stub</li>
+            <li><code>src/store/audit.ts</code> — in-memory stub (no IndexedDB yet), logs events to console</li>
+            <li><code>src/store/register.ts</code> — in-memory stub</li>
+            <li><code>src/store/policy.ts</code> — returns a hardcoded stub <code>PolicyFile</code></li>
+            <li><code>IntakeFlow.tsx</code> — minimal 3-step wizard (description → graph stub → verdict)</li>
+            <li><code>VerdictDisplay.tsx</code> — renders the hardcoded verdict stub</li>
+            <li><code>RegisterView.tsx</code> — shows a single hardcoded use case row</li>
+          </ul>
+        </li>
+        <li>Walking skeleton smoke test: <code>describe('Walking Skeleton') → it('completes full flow end-to-end with stubs')</code></li>
+        <li><code>npm run dev</code> starts without errors</li>
+        <li><code>npm run build</code> completes without TypeScript errors</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Smoke test calling all three entry points (evaluate stub, audit stub, register stub). Tests must pass before moving to Phase 2.</li>
+      </ul>
+    </div>
+
+    <!-- Phase 2 -->
+    <h3 id="phase-2-infrastructure">Phase 2 — Infrastructure</h3>
+    <p><strong>Goal:</strong> Real persistence and real policy loading. Engine and UI stubs still in place.</p>
+    <p><strong>Parallel work:</strong> P2-C01 and P2-C02 can run in parallel — they modify different <code>src/store/</code> files.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P2-C01</div>
+      <h4>Policy loader + Zod validation</h4>
+      <p><strong>Spec reference:</strong> <code>policy-schema.md</code> §3, §4, §5 — YAML schema, condition language, validation rules<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> P2-C02</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/store/policy.ts</code> — real implementation replacing stub:
+          <ul>
+            <li><code>loadPolicy(yaml: string): Result&lt;LoadedPolicy, PolicyError&gt;</code> using <code>js-yaml</code> + Zod</li>
+            <li>Validates all required sections: <code>metadata</code>, <code>invariants</code>, <code>risk_dimensions</code>, <code>control_library</code>, <code>jurisdiction_packs</code></li>
+            <li>Validates condition language: <code>gte</code>, <code>lte</code>, <code>in</code>, <code>not_in</code>, <code>exact</code> operators only</li>
+            <li><code>PolicyFile</code> and <code>LoadedPolicy</code> TypeScript types</li>
+          </ul>
+        </li>
+        <li><code>PolicyEditor.tsx</code> — file upload or paste textarea; shows validation errors inline</li>
+        <li>All <code>PolicyError</code> variants typed and surfaced in the UI</li>
+        <li><code>src/types/policy.ts</code> — all shared policy types</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-CF-1-01</code> — valid policy loads without errors</li>
+        <li><code>TC-CF-2-01</code> — invalid YAML produces a clear error message</li>
+        <li>Invalid condition operator produces validation error</li>
+        <li>Missing required section produces validation error</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P2-C02</div>
+      <h4>IndexedDB stores (audit + register)</h4>
+      <p><strong>Spec reference:</strong> <code>verdict-audit.md</code> §4.4, <code>register-lifecycle.md</code> §4.3<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> P2-C01</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/store/audit.ts</code> — real IndexedDB implementation:
+          <ul>
+            <li><code>aigate-audit</code> DB, <code>audit_events</code> object store, <code>by_use_case</code> index</li>
+            <li><code>append(event: AuditEvent): Promise&lt;void&gt;</code> using <code>db.add()</code> (not <code>put()</code>)</li>
+            <li><code>getAll(useCaseId: string): Promise&lt;AuditEvent[]&gt;</code></li>
+            <li><code>getAllForExport(): Promise&lt;AuditEvent[]&gt;</code></li>
+          </ul>
+        </li>
+        <li><code>src/store/register.ts</code> — real IndexedDB implementation:
+          <ul>
+            <li><code>aigate-register</code> DB, <code>register_nodes</code> and <code>register_edges</code> stores</li>
+            <li>All indexes: <code>by_type</code>, <code>by_submitted_by</code>, <code>by_from_node</code>, <code>by_to_node</code></li>
+            <li>All <code>RegisterStore</code> interface methods</li>
+          </ul>
+        </li>
+        <li>Both stores open cleanly on first launch (schema migration)</li>
+        <li><code>idb</code> library imported and used</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-VD-4-01</code> — append() twice with same event_id throws ConstraintError</li>
+        <li><code>getAll()</code> returns events in insertion order</li>
+        <li><code>getBlastRadius()</code> returns correct nodes for a known component</li>
+        <li>Schema migration runs without error on empty IndexedDB</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P2-C03</div>
+      <h4>Starter policy + jurisdiction pack authoring (HUMAN-LED)</h4>
+      <p><strong>Spec reference:</strong> <code>grounding/PACK-AUTHORING.md</code><br/>
+      <strong>Depends on:</strong> P2-C01 &nbsp;|&nbsp; <strong>Enables:</strong> P3-C01, P7-C01<br/>
+      <strong>Note:</strong> This chunk is executed by the human rule owner, not generated. Claude may scaffold YAML structure only.</p>
+      <h4>Exit gates</h4>
+      <ol>
+        <li>Every <code>source.text</code> copy-pasted from the retrieved primary document and verified by exact string match.</li>
+        <li>Generated/scaffolded rules diffed line-by-line against <code>grounding/raf-extraction.md</code> §B–§H by the rule owner; diff committed.</li>
+        <li>Every rule has two adversarial test cases (one should-fire, one should-not-fire) authored by the second reviewer.</li>
+        <li>Sign-off fields contain real names — <code>[FIRM]</code> placeholders fail validation.</li>
+      </ol>
+      <h4>Wave 1 scope</h4>
+      <p>Encode three packs only: the home-regulator pack, the most demanding applicable ceiling (e.g. <code>ss1-23.yaml</code>), and one further pack the pilot use cases touch. Remaining packs are authored when a pilot use case first touches them.</p>
+    </div>
+
+    <!-- Phase 3 -->
+    <h3 id="phase-3-evaluation-engine">Phase 3 — Evaluation Engine</h3>
+    <p><strong>Goal:</strong> The core pure function. No UI changes — the stub in <code>IntakeFlow.tsx</code> still calls <code>evaluate()</code>. By end of Phase 3, <code>evaluate()</code> is real and deterministic.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P3-C01</div>
+      <h4>Evaluation engine — 8-step pipeline</h4>
+      <p><strong>Spec reference:</strong> <code>evaluation-engine.md</code> §3.1–3.8<br/>
+      <strong>Estimated time:</strong> 4–5 hours<br/>
+      <strong>Parallel with:</strong> P3-C02 can begin as a spike after P3-C01 is half complete</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/engine/evaluate.ts</code> — real 8-step pipeline replacing stub:
+          <ol>
+            <li>Validate graph + policy schema</li>
+            <li>Load jurisdiction overrides (most-demanding-standard)</li>
+            <li>Evaluate hard lines → immediate Rejected if any trip</li>
+            <li>Assign tier (impact-dominant)</li>
+            <li>Assign track (first-matching rule)</li>
+            <li>Evaluate invariants → collect tripped invariants</li>
+            <li>Solve controls (calls <code>solvControls()</code> — stubbed as <code>return []</code> until P3-C02)</li>
+            <li>Assemble Verdict</li>
+          </ol>
+        </li>
+        <li><code>src/types/verdict.ts</code> — full <code>Verdict</code>, <code>VerdictConditions</code>, <code>ConfidenceCaveat</code> interfaces</li>
+        <li><code>src/engine/jurisdiction.ts</code> — jurisdiction override: most-demanding-standard</li>
+        <li><code>src/engine/tier.ts</code> — tier assignment</li>
+        <li><code>src/engine/track.ts</code> — track assignment</li>
+        <li>Engine accepts the stub policy from P2-C01 (or the stub if P2-C01 is not yet complete in parallel builds)</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-PE-1-01</code> — determinism property: same graph + policy → identical verdict × 10 runs</li>
+        <li><code>TC-PE-2-01</code> — track assignment: signal-based track selection</li>
+        <li><code>TC-PE-3-01</code> — tier assignment: tier-triggering rule named in verdict</li>
+        <li><code>TC-PE-4-01</code> — hard line trip → immediate Rejected, no control solving</li>
+        <li><code>TC-PE-5-01</code> — jurisdiction override: most-demanding-standard applies</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P3-C02</div>
+      <h4>Greedy set-cover control solver</h4>
+      <p><strong>Spec reference:</strong> <code>evaluation-engine.md</code> §4<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> none (replaces the stub used by P3-C01)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/engine/greedy-solver.ts</code>:
+          <ul>
+            <li><code>solvControls(trippedInvariants, controlLibrary, inheritedControls, margin): SolverResult</code></li>
+            <li>Greedy set-cover: at each step, add the control that resolves the most remaining invariants</li>
+            <li>Safety margin: solver must satisfy all invariants with <code>margin</code>% headroom</li>
+            <li>Returns <code>{ ok: true, controls: string[] }</code> or <code>{ ok: false, unsatisfiable: string[] }</code></li>
+          </ul>
+        </li>
+        <li><code>P3-C01</code> updated to call real solver instead of stub</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-CS-1-01</code> — greedy solver picks minimum set for a known invariant/control combination</li>
+        <li><code>TC-CS-1-02</code> — inherited platform controls reduce required controls</li>
+        <li><code>TC-CS-2-01</code> — unsatisfiable invariant set → Rejected with named invariants</li>
+        <li><code>TC-CS-3-01</code> — triggered downstream reviews appear in verdict</li>
+      </ul>
+    </div>
+
+    <!-- Phase 4 -->
+    <h3 id="phase-4-intake-flow">Phase 4 — Intake Flow</h3>
+    <p><strong>Goal:</strong> Real intake wizard. LLM extraction, structured form, questions, contradiction detection, attestation. By end of Phase 4, a user can complete the full intake flow and receive a real verdict.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P4-C01</div>
+      <h4>Intake flow — LLM graph extraction + state machine</h4>
+      <p><strong>Spec reference:</strong> <code>intake-flow.md</code> §3, §4<br/>
+      <strong>Estimated time:</strong> 4–5 hours<br/>
+      <strong>Parallel with:</strong> P6-C01 can begin after P4-C04 (separate files)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/components/IntakeFlow.tsx</code> — real 9-state machine with <code>useReducer</code>; <code>IntakeState</code> discriminated union</li>
+        <li><code>src/llm/graph-extractor.ts</code> — Anthropic SDK call; tool_choice forced; Zod parse of response</li>
+        <li><code>DataFlowGraph</code> type with all node types from <code>intake-flow.md</code> §4.2</li>
+        <li><code>graph_review</code> state — renders graph nodes; <code>uncertain: true</code> nodes highlighted; Edit button per node</li>
+        <li>Duplicate detection: semantic comparison (LLM) when API key present; keyword match fallback</li>
+        <li><code>GraphCorrection</code> interface and correction recording</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-UC-3-01</code> — LLM-extracted graph has correct structure</li>
+        <li><code>TC-UC-3-02</code> — uncertain nodes highlighted in graph review</li>
+        <li><code>TC-UC-7-01</code> — correction recorded with before/after values + identity</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P4-C02</div>
+      <h4>Structured form fallback (UC-3a)</h4>
+      <p><strong>Spec reference:</strong> <code>intake-flow.md</code> §5<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> P6-C01 (after P4-C04 API boundary is stable)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/components/StructuredForm.tsx</code> — all 12 fields from <code>intake-flow.md</code> §5.2; all select options from loaded policy (no hardcoded enums)</li>
+        <li><code>buildGraphFromForm(formValues): DataFlowGraph</code> — <code>intake_method: 'structured_form'</code></li>
+        <li><code>usePolicy()</code> hook — <code>hasApiKey: boolean</code> drives path selection in <code>IntakeFlow.tsx</code></li>
+        <li>"Structured intake mode" banner shown when no API key</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-UC-3a-01</code> — structured form produces a valid <code>DataFlowGraph</code></li>
+        <li><code>TC-UC-3a-02</code> — <code>intake_method: 'structured_form'</code> in audit trail</li>
+        <li><code>TC-UC-3a-03</code> — select options come from policy, not hardcoded</li>
+        <li><code>TC-UC-3a-04</code> — no error when no API key configured</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P4-C03</div>
+      <h4>Question generation + contradiction detection</h4>
+      <p><strong>Spec reference:</strong> <code>intake-flow.md</code> §6, §7<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> nothing on this phase's critical path</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/engine/question-generator.ts</code> — generates <code>IntakeQuestion[]</code> from graph + policy + active packs; count limits (max 5 low-tier, max 15 critical-tier)</li>
+        <li><code>src/engine/contradiction.ts</code> — <code>detectContradictions(description, answers, graph): Contradiction[]</code></li>
+        <li><code>src/components/QuestionnaireStep.tsx</code> — renders questions; each answer dispatches to <code>IntakeFlow</code> reducer</li>
+        <li><code>src/components/ContradictionReview.tsx</code> — shows conflicting statements; forces resolution before advancing</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-UC-4-01</code> — uncertain nodes generate targeted questions</li>
+        <li><code>TC-UC-4-02</code> — question count does not exceed the tier-proportionate limit</li>
+        <li><code>TC-UC-5-01</code> — conflicting answers surface contradiction</li>
+        <li><code>TC-UC-5-02</code> — contradiction blocks advance to confirmation</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P4-C04</div>
+      <h4>Attestation + confirmation → evaluation</h4>
+      <p><strong>Spec reference:</strong> <code>intake-flow.md</code> §9, <code>verdict-audit.md</code> §4.3<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> nothing — gating chunk for Phase 5+</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/components/ConfirmationStep.tsx</code> — "Confirm and evaluate" button; shows final graph summary</li>
+        <li>On confirm: <code>audit.append({ event_type: 'graph_confirmed', ... })</code> → <code>evaluate(graph, policy)</code> → <code>audit.append({ event_type: 'verdict_produced', ... })</code> → transition to <code>verdict</code> state</li>
+        <li><code>IntakeFlow.tsx</code> <code>evaluation_pending</code> state with loading indicator (&lt; 200ms expected)</li>
+        <li>Both audit events written before UI transitions</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-UC-6-01</code> — confirmation event written to audit trail before verdict</li>
+        <li><code>TC-UC-6-02</code> — verdict_produced event contains full Verdict object</li>
+        <li><code>TC-UC-6-03</code> — attested_by field matches current role</li>
+      </ul>
+    </div>
+
+    <!-- Phase 5 -->
+    <h3 id="phase-5-verdict-display">Phase 5 — Verdict Display</h3>
+    <p><strong>Goal:</strong> Complete verdict UI. Correction flow. Plain-English trace.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P5-C01</div>
+      <h4>Verdict display + correction flow</h4>
+      <p><strong>Spec reference:</strong> <code>verdict-audit.md</code> §5, §6<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> P6-C01 (separate components after P4-C04 API is stable)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/components/VerdictDisplay.tsx</code> — status above the fold, binding constraint, controls list, downstream reviews</li>
+        <li>Confidence caveat rendering (RA-11): Medium caveat inline; Low caveat as full-page warning with "Provisional" status</li>
+        <li>Correction flow: "Correct a classification" → transition back to <code>graph_review</code> with <code>originalVerdictId</code> carried</li>
+        <li>On re-evaluation: <code>audit.append({ event_type: 'graph_corrected' })</code> + <code>audit.append({ event_type: 'verdict_corrected' })</code></li>
+        <li>Original verdict event is never modified</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-VD-1-01</code> — verdict status visible above the fold</li>
+        <li><code>TC-VD-2-01</code> — binding constraint with graph path shown</li>
+        <li><code>TC-VD-3-01</code> — both original and corrected verdict in audit trail</li>
+        <li><code>TC-VD-3-02</code> — correction record includes identity and timestamp</li>
+        <li><code>TC-RA-11-01</code> — Medium confidence caveat displayed</li>
+        <li><code>TC-RA-11-02</code> — Low confidence verdict shows "Provisional" status</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P5-C02</div>
+      <h4>Plain-English reasoning trace (VD-8)</h4>
+      <p><strong>Spec reference:</strong> <code>verdict-audit.md</code> §7<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> P6-C01 (separate module)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/llm/reasoning-trace.ts</code> — Anthropic SDK call; <code>VerdictTraceData</code> → prose</li>
+        <li>Prompt: passes all structured verdict fields verbatim; instructs "reference only data provided"</li>
+        <li>Trace stored in <code>verdict_produced</code> audit event <code>payload.reasoning_trace</code> field</li>
+        <li>Fallback: <code>reasoning_trace: null</code> → UI shows template-based summary</li>
+        <li><code>&lt;details&gt;</code> element in <code>VerdictDisplay.tsx</code> for the reasoning trace</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-VD-8-01</code> — reasoning trace contains at least one regulatory citation (e.g. "SS1/23 §3.4")</li>
+        <li>Trace unavailable renders fallback without error</li>
+        <li>No API key: trace section shows "configure API key" message</li>
+      </ul>
+    </div>
+
+    <!-- Phase 6 -->
+    <h3 id="phase-6-register">Phase 6 — Register</h3>
+    <p><strong>Goal:</strong> Full register view. Role access. Lifecycle stages. Tier routing. Policy re-eval trigger.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P6-C01</div>
+      <h4>Register view — 1LoD + 2LoD + role access</h4>
+      <p><strong>Spec reference:</strong> <code>register-lifecycle.md</code> §5, §10<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> P5-C01, P5-C02 (different components)</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/components/RegisterView.tsx</code> — two views: 1LoD (own use cases), 2LoD (all use cases)</li>
+        <li>Role driven by <code>localStorage['aigate:role']</code>; filter applied at <code>RegisterStore.getUseCases(role)</code> level</li>
+        <li>2LoD view: tier/track/stage filter chips; full-text search over use case names</li>
+        <li>Use case row: name, submitter (2LoD only), tier, track, lifecycle stage, stale badge</li>
+        <li><code>stale_assessment</code> computed from comparing current pack versions vs verdict's <code>pack_versions</code></li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-RG-2-01</code> — 1LoD sees only own use cases</li>
+        <li><code>TC-RG-2-02</code> — 2LoD sees all use cases</li>
+        <li><code>TC-RG-3-01</code> — filter by Critical tier returns only Critical</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P6-C02</div>
+      <h4>Lifecycle stage + tier routing + policy re-eval trigger</h4>
+      <p><strong>Spec reference:</strong> <code>register-lifecycle.md</code> §6, §7, §8<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> nothing — depends on P6-C01</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/engine/workflow-router.ts</code> — reads <code>policy.tier_workflows</code>; returns <code>WorkflowAction</code></li>
+        <li><code>register.updateLifecycleStage()</code> used throughout intake and verdict flows to advance stage</li>
+        <li><code>src/store/policy.ts</code> <code>onPolicyUpdated()</code> — queues re-evaluation for all active use cases</li>
+        <li>"Policy updated" banner in 2LoD register view</li>
+        <li><code>register-lifecycle.md</code> §6 lifecycle stage constants and transition guards</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-LC-1-01</code> — stage advances Exploring → Pre-checked after verdict</li>
+        <li><code>TC-LC-2-01</code> — Low-tier verdict: lifecycle advances to Approved automatically</li>
+        <li><code>TC-LC-2-02</code> — High-tier verdict: lifecycle stays Pre-checked pending 2LoD action</li>
+        <li><code>TC-LC-4-01</code> — policy update queues all active use cases for re-evaluation</li>
+      </ul>
+    </div>
+
+    <!-- Phase 7 -->
+    <h3 id="phase-7-integration">Phase 7 — Integration &amp; Closure</h3>
+    <p><strong>Goal:</strong> AIGate self-assessment. Export. Spec parity script. Full product startup verification.</p>
+
+    <div class="chunk">
+      <div class="chunk-id">P7-C01</div>
+      <h4>AIGate self-assessment seed (LC-6)</h4>
+      <p><strong>Spec reference:</strong> <code>register-lifecycle.md</code> §9<br/>
+      <strong>Estimated time:</strong> 2–3 hours<br/>
+      <strong>Parallel with:</strong> nothing — depends on P6-C01</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>src/seeds/aigate-self-assessment.ts</code> — <code>AIGATE_USE_CASE_GRAPH</code> constant</li>
+        <li>Called once on first launch (empty register check)</li>
+        <li>Runs real <code>evaluate()</code> against loaded policy</li>
+        <li>Inserts use case node, Anthropic vendor node, edges, and verdict event into IndexedDB</li>
+        <li>If AIGate's own verdict is Rejected: UI shows "AIGate does not satisfy its own controls — policy review required" governance alert</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-LC-4-02</code> — AIGate appears in register with a real verdict</li>
+        <li>AIGate verdict contains policy_version from the current loaded policy</li>
+        <li>Re-evaluation is triggered when policy updates (LC-4 applies to AIGate's use case record)</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P7-C02</div>
+      <h4>Export + spec parity check script</h4>
+      <p><strong>Spec reference:</strong> <code>register-lifecycle.md</code> §10.3<br/>
+      <strong>Estimated time:</strong> 2 hours<br/>
+      <strong>Parallel with:</strong> nothing</p>
+      <h4>Deliverables</h4>
+      <ul>
+        <li><code>RegisterStore.exportAll()</code> → JSON download in <code>RegisterView.tsx</code> (2LoD only)</li>
+        <li><code>scripts/spec-parity-check.py</code> — checks cross-spec invariants:
+          <ul>
+            <li>R1: <code>Verdict</code> interface fields consistent between <code>evaluation-engine.md</code> and <code>verdict-audit.md</code></li>
+            <li>R2: All TypeScript types referenced in specs are defined in at least one spec</li>
+            <li>R3: <code>LifecycleStage</code> values consistent across <code>register-lifecycle.md</code> and <code>verdict-audit.md</code></li>
+            <li>R4: All module paths referenced in specs exist in <code>src/</code> directory (when project is built)</li>
+            <li>R5: All <code>AuditEventType</code> variants referenced in specs match the discriminated union definition</li>
+          </ul>
+        </li>
+        <li>Exit code 0 = clean, 1 = findings, 2 = script error</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li><code>TC-RG-5-01</code> — exported JSON contains all nodes and edges</li>
+        <li>Parity script: <code>python3 scripts/spec-parity-check.py</code> exits 0 on the current spec suite</li>
+      </ul>
+    </div>
+
+    <div class="chunk">
+      <div class="chunk-id">P7-C03</div>
+      <h4>Integration closure + product startup verification</h4>
+      <p><strong>Spec reference:</strong> All specs — closes all deferred wiring seams<br/>
+      <strong>Estimated time:</strong> 3–4 hours<br/>
+      <strong>Parallel with:</strong> nothing — final chunk</p>
+      <h4>Deliverables (wiring seams closed)</h4>
+      <ul>
+        <li>Verify <code>reasoning-trace.ts</code> output is written to <code>verdict_produced</code> audit event (P5-C02 deferred to P7)</li>
+        <li>Verify <code>workflow-router.ts</code> output drives lifecycle stage update in <code>IntakeFlow.tsx</code> after verdict (P6-C02 deferred to P7)</li>
+        <li>Verify <code>stale_assessment</code> badge in <code>RegisterView.tsx</code> correctly computes from audit events (P6-C01 deferred to P7)</li>
+        <li>Verify <code>PolicyEditor.tsx</code> triggers <code>onPolicyUpdated()</code> on save (P6-C02 deferred to P7)</li>
+        <li>Verify AIGate self-assessment runs on every first launch (P7-C01 integration check)</li>
+      </ul>
+      <h4>Product startup verification</h4>
+      <ol>
+        <li><code>npm run build</code> — TypeScript compilation passes with zero errors</li>
+        <li><code>npm run dev</code> — Vite dev server starts on localhost:5173</li>
+        <li>Load default policy (starter config from CF-2)</li>
+        <li>Submit the example use case from the requirements walkthrough scenario</li>
+        <li>Verify: verdict produced, reasoning trace generated, use case appears in register, AIGate self-assessment entry present, export produces valid JSON</li>
+        <li><code>python3 scripts/spec-parity-check.py</code> — exits 0</li>
+      </ol>
+      <p>All smoke tests in this chunk are manual verification steps — they supplement (not replace) the automated test suite.</p>
+    </div>
 
     <!-- PLACEHOLDER: Claude-Specific Chunking Rules -->
     <h2 id="claude-specific-chunking">Claude-Specific Chunking Rules</h2>
-    <p><em>Content to be added</em></p>
+    <ul>
+      <li><strong>Context loading per chunk:</strong> Each chunk's Claude prompt must include:
+        <ol>
+          <li>This implementation guide (or the relevant Phase section)</li>
+          <li><code>cross-cutting.md</code> (conventions section only — §5 and §6)</li>
+          <li>The one domain spec most relevant to the chunk (e.g., <code>intake-flow.md</code> for P4 chunks)</li>
+          <li>The prior chunk's handover file (<code>build/handovers/P{N}-C{N}.md</code>) if available</li>
+        </ol>
+      </li>
+      <li><strong>Do NOT re-load all 6 domain specs per chunk.</strong> The domain spec for the current chunk is sufficient. If a type definition is needed from another spec, quote the relevant interface only.</li>
+      <li><strong>Chunk size guidance:</strong> Each chunk fits comfortably in one context window (this guide + one domain spec + one handover = ~15K tokens). If a chunk's deliverable list feels too large, split by data variation (Cohn): e.g., if P4-C01 proves too large, split into "LLM path" and "state machine" as separate chunks.</li>
+      <li><strong>Large spec sections:</strong> <code>evaluation-engine.md</code> §3 is long. For P3-C01, load <code>evaluation-engine.md</code> §1–3 only. Load §4 (solver) only for P3-C02.</li>
+    </ul>
 
     <!-- PLACEHOLDER: Test Co-location Rule -->
     <h2 id="test-colocations">Test Co-location Rule</h2>
-    <p><em>Content to be added</em></p>
+    <p>Every non-spike chunk includes its tests in the same delivery. The convention:</p>
+    <ul>
+      <li><code>src/engine/evaluate.ts</code> → <code>src/engine/__tests__/evaluate.test.ts</code></li>
+      <li><code>src/store/audit.ts</code> → <code>src/store/__tests__/audit.test.ts</code></li>
+      <li><code>src/components/VerdictDisplay.tsx</code> → <code>src/components/__tests__/VerdictDisplay.test.tsx</code></li>
+    </ul>
+    <p><strong>Never create a separate "write tests" chunk.</strong> If tests are separate from the implementation in a chunk's deliverable list, the chunk is not complete.</p>
+    <p><strong>Test framework:</strong> Vitest + Testing Library (per <code>cross-cutting.md</code>).</p>
 
     <!-- PLACEHOLDER: Parallel Work Identification -->
     <h2 id="parallel-work">Parallel Work Identification</h2>
-    <p><em>Content to be added</em></p>
+    <p>The following pairs can run as parallel Claude subagents dispatched in the same session:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Pair</th>
+          <th>Why safe</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>P2-C01 ∥ P2-C02</td>
+          <td>Different files: <code>policy.ts</code> vs <code>audit.ts</code> / <code>register.ts</code></td>
+        </tr>
+        <tr>
+          <td>P5-C01 ∥ P6-C01</td>
+          <td>Different components: <code>VerdictDisplay.tsx</code> vs <code>RegisterView.tsx</code>. Both require P4-C04 to be complete.</td>
+        </tr>
+        <tr>
+          <td>P5-C02 ∥ P6-C01</td>
+          <td><code>reasoning-trace.ts</code> and <code>RegisterView.tsx</code> share no source files</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Merge strategy for parallel pairs:</strong> Sequential merge. Each parallel chunk targets a different file set (share-nothing). Review both PRs for type compatibility (the <code>AuditEvent</code> and <code>Verdict</code> types are shared) before merging the second.</p>
 
     <!-- PLACEHOLDER: Integration Closure Verification -->
     <h2 id="integration-closure">Integration Closure Verification</h2>
-    <p><em>Content to be added</em></p>
+    <p>Before marking any phase complete, verify:</p>
+    <ul>
+      <li>☐ All TypeScript: <code>npm run build</code> exits 0</li>
+      <li>☐ All tests: <code>npm run test</code> — no failures</li>
+      <li>☐ Handover file written to <code>build/handovers/P{N}-C{XX}.md</code></li>
+      <li>☐ Spec parity: <code>python3 scripts/spec-parity-check.py</code> exits 0 (after P7-C02 exists)</li>
+    </ul>
+    <p>Phase 7-C03 additionally verifies the product starts and the primary user flow completes end-to-end (manual verification steps above).</p>
 
     <!-- PLACEHOLDER: Changelog -->
     <h2 id="changelog">Changelog</h2>
-    <p><em>Content to be added</em></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Date</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1.0</td>
+          <td>2026-06-04</td>
+          <td>Initial creation. Starts at P1 — no prior build phases in <code>build/handovers/</code>.</td>
+        </tr>
+      </tbody>
+    </table>
 
     <p class="gvm-attribution">Generated by the Grounded Vibe Methodology (GVM). Built with Claude Code.</p>
   </main>
