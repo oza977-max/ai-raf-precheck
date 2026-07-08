@@ -109,25 +109,23 @@ aigate/                         # Project root
 │   │   ├── db.ts               # IndexedDB schema + idb setup
 │   │   ├── register.ts         # Use case register (graph model) — RG-1
 │   │   └── audit.ts            # Append-only audit trail — NF-2, VD-4
-│   ├── ui/                     # React components
-│   │   ├── intake/             # UC-1 through UC-7, UC-3a
-│   │   │   ├── IntakeFlow.tsx
-│   │   │   ├── GraphReview.tsx
-│   │   │   ├── QuestionnaireStep.tsx
-│   │   │   └── StructuredForm.tsx  # UC-3a fallback
-│   │   ├── verdict/            # VD-1 through VD-8
-│   │   │   ├── VerdictDisplay.tsx
-│   │   │   ├── ReasoningTrace.tsx
-│   │   │   └── CorrectionFlow.tsx
-│   │   ├── register/           # RG-1 through RG-5
-│   │   │   ├── RegisterView.tsx
-│   │   │   └── UseCaseDetail.tsx
-│   │   ├── settings/           # CF-1 through CF-5, API key
-│   │   │   └── SettingsPanel.tsx
-│   │   └── shared/             # Reusable components
-│   │       ├── PriorityChip.tsx
-│   │       ├── StatusBadge.tsx
-│   │       └── AuditTrail.tsx
+│   ├── components/              # React components (flat — matches implementation-guide.md chunk deliverables)
+│   │   ├── IntakeFlow.tsx       # UC-1 through UC-7, UC-3a — 9-state machine
+│   │   ├── GraphReview.tsx
+│   │   ├── QuestionnaireStep.tsx
+│   │   ├── ContradictionReview.tsx
+│   │   ├── ConfirmationStep.tsx
+│   │   ├── StructuredForm.tsx   # UC-3a fallback
+│   │   ├── VerdictDisplay.tsx   # VD-1 through VD-8
+│   │   ├── ReasoningTrace.tsx
+│   │   ├── CorrectionFlow.tsx
+│   │   ├── RegisterView.tsx     # RG-1 through RG-5
+│   │   ├── UseCaseDetail.tsx
+│   │   ├── SettingsPanel.tsx    # CF-1 through CF-5, API key
+│   │   ├── PriorityChip.tsx     # Shared
+│   │   ├── StatusBadge.tsx
+│   │   ├── AuditTrail.tsx
+│   │   └── __tests__/           # Co-located component tests
 │   └── hooks/                  # Custom hooks
 │       ├── usePolicy.ts        # Load + validate policy file
 │       ├── useRegister.ts      # Register CRUD via IndexedDB
@@ -221,7 +219,7 @@ src/engine/evaluator.test.ts   ← same directory
 
 **Rule 3 — Store is persistence-only:** `src/store/*` handles IndexedDB reads and writes. No evaluation logic, no LLM calls, no React imports.
 
-**Rule 4 — UI is presentation-only:** `src/ui/*` renders state and calls engine/store functions. No evaluation logic inline in components. Business logic lives in engine or store.
+**Rule 4 — UI is presentation-only:** `src/components/*` renders state and calls engine/store functions. No evaluation logic inline in components. Business logic lives in engine or store.
 
 **Dependency direction:** `ui → store`, `ui → engine`, `ui → llm`. Never: `engine → ui`, `store → engine`, `llm → store`.
 
