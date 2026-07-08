@@ -14,18 +14,28 @@ not ask them to run git commands.
 
 ## Model routing policy — don't burn tokens
 
-**Default model for this project: Sonnet.** Only escalate to Opus for genuinely
-thinking-heavy phases. Drop to Haiku for trivial lookups when available.
+**Default model for this project: Sonnet 5 (`claude-sonnet-5`).** Only escalate
+to Opus 4.8 for genuinely thinking-heavy phases. Drop to Haiku 4.5 for trivial
+lookups when available. Never reach for Fable 5 on this project — it's priced
+above Opus and nothing in a GVM build pipeline needs its reasoning ceiling.
 
-### Use Sonnet (default) for
+Current pricing (as of this policy's last check): Sonnet 5 $2/$10 per MTok
+in/out (introductory, through 2026-08-31, then $3/$15) — currently *cheaper
+than Sonnet 4.6* ($3/$15) at equal or better quality, so there is no reason to
+pin to 4.6. Opus 4.8 is $5/$25. Haiku 4.5 is $1/$5. Re-check
+`shared/models.md` in the `claude-api` skill if pricing seems stale — model
+pricing shifts and this file is not auto-updated.
+
+### Use Sonnet 5 (default) for
 - Executing GVM build phases that are mechanical: `/gvm-build`, `/gvm-test`,
   `/gvm-walking-skeleton`, `/gvm-deploy`, `/gvm-status`, `/gvm-doc-write`
   (templated)
 - Writing code, editing files, running shell/git/gh commands
+- Independent code-review subagent passes (the review-convergence loop)
 - Routine review and follow-up questions
 - Anything where the path is clear and the work is execution
 
-### Escalate to Opus ONLY for
+### Escalate to Opus 4.8 ONLY for
 - `/gvm-requirements` — multi-turn elicitation, ambiguity resolution
 - `/gvm-tech-spec` — architecture and design decisions
 - `/gvm-design-review`, `/gvm-code-review` — deep critique panels
@@ -33,11 +43,14 @@ thinking-heavy phases. Drop to Haiku for trivial lookups when available.
   reasoning
 
 **Before escalating to Opus, tell the user *why* and ask them to confirm.**
-After the Opus phase ends, drop back to Sonnet. Do not stay on Opus by default.
+After the Opus phase ends, drop back to Sonnet 5. Do not stay on Opus by
+default.
 
-### Drop to Haiku for
+### Drop to Haiku 4.5 for
 - Quick status checks, file/path lookups, single-file reads where summary is
   not needed
+- HTML generation from already-structured data (build summaries, review
+  reports) — mechanical format conversion, no judgment required
 
 ---
 
