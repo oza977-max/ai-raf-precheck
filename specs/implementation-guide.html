@@ -374,8 +374,13 @@ REGISTER TRACK
 
     <!-- Phase 1 -->
     <h3 id="phase-1-walking-skeleton">Phase 1 — Walking Skeleton</h3>
-    <p><strong>Goal:</strong> End-to-end wired boundary. No real logic — stubs return hardcoded values. Proves the architecture works before any domain chunk fills it in.</p>
+    <p><strong>Goal:</strong> End-to-end wired boundary. No real business logic — but every external boundary is exercised by a <strong>real interaction with an observable outcome</strong> (GVM walking-skeleton rule, Ch. 12). Proves the wiring works before any domain chunk fills it in.</p>
     <p><strong>MVP-1 note:</strong> Phase 1 delivers a runnable product: the user can type a description, click through the intake wizard, see a hardcoded verdict, and view it in the register. The skeleton is interactive and end-to-end — not a page template.</p>
+    <p><strong>Boundary registry (2 external boundaries — both wired for real in this chunk, no stubs):</strong></p>
+    <ul>
+      <li><strong>persistence</strong> — IndexedDB via the <code>idb</code> library: the skeleton writes one real row and reads it back (observable outcome), not an in-memory/console substitute.</li>
+      <li><strong>network / third-party</strong> — Anthropic API (<code>claude-sonnet-4-6</code>, <code>dangerouslyAllowBrowser: true</code>): the skeleton makes one real <code>tool_use</code> call and inspects the structured JSON response. This is our single riskiest integration (browser-side key handling, CORS, structured-output parsing) — it is proven at chunk 1, not deferred to P4.</li>
+    </ul>
 
     <div class="chunk">
       <div class="chunk-id">P1-C01</div>
@@ -388,24 +393,30 @@ REGISTER TRACK
         <li>Vite 5 + React 18 + TypeScript 5 strict project created with <code>npm create vite@latest</code></li>
         <li><code>tsconfig.json</code> with <code>strict: true</code>, <code>noUncheckedIndexedAccess: true</code></li>
         <li>Directory structure: <code>src/engine/</code>, <code>src/llm/</code>, <code>src/store/</code>, <code>src/components/</code>, <code>src/types/</code>, <code>src/seeds/</code></li>
-        <li>Stub implementations wired end-to-end:
+        <li>Boundaries wired REAL (no stubs — walking-skeleton rule):
+          <ul>
+            <li><code>src/store/audit.ts</code> — real <code>idb</code> call: open <code>aigate-audit</code>, write one row, read it back. Minimal schema, but a real persisted row with an observable outcome.</li>
+            <li><code>src/llm/graph-extractor.ts</code> — real Anthropic <code>messages.create</code> with a <code>tool_use</code> call; parse and inspect the structured JSON response. Trivial extraction is fine; the point is the boundary is exercised.</li>
+          </ul>
+        </li>
+        <li>Business logic still stubbed (deepened in later phases):
           <ul>
             <li><code>src/engine/evaluate.ts</code> — accepts graph + policy, returns a hardcoded <code>Verdict</code> stub</li>
-            <li><code>src/store/audit.ts</code> — in-memory stub (no IndexedDB yet), logs events to console</li>
             <li><code>src/store/register.ts</code> — in-memory stub</li>
             <li><code>src/store/policy.ts</code> — returns a hardcoded stub <code>PolicyFile</code></li>
-            <li><code>IntakeFlow.tsx</code> — minimal 3-step wizard (description → graph stub → verdict)</li>
+            <li><code>IntakeFlow.tsx</code> — minimal 3-step wizard (description → real extraction → verdict)</li>
             <li><code>VerdictDisplay.tsx</code> — renders the hardcoded verdict stub</li>
             <li><code>RegisterView.tsx</code> — shows a single hardcoded use case row</li>
           </ul>
         </li>
-        <li>Walking skeleton smoke test: <code>describe('Walking Skeleton') → it('completes full flow end-to-end with stubs')</code></li>
+        <li>Walking skeleton smoke test: <code>describe('Walking Skeleton') → it('completes full flow end-to-end with real boundaries')</code></li>
         <li><code>npm run dev</code> starts without errors</li>
         <li><code>npm run build</code> completes without TypeScript errors</li>
       </ul>
       <h4>Tests</h4>
       <ul>
-        <li>Smoke test calling all three entry points (evaluate stub, audit stub, register stub). Tests must pass before moving to Phase 2.</li>
+        <li>Boundary test: real IndexedDB write→read round-trips a row; real Anthropic call returns parseable structured output. (LLM test gated on API key presence; skips cleanly without one.)</li>
+        <li>Smoke test: full flow end-to-end. Tests must pass before moving to Phase 2.</li>
       </ul>
     </div>
 
