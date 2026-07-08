@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { extractGraphSkeleton } from '../llm/graph-extractor';
 import { evaluate } from '../engine/evaluate';
 import { loadPolicy } from '../store/policy';
-import { addUseCase, getAllUseCases } from '../store/register';
+import { addNode, getUseCases } from '../store/register';
 import type { EvaluationResult } from '../engine/types';
+import type { UseCaseSummary } from '../store/types';
 
 // Rule 4 (cross-cutting.md §7): presentation-only. No business logic inline —
 // calls engine/store/llm functions. Minimal 3-step wizard per P1-C01 scope;
@@ -14,6 +15,16 @@ export default function IntakeFlow() {
   const [step, setStep] = useState<Step>('description_entry');
   const [description, setDescription] = useState('');
   const [verdict, setVerdict] = useState<EvaluationResult | null>(null);
+  const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
+
+  const refreshRegister = useCallback(async () => {
+    const rows = await getUseCases('all');
+    setRegisterRows(rows);
+  }, []);
+
+  useEffect(() => {
+    void refreshRegister();
+  }, [refreshRegister]);
 
   async function handleSubmit() {
     setStep('evaluating');
@@ -28,7 +39,21 @@ export default function IntakeFlow() {
     const result = evaluate({}, policy);
     setVerdict(result);
 
-    addUseCase({ use_case_id: crypto.randomUUID(), label: description, tier: result.tier });
+    await addNode({
+      node_id: crypto.randomUUID(),
+      node_type: 'use_case',
+      label: description,
+      created_at: new Date().toISOString(),
+      metadata: {
+        node_type: 'use_case',
+        submitted_by: 'current-user',
+        lifecycle_stage: 'idea',
+        current_verdict_id: null,
+        tier: result.tier,
+        track: result.track,
+      },
+    });
+    await refreshRegister();
     setStep('verdict');
   }
 
@@ -61,7 +86,7 @@ export default function IntakeFlow() {
         <h2>Register</h2>
         <table>
           <tbody>
-            {getAllUseCases().map((row) => (
+            {registerRows.map((row) => (
               <tr key={row.use_case_id}>
                 <td>{row.label}</td>
                 <td>{row.tier}</td>
