@@ -2,7 +2,6 @@ import { load } from 'js-yaml';
 import { z } from 'zod';
 import type {
   ActionType,
-  Control,
   DataClass,
   DataZone,
   DecisionBindingness,

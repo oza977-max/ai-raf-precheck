@@ -4,6 +4,10 @@ import { evaluate } from '../engine/evaluate';
 import { loadPolicy } from '../store/policy';
 import { addUseCase, getAllUseCases } from '../store/register';
 import type { EvaluationResult } from '../engine/types';
+// Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
+// string; PolicyEditor.tsx's file-upload UI is not wired in until a later
+// chunk, so this smoke path reads the starter policy at build time.
+import appetiteYaml from '../../policy/appetite.yaml?raw';
 
 // Rule 4 (cross-cutting.md §7): presentation-only. No business logic inline —
 // calls engine/store/llm functions. Minimal 3-step wizard per P1-C01 scope;
@@ -24,8 +28,16 @@ export default function IntakeFlow() {
     // stub policy/evaluate pipeline either way.
     await extractGraphSkeleton(description);
 
-    const policy = loadPolicy();
-    const result = evaluate({}, policy);
+    const policyResult = loadPolicy(appetiteYaml);
+    if (!policyResult.valid) {
+      // Starter policy fails to load — evaluation disabled per policy-schema.md
+      // §6 (fail loudly, no silent fallback). Real error surfacing is
+      // PolicyEditor.tsx's job; this smoke path just refuses to proceed.
+      throw new Error(
+        `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
+      );
+    }
+    const result = evaluate({}, policyResult.policy);
     setVerdict(result);
 
     addUseCase({ use_case_id: crypto.randomUUID(), label: description, tier: result.tier });

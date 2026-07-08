@@ -87,9 +87,10 @@ describe('loadPolicy', () => {
     const result = loadPolicy('version: "1.0"\n  bad_indent: [1, 2');
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect(result.errors[0].kind).toBe('policy-invalid');
-      expect(result.errors[0].field).toBe('yaml');
-      expect(result.errors[0].reason.length).toBeGreaterThan(0);
+      const [firstError] = result.errors;
+      expect(firstError?.kind).toBe('policy-invalid');
+      expect(firstError?.field).toBe('yaml');
+      expect(firstError && firstError.reason.length).toBeGreaterThan(0);
     }
   });
 
