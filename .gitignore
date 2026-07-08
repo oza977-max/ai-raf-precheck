@@ -1,6 +1,10 @@
 .DS_Store
 node_modules/
 dist/
-build/
 .env
 *.log
+*.local
+
+# NOTE: build/ is intentionally NOT ignored — it holds GVM's build/prompts/
+# and build/handovers/, the chunk-by-chunk persistence mechanism. Vite's
+# compiled output goes to dist/ (ignored above), not build/.
