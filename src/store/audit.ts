@@ -12,3 +12,9 @@ export async function getAll(useCaseId: string): Promise<AuditEvent[]> {
   const db = await openAuditDb();
   return db.getAllFromIndex('audit_events', 'by_use_case', useCaseId);
 }
+
+// Full export — no index filter. Consumed by 2LoD export (RG-4/RG-5).
+export async function getAllForExport(): Promise<AuditEvent[]> {
+  const db = await openAuditDb();
+  return db.getAll('audit_events');
+}
