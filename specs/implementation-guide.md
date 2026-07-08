@@ -116,9 +116,13 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 
 ### Phase 1 — Walking Skeleton
 
-**Goal:** End-to-end wired boundary. No real logic — stubs return hardcoded values. Proves the architecture works before any domain chunk fills it in.
+**Goal:** End-to-end wired boundary. No real business logic — but every external boundary is exercised by a **real interaction with an observable outcome** (GVM walking-skeleton rule, Ch. 12). Proves the wiring works before any domain chunk fills it in.
 
 **MVP-1 note:** Phase 1 delivers a runnable product: the user can type a description, click through the intake wizard, see a hardcoded verdict, and view it in the register. The skeleton is interactive and end-to-end — not a page template.
+
+**Boundary registry (2 external boundaries — both wired for real in this chunk, no stubs):**
+- **persistence** — IndexedDB via the `idb` library: the skeleton writes one real row and reads it back (observable outcome), not an in-memory/console substitute.
+- **network / third-party** — Anthropic API (`claude-sonnet-4-6`, `dangerouslyAllowBrowser: true`): the skeleton makes one real `tool_use` call and inspects the structured JSON response. This is our single riskiest integration (browser-side key handling, CORS, structured-output parsing) — proven at chunk 1, not deferred to P4.
 
 ---
 
@@ -132,19 +136,21 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 - Vite 5 + React 18 + TypeScript 5 strict project created with `npm create vite@latest`
 - `tsconfig.json` with `strict: true`, `noUncheckedIndexedAccess: true`
 - Directory structure: `src/engine/`, `src/llm/`, `src/store/`, `src/components/`, `src/types/`, `src/seeds/`
-- Stub implementations wired end-to-end:
+- Boundaries wired REAL (no stubs — walking-skeleton rule):
+  - `src/store/audit.ts` — real `idb` call: open `aigate-audit`, write one row, read it back. Minimal schema, but a real persisted row with an observable outcome.
+  - `src/llm/graph-extractor.ts` — real Anthropic `messages.create` with a `tool_use` call; parse and inspect the structured JSON response. Trivial extraction is fine; the point is the boundary is exercised. Test gated on API key presence; skips cleanly without one.
+- Business logic still stubbed (deepened in later phases):
   - `src/engine/evaluate.ts` — accepts graph + policy, returns a hardcoded `Verdict` stub
-  - `src/store/audit.ts` — in-memory stub (no IndexedDB yet), logs events to console
   - `src/store/register.ts` — in-memory stub
   - `src/store/policy.ts` — returns a hardcoded stub `PolicyFile`
-  - `IntakeFlow.tsx` — minimal 3-step wizard (description → graph stub → verdict)
+  - `IntakeFlow.tsx` — minimal 3-step wizard (description → real extraction → verdict)
   - `VerdictDisplay.tsx` — renders the hardcoded verdict stub
   - `RegisterView.tsx` — shows a single hardcoded use case row
-- Walking skeleton smoke test: `describe('Walking Skeleton') → it('completes full flow end-to-end with stubs')`
+- Walking skeleton smoke test: `describe('Walking Skeleton') → it('completes full flow end-to-end with real boundaries')`
 - `npm run dev` starts without errors
 - `npm run build` completes without TypeScript errors
 
-**Tests:** Smoke test calling all three entry points (evaluate stub, audit stub, register stub). Tests must pass before moving to Phase 2.
+**Tests:** Boundary test (real IndexedDB write→read round-trips a row; real Anthropic call returns parseable structured output — LLM test skips cleanly without an API key) + full-flow smoke test. Tests must pass before moving to Phase 2.
 
 ---
 
