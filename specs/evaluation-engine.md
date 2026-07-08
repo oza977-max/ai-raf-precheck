@@ -53,7 +53,7 @@ This spec defines the evaluation engine — the pure-function core of AIGate. It
 ### 3.1 Pipeline overview
 
 ```
-evaluate(graph: DataFlowGraph, policy: LoadedPolicy): Result<Verdict, EngineError>
+evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Verdict, EngineError>
 
 Step 1: Resolve active jurisdiction packs
 Step 2: Evaluate hard lines → immediate Rejected if any trip

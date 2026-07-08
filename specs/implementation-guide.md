@@ -170,19 +170,36 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 
 **Deliverables:**
 - `src/store/policy.ts` — real implementation replacing stub:
-  - `loadPolicy(yaml: string): Result<LoadedPolicy, PolicyError>` using `js-yaml` + Zod
-  - Validates all required sections: `metadata`, `invariants`, `risk_dimensions`, `control_library`, `jurisdiction_packs`
-  - Validates condition language: `gte`, `lte`, `in`, `not_in`, `exact` operators only
-  - `PolicyFile` and `LoadedPolicy` TypeScript types
+  - `loadPolicy(yaml: string): Result<LoadedPolicy, PolicyValidationError[]>` using `js-yaml` + Zod
+  - Validates required top-level sections per `policy-schema.md §6`: `version`, `translation_attestation`,
+    `hard_lines` (may be empty array), `controls` (non-empty), `tracks` (≥1 rule), `tiers` (≥1 rule),
+    `tier_workflow` (all four tiers mapped), `safety_margin` (0.0–1.0)
+  - Validates condition language: `gte`, `lte`, `in`, `not_in`, bare-equality operators only (per §8 ADR-002)
+  - Validates all condition values against the §3.0 canonical vocabulary (`DataClass`, `DataZone`,
+    `ModelType`, `Exposure`, `DecisionBindingness`, `ActionType`, `DecisionType`)
+  - `PolicyFile` and `PolicyValidationResult` TypeScript types (per `policy-schema.md §5–6` — NOT
+    `LoadedPolicy`/`PolicyError`, which do not exist in the canonical spec)
+- Regenerate `policy/appetite.yaml` to the real `policy-schema.md §3.1` structure — the existing file
+  predates tech-spec and uses a stale, non-matching schema (`meta:` wrapper, `track_classification_rules`,
+  `control_library`, `platform_registry`, etc.). Replace with the canonical starter file per
+  `policy-schema.md §10` (Starter Config Pre-Population): flat top-level `version`/`policy_id`/`firm_name`,
+  the 3 starter hard lines, 3 track rules, 4 tier rules, minimal invariants/controls, `kri_thresholds`
+  as green/amber/red bands, `jurisdictions` array (`pack_files` as array per policy-schema.md §3.8 DORA
+  fix), `tier_workflow`, `translation_attestation` with `[FIRM]` markers. Full 3-pack wave-1 authoring is
+  P2-C03 (human-led) — this chunk's regenerated file may reference empty/placeholder jurisdiction packs.
 - `PolicyEditor.tsx` — file upload or paste textarea; shows validation errors inline
-- All `PolicyError` variants typed and surfaced in the UI
-- `src/types/policy.ts` — all shared policy types
+- All `PolicyValidationError` variants typed and surfaced in the UI
+- `src/types/policy.ts` — all shared policy types (re-exported from `src/engine/types.ts` where the
+  canonical vocabulary lives per §3.0 — do not redefine the enums here)
 
 **Tests:**
-- `TC-CF-1-01` — valid policy loads without errors
-- `TC-CF-2-01` — invalid YAML produces a clear error message
-- Invalid condition operator produces validation error
-- Missing required section produces validation error
+- `TC-CF-1-01` — policy file editable in plain text without developer tooling
+- `TC-CF-5-01` — policy file with missing required field prevents evaluation
+- `TC-CF-5-03` — valid policy file and packs load without error
+- `TC-PE-8-01` (cross-traced, CF-2) — regenerated starter config loads and evaluates a use case with no
+  hand-authoring required
+- Invalid condition operator produces validation error (condition-language regression, no dedicated TC ID)
+- Condition value outside §3.0 canonical vocabulary produces validation error
 
 ---
 
