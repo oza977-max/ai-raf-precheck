@@ -4,6 +4,7 @@ dist/
 .env
 *.log
 *.local
+*.tsbuildinfo
 
 # NOTE: build/ is intentionally NOT ignored — it holds GVM's build/prompts/
 # and build/handovers/, the chunk-by-chunk persistence mechanism. Vite's
