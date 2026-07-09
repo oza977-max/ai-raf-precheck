@@ -1,19 +1,34 @@
 import type { IntakeState } from './intake-state';
 
 // Visual step tracker (Claude Design export "AIGate Demo.dc.html").
-// Maps our real states onto the design's step labels. The design shows 6
-// steps (Describe/Duplicates/Graph/Questions/Resolve/Confirm); only the
-// first 3 plus a final "Verdict" step have real content as of P4-C02 —
-// Questions/Resolve/Confirm are P4-C03/P4-C04, not built yet, so they are
-// intentionally omitted here rather than shown as fake/inert steps.
+// Maps our real states onto the design's step labels. All 6 steps are now
+// real content as of P4-C04 — Describe, Duplicates, Graph, Questions,
+// Resolve (contradiction_review — only shown when active, not a normal
+// step in the happy path), Confirm, Verdict.
 const STEPS: Array<{ key: string; label: string; matches: (s: IntakeState['step']) => boolean }> = [
   { key: 'describe', label: 'Describe', matches: (s) => s === 'description_entry' },
   { key: 'duplicates', label: 'Duplicates', matches: (s) => s === 'duplicate_check' },
   { key: 'graph', label: 'Graph', matches: (s) => s === 'graph_extraction' || s === 'graph_review' },
+  {
+    key: 'questions',
+    label: 'Questions',
+    matches: (s) => s === 'questionnaire' || s === 'contradiction_review',
+  },
+  { key: 'confirm', label: 'Confirm', matches: (s) => s === 'confirmation' },
   { key: 'verdict', label: 'Verdict', matches: (s) => s === 'evaluation_pending' || s === 'verdict' },
 ];
 
-const ORDER = ['description_entry', 'duplicate_check', 'graph_extraction', 'graph_review', 'evaluation_pending', 'verdict'];
+const ORDER = [
+  'description_entry',
+  'duplicate_check',
+  'graph_extraction',
+  'graph_review',
+  'questionnaire',
+  'contradiction_review',
+  'confirmation',
+  'evaluation_pending',
+  'verdict',
+];
 
 export default function StepTracker({ current }: { current: IntakeState['step'] }) {
   const currentIndex = ORDER.indexOf(current);

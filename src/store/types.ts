@@ -1,3 +1,6 @@
+import type { GraphCorrection } from '../engine/types';
+import type { Verdict } from '../types/verdict';
+
 // Full AuditEventType union per verdict-audit.md §4.3.
 export type AuditEventType =
   | 'use_case_created'
@@ -22,9 +25,9 @@ export interface AuditEvent {
 export type AuditEventPayload =
   | { type: 'use_case_created'; description: string; intake_method: 'llm' | 'structured_form' }
   | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number }
-  | { type: 'verdict_produced'; verdict: unknown; reasoning_trace?: string } // Verdict type lands P3-C01
-  | { type: 'graph_corrected'; correction: unknown } // GraphCorrection type lands P4-C01
-  | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: unknown; reasoning_trace?: string }
+  | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
+  | { type: 'graph_corrected'; correction: GraphCorrection }
+  | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 're_evaluation_queued'; policy_version: string }
   | { type: 'twoloD_reviewed'; action: 'approved' | 'rejected' | 'correction_requested'; notes?: string }

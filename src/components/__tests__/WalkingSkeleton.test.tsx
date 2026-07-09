@@ -65,9 +65,13 @@ describe('Walking Skeleton', () => {
     // and the graph review step renders the extracted node.
     expect(await screen.findByText(/email drafting model/i)).toBeInTheDocument();
 
-    // Step 3: proceed through the documented P4-C01 pass-through straight to
-    // evaluation — evaluate() runs for real against the real appetite.yaml.
+    // Step 3: proceed — zero uncertain fields means no questions, so the
+    // flow lands directly on the real confirmation/attestation screen
+    // (P4-C04, no more silent pass-through).
     await user.click(screen.getByRole('button', { name: /proceed/i }));
+
+    expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
     expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
@@ -108,6 +112,9 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
+
+    expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
     expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
@@ -168,10 +175,10 @@ describe('Walking Skeleton', () => {
     // A real targeted question renders — not a skipped/fake step.
     expect(await screen.findByText(/question 1 of/i)).toBeInTheDocument();
 
-    // Answer every generated question until the flow proceeds on its own.
+    // Answer every generated question until the flow reaches confirmation.
     for (let i = 0; i < 10; i++) {
-      const verdictShown = screen.queryByText('Verdict', { selector: '.verdict__eyebrow' });
-      if (verdictShown) break;
+      const confirmButton = screen.queryByRole('button', { name: /confirm and evaluate/i });
+      if (confirmButton) break;
       const optionButtons = screen.queryAllByRole('button', { name: /Zone [ABC]/ });
       if (optionButtons.length > 0) {
         await user.click(optionButtons[0]!);
@@ -187,6 +194,150 @@ describe('Walking Skeleton', () => {
       break;
     }
 
+    // A real "Confirm and evaluate" click is required — UC-6 attestation,
+    // not a silent pass-through (P4-C04).
+    expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+  });
+
+  it('P4-C04: writes graph_confirmed then verdict_produced to the audit trail, in order, before showing the verdict (TC-UC-6-01/02/03)', async () => {
+    const uniqueLabel = 'audit ordering check model';
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            input_nodes: [],
+            processing_nodes: [
+              {
+                id: 'p1',
+                label: uniqueLabel,
+                model_type: 'traditional-ml',
+                autonomy_level: 0,
+                data_zone: 'Zone C',
+                vendor: 'internal',
+                replaces_prior_model: false,
+              },
+            ],
+            output_nodes: [
+              {
+                id: 'o1',
+                label: 'output',
+                action_type: 'recommend',
+                exposure: 'internal-only',
+                decision_bindingness: 'material',
+                output_reversibility: 'reversible',
+                scale: 'limited',
+              },
+            ],
+            edges: [],
+            jurisdictions: [],
+          },
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'Audit ordering check');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    const { getUseCases } = await import('../../store/register');
+    const { getAll } = await import('../../store/audit');
+    const useCases = await getUseCases('all');
+    const useCase = useCases.find((u) => u.label === uniqueLabel);
+    expect(useCase).toBeDefined();
+
+    const events = await getAll(useCase!.use_case_id);
+    expect(events.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
+    expect(new Date(events[0]!.occurred_at).getTime()).toBeLessThanOrEqual(new Date(events[1]!.occurred_at).getTime());
+
+    expect(events[0]!.actor).toBe('1LoD'); // TC-UC-6-03, against the documented hardcoded-role placeholder
+
+    const verdictPayload = events[1]!.payload;
+    expect(verdictPayload.type).toBe('verdict_produced');
+    if (verdictPayload.type === 'verdict_produced') {
+      expect(verdictPayload.verdict.use_case_id).toBe(useCase!.use_case_id); // TC-UC-6-02: full Verdict object
+      expect(verdictPayload.verdict.status).toBeDefined();
+      expect(verdictPayload.verdict.attested_by).toBe('1LoD');
+    }
+  });
+
+  it('P4-C04: a correction made during graph review survives through questionnaire and confirmation to the graph_confirmed audit event (BC-P4C04-03, review finding: full chain, not just one hop)', async () => {
+    const uniqueLabel = 'correction survival check model';
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            input_nodes: [],
+            processing_nodes: [
+              {
+                id: 'p1',
+                label: uniqueLabel,
+                model_type: 'traditional-ml',
+                autonomy_level: 0,
+                data_zone: 'Zone C',
+                vendor: 'internal',
+                replaces_prior_model: false,
+              },
+            ],
+            output_nodes: [
+              {
+                id: 'o1',
+                label: 'output',
+                action_type: 'recommend',
+                exposure: 'internal-only',
+                decision_bindingness: 'material',
+                output_reversibility: 'reversible',
+                scale: 'limited',
+              },
+            ],
+            edges: [],
+            jurisdictions: [],
+          },
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'Correction survival check');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+
+    // Make a real correction in graph_review before proceeding.
+    const editButtons = screen.getAllByRole('button', { name: /^edit$/i });
+    await user.click(editButtons[0]!);
+    expect(await screen.findByText(`${uniqueLabel} (corrected)`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    const { getUseCases } = await import('../../store/register');
+    const { getAll } = await import('../../store/audit');
+    const useCases = await getUseCases('all');
+    const useCase = useCases.find((u) => u.label === `${uniqueLabel} (corrected)`);
+    expect(useCase).toBeDefined();
+
+    const events = await getAll(useCase!.use_case_id);
+    const confirmedEvent = events.find((e) => e.event_type === 'graph_confirmed');
+    expect(confirmedEvent).toBeDefined();
+    if (confirmedEvent?.payload.type === 'graph_confirmed') {
+      expect(confirmedEvent.payload.corrections_count).toBe(1);
+    }
   });
 });

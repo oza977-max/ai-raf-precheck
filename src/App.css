@@ -567,3 +567,19 @@ details input {
   color: var(--ink-faint);
   margin: 0.3rem 0 0;
 }
+
+.confirmation__notice {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.confirmation__corrections {
+  background: #eef4ee;
+  border-left: 3px solid var(--green);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  border-radius: 0 6px 6px 0;
+  margin: 0.5rem 0 1rem;
+}

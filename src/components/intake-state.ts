@@ -16,6 +16,8 @@ export type IntakeState =
       questions: IntakeQuestion[];
       answers: QuestionAnswer[];
       resolutionNotes: string[];
+      corrections: GraphCorrection[];
+      useCaseId: string;
     }
   | {
       step: 'contradiction_review';
@@ -24,6 +26,8 @@ export type IntakeState =
       answers: QuestionAnswer[];
       contradictions: Contradiction[];
       resolutionNotes: string[];
+      corrections: GraphCorrection[];
+      useCaseId: string;
     }
   | {
       step: 'confirmation';
@@ -31,8 +35,9 @@ export type IntakeState =
       graphVersion: number;
       corrections: GraphCorrection[];
       answers: QuestionAnswer[];
+      useCaseId: string;
     }
-  | { step: 'evaluation_pending'; graph: DataFlowGraph }
+  | { step: 'evaluation_pending'; graph: DataFlowGraph; useCaseId: string }
   | { step: 'verdict'; verdictId: string };
 
 export type IntakeAction =
@@ -40,18 +45,20 @@ export type IntakeAction =
   | { type: 'SUBMIT_DESCRIPTION' }
   | { type: 'NO_DUPLICATE_FOUND'; method: 'llm' | 'form' }
   | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph }
-  // P4-C01/P4-C04 boundary (build/prompts/P4-C01.md, P4-C03.md): the
-  // `confirmation` state exists in the type union (locked for P4-C04) but
-  // has no UI yet. This action is the documented direct pass-through from
-  // questionnaire (once unanswered questions are exhausted and no
-  // contradiction remains) to evaluation_pending.
-  | { type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
-  | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[] }
+  // useCaseId generated once by the caller at questionnaire entry
+  // (P4-C04) and threaded through every subsequent state — never
+  // regenerated (BC-P4C04-03).
+  | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[]; useCaseId: string }
   | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
   | { type: 'CONTRADICTION_RESOLVED'; explanation: string }
-  | { type: 'VERDICT_READY'; verdictId: string };
+  // UC-6 (intake-flow.md §9): always an explicit human action, even with
+  // zero questions — replaces P4-C01's PROCEED_TO_EVALUATION_PASSTHROUGH,
+  // which is fully removed as of P4-C04 (BC-P4C04-01).
+  | { type: 'PROCEED_TO_CONFIRMATION' }
+  | { type: 'CONFIRMED' }
+  | { type: 'VERDICT_READY' };
 
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
   switch (action.type) {
@@ -82,7 +89,15 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'QUESTIONS_GENERATED':
       if (state.step !== 'graph_review') return state;
-      return { step: 'questionnaire', graph: state.graph, questions: action.questions, answers: [], resolutionNotes: [] };
+      return {
+        step: 'questionnaire',
+        graph: state.graph,
+        questions: action.questions,
+        answers: [],
+        resolutionNotes: [],
+        corrections: state.corrections,
+        useCaseId: action.useCaseId,
+      };
 
     case 'ANSWER_SUBMITTED':
       if (state.step !== 'questionnaire') return state;
@@ -97,15 +112,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         answers: state.answers,
         contradictions: action.contradictions,
         resolutionNotes: state.resolutionNotes,
+        corrections: state.corrections,
+        useCaseId: state.useCaseId,
       };
 
     case 'CONTRADICTION_RESOLVED':
-      // BC-P4C03-03 defense in depth (P4-C03 review finding): reject an
-      // empty/whitespace-only explanation at the reducer layer too, not
-      // just the UI's disabled-button check — a future caller dispatching
-      // this action directly (bug, refactor, test helper) must not be able
-      // to silently bypass resolution. The explanation is kept, not
-      // discarded, so it survives for whichever future chunk audits it.
+      // BC-P4C03-03 defense in depth: reject an empty/whitespace-only
+      // explanation at the reducer layer too, not just the UI's
+      // disabled-button check.
       if (state.step !== 'contradiction_review' || !action.explanation.trim()) return state;
       return {
         step: 'questionnaire',
@@ -113,15 +127,28 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         questions: state.questions,
         answers: state.answers,
         resolutionNotes: [...state.resolutionNotes, action.explanation.trim()],
+        corrections: state.corrections,
+        useCaseId: state.useCaseId,
       };
 
-    case 'PROCEED_TO_EVALUATION_PASSTHROUGH':
-      if (state.step === 'questionnaire') return { step: 'evaluation_pending', graph: state.graph };
-      return state;
+    case 'PROCEED_TO_CONFIRMATION':
+      if (state.step !== 'questionnaire') return state;
+      return {
+        step: 'confirmation',
+        graph: state.graph,
+        graphVersion: state.graph.version,
+        corrections: state.corrections,
+        answers: state.answers,
+        useCaseId: state.useCaseId,
+      };
+
+    case 'CONFIRMED':
+      if (state.step !== 'confirmation') return state;
+      return { step: 'evaluation_pending', graph: state.graph, useCaseId: state.useCaseId };
 
     case 'VERDICT_READY':
       if (state.step !== 'evaluation_pending') return state;
-      return { step: 'verdict', verdictId: action.verdictId };
+      return { step: 'verdict', verdictId: state.useCaseId };
 
     default:
       return state;

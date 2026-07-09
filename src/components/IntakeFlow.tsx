@@ -6,16 +6,18 @@ import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
 import { addNode, getUseCases } from '../store/register';
-import type { DataFlowGraph, EvaluationResult, GraphCorrection } from '../engine/types';
+import type { EvaluationResult, GraphCorrection } from '../engine/types';
 import type { UseCaseSummary } from '../store/types';
 import { generateQuestions } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
+import { append as appendAuditEvent } from '../store/audit';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import StepTracker from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
 import ContradictionReview from './ContradictionReview';
+import ConfirmationStep from './ConfirmationStep';
 // Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
 // string; PolicyEditor.tsx's file-upload UI is not wired in until a later
 // chunk, so this smoke path reads the starter policy at build time.
@@ -23,10 +25,13 @@ import appetiteYaml from '../../policy/appetite.yaml?raw';
 
 // Rule 4 (cross-cutting.md §7): presentation-only. No business logic inline
 // — calls engine/store/llm functions. Real 9-state machine (intake-flow.md
-// §3) as of P4-C01. questionnaire/contradiction_review/confirmation states
-// exist in the type union (locked contract for P4-C03/P4-C04) but have no
-// UI here yet — graph_review proceeds directly to evaluation_pending via a
-// documented pass-through (see build/prompts/P4-C01.md).
+// §3) as of P4-C04 — every state through confirmation/attestation is real.
+//
+// No real auth/role system exists in any chunk so far — attested_by and
+// corrected_by both use this hardcoded placeholder (P4-C04 documented
+// deviation, same as P4-C01's correction flow).
+const CURRENT_ROLE = '1LoD';
+
 const INITIAL_STATE: IntakeState = { step: 'description_entry', description: '' };
 
 export default function IntakeFlow() {
@@ -112,14 +117,14 @@ export default function IntakeFlow() {
       field,
       original_value: originalValue,
       corrected_value: correctedValue,
-      corrected_by: '1LoD',
+      corrected_by: CURRENT_ROLE,
       corrected_at: new Date().toISOString(),
     };
 
     dispatch({ type: 'CORRECTION_APPLIED', correction, updatedGraph });
   }
 
-  async function handleProceedFromGraphReview() {
+  function handleProceedFromGraphReview() {
     if (state.step !== 'graph_review') return;
     if (!policyResult.valid) {
       throw new Error(
@@ -127,18 +132,38 @@ export default function IntakeFlow() {
       );
     }
     const questions = generateQuestions(state.graph, policyResult.policy, []);
+    const useCaseId = crypto.randomUUID();
+    dispatch({ type: 'QUESTIONS_GENERATED', questions, useCaseId });
+    // UC-6 requires an explicit human confirmation click even with zero
+    // questions (P4-C04) — no more silent auto-evaluation.
     if (questions.length === 0) {
-      // No uncertain fields needed clarifying — nothing to ask, proceed straight through.
-      const graph = state.graph;
-      dispatch({ type: 'QUESTIONS_GENERATED', questions: [] });
-      dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
-      await runEvaluation(graph);
-      return;
+      dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
     }
-    dispatch({ type: 'QUESTIONS_GENERATED', questions });
   }
 
-  async function runEvaluation(graph: DataFlowGraph) {
+  async function handleConfirmAndEvaluate() {
+    if (state.step !== 'confirmation') return;
+    const { graph, corrections, useCaseId } = state;
+    dispatch({ type: 'CONFIRMED' });
+
+    // UC-6 (intake-flow.md §9): graph_confirmed written BEFORE evaluate()
+    // runs, verdict_produced written before the UI transitions to verdict
+    // (BC-P4C04-02: sequential, not Promise.all — the second write must
+    // never race ahead of the first).
+    await appendAuditEvent({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: new Date().toISOString(),
+      actor: CURRENT_ROLE,
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: graph.id,
+        graph_version: graph.version,
+        corrections_count: corrections.length,
+      },
+    });
+
     if (!policyResult.valid) {
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
@@ -151,26 +176,47 @@ export default function IntakeFlow() {
     const result = evalResult.value;
     setVerdict(result);
 
-    const useCaseId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const fullVerdict = {
+      ...result,
+      id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      living_status: 'approved' as const,
+      living_status_updated_at: now,
+      attested_by: CURRENT_ROLE,
+      attested_at: now,
+      graph_version: graph.version,
+      corrections: [],
+    };
+
+    await appendAuditEvent({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'verdict_produced',
+      occurred_at: now,
+      actor: 'system',
+      payload: { type: 'verdict_produced', verdict: fullVerdict },
+    });
+
     await addNode({
       node_id: useCaseId,
       node_type: 'use_case',
       label: graph.input_nodes[0]?.label ?? graph.processing_nodes[0]?.label ?? 'AI use case',
-      created_at: new Date().toISOString(),
+      created_at: now,
       metadata: {
         node_type: 'use_case',
-        submitted_by: 'current-user',
+        submitted_by: CURRENT_ROLE,
         lifecycle_stage: 'idea',
-        current_verdict_id: null,
+        current_verdict_id: fullVerdict.id,
         tier: result.tier,
         track: result.track,
       },
     });
     await refreshRegister();
-    dispatch({ type: 'VERDICT_READY', verdictId: useCaseId });
+    dispatch({ type: 'VERDICT_READY' });
   }
 
-  async function handleAnswerSubmitted(questionId: string, value: unknown) {
+  function handleAnswerSubmitted(questionId: string, value: unknown) {
     if (state.step !== 'questionnaire') return;
     const answer = { questionId, value };
     const nextAnswers = [...state.answers, answer];
@@ -183,8 +229,7 @@ export default function IntakeFlow() {
     }
 
     if (nextAnswers.length >= state.questions.length) {
-      dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
-      await runEvaluation(state.graph);
+      dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
     }
   }
 
@@ -272,6 +317,14 @@ export default function IntakeFlow() {
 
         {state.step === 'contradiction_review' && (
           <ContradictionReview contradictions={state.contradictions} onResolve={handleContradictionResolved} />
+        )}
+
+        {state.step === 'confirmation' && (
+          <ConfirmationStep
+            graph={state.graph}
+            corrections={state.corrections}
+            onConfirm={() => void handleConfirmAndEvaluate()}
+          />
         )}
 
         {state.step === 'evaluation_pending' && <p>Evaluating…</p>}

@@ -69,38 +69,66 @@ describe('intakeReducer', () => {
     expect(next).toEqual({ step: 'graph_review', graph: g1, graphVersion: 2, corrections: [correction] });
   });
 
-  it('graph_review → questionnaire on QUESTIONS_GENERATED', () => {
+  it('graph_review → questionnaire on QUESTIONS_GENERATED, carrying corrections forward and setting useCaseId (P4-C04 fix)', () => {
     const g = graph({ version: 1 });
-    const state: IntakeState = { step: 'graph_review', graph: g, graphVersion: 1, corrections: [] };
+    const correction: GraphCorrection = {
+      correction_id: 'c1',
+      graph_version_before: 0,
+      graph_version_after: 1,
+      node_id: 'n1',
+      field: 'data_class',
+      original_value: 'Internal',
+      corrected_value: 'Confidential',
+      corrected_by: '1LoD',
+      corrected_at: '2026-01-01T00:00:00.000Z',
+    };
+    const state: IntakeState = { step: 'graph_review', graph: g, graphVersion: 1, corrections: [correction] };
     const questions = [
       { id: 'Q1', text: 'x?', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
     ];
-    const next = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions });
-    expect(next).toEqual({ step: 'questionnaire', graph: g, questions, answers: [], resolutionNotes: [] });
+    const next = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions, useCaseId: 'uc-1' });
+    expect(next).toEqual({
+      step: 'questionnaire',
+      graph: g,
+      questions,
+      answers: [],
+      resolutionNotes: [],
+      corrections: [correction],
+      useCaseId: 'uc-1',
+    });
   });
 
   it('questionnaire → questionnaire on ANSWER_SUBMITTED, appending the answer', () => {
     const g = graph();
-    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers: [], resolutionNotes: [] };
+    const state: IntakeState = {
+      step: 'questionnaire',
+      graph: g,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
     const answer = { questionId: 'Q1', value: 'yes' };
     const next = intakeReducer(state, { type: 'ANSWER_SUBMITTED', answer });
-    expect(next).toEqual({ step: 'questionnaire', graph: g, questions: [], answers: [answer], resolutionNotes: [] });
+    expect(next).toEqual({ ...state, answers: [answer] });
   });
 
-  it('questionnaire → contradiction_review on CONTRADICTIONS_DETECTED', () => {
+  it('questionnaire → contradiction_review on CONTRADICTIONS_DETECTED, carrying corrections/useCaseId forward', () => {
     const g = graph();
     const answers = [{ questionId: 'Q1', value: 'yes' }];
-    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers, resolutionNotes: [] };
-    const contradictions = [{ statement1: 'a', statement2: 'b', field: 'data_class' }];
-    const next = intakeReducer(state, { type: 'CONTRADICTIONS_DETECTED', contradictions });
-    expect(next).toEqual({
-      step: 'contradiction_review',
+    const state: IntakeState = {
+      step: 'questionnaire',
       graph: g,
       questions: [],
       answers,
-      contradictions,
       resolutionNotes: [],
-    });
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    const contradictions = [{ statement1: 'a', statement2: 'b', field: 'data_class' }];
+    const next = intakeReducer(state, { type: 'CONTRADICTIONS_DETECTED', contradictions });
+    expect(next).toEqual({ ...state, step: 'contradiction_review', contradictions });
   });
 
   it('contradiction_review → questionnaire on CONTRADICTION_RESOLVED, recording the explanation', () => {
@@ -113,6 +141,8 @@ describe('intakeReducer', () => {
       answers,
       contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
       resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
     };
     const next = intakeReducer(state, { type: 'CONTRADICTION_RESOLVED', explanation: 'Confirmed both are correct.' });
     expect(next).toEqual({
@@ -121,6 +151,8 @@ describe('intakeReducer', () => {
       questions: [],
       answers,
       resolutionNotes: ['Confirmed both are correct.'],
+      corrections: [],
+      useCaseId: 'uc-1',
     });
   });
 
@@ -133,30 +165,82 @@ describe('intakeReducer', () => {
       answers: [],
       contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
       resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
     };
     const next = intakeReducer(state, { type: 'CONTRADICTION_RESOLVED', explanation: '   ' });
     expect(next).toBe(state);
   });
 
-  it('questionnaire → evaluation_pending on PROCEED_TO_EVALUATION_PASSTHROUGH (P4-C03: pass-through moved from graph_review)', () => {
+  it('questionnaire → confirmation on PROCEED_TO_CONFIRMATION (P4-C04: real state, no longer a pass-through)', () => {
     const g = graph({ version: 1 });
-    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers: [], resolutionNotes: [] };
-    const next = intakeReducer(state, { type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
-    expect(next).toEqual({ step: 'evaluation_pending', graph: g });
+    const answers = [{ questionId: 'Q1', value: 'yes' }];
+    const correction: GraphCorrection = {
+      correction_id: 'c1',
+      graph_version_before: 0,
+      graph_version_after: 1,
+      node_id: 'n1',
+      field: 'data_class',
+      original_value: 'Internal',
+      corrected_value: 'Confidential',
+      corrected_by: '1LoD',
+      corrected_at: '2026-01-01T00:00:00.000Z',
+    };
+    const state: IntakeState = {
+      step: 'questionnaire',
+      graph: g,
+      questions: [],
+      answers,
+      resolutionNotes: [],
+      corrections: [correction],
+      useCaseId: 'uc-1',
+    };
+    const next = intakeReducer(state, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect(next).toEqual({
+      step: 'confirmation',
+      graph: g,
+      graphVersion: 1,
+      corrections: [correction],
+      answers,
+      useCaseId: 'uc-1',
+    });
   });
 
-  it('does not proceed to evaluation from graph_review anymore (boundary moved)', () => {
+  it('confirmation → evaluation_pending on CONFIRMED, carrying useCaseId', () => {
     const g = graph({ version: 1 });
-    const state: IntakeState = { step: 'graph_review', graph: g, graphVersion: 1, corrections: [] };
+    const state: IntakeState = {
+      step: 'confirmation',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      useCaseId: 'uc-1',
+    };
+    const next = intakeReducer(state, { type: 'CONFIRMED' });
+    expect(next).toEqual({ step: 'evaluation_pending', graph: g, useCaseId: 'uc-1' });
+  });
+
+  it('does not skip confirmation from questionnaire anymore (PROCEED_TO_EVALUATION_PASSTHROUGH removed, BC-P4C04-01)', () => {
+    const g = graph({ version: 1 });
+    const state: IntakeState = {
+      step: 'questionnaire',
+      graph: g,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    // @ts-expect-error PROCEED_TO_EVALUATION_PASSTHROUGH no longer exists in IntakeAction
     const next = intakeReducer(state, { type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
     expect(next).toBe(state);
   });
 
-  it('evaluation_pending → verdict on VERDICT_READY', () => {
+  it('evaluation_pending → verdict on VERDICT_READY, using the carried useCaseId as verdictId', () => {
     const g = graph();
-    const state: IntakeState = { step: 'evaluation_pending', graph: g };
-    const next = intakeReducer(state, { type: 'VERDICT_READY', verdictId: 'v1' });
-    expect(next).toEqual({ step: 'verdict', verdictId: 'v1' });
+    const state: IntakeState = { step: 'evaluation_pending', graph: g, useCaseId: 'uc-1' };
+    const next = intakeReducer(state, { type: 'VERDICT_READY' });
+    expect(next).toEqual({ step: 'verdict', verdictId: 'uc-1' });
   });
 
   it('ignores an action that does not apply to the current state (exhaustive guard)', () => {
