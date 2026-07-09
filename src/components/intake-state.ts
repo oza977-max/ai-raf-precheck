@@ -70,6 +70,12 @@ export type IntakeAction =
   // zero questions.
   | { type: 'PROCEED_TO_CONFIRMATION' }
   | { type: 'CONFIRMED' }
+  // A legitimate engine/policy failure (e.g. no-track-match) during
+  // evaluation must not leave the UI stuck on "Evaluating..." forever —
+  // returns to confirmation so the submitter sees the error and can
+  // retry or go back. (Fix for the pre-existing gap flagged in P5-C01's
+  // handover.)
+  | { type: 'EVALUATION_FAILED' }
   | { type: 'VERDICT_READY' }
   // VD-3 (verdict-audit.md §6): re-enters graph_review reusing the
   // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
@@ -179,6 +185,20 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
     case 'VERDICT_READY':
       if (state.step !== 'evaluation_pending') return state;
       return { step: 'verdict', verdictId: state.useCaseId };
+
+    case 'EVALUATION_FAILED':
+      // Back to graph_review, not stuck on "Evaluating..." forever —
+      // simplest safe recovery point (re-derive graphVersion/corrections
+      // rather than threading them through evaluation_pending too).
+      if (state.step !== 'evaluation_pending') return state;
+      return {
+        step: 'graph_review',
+        graph: state.graph,
+        graphVersion: state.graph.version,
+        corrections: [],
+        useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
+      };
 
     case 'CORRECT_VERDICT':
       if (state.step !== 'verdict') return state;

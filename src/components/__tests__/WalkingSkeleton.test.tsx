@@ -431,4 +431,38 @@ describe('Walking Skeleton', () => {
       );
     }
   });
+
+  it('a genuine engine failure (no-track-match) shows an error and returns to graph_review instead of hanging on "Evaluating..." forever (live-found gap, now fixed)', async () => {
+    localStorage.clear(); // no API key — structured form path, reproduces the exact scenario found live
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'No track match check');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/use case name/i), 'No track match tool');
+    await user.type(screen.getByLabelText(/brief description/i), 'A tool with no matching track rule.');
+    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
+    // deep-learning + non-binding matches no TRACK-* rule in appetite.yaml — a genuine no-track-match.
+    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'deep-learning');
+    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/output action type/i), 'read');
+    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /build graph/i }));
+
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+    // Must NOT hang on "Evaluating..." — a real error renders and the
+    // flow returns to graph_review, not a dead end.
+    expect(await screen.findByRole('alert')).toHaveTextContent(/evaluation could not complete/i);
+    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+  });
 });

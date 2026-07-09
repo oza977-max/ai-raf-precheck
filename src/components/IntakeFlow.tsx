@@ -43,6 +43,7 @@ export default function IntakeFlow() {
   const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
   const [submittedDescription, setSubmittedDescription] = useState('');
   const policyResult = useMemo(() => loadPolicy(appetiteYaml), []);
@@ -148,7 +149,25 @@ export default function IntakeFlow() {
     if (state.step !== 'confirmation') return;
     const { graph, corrections, useCaseId, originalVerdictId } = state;
     dispatch({ type: 'CONFIRMED' });
+    setEvaluationError(null);
 
+    try {
+      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId);
+    } catch (err) {
+      // A legitimate engine/policy failure (e.g. no-track-match) must not
+      // leave the UI stuck on "Evaluating..." forever with no message
+      // (P5-C01 review-flagged gap, fixed here).
+      setEvaluationError(err instanceof Error ? err.message : String(err));
+      dispatch({ type: 'EVALUATION_FAILED' });
+    }
+  }
+
+  async function runConfirmAndEvaluate(
+    graph: DataFlowGraph,
+    corrections: GraphCorrection[],
+    useCaseId: string,
+    originalVerdictId: string | undefined,
+  ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
     // graph_confirmed/verdict_produced — the original verdict_produced
@@ -344,6 +363,9 @@ export default function IntakeFlow() {
           <section>
             <h2>Review extracted graph</h2>
             {duplicateWarning && <p role="alert">{duplicateWarning}</p>}
+            {evaluationError && (
+              <p role="alert">Evaluation could not complete: {evaluationError}. Review the graph and try again.</p>
+            )}
             <ul>
               {[...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].map(
                 (node) => (

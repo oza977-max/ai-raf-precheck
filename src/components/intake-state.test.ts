@@ -280,6 +280,20 @@ describe('intakeReducer', () => {
     expect(afterConfirmation).toMatchObject({ step: 'confirmation', originalVerdictId: 'verdict-abc', useCaseId: 'uc-1' });
   });
 
+  it('evaluation_pending → graph_review on EVALUATION_FAILED, not stuck forever (fix for the P5-C01-flagged uncaught-error gap)', () => {
+    const g = graph({ version: 1 });
+    const state: IntakeState = { step: 'evaluation_pending', graph: g, useCaseId: 'uc-1', originalVerdictId: 'verdict-abc' };
+    const next = intakeReducer(state, { type: 'EVALUATION_FAILED' });
+    expect(next).toEqual({
+      step: 'graph_review',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'verdict-abc',
+    });
+  });
+
   it('ignores an action that does not apply to the current state (exhaustive guard)', () => {
     const state: IntakeState = { step: 'description_entry', description: 'x' };
     const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'llm' });
