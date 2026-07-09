@@ -5,6 +5,7 @@ import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
 import { append } from '../../store/audit';
 import type { RegisterNode, RegisterNodeMetadata } from '../../store/types';
+import type { Verdict } from '../../types/verdict';
 
 function makeUseCaseMetadata(
   overrides: Partial<Extract<RegisterNodeMetadata, { node_type: 'use_case' }>> = {},
@@ -190,5 +191,189 @@ describe('RegisterView', () => {
       URL.createObjectURL = originalCreateObjectURL;
       URL.revokeObjectURL = originalRevokeObjectURL;
     }
+  });
+});
+
+// ── V1.2-A: register detail + audit timeline + 2LoD actions ──
+
+async function seedVerdictEvent(useCaseId: string, overrides: Partial<Verdict> = {}) {
+  const verdict: Verdict = {
+    status: 'approved_with_controls',
+    tier: 'High',
+    track: 'II',
+    binding_constraint: 'INV-DATA-01',
+    binding_path: 'a → b',
+    controls: ['CTRL-ENC-01'],
+    downstream_reviews: [],
+    conditions: { hypotheses: [] },
+    policy_version: '1.0',
+    pack_versions: {},
+    applied_overrides: [],
+    confidence_caveats: [],
+    boundary_proximity: false,
+    explanation: {
+      tier_rationale: null,
+      track_rationale: null,
+      hard_lines_checked: 0,
+      invariants_checked: 0,
+      tripped_invariants: [],
+      binding_reason: null,
+      binding_regulatory_basis: null,
+    },
+    id: crypto.randomUUID(),
+    use_case_id: useCaseId,
+    living_status: 'approved',
+    living_status_updated_at: new Date().toISOString(),
+    attested_by: '1LoD',
+    attested_at: new Date().toISOString(),
+    graph_version: 1,
+    corrections: [],
+    ...overrides,
+  };
+  await append({
+    event_id: crypto.randomUUID(),
+    use_case_id: useCaseId,
+    event_type: 'graph_confirmed',
+    occurred_at: new Date().toISOString(),
+    actor: '1LoD',
+    payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+  });
+  await append({
+    event_id: crypto.randomUUID(),
+    use_case_id: useCaseId,
+    event_type: 'verdict_produced',
+    occurred_at: new Date().toISOString(),
+    actor: 'system',
+    payload: { type: 'verdict_produced', verdict },
+  });
+  return verdict;
+}
+
+describe('RegisterDetail (V1.2-A)', () => {
+  it('B3/B4: clicking a register row opens the detail view with the immutable audit-trail timeline', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'Timeline probe case' });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id);
+
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    await user.click(await screen.findByText('Timeline probe case'));
+
+    expect(await screen.findByText(/immutable audit trail/i)).toBeInTheDocument();
+    expect(screen.getByText('graph_confirmed')).toBeInTheDocument();
+    expect(screen.getByText('verdict_produced')).toBeInTheDocument();
+    expect(screen.getByText(/approved with controls · High · Track II/i)).toBeInTheDocument();
+    // honest NF-2 caveat (design-vision L-3)
+    expect(screen.getByText(/provisional \/ proof-of-concept grade/i)).toBeInTheDocument();
+  });
+
+  it('B5: 2LoD Approve appends twoloD_reviewed then lifecycle_stage_changed and advances the stage to approved', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({
+      node_id: crypto.randomUUID(),
+      label: 'Approval probe case',
+      metadata: makeUseCaseMetadata({ lifecycle_stage: 'pre_checked', tier: 'Critical' }),
+    });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id, { tier: 'Critical' });
+
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    await user.click(await screen.findByText('Approval probe case'));
+
+    expect(await screen.findByText(/awaiting 2LoD action/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    expect(await screen.findByText(/lifecycle advanced to/i)).toBeInTheDocument();
+
+    const { getAll } = await import('../../store/audit');
+    const events = await getAll(node.node_id);
+    const types = events.map((e) => e.event_type);
+    const reviewedIdx = types.indexOf('twoloD_reviewed');
+    const stageIdx = types.indexOf('lifecycle_stage_changed');
+    expect(reviewedIdx).toBeGreaterThan(-1);
+    expect(stageIdx).toBeGreaterThan(reviewedIdx);
+    const reviewed = events[reviewedIdx]!;
+    if (reviewed.payload.type === 'twoloD_reviewed') {
+      expect(reviewed.payload.action).toBe('approved');
+    }
+
+    const { getUseCase } = await import('../../store/register');
+    const summary = await getUseCase(node.node_id);
+    expect(summary?.lifecycle_stage).toBe('approved');
+  });
+
+  it('B5: Request correction appends twoloD_reviewed (correction_requested, with notes) only — stage unchanged', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({
+      node_id: crypto.randomUUID(),
+      label: 'Correction request probe',
+      metadata: makeUseCaseMetadata({ lifecycle_stage: 'pre_checked' }),
+    });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id);
+
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    await user.click(await screen.findByText('Correction request probe'));
+
+    await user.type(await screen.findByLabelText(/notes/i), 'Zone looks wrong');
+    await user.click(screen.getByRole('button', { name: /request correction/i }));
+
+    expect(await screen.findByText(/correction requested — recorded in the audit trail/i)).toBeInTheDocument();
+
+    const { getAll } = await import('../../store/audit');
+    const events = await getAll(node.node_id);
+    const reviewed = events.find((e) => e.event_type === 'twoloD_reviewed');
+    expect(reviewed).toBeDefined();
+    if (reviewed?.payload.type === 'twoloD_reviewed') {
+      expect(reviewed.payload.action).toBe('correction_requested');
+      expect(reviewed.payload.notes).toBe('Zone looks wrong');
+    }
+    expect(events.some((e) => e.event_type === 'lifecycle_stage_changed')).toBe(false);
+
+    const { getUseCase } = await import('../../store/register');
+    const summary = await getUseCase(node.node_id);
+    expect(summary?.lifecycle_stage).toBe('pre_checked');
+  });
+
+  it('review finding, pass 1: a double-click on Approve writes exactly ONE twoloD_reviewed and ONE lifecycle_stage_changed into the append-only trail', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({
+      node_id: crypto.randomUUID(),
+      label: 'Double click probe',
+      metadata: makeUseCaseMetadata({ lifecycle_stage: 'pre_checked' }),
+    });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id);
+
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    await user.click(await screen.findByText('Double click probe'));
+
+    const approve = await screen.findByRole('button', { name: /^approve$/i });
+    await user.dblClick(approve);
+
+    expect(await screen.findByText(/lifecycle advanced to/i)).toBeInTheDocument();
+
+    const { getAll } = await import('../../store/audit');
+    const events = await getAll(node.node_id);
+    expect(events.filter((e) => e.event_type === 'twoloD_reviewed')).toHaveLength(1);
+    expect(events.filter((e) => e.event_type === 'lifecycle_stage_changed')).toHaveLength(1);
+  });
+
+  it('B6/BC-V12A-03: 1LoD sees the scope explainer in the list and NO action bar in the detail view', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({
+      node_id: crypto.randomUUID(),
+      label: 'Role gate probe',
+      metadata: makeUseCaseMetadata({ lifecycle_stage: 'pre_checked' }),
+    });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id);
+
+    render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+    expect(await screen.findByText(/viewing as 1LoD/i)).toBeInTheDocument();
+
+    await user.click(screen.getByText('Role gate probe'));
+    expect(await screen.findByText(/immutable audit trail/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
   });
 });

@@ -787,6 +787,212 @@ details input {
   color: var(--ink-soft);
 }
 
+/* ── Register detail + audit timeline (V1.2-A) ── */
+.register-view__row {
+  cursor: pointer;
+}
+
+.register-view__row:hover td {
+  background: var(--paper);
+}
+
+.register-view__scope-note {
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  margin: 0 0 0.9rem;
+}
+
+.register-stage {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--paper);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.register-stage--pre_checked {
+  color: var(--warn-text);
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+}
+
+.register-stage--approved,
+.register-stage--in_production,
+.register-stage--monitored {
+  color: var(--low);
+  border-color: var(--low);
+  background: #eef4ef;
+}
+
+.register-stage--retired {
+  color: var(--ink-faint);
+}
+
+.register-detail__back {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--navy);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.6rem;
+}
+
+.register-detail__meta {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0.6rem;
+}
+
+.register-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.register-detail__actionbar {
+  border: 1px solid var(--warn-border);
+  background: var(--warn-bg);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.register-detail__actionbar-title {
+  font-weight: 600;
+  color: var(--warn-text);
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+}
+
+.register-detail__actionbar input[type='text'] {
+  max-width: 420px;
+  margin-bottom: 0.6rem;
+}
+
+.register-detail__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.register-detail__approve {
+  background: var(--low);
+  border-color: var(--low);
+}
+
+.register-detail__error {
+  border: 1px solid var(--critical);
+  background: #fbeae8;
+  color: var(--critical);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.register-detail__result {
+  border: 1px solid var(--low);
+  background: #eef4ef;
+  color: var(--low);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.register-detail__timeline h3 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.timeline__row {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.45rem 0;
+  border-left: 2px solid var(--rule);
+  padding-left: 0.8rem;
+  position: relative;
+}
+
+.timeline__dot {
+  position: absolute;
+  left: -6px;
+  top: 0.85rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  border: 2px solid var(--card-bg);
+}
+
+.timeline__dot--graph_confirmed { background: var(--navy); }
+.timeline__dot--graph_corrected { background: var(--medium); }
+.timeline__dot--verdict_produced,
+.timeline__dot--verdict_corrected { background: var(--high); }
+.timeline__dot--lifecycle_stage_changed { background: var(--low); }
+.timeline__dot--twoloD_reviewed { background: var(--low); }
+.timeline__dot--re_evaluation_queued { background: var(--warn-border); }
+
+.timeline__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.timeline__type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+}
+
+.timeline__actor {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+.timeline__time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+}
+
+.timeline__detail {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.register-detail__caveat {
+  margin-top: 0.9rem;
+  font-size: 0.76rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  padding-top: 0.6rem;
+}
+
 /* ── Graph view (V1.1-C01) ── */
 .graph-view {
   display: flex;

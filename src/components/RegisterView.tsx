@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
+import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
@@ -26,6 +27,10 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // V1.2-A: row click -> detail view; refreshKey bumps on return so a
+  // 2LoD approval's stage change is immediately visible in the list.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const is2LoD = role === '2LoD';
 
@@ -45,7 +50,7 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
     return () => {
       cancelled = true;
     };
-  }, [role, is2LoD, currentPolicyVersion]);
+  }, [role, is2LoD, currentPolicyVersion, refreshKey]);
 
   const tiers = useMemo(() => Array.from(new Set(rows.map((r) => r.tier).filter((v): v is string => v !== null))), [rows]);
   const tracks = useMemo(() => Array.from(new Set(rows.map((r) => r.track).filter((v): v is string => v !== null))), [rows]);
@@ -89,6 +94,19 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
     URL.revokeObjectURL(url);
   }
 
+  if (selectedId) {
+    return (
+      <RegisterDetail
+        useCaseId={selectedId}
+        role={role}
+        onBack={() => {
+          setSelectedId(null);
+          setRefreshKey((k) => k + 1);
+        }}
+      />
+    );
+  }
+
   if (!loaded) {
     return (
       <section className="card register-view">
@@ -112,6 +130,13 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
   return (
     <section className="card register-view">
       <h2>Register</h2>
+
+      {!is2LoD && (
+        <p className="register-view__scope-note">
+          You&apos;re viewing as 1LoD — you see your own submissions. The full register and 2LoD approval actions
+          require the 2LoD role.
+        </p>
+      )}
 
       {/* register-lifecycle.md §9 (LC-6) — firm-wide governance concerns,
           shown regardless of 1LoD/2LoD role (only render-able when the
@@ -200,6 +225,7 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
             <th>Tier</th>
             <th>Track</th>
             <th>Status</th>
+            <th>Stage</th>
             <th>Last Evaluated</th>
             <th>Policy Version</th>
             {is2LoD && <th>Stale</th>}
@@ -207,12 +233,19 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
         </thead>
         <tbody>
           {visibleRows.map((row) => (
-            <tr key={row.use_case_id}>
+            <tr
+              key={row.use_case_id}
+              className="register-view__row"
+              onClick={() => setSelectedId(row.use_case_id)}
+            >
               <td>{row.label}</td>
               {is2LoD && <td>{row.submitted_by}</td>}
               <td>{row.tier ?? '—'}</td>
               <td>{row.track ?? '—'}</td>
               <td>{row.current_verdict_status ? STATUS_LABEL[row.current_verdict_status] : '—'}</td>
+              <td>
+                <span className={`register-stage register-stage--${row.lifecycle_stage}`}>{row.lifecycle_stage}</span>
+              </td>
               <td>{row.last_evaluated_at ? new Date(row.last_evaluated_at).toLocaleDateString() : '—'}</td>
               <td>{row.policy_version_at_evaluation ?? '—'}</td>
               {is2LoD && <td>{row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}</td>}

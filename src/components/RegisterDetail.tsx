@@ -1,0 +1,230 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getUseCase, updateLifecycleStage } from '../store/register';
+import { getAll as getAuditEvents, append as appendAuditEvent } from '../store/audit';
+import type { AuditEvent, UseCaseSummary } from '../store/types';
+
+// V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
+// presentation-only — renders the REAL audit store via getAll()
+// (BC-V12A-01), and wires the 2LoD actions to existing store functions
+// (BC-V12A-02/-04: append + updateLifecycleStage, no hand-rolled writes).
+interface RegisterDetailProps {
+  useCaseId: string;
+  role: string;
+  onBack: () => void;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  approved: 'Approved',
+  approved_with_controls: 'Approved with controls',
+  rejected: 'Rejected',
+  provisional: 'Provisional',
+};
+
+// Per-type detail lines derived from the real payload union — never a
+// generic JSON dump (build/prompts/V1.2-A.md scope decision 6).
+function eventDetail(event: AuditEvent): string {
+  const p = event.payload;
+  switch (p.type) {
+    case 'use_case_created':
+      return `${p.description} (intake: ${p.intake_method})`;
+    case 'graph_confirmed':
+      return `Attested. Graph v${p.graph_version}, ${p.corrections_count} correction${p.corrections_count === 1 ? '' : 's'}.`;
+    case 'graph_corrected':
+      return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}`;
+    case 'verdict_produced':
+      return `${STATUS_LABEL[p.verdict.status] ?? p.verdict.status} · ${p.verdict.tier} · Track ${p.verdict.track}.${
+        p.verdict.binding_constraint ? ` Binding: ${p.verdict.binding_constraint}.` : ''
+      } Policy v${p.verdict.policy_version}.`;
+    case 'verdict_corrected':
+      return `${STATUS_LABEL[p.new_verdict.status] ?? p.new_verdict.status} · ${p.new_verdict.tier} · Track ${
+        p.new_verdict.track
+      }. Supersedes verdict ${p.original_verdict_id.slice(0, 8)}…`;
+    case 'lifecycle_stage_changed':
+      return `${p.from_stage} → ${p.to_stage}`;
+    case 're_evaluation_queued':
+      return `Policy updated to v${p.policy_version} — re-evaluation queued. Stage unchanged.`;
+    case 'twoloD_reviewed':
+      return `${p.action.replace('_', ' ')}${p.notes ? ` — ${p.notes}` : ''}`;
+    case 'reasoning_trace_generated':
+      return 'Plain-English reasoning trace generated and stored with the verdict (VD-8).';
+  }
+}
+
+export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDetailProps) {
+  const [summary, setSummary] = useState<UseCaseSummary | null>(null);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [notes, setNotes] = useState('');
+  const [actionResult, setActionResult] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Review finding, pass 1: a double-click fires the async handler twice
+  // before React re-renders the disabled state, writing DUPLICATE events
+  // into the append-only audit trail — which cannot be cleaned up by
+  // design (VD-4/NF-2). A ref is synchronous where state is not (same
+  // lesson as P7-C01's in-flight seed guard).
+  const inFlight = useRef(false);
+
+  const load = useCallback(async () => {
+    const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);
+    setSummary(s ?? null);
+    setEvents(evs);
+  }, [useCaseId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // LC-2/LC-3: decision event first, then the stage change it causes
+  // (updateLifecycleStage itself appends lifecycle_stage_changed).
+  async function handleApprove() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'twoloD_reviewed',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: { type: 'twoloD_reviewed', action: 'approved', ...(notes.trim() ? { notes: notes.trim() } : {}) },
+      });
+      await updateLifecycleStage(useCaseId, 'approved', role);
+      setActionResult('Approved by 2LoD — lifecycle advanced to Approved. Recorded in the audit trail.');
+      setNotes('');
+      await load();
+    } catch (err) {
+      setActionError(`Action failed: ${err instanceof Error ? err.message : String(err)}. Check the timeline below for what was recorded.`);
+      await load();
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function handleRequestCorrection() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'twoloD_reviewed',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'twoloD_reviewed',
+          action: 'correction_requested',
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        },
+      });
+      setActionResult('Correction requested — recorded in the audit trail. The submitter re-runs intake to correct and re-evaluate.');
+      setNotes('');
+      await load();
+    } catch (err) {
+      setActionError(`Action failed: ${err instanceof Error ? err.message : String(err)}. Check the timeline below for what was recorded.`);
+      await load();
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+
+  if (!summary) {
+    return (
+      <section className="card register-detail">
+        <button type="button" className="register-detail__back" onClick={onBack}>
+          ← register
+        </button>
+        <p>Loading…</p>
+      </section>
+    );
+  }
+
+  // BC-V12A-03: gated on role AND stage in JSX, not CSS.
+  const showActionBar = role === '2LoD' && summary.lifecycle_stage === 'pre_checked' && !actionResult;
+
+  return (
+    <section className="card register-detail">
+      <button type="button" className="register-detail__back" onClick={onBack}>
+        ← register
+      </button>
+
+      <h2>{summary.label}</h2>
+      <p className="register-detail__meta">
+        <code>{summary.use_case_id.slice(0, 8)}</code> · submitted by {summary.submitted_by} ·{' '}
+        {new Date(summary.submitted_at).toLocaleDateString()}
+      </p>
+      <div className="register-detail__chips">
+        <span className="graph-node__chip">Tier: {summary.tier ?? '—'}</span>
+        <span className="graph-node__chip">Track: {summary.track ?? '—'}</span>
+        <span className="graph-node__chip">
+          {summary.current_verdict_status ? STATUS_LABEL[summary.current_verdict_status] : 'No verdict'}
+        </span>
+        <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
+      </div>
+
+      {showActionBar && (
+        <div className="register-detail__actionbar">
+          <p className="register-detail__actionbar-title">
+            {summary.tier ?? 'This'} tier — awaiting 2LoD action (LC-2). This use case cannot advance to Approved
+            until you sign off.
+          </p>
+          <label htmlFor="twolod-notes">Notes (optional)</label>
+          <input
+            id="twolod-notes"
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+          <div className="register-detail__actions">
+            <button type="button" className="register-detail__approve" disabled={busy} onClick={() => void handleApprove()}>
+              Approve
+            </button>
+            <button type="button" disabled={busy} onClick={() => void handleRequestCorrection()}>
+              Request correction
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionResult && (
+        <p className="register-detail__result" role="status">
+          {actionResult}
+        </p>
+      )}
+
+      {actionError && (
+        <p role="alert" className="register-detail__error">
+          {actionError}
+        </p>
+      )}
+
+      <div className="register-detail__timeline">
+        <h3>Immutable audit trail (VD-4 / NF-2) · append-only</h3>
+        <ul className="timeline">
+          {events.map((event) => (
+            <li key={event.event_id} className="timeline__row">
+              <span className={`timeline__dot timeline__dot--${event.event_type}`} aria-hidden="true" />
+              <div className="timeline__body">
+                <div className="timeline__head">
+                  <code className="timeline__type">{event.event_type}</code>
+                  <span className="timeline__actor">{event.actor}</span>
+                  <span className="timeline__time">{new Date(event.occurred_at).toLocaleString()}</span>
+                </div>
+                <p className="timeline__detail">{eventDetail(event)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="register-detail__caveat">
+          Audit trail is append-only. V1 is client-side — provisional / proof-of-concept grade for audit purposes
+          (NF-2).
+        </p>
+      </div>
+    </section>
+  );
+}
