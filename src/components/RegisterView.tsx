@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate } from '../store/register';
+import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import type { UseCaseSummary } from '../store/types';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
@@ -78,6 +79,8 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
     );
   }
 
+  const aigateRow = rows.find((r) => r.use_case_id === AIGATE_USE_CASE_ID);
+
   if (rows.length === 0) {
     return (
       <section className="card register-view">
@@ -90,6 +93,20 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
   return (
     <section className="card register-view">
       <h2>Register</h2>
+
+      {/* register-lifecycle.md §9 (LC-6) — firm-wide governance concerns,
+          shown regardless of 1LoD/2LoD role (only render-able when the
+          AIGate row is present in this role's fetched scope at all). */}
+      {aigateRow?.current_verdict_status === 'rejected' && (
+        <div className="register-view__banner register-view__banner--alert" role="alert">
+          AIGate does not satisfy its own controls — policy review required
+        </div>
+      )}
+      {aigateRow?.current_verdict_status !== 'rejected' && aigateRow?.lifecycle_stage === 'pre_checked' && (
+        <div className="register-view__banner" role="status">
+          AIGate self-assessment pending 2LoD approval — verdicts are provisional until cleared.
+        </div>
+      )}
 
       {is2LoD && policyUpdatePending && (
         <div className="register-view__banner" role="status">

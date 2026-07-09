@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import IntakeFlow from './components/IntakeFlow';
 import RegisterView from './components/RegisterView';
 import SettingsPanel from './components/SettingsPanel';
 import { getRole, setRole } from './store/role';
 import { loadPolicy } from './store/policy';
+import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
 import appetiteYaml from '../policy/appetite.yaml?raw';
 import './App.css';
 
@@ -25,6 +26,17 @@ export default function App() {
     setRole(next);
     setRoleState(next);
   }
+
+  // register-lifecycle.md §9 (LC-6): AIGate evaluates itself through its
+  // own engine on first launch. Best-effort — a failure here (e.g.
+  // invalid policy) must not block the app from rendering (same pattern
+  // as VD-8's reasoning-trace generation).
+  useEffect(() => {
+    if (!policyResult.valid) return;
+    seedAigateSelfAssessment(policyResult.policy).catch((err) => {
+      console.warn('AIGate self-assessment seeding failed:', err);
+    });
+  }, []);
 
   return (
     <div className="app-shell">

@@ -540,4 +540,16 @@ describe('Walking Skeleton', () => {
       await screen.findByText(/track ii applies because the model produces a quantitative recommendation/i),
     ).toBeInTheDocument();
   });
+
+  it('TC-LC-4-02 (P7-C01): AIGate evaluates itself on first launch and appears in the register with a real verdict, without any user action', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // No submission action taken — the seed fires from a mount effect, not
+    // from anything the user does. Only navigate to see it.
+    await user.click(screen.getByText('▤ Register'));
+    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
+
+    expect(await screen.findByText('AIGate (self-assessment)')).toBeInTheDocument();
+  });
 });

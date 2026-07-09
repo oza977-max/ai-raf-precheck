@@ -297,6 +297,13 @@ body {
   font-size: 0.88rem;
 }
 
+.register-view__banner--alert {
+  background: #fbeae8;
+  border-color: var(--critical);
+  color: var(--critical);
+  font-weight: 600;
+}
+
 .register-view__controls {
   display: flex;
   flex-direction: column;
