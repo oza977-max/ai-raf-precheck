@@ -14,6 +14,7 @@ export default function ContradictionReview({ contradictions, onResolve }: Contr
 
   return (
     <section aria-label="Contradiction review">
+      <div className="questionnaire__tag">UC-5 · CONTRADICTION REVIEW</div>
       <h2>Resolve contradictions before continuing</h2>
       {contradictions.map((c, i) => (
         <div key={i} className="contradiction" role="alert">

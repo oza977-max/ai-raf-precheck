@@ -17,7 +17,8 @@ export default function QuestionnaireStep({ questions, answeredCount, onAnswer }
   }
 
   return (
-    <section aria-label="Targeted questions">
+    <section aria-label="Targeted questions" className="questionnaire">
+      <div className="questionnaire__tag">UC-4 · TARGETED QUESTIONS</div>
       <p className="questionnaire__progress">
         Question {answeredCount + 1} of {questions.length}
       </p>
