@@ -94,13 +94,27 @@ function dedupeAndMerge(candidates: IntakeQuestion[]): IntakeQuestion[] {
   return [...byKey.values()];
 }
 
+// V1.2-B (design-gap C2): expose the budget the generator already
+// computes internally, so the questionnaire UI can render
+// "{answered}/{total} · budget ≤N (provisional {tier})".
+// BC-V12B-04: additive — generateQuestions' signature is unchanged.
+export function getQuestionBudget(
+  graph: DataFlowGraph,
+  policy: PolicyFile,
+): { budget: number; provisionalTier: Tier } {
+  const provisionalTier = assignTier(graph, [...policy.tiers].sort((a, b) => a.id.localeCompare(b.id))).tier;
+  return { budget: budgetForTier(provisionalTier), provisionalTier };
+}
+
 export function generateQuestions(
   graph: DataFlowGraph,
   policy: PolicyFile,
   _activePacks: JurisdictionPack[],
 ): IntakeQuestion[] {
-  const provisionalTier = assignTier(graph, [...policy.tiers].sort((a, b) => a.id.localeCompare(b.id))).tier;
-  const budget = budgetForTier(provisionalTier);
+  // Review finding (V1.2-B, pass 1): consume the same helper the UI uses
+  // for the displayed budget, so the enforced budget and the displayed
+  // budget can never silently drift apart.
+  const { budget } = getQuestionBudget(graph, policy);
 
   const sortedInvariants = [...policy.invariants].sort((a, b) => a.id.localeCompare(b.id)) as Invariant[];
   const sortedHardLines = [...policy.hard_lines].sort((a, b) => a.id.localeCompare(b.id)) as HardLine[];

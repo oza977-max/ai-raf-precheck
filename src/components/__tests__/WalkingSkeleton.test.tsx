@@ -181,8 +181,9 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText(/risk scoring model/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
-    // A real targeted question renders — not a skipped/fake step.
-    expect(await screen.findByText(/question 1 of/i)).toBeInTheDocument();
+    // A real targeted question renders — not a skipped/fake step. V1.2-B:
+    // the progress line now carries the budget + provisional tier.
+    expect(await screen.findByText(/0 \/ \d+ · budget ≤\d+ \(provisional /i)).toBeInTheDocument();
 
     // Answer every generated question until the flow reaches confirmation.
     for (let i = 0; i < 10; i++) {

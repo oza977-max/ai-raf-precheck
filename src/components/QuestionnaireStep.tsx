@@ -5,10 +5,14 @@ import type { IntakeQuestion } from '../engine/types';
 interface QuestionnaireStepProps {
   questions: IntakeQuestion[];
   answeredCount: number;
+  // V1.2-B (design-gap C2): budget indicator — optional, rendered when
+  // the caller can compute it from the loaded policy.
+  budget?: number;
+  provisionalTier?: string;
   onAnswer: (questionId: string, value: unknown) => void;
 }
 
-export default function QuestionnaireStep({ questions, answeredCount, onAnswer }: QuestionnaireStepProps) {
+export default function QuestionnaireStep({ questions, answeredCount, budget, provisionalTier, onAnswer }: QuestionnaireStepProps) {
   const [textValue, setTextValue] = useState('');
   const current = questions[answeredCount];
 
@@ -20,7 +24,9 @@ export default function QuestionnaireStep({ questions, answeredCount, onAnswer }
     <section aria-label="Targeted questions" className="questionnaire">
       <div className="questionnaire__tag">UC-4 · TARGETED QUESTIONS</div>
       <p className="questionnaire__progress">
-        Question {answeredCount + 1} of {questions.length}
+        {answeredCount} / {questions.length}
+        {budget !== undefined && ` · budget ≤${budget}`}
+        {provisionalTier && ` (provisional ${provisionalTier})`}
       </p>
       <p className="questionnaire__text">{current.text}</p>
       {current.triggered_by.length > 0 && (

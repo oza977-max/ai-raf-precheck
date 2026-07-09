@@ -1,4 +1,5 @@
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
+import { graphSummaryRows } from './graph-summary';
 
 // UC-6 (intake-flow.md §9). Rule 4 (cross-cutting.md §7): presentation-only.
 // This click is the attestation point — writing the graph_confirmed audit
@@ -14,18 +15,7 @@ interface ConfirmationStepProps {
 }
 
 export default function ConfirmationStep({ graph, corrections, onConfirm }: ConfirmationStepProps) {
-  const input = graph.input_nodes[0];
-  const processing = graph.processing_nodes[0];
-  const output = graph.output_nodes[0];
-
-  const summary: Array<{ label: string; value: string }> = [
-    { label: 'Input data', value: input ? `${input.label} · ${input.data_class}` : '—' },
-    { label: 'Model', value: processing ? `${processing.label} · ${processing.model_type}` : '—' },
-    { label: 'Autonomy', value: processing ? `L${processing.autonomy_level}` : '—' },
-    { label: 'Data zone', value: processing?.data_zone ?? '—' },
-    { label: 'Output', value: output ? `${output.label} · ${output.action_type}` : '—' },
-    { label: 'Jurisdictions', value: graph.jurisdictions.length > 0 ? graph.jurisdictions.join(', ') : 'None specified' },
-  ];
+  const summary = graphSummaryRows(graph);
 
   return (
     <section aria-label="Confirm and evaluate">

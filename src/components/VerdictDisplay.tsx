@@ -1,7 +1,8 @@
-import type { PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
+import type { DataFlowGraph, PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
 import { findRuleDescription } from '../engine/find-rule-description';
+import { graphSummaryRows } from './graph-summary';
 import type { Verdict } from '../types/verdict';
-import type { AuditEvent } from '../store/types';
+import type { AuditEvent, LifecycleStage } from '../store/types';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -10,8 +11,20 @@ interface VerdictDisplayProps {
   verdict: Verdict;
   auditEvents: AuditEvent[];
   policy?: PolicyFile;
+  // V1.2-B: provenance panel + register status note — both optional so
+  // older render paths (and tests) without them stay valid.
+  graph?: DataFlowGraph;
+  registerStage?: LifecycleStage;
   onCorrect: () => void;
 }
+
+// BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
+// acceptance tests assert a single match on /approved|rejected/i.
+const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
+  pre_checked: 'Saved to register — awaiting active 2LoD sign-off (LC-2).',
+  approved: 'Saved to register — self-service final.',
+  in_production: 'Saved to register — in production.',
+};
 
 const STATUS_LABEL: Record<Verdict['status'], string> = {
   approved: 'Approved',
@@ -125,7 +138,7 @@ function findReasoningTrace(verdict: Verdict, auditEvents: AuditEvent[]): string
   return null;
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
   const lowCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'low');
   const mediumCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'medium');
   const isProvisional = lowCaveats.length > 0;
@@ -149,6 +162,17 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
 
       <p className="verdict__eyebrow">Verdict</p>
       <h2 className="verdict__heading">{isProvisional ? 'Provisional' : STATUS_LABEL[verdict.status]}</h2>
+      <p className="verdict__meta">
+        <code>{verdict.use_case_id.slice(0, 8)}</code> · evaluated{' '}
+        {new Date(verdict.attested_at).toLocaleDateString()}
+      </p>
+      <p className="verdict__appetite-line">
+        {verdict.status === 'rejected'
+          ? 'Out of appetite — no control set can bring this use case inside.'
+          : `In appetite — ${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} required, ${
+              verdict.downstream_reviews.length
+            } downstream review${verdict.downstream_reviews.length === 1 ? '' : 's'} triggered.`}
+      </p>
 
       <div className="verdict__cards">
         <div className="verdict__stat">
@@ -194,6 +218,40 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
         <p className="verdict__downstream">Downstream reviews: {verdict.downstream_reviews.join(', ')}</p>
       )}
 
+      {verdict.conditions.hypotheses.length > 0 && (
+        <div className="verdict__conditions">
+          <h3>Standing conditions (VD-7)</h3>
+          <p className="verdict__conditions-sub">
+            The hypothesis this verdict is conditional on. V2 monitors these live.
+          </p>
+          <ul>
+            {verdict.conditions.hypotheses.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {graph && (
+        <div className="verdict__provenance">
+          <h3>Record &amp; provenance</h3>
+          <div className="confirmation__grid">
+            {graphSummaryRows(graph).map((row) => (
+              <div key={row.label} className="confirmation__grid-cell">
+                <span className="confirmation__grid-label">{row.label}</span>
+                <span className="confirmation__grid-value">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {registerStage && STAGE_NOTE[registerStage] && (
+        <p className="verdict__stage-note" role="status">
+          {STAGE_NOTE[registerStage]}
+        </p>
+      )}
+
       <details className="verdict__trace">
         <summary>Reasoning trace</summary>
         {reasoningTrace ? (
@@ -206,6 +264,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
           <p>Reasoning trace unavailable — configure an Anthropic API key to enable plain-English explanations.</p>
         )}
       </details>
+
+      <p className="verdict__caveat">
+        Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes (NF-2).
+      </p>
     </section>
   );
 }

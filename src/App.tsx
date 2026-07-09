@@ -4,6 +4,7 @@ import RegisterView from './components/RegisterView';
 import PolicyEditor from './components/PolicyEditor';
 import SettingsPanel from './components/SettingsPanel';
 import { getRole, setRole } from './store/role';
+import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
 import { getCurrentPolicyYaml } from './store/policy-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
@@ -22,6 +23,9 @@ export default function App() {
   // immediately reflected in the header badge and RegisterView's
   // currentPolicyVersion prop, without a full page reload (P7-C03).
   const [policyRevision, setPolicyRevision] = useState(0);
+  // V1.2-B (design-gap E2): register count badge — refreshed on
+  // navigation, an accepted staleness window.
+  const [registerCount, setRegisterCount] = useState<number | null>(null);
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), [policyRevision]);
   const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
@@ -30,6 +34,18 @@ export default function App() {
     setRole(next);
     setRoleState(next);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    getUseCases('all')
+      .then((rows) => {
+        if (!cancelled) setRegisterCount(rows.length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [view, policyRevision]);
 
   // register-lifecycle.md §9 (LC-6): AIGate evaluates itself through its
   // own engine on first launch. Best-effort — a failure here (e.g.
@@ -69,8 +85,8 @@ export default function App() {
             value={role}
             onChange={(e) => handleRoleChange(e.target.value)}
           >
-            <option value="1LoD">1LoD</option>
-            <option value="2LoD">2LoD</option>
+            <option value="1LoD">1LoD — James · Dev</option>
+            <option value="2LoD">2LoD — Priya · AI Risk</option>
           </select>
         </div>
       </header>
@@ -88,7 +104,10 @@ export default function App() {
             className={view === 'register' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
             onClick={() => setView('register')}
           >
-            ▤ Register
+            <span>▤ Register</span>
+            {registerCount !== null && registerCount > 0 && (
+              <span className="app-sidebar__count">{registerCount}</span>
+            )}
           </div>
           <div
             className={view === 'policyEditor' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}

@@ -11,8 +11,8 @@ import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
-import type { AuditEvent, UseCaseSummary } from '../store/types';
-import { generateQuestions } from '../engine/question-generator';
+import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types';
+import { generateQuestions, getQuestionBudget } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
@@ -41,6 +41,7 @@ export default function IntakeFlow() {
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
+  const [savedStage, setSavedStage] = useState<LifecycleStage | null>(null);
   const [submittedDescription, setSubmittedDescription] = useState('');
   // P7-C03: reads getCurrentPolicyYaml() (a saved-policy override, or the
   // bundled starter YAML) instead of a static import. App.tsx unmounts and
@@ -281,6 +282,7 @@ export default function IntakeFlow() {
     // P6-C02 (register-lifecycle.md §7): route the verdict's tier to a
     // real governance stage instead of a hardcoded 'idea'.
     const routedWorkflow = policyResult.valid ? routeToWorkflow(result.tier, policyResult.policy) : undefined;
+    setSavedStage(routedWorkflow?.lifecycle_stage ?? null);
 
     if (isCorrection) {
       // register_nodes uses db.add() in addNode() — a correction reuses
@@ -422,6 +424,7 @@ export default function IntakeFlow() {
           <QuestionnaireStep
             questions={state.questions}
             answeredCount={state.answers.length}
+            {...(policyResult.valid ? getQuestionBudget(state.graph, policyResult.policy) : {})}
             onAnswer={handleAnswerSubmitted}
           />
         )}
@@ -445,6 +448,8 @@ export default function IntakeFlow() {
             verdict={verdict}
             auditEvents={verdictAuditEvents}
             policy={policyResult.valid ? policyResult.policy : undefined}
+            graph={lastGraph ?? undefined}
+            registerStage={savedStage ?? undefined}
             onCorrect={handleCorrectVerdict}
           />
         )}

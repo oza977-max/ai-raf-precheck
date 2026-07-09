@@ -239,3 +239,49 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
     expect(ex.binding_regulatory_basis).toBe('GDPR Art. 32(1)(a)');
   });
 });
+
+describe('evaluate — VD-7 standing conditions (V1.2-B)', () => {
+  it('an approved verdict carries statically-populated hypotheses from kri_thresholds plus graph pins', () => {
+    const g = graph({
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const h = result.value.conditions.hypotheses;
+    expect(h.some((l) => /model drift since validation/i.test(l))).toBe(true);
+    expect(h.some((l) => l === 'Data zone pinned: Zone C')).toBe(true);
+    expect(h.some((l) => /max autonomy level: ≤ L0/i.test(l))).toBe(true);
+    // BC-V12B-03: no hypothesis may contain the words approved/rejected.
+    expect(h.every((l) => !/approved|rejected/i.test(l))).toBe(true);
+  });
+
+  it('High/Critical tiers are held to the tighter high_risk override band; Low uses low_risk', () => {
+    const lowG = graph({ processing_nodes: [TRACK_I_PROCESSING], output_nodes: [TRACK_I_OUTPUT] });
+    const lowResult = evaluate(lowG, policy);
+    if (!lowResult.ok) throw new Error('low fixture failed');
+    expect(lowResult.value.conditions.hypotheses.some((l) => /low risk band.*5–40/i.test(l))).toBe(true);
+
+    const highG = graph({
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [{ ...TRACK_I_OUTPUT, exposure: 'client-facing' as const }],
+    });
+    const highResult = evaluate(highG, policy);
+    if (!highResult.ok) throw new Error('high fixture failed');
+    expect(highResult.value.tier).toBe('High');
+    expect(highResult.value.conditions.hypotheses.some((l) => /high risk band.*5–20/i.test(l))).toBe(true);
+  });
+
+  it('a rejection carries no hypotheses — nothing was accepted to condition', () => {
+    const g = graph({
+      input_nodes: [{ id: 'i1', label: 'trade intel', data_class: 'MNPI', data_zone: 'Zone A' }],
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('rejected');
+    expect(result.value.conditions.hypotheses).toEqual([]);
+  });
+});

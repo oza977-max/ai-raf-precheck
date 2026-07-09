@@ -202,3 +202,48 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
     expect(screen.queryByText(/why this verdict/i)).not.toBeInTheDocument();
   });
 });
+
+describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
+  it('renders standing conditions (VD-7) when the verdict carries hypotheses, with the monitors-live subtitle', () => {
+    const verdict = makeVerdict({
+      conditions: { hypotheses: ['Model drift since validation: green ≤3% · amber ≤7% · red >7%', 'Data zone pinned: Zone B'] },
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/standing conditions \(VD-7\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/V2 monitors these live/i)).toBeInTheDocument();
+    expect(screen.getByText('Data zone pinned: Zone B')).toBeInTheDocument();
+  });
+
+  it('renders no conditions panel for a verdict with empty hypotheses (legacy/rejected)', () => {
+    render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={vi.fn()} />);
+    expect(screen.queryByText(/standing conditions/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the record & provenance panel from the graph prop, and the appetite summary line with counts', () => {
+    const graph = {
+      id: 'g1',
+      version: 1,
+      input_nodes: [{ id: 'i1', label: 'Client notes', data_class: 'Client PII' as const, data_zone: 'Zone B' as const }],
+      processing_nodes: [
+        { id: 'p1', label: 'Drafting model', model_type: 'llm' as const, autonomy_level: 1 as const, data_zone: 'Zone B' as const, vendor: 'Anthropic', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'Draft email', action_type: 'draft' as const, exposure: 'internal-only' as const, decision_bindingness: 'advisory' as const, output_reversibility: 'reversible' as const, scale: 'limited' as const },
+      ],
+      edges: [],
+      jurisdictions: ['UK'],
+      intake_method: 'llm' as const,
+      extracted_at: '2026-01-01T00:00:00.000Z',
+    };
+    render(
+      <VerdictDisplay verdict={makeVerdict()} auditEvents={[]} graph={graph} registerStage="pre_checked" onCorrect={vi.fn()} />,
+    );
+
+    expect(screen.getByText(/record & provenance/i)).toBeInTheDocument();
+    expect(screen.getByText('Client notes · Client PII')).toBeInTheDocument();
+    expect(screen.getByText('Drafting model · llm')).toBeInTheDocument();
+    expect(screen.getByText(/in appetite — 1 control required, 0 downstream reviews triggered/i)).toBeInTheDocument();
+    expect(screen.getByText(/awaiting active 2LoD sign-off \(LC-2\)/i)).toBeInTheDocument();
+  });
+});

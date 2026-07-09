@@ -6,6 +6,7 @@ import { assignTier } from './tier';
 import type { TierAssignment } from './tier';
 import { evaluateInvariants } from './invariants';
 import type { TrippedInvariant } from './invariants';
+import { buildStandingConditions } from './conditions';
 import { solvControls } from './greedy-solver';
 import type {
   DataFlowGraph,
@@ -154,6 +155,10 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
       binding_constraint: tripped[0]?.invariantId ?? '',
       binding_path: tripped[0]?.graphPath ?? '',
       controls: solverResult.controls,
+      // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
+      // statically populated from kri_thresholds + graph pins. Rejection
+      // paths keep hypotheses empty (nothing was approved to condition).
+      conditions: { hypotheses: buildStandingConditions(graph, policy, overrides.finalTier) },
       policy_version: policy.version,
       applied_overrides: overrides.appliedOverrides,
       boundary_proximity: boundaryProximity,
