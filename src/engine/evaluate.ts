@@ -80,6 +80,25 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
 
   const status = tripped.length > 0 ? 'approved_with_controls' : 'approved';
 
+  // boundary_proximity (VD-6/CS-4, §4.2 MVP flag — judgment call, see
+  // build/prompts/P3-C02.md deliverable 2): true when at least one tripped
+  // invariant is covered by exactly one control in the selected set (zero
+  // redundant coverage — the minimum possible margin above the appetite
+  // boundary). Computed here, not inside the solver, to keep SolverResult's
+  // locked P3-C01 contract unchanged.
+  // NOTE: this only checks `solverResult.controls` (newly selected), not
+  // `inheritedControls` — harmless today because evaluate() always calls
+  // solvControls() with `[]` for inherited (platform inheritance isn't
+  // wired yet). Whichever future chunk wires real platform inheritance
+  // must extend this check to `selected ∪ inherited`, per the original
+  // spec intent (§4.2), or this will silently under-report boundary
+  // proximity for invariants covered by an inherited control.
+  const boundaryProximity =
+    tripped.length > 0 &&
+    tripped.some(
+      (t) => controls.filter((c) => solverResult.controls.includes(c.id) && c.resolves.includes(t.invariantId)).length === 1,
+    );
+
   // Step 9: verdict assembly (pure — no identity/time fields).
   // binding_constraint names "the rule/invariant that determined the
   // outcome" (§3.9) — on a clean approved verdict, nothing tripped, so
@@ -96,6 +115,7 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
       controls: solverResult.controls,
       policy_version: policy.version,
       applied_overrides: overrides.appliedOverrides,
+      boundary_proximity: boundaryProximity,
     }),
   };
 }

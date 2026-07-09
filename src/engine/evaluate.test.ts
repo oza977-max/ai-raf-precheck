@@ -123,7 +123,7 @@ describe('evaluate — approved path', () => {
 });
 
 describe('evaluate — approved_with_controls path', () => {
-  it('returns approved_with_controls when an invariant trips and the stub solver reports satisfiable', () => {
+  it('returns approved_with_controls with a real solved control set (P3-C02: no longer the stub)', () => {
     const g = graph({
       input_nodes: [{ id: 'i1', label: 'client notes', data_class: 'Client PII', data_zone: 'Zone A' }],
       processing_nodes: [TRACK_I_PROCESSING],
@@ -131,7 +131,36 @@ describe('evaluate — approved_with_controls path', () => {
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.status).toBe('approved_with_controls');
+    if (result.ok) {
+      expect(result.value.status).toBe('approved_with_controls');
+      // INV-DATA-01 trips (Client PII into Zone A); appetite.yaml's
+      // CTRL-ENC-01 is the only control that resolves it — the real
+      // greedy solver must select it now that P3-C02 replaced the stub.
+      expect(result.value.controls).toEqual(['CTRL-ENC-01']);
+    }
+  });
+
+  it('sets boundary_proximity when a tripped invariant has exactly one resolving control selected (P3-C02 CS-4)', () => {
+    const g = graph({
+      input_nodes: [{ id: 'i1', label: 'client notes', data_class: 'Client PII', data_zone: 'Zone A' }],
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    // appetite.yaml's INV-DATA-01 is resolved by exactly one control
+    // (CTRL-ENC-01) — zero redundant coverage, so boundary_proximity is true.
+    if (result.ok) expect(result.value.boundary_proximity).toBe(true);
+  });
+
+  it('leaves boundary_proximity false on the plain approved path (nothing tripped)', () => {
+    const g = graph({
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.boundary_proximity).toBe(false);
   });
 });
 
