@@ -31,10 +31,16 @@ describe('intakeReducer', () => {
     expect(next).toEqual({ step: 'duplicate_check', description: 'a new AI tool' });
   });
 
-  it('duplicate_check → graph_extraction on NO_DUPLICATE_FOUND', () => {
+  it('duplicate_check → graph_extraction on NO_DUPLICATE_FOUND, carrying the chosen method', () => {
     const state: IntakeState = { step: 'duplicate_check', description: 'x' };
-    const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND' });
+    const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'llm' });
     expect(next).toEqual({ step: 'graph_extraction', description: 'x', method: 'llm' });
+  });
+
+  it('duplicate_check → graph_extraction with method: form when no API key is configured', () => {
+    const state: IntakeState = { step: 'duplicate_check', description: 'x' };
+    const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'form' });
+    expect(next).toEqual({ step: 'graph_extraction', description: 'x', method: 'form' });
   });
 
   it('graph_extraction → graph_review on GRAPH_EXTRACTED, carrying the graph version', () => {
@@ -79,7 +85,7 @@ describe('intakeReducer', () => {
 
   it('ignores an action that does not apply to the current state (exhaustive guard)', () => {
     const state: IntakeState = { step: 'description_entry', description: 'x' };
-    const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND' });
+    const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'llm' });
     expect(next).toBe(state);
   });
 });

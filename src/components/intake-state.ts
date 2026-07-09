@@ -44,7 +44,7 @@ export type IntakeState =
 export type IntakeAction =
   | { type: 'DESCRIPTION_CHANGED'; description: string }
   | { type: 'SUBMIT_DESCRIPTION' }
-  | { type: 'NO_DUPLICATE_FOUND' }
+  | { type: 'NO_DUPLICATE_FOUND'; method: 'llm' | 'form' }
   | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph }
   // P4-C01/P4-C04 boundary (see build/prompts/P4-C01.md): questionnaire,
   // contradiction_review, and confirmation aren't built yet (P4-C03/P4-C04).
@@ -66,7 +66,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'NO_DUPLICATE_FOUND':
       if (state.step !== 'duplicate_check') return state;
-      return { step: 'graph_extraction', description: state.description, method: 'llm' };
+      return { step: 'graph_extraction', description: state.description, method: action.method };
 
     case 'GRAPH_EXTRACTED':
       if (state.step !== 'graph_extraction') return state;

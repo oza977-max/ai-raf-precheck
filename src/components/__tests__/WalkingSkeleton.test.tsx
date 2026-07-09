@@ -33,14 +33,14 @@ const MOCK_GRAPH_INPUT = {
   jurisdictions: [],
 };
 
+const mockCreate = vi.fn().mockResolvedValue({
+  content: [{ type: 'tool_use', name: 'extract_graph', input: MOCK_GRAPH_INPUT }],
+});
+
 vi.mock('@anthropic-ai/sdk', () => {
   return {
     default: class MockAnthropic {
-      messages = {
-        create: vi.fn().mockResolvedValue({
-          content: [{ type: 'tool_use', name: 'extract_graph', input: MOCK_GRAPH_INPUT }],
-        }),
-      };
+      messages = { create: mockCreate };
     },
   };
 });
@@ -49,6 +49,7 @@ describe('Walking Skeleton', () => {
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem('aigate:api-key', 'test-key-for-skeleton');
+    mockCreate.mockClear();
   });
 
   it('completes full flow end-to-end with real boundaries', async () => {
@@ -77,7 +78,7 @@ describe('Walking Skeleton', () => {
     expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
   });
 
-  it('shows a graceful message on the no-api-key path instead of crashing (P4-C01: form fallback UI is P4-C02 scope)', async () => {
+  it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call', async () => {
     localStorage.clear(); // no API key configured
 
     const user = userEvent.setup();
@@ -87,6 +88,32 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'A tool that drafts client emails');
     await user.click(screen.getByRole('button', { name: /submit/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/no anthropic api key configured/i);
+    // Structured intake banner renders instead of the old dead-end message.
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/use case name/i), 'Email drafting tool');
+    await user.type(screen.getByLabelText(/brief description/i), 'Drafts client emails from notes.');
+    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/output action type/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+
+    await user.click(screen.getByRole('button', { name: /build graph/i }));
+
+    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+
+    expect(await screen.findByText(/verdict/i)).toBeInTheDocument();
+    expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
+
+    // Self-verifying, not just structurally implied: the LLM boundary was
+    // never touched on the no-api-key path (review finding, pass 1).
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

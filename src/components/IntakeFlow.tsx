@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useReducer, useState } from 'react';
+import { useEffect, useCallback, useMemo, useReducer, useState } from 'react';
 import { extractGraph } from '../llm/graph-extractor';
 import { confirmSemanticDuplicate } from '../llm/duplicate-check';
 import { getApiKey } from '../llm/client';
@@ -10,6 +10,7 @@ import type { EvaluationResult, GraphCorrection } from '../engine/types';
 import type { UseCaseSummary } from '../store/types';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
+import StructuredForm from './StructuredForm';
 // Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
 // string; PolicyEditor.tsx's file-upload UI is not wired in until a later
 // chunk, so this smoke path reads the starter policy at build time.
@@ -29,6 +30,7 @@ export default function IntakeFlow() {
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
+  const policyResult = useMemo(() => loadPolicy(appetiteYaml), []);
 
   const refreshRegister = useCallback(async () => {
     const rows = await getUseCases('all');
@@ -60,18 +62,18 @@ export default function IntakeFlow() {
       setDuplicateWarning('A similar use case may already exist in the register (keyword match).');
     }
 
-    dispatch({ type: 'NO_DUPLICATE_FOUND' });
+    const hasApiKey = getApiKey() !== null;
+    dispatch({ type: 'NO_DUPLICATE_FOUND', method: hasApiKey ? 'llm' : 'form' });
+
+    if (!hasApiKey) {
+      // P4-C02: structured-form fallback (UC-3a) — real form UI, not the
+      // dead-end message P4-C01 shipped. Rendered below in graph_extraction.
+      return;
+    }
 
     const extraction = await extractGraph(state.description);
     if (!extraction.ok) {
-      // No-key / network / parse failure: P4-C02's structured-form
-      // fallback UI isn't built yet — documented gap (build/prompts/P4-C01.md),
-      // surfaced here as a plain message rather than silently stalling.
-      setExtractionError(
-        extraction.error.kind === 'no-api-key'
-          ? 'No Anthropic API key configured — structured-form fallback is not available yet in this build.'
-          : `Graph extraction failed: ${extraction.error.kind}`,
-      );
+      setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
       return;
     }
     dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value });
@@ -115,7 +117,6 @@ export default function IntakeFlow() {
     const graph = state.graph;
     dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
 
-    const policyResult = loadPolicy(appetiteYaml);
     if (!policyResult.valid) {
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
@@ -165,11 +166,18 @@ export default function IntakeFlow() {
 
       {state.step === 'duplicate_check' && <p>Checking for similar use cases…</p>}
 
-      {state.step === 'graph_extraction' && (
+      {state.step === 'graph_extraction' && state.method === 'llm' && (
         <div>
           <p>Extracting graph…</p>
           {extractionError && <p role="alert">{extractionError}</p>}
         </div>
+      )}
+
+      {state.step === 'graph_extraction' && state.method === 'form' && (
+        <StructuredForm
+          jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
+          onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph })}
+        />
       )}
 
       {state.step === 'graph_review' && (
