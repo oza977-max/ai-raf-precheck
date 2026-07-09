@@ -102,6 +102,39 @@ export type ConditionValue =
 
 export type Condition = Record<string, ConditionValue>;
 
+// UC-4/UC-5 (intake-flow.md §6-7). Relocated here from
+// src/components/intake-state.ts (P4-C03) — src/engine/question-generator.ts
+// and src/engine/contradiction.ts must return these types without importing
+// from src/components/* (one-way dependency, cross-cutting.md §7).
+export interface IntakeQuestion {
+  id: string;
+  text: string;
+  field: string;
+  node_id?: string;
+  triggered_by: string[];
+  answer_type: 'boolean' | 'select' | 'text';
+  options?: string[];
+}
+
+export interface QuestionAnswer {
+  questionId: string;
+  value: unknown;
+}
+
+export interface Contradiction {
+  statement1: string;
+  statement2: string;
+  field: string;
+}
+
+// Placeholder — no pack-loading chunk exists yet (same P3-C01 deviation).
+// generateQuestions() always receives [] for activePacks until a future
+// chunk lands real jurisdiction pack loading.
+export interface JurisdictionPack {
+  code: string;
+  rules: never[];
+}
+
 // UC-7 correction recording (intake-flow.md §8).
 export interface GraphCorrection {
   correction_id: string;

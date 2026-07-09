@@ -116,4 +116,77 @@ describe('Walking Skeleton', () => {
     // never touched on the no-api-key path (review finding, pass 1).
     expect(mockCreate).not.toHaveBeenCalled();
   });
+
+  it('P4-C03: an uncertain node generates a real question, answering it reaches a verdict', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            input_nodes: [],
+            processing_nodes: [
+              {
+                id: 'p1',
+                label: 'risk scoring model',
+                model_type: 'traditional-ml',
+                autonomy_level: 0,
+                data_zone: 'Zone A',
+                vendor: 'internal',
+                replaces_prior_model: false,
+                uncertain: true,
+              },
+            ],
+            output_nodes: [
+              {
+                id: 'o1',
+                label: 'risk score',
+                action_type: 'recommend',
+                exposure: 'internal-only',
+                decision_bindingness: 'material',
+                output_reversibility: 'reversible',
+                scale: 'limited',
+              },
+            ],
+            edges: [],
+            jurisdictions: [],
+          },
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'A risk scoring tool for internal use');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+
+    expect(await screen.findByText(/risk scoring model/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+
+    // A real targeted question renders — not a skipped/fake step.
+    expect(await screen.findByText(/question 1 of/i)).toBeInTheDocument();
+
+    // Answer every generated question until the flow proceeds on its own.
+    for (let i = 0; i < 10; i++) {
+      const verdictShown = screen.queryByText('Verdict', { selector: '.verdict__eyebrow' });
+      if (verdictShown) break;
+      const optionButtons = screen.queryAllByRole('button', { name: /Zone [ABC]/ });
+      if (optionButtons.length > 0) {
+        await user.click(optionButtons[0]!);
+        continue;
+      }
+      const submitAnswer = screen.queryByRole('button', { name: /submit answer/i });
+      if (submitAnswer) {
+        const textbox = screen.getByLabelText(/your answer/i);
+        await user.type(textbox, 'test answer');
+        await user.click(submitAnswer);
+        continue;
+      }
+      break;
+    }
+
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+  });
 });

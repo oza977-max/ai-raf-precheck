@@ -69,11 +69,87 @@ describe('intakeReducer', () => {
     expect(next).toEqual({ step: 'graph_review', graph: g1, graphVersion: 2, corrections: [correction] });
   });
 
-  it('graph_review → evaluation_pending on PROCEED_TO_EVALUATION_PASSTHROUGH (documented P4-C01/P4-C04 boundary)', () => {
+  it('graph_review → questionnaire on QUESTIONS_GENERATED', () => {
+    const g = graph({ version: 1 });
+    const state: IntakeState = { step: 'graph_review', graph: g, graphVersion: 1, corrections: [] };
+    const questions = [
+      { id: 'Q1', text: 'x?', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
+    ];
+    const next = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions });
+    expect(next).toEqual({ step: 'questionnaire', graph: g, questions, answers: [], resolutionNotes: [] });
+  });
+
+  it('questionnaire → questionnaire on ANSWER_SUBMITTED, appending the answer', () => {
+    const g = graph();
+    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers: [], resolutionNotes: [] };
+    const answer = { questionId: 'Q1', value: 'yes' };
+    const next = intakeReducer(state, { type: 'ANSWER_SUBMITTED', answer });
+    expect(next).toEqual({ step: 'questionnaire', graph: g, questions: [], answers: [answer], resolutionNotes: [] });
+  });
+
+  it('questionnaire → contradiction_review on CONTRADICTIONS_DETECTED', () => {
+    const g = graph();
+    const answers = [{ questionId: 'Q1', value: 'yes' }];
+    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers, resolutionNotes: [] };
+    const contradictions = [{ statement1: 'a', statement2: 'b', field: 'data_class' }];
+    const next = intakeReducer(state, { type: 'CONTRADICTIONS_DETECTED', contradictions });
+    expect(next).toEqual({
+      step: 'contradiction_review',
+      graph: g,
+      questions: [],
+      answers,
+      contradictions,
+      resolutionNotes: [],
+    });
+  });
+
+  it('contradiction_review → questionnaire on CONTRADICTION_RESOLVED, recording the explanation', () => {
+    const g = graph();
+    const answers = [{ questionId: 'Q1', value: 'yes' }];
+    const state: IntakeState = {
+      step: 'contradiction_review',
+      graph: g,
+      questions: [],
+      answers,
+      contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+      resolutionNotes: [],
+    };
+    const next = intakeReducer(state, { type: 'CONTRADICTION_RESOLVED', explanation: 'Confirmed both are correct.' });
+    expect(next).toEqual({
+      step: 'questionnaire',
+      graph: g,
+      questions: [],
+      answers,
+      resolutionNotes: ['Confirmed both are correct.'],
+    });
+  });
+
+  it('CONTRADICTION_RESOLVED with an empty/whitespace-only explanation is rejected at the reducer layer (P4-C03 review finding: defense in depth)', () => {
+    const g = graph();
+    const state: IntakeState = {
+      step: 'contradiction_review',
+      graph: g,
+      questions: [],
+      answers: [],
+      contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+      resolutionNotes: [],
+    };
+    const next = intakeReducer(state, { type: 'CONTRADICTION_RESOLVED', explanation: '   ' });
+    expect(next).toBe(state);
+  });
+
+  it('questionnaire → evaluation_pending on PROCEED_TO_EVALUATION_PASSTHROUGH (P4-C03: pass-through moved from graph_review)', () => {
+    const g = graph({ version: 1 });
+    const state: IntakeState = { step: 'questionnaire', graph: g, questions: [], answers: [], resolutionNotes: [] };
+    const next = intakeReducer(state, { type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
+    expect(next).toEqual({ step: 'evaluation_pending', graph: g });
+  });
+
+  it('does not proceed to evaluation from graph_review anymore (boundary moved)', () => {
     const g = graph({ version: 1 });
     const state: IntakeState = { step: 'graph_review', graph: g, graphVersion: 1, corrections: [] };
     const next = intakeReducer(state, { type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
-    expect(next).toEqual({ step: 'evaluation_pending', graph: g });
+    expect(next).toBe(state);
   });
 
   it('evaluation_pending → verdict on VERDICT_READY', () => {

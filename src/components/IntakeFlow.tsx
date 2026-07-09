@@ -6,12 +6,16 @@ import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
 import { addNode, getUseCases } from '../store/register';
-import type { EvaluationResult, GraphCorrection } from '../engine/types';
+import type { DataFlowGraph, EvaluationResult, GraphCorrection } from '../engine/types';
 import type { UseCaseSummary } from '../store/types';
+import { generateQuestions } from '../engine/question-generator';
+import { detectContradictions } from '../engine/contradiction';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import StepTracker from './StepTracker';
+import QuestionnaireStep from './QuestionnaireStep';
+import ContradictionReview from './ContradictionReview';
 // Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
 // string; PolicyEditor.tsx's file-upload UI is not wired in until a later
 // chunk, so this smoke path reads the starter policy at build time.
@@ -31,6 +35,7 @@ export default function IntakeFlow() {
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
+  const [submittedDescription, setSubmittedDescription] = useState('');
   const policyResult = useMemo(() => loadPolicy(appetiteYaml), []);
 
   const refreshRegister = useCallback(async () => {
@@ -44,6 +49,7 @@ export default function IntakeFlow() {
 
   async function handleSubmitDescription() {
     if (state.step !== 'description_entry') return;
+    setSubmittedDescription(state.description);
     dispatch({ type: 'SUBMIT_DESCRIPTION' });
     setDuplicateWarning(null);
 
@@ -113,11 +119,26 @@ export default function IntakeFlow() {
     dispatch({ type: 'CORRECTION_APPLIED', correction, updatedGraph });
   }
 
-  async function handleProceedToEvaluation() {
+  async function handleProceedFromGraphReview() {
     if (state.step !== 'graph_review') return;
-    const graph = state.graph;
-    dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
+    if (!policyResult.valid) {
+      throw new Error(
+        `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
+      );
+    }
+    const questions = generateQuestions(state.graph, policyResult.policy, []);
+    if (questions.length === 0) {
+      // No uncertain fields needed clarifying — nothing to ask, proceed straight through.
+      const graph = state.graph;
+      dispatch({ type: 'QUESTIONS_GENERATED', questions: [] });
+      dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
+      await runEvaluation(graph);
+      return;
+    }
+    dispatch({ type: 'QUESTIONS_GENERATED', questions });
+  }
 
+  async function runEvaluation(graph: DataFlowGraph) {
     if (!policyResult.valid) {
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
@@ -147,6 +168,28 @@ export default function IntakeFlow() {
     });
     await refreshRegister();
     dispatch({ type: 'VERDICT_READY', verdictId: useCaseId });
+  }
+
+  async function handleAnswerSubmitted(questionId: string, value: unknown) {
+    if (state.step !== 'questionnaire') return;
+    const answer = { questionId, value };
+    const nextAnswers = [...state.answers, answer];
+    dispatch({ type: 'ANSWER_SUBMITTED', answer });
+
+    const contradictions = detectContradictions(submittedDescription, nextAnswers, state.graph);
+    if (contradictions.length > 0) {
+      dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
+      return;
+    }
+
+    if (nextAnswers.length >= state.questions.length) {
+      dispatch({ type: 'PROCEED_TO_EVALUATION_PASSTHROUGH' });
+      await runEvaluation(state.graph);
+    }
+  }
+
+  function handleContradictionResolved(explanation: string) {
+    dispatch({ type: 'CONTRADICTION_RESOLVED', explanation });
   }
 
   return (
@@ -213,10 +256,22 @@ export default function IntakeFlow() {
                 ),
               )}
             </ul>
-            <button type="button" onClick={handleProceedToEvaluation}>
+            <button type="button" onClick={handleProceedFromGraphReview}>
               Proceed
             </button>
           </section>
+        )}
+
+        {state.step === 'questionnaire' && (
+          <QuestionnaireStep
+            questions={state.questions}
+            answeredCount={state.answers.length}
+            onAnswer={handleAnswerSubmitted}
+          />
+        )}
+
+        {state.step === 'contradiction_review' && (
+          <ContradictionReview contradictions={state.contradictions} onResolve={handleContradictionResolved} />
         )}
 
         {state.step === 'evaluation_pending' && <p>Evaluating…</p>}
