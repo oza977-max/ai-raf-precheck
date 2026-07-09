@@ -1,21 +1,32 @@
-/* AIGate visual language — Tufte/Few design system (cross-cutting.md §"No UI
-   component library" line 72). Plain CSS, no framework, deterministic
-   styling: high data-ink ratio, minimal chrome, serif headings for
-   authority/readability, tables over decoration, restrained color used only
-   to carry meaning (risk tiers, warnings, uncertainty). */
+/* AIGate visual language — adapted from a Claude Design export
+   ("AIGate Demo.dc.html", exported by the user, tokens extracted by
+   inspecting the rendered demo's computed styles). Plain CSS, no
+   framework, consistent with cross-cutting.md §7's "no UI component
+   library" decision. Colors/fonts below are real extracted values, not
+   guesses — see build/handovers/ for the phase-1 restyle notes. */
 
 :root {
-  --ink: #111;
-  --ink-soft: #444;
-  --ink-faint: #777;
-  --paper: #fffff8;
-  --paper-shade: #f4f4ec;
+  --ink: #1c1b18;
+  --ink-soft: #4a463d;
+  --ink-faint: #857f70;
+  --cream: #f3f0e8;
+  --paper: #e9e6dd;
+  --card-bg: #fcfbf7;
+  --card-border: #d8d3c7;
   --rule: #ddd;
-  --rule-strong: #333;
-  --accent: #1a5c3a;
+  --header-bg: #1c1b18;
+  --header-text: #f3f0e8;
+  --header-border: #3a382f;
+  --navy: #2f4a6b;
+  --navy-hover: #253c58;
   --warn-bg: #fdf3e6;
   --warn-border: #c8791a;
-  --danger: #a8322a;
+  --warn-text: #8f6a2f;
+  --critical: #a8322a;
+  --high: #b5651d;
+  --medium: #8a7a2a;
+  --low: #3a6b4a;
+  --green: #3a6b4a;
 
   color-scheme: light;
 }
@@ -24,213 +35,469 @@
   box-sizing: border-box;
 }
 
-.app {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 6rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+body {
+  margin: 0;
+  background: var(--paper);
+}
+
+.app-shell {
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   color: var(--ink);
   background: var(--paper);
-  line-height: 1.5;
 }
 
-.app h1 {
-  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
-  font-size: 2rem;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  margin-bottom: 1.75rem;
-  border-bottom: 2px solid var(--rule-strong);
-  padding-bottom: 0.6rem;
+/* ── Header ── */
+.app-header {
+  background: var(--header-bg);
+  color: var(--header-text);
+  border-bottom: 1px solid var(--header-border);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.app h2 {
-  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
-  font-size: 1.3rem;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--ink);
-  margin: 2.25rem 0 0.85rem;
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.app section {
-  margin-bottom: 2rem;
+.app-header__logo {
+  font-size: 1.1rem;
 }
 
-.app label {
-  display: block;
-  font-size: 0.85rem;
+.app-header__name {
   font-weight: 600;
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.4rem;
-}
-
-.app textarea,
-.app input[type='text'],
-.app input[type='password'] {
-  width: 100%;
-  font-family: inherit;
   font-size: 1rem;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid #b9b9ab;
+  letter-spacing: -0.01em;
+}
+
+.app-header__badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  border: 1px solid var(--header-border);
   border-radius: 3px;
-  background: #fff;
-  color: var(--ink);
+  padding: 0.15rem 0.4rem;
+  margin-left: 0.3rem;
 }
 
-.app textarea:focus,
-.app input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.app textarea {
-  min-height: 5rem;
-  resize: vertical;
-  display: block;
-  margin-bottom: 0.75rem;
-}
-
-.app button {
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.5rem 1.1rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: 3px;
-  background: var(--ink);
-  color: var(--paper);
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.app button:hover:not(:disabled) {
-  background: #333;
-}
-
-.app button:disabled {
-  background: #ccc;
-  border-color: #ccc;
-  color: #888;
-  cursor: not-allowed;
-}
-
-/* Secondary buttons — Edit / Clear actions, next to primary flow buttons */
-.app li button,
-.app details button + button {
-  background: transparent;
-  color: var(--ink);
-  border-color: #b9b9ab;
-  font-weight: 400;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.82rem;
-  margin-left: 0.5rem;
-}
-
-.app li button:hover:not(:disabled),
-.app details button + button:hover:not(:disabled) {
-  background: var(--paper-shade);
-}
-
-.app [role='alert'] {
-  background: var(--warn-bg);
-  border-left: 3px solid var(--warn-border);
-  padding: 0.7rem 0.9rem;
-  font-size: 0.92rem;
-  margin: 0.75rem 0;
-  color: #5c3d0e;
-}
-
-.app ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem;
-}
-
-.app li {
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid #eee;
+.app-header__status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  color: #b7b2a3;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.app li[data-uncertain='true'] {
+.app-header__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+}
+
+.app-header__sep {
+  color: #56513f;
+}
+
+.app-header__warn {
+  color: #d99a3f;
+}
+
+/* ── Body layout ── */
+.app-body {
+  display: flex;
+  align-items: flex-start;
+}
+
+.app-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--card-border);
+  min-height: calc(100vh - 58px);
+}
+
+.app-sidebar__label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin-bottom: 0.6rem;
+  padding-left: 0.5rem;
+}
+
+.app-sidebar__item {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.15rem;
+  cursor: default;
+}
+
+.app-sidebar__item--active {
+  background: var(--card-border);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.app-sidebar__item--disabled {
+  color: #b3ada0;
+  cursor: not-allowed;
+}
+
+.app-sidebar__settings {
+  margin-top: 2rem;
+  border-top: 1px solid var(--card-border);
+  padding-top: 1rem;
+}
+
+.app-main {
+  flex: 1;
+  padding: 2rem 2rem 6rem;
+  max-width: 780px;
+}
+
+/* ── Intake flow ── */
+.intake-flow h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+}
+
+.intake-flow__subtitle {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  max-width: 560px;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Step tracker ── */
+.step-tracker {
+  list-style: none;
+  display: flex;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  flex-wrap: wrap;
+}
+
+.step-tracker__step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.step-tracker__marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--card-border);
+  color: var(--ink);
+  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-tracker__step--active {
+  color: var(--ink);
+  font-weight: 600;
+  border-color: var(--navy);
+}
+
+.step-tracker__step--active .step-tracker__marker {
+  background: var(--navy);
+  color: #fff;
+}
+
+.step-tracker__step--done .step-tracker__marker {
+  background: var(--green);
+  color: #fff;
+}
+
+.step-tracker__step--done {
+  color: var(--ink-soft);
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.register-card h2 {
+  margin-top: 0;
+}
+
+/* ── Typography ── */
+h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.85rem;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+textarea,
+input[type='text'],
+input[type='password'],
+select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--ink);
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  outline: 2px solid var(--navy);
+  outline-offset: 1px;
+}
+
+textarea {
+  min-height: 6rem;
+  resize: vertical;
+  display: block;
+  margin-bottom: 0.9rem;
+}
+
+/* ── Buttons ── */
+button {
+  font-family: 'IBM Plex Sans', inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--navy-hover);
+}
+
+button:disabled {
+  background: #d8d3c7;
+  color: #a19b8c;
+  cursor: not-allowed;
+}
+
+li button,
+details button + button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--card-border);
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  margin-left: 0.5rem;
+}
+
+li button:hover:not(:disabled),
+details button + button:hover:not(:disabled) {
+  background: var(--paper);
+}
+
+/* ── Alerts / uncertain flags ── */
+[role='alert'] {
+  background: var(--warn-bg);
+  border-left: 3px solid var(--warn-border);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.9rem;
+  color: var(--warn-text);
+  border-radius: 0 6px 6px 0;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+li {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+li[data-uncertain='true'] {
   background: var(--warn-bg);
   border-left: 3px solid var(--warn-border);
 }
 
-.app li strong {
-  color: var(--warn-border);
+li strong {
+  color: var(--warn-text);
   font-weight: 600;
   font-size: 0.85rem;
 }
 
-.app table {
+/* ── Tables ── */
+table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
-.app tbody tr {
-  border-bottom: 1px solid #e8e8e0;
+tbody tr {
+  border-bottom: 1px solid var(--rule);
 }
 
-.app tbody tr:nth-child(even) {
-  background: var(--paper-shade);
+tbody tr:nth-child(even) {
+  background: var(--paper);
 }
 
-.app td {
+td {
   padding: 0.55rem 0.8rem 0.55rem 0;
   vertical-align: top;
 }
 
-.app td:last-child {
+td:last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
   white-space: nowrap;
 }
 
-/* Verdict block — the single most important thing on screen when present */
-.app h2 + p {
-  font-size: 1.05rem;
+/* ── Verdict ── */
+.verdict__eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.3rem;
 }
 
-.app details {
-  margin-bottom: 1.5rem;
-  font-size: 0.88rem;
+.verdict__heading {
+  margin: 0 0 1rem;
+  font-size: 1.4rem;
 }
 
-.app details summary {
-  cursor: pointer;
+.verdict--approved .verdict__heading {
+  color: var(--green);
+}
+
+.verdict--approved_with_controls .verdict__heading {
+  color: var(--warn-text);
+}
+
+.verdict--rejected .verdict__heading {
+  color: var(--critical);
+}
+
+.verdict__cards {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.verdict__stat {
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  min-width: 110px;
+}
+
+.verdict__stat-label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.15rem;
+}
+
+.verdict__stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.verdict__stat-value--critical {
+  color: var(--critical);
+}
+
+.verdict__stat-value--high {
+  color: var(--high);
+}
+
+.verdict__stat-value--medium {
+  color: var(--medium);
+}
+
+.verdict__stat-value--low {
+  color: var(--low);
+}
+
+.verdict__controls {
+  font-size: 0.9rem;
   color: var(--ink-soft);
+}
+
+/* ── Settings (in sidebar) ── */
+details {
+  font-size: 0.82rem;
+}
+
+details summary {
+  cursor: pointer;
+  color: var(--ink-faint);
   font-weight: 600;
 }
 
-.app details summary:hover {
+details summary:hover {
   color: var(--ink);
 }
 
-.app details > div {
-  margin-top: 0.75rem;
-  padding: 0.9rem;
-  background: var(--paper-shade);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  display: flex;
-  align-items: end;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+details > div {
+  margin-top: 0.6rem;
+  padding: 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
 }
 
-.app details label {
-  flex: 1 1 220px;
-  margin-bottom: 0;
+details label {
+  margin-bottom: 0.3rem;
 }
 
-.app details input {
-  margin-top: 0.3rem;
+details input {
+  margin-bottom: 0.5rem;
 }

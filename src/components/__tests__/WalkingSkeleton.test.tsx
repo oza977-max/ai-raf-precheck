@@ -59,7 +59,7 @@ describe('Walking Skeleton', () => {
     // Step 1: description entry
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'A tool that drafts client emails');
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
 
     // Step 2: graph extraction happened (real Anthropic tool_use call, mocked at the SDK boundary)
     // and the graph review step renders the extracted node.
@@ -69,12 +69,12 @@ describe('Walking Skeleton', () => {
     // evaluation — evaluate() runs for real against the real appetite.yaml.
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
-    expect(await screen.findByText(/verdict/i)).toBeInTheDocument();
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
     expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
 
     // Step 4: register shows the use case row (real IndexedDB store write + read),
     // labelled from the extracted graph's first node per IntakeFlow.tsx.
-    expect(screen.getByText(/register/i)).toBeInTheDocument();
+    expect(screen.getByText('Register', { selector: '.register-card h2' })).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
   });
 
@@ -86,7 +86,7 @@ describe('Walking Skeleton', () => {
 
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'A tool that drafts client emails');
-    await user.click(screen.getByRole('button', { name: /submit/i }));
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
 
     // Structured intake banner renders instead of the old dead-end message.
     expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe('Walking Skeleton', () => {
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
-    expect(await screen.findByText(/verdict/i)).toBeInTheDocument();
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
     expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
 
     // Self-verifying, not just structurally implied: the LLM boundary was

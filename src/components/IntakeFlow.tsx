@@ -11,6 +11,7 @@ import type { UseCaseSummary } from '../store/types';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
+import StepTracker from './StepTracker';
 // Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
 // string; PolicyEditor.tsx's file-upload UI is not wired in until a later
 // chunk, so this smoke path reads the starter policy at build time.
@@ -149,73 +150,105 @@ export default function IntakeFlow() {
   }
 
   return (
-    <div>
-      {state.step === 'description_entry' && (
-        <div>
-          <label htmlFor="description-input">Describe your AI use case</label>
-          <textarea
-            id="description-input"
-            value={state.description}
-            onChange={(e) => dispatch({ type: 'DESCRIPTION_CHANGED', description: e.target.value })}
+    <div className="intake-flow">
+      <div className="intake-flow__title-row">
+        <h1>New pre-check</h1>
+      </div>
+      <p className="intake-flow__subtitle">
+        Describe the AI use case in plain language. The engine reads what it can, asks only what it must,
+        and returns a defensible verdict.
+      </p>
+
+      <StepTracker current={state.step} />
+
+      <div className="card">
+        {state.step === 'description_entry' && (
+          <div>
+            <label htmlFor="description-input">Describe your AI use case</label>
+            <textarea
+              id="description-input"
+              value={state.description}
+              onChange={(e) => dispatch({ type: 'DESCRIPTION_CHANGED', description: e.target.value })}
+              placeholder="What does this AI tool do? What data does it touch, and what does it decide or action?"
+            />
+            <button type="button" onClick={handleSubmitDescription} disabled={!state.description.trim()}>
+              Read &amp; extract →
+            </button>
+          </div>
+        )}
+
+        {state.step === 'duplicate_check' && <p>Checking for similar use cases…</p>}
+
+        {state.step === 'graph_extraction' && state.method === 'llm' && (
+          <div>
+            <p>Extracting graph…</p>
+            {extractionError && <p role="alert">{extractionError}</p>}
+          </div>
+        )}
+
+        {state.step === 'graph_extraction' && state.method === 'form' && (
+          <StructuredForm
+            jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
+            onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph })}
           />
-          <button type="button" onClick={handleSubmitDescription} disabled={!state.description.trim()}>
-            Submit
-          </button>
-        </div>
-      )}
+        )}
 
-      {state.step === 'duplicate_check' && <p>Checking for similar use cases…</p>}
+        {state.step === 'graph_review' && (
+          <section>
+            <h2>Review extracted graph</h2>
+            {duplicateWarning && <p role="alert">{duplicateWarning}</p>}
+            <ul>
+              {[...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].map(
+                (node) => (
+                  <li key={node.id} data-uncertain={'uncertain' in node && node.uncertain ? 'true' : 'false'}>
+                    {node.label}
+                    {'uncertain' in node && node.uncertain && <strong> (uncertain — please confirm)</strong>}
+                    <button
+                      type="button"
+                      onClick={() => handleCorrectNode(node.id, 'label', `${node.label} (corrected)`)}
+                    >
+                      Edit
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+            <button type="button" onClick={handleProceedToEvaluation}>
+              Proceed
+            </button>
+          </section>
+        )}
 
-      {state.step === 'graph_extraction' && state.method === 'llm' && (
-        <div>
-          <p>Extracting graph…</p>
-          {extractionError && <p role="alert">{extractionError}</p>}
-        </div>
-      )}
+        {state.step === 'evaluation_pending' && <p>Evaluating…</p>}
 
-      {state.step === 'graph_extraction' && state.method === 'form' && (
-        <StructuredForm
-          jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
-          onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph })}
-        />
-      )}
-
-      {state.step === 'graph_review' && (
-        <section>
-          <h2>Review extracted graph</h2>
-          {duplicateWarning && <p role="alert">{duplicateWarning}</p>}
-          <ul>
-            {[...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].map(
-              (node) => (
-                <li key={node.id} data-uncertain={'uncertain' in node && node.uncertain ? 'true' : 'false'}>
-                  {node.label}
-                  {'uncertain' in node && node.uncertain && <strong> (uncertain — please confirm)</strong>}
-                  <button
-                    type="button"
-                    onClick={() => handleCorrectNode(node.id, 'label', `${node.label} (corrected)`)}
-                  >
-                    Edit
-                  </button>
-                </li>
-              ),
+        {state.step === 'verdict' && verdict && (
+          <section className={`verdict verdict--${verdict.status}`}>
+            <p className="verdict__eyebrow">Verdict</p>
+            <h2 className="verdict__heading">
+              {verdict.status === 'approved' && 'Approved'}
+              {verdict.status === 'approved_with_controls' && 'Approved with controls'}
+              {verdict.status === 'rejected' && 'Rejected'}
+            </h2>
+            <div className="verdict__cards">
+              <div className="verdict__stat">
+                <span className="verdict__stat-label">Tier</span>
+                <span className={`verdict__stat-value verdict__stat-value--${verdict.tier.toLowerCase()}`}>
+                  {verdict.tier}
+                </span>
+              </div>
+              <div className="verdict__stat">
+                <span className="verdict__stat-label">Track</span>
+                <span className="verdict__stat-value">{verdict.track}</span>
+              </div>
+            </div>
+            {verdict.controls.length > 0 && (
+              <p className="verdict__controls">Controls required: {verdict.controls.join(', ')}</p>
             )}
-          </ul>
-          <button type="button" onClick={handleProceedToEvaluation}>
-            Proceed
-          </button>
-        </section>
-      )}
+          </section>
+        )}
+      </div>
 
-      {state.step === 'evaluation_pending' && <p>Evaluating…</p>}
-
-      {state.step === 'verdict' && verdict && (
-        <section>
-          <h2>Verdict: {verdict.status}</h2>
-          <p>Tier: {verdict.tier}</p>
-        </section>
-      )}
-
-      <section>
+      <section className="card register-card">
         <h2>Register</h2>
         <table>
           <tbody>
