@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { loadPolicy } from './policy';
+import { loadPolicy, onPolicyUpdated } from './policy';
+import { addNode } from './register';
+import { getAll } from './audit';
+import type { RegisterNode, LifecycleStage } from './types';
 
 const VALID_YAML = `
 version: "1.0"
@@ -167,6 +170,64 @@ describe('loadPolicy', () => {
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors.some((e) => /Very Low/.test(e.reason))).toBe(true);
+    }
+  });
+});
+
+function makeUseCaseNode(lifecycleStage: LifecycleStage, label: string): RegisterNode {
+  return {
+    node_id: crypto.randomUUID(),
+    node_type: 'use_case',
+    label,
+    created_at: new Date().toISOString(),
+    metadata: {
+      node_type: 'use_case',
+      submitted_by: '1LoD',
+      lifecycle_stage: lifecycleStage,
+      current_verdict_id: null,
+      tier: 'Low',
+      track: 'I',
+    },
+  };
+}
+
+describe('onPolicyUpdated (TC-LC-4-01)', () => {
+  it('queues re_evaluation_queued for approved/in_production/pre_checked use cases only, and never changes lifecycle_stage', async () => {
+    const stages: LifecycleStage[] = [
+      'idea',
+      'exploring',
+      'pre_checked',
+      'approved',
+      'in_production',
+      'monitored',
+      'retired',
+    ];
+    const nodes = stages.map((stage) => makeUseCaseNode(stage, `${stage}-case`));
+    for (const node of nodes) {
+      await addNode(node);
+    }
+
+    await onPolicyUpdated('2.0');
+
+    for (const node of nodes) {
+      const events = await getAll(node.node_id);
+      const queued = events.filter((e) => e.event_type === 're_evaluation_queued');
+      const shouldBeQueued = ['approved', 'in_production', 'pre_checked'].includes(
+        node.metadata.node_type === 'use_case' ? node.metadata.lifecycle_stage : '',
+      );
+
+      if (shouldBeQueued) {
+        expect(queued).toHaveLength(1);
+        expect(queued[0]?.payload).toEqual({ type: 're_evaluation_queued', policy_version: '2.0' });
+        expect(queued[0]?.actor).toBe('system');
+      } else {
+        expect(queued).toHaveLength(0);
+      }
+
+      // §8: lifecycle_stage never changes on policy save, regardless of
+      // whether re-evaluation was queued.
+      const stageChangeEvents = events.filter((e) => e.event_type === 'lifecycle_stage_changed');
+      expect(stageChangeEvents).toHaveLength(0);
     }
   });
 });

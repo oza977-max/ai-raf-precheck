@@ -1,6 +1,9 @@
 import { load } from 'js-yaml';
 import { z } from 'zod';
 import { CANONICAL_VOCABULARY } from '../engine/canonical-vocabulary';
+import { getUseCases } from './register';
+import { append } from './audit';
+import type { LifecycleStage } from './types';
 import type {
   HardLine,
   Invariant,
@@ -327,4 +330,31 @@ export function loadPolicy(yaml: string): PolicyValidationResult {
   }
 
   return { valid: true, policy, warnings };
+}
+
+// register-lifecycle.md §8 (LC-4). Deviation from the spec's literal
+// signature: imports register.ts/audit.ts directly instead of taking
+// injected RegisterStore/AuditStore parameters — those interface types
+// don't exist anywhere in this codebase; register.ts already imports
+// audit.ts the same way (store-to-store imports are an established
+// pattern here).
+const ACTIVE_LIFECYCLE_STAGES: readonly LifecycleStage[] = ['approved', 'in_production', 'pre_checked'];
+
+export async function onPolicyUpdated(newVersion: string): Promise<void> {
+  const allUseCases = await getUseCases('all');
+  const active = allUseCases.filter((uc) => ACTIVE_LIFECYCLE_STAGES.includes(uc.lifecycle_stage));
+
+  for (const uc of active) {
+    // BC-P6C02-02: lifecycle_stage is NOT changed here — only queued for
+    // re-evaluation. It moves to 'pre_checked' only on a human-triggered
+    // re-run or a changed verdict (§8).
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: uc.use_case_id,
+      event_type: 're_evaluation_queued',
+      occurred_at: new Date().toISOString(),
+      actor: 'system',
+      payload: { type: 're_evaluation_queued', policy_version: newVersion },
+    });
+  }
 }

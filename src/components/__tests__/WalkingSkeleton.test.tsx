@@ -82,6 +82,13 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByText('▤ Register'));
     expect(await screen.findByText('Register', { selector: '.register-view h2' })).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
+
+    // TC-LC-2-01 (P6-C02): this fixture is internal-only exposure → Low
+    // tier → self-service workflow → the register node is created with
+    // lifecycle_stage 'approved' directly (routeToWorkflow(), not the old
+    // hardcoded 'idea'). Switch to 2LoD to see the stage filter chip.
+    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
+    expect(await screen.findByRole('button', { name: 'approved' })).toBeInTheDocument();
   });
 
   it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call', async () => {
@@ -466,6 +473,41 @@ describe('Walking Skeleton', () => {
     // flow returns to graph_review, not a dead end.
     expect(await screen.findByRole('alert')).toHaveTextContent(/evaluation could not complete/i);
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+  });
+
+  it('TC-LC-2-02 (P6-C02): a High-tier verdict routes the register node to lifecycle_stage "pre_checked" pending 2LoD approval, not auto-approved', async () => {
+    localStorage.clear(); // no API key — structured form path, deterministic tier
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'High tier routing check');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/use case name/i), 'High tier tool');
+    await user.type(screen.getByLabelText(/brief description/i), 'Client-facing decision support.');
+    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
+    // client-facing exposure trips TIER-HIGH (policy/appetite.yaml).
+    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'client-facing');
+    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
+    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /build graph/i }));
+
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    await user.click(screen.getByText('▤ Register'));
+    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
+    expect(await screen.findByRole('button', { name: 'pre_checked' })).toBeInTheDocument();
   });
 
   it('P5-C02: the real LLM-generated reasoning trace renders in the verdict details section', async () => {

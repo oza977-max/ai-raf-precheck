@@ -5,8 +5,9 @@ import { getApiKey } from '../llm/client';
 import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
-import { addNode, getUseCases, updateUseCaseVerdictSummary } from '../store/register';
+import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage } from '../store/register';
 import { getRole } from '../store/role';
+import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
@@ -266,6 +267,10 @@ export default function IntakeFlow() {
       });
     }
 
+    // P6-C02 (register-lifecycle.md §7): route the verdict's tier to a
+    // real governance stage instead of a hardcoded 'idea'.
+    const routedWorkflow = policyResult.valid ? routeToWorkflow(result.tier, policyResult.policy) : undefined;
+
     if (isCorrection) {
       // register_nodes uses db.add() in addNode() — a correction reuses
       // the existing useCaseId, so calling addNode() again would throw a
@@ -275,7 +280,21 @@ export default function IntakeFlow() {
         track: result.track,
         currentVerdictId: fullVerdict.id,
       });
+      // §6: "Pre-checked → Pre-checked (correction + re-evaluation)" — a
+      // real, audited lifecycle_stage_changed transition, but only when
+      // the routed stage actually changes (a same-stage re-evaluation
+      // must not emit a no-op audit event).
+      if (routedWorkflow) {
+        const existing = await getUseCase(useCaseId);
+        if (existing && existing.lifecycle_stage !== routedWorkflow.lifecycle_stage) {
+          await updateLifecycleStage(useCaseId, routedWorkflow.lifecycle_stage, getRole());
+        }
+      }
     } else {
+      // The register node doesn't exist until this first confirm+verdict
+      // cycle (established since P4-C01/P5-C01) — the unobservable
+      // Idea/Exploring states are skipped; the node is created directly
+      // at its routed stage (build/prompts/P6-C02.md deviation #4).
       await addNode({
         node_id: useCaseId,
         node_type: 'use_case',
@@ -284,7 +303,7 @@ export default function IntakeFlow() {
         metadata: {
           node_type: 'use_case',
           submitted_by: getRole(),
-          lifecycle_stage: 'idea',
+          lifecycle_stage: routedWorkflow?.lifecycle_stage ?? 'idea',
           current_verdict_id: fullVerdict.id,
           tier: result.tier,
           track: result.track,
