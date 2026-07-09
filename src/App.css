@@ -574,6 +574,42 @@ details input {
   margin-bottom: 1rem;
 }
 
+.confirmation__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem 1.5rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  background: var(--paper);
+}
+
+.confirmation__grid-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.confirmation__grid-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.confirmation__grid-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.confirmation__attest-line {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+  margin: 0 0 1rem;
+}
+
 .confirmation__corrections {
   background: #eef4ee;
   border-left: 3px solid var(--green);
