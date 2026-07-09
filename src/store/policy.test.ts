@@ -160,4 +160,13 @@ describe('loadPolicy', () => {
       ).toBe(true);
     }
   });
+
+  it('rejects a tier rule whose name is not one of Critical/High/Medium/Low (P3-C01 review finding)', () => {
+    const yaml = VALID_YAML.replace('name: "Low"', 'name: "Very Low"');
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((e) => /Very Low/.test(e.reason))).toBe(true);
+    }
+  });
 });

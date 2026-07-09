@@ -230,10 +230,27 @@ function validateTracks(tracks: TrackRule[]): PolicyValidationError[] {
   );
 }
 
+const VALID_TIER_NAMES = new Set(['Critical', 'High', 'Medium', 'Low']);
+
 function validateTiers(tiers: TierRule[]): PolicyValidationError[] {
-  return tiers.flatMap((t) =>
-    t.triggers.flatMap((trig) => validateConditionFieldValue(trig.field, trig.value)),
-  );
+  const errors: PolicyValidationError[] = [];
+  for (const t of tiers) {
+    // assignTier() (evaluation-engine.md §3.5) keys tier identity off this
+    // free-text `name` field — an unrecognized name would silently fail
+    // every TIER_ORDER comparison at eval time, under-tiering the use case.
+    // Fail loud here instead.
+    if (!VALID_TIER_NAMES.has(t.name)) {
+      errors.push({
+        kind: 'policy-invalid',
+        field: `tiers[${t.id}].name`,
+        reason: `tier name "${t.name}" is not one of Critical, High, Medium, Low`,
+      });
+    }
+    for (const trig of t.triggers) {
+      errors.push(...validateConditionFieldValue(trig.field, trig.value));
+    }
+  }
+  return errors;
 }
 
 function validateInvariants(invariants: Invariant[]): PolicyValidationError[] {

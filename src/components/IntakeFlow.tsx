@@ -48,7 +48,47 @@ export default function IntakeFlow() {
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
     }
-    const result = evaluate({}, policyResult.policy);
+    // P3-C01 smoke path: a minimal placeholder graph carrying just enough
+    // signal to match a track rule (every appetite.yaml track rule requires
+    // model_type). Real LLM-driven graph extraction (populating nodes from
+    // `description`) is P4-C01's scope — this chunk only needs evaluate()
+    // to run for real, not to interpret the description yet.
+    const graph = {
+      id: crypto.randomUUID(),
+      version: 1,
+      input_nodes: [],
+      processing_nodes: [
+        {
+          id: crypto.randomUUID(),
+          label: description,
+          model_type: 'traditional-ml' as const,
+          autonomy_level: 0 as const,
+          data_zone: 'Zone C' as const,
+          vendor: 'internal',
+          replaces_prior_model: false,
+        },
+      ],
+      output_nodes: [
+        {
+          id: crypto.randomUUID(),
+          label: 'output',
+          action_type: 'recommend' as const,
+          exposure: 'internal-only' as const,
+          decision_bindingness: 'material' as const,
+          output_reversibility: 'reversible' as const,
+          scale: 'limited' as const,
+        },
+      ],
+      edges: [],
+      jurisdictions: [],
+      intake_method: 'llm' as const,
+      extracted_at: new Date().toISOString(),
+    };
+    const evalResult = evaluate(graph, policyResult.policy);
+    if (!evalResult.ok) {
+      throw new Error(`Evaluation failed: ${evalResult.error.kind}`);
+    }
+    const result = evalResult.value;
     setVerdict(result);
 
     await addNode({
