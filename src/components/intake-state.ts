@@ -9,7 +9,16 @@ export type IntakeState =
   | { step: 'description_entry'; description: string }
   | { step: 'duplicate_check'; description: string }
   | { step: 'graph_extraction'; description: string; method: 'llm' | 'form' }
-  | { step: 'graph_review'; graph: DataFlowGraph; graphVersion: number; corrections: GraphCorrection[] }
+  | {
+      step: 'graph_review';
+      graph: DataFlowGraph;
+      graphVersion: number;
+      corrections: GraphCorrection[];
+      useCaseId: string;
+      // Present only on a correction pass (P5-C01, verdict-audit.md §6) —
+      // undefined on a fresh submission.
+      originalVerdictId?: string;
+    }
   | {
       step: 'questionnaire';
       graph: DataFlowGraph;
@@ -18,6 +27,7 @@ export type IntakeState =
       resolutionNotes: string[];
       corrections: GraphCorrection[];
       useCaseId: string;
+      originalVerdictId?: string;
     }
   | {
       step: 'contradiction_review';
@@ -28,6 +38,7 @@ export type IntakeState =
       resolutionNotes: string[];
       corrections: GraphCorrection[];
       useCaseId: string;
+      originalVerdictId?: string;
     }
   | {
       step: 'confirmation';
@@ -36,29 +47,33 @@ export type IntakeState =
       corrections: GraphCorrection[];
       answers: QuestionAnswer[];
       useCaseId: string;
+      originalVerdictId?: string;
     }
-  | { step: 'evaluation_pending'; graph: DataFlowGraph; useCaseId: string }
+  | { step: 'evaluation_pending'; graph: DataFlowGraph; useCaseId: string; originalVerdictId?: string }
   | { step: 'verdict'; verdictId: string };
 
 export type IntakeAction =
   | { type: 'DESCRIPTION_CHANGED'; description: string }
   | { type: 'SUBMIT_DESCRIPTION' }
   | { type: 'NO_DUPLICATE_FOUND'; method: 'llm' | 'form' }
-  | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph }
+  // useCaseId generated once by the caller at graph extraction (P5-C01 —
+  // moved earlier than P4-C04's questionnaire-entry generation so a
+  // correction pass, which re-enters at graph_review, can reuse it
+  // instead of generating a new one; BC-P5C01-01).
+  | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph; useCaseId: string }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
-  // useCaseId generated once by the caller at questionnaire entry
-  // (P4-C04) and threaded through every subsequent state — never
-  // regenerated (BC-P4C04-03).
-  | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[]; useCaseId: string }
+  | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[] }
   | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
   | { type: 'CONTRADICTION_RESOLVED'; explanation: string }
   // UC-6 (intake-flow.md §9): always an explicit human action, even with
-  // zero questions — replaces P4-C01's PROCEED_TO_EVALUATION_PASSTHROUGH,
-  // which is fully removed as of P4-C04 (BC-P4C04-01).
+  // zero questions.
   | { type: 'PROCEED_TO_CONFIRMATION' }
   | { type: 'CONFIRMED' }
-  | { type: 'VERDICT_READY' };
+  | { type: 'VERDICT_READY' }
+  // VD-3 (verdict-audit.md §6): re-enters graph_review reusing the
+  // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
+  | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string };
 
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
   switch (action.type) {
@@ -76,12 +91,18 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'GRAPH_EXTRACTED':
       if (state.step !== 'graph_extraction') return state;
-      return { step: 'graph_review', graph: action.graph, graphVersion: action.graph.version, corrections: [] };
+      return {
+        step: 'graph_review',
+        graph: action.graph,
+        graphVersion: action.graph.version,
+        corrections: [],
+        useCaseId: action.useCaseId,
+      };
 
     case 'CORRECTION_APPLIED':
       if (state.step !== 'graph_review') return state;
       return {
-        step: 'graph_review',
+        ...state,
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
@@ -96,7 +117,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         answers: [],
         resolutionNotes: [],
         corrections: state.corrections,
-        useCaseId: action.useCaseId,
+        useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
       };
 
     case 'ANSWER_SUBMITTED':
@@ -114,6 +136,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         resolutionNotes: state.resolutionNotes,
         corrections: state.corrections,
         useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -129,6 +152,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         resolutionNotes: [...state.resolutionNotes, action.explanation.trim()],
         corrections: state.corrections,
         useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
       };
 
     case 'PROCEED_TO_CONFIRMATION':
@@ -140,15 +164,32 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         answers: state.answers,
         useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
       };
 
     case 'CONFIRMED':
       if (state.step !== 'confirmation') return state;
-      return { step: 'evaluation_pending', graph: state.graph, useCaseId: state.useCaseId };
+      return {
+        step: 'evaluation_pending',
+        graph: state.graph,
+        useCaseId: state.useCaseId,
+        originalVerdictId: state.originalVerdictId,
+      };
 
     case 'VERDICT_READY':
       if (state.step !== 'evaluation_pending') return state;
       return { step: 'verdict', verdictId: state.useCaseId };
+
+    case 'CORRECT_VERDICT':
+      if (state.step !== 'verdict') return state;
+      return {
+        step: 'graph_review',
+        graph: action.graph,
+        graphVersion: action.graph.version,
+        corrections: [],
+        useCaseId: action.useCaseId,
+        originalVerdictId: action.originalVerdictId,
+      };
 
     default:
       return state;

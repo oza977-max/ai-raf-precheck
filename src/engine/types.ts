@@ -31,6 +31,11 @@ export interface ConfidenceCaveat {
   ruleId: string;
   field: string;
   reason: string;
+  // RA-11 (verdict-audit.md §5.3) — P5-C01 addition. Note: evaluate()
+  // does not yet populate confidence_caveats with real data (always []);
+  // this field exists so VerdictDisplay.tsx can render correctly once a
+  // future engine chunk starts producing real caveats.
+  confidence: 'low' | 'medium' | 'high';
 }
 
 export interface AppliedOverride {

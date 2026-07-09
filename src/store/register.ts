@@ -43,7 +43,7 @@ function toSummary(node: RegisterNode): UseCaseSummary {
 
 export async function updateUseCaseVerdictSummary(
   useCaseId: string,
-  summary: Partial<UseCaseSummary>
+  summary: Partial<UseCaseSummary> & { currentVerdictId?: string }
 ): Promise<void> {
   const db = await openRegisterDb();
   const node = await db.get('register_nodes', useCaseId);
@@ -57,6 +57,9 @@ export async function updateUseCaseVerdictSummary(
       ...node.metadata,
       tier: summary.tier ?? node.metadata.tier,
       track: summary.track ?? node.metadata.track,
+      // currentVerdictId (P5-C01, verdict-audit.md §6.2) — a correction
+      // must point the register at the NEW verdict, not the original.
+      current_verdict_id: summary.currentVerdictId ?? node.metadata.current_verdict_id,
     },
   };
 

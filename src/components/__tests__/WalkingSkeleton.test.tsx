@@ -340,4 +340,95 @@ describe('Walking Skeleton', () => {
       expect(confirmedEvent.payload.corrections_count).toBe(1);
     }
   });
+
+  it('P5-C01: "Correct this classification?" re-enters graph_review, reuses the same use case, and appends graph_corrected/verdict_corrected without touching the original verdict_produced event', async () => {
+    const uniqueLabel = 'correction flow check model';
+    const buildGraphInput = () => ({
+      input_nodes: [],
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: uniqueLabel,
+          model_type: 'traditional-ml',
+          autonomy_level: 0,
+          data_zone: 'Zone C',
+          vendor: 'internal',
+          replaces_prior_model: false,
+        },
+      ],
+      output_nodes: [
+        {
+          id: 'o1',
+          label: 'output',
+          action_type: 'recommend',
+          exposure: 'internal-only',
+          decision_bindingness: 'material',
+          output_reversibility: 'reversible',
+          scale: 'limited',
+        },
+      ],
+      edges: [],
+      jurisdictions: [],
+    });
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'extract_graph', input: buildGraphInput() }],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    // First pass: reach a verdict normally.
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'Correction flow check');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    const { getUseCases } = await import('../../store/register');
+    const { getAll } = await import('../../store/audit');
+    const useCasesBefore = await getUseCases('all');
+    const useCase = useCasesBefore.find((u) => u.label === uniqueLabel);
+    expect(useCase).toBeDefined();
+    const useCaseId = useCase!.use_case_id;
+
+    const eventsBeforeCorrection = await getAll(useCaseId);
+    expect(eventsBeforeCorrection.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
+    const originalVerdictEvent = eventsBeforeCorrection[1]!;
+
+    // Click "Correct this classification?" — re-enters graph_review.
+    await user.click(screen.getByRole('button', { name: /correct this classification/i }));
+    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+
+    // Make a correction, then walk back through to a new verdict.
+    const editButtons = screen.getAllByRole('button', { name: /^edit$/i });
+    await user.click(editButtons[0]!);
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    // Same use case, not a new one (BC-P5C01-01).
+    const useCasesAfter = await getUseCases('all');
+    const matchingUseCases = useCasesAfter.filter((u) => u.use_case_id === useCaseId);
+    expect(matchingUseCases).toHaveLength(1);
+
+    const eventsAfterCorrection = await getAll(useCaseId);
+    expect(eventsAfterCorrection.map((e) => e.event_type)).toEqual([
+      'graph_confirmed',
+      'verdict_produced',
+      'graph_corrected',
+      'verdict_corrected',
+    ]);
+
+    // The original verdict_produced event is byte-identical — never modified.
+    expect(eventsAfterCorrection[1]).toEqual(originalVerdictEvent);
+
+    const verdictCorrectedEvent = eventsAfterCorrection[3]!;
+    if (verdictCorrectedEvent.payload.type === 'verdict_corrected') {
+      expect(verdictCorrectedEvent.payload.original_verdict_id).toBe(
+        originalVerdictEvent.payload.type === 'verdict_produced' ? originalVerdictEvent.payload.verdict.id : undefined,
+      );
+    }
+  });
 });

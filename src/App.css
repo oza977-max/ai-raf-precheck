@@ -619,3 +619,70 @@ details input {
   border-radius: 0 6px 6px 0;
   margin: 0.5rem 0 1rem;
 }
+
+/* ── VerdictDisplay (P5-C01) ── */
+.verdict__provisional-banner {
+  background: #fbeae8;
+  border: 1px solid var(--critical);
+  border-left-width: 4px;
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+  color: var(--critical);
+}
+
+.verdict__provisional-banner strong {
+  font-size: 1rem;
+}
+
+.verdict__medium-caveat {
+  background: var(--warn-bg);
+  border-left: 3px solid var(--warn-border);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+  color: var(--warn-text);
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 1rem;
+}
+
+.verdict__binding {
+  margin: 0.75rem 0 1rem;
+  font-size: 0.92rem;
+}
+
+.verdict__binding code {
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.verdict__binding-path {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+.verdict__downstream {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.verdict__trace {
+  margin-top: 1.25rem;
+  font-size: 0.88rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.9rem;
+}
+
+.verdict__trace summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.verdict__trace summary:hover {
+  color: var(--ink);
+}

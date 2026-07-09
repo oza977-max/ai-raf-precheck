@@ -5,12 +5,13 @@ import { getApiKey } from '../llm/client';
 import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
-import { addNode, getUseCases } from '../store/register';
-import type { EvaluationResult, GraphCorrection } from '../engine/types';
-import type { UseCaseSummary } from '../store/types';
+import { addNode, getUseCases, updateUseCaseVerdictSummary } from '../store/register';
+import type { DataFlowGraph, GraphCorrection } from '../engine/types';
+import type { Verdict } from '../types/verdict';
+import type { AuditEvent, UseCaseSummary } from '../store/types';
 import { generateQuestions } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
-import { append as appendAuditEvent } from '../store/audit';
+import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
@@ -18,6 +19,7 @@ import StepTracker from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
 import ContradictionReview from './ContradictionReview';
 import ConfirmationStep from './ConfirmationStep';
+import VerdictDisplay from './VerdictDisplay';
 // Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
 // string; PolicyEditor.tsx's file-upload UI is not wired in until a later
 // chunk, so this smoke path reads the starter policy at build time.
@@ -36,7 +38,9 @@ const INITIAL_STATE: IntakeState = { step: 'description_entry', description: '' 
 
 export default function IntakeFlow() {
   const [state, dispatch] = useReducer(intakeReducer, INITIAL_STATE);
-  const [verdict, setVerdict] = useState<EvaluationResult | null>(null);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
+  const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
@@ -88,7 +92,7 @@ export default function IntakeFlow() {
       setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
       return;
     }
-    dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value });
+    dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
   }
 
   function handleCorrectNode(nodeId: string, field: string, correctedValue: unknown) {
@@ -132,8 +136,7 @@ export default function IntakeFlow() {
       );
     }
     const questions = generateQuestions(state.graph, policyResult.policy, []);
-    const useCaseId = crypto.randomUUID();
-    dispatch({ type: 'QUESTIONS_GENERATED', questions, useCaseId });
+    dispatch({ type: 'QUESTIONS_GENERATED', questions });
     // UC-6 requires an explicit human confirmation click even with zero
     // questions (P4-C04) — no more silent auto-evaluation.
     if (questions.length === 0) {
@@ -143,77 +146,133 @@ export default function IntakeFlow() {
 
   async function handleConfirmAndEvaluate() {
     if (state.step !== 'confirmation') return;
-    const { graph, corrections, useCaseId } = state;
+    const { graph, corrections, useCaseId, originalVerdictId } = state;
     dispatch({ type: 'CONFIRMED' });
 
-    // UC-6 (intake-flow.md §9): graph_confirmed written BEFORE evaluate()
-    // runs, verdict_produced written before the UI transitions to verdict
-    // (BC-P4C04-02: sequential, not Promise.all — the second write must
-    // never race ahead of the first).
-    await appendAuditEvent({
-      event_id: crypto.randomUUID(),
-      use_case_id: useCaseId,
-      event_type: 'graph_confirmed',
-      occurred_at: new Date().toISOString(),
-      actor: CURRENT_ROLE,
-      payload: {
-        type: 'graph_confirmed',
-        graph_id: graph.id,
-        graph_version: graph.version,
-        corrections_count: corrections.length,
-      },
-    });
+    // VD-3 (verdict-audit.md §6): a correction pass writes
+    // graph_corrected/verdict_corrected instead of
+    // graph_confirmed/verdict_produced — the original verdict_produced
+    // event is never modified (append-only, per-event UUIDs).
+    const isCorrection = Boolean(originalVerdictId);
+
+    if (isCorrection) {
+      // BC-P5C01-02: one graph_corrected event per individual
+      // GraphCorrection, matching the spec's singular payload shape.
+      for (const correction of corrections) {
+        await appendAuditEvent({
+          event_id: crypto.randomUUID(),
+          use_case_id: useCaseId,
+          event_type: 'graph_corrected',
+          occurred_at: new Date().toISOString(),
+          actor: CURRENT_ROLE,
+          payload: { type: 'graph_corrected', correction },
+        });
+      }
+    } else {
+      // UC-6 (intake-flow.md §9): graph_confirmed written BEFORE evaluate()
+      // runs, verdict_produced written before the UI transitions to verdict
+      // (BC-P4C04-02: sequential, not Promise.all).
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'graph_confirmed',
+        occurred_at: new Date().toISOString(),
+        actor: CURRENT_ROLE,
+        payload: {
+          type: 'graph_confirmed',
+          graph_id: graph.id,
+          graph_version: graph.version,
+          corrections_count: corrections.length,
+        },
+      });
+    }
 
     if (!policyResult.valid) {
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
     }
+    // §6.1: the engine evaluates the corrected graph as a fresh call —
+    // there is no "partial re-evaluation".
     const evalResult = evaluate(graph, policyResult.policy);
     if (!evalResult.ok) {
       throw new Error(`Evaluation failed: ${evalResult.error.kind}`);
     }
     const result = evalResult.value;
-    setVerdict(result);
 
     const now = new Date().toISOString();
-    const fullVerdict = {
+    const fullVerdict: Verdict = {
       ...result,
       id: crypto.randomUUID(),
       use_case_id: useCaseId,
-      living_status: 'approved' as const,
+      living_status: 'approved',
       living_status_updated_at: now,
       attested_by: CURRENT_ROLE,
       attested_at: now,
       graph_version: graph.version,
       corrections: [],
     };
+    setVerdict(fullVerdict);
+    setLastGraph(graph);
 
-    await appendAuditEvent({
-      event_id: crypto.randomUUID(),
-      use_case_id: useCaseId,
-      event_type: 'verdict_produced',
-      occurred_at: now,
-      actor: 'system',
-      payload: { type: 'verdict_produced', verdict: fullVerdict },
-    });
+    if (isCorrection) {
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'verdict_corrected',
+        occurred_at: now,
+        actor: 'system',
+        payload: { type: 'verdict_corrected', original_verdict_id: originalVerdictId!, new_verdict: fullVerdict },
+      });
+    } else {
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'verdict_produced',
+        occurred_at: now,
+        actor: 'system',
+        payload: { type: 'verdict_produced', verdict: fullVerdict },
+      });
+    }
 
-    await addNode({
-      node_id: useCaseId,
-      node_type: 'use_case',
-      label: graph.input_nodes[0]?.label ?? graph.processing_nodes[0]?.label ?? 'AI use case',
-      created_at: now,
-      metadata: {
-        node_type: 'use_case',
-        submitted_by: CURRENT_ROLE,
-        lifecycle_stage: 'idea',
-        current_verdict_id: fullVerdict.id,
+    if (isCorrection) {
+      // register_nodes uses db.add() in addNode() — a correction reuses
+      // the existing useCaseId, so calling addNode() again would throw a
+      // duplicate-key ConstraintError. Update the existing node instead.
+      await updateUseCaseVerdictSummary(useCaseId, {
         tier: result.tier,
         track: result.track,
-      },
-    });
+        currentVerdictId: fullVerdict.id,
+      });
+    } else {
+      await addNode({
+        node_id: useCaseId,
+        node_type: 'use_case',
+        label: graph.input_nodes[0]?.label ?? graph.processing_nodes[0]?.label ?? 'AI use case',
+        created_at: now,
+        metadata: {
+          node_type: 'use_case',
+          submitted_by: CURRENT_ROLE,
+          lifecycle_stage: 'idea',
+          current_verdict_id: fullVerdict.id,
+          tier: result.tier,
+          track: result.track,
+        },
+      });
+    }
     await refreshRegister();
+    setVerdictAuditEvents(await getAuditEvents(useCaseId));
     dispatch({ type: 'VERDICT_READY' });
+  }
+
+  function handleCorrectVerdict() {
+    if (state.step !== 'verdict' || !verdict || !lastGraph) return;
+    dispatch({
+      type: 'CORRECT_VERDICT',
+      graph: lastGraph,
+      useCaseId: verdict.use_case_id,
+      originalVerdictId: verdict.id,
+    });
   }
 
   function handleAnswerSubmitted(questionId: string, value: unknown) {
@@ -277,7 +336,7 @@ export default function IntakeFlow() {
         {state.step === 'graph_extraction' && state.method === 'form' && (
           <StructuredForm
             jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
-            onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph })}
+            onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph, useCaseId: crypto.randomUUID() })}
           />
         )}
 
@@ -330,29 +389,12 @@ export default function IntakeFlow() {
         {state.step === 'evaluation_pending' && <p>Evaluating…</p>}
 
         {state.step === 'verdict' && verdict && (
-          <section className={`verdict verdict--${verdict.status}`}>
-            <p className="verdict__eyebrow">Verdict</p>
-            <h2 className="verdict__heading">
-              {verdict.status === 'approved' && 'Approved'}
-              {verdict.status === 'approved_with_controls' && 'Approved with controls'}
-              {verdict.status === 'rejected' && 'Rejected'}
-            </h2>
-            <div className="verdict__cards">
-              <div className="verdict__stat">
-                <span className="verdict__stat-label">Tier</span>
-                <span className={`verdict__stat-value verdict__stat-value--${verdict.tier.toLowerCase()}`}>
-                  {verdict.tier}
-                </span>
-              </div>
-              <div className="verdict__stat">
-                <span className="verdict__stat-label">Track</span>
-                <span className="verdict__stat-value">{verdict.track}</span>
-              </div>
-            </div>
-            {verdict.controls.length > 0 && (
-              <p className="verdict__controls">Controls required: {verdict.controls.join(', ')}</p>
-            )}
-          </section>
+          <VerdictDisplay
+            verdict={verdict}
+            auditEvents={verdictAuditEvents}
+            policy={policyResult.valid ? policyResult.policy : undefined}
+            onCorrect={handleCorrectVerdict}
+          />
         )}
       </div>
 

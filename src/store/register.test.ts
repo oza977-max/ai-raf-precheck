@@ -6,6 +6,7 @@ import {
   getUseCase,
   getBlastRadius,
   updateLifecycleStage,
+  updateUseCaseVerdictSummary,
   exportAll,
 } from './register';
 import { getAll } from './audit';
@@ -151,6 +152,25 @@ describe('register store', () => {
       from_stage: 'idea',
       to_stage: 'exploring',
     });
+  });
+
+  it('updateUseCaseVerdictSummary() updates tier/track/currentVerdictId without throwing (P5-C01 review-caught bug: addNode() on the same node_id twice throws ConstraintError since it uses db.add())', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Correction probe' });
+    await addNode(node);
+
+    const newVerdictId = crypto.randomUUID();
+    await updateUseCaseVerdictSummary(nodeId, { tier: 'High', track: 'II', currentVerdictId: newVerdictId });
+
+    const summary = await getUseCase(nodeId);
+    expect(summary?.tier).toBe('High');
+    expect(summary?.track).toBe('II');
+
+    const { nodes } = await exportAll();
+    const updatedNode = nodes.find((n) => n.node_id === nodeId);
+    expect(updatedNode?.metadata.node_type === 'use_case' && updatedNode.metadata.current_verdict_id).toBe(
+      newVerdictId,
+    );
   });
 
   it('exportAll() returns all nodes and edges (2LoD export)', async () => {
