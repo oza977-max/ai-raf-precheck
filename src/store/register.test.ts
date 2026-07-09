@@ -9,8 +9,36 @@ import {
   updateUseCaseVerdictSummary,
   exportAll,
 } from './register';
-import { getAll } from './audit';
+import { getAll, append } from './audit';
 import type { RegisterNode, RegisterEdge } from './types';
+import type { Verdict } from '../types/verdict';
+
+function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
+  return {
+    status: 'approved_with_controls',
+    tier: 'High',
+    track: 'II',
+    binding_constraint: 'INV-DATA-01',
+    binding_path: 'client notes → drafting model → drafted email',
+    controls: ['CTRL-ENC-01'],
+    downstream_reviews: [],
+    conditions: { hypotheses: [] },
+    policy_version: '1.0',
+    pack_versions: {},
+    applied_overrides: [],
+    confidence_caveats: [],
+    boundary_proximity: false,
+    id: 'verdict-1',
+    use_case_id: 'uc-1',
+    living_status: 'approved',
+    living_status_updated_at: '2026-01-01T00:00:00.000Z',
+    attested_by: '1LoD',
+    attested_at: '2026-01-01T00:00:00.000Z',
+    graph_version: 1,
+    corrections: [],
+    ...overrides,
+  };
+}
 
 function makeUseCaseNode(overrides: Partial<RegisterNode> = {}): RegisterNode {
   return {
@@ -171,6 +199,114 @@ describe('register store', () => {
     expect(updatedNode?.metadata.node_type === 'use_case' && updatedNode.metadata.current_verdict_id).toBe(
       newVerdictId,
     );
+  });
+
+  it('getUseCase() computes current_verdict_status/last_evaluated_at/policy_version_at_evaluation from the audit trail, not from RegisterNodeMetadata (verdict-audit.md §8)', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Verdict-scan probe' });
+    await addNode(node);
+
+    const verdict = makeVerdict({ id: crypto.randomUUID(), use_case_id: nodeId, status: 'rejected' });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict },
+    });
+
+    const summary = await getUseCase(nodeId);
+    expect(summary?.current_verdict_status).toBe('rejected');
+    expect(summary?.last_evaluated_at).toEqual(expect.any(String));
+    expect(summary?.policy_version_at_evaluation).toBe('1.0');
+  });
+
+  it('current_verdict_status is "provisional" when the latest verdict carries a low-confidence caveat, overriding the raw status', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Provisional probe' });
+    await addNode(node);
+
+    const verdict = makeVerdict({
+      status: 'approved_with_controls',
+      confidence_caveats: [{ ruleId: 'INV-DATA-01', field: 'model_type', confidence: 'low', reason: 'ambiguous description' }],
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict },
+    });
+
+    const summary = await getUseCase(nodeId);
+    expect(summary?.current_verdict_status).toBe('provisional');
+  });
+
+  it('a verdict_corrected event supersedes an earlier verdict_produced event for the computed summary', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Correction-supersedes probe' });
+    await addNode(node);
+
+    const originalVerdict = makeVerdict({ id: 'v1', status: 'rejected' });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict: originalVerdict },
+    });
+
+    const newVerdict = makeVerdict({ id: 'v2', status: 'approved' });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'verdict_corrected', original_verdict_id: 'v1', new_verdict: newVerdict },
+    });
+
+    const summary = await getUseCase(nodeId);
+    expect(summary?.current_verdict_status).toBe('approved');
+  });
+
+  it('stale_assessment is true when policy_version_at_evaluation differs from the passed currentPolicyVersion, false otherwise', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Stale probe' });
+    await addNode(node);
+
+    const verdict = makeVerdict({ policy_version: '1.0' });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict },
+    });
+
+    const staleSummary = await getUseCase(nodeId, '2.0');
+    expect(staleSummary?.stale_assessment).toBe(true);
+
+    const freshSummary = await getUseCase(nodeId, '1.0');
+    expect(freshSummary?.stale_assessment).toBe(false);
+  });
+
+  it('getUseCases() with no verdict events leaves current_verdict_status null and stale_assessment false', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'No-verdict probe' });
+    await addNode(node);
+
+    const summaries = await getUseCases('all', '1.0');
+    const found = summaries.find((s) => s.use_case_id === nodeId);
+
+    expect(found?.current_verdict_status).toBeNull();
+    expect(found?.last_evaluated_at).toBeNull();
+    expect(found?.policy_version_at_evaluation).toBeNull();
+    expect(found?.stale_assessment).toBe(false);
   });
 
   it('exportAll() returns all nodes and edges (2LoD export)', async () => {

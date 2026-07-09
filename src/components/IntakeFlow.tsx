@@ -6,6 +6,7 @@ import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
 import { addNode, getUseCases, updateUseCaseVerdictSummary } from '../store/register';
+import { getRole } from '../store/role';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
@@ -30,12 +31,7 @@ import appetiteYaml from '../../policy/appetite.yaml?raw';
 // Rule 4 (cross-cutting.md §7): presentation-only. No business logic inline
 // — calls engine/store/llm functions. Real 9-state machine (intake-flow.md
 // §3) as of P4-C04 — every state through confirmation/attestation is real.
-//
-// No real auth/role system exists in any chunk so far — attested_by and
-// corrected_by both use this hardcoded placeholder (P4-C04 documented
-// deviation, same as P4-C01's correction flow).
-const CURRENT_ROLE = '1LoD';
-
+// getRole() (P6-C01) replaces the hardcoded '1LoD' placeholder throughout.
 const INITIAL_STATE: IntakeState = { step: 'description_entry', description: '' };
 
 export default function IntakeFlow() {
@@ -124,7 +120,7 @@ export default function IntakeFlow() {
       field,
       original_value: originalValue,
       corrected_value: correctedValue,
-      corrected_by: CURRENT_ROLE,
+      corrected_by: getRole(),
       corrected_at: new Date().toISOString(),
     };
 
@@ -185,7 +181,7 @@ export default function IntakeFlow() {
           use_case_id: useCaseId,
           event_type: 'graph_corrected',
           occurred_at: new Date().toISOString(),
-          actor: CURRENT_ROLE,
+          actor: getRole(),
           payload: { type: 'graph_corrected', correction },
         });
       }
@@ -198,7 +194,7 @@ export default function IntakeFlow() {
         use_case_id: useCaseId,
         event_type: 'graph_confirmed',
         occurred_at: new Date().toISOString(),
-        actor: CURRENT_ROLE,
+        actor: getRole(),
         payload: {
           type: 'graph_confirmed',
           graph_id: graph.id,
@@ -228,7 +224,7 @@ export default function IntakeFlow() {
       use_case_id: useCaseId,
       living_status: 'approved',
       living_status_updated_at: now,
-      attested_by: CURRENT_ROLE,
+      attested_by: getRole(),
       attested_at: now,
       graph_version: graph.version,
       corrections: [],
@@ -287,7 +283,7 @@ export default function IntakeFlow() {
         created_at: now,
         metadata: {
           node_type: 'use_case',
-          submitted_by: CURRENT_ROLE,
+          submitted_by: getRole(),
           lifecycle_stage: 'idea',
           current_verdict_id: fullVerdict.id,
           tier: result.tier,
@@ -435,20 +431,6 @@ export default function IntakeFlow() {
           />
         )}
       </div>
-
-      <section className="card register-card">
-        <h2>Register</h2>
-        <table>
-          <tbody>
-            {registerRows.map((row) => (
-              <tr key={row.use_case_id}>
-                <td>{row.label}</td>
-                <td>{row.tier}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
     </div>
   );
 }

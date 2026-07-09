@@ -112,6 +112,23 @@ body {
   color: #d99a3f;
 }
 
+.app-header__role-label {
+  margin: 0;
+  color: #b7b2a3;
+  font-size: 0.78rem;
+  font-weight: normal;
+}
+
+.app-header__role-select {
+  background: transparent;
+  color: var(--header-text);
+  border: 1px solid var(--header-border);
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.3rem;
+}
+
 /* ── Body layout ── */
 .app-body {
   display: flex;
@@ -141,7 +158,7 @@ body {
   font-size: 0.88rem;
   color: var(--ink-soft);
   margin-bottom: 0.15rem;
-  cursor: default;
+  cursor: pointer;
 }
 
 .app-sidebar__item--active {
@@ -245,8 +262,82 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.register-card h2 {
+.register-view h2 {
   margin-top: 0;
+}
+
+.register-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.register-view th,
+.register-view td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.register-view th {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.register-view__banner {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  color: var(--warn-text);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+}
+
+.register-view__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.register-view__controls input[type='text'] {
+  max-width: 320px;
+}
+
+.register-view__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.chip--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.register-view__stale-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--high);
+  border: 1px solid var(--high);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
 }
 
 /* ── Typography ── */

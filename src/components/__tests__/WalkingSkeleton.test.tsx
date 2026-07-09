@@ -78,7 +78,9 @@ describe('Walking Skeleton', () => {
 
     // Step 4: register shows the use case row (real IndexedDB store write + read),
     // labelled from the extracted graph's first node per IntakeFlow.tsx.
-    expect(screen.getByText('Register', { selector: '.register-card h2' })).toBeInTheDocument();
+    // Navigate to the Register view (P6-C01) via the sidebar.
+    await user.click(screen.getByText('▤ Register'));
+    expect(await screen.findByText('Register', { selector: '.register-view h2' })).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
   });
 
