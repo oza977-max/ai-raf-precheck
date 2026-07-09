@@ -136,4 +136,50 @@ describe('RegisterView', () => {
     render(<RegisterView role="never-used-actor-id" currentPolicyVersion="1.0" />);
     expect(await screen.findByText(/no use cases submitted yet/i)).toBeInTheDocument();
   });
+
+  it('TC-RG-5-01: "Export JSON" button (2LoD only) triggers a download whose Blob contains exported_at, nodes, and edges', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'Export target case' });
+    await addNode(node);
+
+    // TDD-2 mock budget = 1: jsdom has no real file-download API, and its
+    // Blob shim lacks `.text()` — the Blob constructor is intercepted to
+    // capture the raw JSON string it was built from instead.
+    let capturedJson: string | undefined;
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor(parts: BlobPart[]) {
+        capturedJson = String(parts[0]);
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+
+    try {
+      // 1LoD view has no Export button at all (§10.3: 2LoD only).
+      const oneLoD = render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+      await oneLoD.findByText('Export target case');
+      expect(oneLoD.queryByRole('button', { name: /export json/i })).not.toBeInTheDocument();
+      oneLoD.unmount();
+
+      render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Export target case');
+
+      await user.click(screen.getByRole('button', { name: /export json/i }));
+
+      expect(capturedJson).toBeDefined();
+      const parsed = JSON.parse(capturedJson!);
+      expect(typeof parsed.exported_at).toBe('string');
+      expect(new Date(parsed.exported_at).toString()).not.toBe('Invalid Date');
+      expect(Array.isArray(parsed.nodes)).toBe(true);
+      expect(Array.isArray(parsed.edges)).toBe(true);
+      expect(parsed.nodes.some((n: { node_id: string }) => n.node_id === node.node_id)).toBe(true);
+    } finally {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+  });
 });

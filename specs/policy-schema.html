@@ -308,7 +308,7 @@
       <li><code>policy/appetite.yaml</code> — the main policy file the bank customises</li>
       <li><code>policy/packs/*.yaml</code> — jurisdiction override pack files</li>
       <li>The TypeScript interfaces that correspond to each schema</li>
-      <li>Validation rules enforced by <code>src/engine/policy-loader.ts</code> (CF-5)</li>
+      <li>Validation rules enforced by <code>src/store/policy.ts</code> (CF-5)</li>
       <li>The starter config pre-population strategy (PE-8, CF-2)</li>
     </ol>
     <p>The policy file is the bank's Risk Appetite Framework expressed in machine-readable form. Every verdict traces back to a rule in this file.</p>
@@ -648,7 +648,7 @@ rules:
       </tbody>
     </table>
 
-    <h3 id="pack-validation">Pack validation rules (enforced by policy-loader.ts)</h3>
+    <h3 id="pack-validation">Pack validation rules (enforced by src/store/policy.ts)</h3>
 
     <p>Every rule in a pack <strong>must</strong> have:</p>
     <ul>
@@ -665,7 +665,7 @@ rules:
 
     <h2 id="typescript-interfaces">TypeScript Interfaces</h2>
 
-    <p>These interfaces live in <code>src/engine/types.ts</code> and are the canonical type definitions. Zod schemas (in <code>src/engine/policy-loader.ts</code>) are generated from these interfaces and used for runtime validation.</p>
+    <p>These interfaces live in <code>src/engine/types.ts</code> and are the canonical type definitions. Zod schemas (in <code>src/store/policy.ts</code>) are generated from these interfaces and used for runtime validation.</p>
 
     <pre><code>// src/engine/types.ts
 
@@ -751,7 +751,7 @@ export type PackRuleEffect =
   | { type: 'hard_line'; condition: Condition; reason: string }
   | { type: 'required_review'; review_type: string; condition: Condition };</code></pre>
 
-    <h2 id="validation-rules">Validation Rules (policy-loader.ts)</h2>
+    <h2 id="validation-rules">Validation Rules (src/store/policy.ts)</h2>
 
     <p>The loader performs these checks on every load. All checks must pass before the policy is marked valid.</p>
 
@@ -851,7 +851,7 @@ export interface PolicyValidationError {
         <p>Minimal operator set (Option 3). The condition language covers all cases in the current requirements. If a future requirement needs richer logic, this decision can be revisited with an ADR superseding this one.</p>
 
         <h4>Consequences</h4>
-        <p><code>policy-loader.ts</code> implements a simple condition evaluator (~100 lines). All conditions are statically analyzable (no eval, no dynamic code). Security: no injection risk from policy file contents.</p>
+        <p><code>src/store/policy.ts</code> implements a simple condition evaluator (~100 lines). All conditions are statically analyzable (no eval, no dynamic code). Security: no injection risk from policy file contents.</p>
       </div>
     </details>
 

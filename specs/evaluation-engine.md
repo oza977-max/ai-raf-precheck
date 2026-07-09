@@ -27,8 +27,8 @@
 This spec defines the evaluation engine — the pure-function core of AIGate. It takes a confirmed data-flow graph and a loaded policy (main file + active packs) and returns a deterministic verdict. No LLM calls. No randomness. No external state.
 
 **Files:**
-- `src/engine/evaluator.ts` — main pipeline
-- `src/engine/control-solver.ts` — minimal control set solver
+- `src/engine/evaluate.ts` — main pipeline
+- `src/engine/greedy-solver.ts` — minimal control set solver
 - `src/engine/jurisdiction.ts` — pack application and most-demanding-standard merge
 - `src/engine/contradiction.ts` — contradiction detection (UC-5, OB-2)
 - `src/engine/types.ts` — shared types (defined in policy-schema spec)

@@ -95,12 +95,13 @@ type IntakeState =
 ### 4.1 Graph extractor interface
 
 ```typescript
-// src/llm/graph-extractor.ts
+// src/llm/graph-extractor.ts (signature as actually built, P4-C01 — the
+// API key is read internally via getApiKey(), and permitted values come
+// from src/engine/canonical-vocabulary.ts's shared runtime constants,
+// not a caller-supplied parameter)
 export async function extractGraph(
-  description: string,
-  apiKey: string,
-  policyPermittedValues: PolicyPermittedValues  // Enum values from policy file for node labels
-): Promise<Result<DataFlowGraph, LlmError>>
+  description: string
+): Promise<LlmResult<DataFlowGraph>>
 ```
 
 The function constructs a structured prompt instructing the model to return a JSON object conforming to `DataFlowGraph`. It uses `claude-sonnet-4-6` with `temperature: 0` for consistency.
@@ -142,7 +143,7 @@ export interface OutputNode {
   id: string;
   label: string;
   action_type: ActionType;
-  exposure: ExposureLevel;
+  exposure: Exposure;
   decision_bindingness: DecisionBindingness;
   output_reversibility: 'reversible' | 'irreversible' | 'unknown';
   scale: 'limited' | 'at_scale';  // TIER-CRITICAL trigger when client-/market-facing at scale

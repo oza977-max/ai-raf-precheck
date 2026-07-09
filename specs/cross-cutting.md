@@ -95,9 +95,9 @@ aigate/                         # Project root
 │   ├── main.tsx                # React entry point
 │   ├── App.tsx                 # Root component + router
 │   ├── engine/                 # Policy engine — pure functions, no React
-│   │   ├── policy-loader.ts    # Parse + validate YAML policy + packs
-│   │   ├── evaluator.ts        # Main evaluation pipeline (PE-1 through PE-6)
-│   │   ├── control-solver.ts   # Minimal control set solver (CS-1, CS-2)
+│   │   ├── evaluate.ts         # Main evaluation pipeline (PE-1 through PE-6)
+│   │   ├── greedy-solver.ts    # Minimal control set solver (CS-1, CS-2)
+│   │   ├── workflow-router.ts  # Tier-to-governance-stage routing (LC-2)
 │   │   ├── jurisdiction.ts     # Jurisdiction override pack application
 │   │   ├── contradiction.ts    # Graph contradiction detection (UC-5, OB-2)
 │   │   └── types.ts            # Shared engine types (Graph, Verdict, Policy, etc.)
@@ -107,7 +107,9 @@ aigate/                         # Project root
 │   │   └── client.ts           # Anthropic SDK wrapper (API key management)
 │   ├── store/                  # Persistence
 │   │   ├── db.ts               # IndexedDB schema + idb setup
+│   │   ├── policy.ts           # Parse + validate YAML policy + packs
 │   │   ├── register.ts         # Use case register (graph model) — RG-1
+│   │   ├── role.ts             # localStorage 1LoD/2LoD role toggle
 │   │   └── audit.ts            # Append-only audit trail — NF-2, VD-4
 │   ├── components/              # React components (flat — matches implementation-guide.md chunk deliverables)
 │   │   ├── IntakeFlow.tsx       # UC-1 through UC-7, UC-3a — 9-state machine
@@ -189,8 +191,8 @@ React error boundaries at the route level. Each major view (intake, verdict, reg
 ### Test locations
 Tests co-located with source:
 ```
-src/engine/evaluator.ts
-src/engine/evaluator.test.ts   ← same directory
+src/engine/evaluate.ts
+src/engine/evaluate.test.ts   ← same directory
 ```
 
 ### Test layers

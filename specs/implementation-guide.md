@@ -563,8 +563,8 @@ All smoke tests in this chunk are manual verification steps — they supplement 
 ## 7. Test Co-location Rule
 
 Every non-spike chunk includes its tests in the same delivery. The convention:
-- `src/engine/evaluate.ts` → `src/engine/__tests__/evaluate.test.ts`
-- `src/store/audit.ts` → `src/store/__tests__/audit.test.ts`
+- `src/engine/evaluate.ts` → `src/engine/evaluate.test.ts` (engine/store colocate tests as siblings, not a `__tests__/` subfolder — only `src/components/*` uses `__tests__/`, per the actual convention adopted in P1-C01)
+- `src/store/audit.ts` → `src/store/audit.test.ts`
 - `src/components/VerdictDisplay.tsx` → `src/components/__tests__/VerdictDisplay.test.tsx`
 
 **Never create a separate "write tests" chunk.** If tests are separate from the implementation in a chunk's deliverable list, the chunk is not complete.

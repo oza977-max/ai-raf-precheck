@@ -27,7 +27,7 @@ This spec defines the exact schema for:
 1. `policy/appetite.yaml` — the main policy file the bank customises
 2. `policy/packs/*.yaml` — jurisdiction override pack files
 3. The TypeScript interfaces that correspond to each schema
-4. Validation rules enforced by `src/engine/policy-loader.ts` (CF-5)
+4. Validation rules enforced by `src/store/policy.ts` (CF-5)
 5. The starter config pre-population strategy (PE-8, CF-2)
 
 The policy file is the bank's Risk Appetite Framework expressed in machine-readable form. Every verdict traces back to a rule in this file.
@@ -493,7 +493,7 @@ rules:
 | `hard_line` | Treats matching use cases as hard-line rejected (pack-level hard lines) |
 | `required_review` | Adds a downstream review requirement |
 
-### Pack validation rules (enforced by `policy-loader.ts`)
+### Pack validation rules (enforced by `src/store/policy.ts`)
 
 Every rule in a pack **must** have:
 - `id` — unique within the pack, format `{PACK-CODE}-{CATEGORY}-{NN}`
@@ -511,7 +511,7 @@ A rule missing any of these fields causes the entire pack to be **rejected on lo
 
 ## 5. TypeScript Interfaces
 
-These interfaces live in `src/engine/types.ts` and are the canonical type definitions. Zod schemas (in `src/engine/policy-loader.ts`) are generated from these interfaces and used for runtime validation.
+These interfaces live in `src/engine/types.ts` and are the canonical type definitions. Zod schemas (in `src/store/policy.ts`) are generated from these interfaces and used for runtime validation.
 
 ```typescript
 // src/engine/types.ts
@@ -605,7 +605,7 @@ export type PackRuleEffect =
 
 ---
 
-## 6. Validation Rules (policy-loader.ts)
+## 6. Validation Rules (src/store/policy.ts)
 
 The loader performs these checks on every load. All checks must pass before the policy is marked valid.
 
@@ -687,7 +687,7 @@ export interface PolicyValidationError {
 
 **Decision:** Minimal operator set (Option 3). The condition language covers all cases in the current requirements. If a future requirement needs richer logic, this decision can be revisited with an ADR superseding this one.
 
-**Consequences:** `policy-loader.ts` implements a simple condition evaluator (~100 lines). All conditions are statically analyzable (no eval, no dynamic code). Security: no injection risk from policy file contents.
+**Consequences:** `src/store/policy.ts` implements a simple condition evaluator (~100 lines). All conditions are statically analyzable (no eval, no dynamic code). Security: no injection risk from policy file contents.
 
 ---
 

@@ -521,9 +521,9 @@
 │   ├── main.tsx                # React entry point
 │   ├── App.tsx                 # Root component + router
 │   ├── engine/                 # Policy engine — pure functions, no React
-│   │   ├── policy-loader.ts    # Parse + validate YAML policy + packs
-│   │   ├── evaluator.ts        # Main evaluation pipeline (PE-1 through PE-6)
-│   │   ├── control-solver.ts   # Minimal control set solver (CS-1, CS-2)
+│   │   ├── evaluate.ts         # Main evaluation pipeline (PE-1 through PE-6)
+│   │   ├── greedy-solver.ts    # Minimal control set solver (CS-1, CS-2)
+│   │   ├── workflow-router.ts  # Tier-to-governance-stage routing (LC-2)
 │   │   ├── jurisdiction.ts     # Jurisdiction override pack application
 │   │   ├── contradiction.ts    # Graph contradiction detection (UC-5, OB-2)
 │   │   └── types.ts            # Shared engine types (Graph, Verdict, Policy, etc.)
@@ -607,8 +607,8 @@ type EngineError =
 
     <h3 id="test-locations">Test Locations</h3>
     <p>Tests co-located with source:</p>
-    <pre><code>src/engine/evaluator.ts
-src/engine/evaluator.test.ts   ← same directory</code></pre>
+    <pre><code>src/engine/evaluate.ts
+src/engine/evaluate.test.ts   ← same directory</code></pre>
 
     <h3 id="test-layers">Test Layers</h3>
     <table>

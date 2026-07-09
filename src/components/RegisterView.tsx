@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getUseCases, hasPendingPolicyUpdate } from '../store/register';
+import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import type { UseCaseSummary } from '../store/types';
 
@@ -70,6 +70,25 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
     });
   }, [rows, is2LoD, tierFilter, trackFilter, stageFilter, statusFilter, search]);
 
+  // register-lifecycle.md §10.3 (RG-5) — 2LoD-only export, deferred from
+  // P6-C01. Browser download via Blob + a temporary anchor; no business
+  // logic beyond calling the existing exportAll() store function.
+  async function handleExport() {
+    const { nodes, edges } = await exportAll();
+    const payload = { exported_at: new Date().toISOString(), nodes, edges };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `aigate-register-export-${payload.exported_at}.json`;
+    // Some browsers only fire a download reliably when the anchor is
+    // attached to the DOM at click time (review finding, pass 1).
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   if (!loaded) {
     return (
       <section className="card register-view">
@@ -116,13 +135,18 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
 
       {is2LoD && (
         <div className="register-view__controls">
-          <input
-            type="text"
-            placeholder="Search use cases…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search use cases"
-          />
+          <div className="register-view__controls-row">
+            <input
+              type="text"
+              placeholder="Search use cases…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search use cases"
+            />
+            <button type="button" className="register-view__export-button" onClick={() => void handleExport()}>
+              Export JSON
+            </button>
+          </div>
           <div className="register-view__chips">
             {tiers.map((tier) => (
               <button

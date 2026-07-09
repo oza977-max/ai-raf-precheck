@@ -315,6 +315,25 @@ body {
   max-width: 320px;
 }
 
+.register-view__controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.register-view__export-button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .register-view__chips {
   display: flex;
   flex-wrap: wrap;
