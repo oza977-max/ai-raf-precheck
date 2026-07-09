@@ -5,6 +5,7 @@ import { getApiKey } from '../llm/client';
 import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
+import { getCurrentPolicyYaml } from '../store/policy-source';
 import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
@@ -24,11 +25,6 @@ import QuestionnaireStep from './QuestionnaireStep';
 import ContradictionReview from './ContradictionReview';
 import ConfirmationStep from './ConfirmationStep';
 import VerdictDisplay from './VerdictDisplay';
-// Vite ?raw import (P2-C01 upstream fix) — loadPolicy() now takes a YAML
-// string; PolicyEditor.tsx's file-upload UI is not wired in until a later
-// chunk, so this smoke path reads the starter policy at build time.
-import appetiteYaml from '../../policy/appetite.yaml?raw';
-
 // Rule 4 (cross-cutting.md §7): presentation-only. No business logic inline
 // — calls engine/store/llm functions. Real 9-state machine (intake-flow.md
 // §3) as of P4-C04 — every state through confirmation/attestation is real.
@@ -45,7 +41,21 @@ export default function IntakeFlow() {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
   const [submittedDescription, setSubmittedDescription] = useState('');
-  const policyResult = useMemo(() => loadPolicy(appetiteYaml), []);
+  // P7-C03: reads getCurrentPolicyYaml() (a saved-policy override, or the
+  // bundled starter YAML) instead of a static import. App.tsx unmounts and
+  // remounts IntakeFlow every time the user navigates away and back
+  // (existing view-switching behavior), so this useMemo naturally re-reads
+  // the current policy on each visit without extra prop-threading.
+  //
+  // Acknowledged tradeoff (review finding, pass 1): a policy saved via
+  // PolicyEditor while the user is already sitting on this screen won't
+  // be picked up until they navigate away and back — the memo only
+  // re-reads on remount, not on every render. This is a narrow, low-risk
+  // gap in the single-view nav model (App.tsx renders exactly one of
+  // IntakeFlow/RegisterView/PolicyEditor at a time, so reaching
+  // PolicyEditor's Save button already requires leaving this screen
+  // first); not worth a cross-component subscription mechanism for V1.
+  const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), []);
 
   const refreshRegister = useCallback(async () => {
     const rows = await getUseCases('all');

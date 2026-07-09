@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PolicyEditor from '../PolicyEditor';
@@ -64,16 +64,53 @@ safety_margin: 0.10
 `;
 
 describe('PolicyEditor', () => {
-  it('loads a valid policy and shows a success message', async () => {
+  it('pre-fills the textarea with the currently active policy YAML (P7-C03)', () => {
+    render(<PolicyEditor />);
+    const textarea = screen.getByLabelText(/policy yaml/i) as HTMLTextAreaElement;
+    expect(textarea.value.length).toBeGreaterThan(0);
+    expect(textarea.value).toContain('policy_id');
+  });
+
+  it('validates a valid policy and shows a success message, without saving', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
 
     const textarea = screen.getByLabelText(/policy yaml/i);
-    await user.click(textarea);
+    await user.clear(textarea);
     await user.paste(MINIMAL_VALID_POLICY_YAML);
 
-    await user.click(screen.getByRole('button', { name: /load/i }));
+    await user.click(screen.getByRole('button', { name: /validate/i }));
 
-    expect(await screen.findByText(/loaded successfully|valid/i)).toBeInTheDocument();
+    expect(await screen.findByText(/is valid/i)).toBeInTheDocument();
+  });
+
+  it('BC-P7C03-02: invalid YAML shows field errors and does not save or call onSaved', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    render(<PolicyEditor onSaved={onSaved} />);
+
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    await user.paste('not: valid: policy: yaml: at all');
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(await screen.findByText(/policy is invalid/i)).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it('BC-P7C03-01: saving a valid policy reports a queued count and calls onSaved', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    render(<PolicyEditor onSaved={onSaved} />);
+
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    await user.paste(MINIMAL_VALID_POLICY_YAML);
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    expect(await screen.findByText(/policy saved.*queued for re-evaluation/i)).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledTimes(1);
   });
 });

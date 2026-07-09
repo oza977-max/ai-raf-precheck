@@ -552,4 +552,65 @@ describe('Walking Skeleton', () => {
 
     expect(await screen.findByText('AIGate (self-assessment)')).toBeInTheDocument();
   });
+
+  it('P7-C03 Part A: AIGate self-assessment seeds exactly once across a genuine app re-mount, not just within one mount (extends P7-C01\'s single-mount race test)', async () => {
+    const first = render(<App />);
+    await first.findByText('▤ Register');
+    // Give the mount-effect's seed a tick to complete before unmounting.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    first.unmount();
+
+    const second = render(<App />);
+    await second.findByText('▤ Register');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const { exportAll } = await import('../../store/register');
+    const { nodes } = await exportAll();
+    const aigateNodes = nodes.filter((n) => n.node_id === 'aigate-self-assessment');
+    expect(aigateNodes).toHaveLength(1);
+  });
+
+  it('P7-C03 Part B: saving a valid policy via the Appetite framework editor is a real save — queues re-evaluation for existing active use cases and updates the header\'s policy version', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByText('§ Appetite framework'));
+    const textarea = await screen.findByLabelText(/policy yaml/i);
+    const originalYaml = (textarea as HTMLTextAreaElement).value;
+    expect(originalYaml).toContain('version: "1.0"');
+
+    const updatedYaml = originalYaml.replace('version: "1.0"', 'version: "1.1"');
+    await user.click(textarea);
+    await user.clear(textarea);
+    await user.paste(updatedYaml);
+
+    // SettingsPanel also has a (disabled) "Save" button — disambiguate.
+    const saveButtons = screen.getAllByRole('button', { name: /^save$/i });
+    await user.click(saveButtons.find((b) => !b.hasAttribute('disabled'))!);
+
+    expect(await screen.findByText(/policy saved.*queued for re-evaluation/i)).toBeInTheDocument();
+
+    // Header badge reflects the newly saved version without a page reload.
+    expect(await screen.findByText(/policy v1\.1/)).toBeInTheDocument();
+
+    // A real save, not just a UI message: at least one previously-existing
+    // active use case (from earlier tests in this file, sharing IndexedDB)
+    // now has a re_evaluation_queued event for the new version.
+    const { getUseCases } = await import('../../store/register');
+    const { getAll } = await import('../../store/audit');
+    const allUseCases = await getUseCases('all');
+    let foundQueuedEvent = false;
+    for (const uc of allUseCases) {
+      const events = await getAll(uc.use_case_id);
+      if (
+        events.some(
+          (e) => e.event_type === 're_evaluation_queued' && e.payload.type === 're_evaluation_queued' && e.payload.policy_version === '1.1',
+        )
+      ) {
+        foundQueuedEvent = true;
+        break;
+      }
+    }
+    expect(foundQueuedEvent).toBe(true);
+  });
 });

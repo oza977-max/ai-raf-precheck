@@ -1,26 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import IntakeFlow from './components/IntakeFlow';
 import RegisterView from './components/RegisterView';
+import PolicyEditor from './components/PolicyEditor';
 import SettingsPanel from './components/SettingsPanel';
 import { getRole, setRole } from './store/role';
 import { loadPolicy } from './store/policy';
+import { getCurrentPolicyYaml } from './store/policy-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
-import appetiteYaml from '../policy/appetite.yaml?raw';
 import './App.css';
 
 // App shell visual language taken from a Claude Design export
 // ("AIGate Demo.dc.html") — dark header, warm-paper workspace, IBM Plex
-// Sans/Mono. Sidebar "Register" nav item now switches the main view to
-// RegisterView.tsx (P6-C01) — a real, working feature (P2-C02/P4-C01/
-// P6-C01). "Appetite framework" is marked coming soon since
-// PolicyEditor.tsx isn't wired into the intake flow yet (P2-C01 handover
-// note).
-const policyResult = loadPolicy(appetiteYaml);
-const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
-
+// Sans/Mono. Sidebar "Register" nav item switches the main view to
+// RegisterView.tsx (P6-C01). "Appetite framework" now routes to
+// PolicyEditor.tsx (P7-C03) — a real Save flow, no longer a disabled
+// placeholder.
 export default function App() {
-  const [view, setView] = useState<'intake' | 'register'>('intake');
+  const [view, setView] = useState<'intake' | 'register' | 'policyEditor'>('intake');
   const [role, setRoleState] = useState(getRole());
+  // Bumped by PolicyEditor's onSaved callback so a saved policy change is
+  // immediately reflected in the header badge and RegisterView's
+  // currentPolicyVersion prop, without a full page reload (P7-C03).
+  const [policyRevision, setPolicyRevision] = useState(0);
+
+  const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), [policyRevision]);
+  const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
 
   function handleRoleChange(next: string) {
     setRole(next);
@@ -30,12 +34,14 @@ export default function App() {
   // register-lifecycle.md §9 (LC-6): AIGate evaluates itself through its
   // own engine on first launch. Best-effort — a failure here (e.g.
   // invalid policy) must not block the app from rendering (same pattern
-  // as VD-8's reasoning-trace generation).
+  // as VD-8's reasoning-trace generation). Runs once per app lifetime —
+  // seedAigateSelfAssessment() is idempotent and race-safe (P7-C01).
   useEffect(() => {
     if (!policyResult.valid) return;
     seedAigateSelfAssessment(policyResult.policy).catch((err) => {
       console.warn('AIGate self-assessment seeding failed:', err);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -84,7 +90,10 @@ export default function App() {
           >
             ▤ Register
           </div>
-          <div className="app-sidebar__item app-sidebar__item--disabled" title="Coming soon — PolicyEditor.tsx isn't wired into the intake flow yet">
+          <div
+            className={view === 'policyEditor' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            onClick={() => setView('policyEditor')}
+          >
             § Appetite framework
           </div>
           <div className="app-sidebar__settings">
@@ -93,11 +102,9 @@ export default function App() {
         </nav>
 
         <main className="app-main">
-          {view === 'intake' ? (
-            <IntakeFlow />
-          ) : (
-            <RegisterView role={role} currentPolicyVersion={currentPolicyVersion} />
-          )}
+          {view === 'intake' && <IntakeFlow />}
+          {view === 'register' && <RegisterView role={role} currentPolicyVersion={currentPolicyVersion} />}
+          {view === 'policyEditor' && <PolicyEditor onSaved={() => setPolicyRevision((r) => r + 1)} />}
         </main>
       </div>
     </div>

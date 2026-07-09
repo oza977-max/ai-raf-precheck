@@ -340,7 +340,11 @@ export function loadPolicy(yaml: string): PolicyValidationResult {
 // pattern here).
 const ACTIVE_LIFECYCLE_STAGES: readonly LifecycleStage[] = ['approved', 'in_production', 'pre_checked'];
 
-export async function onPolicyUpdated(newVersion: string): Promise<void> {
+// P7-C03: return type widened from Promise<void> to report a queued
+// count — no existing caller used the return value, so this is a
+// non-breaking change. Lets PolicyEditor.tsx's Save flow report an
+// honest "N use cases queued" message instead of a vague confirmation.
+export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount: number }> {
   const allUseCases = await getUseCases('all');
   const active = allUseCases.filter((uc) => ACTIVE_LIFECYCLE_STAGES.includes(uc.lifecycle_stage));
 
@@ -357,4 +361,6 @@ export async function onPolicyUpdated(newVersion: string): Promise<void> {
       payload: { type: 're_evaluation_queued', policy_version: newVersion },
     });
   }
+
+  return { queuedCount: active.length };
 }
