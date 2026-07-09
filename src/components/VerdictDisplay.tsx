@@ -1,4 +1,4 @@
-import type { PolicyFile } from '../engine/types';
+import type { PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
 import { findRuleDescription } from '../engine/find-rule-description';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent } from '../store/types';
@@ -18,6 +18,98 @@ const STATUS_LABEL: Record<Verdict['status'], string> = {
   approved_with_controls: 'Approved with controls',
   rejected: 'Rejected',
 };
+
+function Citation({ text }: { text?: string }) {
+  if (!text) return null;
+  return <span className="verdict__citation">{text}</span>;
+}
+
+function rationaleLine(kind: 'Tier' | 'Track', value: string, rationale: RuleRationale) {
+  if (rationale.rule_id === 'TIER-LOW-DEFAULT') {
+    return (
+      <p>
+        {kind} {value} — no tier trigger matched (default).
+      </p>
+    );
+  }
+  // Rule names often begin with the same "Track II — " prefix this line
+  // already renders — strip it rather than reading "Track II — Track II — …".
+  const prefix = `${kind} ${value} — `.toLowerCase();
+  const ruleName = rationale.rule_name?.toLowerCase().startsWith(prefix)
+    ? rationale.rule_name.slice(prefix.length)
+    : rationale.rule_name;
+  return (
+    <p>
+      {kind} {value} —{' '}
+      {rationale.matched_field ? (
+        <>
+          triggered by <code>{rationale.matched_field}</code>{' '}
+        </>
+      ) : ruleName ? (
+        <>{ruleName} </>
+      ) : null}
+      (<code>{rationale.rule_id}</code>)
+      <Citation text={rationale.regulatory_basis} />
+    </p>
+  );
+}
+
+function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanation: VerdictExplanation }) {
+  const isHardLineRejection = verdict.status === 'rejected' && explanation.binding_reason !== null;
+
+  return (
+    <div className="verdict__why">
+      <h3>Why this verdict</h3>
+
+      {isHardLineRejection && (
+        <p className="verdict__why-reason">
+          {explanation.binding_reason}
+          <Citation text={explanation.binding_regulatory_basis ?? undefined} />
+        </p>
+      )}
+
+      {explanation.tier_rationale ? (
+        rationaleLine('Tier', verdict.tier, explanation.tier_rationale)
+      ) : (
+        <p>Tier and track shown are ceiling values — a hard-line rejection skips tier/track assignment.</p>
+      )}
+      {explanation.track_rationale && rationaleLine('Track', verdict.track, explanation.track_rationale)}
+
+      {explanation.tripped_invariants.length > 0 && (
+        <ul className="verdict__tripped">
+          {explanation.tripped_invariants.map((t) => (
+            <li key={t.id}>
+              <code>{t.id}</code>{' '}
+              <span className={`verdict__severity verdict__severity--${t.severity.toLowerCase()}`}>{t.severity}</span>{' '}
+              — {t.description}
+              <Citation text={t.regulatory_basis} />
+              {t.required_controls.length > 0 && (
+                <span className="verdict__tripped-controls"> Requires: {t.required_controls.join(', ')}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="verdict__checked">
+        {isHardLineRejection ? (
+          <>
+            Evaluated against {explanation.hard_lines_checked} hard lines — <code>{verdict.binding_constraint}</code>{' '}
+            tripped; evaluation stopped there.
+          </>
+        ) : (
+          <>
+            Evaluated against {explanation.hard_lines_checked} hard lines and {explanation.invariants_checked}{' '}
+            invariants —{' '}
+            {explanation.tripped_invariants.length === 0
+              ? 'none triggered.'
+              : `${explanation.tripped_invariants.length} triggered.`}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
 
 function findReasoningTrace(verdict: Verdict, auditEvents: AuditEvent[]): string | null {
   // Most recent verdict_produced/verdict_corrected event for this verdict.
@@ -40,6 +132,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
 
   const reasoningTrace = findReasoningTrace(verdict, auditEvents);
   const fallbackDescription = findRuleDescription(policy, verdict.binding_constraint);
+  // BC-V11C01-04: verdicts persisted before V1.1-C01 lack `explanation` —
+  // the type says required, but old audit-trail data may resurface.
+  const explanation: VerdictExplanation | undefined = verdict.explanation ?? undefined;
 
   return (
     <section className={`verdict verdict--${verdict.status}`} aria-label="Verdict">
@@ -84,6 +179,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
         </p>
         {verdict.binding_path && <p className="verdict__binding-path">{verdict.binding_path}</p>}
       </div>
+
+      {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} />}
 
       <button type="button" onClick={onCorrect}>
         Correct this classification?

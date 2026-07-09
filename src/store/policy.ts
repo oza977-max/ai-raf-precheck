@@ -76,6 +76,8 @@ const InvariantSchema = z.object({
   condition: ConditionRecordSchema,
   required_controls: z.array(z.string()),
   severity: z.string(),
+  // V1.1-C01: optional citation, surfaced in the verdict explanation.
+  regulatory_basis: z.string().optional(),
 });
 
 const ControlSchema = z.object({

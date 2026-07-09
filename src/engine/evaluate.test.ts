@@ -176,3 +176,66 @@ describe('evaluate — no-track-match', () => {
     if (!result.ok) expect(result.error.kind).toBe('no-track-match');
   });
 });
+
+describe('evaluate — verdict explanation (V1.1-C01)', () => {
+  it('hard-line rejection carries the rule reason + regulatory citation, with rationales honestly null', () => {
+    const g = graph({
+      input_nodes: [{ id: 'i1', label: 'trade intel', data_class: 'MNPI', data_zone: 'Zone A' }],
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('rejected');
+    const ex = result.value.explanation;
+    expect(ex.binding_reason).toMatch(/market abuse/i);
+    expect(ex.binding_regulatory_basis).toBe('MAR Article 8; MiFID II');
+    // Tier/track assignment is skipped on hard-line rejection — the
+    // rationale must not fabricate one for the ceiling values.
+    expect(ex.tier_rationale).toBeNull();
+    expect(ex.track_rationale).toBeNull();
+    expect(ex.hard_lines_checked).toBe(policy.hard_lines.length);
+  });
+
+  it('a clean approved verdict explains which rules assigned the tier and track, with citations, and reports what was checked', () => {
+    const g = graph({
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('approved');
+    const ex = result.value.explanation;
+    expect(ex.tier_rationale?.rule_id).toMatch(/^TIER-/);
+    expect(ex.tier_rationale?.matched_field).toBe('exposure');
+    expect(ex.track_rationale?.rule_id).toBe('TRACK-I');
+    expect(ex.track_rationale?.regulatory_basis).toContain('SS1/23');
+    expect(ex.hard_lines_checked).toBe(policy.hard_lines.length);
+    expect(ex.invariants_checked).toBe(policy.invariants.length);
+    expect(ex.tripped_invariants).toEqual([]);
+    expect(ex.binding_reason).toBeNull();
+    expect(ex.binding_regulatory_basis).toBeNull();
+  });
+
+  it('approved_with_controls carries the FULL tripped-invariant detail (severity, required controls, citation) — no longer the one-element approximation', () => {
+    const g = graph({
+      input_nodes: [{ id: 'i1', label: 'client notes', data_class: 'Client PII', data_zone: 'Zone B' }],
+      processing_nodes: [TRACK_I_PROCESSING],
+      output_nodes: [TRACK_I_OUTPUT],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('approved_with_controls');
+    const ex = result.value.explanation;
+    expect(ex.tripped_invariants).toHaveLength(1);
+    const detail = ex.tripped_invariants[0]!;
+    expect(detail.id).toBe('INV-DATA-01');
+    expect(detail.severity).toBe('High');
+    expect(detail.required_controls).toEqual(['CTRL-ENC-01']);
+    expect(detail.regulatory_basis).toBe('GDPR Art. 32(1)(a)');
+    expect(ex.binding_regulatory_basis).toBe('GDPR Art. 32(1)(a)');
+  });
+});

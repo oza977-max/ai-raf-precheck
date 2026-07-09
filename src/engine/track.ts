@@ -5,6 +5,9 @@ export interface TrackAssignment {
   track: Track;
   ruleId: string;
   ruleName: string;
+  // V1.1-C01: TrackRule.regulatory_basis, surfaced into the verdict
+  // explanation instead of being dropped.
+  regulatoryBasis: string;
 }
 
 // First-match short-circuit (evaluation-engine.md §3.4). Rules are evaluated
@@ -15,7 +18,7 @@ export function assignTrack(graph: DataFlowGraph, trackRules: TrackRule[]): Resu
     if (matchesCondition(condition, graph)) {
       const trackMatch = /^TRACK-(III|II|I)/.exec(rule.id);
       const track = (trackMatch?.[1] ?? 'I') as Track;
-      return { ok: true, value: { track, ruleId: rule.id, ruleName: rule.name } };
+      return { ok: true, value: { track, ruleId: rule.id, ruleName: rule.name, regulatoryBasis: rule.regulatory_basis } };
     }
   }
   return {

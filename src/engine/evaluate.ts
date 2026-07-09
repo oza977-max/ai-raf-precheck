@@ -1,10 +1,22 @@
 import { applyJurisdictionOverrides, resolveActivePacks } from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
 import { assignTrack } from './track';
+import type { TrackAssignment } from './track';
 import { assignTier } from './tier';
+import type { TierAssignment } from './tier';
 import { evaluateInvariants } from './invariants';
+import type { TrippedInvariant } from './invariants';
 import { solvControls } from './greedy-solver';
-import type { DataFlowGraph, EngineError, EvaluationResult, PolicyFile, Result } from './types';
+import type {
+  DataFlowGraph,
+  EngineError,
+  EvaluationResult,
+  PolicyFile,
+  Result,
+  RuleRationale,
+  TrippedInvariantDetail,
+  VerdictExplanation,
+} from './types';
 
 // Rule 1 (cross-cutting.md §7): engine is a pure island — no React, no idb, no SDK.
 // evaluation-engine.md §3.1 pipeline, 9 steps. Pure function: no Date.now(),
@@ -37,6 +49,17 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
         binding_constraint: hardLineResult.hardLineId,
         binding_path: hardLineResult.graphPath,
         policy_version: policy.version,
+        explanation: {
+          // Tier/track rationale honestly null — assignment was skipped,
+          // the reported Critical/I are ceiling values, not assignments.
+          tier_rationale: null,
+          track_rationale: null,
+          hard_lines_checked: hardLines.length,
+          invariants_checked: 0,
+          tripped_invariants: [],
+          binding_reason: hardLineResult.reason,
+          binding_regulatory_basis: hardLineResult.regulatoryBasis,
+        },
       }),
     };
   }
@@ -62,8 +85,19 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
     policy.safety_margin,
   );
 
+  // V1.1-C01: rationale + tripped detail — data the earlier steps already
+  // computed, now carried into the verdict instead of dropped (pure
+  // function of the same sorted inputs; NF-1 determinism unchanged).
+  const rationales = {
+    tier_rationale: tierRationale(tierAssignment),
+    track_rationale: trackRationale(trackResult.value),
+  };
+  const checkCounts = { hard_lines_checked: hardLines.length, invariants_checked: invariants.length };
+  const trippedDetails = tripped.map(toTrippedDetail);
+
   // Step 8: status determination.
   if (!solverResult.ok) {
+    const bindingTripped = tripped.find((t) => t.invariantId === solverResult.unsatisfiableInvariant);
     return {
       ok: true,
       value: emptyResult({
@@ -71,9 +105,16 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
         tier: overrides.finalTier,
         track: overrides.finalTrack,
         binding_constraint: solverResult.unsatisfiableInvariant,
-        binding_path: tripped.find((t) => t.invariantId === solverResult.unsatisfiableInvariant)?.graphPath ?? '',
+        binding_path: bindingTripped?.graphPath ?? '',
         policy_version: policy.version,
         applied_overrides: overrides.appliedOverrides,
+        explanation: {
+          ...rationales,
+          ...checkCounts,
+          tripped_invariants: trippedDetails,
+          binding_reason: null,
+          binding_regulatory_basis: bindingTripped?.regulatoryBasis ?? null,
+        },
       }),
     };
   }
@@ -116,7 +157,41 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
       policy_version: policy.version,
       applied_overrides: overrides.appliedOverrides,
       boundary_proximity: boundaryProximity,
+      explanation: {
+        ...rationales,
+        ...checkCounts,
+        tripped_invariants: trippedDetails,
+        binding_reason: null,
+        binding_regulatory_basis: tripped[0]?.regulatoryBasis ?? null,
+      },
     }),
+  };
+}
+
+function tierRationale(assignment: TierAssignment): RuleRationale {
+  return {
+    rule_id: assignment.triggeringRuleId,
+    ...(assignment.triggeringField ? { matched_field: assignment.triggeringField } : {}),
+    ...(assignment.triggeringRegulatoryBasis ? { regulatory_basis: assignment.triggeringRegulatoryBasis } : {}),
+  };
+}
+
+function trackRationale(assignment: TrackAssignment): RuleRationale {
+  return {
+    rule_id: assignment.ruleId,
+    rule_name: assignment.ruleName,
+    ...(assignment.regulatoryBasis ? { regulatory_basis: assignment.regulatoryBasis } : {}),
+  };
+}
+
+function toTrippedDetail(t: TrippedInvariant): TrippedInvariantDetail {
+  return {
+    id: t.invariantId,
+    description: t.description,
+    severity: t.severity,
+    required_controls: t.requiredControls,
+    graph_path: t.graphPath,
+    ...(t.regulatoryBasis ? { regulatory_basis: t.regulatoryBasis } : {}),
   };
 }
 
@@ -139,6 +214,19 @@ function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
     applied_overrides: [],
     confidence_caveats: [],
     boundary_proximity: false,
+    explanation: emptyExplanation(),
     ...overrides,
+  };
+}
+
+function emptyExplanation(): VerdictExplanation {
+  return {
+    tier_rationale: null,
+    track_rationale: null,
+    hard_lines_checked: 0,
+    invariants_checked: 0,
+    tripped_invariants: [],
+    binding_reason: null,
+    binding_regulatory_basis: null,
   };
 }

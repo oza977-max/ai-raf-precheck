@@ -350,6 +350,7 @@ invariants:
       data_zone: { not_in: ["Zone C internal"] }
     required_controls: []         # No control resolves this — hard line HL-002 catches it first
     severity: "Critical"
+    regulatory_basis: "MAR Article 8; MiFID II"   # optional (V1.1-C01) — citation surfaced in the verdict explanation
 ```
 
 ### 3.6 Control library schema

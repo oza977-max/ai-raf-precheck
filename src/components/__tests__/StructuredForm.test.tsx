@@ -60,3 +60,12 @@ describe('StructuredForm', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('StructuredForm — field help (V1.1-C01)', () => {
+  it('explains the Zone A/B/C taxonomy and the input-vs-processing zone distinction inline', () => {
+    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
+    expect(screen.getByText(/Zone A — external \/ public internet/i)).toBeInTheDocument();
+    expect(screen.getByText(/where the model itself runs/i)).toBeInTheDocument();
+    expect(screen.getByText(/material non-public information/i)).toBeInTheDocument();
+  });
+});

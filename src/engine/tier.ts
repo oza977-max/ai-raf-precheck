@@ -6,6 +6,9 @@ export interface TierAssignment {
   triggeringRuleId: string;
   triggeringField: string;
   triggeringValue: unknown;
+  // V1.1-C01: the matched trigger's optional citation, surfaced into
+  // the verdict explanation instead of being dropped.
+  triggeringRegulatoryBasis?: string;
 }
 
 const TIER_ORDER: Record<Tier, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
@@ -31,6 +34,7 @@ export function assignTier(graph: DataFlowGraph, tierRules: TierRule[]): TierAss
           triggeringRuleId: rule.id,
           triggeringField: trigger.field,
           triggeringValue: trigger.value,
+          ...(trigger.regulatory_basis ? { triggeringRegulatoryBasis: trigger.regulatory_basis } : {}),
         };
       }
     }

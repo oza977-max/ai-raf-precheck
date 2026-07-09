@@ -20,6 +20,7 @@ import { findRuleDescription } from '../engine/find-rule-description';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
+import GraphView from './GraphView';
 import StepTracker from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
 import ContradictionReview from './ContradictionReview';
@@ -407,22 +408,10 @@ export default function IntakeFlow() {
             {evaluationError && (
               <p role="alert">Evaluation could not complete: {evaluationError}. Review the graph and try again.</p>
             )}
-            <ul>
-              {[...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].map(
-                (node) => (
-                  <li key={node.id} data-uncertain={'uncertain' in node && node.uncertain ? 'true' : 'false'}>
-                    {node.label}
-                    {'uncertain' in node && node.uncertain && <strong> (uncertain — please confirm)</strong>}
-                    <button
-                      type="button"
-                      onClick={() => handleCorrectNode(node.id, 'label', `${node.label} (corrected)`)}
-                    >
-                      Edit
-                    </button>
-                  </li>
-                ),
-              )}
-            </ul>
+            {/* V1.1-C01: a real visual data-flow with a real per-field
+                correction editor — replaces the flat list whose Edit
+                button was a stub that appended " (corrected)" to labels. */}
+            <GraphView graph={state.graph} editable onCorrect={handleCorrectNode} />
             <button type="button" onClick={handleProceedFromGraphReview}>
               Proceed
             </button>

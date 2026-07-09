@@ -18,6 +18,15 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     applied_overrides: [],
     confidence_caveats: [],
     boundary_proximity: false,
+    explanation: {
+      tier_rationale: null,
+      track_rationale: null,
+      hard_lines_checked: 0,
+      invariants_checked: 0,
+      tripped_invariants: [],
+      binding_reason: null,
+      binding_regulatory_basis: null,
+    },
     id: 'verdict-1',
     use_case_id: 'uc-1',
     living_status: 'approved',
@@ -106,5 +115,90 @@ describe('VerdictDisplay', () => {
     ];
     render(<VerdictDisplay verdict={verdict} auditEvents={auditEvents} onCorrect={vi.fn()} />);
     expect(screen.getByText(/track ii per ss1\/23 §3\.4/i)).toBeInTheDocument();
+  });
+});
+
+describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
+  it('a hard-line rejection shows the rule reason and its regulatory citation', () => {
+    const verdict = makeVerdict({
+      status: 'rejected',
+      binding_constraint: 'HL-002',
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 5,
+        invariants_checked: 0,
+        tripped_invariants: [],
+        binding_reason: 'MNPI outside Zone C violates market abuse prevention requirements.',
+        binding_regulatory_basis: 'MAR Article 8; MiFID II',
+      },
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/market abuse prevention requirements/i)).toBeInTheDocument();
+    expect(screen.getByText('MAR Article 8; MiFID II')).toBeInTheDocument();
+    expect(screen.getByText(/ceiling values/i)).toBeInTheDocument();
+    expect(screen.getByText(/evaluation stopped there/i)).toBeInTheDocument();
+  });
+
+  it('a clean Approved verdict explains tier/track assignment with citations and reports what was checked', () => {
+    const verdict = makeVerdict({
+      status: 'approved',
+      binding_constraint: '',
+      controls: [],
+      explanation: {
+        tier_rationale: { rule_id: 'TIER-MEDIUM', matched_field: 'exposure' },
+        track_rationale: { rule_id: 'TRACK-II', rule_name: 'Track II — AI on MRM', regulatory_basis: 'SS1/23 §3.4' },
+        hard_lines_checked: 5,
+        invariants_checked: 2,
+        tripped_invariants: [],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+      },
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText('TIER-MEDIUM')).toBeInTheDocument();
+    expect(screen.getByText('exposure')).toBeInTheDocument();
+    expect(screen.getByText('SS1/23 §3.4')).toBeInTheDocument();
+    expect(screen.getByText(/evaluated against 5 hard lines and 2 invariants/i)).toBeInTheDocument();
+    expect(screen.getByText(/none triggered/i)).toBeInTheDocument();
+  });
+
+  it('tripped invariants render with description, severity, citation, and required controls', () => {
+    const verdict = makeVerdict({
+      explanation: {
+        tier_rationale: { rule_id: 'TIER-HIGH', matched_field: 'data_class' },
+        track_rationale: { rule_id: 'TRACK-I', rule_name: 'Track I' },
+        hard_lines_checked: 5,
+        invariants_checked: 2,
+        tripped_invariants: [
+          {
+            id: 'INV-DATA-01',
+            description: 'Client PII must not flow to an external model endpoint without encryption in transit',
+            severity: 'High',
+            regulatory_basis: 'GDPR Art. 32(1)(a)',
+            required_controls: ['CTRL-ENC-01'],
+            graph_path: 'a → b',
+          },
+        ],
+        binding_reason: null,
+        binding_regulatory_basis: 'GDPR Art. 32(1)(a)',
+      },
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/without encryption in transit/i)).toBeInTheDocument();
+    expect(screen.getByText('High', { selector: '.verdict__severity' })).toBeInTheDocument();
+    expect(screen.getAllByText('GDPR Art. 32(1)(a)').length).toBeGreaterThan(0);
+    expect(screen.getByText(/requires: CTRL-ENC-01/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 triggered/i)).toBeInTheDocument();
+  });
+
+  it('BC-V11C01-04: a pre-V1.1 verdict without explanation renders without crashing (no why section)', () => {
+    const legacy = { ...makeVerdict(), explanation: undefined } as unknown as Parameters<typeof VerdictDisplay>[0]['verdict'];
+    render(<VerdictDisplay verdict={legacy} auditEvents={[]} onCorrect={vi.fn()} />);
+    expect(screen.getByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+    expect(screen.queryByText(/why this verdict/i)).not.toBeInTheDocument();
   });
 });

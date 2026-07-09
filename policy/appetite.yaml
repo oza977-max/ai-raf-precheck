@@ -181,6 +181,7 @@ invariants:
       data_zone: { in: ["Zone A", "Zone B"] }
     required_controls: ["CTRL-ENC-01"]
     severity: "High"
+    regulatory_basis: "GDPR Art. 32(1)(a)"
 
   - id: "INV-ZONE-01"
     description: "MNPI must remain within Zone C"
@@ -189,6 +190,7 @@ invariants:
       data_zone: { not_in: ["Zone C"] }
     required_controls: []
     severity: "Critical"
+    regulatory_basis: "MAR Article 8; MiFID II"
 
 controls:
   - id: "CTRL-ENC-01"

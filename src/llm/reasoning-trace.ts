@@ -6,15 +6,18 @@ import type { Verdict } from '../types/verdict';
 // verdict-audit.md §7. Rule 2 (cross-cutting.md §7): src/llm/* is the ONLY
 // place the Anthropic SDK is imported.
 //
-// Spec gap, documented (build/prompts/P5-C02.md): §7's VerdictTraceData
-// wants a full tripped_invariants[] array, but Verdict only exposes a
-// single binding_constraint/binding_path (the ONE rule that determined
-// the outcome) — the full tripped set is computed internally by
-// evaluate() and discarded. tripped_invariants below is a one-element
-// array built from binding_constraint/binding_path, not the complete set.
+// V1.1-C01: the full tripped set is now carried on
+// verdict.explanation.tripped_invariants (closing P5-C02's documented
+// one-element approximation), so the trace prompt receives the complete
+// multi-invariant breakdown with descriptions and citations. The
+// one-element binding-constraint fallback remains only for verdicts
+// persisted before the explanation field existed.
 export interface TrippedInvariantSummary {
   invariantId: string;
   graphPath: string;
+  description?: string;
+  severity?: string;
+  regulatory_basis?: string;
 }
 
 export interface ControlDetail {
@@ -48,9 +51,18 @@ export function buildTraceData(verdict: Verdict, controlLibrary: Control[], bind
     binding_constraint_id: verdict.binding_constraint,
     binding_constraint_description: bindingDescription,
     binding_path: verdict.binding_path,
-    tripped_invariants: verdict.binding_constraint
-      ? [{ invariantId: verdict.binding_constraint, graphPath: verdict.binding_path }]
-      : [],
+    tripped_invariants:
+      verdict.explanation && verdict.explanation.tripped_invariants.length > 0
+        ? verdict.explanation.tripped_invariants.map((t) => ({
+            invariantId: t.id,
+            graphPath: t.graph_path,
+            description: t.description,
+            severity: t.severity,
+            ...(t.regulatory_basis ? { regulatory_basis: t.regulatory_basis } : {}),
+          }))
+        : verdict.binding_constraint
+          ? [{ invariantId: verdict.binding_constraint, graphPath: verdict.binding_path }]
+          : [],
     controls_required: verdict.controls
       .map((id) => controlsById.get(id))
       .filter((c): c is Control => c !== undefined)

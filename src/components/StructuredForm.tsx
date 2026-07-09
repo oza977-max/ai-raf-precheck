@@ -101,6 +101,10 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       />
 
       <label htmlFor="sf-input-data-class">Input data class</label>
+      <p className="field-help">
+        How sensitive is the data feeding this AI? Public → Internal → Confidential → Client PII (client
+        personal data) → MNPI (material non-public information).
+      </p>
       <select
         id="sf-input-data-class"
         value={values.inputDataClass ?? ''}
@@ -115,6 +119,12 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </select>
 
       <label htmlFor="sf-input-data-zone">Input data zone</label>
+      <p className="field-help">
+        Where the data lives today. Zone A — external / public internet (outside the firm&apos;s control).
+        Zone B — cloud or managed third party (vendor-hosted under contract, e.g. a cloud LLM API).
+        Zone C — internal only (firm-controlled infrastructure — the boundary sensitive data like MNPI must
+        not leave).
+      </p>
       <select
         id="sf-input-data-zone"
         value={values.inputDataZone ?? ''}
@@ -156,6 +166,11 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </select>
 
       <label htmlFor="sf-processing-zone">Processing data zone</label>
+      <p className="field-help">
+        Where the model itself runs and touches the data — a cloud LLM API is Zone B even if your data lives
+        in Zone C. Data crossing from a stricter zone to a looser one is exactly what the policy rules watch
+        for.
+      </p>
       <select
         id="sf-processing-zone"
         value={values.processingDataZone ?? ''}
@@ -186,6 +201,10 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </select>
 
       <label htmlFor="sf-exposure">Output exposure</label>
+      <p className="field-help">
+        Who sees the output: internal-only (one team) · internal-shared (multiple teams) · client-facing ·
+        market-facing.
+      </p>
       <select
         id="sf-exposure"
         value={values.outputExposure ?? ''}
@@ -200,6 +219,10 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </select>
 
       <label htmlFor="sf-bindingness">Decision bindingness</label>
+      <p className="field-help">
+        How much weight the output carries: non-binding (informational) · advisory (input to a human
+        decision) · material (materially drives real decisions) · binding (directly determines the outcome).
+      </p>
       <select
         id="sf-bindingness"
         value={values.decisionBindingness ?? ''}
@@ -232,6 +255,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </select>
 
       <label htmlFor="sf-scale">Output scale</label>
+      <p className="field-help">limited — pilot or small population · at_scale — production-wide.</p>
       <select
         id="sf-scale"
         value={values.outputScale ?? ''}

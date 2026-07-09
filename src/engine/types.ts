@@ -20,6 +20,42 @@ export interface EvaluationResult {
   applied_overrides: AppliedOverride[];
   confidence_caveats: ConfidenceCaveat[];
   boundary_proximity: boolean;
+  explanation: VerdictExplanation;
+}
+
+// V1.1-C01: the "why" behind a verdict, wired from data the engine was
+// already computing and previously discarding at assembly (tier/track
+// rationale, hard-line reason + regulatory citation, tripped-invariant
+// details). Deterministic — a pure function of the same sorted inputs
+// as the rest of the result (NF-1 holds unchanged).
+export interface RuleRationale {
+  rule_id: string;
+  rule_name?: string;
+  matched_field?: string;
+  regulatory_basis?: string;
+}
+
+export interface TrippedInvariantDetail {
+  id: string;
+  description: string;
+  severity: string;
+  regulatory_basis?: string;
+  required_controls: string[];
+  graph_path: string;
+}
+
+export interface VerdictExplanation {
+  // null on a hard-line rejection, where tier/track assignment is
+  // skipped by design (§3.1 step order) and ceiling values are reported.
+  tier_rationale: RuleRationale | null;
+  track_rationale: RuleRationale | null;
+  hard_lines_checked: number;
+  invariants_checked: number;
+  // The FULL tripped set — closes P5-C02's documented one-element
+  // approximation (binding_constraint remains the single binding rule).
+  tripped_invariants: TrippedInvariantDetail[];
+  binding_reason: string | null;
+  binding_regulatory_basis: string | null;
 }
 
 // VD-7: hypothesis schema for V2 monitoring — empty in V1, structure locked now.
@@ -244,6 +280,10 @@ export interface Invariant {
   condition: Condition;
   required_controls: string[];
   severity: string;
+  // V1.1-C01: optional — hard lines/tracks always carry a citation, but
+  // invariants may not have one; the UI shows nothing rather than a
+  // fabricated citation (BC-V11C01-02).
+  regulatory_basis?: string;
 }
 
 export interface Control {

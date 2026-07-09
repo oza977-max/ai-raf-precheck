@@ -327,10 +327,13 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
 
-    // Make a real correction in graph_review before proceeding.
-    const editButtons = screen.getAllByRole('button', { name: /^edit$/i });
-    await user.click(editButtons[0]!);
-    expect(await screen.findByText(`${uniqueLabel} (corrected)`)).toBeInTheDocument();
+    // Make a real correction in graph_review before proceeding — V1.1-C01:
+    // a genuine field edit through the correction editor, not the old
+    // stub that appended " (corrected)" to the label.
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
+    const zoneSelect = await screen.findByLabelText(`${uniqueLabel} — data zone`);
+    await user.selectOptions(zoneSelect, 'Zone B');
+    expect(zoneSelect).toHaveValue('Zone B');
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -339,7 +342,7 @@ describe('Walking Skeleton', () => {
     const { getUseCases } = await import('../../store/register');
     const { getAll } = await import('../../store/audit');
     const useCases = await getUseCases('all');
-    const useCase = useCases.find((u) => u.label === `${uniqueLabel} (corrected)`);
+    const useCase = useCases.find((u) => u.label === uniqueLabel);
     expect(useCase).toBeDefined();
 
     const events = await getAll(useCase!.use_case_id);
@@ -388,7 +391,7 @@ describe('Walking Skeleton', () => {
 
     // First pass: reach a verdict normally.
     const input = screen.getByLabelText(/describe your ai use case/i);
-    await user.type(input, 'Correction flow check');
+    await user.type(input, 'Quartz xylophone probe intake');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
@@ -410,9 +413,9 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /correct this classification/i }));
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
 
-    // Make a correction, then walk back through to a new verdict.
-    const editButtons = screen.getAllByRole('button', { name: /^edit$/i });
-    await user.click(editButtons[0]!);
+    // Make a real field correction, then walk back through to a new verdict.
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
+    await user.selectOptions(await screen.findByLabelText(`${uniqueLabel} — data zone`), 'Zone B');
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();

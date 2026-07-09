@@ -228,6 +228,36 @@ interface EvaluationResult {
   applied_overrides: AppliedOverride[];
   confidence_caveats: ConfidenceCaveat[];  // Medium/Low confidence rules that fired (RA-11)
   boundary_proximity: boolean;         // True if any satisfied invariant has zero redundant coverage (CS-1)
+  explanation: VerdictExplanation;     // V1.1-C01: the "why" — rationale + citations, deterministic
+}
+
+// V1.1-C01: wired from data the engine already computed (tier/track
+// assignment rationale, hard-line reason + regulatory_basis, tripped
+// invariant details) and previously discarded at verdict assembly.
+interface RuleRationale {
+  rule_id: string;
+  rule_name?: string;
+  matched_field?: string;
+  regulatory_basis?: string;
+}
+
+interface TrippedInvariantDetail {
+  id: string;
+  description: string;
+  severity: string;
+  regulatory_basis?: string;
+  required_controls: string[];
+  graph_path: string;
+}
+
+interface VerdictExplanation {
+  tier_rationale: RuleRationale | null;   // null on hard-line rejection (assignment skipped)
+  track_rationale: RuleRationale | null;
+  hard_lines_checked: number;
+  invariants_checked: number;
+  tripped_invariants: TrippedInvariantDetail[];  // the FULL set (closes the P5-C02 one-element approximation)
+  binding_reason: string | null;
+  binding_regulatory_basis: string | null;
 }
 
 // Envelope — added by caller, never by evaluate()
