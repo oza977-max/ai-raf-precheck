@@ -1,4 +1,5 @@
 import type { PolicyFile } from '../engine/types';
+import { findRuleDescription } from '../engine/find-rule-description';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent } from '../store/types';
 
@@ -29,15 +30,6 @@ function findReasoningTrace(verdict: Verdict, auditEvents: AuditEvent[]): string
   if (match.payload.type === 'verdict_produced' || match.payload.type === 'verdict_corrected') {
     return match.payload.reasoning_trace ?? null;
   }
-  return null;
-}
-
-function findRuleDescription(policy: PolicyFile | undefined, ruleId: string): string | null {
-  if (!policy) return null;
-  const hardLine = policy.hard_lines.find((h) => h.id === ruleId);
-  if (hardLine) return hardLine.description;
-  const invariant = policy.invariants.find((i) => i.id === ruleId);
-  if (invariant) return invariant.description;
   return null;
 }
 
@@ -114,7 +106,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, onCorrect
             <code>{verdict.binding_constraint}</code> — {fallbackDescription}
           </p>
         ) : (
-          <p>No reasoning trace available. Configure an API key to generate one.</p>
+          <p>Reasoning trace unavailable — configure an Anthropic API key to enable plain-English explanations.</p>
         )}
       </details>
     </section>

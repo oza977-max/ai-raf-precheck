@@ -85,9 +85,11 @@ describe('VerdictDisplay', () => {
     expect(onCorrect).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to a structured summary in the reasoning-trace details when no LLM trace is available (P5-C02 not built yet)', () => {
+  it('shows the exact §7 fallback message when no LLM trace and no policy-based structured summary is available', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={vi.fn()} />);
-    expect(screen.getByText(/no reasoning trace available/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/reasoning trace unavailable — configure an anthropic api key/i),
+    ).toBeInTheDocument();
   });
 
   it('renders the LLM-generated reasoning trace from the matching audit event when present', () => {

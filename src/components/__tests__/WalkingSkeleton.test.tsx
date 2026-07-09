@@ -465,4 +465,35 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/evaluation could not complete/i);
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
   });
+
+  it('P5-C02: the real LLM-generated reasoning trace renders in the verdict details section', async () => {
+    // Distinguish calls by shape, not by queue order: extractGraph() and
+    // confirmSemanticDuplicate() both pass `tools`; generateReasoningTrace()
+    // does not. Robust against an extra duplicate-check LLM call shifting
+    // a plain call-order queue out of sync.
+    mockCreate.mockImplementation(async (args: { tools?: unknown }) => {
+      if (args.tools) {
+        return { content: [{ type: 'tool_use', name: 'extract_graph', input: MOCK_GRAPH_INPUT }] };
+      }
+      return {
+        content: [{ type: 'text', text: 'Track II applies because the model produces a quantitative recommendation.' }],
+      };
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+    await user.click(screen.getByText(/reasoning trace/i));
+    expect(
+      await screen.findByText(/track ii applies because the model produces a quantitative recommendation/i),
+    ).toBeInTheDocument();
+  });
 });

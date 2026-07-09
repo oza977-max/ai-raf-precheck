@@ -12,6 +12,8 @@ import type { AuditEvent, UseCaseSummary } from '../store/types';
 import { generateQuestions } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
+import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
+import { findRuleDescription } from '../engine/find-rule-description';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
@@ -234,6 +236,15 @@ export default function IntakeFlow() {
     setVerdict(fullVerdict);
     setLastGraph(graph);
 
+    // VD-8 (verdict-audit.md §7) — best-effort: a trace failure (no key,
+    // network error) must not block verdict storage (BC-P5C02-01).
+    // reasoning_trace: undefined is a valid, spec-mandated outcome.
+    const controlLibrary = policyResult.valid ? policyResult.policy.controls : [];
+    const bindingDescription =
+      findRuleDescription(policyResult.valid ? policyResult.policy : undefined, fullVerdict.binding_constraint) ?? '';
+    const traceResult = await generateReasoningTraceForVerdict(fullVerdict, controlLibrary, bindingDescription);
+    const reasoningTrace = traceResult.ok ? traceResult.value : undefined;
+
     if (isCorrection) {
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
@@ -241,7 +252,12 @@ export default function IntakeFlow() {
         event_type: 'verdict_corrected',
         occurred_at: now,
         actor: 'system',
-        payload: { type: 'verdict_corrected', original_verdict_id: originalVerdictId!, new_verdict: fullVerdict },
+        payload: {
+          type: 'verdict_corrected',
+          original_verdict_id: originalVerdictId!,
+          new_verdict: fullVerdict,
+          reasoning_trace: reasoningTrace,
+        },
       });
     } else {
       await appendAuditEvent({
@@ -250,7 +266,7 @@ export default function IntakeFlow() {
         event_type: 'verdict_produced',
         occurred_at: now,
         actor: 'system',
-        payload: { type: 'verdict_produced', verdict: fullVerdict },
+        payload: { type: 'verdict_produced', verdict: fullVerdict, reasoning_trace: reasoningTrace },
       });
     }
 
