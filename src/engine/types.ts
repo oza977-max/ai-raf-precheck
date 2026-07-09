@@ -102,6 +102,20 @@ export type ConditionValue =
 
 export type Condition = Record<string, ConditionValue>;
 
+// UC-7 correction recording (intake-flow.md §8).
+export interface GraphCorrection {
+  correction_id: string;
+  graph_version_before: number;
+  graph_version_after: number;
+  node_id: string;
+  field: string;
+  original_value: unknown;
+  corrected_value: unknown;
+  corrected_by: string;
+  corrected_at: string;
+  reason?: string;
+}
+
 // Result<T, E> pattern (cross-cutting.md §5) — engine functions never throw.
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 

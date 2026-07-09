@@ -1,21 +1,15 @@
 import { load } from 'js-yaml';
 import { z } from 'zod';
+import { CANONICAL_VOCABULARY } from '../engine/canonical-vocabulary';
 import type {
-  ActionType,
-  DataClass,
-  DataZone,
-  DecisionBindingness,
-  DecisionType,
   HardLine,
   Invariant,
-  ModelType,
   PolicyFile,
   PolicyValidationError,
   PolicyValidationResult,
   Tier,
   TierRule,
   TrackRule,
-  Exposure,
 } from '../engine/types';
 
 // Rule 3 (cross-cutting.md §7): persistence-only — no React, no LLM imports.
@@ -127,45 +121,11 @@ const PolicyFileSchema = z.object({
 // a condition-value object. Bare equality (string/number/boolean) is separate.
 const ALLOWED_CONDITION_OPERATORS = new Set(['gte', 'lte', 'in', 'not_in']);
 
-// --- Canonical vocabulary (policy-schema.md §3.0). Only fields whose values
-// are drawn from a closed enum are checked; unrecognised fields pass through
+// Canonical vocabulary (policy-schema.md §3.0) — imported from
+// src/engine/canonical-vocabulary.ts, the single runtime source of truth
+// shared with src/llm/graph-extractor.ts. Only fields whose values are
+// drawn from a closed enum are checked; unrecognised fields pass through
 // (forward compatibility — Kleppmann Ch. 4).
-const CANONICAL_VOCABULARY: Record<string, readonly string[]> = {
-  data_class: ['Public', 'Internal', 'Confidential', 'Client PII', 'MNPI'] satisfies DataClass[],
-  data_zone: ['Zone A', 'Zone B', 'Zone C'] satisfies DataZone[],
-  model_type: [
-    'statistical',
-    'traditional-ml',
-    'ml',
-    'deep-learning',
-    'llm',
-    'generative-ai',
-    'agentic',
-  ] satisfies ModelType[],
-  exposure: [
-    'internal-only',
-    'internal-shared',
-    'client-facing',
-    'market-facing',
-  ] satisfies Exposure[],
-  decision_bindingness: [
-    'non-binding',
-    'advisory',
-    'material',
-    'binding',
-  ] satisfies DecisionBindingness[],
-  action_type: ['read', 'draft', 'recommend', 'execute', 'trade', 'approve'] satisfies ActionType[],
-  decision_type: [
-    'credit-decision',
-    'lending-decision',
-    'fraud-detection',
-    'trading',
-    'pricing',
-    'hiring',
-    'regulatory-reporting',
-    'operational',
-  ] satisfies DecisionType[],
-};
 
 const REQUIRED_TIERS: Tier[] = ['Critical', 'High', 'Medium', 'Low'];
 
