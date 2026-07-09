@@ -261,7 +261,10 @@ export interface OutputNode {
   action_type: ActionType;
   exposure: ExposureLevel;
   decision_bindingness: DecisionBindingness;
-  reversibility: 'reversible' | 'irreversible' | 'unknown';
+  output_reversibility: 'reversible' | 'irreversible' | 'unknown';
+  scale: 'limited' | 'at_scale';
+  decision_type?: DecisionType;
+  hitl?: boolean;
 }
 
 export interface GraphEdge {

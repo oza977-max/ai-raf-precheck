@@ -144,8 +144,10 @@ export interface OutputNode {
   action_type: ActionType;
   exposure: ExposureLevel;
   decision_bindingness: DecisionBindingness;
-  reversibility: 'reversible' | 'irreversible' | 'unknown';
+  output_reversibility: 'reversible' | 'irreversible' | 'unknown';
   scale: 'limited' | 'at_scale';  // TIER-CRITICAL trigger when client-/market-facing at scale
+  decision_type?: DecisionType;   // Drives HL-003/HL-004/TIER-CRITICAL/TIER-HIGH decision_type triggers
+  hitl?: boolean;                 // Human-in-the-loop present — drives HL-003
 }
 
 export interface GraphEdge {
