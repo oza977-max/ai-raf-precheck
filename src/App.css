@@ -1,6 +1,236 @@
+/* AIGate visual language — Tufte/Few design system (cross-cutting.md §"No UI
+   component library" line 72). Plain CSS, no framework, deterministic
+   styling: high data-ink ratio, minimal chrome, serif headings for
+   authority/readability, tables over decoration, restrained color used only
+   to carry meaning (risk tiers, warnings, uncertainty). */
+
+:root {
+  --ink: #111;
+  --ink-soft: #444;
+  --ink-faint: #777;
+  --paper: #fffff8;
+  --paper-shade: #f4f4ec;
+  --rule: #ddd;
+  --rule-strong: #333;
+  --accent: #1a5c3a;
+  --warn-bg: #fdf3e6;
+  --warn-border: #c8791a;
+  --danger: #a8322a;
+
+  color-scheme: light;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 .app {
   max-width: 720px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 2.5rem 1.5rem 6rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+.app h1 {
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.75rem;
+  border-bottom: 2px solid var(--rule-strong);
+  padding-bottom: 0.6rem;
+}
+
+.app h2 {
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink);
+  margin: 2.25rem 0 0.85rem;
+}
+
+.app section {
+  margin-bottom: 2rem;
+}
+
+.app label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+}
+
+.app textarea,
+.app input[type='text'],
+.app input[type='password'] {
+  width: 100%;
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #b9b9ab;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.app textarea:focus,
+.app input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.app textarea {
+  min-height: 5rem;
+  resize: vertical;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.app button {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.app button:hover:not(:disabled) {
+  background: #333;
+}
+
+.app button:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Secondary buttons — Edit / Clear actions, next to primary flow buttons */
+.app li button,
+.app details button + button {
+  background: transparent;
+  color: var(--ink);
+  border-color: #b9b9ab;
+  font-weight: 400;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  margin-left: 0.5rem;
+}
+
+.app li button:hover:not(:disabled),
+.app details button + button:hover:not(:disabled) {
+  background: var(--paper-shade);
+}
+
+.app [role='alert'] {
+  background: var(--warn-bg);
+  border-left: 3px solid var(--warn-border);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.92rem;
+  margin: 0.75rem 0;
+  color: #5c3d0e;
+}
+
+.app ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.app li {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app li[data-uncertain='true'] {
+  background: var(--warn-bg);
+  border-left: 3px solid var(--warn-border);
+}
+
+.app li strong {
+  color: var(--warn-border);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.app table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.app tbody tr {
+  border-bottom: 1px solid #e8e8e0;
+}
+
+.app tbody tr:nth-child(even) {
+  background: var(--paper-shade);
+}
+
+.app td {
+  padding: 0.55rem 0.8rem 0.55rem 0;
+  vertical-align: top;
+}
+
+.app td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* Verdict block — the single most important thing on screen when present */
+.app h2 + p {
+  font-size: 1.05rem;
+}
+
+.app details {
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+}
+
+.app details summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.app details summary:hover {
+  color: var(--ink);
+}
+
+.app details > div {
+  margin-top: 0.75rem;
+  padding: 0.9rem;
+  background: var(--paper-shade);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  display: flex;
+  align-items: end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.app details label {
+  flex: 1 1 220px;
+  margin-bottom: 0;
+}
+
+.app details input {
+  margin-top: 0.3rem;
 }
