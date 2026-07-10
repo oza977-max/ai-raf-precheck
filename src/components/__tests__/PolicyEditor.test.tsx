@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PolicyEditor from '../PolicyEditor';
@@ -112,5 +112,66 @@ describe('PolicyEditor', () => {
 
     expect(await screen.findByText(/policy saved.*queued for re-evaluation/i)).toBeInTheDocument();
     expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
+  beforeEach(() => {
+    // Earlier tests in this file SAVE a minimal policy into localStorage;
+    // these tests need the bundled starter YAML (with [FIRM] markers and
+    // the full pack list) as the active policy.
+    localStorage.clear();
+  });
+
+  it('D4: shows the NF-10 ACTION REQUIRED banner while [FIRM] markers are present, and hides it once replaced', async () => {
+    const user = userEvent.setup();
+    render(<PolicyEditor />);
+    // The bundled starter policy carries [FIRM] markers.
+    expect(screen.getByText(/action required/i)).toBeInTheDocument();
+    expect(screen.getByText(/verdicts are provisional until your CRO adopts/i)).toBeInTheDocument();
+
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    await user.paste(MINIMAL_VALID_POLICY_YAML); // no [FIRM] markers
+    expect(screen.queryByText(/action required/i)).not.toBeInTheDocument();
+  });
+
+  it('review finding, pass 1: [FIRM] mentions in comment lines alone do NOT trigger the NF-10 banner (an adopted framework keeping the template header is not provisional)', async () => {
+    const user = userEvent.setup();
+    render(<PolicyEditor />);
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    // Valid policy, real markers filled in, but the instructional comment
+    // still mentions [FIRM] — exactly the post-adoption state.
+    await user.paste(`# Search for [FIRM] markers below — each one requires review.\n${MINIMAL_VALID_POLICY_YAML}`);
+    expect(screen.queryByText(/action required/i)).not.toBeInTheDocument();
+  });
+
+  it('D2/BC-V12C-01: lists the declared jurisdiction packs with the honest not-loaded chip — never "loaded"/"fired"', () => {
+    render(<PolicyEditor />);
+    expect(screen.getByText('Jurisdiction packs', { selector: 'h3' })).toBeInTheDocument();
+    expect(screen.getByText('UK')).toBeInTheDocument();
+    expect(screen.getByText('EU')).toBeInTheDocument();
+    const chips = screen.getAllByText('declared — not loaded by V1 engine');
+    expect(chips.length).toBeGreaterThanOrEqual(6);
+    expect(screen.queryByText(/^loaded$|^fired$/i)).not.toBeInTheDocument();
+  });
+
+  it('D3: lists the hard lines with the checked-first framing', () => {
+    render(<PolicyEditor />);
+    expect(screen.getByText(/hard lines — no control set can fix/i)).toBeInTheDocument();
+    expect(screen.getByText(/rejected immediately \(PE-4\)/i)).toBeInTheDocument();
+    expect(screen.getByText('HL-001')).toBeInTheDocument();
+    expect(screen.getByText('HL-005')).toBeInTheDocument();
+  });
+
+  it('invalid YAML shows the panels-unavailable note instead of stale panels', async () => {
+    const user = userEvent.setup();
+    render(<PolicyEditor />);
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    await user.paste('definitely: not: valid: yaml');
+    expect(screen.getByText(/panels unavailable — YAML invalid/i)).toBeInTheDocument();
+    expect(screen.queryByText(/jurisdiction packs/i)).not.toBeInTheDocument();
   });
 });

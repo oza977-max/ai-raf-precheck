@@ -37,7 +37,10 @@ export default function IntakeFlow() {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
   const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  // V1.2-C (UC-2/RG-2 leak fix, design-gap C1): the match is stored with
+  // both tier and label, but the LABEL is only ever rendered for 2LoD —
+  // 1LoD gets the redacted card (tier + "contact AI Risk").
+  const [duplicateMatch, setDuplicateMatch] = useState<{ tier: string | null; label: string } | null>(null);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
@@ -72,22 +75,20 @@ export default function IntakeFlow() {
     if (state.step !== 'description_entry') return;
     setSubmittedDescription(state.description);
     dispatch({ type: 'SUBMIT_DESCRIPTION' });
-    setDuplicateWarning(null);
+    setDuplicateMatch(null);
 
     const candidates = findPossibleDuplicates(
       state.description,
       registerRows.map((r) => ({ id: r.use_case_id, label: r.label })),
     );
-    if (candidates.length > 0 && getApiKey()) {
-      const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
-      if (topCandidate) {
-        const confirmed = await confirmSemanticDuplicate(state.description, topCandidate.label);
-        if (confirmed) {
-          setDuplicateWarning(`A similar use case may already exist: "${topCandidate.label}"`);
-        }
+    const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
+    if (topCandidate && getApiKey()) {
+      const confirmed = await confirmSemanticDuplicate(state.description, topCandidate.label);
+      if (confirmed) {
+        setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
       }
-    } else if (candidates.length > 0) {
-      setDuplicateWarning('A similar use case may already exist in the register (keyword match).');
+    } else if (topCandidate) {
+      setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
     }
 
     const hasApiKey = getApiKey() !== null;
@@ -406,7 +407,27 @@ export default function IntakeFlow() {
         {state.step === 'graph_review' && (
           <section>
             <h2>Review extracted graph</h2>
-            {duplicateWarning && <p role="alert">{duplicateWarning}</p>}
+            {duplicateMatch && (
+              <div className="duplicate-card" role="alert">
+                <p className="duplicate-card__title">One similar use case exists in the register</p>
+                {getRole() === '2LoD' ? (
+                  <p>
+                    Overlapping use case: <strong>{duplicateMatch.label}</strong>
+                    {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}. Consider adopting its
+                    classification, or confirm this one is genuinely new.
+                  </p>
+                ) : (
+                  // BC-V12C-02: the label is never rendered for non-2LoD
+                  // roles (UC-2/RG-2 — redacted match, tier only).
+                  <p>
+                    A use case with overlapping characteristics
+                    {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on record. Full
+                    detail is visible to the 2nd Line of Defence. Contact AI Risk to adopt its classification,
+                    or confirm yours is genuinely new.
+                  </p>
+                )}
+              </div>
+            )}
             {evaluationError && (
               <p role="alert">Evaluation could not complete: {evaluationError}. Review the graph and try again.</p>
             )}

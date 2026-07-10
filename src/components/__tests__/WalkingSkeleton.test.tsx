@@ -595,7 +595,9 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText(/policy saved.*queued for re-evaluation/i)).toBeInTheDocument();
 
     // Header badge reflects the newly saved version without a page reload.
-    expect(await screen.findByText(/policy v1\.1/)).toBeInTheDocument();
+    // (findAllBy: the V1.2-C appetite view's meta line also shows the
+    // version, so a single-match query would be ambiguous.)
+    expect((await screen.findAllByText(/policy v1\.1/)).length).toBeGreaterThan(0);
 
     // A real save, not just a UI message: at least one previously-existing
     // active use case (from earlier tests in this file, sharing IndexedDB)
@@ -616,5 +618,96 @@ describe('Walking Skeleton', () => {
       }
     }
     expect(foundQueuedEvent).toBe(true);
+  });
+
+  it('V1.2-C / UC-2: the duplicate match card is REDACTED for 1LoD — tier shown, label never rendered', async () => {
+    localStorage.clear(); // no API key -> keyword duplicate path, and role defaults to 1LoD
+    const { addNode } = await import('../../store/register');
+    const existingLabel = 'quorix zenbat flumtrek engine';
+    await addNode({
+      node_id: crypto.randomUUID(),
+      node_type: 'use_case',
+      label: existingLabel,
+      created_at: new Date().toISOString(),
+      metadata: {
+        node_type: 'use_case',
+        submitted_by: 'someone-else',
+        lifecycle_stage: 'approved',
+        current_verdict_id: null,
+        tier: 'High',
+        track: 'II',
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    const input = screen.getByLabelText(/describe your ai use case/i);
+    // High keyword overlap with the seeded label -> keyword duplicate hit.
+    await user.type(input, 'quorix zenbat flumtrek checker');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+
+    // Structured form path; build a minimal graph to reach graph review.
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/use case name/i), 'Redaction probe');
+    await user.type(screen.getByLabelText(/brief description/i), 'x');
+    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
+    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
+    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /build graph/i }));
+
+    expect(await screen.findByText(/one similar use case exists/i)).toBeInTheDocument();
+    expect(screen.getByText(/tier High/)).toBeInTheDocument();
+    expect(screen.getByText(/full detail is visible to the 2nd line of defence/i)).toBeInTheDocument();
+    // BC-V12C-02: the matched label must be unreachable in the DOM.
+    expect(screen.queryByText(new RegExp(existingLabel, 'i'))).not.toBeInTheDocument();
+  });
+
+  it('V1.2-C / UC-2: 2LoD sees the full duplicate match detail including the label', async () => {
+    localStorage.clear();
+    localStorage.setItem('aigate:role', '2LoD');
+    const { addNode } = await import('../../store/register');
+    const existingLabel = 'brindle vexomat quarlune pipeline';
+    await addNode({
+      node_id: crypto.randomUUID(),
+      node_type: 'use_case',
+      label: existingLabel,
+      created_at: new Date().toISOString(),
+      metadata: {
+        node_type: 'use_case',
+        submitted_by: 'someone-else',
+        lifecycle_stage: 'approved',
+        current_verdict_id: null,
+        tier: 'Medium',
+        track: 'III',
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'brindle vexomat quarlune probe');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/use case name/i), 'Full detail probe');
+    await user.type(screen.getByLabelText(/brief description/i), 'x');
+    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
+    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
+    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /build graph/i }));
+
+    expect(await screen.findByText(/one similar use case exists/i)).toBeInTheDocument();
+    expect(screen.getByText(existingLabel)).toBeInTheDocument();
   });
 });
