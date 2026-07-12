@@ -147,14 +147,20 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.queryByText(/action required/i)).not.toBeInTheDocument();
   });
 
-  it('D2/BC-V12C-01: lists the declared jurisdiction packs with the honest not-loaded chip — never "loaded"/"fired"', () => {
+  it('D2 (V2-A): lists the jurisdiction packs with the REAL loader state — loaded rule counts, honestly marked pending adoption, never "fired"', () => {
     render(<PolicyEditor />);
     expect(screen.getByText('Jurisdiction packs', { selector: 'h3' })).toBeInTheDocument();
     expect(screen.getByText('UK')).toBeInTheDocument();
     expect(screen.getByText('EU')).toBeInTheDocument();
-    const chips = screen.getAllByText('declared — not loaded by V1 engine');
+    // V2-A: packs genuinely load now; every chip carries the pending-
+    // adoption qualifier because all sign-offs are [FIRM] placeholders.
+    const chips = screen.getAllByText(/loaded — .+\(\d+ rules?, v[\d.]+-proposed\).*· pending adoption/);
     expect(chips.length).toBeGreaterThanOrEqual(6);
-    expect(screen.queryByText(/^loaded$|^fired$/i)).not.toBeInTheDocument();
+    // Review fix, pass 1: EU declares TWO packs — both must be visible.
+    expect(screen.getByText(/EU-AIACT \(2 rules, v0\.1-proposed\) \+ DORA \(1 rule, v0\.1-proposed\)|DORA \(1 rule, v0\.1-proposed\) \+ EU-AIACT \(2 rules, v0\.1-proposed\)/)).toBeInTheDocument();
+    // "fired" remains a per-verdict concept (the RA-9 chain), never a
+    // static pack state.
+    expect(screen.queryByText(/fired/i)).not.toBeInTheDocument();
   });
 
   it('D3: lists the hard lines with the checked-first framing', () => {

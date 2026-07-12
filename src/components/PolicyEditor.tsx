@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { loadPolicy, onPolicyUpdated } from '../store/policy';
 import { getCurrentPolicyYaml, setCurrentPolicyYaml } from '../store/policy-source';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
 import type { PolicyValidationError } from '../engine/types';
 
 interface PolicyEditorProps {
@@ -31,6 +33,11 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   // lines first — otherwise a genuinely adopted framework that kept the
   // template header would be branded "provisional" forever, an integrity
   // defect in a product built on honest status claims.
+  // V2-A: real pack loading — chips now reflect the loader's actual
+  // result. "loaded — pending adoption" is honest: rules apply at eval
+  // time but every sign-off is a [FIRM] placeholder until the CRO adopts.
+  const packLoad = useMemo(() => loadPacks(getPackSources()), []);
+
   const hasFirmMarkers = yaml
     .split('\n')
     .filter((line) => !line.trim().startsWith('#'))
@@ -140,15 +147,32 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         <div className="policy-view__panel">
           <h3>Jurisdiction packs</h3>
           <ul className="policy-view__packs">
-            {livePolicy.jurisdictions.map((j) => (
-              <li key={j.code}>
-                <code className="policy-view__pack-code">{j.code}</code>
-                <span className="policy-view__pack-name">{j.name}</span>
-                {/* BC-V12C-01: the V1 engine does not load packs — the
-                    chip says so plainly, never "loaded"/"fired". */}
-                <span className="policy-view__pack-state">declared — not loaded by V1 engine</span>
-              </li>
-            ))}
+            {livePolicy.jurisdictions.map((j) => {
+              // Review fixes (pass 1): a jurisdiction can declare MULTIPLE
+              // packs (EU = EU AI Act + DORA) — show them all; and load
+              // errors are matched by the declared pack FILE names, not a
+              // code-substring heuristic that missed 5 of 7 files.
+              const jurisdictionPacks = packLoad.packs.filter((p) => p.jurisdiction === j.code);
+              const fileNames = j.pack_files.map((pf) => pf.split('/').pop() ?? pf);
+              const packError = packLoad.errors.find((e) => fileNames.some((fn) => e.file.endsWith(fn)));
+              return (
+                <li key={j.code}>
+                  <code className="policy-view__pack-code">{j.code}</code>
+                  <span className="policy-view__pack-name">{j.name}</span>
+                  {jurisdictionPacks.length > 0 ? (
+                    <span className="policy-view__pack-state policy-view__pack-state--loaded">
+                      loaded — {jurisdictionPacks.map((p) => `${p.pack_id} (${p.rules.length} rule${p.rules.length === 1 ? '' : 's'}, v${p.version})`).join(' + ')} · pending adoption
+                    </span>
+                  ) : packError ? (
+                    <span className="policy-view__pack-state policy-view__pack-state--invalid">
+                      invalid: {packError.reason.slice(0, 60)}
+                    </span>
+                  ) : (
+                    <span className="policy-view__pack-state">declared — no pack file loaded</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

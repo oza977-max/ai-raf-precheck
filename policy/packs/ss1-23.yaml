@@ -1,0 +1,27 @@
+# UK PRA SS1/23 pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+pack_id: "SS1-23"
+version: "0.1-proposed"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Supervisory Statement SS1/23 — Model Risk Management Principles for Banks"
+effective_date: "2024-05-17"
+reviewer_name: "[FIRM] — Model Risk"
+reviewer_role: "Head of Model Risk"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "SS1-UK-REV-01"
+    title: "Independent validation for models feeding material decisions"
+    source:
+      document: "SS1/23"
+      section: "§3.4"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Models producing quantitative outputs used in material decisions require independent validation, regardless of the underlying technique."
+    effect:
+      type: "required_review"
+      review: "Independent model validation (2LoD)"
+    condition:
+      decision_bindingness: { in: ["material", "binding"] }
+    confidence: "High"
+    reviewer_name: "[FIRM] — Model Risk"
+    reviewer_role: "Head of Model Risk"
+    sign_off_date: "[DATE]"

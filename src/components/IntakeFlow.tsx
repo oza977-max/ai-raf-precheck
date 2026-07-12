@@ -6,6 +6,8 @@ import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
 import { getCurrentPolicyYaml } from '../store/policy-source';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
 import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
@@ -61,6 +63,10 @@ export default function IntakeFlow() {
   // PolicyEditor's Save button already requires leaving this screen
   // first); not worth a cross-component subscription mechanism for V1.
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), []);
+  // V2-A: jurisdiction packs — bundled files, parsed once. Invalid packs
+  // are dropped by the loader (whole-pack rejection, CF-5/RA-7) and shown
+  // on the Appetite screen; evaluation proceeds with the valid ones.
+  const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
 
   const refreshRegister = useCallback(async () => {
     const rows = await getUseCases('all');
@@ -225,7 +231,7 @@ export default function IntakeFlow() {
     }
     // §6.1: the engine evaluates the corrected graph as a fresh call —
     // there is no "partial re-evaluation".
-    const evalResult = evaluate(graph, policyResult.policy);
+    const evalResult = evaluate(graph, policyResult.policy, loadedPacks);
     if (!evalResult.ok) {
       throw new Error(`Evaluation failed: ${evalResult.error.kind}`);
     }

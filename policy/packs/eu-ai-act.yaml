@@ -1,0 +1,46 @@
+# EU AI Act pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+# The two Annex III quotes below are believed accurate but MUST be
+# verified against the retrieved Official Journal text during pack
+# authoring (grounding/PACK-AUTHORING.md) before any sign-off.
+pack_id: "EU-AIACT"
+version: "0.1-proposed"
+jurisdiction: "EU"
+regulator: "European Commission"
+document: "EU AI Act (Regulation (EU) 2024/1689)"
+effective_date: "2024-08-01"
+reviewer_name: "[FIRM] — Legal/Compliance"
+reviewer_role: "Head of Compliance"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "EU-AIACT-TIER-01"
+    title: "Annex III high-risk: creditworthiness assessment"
+    source:
+      document: "EU AI Act"
+      section: "Annex III §5(b)"
+      text: "AI systems intended to be used to evaluate the creditworthiness of natural persons or establish their credit score, with the exception of AI systems used for the purpose of detecting financial fraud"
+    effect:
+      type: "tier_floor"
+      minimum_tier: "Critical"
+    condition:
+      decision_type: { in: ["credit-decision", "lending-decision"] }
+    confidence: "Medium"
+    reviewer_name: "[FIRM] — Legal/Compliance"
+    reviewer_role: "Head of Compliance"
+    sign_off_date: "[DATE]"
+
+  - id: "EU-AIACT-TIER-02"
+    title: "Annex III high-risk: recruitment and selection"
+    source:
+      document: "EU AI Act"
+      section: "Annex III §4(a)"
+      text: "AI systems intended to be used for the recruitment or selection of natural persons, in particular to place targeted job advertisements, to analyse and filter job applications, and to evaluate candidates"
+    effect:
+      type: "tier_floor"
+      minimum_tier: "Critical"
+    condition:
+      decision_type: { in: ["hiring"] }
+    confidence: "Medium"
+    reviewer_name: "[FIRM] — Legal/Compliance"
+    reviewer_role: "Head of Compliance"
+    sign_off_date: "[DATE]"

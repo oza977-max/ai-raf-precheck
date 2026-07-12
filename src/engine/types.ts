@@ -56,6 +56,9 @@ export interface VerdictExplanation {
   tripped_invariants: TrippedInvariantDetail[];
   binding_reason: string | null;
   binding_regulatory_basis: string | null;
+  // V2-A (RA-9): fired jurisdiction-pack rules with verbatim source text
+  // + sign-off. Optional: verdicts persisted before V2-A lack it.
+  regulatory_chain?: RegulatoryChainEntry[];
 }
 
 // VD-7: hypothesis schema for V2 monitoring — empty in V1, structure locked now.
@@ -168,12 +171,58 @@ export interface Contradiction {
   field: string;
 }
 
-// Placeholder — no pack-loading chunk exists yet (same P3-C01 deviation).
-// generateQuestions() always receives [] for activePacks until a future
-// chunk lands real jurisdiction pack loading.
+// V2-A: REAL jurisdiction pack schema (policy-schema.md §4), replacing
+// the P3-C01 placeholder. track_floor is intentionally absent — the
+// supplement model was decided instead (repo-updates §4.2): obligations
+// are only ever ADDED, tier floors only ever RAISE (BC-V2A-01).
+export type PackConfidence = 'High' | 'Medium' | 'Low';
+
+export interface PackRuleSource {
+  document: string;
+  section: string;
+  text: string; // verbatim — or carrying the [ILLUSTRATIVE …] marker until pack authoring copies from a retrieved source
+}
+
+export type PackRuleEffect =
+  | { type: 'tier_floor'; minimum_tier: Tier }
+  | { type: 'required_control'; control_id: string }
+  | { type: 'required_review'; review: string }
+  | { type: 'hard_line'; reason: string };
+
+export interface PackRule {
+  id: string;
+  title: string;
+  source: PackRuleSource;
+  effect: PackRuleEffect;
+  condition: Condition;
+  confidence: PackConfidence;
+  reviewer_name: string; // containing a [..] placeholder = UNSIGNED (NF-7) → fired rule renders the verdict provisional
+  reviewer_role: string;
+  sign_off_date: string;
+}
+
 export interface JurisdictionPack {
-  code: string;
-  rules: never[];
+  pack_id: string;
+  version: string;
+  jurisdiction: string;
+  regulator: string;
+  document: string;
+  effective_date: string;
+  reviewer_name: string;
+  reviewer_role: string;
+  sign_off_date: string;
+  rules: PackRule[];
+}
+
+// RA-9: one entry per FIRED pack rule — the regulatory reasoning chain.
+export interface RegulatoryChainEntry {
+  rule_id: string;
+  document: string;
+  section: string;
+  source_text: string;
+  confidence: PackConfidence;
+  derived: string;
+  sign_off: string;
 }
 
 // UC-7 correction recording (intake-flow.md §8).

@@ -1,0 +1,27 @@
+# EU DORA pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+pack_id: "DORA"
+version: "0.1-proposed"
+jurisdiction: "EU"
+regulator: "European Commission / ESAs"
+document: "Digital Operational Resilience Act (Reg. (EU) 2022/2554)"
+effective_date: "2025-01-17"
+reviewer_name: "[FIRM] — Technology Risk"
+reviewer_role: "Head of Technology Risk"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "DORA-EU-REV-01"
+    title: "ICT third-party risk review for cloud-processed workloads"
+    source:
+      document: "DORA"
+      section: "Art. 28"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Financial entities shall manage ICT third-party risk, including concentration risk arising from reliance on cloud service providers."
+    effect:
+      type: "required_review"
+      review: "ICT third-party concentration review"
+    condition:
+      data_zone: { in: ["Zone B"] }
+    confidence: "Medium"
+    reviewer_name: "[FIRM] — Technology Risk"
+    reviewer_role: "Head of Technology Risk"
+    sign_off_date: "[DATE]"

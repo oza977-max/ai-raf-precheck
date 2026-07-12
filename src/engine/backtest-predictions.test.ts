@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadPolicy } from '../store/policy';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
 import { evaluate } from './evaluate';
 import type { DataFlowGraph, PolicyFile } from './types';
 
@@ -11,11 +13,15 @@ import type { DataFlowGraph, PolicyFile } from './types';
 // outcome fails here and the pack gets corrected instead of poisoning
 // the back-test.
 let policy: PolicyFile;
+let packs: ReturnType<typeof loadPacks>['packs'];
 beforeAll(() => {
   const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
   const r = loadPolicy(yaml);
   if (!r.valid) throw new Error('policy invalid');
   policy = r.policy;
+  const packResult = loadPacks(getPackSources());
+  if (packResult.errors.length > 0) throw new Error('pack load errors: ' + JSON.stringify(packResult.errors));
+  packs = packResult.packs;
 });
 
 function g(dataClass: string, inZone: string, model: string, autonomy: number, procZone: string, action: string, exposure: string, bindingness: string, reversibility: string, scale: string): DataFlowGraph {
@@ -52,4 +58,82 @@ describe('backtest pack predictions', () => {
       if (expected.binding) expect(r.value.binding_constraint).toBe(expected.binding);
     });
   }
+});
+
+// ── V2-A: jurisdictional back-test cases (packs loaded from the real files) ──
+
+function g2(opts: {
+  dataClass: string; inZone: string; model: string; autonomy: number; procZone: string;
+  action: string; exposure: string; bindingness: string; reversibility: string; scale: string;
+  decisionType?: string; hitl?: boolean; jurisdictions: string[];
+}): DataFlowGraph {
+  const base = g(opts.dataClass, opts.inZone, opts.model, opts.autonomy, opts.procZone, opts.action, opts.exposure, opts.bindingness, opts.reversibility, opts.scale);
+  base.jurisdictions = opts.jurisdictions;
+  if (opts.decisionType) (base.output_nodes[0] as { decision_type?: string }).decision_type = opts.decisionType;
+  if (opts.hitl !== undefined) (base.output_nodes[0] as { hitl?: boolean }).hitl = opts.hitl;
+  return base;
+}
+
+describe('backtest pack predictions — jurisdictional (V2-A)', () => {
+  it('UC-9 EU retail credit scoring: Critical (base + Annex III floor), controls + UK/EU reviews, provisional', () => {
+    const r = evaluate(g2({ dataClass: 'Client PII', inZone: 'Zone B', model: 'ml', autonomy: 1, procZone: 'Zone B', action: 'recommend', exposure: 'internal-shared', bindingness: 'material', reversibility: 'reversible', scale: 'at_scale', decisionType: 'credit-decision', hitl: true, jurisdictions: ['UK', 'EU'] }), policy, packs);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.status).toBe('approved_with_controls');
+    expect(r.value.tier).toBe('Critical');
+    expect(r.value.track).toBe('II');
+    expect(r.value.controls).toContain('CTRL-ENC-01');
+    expect(r.value.downstream_reviews).toEqual([
+      'ICT third-party concentration review',
+      'Independent model validation (2LoD)',
+    ]);
+    const chain = r.value.explanation.regulatory_chain ?? [];
+    expect(chain.map((c) => c.rule_id)).toEqual(['DORA-EU-REV-01', 'EU-AIACT-TIER-01', 'SS1-UK-REV-01']);
+    // NF-7: unsigned pack rules -> provisional verdict.
+    expect(r.value.confidence_caveats.some((c) => c.confidence === 'low')).toBe(true);
+  });
+
+  it('UC-10 EU CV screening: FORCED Medium -> Critical by Annex III 4(a) — the visible pack-force demo', () => {
+    const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone B', model: 'ml', autonomy: 1, procZone: 'Zone B', action: 'recommend', exposure: 'internal-shared', bindingness: 'material', reversibility: 'reversible', scale: 'at_scale', decisionType: 'hiring', jurisdictions: ['EU'] }), policy, packs);
+    if (!r.ok) return;
+    expect(r.value.status).toBe('approved');
+    expect(r.value.tier).toBe('Critical');
+    const forced = (r.value.explanation.regulatory_chain ?? []).find((c) => c.rule_id === 'EU-AIACT-TIER-02');
+    expect(forced?.derived).toMatch(/forced to Critical \(was Medium\)/);
+    expect(forced?.source_text).toMatch(/recruitment or selection of natural persons/);
+  });
+
+  it('UC-11 UK-only quant VaR model: Low tier but SS1/23 supplements independent validation', () => {
+    const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone C', model: 'statistical', autonomy: 0, procZone: 'Zone C', action: 'recommend', exposure: 'internal-only', bindingness: 'material', reversibility: 'reversible', scale: 'at_scale', jurisdictions: ['UK'] }), policy, packs);
+    if (!r.ok) return;
+    expect(r.value.status).toBe('approved');
+    expect(r.value.tier).toBe('Low');
+    expect(r.value.track).toBe('I');
+    expect(r.value.downstream_reviews).toEqual(['Independent model validation (2LoD)']);
+  });
+
+  it('UC-12 Canada autonomy-2 model: OSFI pack ADDS a required control -> approved_with_controls with zero tripped invariants', () => {
+    const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone C', model: 'ml', autonomy: 2, procZone: 'Zone C', action: 'recommend', exposure: 'internal-shared', bindingness: 'advisory', reversibility: 'reversible', scale: 'limited', jurisdictions: ['CA'] }), policy, packs);
+    if (!r.ok) return;
+    expect(r.value.status).toBe('approved_with_controls');
+    expect(r.value.controls).toEqual(['CTRL-LOG-01']);
+    expect(r.value.explanation.tripped_invariants).toEqual([]);
+  });
+
+  it('UC-13 SG+JP client-facing LLM assistant: High tier, FEAT + explainability reviews, provisional', () => {
+    const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone B', model: 'llm', autonomy: 1, procZone: 'Zone B', action: 'recommend', exposure: 'client-facing', bindingness: 'advisory', reversibility: 'reversible', scale: 'at_scale', jurisdictions: ['SG', 'JP'] }), policy, packs);
+    if (!r.ok) return;
+    expect(r.value.tier).toBe('High');
+    expect(r.value.downstream_reviews).toEqual([
+      'Explainability documentation review',
+      'Fairness & accountability review (FEAT)',
+    ]);
+    expect(r.value.confidence_caveats.length).toBeGreaterThan(0);
+  });
+
+  it('UC-8b regulatory reporting WITH decision_type (now form-selectable): tiers High as grounding requires', () => {
+    const r = evaluate(g2({ dataClass: 'Confidential', inZone: 'Zone B', model: 'llm', autonomy: 1, procZone: 'Zone B', action: 'draft', exposure: 'internal-shared', bindingness: 'material', reversibility: 'reversible', scale: 'limited', decisionType: 'regulatory-reporting', jurisdictions: [] }), policy, packs);
+    if (!r.ok) return;
+    expect(r.value.tier).toBe('High');
+  });
 });

@@ -28,6 +28,7 @@ export interface StructuredFormValues {
   outputScale: 'limited' | 'at_scale';
   replacesPriorModel: boolean;
   decisionType?: DecisionType;
+  hitl?: boolean;
   jurisdictions: string[];
 }
 
@@ -67,7 +68,8 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
         decision_bindingness: values.decisionBindingness,
         output_reversibility: values.outputReversibility,
         scale: values.outputScale,
-        decision_type: values.decisionType,
+        ...(values.decisionType !== undefined ? { decision_type: values.decisionType } : {}),
+        ...(values.hitl !== undefined ? { hitl: values.hitl } : {}),
       },
     ],
     edges: [

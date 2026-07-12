@@ -14,14 +14,11 @@ against `policy/appetite.yaml` v1.0) and — more importantly — against
 the committee is the finding; disagreement with the prediction is a bug.
 
 **Known V1 form limitations (honest caveats):**
-- `decision_type` and `hitl` are only extractable on the LLM path — the
-  structured form cannot express them, so **HL-003 (autonomous credit
-  decisions), HL-004 (autonomous trading), and the decision-type
-  Critical-tier triggers are unreachable via the form**. UC-4 below is
-  designed to trip HL-001 instead, which the form can express.
-- Jurisdiction checkboxes are recorded but **packs are not loaded by the
-  V1 engine** — no EU Annex III forced-Critical overrides yet (that's
-  the V2 RA-9 work). Tick them anyway; they land in the audit trail.
+- ~~`decision_type`/`hitl` unreachable via the form~~ **Closed in V2-A**:
+  both are now optional form selects.
+- ~~Packs not loaded~~ **Closed in V2-A**: all seven packs load and
+  apply. Their sign-offs are `[FIRM]` placeholders, so pack-touched
+  verdicts are honestly provisional until adoption.
 
 ---
 
@@ -210,6 +207,59 @@ LLM path this should tier High. If your committee would call this High
 logic — a good back-test observation to record.
 
 ---
+
+## Jurisdictional cases (V2-A — packs now load; run with jurisdiction boxes ticked)
+
+The form now has **Decision type** and **Human-in-the-loop** selects, so
+the earlier caveats are closed: HL-003/HL-004 are reachable, and UC-8
+tiers High when you select `regulatory-reporting`. Every pack rule is
+signed `[FIRM] — pending adoption`, so any verdict a pack touches is
+honestly **provisional** (NF-7) until your CRO adopts the packs.
+
+### UC-9 · EU retail credit scoring (the design's UC-2041)
+As UC-3's form values plus: decision type `credit-decision` · HITL `Yes`
+· scale `at_scale` · jurisdictions **UK + EU**.
+**Verified prediction:** Approved with controls · **Critical** · Track II
+· CTRL-ENC-01 · downstream reviews: ICT third-party concentration (DORA
+Art. 28) + Independent model validation (SS1/23 §3.4) · RA-9 chain shows
+3 fired rules with source text · **provisional** (unsigned packs).
+
+### UC-10 · EU CV-screening tool (the visible "forced tier" demo)
+Data class `Internal` · zones `Zone B` · model `ml` · autonomy `1` ·
+action `recommend` · exposure `internal-shared` · bindingness `material`
+· reversible · at_scale · decision type `hiring` · jurisdiction **EU**.
+**Verified prediction:** Approved · **Critical — FORCED from Medium** by
+EU AI Act Annex III §4(a); the chain entry quotes the recruitment text
+and reads "Tier forced to Critical (was Medium) — most demanding
+standard applies."
+
+### UC-11 · UK-only VaR model (statistical, internal)
+`Internal` · `Zone C` both zones · `statistical` · autonomy `0` ·
+`recommend` · `internal-only` · `material` · reversible · at_scale ·
+jurisdiction **UK**.
+**Verified prediction:** Approved · Low · Track I — but SS1/23
+supplements "Independent model validation (2LoD)" as a downstream
+review. Obligations added without reclassifying: the supplement model.
+
+### UC-12 · Canada model at autonomy L2
+`Internal` · `Zone C` · `ml` · autonomy `2` · `recommend` ·
+`internal-shared` · `advisory` · reversible · limited · jurisdiction
+**CA**.
+**Verified prediction:** **Approved with controls** · Medium — the OSFI
+E-23 pack ADDS CTRL-LOG-01 with zero invariants tripped: a control
+requirement sourced entirely from a jurisdiction pack.
+
+### UC-13 · SG+JP client-facing LLM assistant
+`Internal` · `Zone B` · `llm` · autonomy `1` · `recommend` ·
+`client-facing` · `advisory` · reversible · at_scale · jurisdictions
+**SG + JP**.
+**Verified prediction:** High tier with two pack reviews — FEAT fairness
+(MAS) + explainability documentation (FSA Japan) · provisional.
+
+**Engine verification:** all 15 predictions (9 original + 6
+jurisdictional) are asserted in
+`src/engine/backtest-predictions.test.ts` against the real policy and
+the real pack files — the pack cannot silently drift.
 
 ## Recording results
 

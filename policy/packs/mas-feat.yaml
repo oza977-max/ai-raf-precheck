@@ -1,0 +1,27 @@
+# Singapore MAS FEAT pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+pack_id: "MAS-FEAT"
+version: "0.1-proposed"
+jurisdiction: "SG"
+regulator: "MAS"
+document: "MAS FEAT Principles — Fairness, Ethics, Accountability, Transparency"
+effective_date: "2018-11-12"
+reviewer_name: "[FIRM] — Compliance"
+reviewer_role: "Head of Compliance"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "FEAT-SG-REV-01"
+    title: "Fairness review for client-facing AI decisions"
+    source:
+      document: "MAS FEAT"
+      section: "Fairness Principle 1"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Individuals or groups should not be systematically disadvantaged through AI-driven decisions."
+    effect:
+      type: "required_review"
+      review: "Fairness & accountability review (FEAT)"
+    condition:
+      exposure: { in: ["client-facing", "market-facing"] }
+    confidence: "Medium"
+    reviewer_name: "[FIRM] — Compliance"
+    reviewer_role: "Head of Compliance"
+    sign_off_date: "[DATE]"

@@ -1140,6 +1140,97 @@ details input {
   line-height: 1.45;
 }
 
+/* ── Regulatory reasoning chain (V2-A, RA-9) ── */
+.verdict__chain {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.verdict__chain h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.verdict__chain-sub {
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  margin: 0 0 0.6rem;
+}
+
+.verdict__chain-entry {
+  border-top: 1px solid var(--rule);
+  padding: 0.55rem 0;
+}
+
+.verdict__chain-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.verdict__chain-doc {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  flex: 1;
+}
+
+.verdict__conf {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.verdict__conf--high { color: var(--low); }
+.verdict__conf--medium { color: var(--warn-text); background: var(--warn-bg); }
+.verdict__conf--low { color: var(--critical); background: #fbeae8; }
+
+.verdict__chain-quote {
+  margin: 0.4rem 0;
+  padding: 0.4rem 0.7rem;
+  border-left: 3px solid var(--card-border);
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.verdict__chain-derived {
+  margin: 0.2rem 0;
+  font-size: 0.84rem;
+}
+
+.verdict__chain-signoff {
+  margin: 0.1rem 0 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+}
+
+.policy-view__pack-state--loaded {
+  color: var(--low);
+  border-color: var(--low);
+  background: #eef4ef;
+}
+
+.policy-view__pack-state--invalid {
+  color: var(--critical);
+  border-color: var(--critical);
+  background: #fbeae8;
+}
+
 /* ── Proof-carrying controls (V1.3) ── */
 .verdict__controlset {
   margin: 1rem 0;

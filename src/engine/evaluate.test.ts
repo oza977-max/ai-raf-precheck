@@ -285,3 +285,58 @@ describe('evaluate — VD-7 standing conditions (V1.2-B)', () => {
     expect(result.value.conditions.hypotheses).toEqual([]);
   });
 });
+
+describe('evaluate — jurisdiction packs (V2-A)', () => {
+  const euPack = {
+    pack_id: 'EU-AIACT', version: '0.1', jurisdiction: 'EU', regulator: 'EC',
+    document: 'EU AI Act', effective_date: '2024-08-01',
+    reviewer_name: '[FIRM] — Legal', reviewer_role: 'Head', sign_off_date: '[DATE]',
+    rules: [{
+      id: 'EU-AIACT-TIER-02', title: 'Annex III employment',
+      source: { document: 'EU AI Act', section: 'Annex III §4(a)', text: 'recruitment or selection of natural persons…' },
+      effect: { type: 'tier_floor' as const, minimum_tier: 'Critical' as const },
+      condition: { decision_type: { in: ['hiring'] } },
+      confidence: 'Medium' as const,
+      reviewer_name: '[FIRM] — Legal', reviewer_role: 'Head', sign_off_date: '[DATE]',
+    }],
+  };
+
+  const hiringGraph = () => graph({
+    processing_nodes: [{ id: 'p1', label: 'cv screener', model_type: 'ml', autonomy_level: 1, data_zone: 'Zone B', vendor: 'internal', replaces_prior_model: false }],
+    output_nodes: [{ id: 'o1', label: 'shortlist', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'material', output_reversibility: 'reversible', scale: 'at_scale', decision_type: 'hiring' as const }],
+    jurisdictions: ['EU'],
+  });
+
+  it('an EU hiring case is FORCED from Medium to Critical by the Annex III floor, with the chain + provisional caveat (NF-7 unsigned)', () => {
+    const result = evaluate(hiringGraph(), policy, [euPack]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.tier).toBe('Critical');
+    expect(result.value.applied_overrides).toHaveLength(1);
+    expect(result.value.pack_versions).toEqual({ 'EU-AIACT': '0.1' });
+    const chain = result.value.explanation.regulatory_chain ?? [];
+    expect(chain).toHaveLength(1);
+    expect(chain[0]?.source_text).toMatch(/recruitment or selection/);
+    expect(chain[0]?.sign_off).toMatch(/pending firm adoption/);
+    // BC-V2A-03: unsigned fired rule → low caveat → provisional verdict.
+    expect(result.value.confidence_caveats.some((c) => c.confidence === 'low')).toBe(true);
+  });
+
+  it('without the pack (or without the jurisdiction) the same case stays Medium — behavior is byte-identical to pre-V2-A', () => {
+    const noPack = evaluate(hiringGraph(), policy);
+    if (!noPack.ok) return;
+    expect(noPack.value.tier).toBe('Medium');
+    expect(noPack.value.confidence_caveats).toEqual([]);
+    expect(noPack.value.applied_overrides).toEqual([]);
+
+    const wrongJurisdiction = evaluate(graph({ ...hiringGraph(), jurisdictions: ['US'] }), policy, [euPack]);
+    if (!wrongJurisdiction.ok) return;
+    expect(wrongJurisdiction.value.tier).toBe('Medium');
+  });
+
+  it('is deterministic with packs — byte-identical across 10 runs', () => {
+    const results = Array.from({ length: 10 }, () => evaluate(hiringGraph(), policy, [euPack]));
+    const first = JSON.stringify(results[0]);
+    for (const r of results) expect(JSON.stringify(r)).toBe(first);
+  });
+});

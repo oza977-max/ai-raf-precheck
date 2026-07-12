@@ -1,0 +1,27 @@
+# US Fed/OCC/FDIC SR 26-2 pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+pack_id: "SR-26-2"
+version: "0.1-proposed"
+jurisdiction: "US"
+regulator: "Fed/OCC/FDIC"
+document: "SR 26-2 — Model Risk Management: AI/ML Scope"
+effective_date: "2026-01-15"
+reviewer_name: "[FIRM] — Model Risk"
+reviewer_role: "Head of Model Risk"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "SR262-US-REV-01"
+    title: "US MRM scope assessment for material AI/ML models"
+    source:
+      document: "SR 26-2"
+      section: "§II.A"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] AI/ML models whose outputs materially inform decisions fall within model risk management scope and require a scope assessment."
+    effect:
+      type: "required_review"
+      review: "US MRM scope assessment"
+    condition:
+      decision_bindingness: { in: ["material", "binding"] }
+    confidence: "Medium"
+    reviewer_name: "[FIRM] — Model Risk"
+    reviewer_role: "Head of Model Risk"
+    sign_off_date: "[DATE]"

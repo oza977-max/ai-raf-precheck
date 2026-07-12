@@ -1,4 +1,10 @@
-import { applyJurisdictionOverrides, resolveActivePacks } from './jurisdiction';
+import {
+  applyJurisdictionOverrides,
+  caveatForFiredRule,
+  chainEntryFor,
+  evaluatePackHardLines,
+  resolveActivePacks,
+} from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
 import { assignTrack } from './track';
 import type { TrackAssignment } from './track';
@@ -12,6 +18,7 @@ import type {
   DataFlowGraph,
   EngineError,
   EvaluationResult,
+  JurisdictionPack,
   PolicyFile,
   Result,
   RuleRationale,
@@ -22,15 +29,22 @@ import type {
 // Rule 1 (cross-cutting.md §7): engine is a pure island — no React, no idb, no SDK.
 // evaluation-engine.md §3.1 pipeline, 9 steps. Pure function: no Date.now(),
 // no Math.random(), no I/O anywhere in the call graph (NF-1, §7 determinism).
-export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<EvaluationResult, EngineError> {
+export function evaluate(
+  graph: DataFlowGraph,
+  policy: PolicyFile,
+  packs: JurisdictionPack[] = [],
+): Result<EvaluationResult, EngineError> {
   const hardLines = sortedById(policy.hard_lines);
   const tracks = sortedById(policy.tracks);
   const tiers = sortedById(policy.tiers);
   const invariants = sortedById(policy.invariants);
   const controls = sortedById(policy.controls);
 
-  // Step 1: jurisdiction pack resolution (pass-through until pack-loading lands).
-  resolveActivePacks(graph.jurisdictions, policy.jurisdictions);
+  // Step 1 (V2-A, real for the first time): resolve loaded packs against
+  // the graph's jurisdictions. Additive third param — callers without
+  // packs are byte-identical to pre-V2-A behavior.
+  const activePacks = resolveActivePacks(graph.jurisdictions, policy.jurisdictions, packs);
+  const packVersions = Object.fromEntries(activePacks.map((p) => [p.pack_id, p.version]));
 
   // Step 2: hard lines — first trip is immediate rejection, no further steps.
   const hardLineResult = evaluateHardLines(graph, hardLines);
@@ -50,6 +64,10 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
         binding_constraint: hardLineResult.hardLineId,
         binding_path: hardLineResult.graphPath,
         policy_version: policy.version,
+        // Review finding, pass 1: the audit trail must record which pack
+        // versions were in force even when a BASE hard line rejects —
+        // otherwise indistinguishable from "no packs loaded".
+        pack_versions: packVersions,
         explanation: {
           // Tier/track rationale honestly null — assignment was skipped,
           // the reported Critical/I are ceiling values, not assignments.
@@ -65,6 +83,38 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
     };
   }
 
+  // Step 2b (V2-A): pack-level hard lines — graph-only conditions,
+  // same immediate-rejection semantics as base hard lines.
+  const packHardLine = evaluatePackHardLines(graph, activePacks);
+  if (packHardLine) {
+    const { rule } = packHardLine;
+    const reason = rule.effect.type === 'hard_line' ? rule.effect.reason : '';
+    const caveat = caveatForFiredRule(rule);
+    return {
+      ok: true,
+      value: emptyResult({
+        status: 'rejected',
+        tier: 'Critical',
+        track: 'I',
+        binding_constraint: rule.id,
+        binding_path: packHardLine.graphPath,
+        policy_version: policy.version,
+        pack_versions: packVersions,
+        confidence_caveats: caveat ? [caveat] : [],
+        explanation: {
+          tier_rationale: null,
+          track_rationale: null,
+          hard_lines_checked: hardLines.length,
+          invariants_checked: 0,
+          tripped_invariants: [],
+          binding_reason: reason,
+          binding_regulatory_basis: `${rule.source.document} ${rule.source.section}`,
+          regulatory_chain: [chainEntryFor(rule, `Hard-line rejection: ${reason}`)],
+        },
+      }),
+    };
+  }
+
   // Step 3: track assignment (first-match short-circuit).
   const trackResult = assignTrack(graph, tracks);
   if (!trackResult.ok) return trackResult;
@@ -72,8 +122,9 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
   // Step 4: tier assignment (impact-dominant, all rules evaluated).
   const tierAssignment = assignTier(graph, tiers);
 
-  // Step 5: jurisdiction overrides (pass-through stub).
-  const overrides = applyJurisdictionOverrides(trackResult.value.track, tierAssignment.tier);
+  // Step 5 (V2-A, real): tier floors raise (never lower), obligations
+  // supplement; every fired rule lands in the regulatory chain + caveats.
+  const overrides = applyJurisdictionOverrides(graph, tierAssignment.tier, trackResult.value.track, activePacks);
 
   // Step 6: invariant evaluation (no short-circuit — solver needs the full set).
   const tripped = evaluateInvariants(graph, invariants);
@@ -108,19 +159,22 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
         binding_constraint: solverResult.unsatisfiableInvariant,
         binding_path: bindingTripped?.graphPath ?? '',
         policy_version: policy.version,
+        pack_versions: packVersions,
         applied_overrides: overrides.appliedOverrides,
+        confidence_caveats: overrides.caveats,
         explanation: {
           ...rationales,
           ...checkCounts,
           tripped_invariants: trippedDetails,
           binding_reason: null,
           binding_regulatory_basis: bindingTripped?.regulatoryBasis ?? null,
+          regulatory_chain: overrides.chain,
         },
       }),
     };
   }
 
-  const status = tripped.length > 0 ? 'approved_with_controls' : 'approved';
+  const status = tripped.length > 0 || overrides.addedControls.length > 0 ? 'approved_with_controls' : 'approved';
 
   // boundary_proximity (VD-6/CS-4, §4.2 MVP flag — judgment call, see
   // build/prompts/P3-C02.md deliverable 2): true when at least one tripped
@@ -154,13 +208,18 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
       track: overrides.finalTrack,
       binding_constraint: tripped[0]?.invariantId ?? '',
       binding_path: tripped[0]?.graphPath ?? '',
-      controls: solverResult.controls,
+      // Pack-required controls supplement the solver's minimal set
+      // (BC-V2A-01: obligations only ever add).
+      controls: [...new Set([...solverResult.controls, ...overrides.addedControls])].sort(),
+      downstream_reviews: overrides.addedReviews,
       // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
       // statically populated from kri_thresholds + graph pins. Rejection
       // paths keep hypotheses empty (nothing was approved to condition).
       conditions: { hypotheses: buildStandingConditions(graph, policy, overrides.finalTier) },
       policy_version: policy.version,
+      pack_versions: packVersions,
       applied_overrides: overrides.appliedOverrides,
+      confidence_caveats: overrides.caveats,
       boundary_proximity: boundaryProximity,
       explanation: {
         ...rationales,
@@ -168,6 +227,7 @@ export function evaluate(graph: DataFlowGraph, policy: PolicyFile): Result<Evalu
         tripped_invariants: trippedDetails,
         binding_reason: null,
         binding_regulatory_basis: tripped[0]?.regulatoryBasis ?? null,
+        regulatory_chain: overrides.chain,
       },
     }),
   };

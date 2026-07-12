@@ -206,6 +206,29 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} />}
 
+      {explanation?.regulatory_chain && explanation.regulatory_chain.length > 0 && (
+        <div className="verdict__chain">
+          <h3>Regulatory reasoning chain (RA-9)</h3>
+          <p className="verdict__chain-sub">Every pack rule that fired, traceable to source text.</p>
+          {explanation.regulatory_chain.map((entry) => (
+            <div key={entry.rule_id} className="verdict__chain-entry">
+              <div className="verdict__chain-head">
+                <code>{entry.rule_id}</code>
+                <span className="verdict__chain-doc">
+                  {entry.document} · {entry.section}
+                </span>
+                <span className={`verdict__conf verdict__conf--${entry.confidence.toLowerCase()}`}>
+                  CONFIDENCE: {entry.confidence.toUpperCase()}
+                </span>
+              </div>
+              <blockquote className="verdict__chain-quote">“{entry.source_text}”</blockquote>
+              <p className="verdict__chain-derived">→ DERIVED&ensp;{entry.derived}</p>
+              <p className="verdict__chain-signoff">SIGN-OFF&ensp;{entry.sign_off}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <button type="button" onClick={onCorrect}>
         Correct this classification?
       </button>

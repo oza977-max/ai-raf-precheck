@@ -1,0 +1,27 @@
+# Canada OSFI E-23 pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+pack_id: "OSFI-E23"
+version: "0.1-proposed"
+jurisdiction: "CA"
+regulator: "OSFI"
+document: "Guideline E-23 — Model Risk Management (effective Jan 2027)"
+effective_date: "2027-01-01"
+reviewer_name: "[FIRM] — Model Risk"
+reviewer_role: "Head of Model Risk"
+sign_off_date: "[DATE]"
+
+rules:
+  - id: "E23-CA-CTL-01"
+    title: "Logging and kill-switch for autonomy above L1"
+    source:
+      document: "OSFI E-23"
+      section: "§4.2"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Institutions should maintain effective oversight and intervention capability over models acting with autonomy."
+    effect:
+      type: "required_control"
+      control_id: "CTRL-LOG-01"
+    condition:
+      autonomy_level: { gte: 2 }
+    confidence: "Low"
+    reviewer_name: "[FIRM] — Model Risk"
+    reviewer_role: "Head of Model Risk"
+    sign_off_date: "[DATE]"

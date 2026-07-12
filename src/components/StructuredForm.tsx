@@ -4,6 +4,7 @@ import {
   DATA_CLASSES,
   DATA_ZONES,
   DECISION_BINDINGNESS,
+  DECISION_TYPES,
   EXPOSURES,
   MODEL_TYPES,
 } from '../engine/canonical-vocabulary';
@@ -252,6 +253,39 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
             {v}
           </option>
         ))}
+      </select>
+
+      <label htmlFor="sf-decision-type">Decision type (optional)</label>
+      <p className="field-help">
+        What decision does the output feed? Drives hard lines and tier triggers (e.g. credit/lending →
+        Critical; regulatory-reporting → High). Leave blank if none applies.
+      </p>
+      <select
+        id="sf-decision-type"
+        value={values.decisionType ?? ''}
+        onChange={(e) =>
+          update('decisionType', (e.target.value || undefined) as StructuredFormValues['decisionType'])
+        }
+      >
+        <option value="">None / not applicable</option>
+        {DECISION_TYPES.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+
+      <label htmlFor="sf-hitl">Human in the loop before the system acts? (optional)</label>
+      <select
+        id="sf-hitl"
+        value={values.hitl === undefined ? '' : values.hitl ? 'yes' : 'no'}
+        onChange={(e) =>
+          update('hitl', e.target.value === '' ? undefined : e.target.value === 'yes')
+        }
+      >
+        <option value="">Not specified</option>
+        <option value="yes">Yes — a human approves before action</option>
+        <option value="no">No — the system acts without prior human review</option>
       </select>
 
       <label htmlFor="sf-scale">Output scale</label>

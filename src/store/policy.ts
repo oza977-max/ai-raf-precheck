@@ -184,7 +184,11 @@ function vocabularyErrors(field: string, value: unknown): PolicyValidationError[
   return errors;
 }
 
-function validateConditionFieldValue(field: string, value: unknown): PolicyValidationError[] {
+// Exported for src/store/packs.ts (V2-A review fix): pack rule conditions
+// must pass the same operator + canonical-vocabulary validation as the
+// main policy — a typo'd field or malformed operator would otherwise
+// produce a regulatory rule that silently never fires (CF-5/RA-7).
+export function validateConditionFieldValue(field: string, value: unknown): PolicyValidationError[] {
   return [...operatorErrors(field, value), ...vocabularyErrors(field, value)];
 }
 
