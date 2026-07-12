@@ -562,6 +562,12 @@ export interface Control {
   description: string;
   resolves: string[];           // Invariant IDs
   burden: 1 | 2 | 3 | 4 | 5;
+  verification_evidence?: {            // V1.3 proof-carrying controls — absent = UNVERIFIED
+    status: 'verified' | 'unverified';
+    detail?: string;
+    attested_by?: string;
+    attested_at?: string;
+  };
   verification: string;
   platform_satisfies: string[]; // Platform IDs whose approval satisfies this control
 }

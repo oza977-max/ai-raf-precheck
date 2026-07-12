@@ -231,3 +231,20 @@ describe('onPolicyUpdated (TC-LC-4-01)', () => {
     }
   });
 });
+
+describe('ControlSchema — verification_evidence (V1.3)', () => {
+  it('accepts a control with optional verification_evidence and rejects a bad status literal', () => {
+    const withEvidence = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      detail: "attested"',
+    );
+    expect(loadPolicy(withEvidence).valid).toBe(true);
+
+    const badStatus = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "checked"',
+    );
+    const result = loadPolicy(badStatus);
+    expect(result.valid).toBe(false);
+  });
+});

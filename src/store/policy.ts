@@ -88,6 +88,15 @@ const ControlSchema = z.object({
   burden: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   verification: z.string(),
   platform_satisfies: z.array(z.string()),
+  // V1.3: proof-carrying controls — optional, absent = unverified.
+  verification_evidence: z
+    .object({
+      status: z.enum(['verified', 'unverified']),
+      detail: z.string().optional(),
+      attested_by: z.string().optional(),
+      attested_at: z.string().optional(),
+    })
+    .optional(),
 });
 
 const JurisdictionEntrySchema = z.object({

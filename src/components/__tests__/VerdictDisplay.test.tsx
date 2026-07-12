@@ -247,3 +247,57 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     expect(screen.getByText(/awaiting active 2LoD sign-off \(LC-2\)/i)).toBeInTheDocument();
   });
 });
+
+describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
+  const policyStub = {
+    controls: [
+      {
+        id: 'CTRL-ENC-01',
+        name: 'Encryption in transit (TLS 1.3+)',
+        description: 'TLS 1.3+',
+        resolves: ['INV-DATA-01'],
+        burden: 1,
+        verification: 'manifest check',
+        platform_satisfies: [],
+        verification_evidence: {
+          status: 'verified' as const,
+          detail: 'Platform pins TLS 1.3',
+          attested_by: 'Platform Engineering',
+          attested_at: '2026-06-01',
+        },
+      },
+      {
+        id: 'CTRL-HITL-02',
+        name: 'Human review before action execution',
+        description: 'HITL',
+        resolves: [],
+        burden: 3,
+        verification: 'UI shows approval step',
+        platform_satisfies: [],
+        // no verification_evidence -> UNVERIFIED (BC-V13-02)
+      },
+    ],
+    hard_lines: [],
+    invariants: [],
+  } as unknown as Parameters<typeof VerdictDisplay>[0]['policy'];
+
+  it('renders the CS-1 panel with a VERIFIED chip + attestation for evidenced controls and UNVERIFIED for bare ones', () => {
+    const verdict = makeVerdict({ controls: ['CTRL-ENC-01', 'CTRL-HITL-02'] });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policyStub} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/minimal control set \(CS-1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/statuses are attested in the policy file/i)).toBeInTheDocument();
+    expect(screen.getByText('VERIFIED')).toBeInTheDocument();
+    expect(screen.getByText('UNVERIFIED')).toBeInTheDocument();
+    expect(screen.getByText(/platform pins TLS 1\.3 — attested by Platform Engineering \(2026-06-01\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/patches: INV-DATA-01/i)).toBeInTheDocument();
+  });
+
+  it('BC-V13-03: without a policy prop, degrades to the plain id list — no fabricated chips', () => {
+    const verdict = makeVerdict({ controls: ['CTRL-ENC-01'] });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+    expect(screen.getByText(/controls required: CTRL-ENC-01/i)).toBeInTheDocument();
+    expect(screen.queryByText('VERIFIED')).not.toBeInTheDocument();
+    expect(screen.queryByText('UNVERIFIED')).not.toBeInTheDocument();
+  });
+});

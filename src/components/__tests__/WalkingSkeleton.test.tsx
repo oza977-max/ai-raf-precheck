@@ -128,6 +128,12 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
     expect(screen.getByText(/approved|rejected/i)).toBeInTheDocument();
 
+    // V1.3: proof-carrying controls — this Client-PII flow requires
+    // CTRL-ENC-01, which carries the starter YAML's worked verification
+    // example, so the CS-1 panel shows a VERIFIED chip.
+    expect(screen.getByText(/minimal control set \(CS-1\)/i)).toBeInTheDocument();
+    expect(screen.getByText('VERIFIED')).toBeInTheDocument();
+
     // Self-verifying, not just structurally implied: the LLM boundary was
     // never touched on the no-api-key path (review finding, pass 1).
     expect(mockCreate).not.toHaveBeenCalled();

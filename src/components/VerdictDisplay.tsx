@@ -210,9 +210,56 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         Correct this classification?
       </button>
 
-      {verdict.controls.length > 0 && (
-        <p className="verdict__controls">Controls required: {verdict.controls.join(', ')}</p>
-      )}
+      {verdict.controls.length > 0 &&
+        (policy ? (
+          // V1.3 (design-vision decision #3): proof-carrying controls —
+          // MINIMAL CONTROL SET (CS-1) panel with per-control verification
+          // status. BC-V13-02: absent evidence renders UNVERIFIED, never a
+          // blank or implied pass.
+          <div className="verdict__controlset">
+            <h3>Minimal control set (CS-1)</h3>
+            <p className="verdict__controlset-sub">
+              Smallest set that holds the appetite margin. V1: statuses are attested in the policy file;
+              machine-checked evidence binding is V1.5.
+            </p>
+            <ul>
+              {verdict.controls.map((id) => {
+                const control = policy.controls.find((c) => c.id === id);
+                const evidence = control?.verification_evidence;
+                const verified = evidence?.status === 'verified';
+                return (
+                  <li key={id}>
+                    <div className="verdict__control-head">
+                      <code>{id}</code>
+                      <span className="verdict__control-name">{control?.name ?? ''}</span>
+                      <span
+                        className={
+                          verified ? 'verdict__vchip verdict__vchip--verified' : 'verdict__vchip verdict__vchip--unverified'
+                        }
+                      >
+                        {verified ? 'VERIFIED' : 'UNVERIFIED'}
+                      </span>
+                    </div>
+                    {control && control.resolves.length > 0 && (
+                      <p className="verdict__control-patches">Patches: {control.resolves.join(', ')}</p>
+                    )}
+                    {verified && evidence?.detail && (
+                      <p className="verdict__control-evidence">
+                        {evidence.detail}
+                        {evidence.attested_by ? ` — attested by ${evidence.attested_by}` : ''}
+                        {evidence.attested_at ? ` (${evidence.attested_at})` : ''}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          // BC-V13-03: legacy render paths without a policy prop degrade to
+          // the plain id list — no fabricated chips.
+          <p className="verdict__controls">Controls required: {verdict.controls.join(', ')}</p>
+        ))}
 
       {verdict.downstream_reviews.length > 0 && (
         <p className="verdict__downstream">Downstream reviews: {verdict.downstream_reviews.join(', ')}</p>

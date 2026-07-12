@@ -1140,6 +1140,92 @@ details input {
   line-height: 1.45;
 }
 
+/* ── Proof-carrying controls (V1.3) ── */
+.verdict__controlset {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.verdict__controlset h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.verdict__controlset-sub {
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  margin: 0 0 0.6rem;
+}
+
+.verdict__controlset ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.verdict__controlset li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.verdict__controlset li:last-child {
+  border-bottom: none;
+}
+
+.verdict__control-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.verdict__control-name {
+  font-weight: 600;
+  flex: 1;
+}
+
+.verdict__vchip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.verdict__vchip--verified {
+  color: var(--low);
+  background: #eef4ef;
+}
+
+.verdict__vchip--unverified {
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
+
+.verdict__control-patches {
+  margin: 0.2rem 0 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.verdict__control-evidence {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
 /* ── Appetite framework view (V1.2-C) ── */
 .policy-view h2 {
   margin: 0 0 0.2rem;

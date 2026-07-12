@@ -294,6 +294,18 @@ export interface Control {
   burden: 1 | 2 | 3 | 4 | 5;
   verification: string;
   platform_satisfies: string[];
+  // V1.3 (design-vision decision #3, proof-carrying controls): current
+  // verification status + evidence binding. ABSENT = unverified — the
+  // honest default (BC-V13-02). V1 statuses are attested by hand in the
+  // policy file; machine-checked evidence binding is V1.5.
+  verification_evidence?: ControlVerificationEvidence;
+}
+
+export interface ControlVerificationEvidence {
+  status: 'verified' | 'unverified';
+  detail?: string;
+  attested_by?: string;
+  attested_at?: string;
 }
 
 export interface KriThresholds {
