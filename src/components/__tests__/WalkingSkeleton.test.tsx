@@ -60,6 +60,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'A tool that drafts client emails');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     // Step 2: graph extraction happened (real Anthropic tool_use call, mocked at the SDK boundary)
     // and the graph review step renders the extracted node.
@@ -100,6 +101,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'A tool that drafts client emails');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     // Structured intake banner renders instead of the old dead-end message.
     expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
@@ -183,6 +185,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'A risk scoring tool for internal use');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     expect(await screen.findByText(/risk scoring model/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
@@ -262,6 +265,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'Audit ordering check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -332,6 +336,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'Correction survival check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
 
     // Make a real correction in graph_review before proceeding — V1.1-C01:
@@ -400,6 +405,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'Quartz xylophone probe intake');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -460,6 +466,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'No track match check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/use case name/i), 'No track match tool');
@@ -494,6 +501,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'High tier routing check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/use case name/i), 'High tier tool');
@@ -540,6 +548,7 @@ describe('Walking Skeleton', () => {
     const input = screen.getByLabelText(/describe your ai use case/i);
     await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -652,26 +661,17 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'quorix zenbat flumtrek checker');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
 
-    // Structured form path; build a minimal graph to reach graph review.
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/use case name/i), 'Redaction probe');
-    await user.type(screen.getByLabelText(/brief description/i), 'x');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
-
+    // V2-B: the duplicate check is a GATE — the card renders at the
+    // duplicate step and the flow does not proceed without confirmation.
     expect(await screen.findByText(/one similar use case exists/i)).toBeInTheDocument();
     expect(screen.getByText(/tier High/)).toBeInTheDocument();
     expect(screen.getByText(/full detail is visible to the 2nd line of defence/i)).toBeInTheDocument();
     // BC-V12C-02: the matched label must be unreachable in the DOM.
     expect(screen.queryByText(new RegExp(existingLabel, 'i'))).not.toBeInTheDocument();
+    // The next step is only reachable via explicit confirmation.
+    expect(screen.queryByText(/structured intake mode/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /this is a new use case/i }));
+    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
   });
 
   it('V1.2-C / UC-2: 2LoD sees the full duplicate match detail including the label', async () => {
@@ -699,20 +699,7 @@ describe('Walking Skeleton', () => {
     await user.type(screen.getByLabelText(/describe your ai use case/i), 'brindle vexomat quarlune probe');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
 
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/use case name/i), 'Full detail probe');
-    await user.type(screen.getByLabelText(/brief description/i), 'x');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
-
+    // V2-B gate: 2LoD sees the full match detail at the duplicate step.
     expect(await screen.findByText(/one similar use case exists/i)).toBeInTheDocument();
     expect(screen.getByText(existingLabel)).toBeInTheDocument();
   });

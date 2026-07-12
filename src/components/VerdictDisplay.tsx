@@ -292,7 +292,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <div className="verdict__conditions">
           <h3>Standing conditions (VD-7)</h3>
           <p className="verdict__conditions-sub">
-            The hypothesis this verdict is conditional on. V2 monitors these live.
+            The operating bounds this verdict assumes — it holds only while the system stays inside them.
+            Nothing to action now: they are recorded with the verdict as its expiry conditions. If the system
+            later drifts outside any bound (or the deployment changes zone/autonomy), this verdict no longer
+            applies and re-assessment is required. V2 monitors these live; in V1 they are checked at re-review.
           </p>
           <ul>
             {verdict.conditions.hypotheses.map((h) => (
