@@ -43,6 +43,7 @@ export default function IntakeFlow() {
   // both tier and label, but the LABEL is only ever rendered for 2LoD —
   // 1LoD gets the redacted card (tier + "contact AI Risk").
   const [duplicateMatch, setDuplicateMatch] = useState<{ tier: string | null; label: string } | null>(null);
+  const [duplicateCheckDone, setDuplicateCheckDone] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
@@ -82,6 +83,7 @@ export default function IntakeFlow() {
     setSubmittedDescription(state.description);
     dispatch({ type: 'SUBMIT_DESCRIPTION' });
     setDuplicateMatch(null);
+    setDuplicateCheckDone(false);
 
     const candidates = findPossibleDuplicates(
       state.description,
@@ -96,13 +98,22 @@ export default function IntakeFlow() {
     } else if (topCandidate) {
       setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
     }
+    // V2-B (user feedback): the duplicate check is now a REAL GATE — the
+    // flow stops here and shows the result (match card, or an explicit
+    // "checked N entries, none similar"), and only proceeds on the
+    // user's "This is a new use case" confirmation. Previously it
+    // auto-proceeded past a green tick, making the inventory check
+    // invisible (the V1.2-C documented deviation, now user-rejected).
+    setDuplicateCheckDone(true);
+  }
 
+  async function handleConfirmNewUseCase() {
+    if (state.step !== 'duplicate_check') return;
     const hasApiKey = getApiKey() !== null;
     dispatch({ type: 'NO_DUPLICATE_FOUND', method: hasApiKey ? 'llm' : 'form' });
 
     if (!hasApiKey) {
-      // P4-C02: structured-form fallback (UC-3a) — real form UI, not the
-      // dead-end message P4-C01 shipped. Rendered below in graph_extraction.
+      // P4-C02: structured-form fallback (UC-3a) rendered in graph_extraction.
       return;
     }
 
@@ -394,7 +405,44 @@ export default function IntakeFlow() {
           </div>
         )}
 
-        {state.step === 'duplicate_check' && <p>Checking for similar use cases…</p>}
+        {state.step === 'duplicate_check' && (
+          <section aria-label="Duplicate check" className="dup-gate">
+            <div className="questionnaire__tag">UC-2 · DUPLICATE CHECK</div>
+            {!duplicateCheckDone ? (
+              <p>Checking the existing inventory for similar use cases…</p>
+            ) : (
+              <>
+                {duplicateMatch ? (
+                  <div className="duplicate-card" role="alert">
+                    <p className="duplicate-card__title">One similar use case exists in the register</p>
+                    {getRole() === '2LoD' ? (
+                      <p>
+                        Overlapping use case: <strong>{duplicateMatch.label}</strong>
+                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}. Consider adopting its
+                        classification, or confirm this one is genuinely new.
+                      </p>
+                    ) : (
+                      <p>
+                        A use case with overlapping characteristics
+                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on record. Full
+                        detail is visible to the 2nd Line of Defence. Contact AI Risk to adopt its classification,
+                        or confirm yours is genuinely new.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="dup-gate__clear">
+                    No similar use case found — checked {registerRows.length} register{' '}
+                    {registerRows.length === 1 ? 'entry' : 'entries'} for overlapping characteristics.
+                  </p>
+                )}
+                <button type="button" onClick={() => void handleConfirmNewUseCase()}>
+                  This is a new use case →
+                </button>
+              </>
+            )}
+          </section>
+        )}
 
         {state.step === 'graph_extraction' && state.method === 'llm' && (
           <div>
@@ -413,27 +461,6 @@ export default function IntakeFlow() {
         {state.step === 'graph_review' && (
           <section>
             <h2>Review extracted graph</h2>
-            {duplicateMatch && (
-              <div className="duplicate-card" role="alert">
-                <p className="duplicate-card__title">One similar use case exists in the register</p>
-                {getRole() === '2LoD' ? (
-                  <p>
-                    Overlapping use case: <strong>{duplicateMatch.label}</strong>
-                    {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}. Consider adopting its
-                    classification, or confirm this one is genuinely new.
-                  </p>
-                ) : (
-                  // BC-V12C-02: the label is never rendered for non-2LoD
-                  // roles (UC-2/RG-2 — redacted match, tier only).
-                  <p>
-                    A use case with overlapping characteristics
-                    {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on record. Full
-                    detail is visible to the 2nd Line of Defence. Contact AI Risk to adopt its classification,
-                    or confirm yours is genuinely new.
-                  </p>
-                )}
-              </div>
-            )}
             {evaluationError && (
               <p role="alert">Evaluation could not complete: {evaluationError}. Review the graph and try again.</p>
             )}
