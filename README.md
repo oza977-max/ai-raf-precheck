@@ -1,12 +1,32 @@
 # AIGate
 
-**The live conformance layer between a bank's risk appetite and its actual running AI estate.**
+**AI risk appetite as code, for banks.**
 
-AIGate doesn't approve a description of an AI system. It proves the real system stays inside the rules the bank set — continuously, not once at approval time.
+A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
-A developer provides their AI tool's artifacts (code, deployment config, IaC). AIGate reads what the system actually does, asks only the questions the artifacts don't already answer, evaluates against the bank's machine-readable Risk Appetite Framework, and returns a verdict: approved / approved with these controls / rejected — with the exact regulatory reasoning chain, documented and on record.
+Describe the AI use case (plain language or a short structured form). AIGate maps it to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, OSFI E-23, MAS FEAT, DORA, FSA Japan), and returns:
 
-Replaces self-attested intake forms that run to hundreds of questions and months-long committee cycles with evidence-backed governance that keeps working after approval.
+- a **verdict with its "why"** — which rule set the tier, which invariant tripped, each with its regulatory citation;
+- the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
+- a **regulatory reasoning chain** quoting the verbatim source text, confidence, and human sign-off behind every jurisdictional rule that fired;
+- **standing conditions** — the operating bounds the approval assumes (the verdict is a hypothesis; drift outside the bounds voids it);
+- an entry in a **graph-based AI register** with a role-gated 2LoD approval workflow and an append-only audit trail of every event.
+
+Same inputs, same verdict, every time — no LLM in the decision path. The LLM only helps at the edges (reading descriptions in, explaining verdicts out).
+
+## What works today (V1 proof-of-concept)
+
+The full gate, end to end: intake (LLM or form) → duplicate check against the register → graph review with corrections → targeted questions with contradiction detection → attestation → deterministic verdict → register with lifecycle governance (Low self-serves; Medium/High/Critical await 2LoD sign-off) → policy editing with automatic re-evaluation queuing → JSON export. AIGate submits itself through its own gate on first launch.
+
+**Honest limits, stated in the UI itself**: verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules; the audit trail is client-side (proof-of-concept grade — the system-of-record store is V1.5); artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
+
+## Run it
+
+```
+npm install
+npm run dev      # app on http://localhost:5173
+npm test         # 215 tests
+```
 
 ---
 
@@ -76,10 +96,11 @@ This means:
 
 ## Getting started
 
-1. Open `policy/appetite.yaml` — read the preamble, understand the starter rules
-2. Replace `[FIRM]` placeholders with your organisation's details
-3. Review the materiality tiers and adjust thresholds to match your actual risk appetite
-4. Submit your first use case
+1. `npm install && npm run dev`, open http://localhost:5173
+2. Open `policy/appetite.yaml` — read the preamble, understand the starter rules
+3. Replace `[FIRM]` placeholders with your organisation's details
+4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
+5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts
 
 Full documentation: `requirements/requirements.html`
 
@@ -87,7 +108,6 @@ Full documentation: `requirements/requirements.html`
 
 ## Project status
 
-Currently in requirements and design phase. Built using the [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
-V1 is an internal engine-validation proof-of-concept; artifact binding and the system-of-record audit store arrive in V1.5.
+**V1 build complete** — engine, intake, register, lifecycle, jurisdiction packs, audit trail, 215 tests. Currently in internal validation: back-testing verdicts against historically decided use cases. V1 is an engine-validation proof-of-concept; artifact binding and the system-of-record audit store arrive in V1.5; live KRI monitoring against standing conditions is V2. Built with the [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
 
 *Developed using the Grounded Vibe Methodology*
