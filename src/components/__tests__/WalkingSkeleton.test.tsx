@@ -104,7 +104,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     // Structured intake banner renders instead of the old dead-end message.
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/use case name/i), 'Email drafting tool');
     await user.type(screen.getByLabelText(/brief description/i), 'Drafts client emails from notes.');
@@ -470,7 +470,7 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'No track match check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/use case name/i), 'No track match tool');
     await user.type(screen.getByLabelText(/brief description/i), 'A tool with no matching track rule.');
@@ -505,7 +505,7 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'High tier routing check');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/use case name/i), 'High tier tool');
     await user.type(screen.getByLabelText(/brief description/i), 'Client-facing decision support.');
@@ -672,9 +672,9 @@ describe('Walking Skeleton', () => {
     // BC-V12C-02: the matched label must be unreachable in the DOM.
     expect(screen.queryByText(new RegExp(existingLabel, 'i'))).not.toBeInTheDocument();
     // The next step is only reachable via explicit confirmation.
-    expect(screen.queryByText(/structured intake mode/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/guided intake — answer the fields below/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /this is a new use case/i }));
-    expect(await screen.findByText(/structured intake mode/i)).toBeInTheDocument();
+    expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
   });
 
   it('V1.2-C / UC-2: 2LoD sees the full duplicate match detail including the label', async () => {

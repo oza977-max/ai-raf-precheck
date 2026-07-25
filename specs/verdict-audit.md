@@ -298,7 +298,7 @@ export async function generateReasoningTrace(
 
 The resulting prose is stored in the `verdict_produced` audit event alongside the structured verdict data. If the LLM call fails (no API key, network error, parse error), the verdict is still stored with `reasoning_trace: null`. The UI falls back to a template-based summary.
 
-**No API key fallback:** If `dangerouslyAllowBrowser` is set but no API key is present, `generateReasoningTrace` returns `{ ok: false, error: { kind: 'no-api-key' } }` without throwing. The verdict display proceeds; the trace section shows: "Reasoning trace unavailable — configure an Anthropic API key to enable plain-English explanations."
+**No API key fallback:** If `dangerouslyAllowBrowser` is set but no API key is present, `generateReasoningTrace` returns `{ ok: false, error: { kind: 'no-api-key' } }` without throwing. The verdict display proceeds; the trace section shows: "Narrative summary not generated — this optional plain-English retelling needs an Anthropic API key (Settings). It adds nothing to the outcome above: the rules, citations and required controls shown on this page are the complete basis for the decision." (V2-D: reworded — the trace is an optional narrative layer over an already-complete explanation, not a missing capability.)
 
 ---
 

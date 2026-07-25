@@ -326,7 +326,7 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 - `src/components/StructuredForm.tsx` — all 12 fields from `intake-flow.md §5.2`; all select options from loaded policy (no hardcoded enums)
 - `buildGraphFromForm(formValues): DataFlowGraph` — `intake_method: 'structured_form'`
 - `usePolicy()` hook — `hasApiKey: boolean` drives path selection in `IntakeFlow.tsx`
-- "Structured intake mode" banner shown when no API key
+- "Guided intake" banner shown when no API key
 
 **Tests:**
 - `TC-UC-3a-01` — structured form produces a valid `DataFlowGraph`

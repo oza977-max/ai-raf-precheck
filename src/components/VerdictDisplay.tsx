@@ -334,7 +334,11 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             <code>{verdict.binding_constraint}</code> — {fallbackDescription}
           </p>
         ) : (
-          <p>Reasoning trace unavailable — configure an Anthropic API key to enable plain-English explanations.</p>
+          <p>
+            Narrative summary not generated — this optional plain-English retelling needs an
+            Anthropic API key (Settings). It adds nothing to the outcome above: the rules, citations
+            and required controls shown on this page are the complete basis for the decision.
+          </p>
         )}
       </details>
 
