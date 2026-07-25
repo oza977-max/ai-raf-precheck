@@ -195,12 +195,15 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText(/0 \/ \d+ · budget ≤\d+ \(provisional /i)).toBeInTheDocument();
 
     // Answer every generated question until the flow reaches confirmation.
-    for (let i = 0; i < 10; i++) {
+    // V2-C: a realistic policy generates questions across many fields, so
+    // this answers whatever option the current question offers rather than
+    // assuming a data-zone question (budget can reach 15).
+    for (let i = 0; i < 20; i++) {
       const confirmButton = screen.queryByRole('button', { name: /confirm and evaluate/i });
       if (confirmButton) break;
-      const optionButtons = screen.queryAllByRole('button', { name: /Zone [ABC]/ });
-      if (optionButtons.length > 0) {
-        await user.click(optionButtons[0]!);
+      const firstOption = document.querySelector<HTMLButtonElement>('.questionnaire__options button');
+      if (firstOption) {
+        await user.click(firstOption);
         continue;
       }
       const submitAnswer = screen.queryByRole('button', { name: /submit answer/i });

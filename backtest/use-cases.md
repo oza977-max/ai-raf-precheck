@@ -13,6 +13,12 @@ against `policy/appetite.yaml` v1.0) and — more importantly — against
 **what your committee would actually have decided**. Disagreement with
 the committee is the finding; disagreement with the prediction is a bug.
 
+**Policy version note:** these predictions are against the enriched
+starter policy (13 invariants, 12 controls, derived from
+`grounding/raf-extraction.md` §E/§F). Every prediction below is pinned by
+`src/engine/backtest-predictions.test.ts`, so a policy edit that changes
+an outcome fails the suite rather than silently invalidating this page.
+
 **Known V1 form limitations (honest caveats):**
 - ~~`decision_type`/`hitl` unreachable via the form~~ **Closed in V2-A**:
   both are now optional form selects.
@@ -37,10 +43,11 @@ the committee is the finding; disagreement with the prediction is a bug.
 exposure `internal-shared` · bindingness `advisory` · `reversible` ·
 `at_scale`
 
-**Predicted:** **Approved · Medium · Track II** (llm + advisory →
-TRACK-II, SS1/23 §3.4; internal-shared → TIER-MEDIUM). No invariants
-trip. Lifecycle `pre_checked` (Medium = 2LoD-notify, 5-day
-auto-approve). Standing conditions use the low-risk override band.
+**Predicted:** **Approved with controls · Medium · Track II** — binding
+constraint `INV-TRACK2-01` (Track II baseline: hosted models can be
+substituted without notice). Controls solved: `CTRL-CITE-01`,
+`CTRL-FINGERPRINT-01`, `CTRL-REDTEAM-01`. Lifecycle `pre_checked`
+(Medium = 2LoD-notify). Standing conditions use the low-risk band.
 
 ---
 
@@ -56,7 +63,8 @@ auto-approve). Standing conditions use the low-risk override band.
 
 **Predicted:** **REJECTED · High · Track II** — INV-ZONE-01 ("MNPI must
 remain within Zone C", MAR Article 8; MiFID II) trips and **no control
-in the library can resolve it** → no-control-set rejection. The
+in the library can resolve it** → no-control-set rejection. This is the
+one invariant deliberately left unresolvable. The
 "Why this verdict" panel should show the MAR/MiFID citation. This is the
 zone rules doing exactly their job: same tool, one data-class change,
 opposite verdict.
@@ -78,12 +86,13 @@ opposite verdict.
 exposure `internal-shared` · bindingness `material` · `reversible` ·
 `at_scale`
 
-**Predicted:** **Approved with controls · High · Track II** — Client PII
-triggers TIER-HIGH; INV-DATA-01 trips (Client PII in Zone B, GDPR Art.
-32(1)(a)) and CTRL-ENC-01 resolves it (VERIFIED chip from the starter
-attestation example). `boundary_proximity: true` (single control, zero
-redundancy). Lifecycle `pre_checked` — awaiting active 2LoD sign-off:
-go approve it in the register as 2LoD and watch the audit trail.
+**Predicted:** **Approved with controls · High · Track II** — the richest
+verdict in the pack. Binding constraint `INV-DATA-01` (Client PII in
+Zone B, GDPR Art. 32(1)(a)). Five controls solved: `CTRL-ENC-01`
+(VERIFIED chip from the starter attestation), `CTRL-FINGERPRINT-01`,
+`CTRL-GROUND-01`, `CTRL-REDTEAM-01`, `CTRL-SAMPLE-01`. Lifecycle
+`pre_checked` — approve it in the register as 2LoD and watch the audit
+trail.
 
 ---
 
@@ -124,9 +133,10 @@ description should trip HL-003.
 exposure `internal-shared` · bindingness `advisory` · `reversible` ·
 `at_scale`
 
-**Predicted:** **Approved · Medium · Track II**, no controls, lifecycle
-`pre_checked` (notify). Clean-approval explanation should read
-"Evaluated against 5 hard lines and 2 invariants — none triggered."
+**Predicted:** **Approved with controls · Medium · Track II** — binding
+`INV-TRACK2-01`; controls `CTRL-FINGERPRINT-01`, `CTRL-REDTEAM-01`,
+`CTRL-SAMPLE-01` (the recommendation runs at scale, so behavioural
+sampling is required). Lifecycle `pre_checked`.
 
 ---
 
@@ -154,11 +164,12 @@ infrastructure.
 **Form values:** as UC-6a but input zone `Zone C`, processing zone
 `Zone C`.
 
-**Predicted:** **Approved · High · Track II** (MNPI data class →
-TIER-HIGH; no invariant trips in Zone C; no controls required).
-Lifecycle `pre_checked` — 2LoD approval required. The 6a/6b pair is the
-cleanest demonstration of appetite-as-code: identical use case, the
-deployment zone alone flips the verdict, and both verdicts cite why.
+**Predicted:** **Approved with controls · High · Track II** — the zone
+invariant no longer trips, so the use case is inside appetite; binding
+`INV-HALLUC-01` with `CTRL-CITE-01`, `CTRL-FINGERPRINT-01`,
+`CTRL-GROUND-01`, `CTRL-REDTEAM-01`. The 6a/6b pair is the cleanest
+demonstration of appetite-as-code: identical use case, the deployment
+zone alone flips rejected → approved-with-controls, and both cite why.
 
 ---
 
@@ -176,10 +187,12 @@ deployment zone alone flips the verdict, and both verdicts cite why.
 exposure `internal-only` · bindingness `non-binding` · `reversible` ·
 `at_scale`
 
-**Predicted:** **Approved · Low · Track III** (agentic + non-binding →
-TRACK-III "AI Governance track", SR 26-2 §III.C GenAI exclusion;
-internal-only → TIER-LOW). Lifecycle **`approved`** — the only
-self-service-final case in this pack. Worth stress-testing the
+**Predicted:** **Approved with controls · Low · Track III** (agentic +
+non-binding → TRACK-III "AI Governance track", SR 26-2 §III.C GenAI
+exclusion; internal-only → TIER-LOW). Binding `INV-AGENT-01`; controls
+`CTRL-LOG-01` (tool-call logging, kill switch, minimal permissions) and
+`CTRL-REDTEAM-01`. Lifecycle **`approved`** — the only self-service-final
+case in this pack. Worth stress-testing the
 classification honestly: if analysts' scripts feed risk numbers used in
 decisions, is `non-binding` really true? Re-run with `advisory` and
 watch it move to Track II / pre_checked.
@@ -199,12 +212,13 @@ watch it move to Track II / pre_checked.
 exposure `internal-shared` · bindingness `material` · `reversible` ·
 `limited`
 
-**Predicted (form path):** **Approved · Medium · Track II**. **Known
-under-tiering:** the grounding says regulatory-reporting decision types
-are TIER-HIGH, but the form cannot express `decision_type` — via the
-LLM path this should tier High. If your committee would call this High
-(it should), that's the form-path limitation showing, not the appetite
-logic — a good back-test observation to record.
+**Predicted:** with **Decision type** left blank: **Approved with
+controls · Medium · Track II**, binding `INV-HALLUC-01`, controls
+`CTRL-CITE-01`, `CTRL-FINGERPRINT-01`, `CTRL-GROUND-01`,
+`CTRL-REDTEAM-01`. Set **Decision type = `regulatory-reporting`** and the
+same case tiers **High** — same controls, higher tier. Worth running both
+ways: it shows how much the tier depends on the submitter correctly
+declaring what the output feeds.
 
 ---
 
