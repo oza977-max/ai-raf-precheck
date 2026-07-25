@@ -138,6 +138,23 @@ function findReasoningTrace(verdict: Verdict, auditEvents: AuditEvent[]): string
   return null;
 }
 
+
+// V2-E: replaces the CONFIDENCE: HIGH/MEDIUM/LOW chip. That grade was
+// subjective — nobody could say what MEDIUM obliged a reader to do. This
+// says what the rule does to its own quoted text, which the reader can
+// check against the quote shown directly below it.
+const BASIS_LABELS: Record<string, string> = {
+  verbatim: 'STATES THE QUOTED TEXT',
+  derived: 'INFERRED FROM THE TEXT',
+  judgement: 'LEGAL JUDGEMENT',
+};
+
+const BASIS_HELP: Record<string, string> = {
+  verbatim: 'This rule restates the quoted passage. Nothing was read into it.',
+  derived: 'This rule is an inference from the quoted passage, not something it says outright. Check the inference holds for your case.',
+  judgement: 'This rule rests on a reading of the law that the quoted passage does not settle. A qualified person has to stand behind it.',
+};
+
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
   const lowCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'low');
   const mediumCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'medium');
@@ -217,13 +234,14 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 <span className="verdict__chain-doc">
                   {entry.document} · {entry.section}
                 </span>
-                <span className={`verdict__conf verdict__conf--${entry.confidence.toLowerCase()}`}>
-                  CONFIDENCE: {entry.confidence.toUpperCase()}
+                <span className={`verdict__conf verdict__conf--${entry.basis}`}>
+                  {BASIS_LABELS[entry.basis]}
                 </span>
               </div>
               <blockquote className="verdict__chain-quote">“{entry.source_text}”</blockquote>
               <p className="verdict__chain-derived">→ DERIVED&ensp;{entry.derived}</p>
               <p className="verdict__chain-signoff">SIGN-OFF&ensp;{entry.sign_off}</p>
+              <p className="verdict__chain-basis-help">{BASIS_HELP[entry.basis]}</p>
             </div>
           ))}
         </div>

@@ -21,7 +21,4 @@ rules:
       review: "Explainability documentation review"
     condition:
       model_type: { in: ["llm", "generative-ai", "agentic"] }
-    confidence: "Low"
-    reviewer_name: "[FIRM] — Compliance"
-    reviewer_role: "Head of Compliance"
-    sign_off_date: "[DATE]"
+    basis: "judgement"

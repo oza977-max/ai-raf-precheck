@@ -175,7 +175,23 @@ export interface Contradiction {
 // the P3-C01 placeholder. track_floor is intentionally absent — the
 // supplement model was decided instead (repo-updates §4.2): obligations
 // are only ever ADDED, tier floors only ever RAISE (BC-V2A-01).
-export type PackConfidence = 'High' | 'Medium' | 'Low';
+// V2-E (user feedback: "who signed off on that interpretation, and how
+// confident they were — I don't know how this will work, don't think it's
+// practically implementable").
+//
+// Replaces the old `confidence: High | Medium | Low`. That score was
+// subjective and uncalibrated: two reviewers would grade the same rule
+// differently and nobody could say what "Medium" obliged them to do —
+// fabricated precision, which is the one thing this product must not do.
+//
+// `basis` asks an objectively checkable question instead: does the rule
+// restate the quoted regulatory text, infer from it, or rest on legal
+// judgement? A reviewer can verify that by reading the rule against its
+// own source quote, without inventing a confidence number.
+export type PackBasis =
+  | 'verbatim'   // rule restates the quoted text; nothing inferred
+  | 'derived'    // a direct inference from the quoted text
+  | 'judgement'; // rests on legal interpretation — needs a named human
 
 export interface PackRuleSource {
   document: string;
@@ -195,10 +211,16 @@ export interface PackRule {
   source: PackRuleSource;
   effect: PackRuleEffect;
   condition: Condition;
-  confidence: PackConfidence;
-  reviewer_name: string; // containing a [..] placeholder = UNSIGNED (NF-7) → fired rule renders the verdict provisional
-  reviewer_role: string;
-  sign_off_date: string;
+  basis: PackBasis;
+  // V2-E: sign-off is a PACK-level act, not a per-rule one. Legal issues a
+  // position on a regulation; they do not countersign each line of a YAML
+  // file, and asking them to made adoption a task no firm would finish.
+  // These optional fields exist only for the rare rule a firm signs off
+  // separately from its pack (a local deviation) — when absent, the pack's
+  // sign-off governs.
+  reviewer_name?: string;
+  reviewer_role?: string;
+  sign_off_date?: string;
 }
 
 export interface JurisdictionPack {
@@ -208,6 +230,9 @@ export interface JurisdictionPack {
   regulator: string;
   document: string;
   effective_date: string;
+  // The unit of adoption (NF-7). A [..] placeholder in either field means
+  // the pack is UNADOPTED — every verdict relying on one of its rules is
+  // provisional.
   reviewer_name: string;
   reviewer_role: string;
   sign_off_date: string;
@@ -220,7 +245,7 @@ export interface RegulatoryChainEntry {
   document: string;
   section: string;
   source_text: string;
-  confidence: PackConfidence;
+  basis: PackBasis;
   derived: string;
   sign_off: string;
 }

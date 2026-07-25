@@ -89,7 +89,7 @@ export function evaluate(
   if (packHardLine) {
     const { rule } = packHardLine;
     const reason = rule.effect.type === 'hard_line' ? rule.effect.reason : '';
-    const caveat = caveatForFiredRule(rule);
+    const caveat = caveatForFiredRule(rule, packHardLine.pack);
     return {
       ok: true,
       value: emptyResult({
@@ -109,7 +109,7 @@ export function evaluate(
           tripped_invariants: [],
           binding_reason: reason,
           binding_regulatory_basis: `${rule.source.document} ${rule.source.section}`,
-          regulatory_chain: [chainEntryFor(rule, `Hard-line rejection: ${reason}`)],
+          regulatory_chain: [chainEntryFor(rule, `Hard-line rejection: ${reason}`, packHardLine.pack)],
         },
       }),
     };

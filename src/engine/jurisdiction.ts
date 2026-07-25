@@ -21,8 +21,20 @@ const TIER_RANK: Record<Tier, number> = { Critical: 4, High: 3, Medium: 2, Low: 
 // placeholder is UNSIGNED — an un-dated sign-off is not a sign-off
 // (review finding, pass 1). The rule is a proposed interpretation, and
 // any verdict relying on it must surface as provisional (BC-V2A-03).
-export function isUnsigned(rule: PackRule): boolean {
-  return /\[[^\]]*\]/.test(rule.reviewer_name) || /\[[^\]]*\]/.test(rule.sign_off_date);
+//
+// V2-E: adoption is decided at PACK level. A rule may carry its own
+// sign-off only where a firm deviates locally; absent that, the pack's
+// sign-off governs. One adoption decision per regulation is what a Legal
+// function actually produces — a per-rule signature was a review burden
+// no firm would complete, leaving every deployment permanently
+// provisional.
+const PLACEHOLDER = /\[[^\]]*\]/;
+
+export function isUnsigned(rule: PackRule, pack?: { reviewer_name: string; sign_off_date: string }): boolean {
+  const name = rule.reviewer_name ?? pack?.reviewer_name ?? '';
+  const date = rule.sign_off_date ?? pack?.sign_off_date ?? '';
+  if (!name || !date) return true;
+  return PLACEHOLDER.test(name) || PLACEHOLDER.test(date);
 }
 
 export function resolveActivePacks(
@@ -35,52 +47,61 @@ export function resolveActivePacks(
     .sort((a, b) => a.pack_id.localeCompare(b.pack_id));
 }
 
-export function caveatForFiredRule(rule: PackRule): ConfidenceCaveat | null {
+type PackSignOff = { reviewer_name: string; reviewer_role: string; sign_off_date: string };
+
+export function caveatForFiredRule(rule: PackRule, pack?: PackSignOff): ConfidenceCaveat | null {
   const cite = `${rule.source.document} ${rule.source.section}`;
-  if (isUnsigned(rule)) {
+  if (isUnsigned(rule, pack)) {
     return {
       ruleId: rule.id,
       field: 'jurisdiction_pack',
       confidence: 'low',
-      reason: `${cite} — proposed interpretation, pending firm adoption (rule is unsigned; NF-7)`,
+      reason: `${cite} — proposed interpretation, pending firm adoption (pack not adopted; NF-7)`,
     };
   }
-  if (rule.confidence === 'Low') {
+  // V2-E: the caveat now follows what the rule is DOING to the source
+  // text, which anyone can check by reading the two side by side —
+  // rather than a confidence grade someone had to invent.
+  if (rule.basis === 'judgement') {
     return {
       ruleId: rule.id,
       field: 'jurisdiction_pack',
       confidence: 'low',
-      reason: `${cite} — low-confidence interpretation. Verify with Compliance before relying on it (RA-11).`,
+      reason: `${cite} — this rule rests on legal interpretation, not on the quoted text alone. Confirm with Compliance before relying on it (RA-11).`,
     };
   }
-  if (rule.confidence === 'Medium') {
+  if (rule.basis === 'derived') {
     return {
       ruleId: rule.id,
       field: 'jurisdiction_pack',
       confidence: 'medium',
-      reason: `${cite} involves interpretive judgment. Verify with Compliance before relying on it (RA-11).`,
+      reason: `${cite} — inferred from the quoted text rather than stated in it. Check the inference holds for this use case (RA-11).`,
     };
   }
   return null;
 }
 
-export function chainEntryFor(rule: PackRule, derived: string): RegulatoryChainEntry {
+export function chainEntryFor(rule: PackRule, derived: string, pack?: PackSignOff): RegulatoryChainEntry {
+  const name = rule.reviewer_name ?? pack?.reviewer_name ?? 'not yet adopted';
+  const date = rule.sign_off_date ?? pack?.sign_off_date;
+  const scope = rule.reviewer_name ? 'this rule' : 'pack';
   return {
     rule_id: rule.id,
     document: rule.source.document,
     section: rule.source.section,
     source_text: rule.source.text,
-    confidence: rule.confidence,
+    basis: rule.basis,
     derived,
-    sign_off: isUnsigned(rule)
-      ? `${rule.reviewer_name} · pending firm adoption`
-      : `${rule.reviewer_name} · ${rule.sign_off_date}`,
+    sign_off: isUnsigned(rule, pack)
+      ? `${name} · pending firm adoption`
+      : `${name} · ${date} (adopted at ${scope} level)`,
   };
 }
 
 export interface PackHardLineHit {
   rule: PackRule;
   packId: string;
+  pack: JurisdictionPack;
   graphPath: string;
 }
 
@@ -92,7 +113,7 @@ export function evaluatePackHardLines(graph: DataFlowGraph, activePacks: Jurisdi
     for (const rule of rules) {
       if (rule.effect.type !== 'hard_line') continue;
       if (matchesCondition(rule.condition, graph)) {
-        return { rule, packId: pack.pack_id, graphPath: describeGraphPath(graph) };
+        return { rule, packId: pack.pack_id, pack, graphPath: describeGraphPath(graph) };
       }
     }
   }
@@ -147,8 +168,8 @@ export function applyJurisdictionOverrides(
       }
 
       appliedOverrides.push({ packCode: pack.pack_id, ruleId: rule.id, effect: derived });
-      chain.push(chainEntryFor(rule, derived));
-      const caveat = caveatForFiredRule(rule);
+      chain.push(chainEntryFor(rule, derived, pack));
+      const caveat = caveatForFiredRule(rule, pack);
       if (caveat) caveats.push(caveat);
     }
   }

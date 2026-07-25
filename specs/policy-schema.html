@@ -325,8 +325,8 @@
         <tr><td>Pack independence</td><td>CF-4</td><td>Packs are separate files; updating one pack doesn't change the main file version</td></tr>
         <tr><td>Validation at load time</td><td>CF-5</td><td>Invalid policy = evaluation disabled; exact field named in error</td></tr>
         <tr><td>Primary source citation per rule</td><td>RA-7</td><td>Every pack rule has a <code>source</code> block — no source = invalid</td></tr>
-        <tr><td>Confidence scoring</td><td>RA-8</td><td>Every pack rule has <code>confidence: High | Medium | Low</code></td></tr>
-        <tr><td>Human sign-off per rule</td><td>NF-7</td><td>Pack rules need <code>reviewer_name</code>, <code>reviewer_role</code>, <code>sign_off_date</code></td></tr>
+        <tr><td>Confidence scoring</td><td>RA-8</td><td>Every pack rule has <code>basis: verbatim | derived | judgement</code> (V2-E; replaces <code>confidence</code>)</td></tr>
+        <tr><td>Human sign-off per rule</td><td>NF-7</td><td>Pack <em>header</em> needs <code>reviewer_name</code>, <code>reviewer_role</code>, <code>sign_off_date</code>; rules inherit it (V2-E)</td></tr>
         <tr><td>Translation attestation</td><td>NF-10</td><td>Main policy file has <code>translation_attestation</code> block</td></tr>
         <tr><td>Control library resolves invariants</td><td>CS-1, CS-2</td><td>Each control declares which invariants it resolves + burden score</td></tr>
         <tr><td>Envelope semantics</td><td>OQ-PV-1, PV-1–3</td><td>Ordinal (≤ ceiling) and set (⊆ subset) dimensions (V2+ schema, declare now)</td></tr>
@@ -613,7 +613,7 @@ rules:
       condition:
         output_type: { in: ["quantitative", "score", "recommendation"] }
         decision_bindingness: { in: ["material", "binding", "advisory"] }
-    confidence: "High"
+    basis: "verbatim"
     reviewer_name: "[FIRM] — Regulatory Affairs Lead"
     reviewer_role: "Head of Model Risk"
     sign_off_date: "2026-05-01"
@@ -629,7 +629,7 @@ rules:
       control_id: "CTRL-RAF-01"
       condition:
         track: { in: ["II", "III"] }
-    confidence: "High"
+    basis: "verbatim"
     reviewer_name: "[FIRM] — Regulatory Affairs Lead"
     reviewer_role: "Head of Model Risk"
     sign_off_date: "2026-05-01"</code></pre>
@@ -745,7 +745,7 @@ export interface PackRule {
     text: string;
   };
   effect: PackRuleEffect;
-  confidence: Confidence;
+  basis: PackBasis;                 // V2-E — replaces `confidence`
   reviewer_name: string;
   reviewer_role: string;
   sign_off_date: string;

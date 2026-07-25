@@ -21,7 +21,4 @@ rules:
       review: "Independent model validation (2LoD)"
     condition:
       decision_bindingness: { in: ["material", "binding"] }
-    confidence: "High"
-    reviewer_name: "[FIRM] — Model Risk"
-    reviewer_role: "Head of Model Risk"
-    sign_off_date: "[DATE]"
+    basis: "verbatim"

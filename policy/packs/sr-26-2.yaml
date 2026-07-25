@@ -21,7 +21,4 @@ rules:
       review: "US MRM scope assessment"
     condition:
       decision_bindingness: { in: ["material", "binding"] }
-    confidence: "Medium"
-    reviewer_name: "[FIRM] — Model Risk"
-    reviewer_role: "Head of Model Risk"
-    sign_off_date: "[DATE]"
+    basis: "derived"

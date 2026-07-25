@@ -21,7 +21,4 @@ rules:
       review: "ICT third-party concentration review"
     condition:
       data_zone: { in: ["Zone B"] }
-    confidence: "Medium"
-    reviewer_name: "[FIRM] — Technology Risk"
-    reviewer_role: "Head of Technology Risk"
-    sign_off_date: "[DATE]"
+    basis: "derived"

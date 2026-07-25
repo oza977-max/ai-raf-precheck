@@ -24,10 +24,7 @@ rules:
       minimum_tier: "Critical"
     condition:
       decision_type: { in: ["credit-decision", "lending-decision"] }
-    confidence: "Medium"
-    reviewer_name: "[FIRM] — Legal/Compliance"
-    reviewer_role: "Head of Compliance"
-    sign_off_date: "[DATE]"
+    basis: "derived"
 
   - id: "EU-AIACT-TIER-02"
     title: "Annex III high-risk: recruitment and selection"
@@ -40,7 +37,4 @@ rules:
       minimum_tier: "Critical"
     condition:
       decision_type: { in: ["hiring"] }
-    confidence: "Medium"
-    reviewer_name: "[FIRM] — Legal/Compliance"
-    reviewer_role: "Head of Compliance"
-    sign_off_date: "[DATE]"
+    basis: "derived"
