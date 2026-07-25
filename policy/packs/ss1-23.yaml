@@ -21,4 +21,4 @@ rules:
       review: "Independent model validation (2LoD)"
     condition:
       decision_bindingness: { in: ["material", "binding"] }
-    basis: "verbatim"
+    basis: "derived"

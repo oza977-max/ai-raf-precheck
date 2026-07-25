@@ -187,3 +187,31 @@ describe('V2-E: pack-level adoption and objective basis', () => {
     expect(localChain[0]?.sign_off).toBe('B. Deviation · 2026-03-01 (adopted at this rule level)');
   });
 });
+
+// V2-E follow-up — user asked how pack sign-off actually works in
+// practice. Auditing that surfaced the real blocker: 6 of the 8 starter
+// rules still carry authoring-placeholder quotes, and one of those
+// declared basis "verbatim" — a flat contradiction, since the quote
+// itself says it is not the verbatim text.
+describe('placeholder source text cannot be reviewed', () => {
+  const SIGNED = { reviewer_name: 'A. Counsel', reviewer_role: 'Head of Compliance', sign_off_date: '2026-03-01' };
+
+  it('an authoring placeholder outranks "pending adoption" — the rule is not merely unsigned, it is unreviewable', () => {
+    const r = rule({
+      basis: 'verbatim',
+      reviewer_name: undefined,
+      sign_off_date: undefined,
+      source: { document: 'SS1/23', section: '§3.4', text: '[ILLUSTRATIVE — NOT VERBATIM] something about validation' },
+    });
+    const caveat = caveatForFiredRule(r, pack([r], SIGNED));
+    expect(caveat?.confidence).toBe('low');
+    expect(caveat?.reason).toMatch(/authoring placeholder, not the regulation/i);
+    // Must NOT read as a signature-away-from-ready.
+    expect(caveat?.reason).not.toMatch(/pending firm adoption/i);
+  });
+
+  it('a real quote on an adopted pack produces no caveat', () => {
+    const r = rule({ basis: 'verbatim', reviewer_name: undefined, sign_off_date: undefined });
+    expect(caveatForFiredRule(r, pack([r], SIGNED))).toBeNull();
+  });
+});
