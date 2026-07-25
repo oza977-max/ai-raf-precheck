@@ -297,7 +297,8 @@ export interface GraphEdge {
     <table>
       <thead>
         <tr>
-          <th>Field</th>
+          <th>Question shown</th>
+          <th>Underlying field</th>
           <th>Type</th>
           <th>Required</th>
           <th>Notes</th>
@@ -305,79 +306,120 @@ export interface GraphEdge {
       </thead>
       <tbody>
         <tr>
-          <td>Use case name</td>
+          <td>What do you want to call it?</td>
+          <td>use case name</td>
           <td>Text</td>
           <td>Yes</td>
           <td>Stored as the use case label</td>
         </tr>
         <tr>
-          <td>Brief description</td>
+          <td>In a sentence or two, what does it do?</td>
+          <td>description</td>
           <td>Textarea</td>
           <td>Yes</td>
           <td>1–5 sentences (UC-1 equivalent)</td>
         </tr>
         <tr>
-          <td>Input data class</td>
+          <td>What kind of information does it use?</td>
+          <td>input data class</td>
           <td>Select</td>
           <td>Yes</td>
-          <td>Values from policy <code>data_classes</code></td>
+          <td>Canonical <code>DATA_CLASSES</code></td>
         </tr>
         <tr>
-          <td>Input data zone</td>
+          <td>Where does that information sit today?</td>
+          <td>input data zone</td>
           <td>Select</td>
           <td>Yes</td>
-          <td>Values from policy <code>data_zones</code></td>
+          <td>Canonical <code>DATA_ZONES</code></td>
         </tr>
         <tr>
-          <td>AI model type</td>
+          <td>What kind of AI is it?</td>
+          <td>model type</td>
           <td>Select</td>
           <td>Yes</td>
-          <td>Values from policy <code>model_types</code></td>
+          <td>Canonical <code>MODEL_TYPES</code></td>
         </tr>
         <tr>
-          <td>Autonomy level</td>
+          <td>How much can it do without a person?</td>
+          <td>autonomy level</td>
           <td>Select (0–4)</td>
           <td>Yes</td>
-          <td>With plain-language descriptions per level</td>
+          <td>Plain-language description per level</td>
         </tr>
         <tr>
-          <td>Processing data zone</td>
+          <td>Where does the AI itself run?</td>
+          <td>processing data zone</td>
           <td>Select</td>
           <td>Yes</td>
-          <td></td>
+          <td>Help text flags the storage-vs-processing trap</td>
         </tr>
         <tr>
-          <td>Output action type</td>
+          <td>What does it actually produce or do?</td>
+          <td>output action type</td>
           <td>Select</td>
           <td>Yes</td>
-          <td>Values from policy <code>action_types</code></td>
+          <td>Canonical <code>ACTION_TYPES</code></td>
         </tr>
         <tr>
-          <td>Output exposure</td>
+          <td>Who sees what it produces?</td>
+          <td>output exposure</td>
           <td>Select</td>
           <td>Yes</td>
-          <td>Values from policy <code>exposure_levels</code></td>
+          <td>Canonical <code>EXPOSURES</code></td>
         </tr>
         <tr>
-          <td>Decision bindingness</td>
+          <td>How much weight does its output carry?</td>
+          <td>decision bindingness</td>
           <td>Select</td>
           <td>Yes</td>
-          <td></td>
+          <td>Help text asks for practice, not process</td>
         </tr>
         <tr>
-          <td>Output reversibility</td>
+          <td>If it gets something wrong, can it be undone?</td>
+          <td>output reversibility</td>
           <td>Select</td>
           <td>Yes</td>
           <td>reversible / irreversible / unknown</td>
         </tr>
         <tr>
-          <td>Jurisdictions</td>
+          <td>How widely is it used?</td>
+          <td>output scale</td>
+          <td>Select</td>
+          <td>Yes</td>
+          <td>limited / at_scale</td>
+        </tr>
+        <tr>
+          <td>What kind of decision does it feed?</td>
+          <td>decision type</td>
+          <td>Select</td>
+          <td>No</td>
+          <td>Canonical <code>DECISION_TYPES</code></td>
+        </tr>
+        <tr>
+          <td>Does a person check it before anything happens?</td>
+          <td>hitl</td>
+          <td>Select</td>
+          <td>No</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>It replaces something we already use</td>
+          <td>replaces prior model</td>
+          <td>Boolean</td>
+          <td>Yes</td>
+          <td>Drives TRACK-II-REPLACE (RAF §5 rule 3)</td>
+        </tr>
+        <tr>
+          <td>Which countries or regions does it touch?</td>
+          <td>jurisdictions</td>
           <td>Multi-select</td>
           <td>Yes</td>
           <td>From policy <code>jurisdictions</code></td>
         </tr>
       </tbody>
     </table>
+    <p><strong>V2-E — labels are business questions, values are canonical.</strong> The original labels were the engine's own field names and the options were raw enum values (&quot;Zone B&quot;, &quot;agentic&quot;, &quot;non-binding&quot;). User feedback: <em>&quot;not very business friendly — how will they know all this?&quot;</em> The fix is presentation-only: submitted <strong>values</strong> are unchanged and remain the canonical vocabulary (policy-schema.md §3.0), since that is what policy rules match on. Only the words the user reads changed. Each option keeps its canonical term in parentheses so answers stay traceable. Copy lives in <code>src/components/field-copy.ts</code>. The submit button reads &quot;Continue&quot;, not &quot;Build graph&quot;.</p>
 
     <h3 id="form-output">5.3 Form Output</h3>
     <p>On submit, <code>StructuredForm.tsx</code> calls <code>buildGraphFromForm(formValues)</code> which constructs a <code>DataFlowGraph</code> object with <code>intake_method: 'structured_form'</code>. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.</p>

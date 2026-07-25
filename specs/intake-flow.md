@@ -187,24 +187,43 @@ tester without a key can use.)
 
 ### 5.2 Form fields
 
-The form presents one field per graph attribute. All permitted values come from the loaded policy file (no hardcoded enums):
+The form presents one field per graph attribute.
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| Use case name | Text | Yes | Stored as the use case label |
-| Brief description | Textarea | Yes | 1–5 sentences (UC-1 equivalent) |
-| Input data class | Select | Yes | Values from policy `data_classes` |
-| Input data zone | Select | Yes | Values from policy `data_zones` |
-| AI model type | Select | Yes | Values from policy `model_types` |
-| Autonomy level | Select (0–4) | Yes | With plain-language descriptions per level |
-| Processing data zone | Select | Yes | |
-| Output action type | Select | Yes | Values from policy `action_types` |
-| Output exposure | Select | Yes | Values from policy `exposure_levels` |
-| Decision bindingness | Select | Yes | |
-| Output reversibility | Select | Yes | reversible / irreversible / unknown |
-| Output scale | Select | Yes | limited / at_scale |
-| Replaces prior model | Boolean | Yes | Drives TRACK-II-REPLACE (RAF §5 rule 3) |
-| Jurisdictions | Multi-select | Yes | From policy `jurisdictions` |
+**V2-E — labels are business questions, values are canonical.** The
+original labels in this table were the engine's own field names, and the
+options were raw enum values ("Zone B", "agentic", "non-binding"). User
+feedback: *"not very business friendly — how will they know all this?"* A
+front-office submitter cannot answer "output reversibility".
+
+The fix is presentation-only. The **values** submitted are unchanged and
+remain the canonical vocabulary (policy-schema.md §3.0) — they are what
+policy rules match on, and changing them would break every rule. Only the
+words the user reads changed. Each option keeps its canonical term in
+parentheses so a model-validation reader can map an answer back to the
+vocabulary the policy and verdict are written in. Copy lives in
+`src/components/field-copy.ts`.
+
+| Question shown | Underlying field | Type | Required | Notes |
+|---|---|---|---|---|
+| What do you want to call it? | use case name | Text | Yes | Stored as the use case label |
+| In a sentence or two, what does it do? | description | Textarea | Yes | 1–5 sentences (UC-1 equivalent) |
+| What kind of information does it use? | input data class | Select | Yes | Canonical `DATA_CLASSES` |
+| Where does that information sit today? | input data zone | Select | Yes | Canonical `DATA_ZONES` |
+| What kind of AI is it? | model type | Select | Yes | Canonical `MODEL_TYPES` |
+| How much can it do without a person? | autonomy level | Select (0–4) | Yes | Plain-language description per level |
+| Where does the AI itself run? | processing data zone | Select | Yes | Help text flags the storage-vs-processing trap |
+| What does it actually produce or do? | output action type | Select | Yes | Canonical `ACTION_TYPES` |
+| Who sees what it produces? | output exposure | Select | Yes | Canonical `EXPOSURES` |
+| How much weight does its output carry? | decision bindingness | Select | Yes | Help text asks for practice, not process |
+| If it gets something wrong, can it be undone? | output reversibility | Select | Yes | reversible / irreversible / unknown |
+| How widely is it used? | output scale | Select | Yes | limited / at_scale |
+| What kind of decision does it feed? | decision type | Select | No | Canonical `DECISION_TYPES` |
+| Does a person check it before anything happens? | hitl | Select | No | |
+| It replaces something we already use | replaces prior model | Boolean | Yes | Drives TRACK-II-REPLACE (RAF §5 rule 3) |
+| Which countries or regions does it touch? | jurisdictions | Multi-select | Yes | From policy `jurisdictions` |
+
+The submit button reads **"Continue"**, not "Build graph" — the user is
+describing a use case, not constructing a data structure.
 
 ### 5.3 Form output
 
