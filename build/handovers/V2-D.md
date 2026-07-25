@@ -15,10 +15,20 @@ Build → test/typecheck gates → GitHub Pages. AIGate is backend-less
 (NF-3) and `vite.config.ts` already sets `base: './'`, so `dist/` is a
 complete deployment. Turns "clone and npm install" into a URL.
 
-*One manual step remains:* Pages must be enabled in repository settings.
-On a private repo that needs a paid plan and publishes the site publicly —
-flagged in the workflow comment and the tester guide, deliberately left as
-the user's decision.
+*Blocked on token scope:* the session's OAuth token lacks `workflow`
+scope, so `.github/workflows/deploy.yml` could not be pushed. The file now
+lives at `docs/github-pages-workflow.yml` for the user to install via the
+GitHub web UI if they want automated deploys.
+
+*Shipped instead:* the current static build is pushed to a `gh-pages`
+branch, which needs no special scope. Enabling Pages against that branch is
+one dropdown in repository settings. Trade-off: the branch is a snapshot and
+goes stale — it must be regenerated after changes, which the workflow would
+have automated.
+
+*Left to the user deliberately:* enabling Pages is the act that publishes.
+On a private repo it needs a paid plan and makes the site public. Not an
+action to take on someone's behalf.
 
 *Correction to the specs:* NF-4 / `vite.config.ts` claim `file://`
 compatibility. They are wrong — the built page loads via
