@@ -1194,9 +1194,17 @@ details input {
   white-space: nowrap;
 }
 
-.verdict__conf--high { color: var(--low); }
-.verdict__conf--medium { color: var(--warn-text); background: var(--warn-bg); }
-.verdict__conf--low { color: var(--critical); background: #fbeae8; }
+/* V2-E: basis replaces the High/Medium/Low confidence grade. */
+.verdict__conf--verbatim { color: var(--low); }
+.verdict__conf--derived { color: var(--warn-text); background: var(--warn-bg); }
+.verdict__conf--judgement { color: var(--critical); background: #fbeae8; }
+
+.verdict__chain-basis-help {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
 
 .verdict__chain-quote {
   margin: 0.4rem 0;

@@ -21,7 +21,4 @@ rules:
       review: "Fairness & accountability review (FEAT)"
     condition:
       exposure: { in: ["client-facing", "market-facing"] }
-    confidence: "Medium"
-    reviewer_name: "[FIRM] — Compliance"
-    reviewer_role: "Head of Compliance"
-    sign_off_date: "[DATE]"
+    basis: "derived"

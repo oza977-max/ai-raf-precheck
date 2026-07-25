@@ -8,7 +8,7 @@ Describe the AI use case (plain language or a short structured form). AIGate map
 
 - a **verdict with its "why"** — which rule set the tier, which invariant tripped, each with its regulatory citation;
 - the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
-- a **regulatory reasoning chain** quoting the verbatim source text, confidence, and human sign-off behind every jurisdictional rule that fired;
+- a **regulatory reasoning chain** quoting the verbatim source text, the basis of the rule drawn from it, and the human sign-off behind every jurisdictional rule that fired;
 - **standing conditions** — the operating bounds the approval assumes (the verdict is a hypothesis; drift outside the bounds voids it);
 - an entry in a **graph-based AI register** with a role-gated 2LoD approval workflow and an append-only audit trail of every event.
 
@@ -25,7 +25,7 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 219 tests
+npm test         # 225 tests
 ```
 
 No backend, no database, no API key required. The whole app is a static
@@ -93,20 +93,20 @@ SR 26-2 RFI will land and change the US position on generative AI. EU AI Act Ann
 
 Not: *"Track II if quantitative output into a regulated decision"*
 
-But: *"Track II — derived from SS1/23 §3.4: 'models that produce quantitative outputs used in material decisions require independent validation.' Confidence: High."*
+But: *"Track II — from SS1/23 §3.4: 'models that produce quantitative outputs used in material decisions require independent validation.' Basis: states the quoted text."*
 
 This means:
 - The verdict shows you the exact regulatory text behind every decision. You can verify it yourself against the source.
 - When a regulation changes, only the rules citing the changed sections need review — not the whole pack.
-- Ambiguous rules carry a confidence score (High / Medium / Low) so you know where solid ground is and where judgment is required.
+- Every rule declares its **basis** — whether it restates the quoted text, infers from it, or rests on legal judgement. That is something a reviewer can check by reading the rule against its own citation, rather than a confidence score somebody had to invent.
 
-**Every rule requires a human reviewer sign-off** — name, role, date — against the primary source text. AIGate does not interpret regulations autonomously. A bank that tells the PRA "our AI interpreted SS1/23" does not have a defensible answer. A qualified person must stand behind every regulatory determination. AIGate makes that accountability traceable and minimal in effort: reviewers sign off only on rules citing changed text, not the whole pack every time.
+**Every pack requires a human reviewer sign-off** — name, role, date — against the primary source text. Sign-off is per regulation, not per rule: Legal issues a position on SS1/23, they do not countersign each line of a config file. (A single rule can carry its own sign-off where a firm deviates from the central reading.) AIGate does not interpret regulations autonomously. A bank that tells the PRA "our AI interpreted SS1/23" does not have a defensible answer. A qualified person must stand behind every regulatory determination. AIGate makes that accountability traceable and minimal in effort: reviewers sign off only on rules citing changed text, not the whole pack every time.
 
-**Verdicts show the full reasoning chain:** regulatory text → derived rule → verdict. A regulator asking "why was this Track II?" sees the SS1/23 section, the rule, and who reviewed it — not just a version number.
+**Verdicts show the full reasoning chain:** regulatory text → derived rule → verdict, with the basis of each step stated. A regulator asking "why was this Track II?" sees the SS1/23 section, the rule, and who reviewed it — not just a version number.
 
 **When a bank disagrees with the central interpretation**, they can override locally — but they must cite the competing text and record their reasoning. Silent overrides are not permitted.
 
-**What this does not solve:** genuine legal ambiguity. When regulatory text is contested, AIGate flags the rule as Low confidence and routes to the bank's legal team. It does not pretend to resolve what qualified lawyers disagree about. That is the honest boundary of what a tool can do.
+**What this does not solve:** genuine legal ambiguity. When regulatory text is contested, AIGate marks the rule `judgement`, renders the verdict provisional, and routes to the bank's legal team. It does not pretend to resolve what qualified lawyers disagree about. That is the honest boundary of what a tool can do.
 
 ---
 

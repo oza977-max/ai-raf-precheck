@@ -43,8 +43,8 @@ The policy file is the bank's Risk Appetite Framework expressed in machine-reada
 | Pack independence | CF-4 | Packs are separate files; updating one pack doesn't change the main file version |
 | Validation at load time | CF-5 | Invalid policy = evaluation disabled; exact field named in error |
 | Primary source citation per rule | RA-7 | Every pack rule has a `source` block — no source = invalid |
-| Confidence scoring | RA-8 | Every pack rule has `confidence: High | Medium | Low` |
-| Human sign-off per rule | NF-7 | Pack rules need `reviewer_name`, `reviewer_role`, `sign_off_date` |
+| Interpretive basis per rule | RA-8 | Every pack rule has `basis: verbatim \| derived \| judgement` (V2-E; replaces `confidence`) |
+| Human sign-off per pack | NF-7 | Pack header needs `reviewer_name`, `reviewer_role`, `sign_off_date`; rules inherit it (V2-E) |
 | Translation attestation | NF-10 | Main policy file has `translation_attestation` block |
 | Control library resolves invariants | CS-1, CS-2 | Each control declares which invariants it resolves + burden score |
 | Envelope semantics | OQ-PV-1, PV-1–3 | Ordinal (≤ ceiling) and set (⊆ subset) dimensions (V2+ schema, declare now) |
@@ -462,10 +462,7 @@ rules:
       condition:
         output_type: { in: ["quantitative", "score", "recommendation"] }
         decision_bindingness: { in: ["material", "binding", "advisory"] }
-    confidence: "High"
-    reviewer_name: "[FIRM] — Regulatory Affairs Lead"
-    reviewer_role: "Head of Model Risk"
-    sign_off_date: "2026-05-01"
+    basis: "verbatim"
   
   - id: "SS1-UK-TIER-01"
     title: "Model risk appetite quantification"
@@ -478,11 +475,43 @@ rules:
       control_id: "CTRL-RAF-01"
       condition:
         track: { in: ["II", "III"] }
-    confidence: "High"
-    reviewer_name: "[FIRM] — Regulatory Affairs Lead"
-    reviewer_role: "Head of Model Risk"
-    sign_off_date: "2026-05-01"
+    basis: "verbatim"
 ```
+
+### V2-E — pack-level adoption, and `basis` instead of `confidence`
+
+User feedback on the original design: *"who signed off on that
+interpretation, and how confident they were — I don't know how this will
+work, don't think it's practically implementable."* Two parts of that were
+right, and both are fixed here.
+
+**1. `confidence: High | Medium | Low` → `basis: verbatim | derived | judgement`.**
+The confidence grade was subjective and uncalibrated. Two reviewers would
+score the same rule differently, and nothing told a reader what "Medium"
+obliged them to do — fabricated precision, which this product must not
+produce. `basis` asks an objectively checkable question instead: does the
+rule restate the quoted text, infer from it, or rest on legal judgement? A
+reviewer verifies that by reading the rule against its own `source.text`,
+with no number to invent.
+
+| `basis` | Meaning | Caveat produced |
+|---|---|---|
+| `verbatim` | Restates the quoted passage; nothing read into it | none |
+| `derived` | A direct inference from the quoted passage | medium — check the inference holds |
+| `judgement` | Rests on a reading the passage does not settle | low — verdict is provisional |
+
+**2. Sign-off moves from per-rule to per-pack.** Legal issues a position on
+a regulation; they do not countersign each line of a YAML file. Requiring a
+signature per rule made adoption a task no firm would finish, which left
+every deployment permanently provisional — the exact failure the field was
+meant to prevent. The **pack header** now carries `reviewer_name`,
+`reviewer_role` and `sign_off_date`, and rules inherit it. Rule-level
+sign-off fields remain valid but **optional**, for the rare rule a firm
+signs off separately (a local deviation from the central interpretation).
+
+NF-7 is unchanged in effect: a `[..]` placeholder in the governing
+sign-off — pack-level, or rule-level where present — means unadopted, and
+any verdict relying on that rule renders provisional.
 
 ### Pack rule effects
 
@@ -596,11 +625,15 @@ export interface PackRule {
     retrieved_date: string;  // ISO 8601 date the document was retrieved
   };
   effect: PackRuleEffect;
-  confidence: Confidence;
-  reviewer_name: string;
-  reviewer_role: string;
-  sign_off_date: string;
+  basis: PackBasis;                 // V2-E — replaces `confidence`
+  // V2-E: optional. The pack header's sign-off governs unless a rule
+  // carries its own (a firm's local deviation).
+  reviewer_name?: string;
+  reviewer_role?: string;
+  sign_off_date?: string;
 }
+
+export type PackBasis = 'verbatim' | 'derived' | 'judgement';
 
 export type PackRuleEffect =
   | { type: 'track_floor'; minimum_track: Track; condition: Condition }

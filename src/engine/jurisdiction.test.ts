@@ -36,7 +36,7 @@ function rule(overrides: Partial<PackRule> = {}): PackRule {
     source: { document: 'EU AI Act', section: 'Annex III §4(a)', text: 'recruitment or selection of natural persons…' },
     effect: { type: 'tier_floor', minimum_tier: 'Critical' },
     condition: { decision_type: { in: ['hiring'] } },
-    confidence: 'Medium',
+    basis: 'derived',
     reviewer_name: '[FIRM] — Legal/Compliance',
     reviewer_role: 'Head of Compliance',
     sign_off_date: '[DATE]',
@@ -120,7 +120,7 @@ describe('NF-7 / RA-11 caveats (V2-A)', () => {
   it('a signed Medium rule yields a medium caveat; signed High yields none', () => {
     const signed = rule({ reviewer_name: 'A. Mensah', sign_off_date: '2026-05-14' });
     expect(caveatForFiredRule(signed)?.confidence).toBe('medium');
-    expect(caveatForFiredRule({ ...signed, confidence: 'High' })).toBeNull();
+    expect(caveatForFiredRule({ ...signed, basis: 'verbatim' })).toBeNull();
   });
 });
 
@@ -135,5 +135,55 @@ describe('evaluatePackHardLines (V2-A)', () => {
     expect(hit?.rule.id).toBe('EU-AIACT-HL-01');
     expect(hit?.graphPath.length).toBeGreaterThan(0);
     expect(evaluatePackHardLines(graph({ jurisdictions: ['EU'], output_nodes: [] }), [pack([hl])])).toBeNull();
+  });
+});
+
+// V2-E — user feedback: "who signed off on that interpretation, and how
+// confident they were — I don't know how this will work, don't think it's
+// practically implementable."
+//
+// Two changes those tests pin: sign-off is a PACK-level act that rules
+// inherit (Legal issues one position per regulation, not a signature per
+// YAML line), and the subjective High/Medium/Low confidence grade is
+// replaced by `basis` — what the rule does to its own quoted text, which
+// a reviewer can check by reading the two side by side.
+describe('V2-E: pack-level adoption and objective basis', () => {
+  const SIGNED = { reviewer_name: 'A. Counsel', reviewer_role: 'Head of Compliance', sign_off_date: '2026-03-01' };
+
+  it('a rule with no sign-off of its own inherits its pack’s adoption', () => {
+    const r = rule({ reviewer_name: undefined, reviewer_role: undefined, sign_off_date: undefined });
+    expect(isUnsigned(r, pack([r], SIGNED))).toBe(false);
+    expect(isUnsigned(r, pack([r]))).toBe(true); // pack still has [FIRM]/[DATE]
+  });
+
+  it('an unadopted pack makes every rule under it provisional, whatever its basis', () => {
+    const r = rule({ basis: 'verbatim', reviewer_name: undefined, sign_off_date: undefined });
+    const caveat = caveatForFiredRule(r, pack([r]));
+    expect(caveat?.confidence).toBe('low');
+    expect(caveat?.reason).toMatch(/pending firm adoption/i);
+  });
+
+  it('basis drives the caveat once the pack is adopted', () => {
+    const verbatim = rule({ basis: 'verbatim', reviewer_name: undefined, sign_off_date: undefined });
+    const derived = rule({ basis: 'derived', reviewer_name: undefined, sign_off_date: undefined });
+    const judgement = rule({ basis: 'judgement', reviewer_name: undefined, sign_off_date: undefined });
+
+    // A rule that merely restates the quoted text needs no caveat — there
+    // is nothing for a reader to second-guess.
+    expect(caveatForFiredRule(verbatim, pack([verbatim], SIGNED))).toBeNull();
+    expect(caveatForFiredRule(derived, pack([derived], SIGNED))?.confidence).toBe('medium');
+    expect(caveatForFiredRule(judgement, pack([judgement], SIGNED))?.confidence).toBe('low');
+  });
+
+  it('the reasoning chain says whose sign-off it is and at what level', () => {
+    const inherited = rule({ reviewer_name: undefined, sign_off_date: undefined });
+    const local = rule({ ...SIGNED, reviewer_name: 'B. Deviation' });
+
+    const { chain } = applyJurisdictionOverrides(graph(), 'Low', 'II', [pack([inherited], SIGNED)]);
+    expect(chain[0]?.sign_off).toBe('A. Counsel · 2026-03-01 (adopted at pack level)');
+    expect(chain[0]?.basis).toBe('derived');
+
+    const localChain = applyJurisdictionOverrides(graph(), 'Low', 'II', [pack([local], SIGNED)]).chain;
+    expect(localChain[0]?.sign_off).toBe('B. Deviation · 2026-03-01 (adopted at this rule level)');
   });
 });

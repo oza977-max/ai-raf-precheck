@@ -2,7 +2,7 @@
 
 **Location in repo:** `grounding/PACK-AUTHORING.md`
 **Status:** Operating procedure — this is the P2-C03 chunk. Human-led; Claude scaffolds structure only.
-**Why this document exists:** The rule corpus — verbatim-cited, confidence-scored, human-signed
+**Why this document exists:** The rule corpus — verbatim-cited, basis-declared, human-signed
 regulatory rules — is the product's core asset. It is never generated; it is authored. A wrong rule
 here is enforced deterministically on every verdict thereafter.
 
@@ -12,9 +12,9 @@ here is enforced deterministically on every verdict thereafter.
 
 | Role | Person | Responsibility |
 |---|---|---|
-| Rule owner | The 2LoD lead (you) | Source acquisition, provision extraction, condition encoding, confidence scoring, sign-off on High/Medium rules |
+| Rule owner | The 2LoD lead (you) | Source acquisition, provision extraction, condition encoding, declaring each rule's basis, and pack-level sign-off |
 | Adversarial reviewer | Second 2LoD team member | Independent read of each provision; two test cases per rule (one should-fire, one should-not-fire); attempts to break each condition |
-| Contested-rule owner | Compliance/Legal (named per rule) | Sign-off on Low-confidence rules only — tabled as bounded, specific questions |
+| Contested-rule owner | Compliance/Legal (named per rule) | Sign-off on `judgement`-basis rules only — tabled as bounded, specific questions |
 
 Pre-adoption label: until the firm formally adopts the RAF, every sign-off is recorded as
 **"proposed interpretation — pending firm adoption"** and verdicts carry the NF-10 unattested label.
@@ -41,14 +41,24 @@ background or intent language. Expect 15–25 operative provisions for a documen
 The text is fact; the condition is professional interpretation of that fact. The pairing is what
 lets an auditor challenge the interpretation while seeing exactly what it derived from.
 
-**4. Score confidence honestly.**
-- **High** — text unambiguous; rule owner and adversarial reviewer read it identically.
-- **Medium** — judgment involved; verdict will carry an explicit caveat naming the ambiguity.
-- **Low** — genuinely contested; rule routes to Compliance/Legal for sign-off; verdicts provisional
-  until they determine.
+**4. Declare the basis honestly.**
+Ask one question: *what is this rule doing to the text I quoted?* Not "how confident am I" — that
+was the old `confidence` field, and it failed because two reviewers grade the same rule differently
+and nobody could say what "Medium" obliged them to do (V2-E).
+- **`verbatim`** — the rule restates the quoted passage. Nothing read in. An adversarial reviewer
+  holding the rule beside its own `source.text` agrees they say the same thing.
+- **`derived`** — a direct inference from the passage, not something it states. The verdict carries
+  a caveat naming the inference so a reader can check it holds for their case.
+- **`judgement`** — the passage does not settle the question; the rule rests on a reading of the
+  law. Routes to Compliance/Legal, and verdicts relying on it are provisional until they determine.
+
+This is checkable in a way a confidence score was not: put the rule next to its quote and the basis
+is either right or it isn't.
+
 **Default conservative on ambiguity:** where two readings exist, encode the more demanding one and
-mark Medium. A conservative misread costs friction; a liberal one costs regulatory exposure.
-Expected distribution roughly 70/25/5 — if everything is coming out High, the scoring is dishonest.
+mark it `derived` at minimum. A conservative misread costs friction; a liberal one costs regulatory
+exposure. If everything is coming out `verbatim`, the declaration is dishonest — genuine regulation
+rarely maps to graph conditions without inference.
 
 **5. Adversarial review.**
 For every rule, the reviewer authors two test cases: a use case where the rule must fire, and a

@@ -116,3 +116,72 @@ and the acceptance suite uses a single-match `/approved|rejected/i` query —
 - No import path — export is one-way, so testers' registers cannot be
   combined.
 - Enabling GitHub Pages (and the public/paid-plan decision) is the user's.
+
+---
+
+# V2-E — user feedback: business language + workable sign-off
+
+Two pieces of feedback, both acted on.
+
+## 1. "Not very business friendly — how will they know all this?"
+
+The form's labels were the engine's own field names (`input data class`,
+`output reversibility`, `processing data zone`) and its options were raw
+enum values (`Zone B`, `agentic`, `non-binding`). The data model had leaked
+straight into the UI.
+
+Presentation-only fix — the submitted **values** are untouched canonical
+vocabulary (policy-schema.md §3.0), because that is what every policy rule
+matches on. Only the words changed. Copy lives in
+`src/components/field-copy.ts`; each option keeps its canonical term in
+parentheses so a model-validation reader can still trace an answer back to
+the vocabulary the verdict is written in.
+
+Help text now warns about the two traps that actually produce wrong
+answers: confusing where data is *stored* with where it is *processed*
+(the zone-crossing rules turn on this), and understating bindingness
+relative to what happens in practice.
+
+TC-UC-3a-03 strengthened — it previously only counted options, which a
+hardcoded list of the right length would have passed. It now asserts the
+option **values** equal the canonical vocabulary.
+
+## 2. "Who signed off and how confident — don't think it's practically implementable"
+
+Assessed rather than accepted wholesale. Two of the three parts were right.
+
+**`confidence: High | Medium | Low` → `basis: verbatim | derived | judgement`.**
+The confidence grade was subjective and uncalibrated: two reviewers grade
+the same rule differently, and nothing said what "Medium" obliged a reader
+to do. That is fabricated precision — the one thing this product must not
+produce. `basis` asks what the rule *does to its own quoted text*, which a
+reviewer checks by reading the two side by side. Caveats now key off it:
+`verbatim` → none, `derived` → medium, `judgement` → low/provisional.
+
+**Sign-off moves from per-rule to per-pack.** Legal issues a position on a
+regulation; they do not countersign each line of a YAML file. A per-rule
+signature made adoption a task no firm would finish — leaving every
+deployment permanently provisional, the exact failure the field existed to
+prevent. Pack header carries the sign-off; rules inherit it. Rule-level
+fields remain valid but optional, for a firm's local deviation from the
+central reading (`chain[].sign_off` says which level it came from).
+
+**What was NOT accepted:** removing human accountability altogether. Without
+a named person behind an interpretation, AIGate becomes "the tool that
+interprets the EU AI Act for you" — which README correctly calls
+indefensible to a regulator. The principle stays; the unit and the basis
+changed.
+
+Nothing shipped was fabricated: the packs still carry `[FIRM]`/`[DATE]`
+placeholders, so everything reads "pending firm adoption" — honest, and
+now achievable in one act per regulation rather than dozens.
+
+## Verification
+
+- 225 tests (was 221), run 3× consecutively, all green
+- `npx tsc --noEmit`, `npm run build`, spec parity — all clean
+- Specs updated in `.md` **and** `.html` (policy-schema, intake-flow) plus
+  `grounding/PACK-AUTHORING.md` and README
+- Live: drove an EU credit-scoring case end to end; the chain renders
+  "INFERRED FROM THE TEXT" with the plain-English explanation beneath and
+  "pending firm adoption" on the sign-off line

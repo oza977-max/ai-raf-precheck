@@ -39,7 +39,7 @@ rules:
       type: "required_review"
       review: "R"
     condition: {}
-    confidence: "High"
+    basis: "verbatim"
     reviewer_name: "X"
     reviewer_role: "Y"
     sign_off_date: "2026-01-01"
@@ -69,7 +69,7 @@ rules:
     effect: { type: "required_review", review: "R" }
     condition:
       decision_bindingness: { includes: ["material"] }
-    confidence: "High"
+    basis: "verbatim"
     reviewer_name: "X"
     reviewer_role: "Y"
     sign_off_date: "2026-01-01"

@@ -25,10 +25,13 @@ const PackRuleSchema = z.object({
   }),
   effect: PackRuleEffectSchema,
   condition: z.record(z.string(), z.unknown()),
-  confidence: z.enum(['High', 'Medium', 'Low']),
-  reviewer_name: z.string().min(1),
-  reviewer_role: z.string().min(1),
-  sign_off_date: z.string().min(1),
+  // V2-E: `basis` replaces the subjective High/Medium/Low confidence
+  // score. Rule-level sign-off is now OPTIONAL — the pack header is the
+  // unit of adoption; these fields only carry a firm's local deviation.
+  basis: z.enum(['verbatim', 'derived', 'judgement']),
+  reviewer_name: z.string().min(1).optional(),
+  reviewer_role: z.string().min(1).optional(),
+  sign_off_date: z.string().min(1).optional(),
 });
 
 const PackSchema = z.object({

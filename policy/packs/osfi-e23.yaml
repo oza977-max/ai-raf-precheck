@@ -21,7 +21,4 @@ rules:
       control_id: "CTRL-LOG-01"
     condition:
       autonomy_level: { gte: 2 }
-    confidence: "Low"
-    reviewer_name: "[FIRM] — Model Risk"
-    reviewer_role: "Head of Model Risk"
-    sign_off_date: "[DATE]"
+    basis: "judgement"

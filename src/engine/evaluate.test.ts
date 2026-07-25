@@ -322,7 +322,7 @@ describe('evaluate — jurisdiction packs (V2-A)', () => {
       source: { document: 'EU AI Act', section: 'Annex III §4(a)', text: 'recruitment or selection of natural persons…' },
       effect: { type: 'tier_floor' as const, minimum_tier: 'Critical' as const },
       condition: { decision_type: { in: ['hiring'] } },
-      confidence: 'Medium' as const,
+      basis: 'derived' as const,
       reviewer_name: '[FIRM] — Legal', reviewer_role: 'Head', sign_off_date: '[DATE]',
     }],
   };
