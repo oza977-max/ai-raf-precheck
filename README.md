@@ -29,11 +29,18 @@ npm test         # 219 tests
 ```
 
 No backend, no database, no API key required. The whole app is a static
-build (`npm run build` → `dist/`), so it can be hosted anywhere; a GitHub
-Pages workflow is included at `.github/workflows/deploy.yml` (enable Pages
-in repository settings to activate it). Note that the built page loads as a
-JavaScript module, so it must be *served* — opening `dist/index.html` from
-the filesystem will not work.
+build (`npm run build` → `dist/`), so it can be hosted anywhere.
+
+**To publish it as a link:** the current build is already pushed to the
+`gh-pages` branch. Enable it in **Settings → Pages → Source: Deploy from a
+branch → `gh-pages` / `(root)`**. To refresh after changes, run
+`npm run build` and re-publish that branch. For automated deploys instead,
+`docs/github-pages-workflow.yml` is a ready-made Actions workflow — copy it
+to `.github/workflows/` (adding it requires a token with `workflow` scope,
+or use GitHub's web UI) and set Pages source to "GitHub Actions".
+
+Note that the built page loads as a JavaScript module, so it must be
+*served* — opening `dist/index.html` from the filesystem will not work.
 
 An Anthropic API key is optional and only enables plain-language intake,
 semantic duplicate matching, and a narrative retelling of a verdict. Nothing
