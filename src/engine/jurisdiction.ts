@@ -30,6 +30,19 @@ const TIER_RANK: Record<Tier, number> = { Critical: 4, High: 3, Medium: 2, Low: 
 // provisional.
 const PLACEHOLDER = /\[[^\]]*\]/;
 
+// V2-E: a rule whose `source.text` is still an authoring placeholder
+// cannot be reviewed at all. `basis` is defined RELATIVE to the quote —
+// "does this rule restate the quoted text?" is unanswerable when the
+// quote announces it is not the real text. 6 of the 8 starter rules are
+// in this state, so this is the normal case today, not an edge case.
+//
+// This must outrank the ordinary unsigned caveat: "pending firm adoption"
+// implies the rule is ready and merely awaiting a signature, which would
+// overstate what is here.
+export function hasPlaceholderQuote(rule: PackRule): boolean {
+  return /ILLUSTRATIVE|NOT VERBATIM/i.test(rule.source.text);
+}
+
 export function isUnsigned(rule: PackRule, pack?: { reviewer_name: string; sign_off_date: string }): boolean {
   const name = rule.reviewer_name ?? pack?.reviewer_name ?? '';
   const date = rule.sign_off_date ?? pack?.sign_off_date ?? '';
@@ -51,6 +64,14 @@ type PackSignOff = { reviewer_name: string; reviewer_role: string; sign_off_date
 
 export function caveatForFiredRule(rule: PackRule, pack?: PackSignOff): ConfidenceCaveat | null {
   const cite = `${rule.source.document} ${rule.source.section}`;
+  if (hasPlaceholderQuote(rule)) {
+    return {
+      ruleId: rule.id,
+      field: 'jurisdiction_pack',
+      confidence: 'low',
+      reason: `${cite} — the source text for this rule is an authoring placeholder, not the regulation. It cannot be reviewed or relied on until the verbatim text is retrieved (grounding/PACK-AUTHORING.md).`,
+    };
+  }
   if (isUnsigned(rule, pack)) {
     return {
       ruleId: rule.id,
