@@ -131,6 +131,14 @@ Full documentation: `requirements/requirements.html`
 
 ---
 
+## Licence
+
+All rights reserved — published for reading and evaluation, not for
+redistribution or commercial use. See [LICENSE](LICENSE), which also
+explains how to open it up later if that becomes the right call.
+
+---
+
 ## Project status
 
 **V1 build complete** — engine, intake, register, lifecycle, jurisdiction packs, audit trail, 215 tests. Currently in internal validation: back-testing verdicts against historically decided use cases. V1 is an engine-validation proof-of-concept; artifact binding and the system-of-record audit store arrive in V1.5; live KRI monitoring against standing conditions is V2. Built with the [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).

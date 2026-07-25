@@ -10,3 +10,7 @@ dist/
 # and build/handovers/, the chunk-by-chunk persistence mechanism. Vite's
 # compiled output goes to dist/ (ignored above), not build/.
 Mockup prototype request/
+
+# Commercial strategy + internal adoption plan — deliberately not published.
+# Purged from git history 2026-07-26; keep it local.
+design-vision.md

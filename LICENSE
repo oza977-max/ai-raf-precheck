@@ -1,0 +1,27 @@
+Copyright (c) 2026 the AIGate authors. All rights reserved.
+
+This source code is published for reading, evaluation and discussion.
+
+You may view, clone and run it to evaluate it, and quote from it with
+attribution. You may not redistribute it, publish modified versions, or
+use it or any substantial part of it in a commercial product or service
+without the copyright holder's written permission.
+
+No warranty of any kind is given. Nothing here is legal, regulatory or
+compliance advice, and the starter policy and jurisdiction packs are an
+unadopted template — see README.md.
+
+---
+
+Why this licence, and how to change it
+
+A public repository with no LICENSE file is legally "all rights reserved"
+but is widely read as "help yourself". This file removes that ambiguity in
+the more conservative direction, because the choice is asymmetric: an
+all-rights-reserved project can be opened up later at any time, whereas an
+MIT or Apache grant cannot be withdrawn from code already released under
+it. Keeping the option open costs nothing today.
+
+To open this up later, replace this file with the full text of the licence
+you choose (MIT and Apache-2.0 are the usual candidates; Apache-2.0 also
+carries an express patent grant) and note the change in README.md.
