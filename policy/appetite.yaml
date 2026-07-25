@@ -173,6 +173,12 @@ tiers:
       - field: "exposure"
         value: "internal-only"
 
+# Invariants — the rules evaluated against the graph. Each MUST have at
+# least one control whose `resolves` names it, or a use case tripping it
+# is rejected as unsatisfiable (that is deliberate for INV-ZONE-01).
+# Derived from grounding/raf-extraction.md §E (worked examples) and §F
+# (control library). Thresholds and scope are STARTER content: review and
+# adjust to your firm's actual appetite before adoption.
 invariants:
   - id: "INV-DATA-01"
     description: "Client PII must not flow to an external model endpoint without encryption in transit"
@@ -192,6 +198,111 @@ invariants:
     severity: "Critical"
     regulatory_basis: "MAR Article 8; MiFID II"
 
+  - id: "INV-TRACK2-01"
+    description: "Track II baseline — hosted models can be substituted without notice; output fingerprinting and version pinning are mandatory"
+    condition:
+      model_type: { in: ["ml", "deep-learning", "llm", "generative-ai"] }
+      decision_bindingness: { in: ["advisory", "material", "binding"] }
+    required_controls: ["CTRL-FINGERPRINT-01"]
+    severity: "High"
+    regulatory_basis: "RAF §5 — Track II baseline; zero tolerance for unmonitored vendor model change"
+
+  - id: "INV-HALLUC-01"
+    description: "Generative output feeding a material decision must be grounded — every claim resolves to a retrievable source"
+    condition:
+      model_type: { in: ["llm", "generative-ai"] }
+      decision_bindingness: { in: ["material", "binding"] }
+    required_controls: ["CTRL-GROUND-01"]
+    severity: "High"
+    regulatory_basis: "RAF §9 — grounding verification mode"
+
+  - id: "INV-CITE-01"
+    description: "Generative drafting must attach resolvable citations; unverified output is marked as such"
+    condition:
+      model_type: { in: ["llm", "generative-ai"] }
+      action_type: { in: ["draft"] }
+    required_controls: ["CTRL-CITE-01"]
+    severity: "Medium"
+    regulatory_basis: "RAF §9 — grounding minimum requirements"
+
+  - id: "INV-AGENT-01"
+    description: "Tool-using systems require minimal permissions, full tool-call logging and a kill switch"
+    condition:
+      model_type: { in: ["agentic"] }
+    required_controls: ["CTRL-LOG-01"]
+    severity: "High"
+    regulatory_basis: "RAF §6 — agentic / tool-use controls"
+
+  - id: "INV-AUTONOMY-01"
+    description: "Autonomy at L2 or above on a material or binding decision requires a human decision gate"
+    condition:
+      autonomy_level: { gte: 2 }
+      decision_bindingness: { in: ["material", "binding"] }
+    required_controls: ["CTRL-HITL-02"]
+    severity: "Critical"
+    regulatory_basis: "RAF §7 — autonomy ceiling"
+
+  - id: "INV-CONDUCT-01"
+    description: "Client- or market-facing AI output requires conduct testing and transcript audit"
+    condition:
+      exposure: { in: ["client-facing", "market-facing"] }
+    required_controls: ["CTRL-CONDUCT-01"]
+    severity: "High"
+    regulatory_basis: "RAF §4 — conduct & fairness"
+
+  - id: "INV-ESCALATE-01"
+    description: "Conversational client-facing systems require a documented human escalation path"
+    condition:
+      model_type: { in: ["llm", "generative-ai"] }
+      exposure: { in: ["client-facing"] }
+    required_controls: ["CTRL-ESCALATE-01"]
+    severity: "High"
+    regulatory_basis: "RAF §4 — client harm / escalation"
+
+  - id: "INV-DRIFT-01"
+    description: "Quantitative models informing material decisions require drift monitoring against validation baseline"
+    condition:
+      model_type: { in: ["statistical", "traditional-ml", "ml", "deep-learning"] }
+      decision_bindingness: { in: ["material", "binding"] }
+    required_controls: ["CTRL-DRIFT-01"]
+    severity: "High"
+    regulatory_basis: "RAF §8 — drift signals; SS1/23 §3.4"
+
+  - id: "INV-EXPLAIN-01"
+    description: "Machine-learned models informing material decisions require explainability documentation"
+    condition:
+      model_type: { in: ["ml", "deep-learning"] }
+      decision_bindingness: { in: ["material", "binding"] }
+    required_controls: ["CTRL-EXPLAIN-01"]
+    severity: "Medium"
+    regulatory_basis: "RAF §5 — Track II transparency"
+
+  - id: "INV-SEC-01"
+    description: "Prompt-injectable systems shared beyond a single team require periodic adversarial red-teaming"
+    condition:
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["internal-shared", "client-facing", "market-facing"] }
+    required_controls: ["CTRL-REDTEAM-01"]
+    severity: "Medium"
+    regulatory_basis: "RAF §9 — adversarial verification mode"
+
+  - id: "INV-SAMPLE-01"
+    description: "Recommendation or classification at scale requires continuous behavioural sampling against human ground truth"
+    condition:
+      action_type: { in: ["recommend"] }
+      scale: "at_scale"
+    required_controls: ["CTRL-SAMPLE-01"]
+    severity: "Medium"
+    regulatory_basis: "RAF §9 — behavioural verification mode"
+
+# Control library (grounding/raf-extraction.md §F). The solver picks the
+# minimal burden-weighted set covering every tripped invariant, using the
+# `resolves` list below — an invariant no control resolves makes the use
+# case unsatisfiable. `burden` is 1 (cheapest) to 5 (heaviest).
+#
+# Proof-carrying controls (V1.3): a control with no verification_evidence
+# block is treated as UNVERIFIED. Statuses are hand-attested in this file
+# in V1; machine-checked evidence binding arrives in V1.5.
 controls:
   - id: "CTRL-ENC-01"
     name: "Encryption in transit (TLS 1.3+)"
@@ -202,30 +313,99 @@ controls:
     platform_satisfies:
       - "azure-openai-internal"
       - "azure-openai-eu"
-    # Proof-carrying controls (V1.3): status is hand-attested in this file
-    # in V1; machine-checked evidence binding arrives in V1.5. A control
-    # with no verification_evidence block is treated as UNVERIFIED.
     verification_evidence:
       status: "verified"
       detail: "Platform allow-list pins TLS 1.3; platform attestation on file"
       attested_by: "[FIRM] — Platform Engineering"
       attested_at: "[DATE]"
 
+  - id: "CTRL-FINGERPRINT-01"
+    name: "Output fingerprinting + version pinning"
+    description: "Model version pinned; outputs fingerprinted against a fixed probe set to detect silent substitution"
+    resolves: ["INV-TRACK2-01"]
+    burden: 2
+    verification: "Probe set and baseline fingerprints on file; alert on step-change in aggregate grounding confidence"
+    platform_satisfies: []
+
+  - id: "CTRL-CITE-01"
+    name: "Citation resolution"
+    description: "Every generated claim carries a resolvable citation; unverified claims are visibly marked"
+    resolves: ["INV-CITE-01"]
+    burden: 2
+    verification: "Sampled outputs show citations resolving to retrievable sources"
+    platform_satisfies: []
+
+  - id: "CTRL-ESCALATE-01"
+    name: "Human escalation path"
+    description: "Documented route from the AI interaction to a human owner, surfaced to the client"
+    resolves: ["INV-ESCALATE-01"]
+    burden: 2
+    verification: "Escalation route documented, staffed, and exercised in testing"
+    platform_satisfies: []
+
+  - id: "CTRL-LOG-01"
+    name: "Tool-call logging, kill switch and minimal permissions"
+    description: "All tool invocations logged to an append-only store; kill switch disables execution within 1 hour; permissions scoped to the minimum required"
+    resolves: ["INV-AGENT-01"]
+    burden: 2
+    verification: "Log store is append-only; kill-switch procedure documented and tested"
+    platform_satisfies: ["azure-openai-internal"]
+
   - id: "CTRL-HITL-02"
-    name: "Human review before action execution (HITL L2)"
-    description: "Every action proposed by the AI must be reviewed and approved by a human before execution"
-    resolves: []
+    name: "Human decision gate (HITL L2)"
+    description: "Every action proposed by the AI is reviewed and approved by a human before execution"
+    resolves: ["INV-AUTONOMY-01"]
     burden: 3
     verification: "UI shows human approval step; audit trail records approval identity and timestamp"
     platform_satisfies: []
 
-  - id: "CTRL-LOG-01"
-    name: "Full tool-call logging with kill switch"
-    description: "All tool invocations logged to append-only store; kill switch disables execution within 1 hour"
-    resolves: []
-    burden: 2
-    verification: "Log store is append-only; kill-switch procedure documented and tested"
-    platform_satisfies: ["azure-openai-internal"]
+  - id: "CTRL-DRIFT-01"
+    name: "Drift monitoring"
+    description: "Continuous monitoring of model drift against the validation baseline, with defined amber/red thresholds"
+    resolves: ["INV-DRIFT-01"]
+    burden: 3
+    verification: "Drift dashboard live; thresholds match the KRI table; breach routes to 2LoD"
+    platform_satisfies: []
+
+  - id: "CTRL-EXPLAIN-01"
+    name: "Explainability documentation"
+    description: "Documented account of how the model reaches its outputs, sufficient for independent validation"
+    resolves: ["INV-EXPLAIN-01"]
+    burden: 3
+    verification: "Explainability pack reviewed by independent validation"
+    platform_satisfies: []
+
+  - id: "CTRL-REDTEAM-01"
+    name: "Adversarial red-teaming"
+    description: "Structured red-teaming for injection, jailbreak, exfiltration and role confusion; quarterly minimum, pre-launch for Track II"
+    resolves: ["INV-SEC-01"]
+    burden: 3
+    verification: "Red-team report on file within the last quarter; findings tracked to closure"
+    platform_satisfies: []
+
+  - id: "CTRL-SAMPLE-01"
+    name: "Behavioural sampling"
+    description: "Continuous sampling of outputs against human ground truth, with disagreement triage"
+    resolves: ["INV-SAMPLE-01"]
+    burden: 3
+    verification: "Sampling rate and triage process documented; disagreement rate tracked"
+    platform_satisfies: []
+
+  - id: "CTRL-GROUND-01"
+    name: "Grounding verification"
+    description: "Claim-level source resolution, per-claim confidence scoring, citation attachment, and an immutable audit log available to 2LoD"
+    resolves: ["INV-HALLUC-01"]
+    burden: 4
+    verification: "Audit log records claim, source, confidence, timestamp and model version; failed grounding routes to human review"
+    platform_satisfies: []
+
+  - id: "CTRL-CONDUCT-01"
+    name: "Conduct testing + transcript audit"
+    description: "Pre-launch and periodic conduct testing, with sampled transcript audit for client harm and fairness"
+    resolves: ["INV-CONDUCT-01"]
+    burden: 4
+    verification: "Conduct test results and transcript audit sampling on file"
+    platform_satisfies: []
 
 kri_thresholds:
   performance:

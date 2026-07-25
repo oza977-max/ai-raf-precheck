@@ -146,6 +146,12 @@ export function evaluate(
   };
   const checkCounts = { hard_lines_checked: hardLines.length, invariants_checked: invariants.length };
   const trippedDetails = tripped.map(toTrippedDetail);
+  // The binding constraint is "the rule that determined the outcome"
+  // (§3.9) — so it must be the most severe tripped invariant, not simply
+  // the first by id. With a realistic multi-invariant policy the
+  // sorted-first choice names an essentially arbitrary rule on the
+  // headline field. Ties break by id, preserving determinism.
+  const binding = mostSevere(tripped);
 
   // Step 8: status determination.
   if (!solverResult.ok) {
@@ -206,8 +212,8 @@ export function evaluate(
       status,
       tier: overrides.finalTier,
       track: overrides.finalTrack,
-      binding_constraint: tripped[0]?.invariantId ?? '',
-      binding_path: tripped[0]?.graphPath ?? '',
+      binding_constraint: binding?.invariantId ?? '',
+      binding_path: binding?.graphPath ?? '',
       // Pack-required controls supplement the solver's minimal set
       // (BC-V2A-01: obligations only ever add).
       controls: [...new Set([...solverResult.controls, ...overrides.addedControls])].sort(),
@@ -226,7 +232,7 @@ export function evaluate(
         ...checkCounts,
         tripped_invariants: trippedDetails,
         binding_reason: null,
-        binding_regulatory_basis: tripped[0]?.regulatoryBasis ?? null,
+        binding_regulatory_basis: binding?.regulatoryBasis ?? null,
         regulatory_chain: overrides.chain,
       },
     }),
@@ -247,6 +253,17 @@ function trackRationale(assignment: TrackAssignment): RuleRationale {
     rule_name: assignment.ruleName,
     ...(assignment.regulatoryBasis ? { regulatory_basis: assignment.regulatoryBasis } : {}),
   };
+}
+
+const SEVERITY_RANK: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+
+// Highest severity wins; ties break by id so the choice stays deterministic
+// regardless of policy ordering (NF-1).
+function mostSevere(tripped: TrippedInvariant[]): TrippedInvariant | undefined {
+  return [...tripped].sort((a, b) => {
+    const rank = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+    return rank !== 0 ? rank : a.invariantId.localeCompare(b.invariantId);
+  })[0];
 }
 
 function toTrippedDetail(t: TrippedInvariant): TrippedInvariantDetail {

@@ -35,15 +35,15 @@ function g(dataClass: string, inZone: string, model: string, autonomy: number, p
 }
 
 const cases: Array<[string, DataFlowGraph, { status: string; tier?: string; track?: string; binding?: string }]> = [
-  ['UC-1 VaR commentary', g('Confidential','Zone B','llm',1,'Zone B','draft','internal-shared','advisory','reversible','at_scale'), { status: 'approved', tier: 'Medium', track: 'II' }],
+  ['UC-1 VaR commentary', g('Confidential','Zone B','llm',1,'Zone B','draft','internal-shared','advisory','reversible','at_scale'), { status: 'approved_with_controls', tier: 'Medium', track: 'II', binding: 'INV-TRACK2-01' }],
   ['UC-2 MNPI commentary', g('MNPI','Zone B','llm',1,'Zone B','draft','internal-shared','advisory','reversible','at_scale'), { status: 'rejected', binding: 'INV-ZONE-01' }],
   ['UC-3 credit review', g('Client PII','Zone B','llm',1,'Zone B','recommend','internal-shared','material','reversible','at_scale'), { status: 'approved_with_controls', tier: 'High', track: 'II', binding: 'INV-DATA-01' }],
   ['UC-4 auto line cut', g('Client PII','Zone C','traditional-ml',4,'Zone C','execute','client-facing','binding','irreversible','at_scale'), { status: 'rejected', binding: 'HL-001' }],
-  ['UC-5 op risk events', g('Internal','Zone B','llm',1,'Zone B','recommend','internal-shared','advisory','reversible','at_scale'), { status: 'approved', tier: 'Medium', track: 'II' }],
+  ['UC-5 op risk events', g('Internal','Zone B','llm',1,'Zone B','recommend','internal-shared','advisory','reversible','at_scale'), { status: 'approved_with_controls', tier: 'Medium', track: 'II', binding: 'INV-TRACK2-01' }],
   ['UC-6a deal memo Zone B', g('MNPI','Zone B','llm',1,'Zone B','draft','internal-shared','material','reversible','limited'), { status: 'rejected', binding: 'INV-ZONE-01' }],
-  ['UC-6b deal memo Zone C', g('MNPI','Zone C','llm',1,'Zone C','draft','internal-shared','material','reversible','limited'), { status: 'approved', tier: 'High', track: 'II' }],
-  ['UC-7 Claude Code', g('Internal','Zone B','agentic',1,'Zone B','draft','internal-only','non-binding','reversible','at_scale'), { status: 'approved', tier: 'Low', track: 'III' }],
-  ['UC-8 reg reporting', g('Confidential','Zone B','llm',1,'Zone B','draft','internal-shared','material','reversible','limited'), { status: 'approved', tier: 'Medium', track: 'II' }],
+  ['UC-6b deal memo Zone C', g('MNPI','Zone C','llm',1,'Zone C','draft','internal-shared','material','reversible','limited'), { status: 'approved_with_controls', tier: 'High', track: 'II', binding: 'INV-HALLUC-01' }],
+  ['UC-7 Claude Code', g('Internal','Zone B','agentic',1,'Zone B','draft','internal-only','non-binding','reversible','at_scale'), { status: 'approved_with_controls', tier: 'Low', track: 'III', binding: 'INV-AGENT-01' }],
+  ['UC-8 reg reporting', g('Confidential','Zone B','llm',1,'Zone B','draft','internal-shared','material','reversible','limited'), { status: 'approved_with_controls', tier: 'Medium', track: 'II', binding: 'INV-HALLUC-01' }],
 ];
 
 describe('backtest pack predictions', () => {
@@ -96,7 +96,7 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
   it('UC-10 EU CV screening: FORCED Medium -> Critical by Annex III 4(a) — the visible pack-force demo', () => {
     const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone B', model: 'ml', autonomy: 1, procZone: 'Zone B', action: 'recommend', exposure: 'internal-shared', bindingness: 'material', reversibility: 'reversible', scale: 'at_scale', decisionType: 'hiring', jurisdictions: ['EU'] }), policy, packs);
     if (!r.ok) return;
-    expect(r.value.status).toBe('approved');
+    expect(r.value.status).toBe('approved_with_controls');
     expect(r.value.tier).toBe('Critical');
     const forced = (r.value.explanation.regulatory_chain ?? []).find((c) => c.rule_id === 'EU-AIACT-TIER-02');
     expect(forced?.derived).toMatch(/forced to Critical \(was Medium\)/);
@@ -106,7 +106,7 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
   it('UC-11 UK-only quant VaR model: Low tier but SS1/23 supplements independent validation', () => {
     const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone C', model: 'statistical', autonomy: 0, procZone: 'Zone C', action: 'recommend', exposure: 'internal-only', bindingness: 'material', reversibility: 'reversible', scale: 'at_scale', jurisdictions: ['UK'] }), policy, packs);
     if (!r.ok) return;
-    expect(r.value.status).toBe('approved');
+    expect(r.value.status).toBe('approved_with_controls');
     expect(r.value.tier).toBe('Low');
     expect(r.value.track).toBe('I');
     expect(r.value.downstream_reviews).toEqual(['Independent model validation (2LoD)']);
@@ -116,8 +116,9 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone C', model: 'ml', autonomy: 2, procZone: 'Zone C', action: 'recommend', exposure: 'internal-shared', bindingness: 'advisory', reversibility: 'reversible', scale: 'limited', jurisdictions: ['CA'] }), policy, packs);
     if (!r.ok) return;
     expect(r.value.status).toBe('approved_with_controls');
-    expect(r.value.controls).toEqual(['CTRL-LOG-01']);
-    expect(r.value.explanation.tripped_invariants).toEqual([]);
+    // V2-C: the enriched policy also trips INV-TRACK2-01 here, so the pack
+    // control now supplements a solved control rather than standing alone.
+    expect(r.value.controls).toEqual(['CTRL-FINGERPRINT-01', 'CTRL-LOG-01']);
   });
 
   it('UC-13 SG+JP client-facing LLM assistant: High tier, FEAT + explainability reviews, provisional', () => {

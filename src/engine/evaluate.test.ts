@@ -84,6 +84,29 @@ const TRACK_I_OUTPUT = {
   scale: 'limited' as const,
 };
 
+// V2-C: with a realistic 13-invariant policy, a Track I quantitative model
+// necessarily trips drift monitoring — "nothing tripped" now requires a
+// genuinely trivial use case. This is grounding §E row 1: an internal
+// productivity copilot, Low tier / Track III, no client data.
+const CLEAN_PROCESSING = {
+  id: 'p1',
+  label: 'internal copilot',
+  model_type: 'llm' as const,
+  autonomy_level: 0 as const,
+  data_zone: 'Zone C' as const,
+  vendor: 'internal',
+  replaces_prior_model: false,
+};
+const CLEAN_OUTPUT = {
+  id: 'o1',
+  label: 'suggestion',
+  action_type: 'read' as const,
+  exposure: 'internal-only' as const,
+  decision_bindingness: 'non-binding' as const,
+  output_reversibility: 'reversible' as const,
+  scale: 'limited' as const,
+};
+
 describe('evaluate — jurisdiction pass-through (TC-PE-5-01 structure)', () => {
   it('does not crash with jurisdictions present and applies no overrides', () => {
     const g = graph({
@@ -100,8 +123,8 @@ describe('evaluate — jurisdiction pass-through (TC-PE-5-01 structure)', () => 
 describe('evaluate — approved path', () => {
   it('returns approved when no invariants trip', () => {
     const g = graph({
-      processing_nodes: [TRACK_I_PROCESSING],
-      output_nodes: [TRACK_I_OUTPUT],
+      processing_nodes: [CLEAN_PROCESSING],
+      output_nodes: [CLEAN_OUTPUT],
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
@@ -113,8 +136,8 @@ describe('evaluate — approved path', () => {
 
   it('leaves binding_constraint empty when nothing tripped (P3-C01 review finding: must not leak the track rule id)', () => {
     const g = graph({
-      processing_nodes: [TRACK_I_PROCESSING],
-      output_nodes: [TRACK_I_OUTPUT],
+      processing_nodes: [CLEAN_PROCESSING],
+      output_nodes: [CLEAN_OUTPUT],
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
@@ -133,10 +156,10 @@ describe('evaluate — approved_with_controls path', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.status).toBe('approved_with_controls');
-      // INV-DATA-01 trips (Client PII into Zone A); appetite.yaml's
-      // CTRL-ENC-01 is the only control that resolves it — the real
-      // greedy solver must select it now that P3-C02 replaced the stub.
-      expect(result.value.controls).toEqual(['CTRL-ENC-01']);
+      // Client PII into Zone A trips INV-DATA-01; the traditional-ml model
+      // feeding a material decision also trips INV-DRIFT-01. The real
+      // greedy solver must cover both from the control library.
+      expect(result.value.controls).toEqual(['CTRL-DRIFT-01', 'CTRL-ENC-01']);
     }
   });
 
@@ -155,8 +178,8 @@ describe('evaluate — approved_with_controls path', () => {
 
   it('leaves boundary_proximity false on the plain approved path (nothing tripped)', () => {
     const g = graph({
-      processing_nodes: [TRACK_I_PROCESSING],
-      output_nodes: [TRACK_I_OUTPUT],
+      processing_nodes: [CLEAN_PROCESSING],
+      output_nodes: [CLEAN_OUTPUT],
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
@@ -200,8 +223,8 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
 
   it('a clean approved verdict explains which rules assigned the tier and track, with citations, and reports what was checked', () => {
     const g = graph({
-      processing_nodes: [TRACK_I_PROCESSING],
-      output_nodes: [TRACK_I_OUTPUT],
+      processing_nodes: [CLEAN_PROCESSING],
+      output_nodes: [CLEAN_OUTPUT],
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
@@ -210,8 +233,8 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
     const ex = result.value.explanation;
     expect(ex.tier_rationale?.rule_id).toMatch(/^TIER-/);
     expect(ex.tier_rationale?.matched_field).toBe('exposure');
-    expect(ex.track_rationale?.rule_id).toBe('TRACK-I');
-    expect(ex.track_rationale?.regulatory_basis).toContain('SS1/23');
+    expect(ex.track_rationale?.rule_id).toBe('TRACK-III');
+    expect(ex.track_rationale?.regulatory_basis).toContain('SR 26-2');
     expect(ex.hard_lines_checked).toBe(policy.hard_lines.length);
     expect(ex.invariants_checked).toBe(policy.invariants.length);
     expect(ex.tripped_invariants).toEqual([]);
@@ -230,8 +253,11 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
     if (!result.ok) return;
     expect(result.value.status).toBe('approved_with_controls');
     const ex = result.value.explanation;
-    expect(ex.tripped_invariants).toHaveLength(1);
-    const detail = ex.tripped_invariants[0]!;
+    // V2-C: Client PII in Zone B trips INV-DATA-01, and the quantitative
+    // model on a material decision trips INV-DRIFT-01 — the point of this
+    // test is the FULL set, so assert both are present and inspect one.
+    expect(ex.tripped_invariants.map((t) => t.id).sort()).toEqual(['INV-DATA-01', 'INV-DRIFT-01']);
+    const detail = ex.tripped_invariants.find((t) => t.id === 'INV-DATA-01')!;
     expect(detail.id).toBe('INV-DATA-01');
     expect(detail.severity).toBe('High');
     expect(detail.required_controls).toEqual(['CTRL-ENC-01']);
