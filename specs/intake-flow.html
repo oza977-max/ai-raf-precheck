@@ -289,7 +289,8 @@ export interface GraphEdge {
 
     <h3 id="when-form-shown">5.1 When the Form is Shown</h3>
     <p>The <code>usePolicy</code> hook exposes <code>hasApiKey: boolean</code>. If false, <code>IntakeFlow.tsx</code> sets <code>method: 'form'</code> in the <code>graph_extraction</code> state and renders <code>StructuredForm.tsx</code> instead of calling the LLM.</p>
-    <p>A banner is shown: <strong>"Structured intake mode — LLM graph extraction is not configured. Answer the fields below to describe your use case."</strong></p>
+    <p>A banner is shown: <strong>"Guided intake — answer the fields below to describe your use case. No AI is involved in reading your answers or in the decision that follows, so the same answers always produce the same outcome. (Adding an API key in Settings unlocks an optional plain-English alternative to this form; it changes how the description is read in, not how it is scored.)"</strong></p>
+    <p>(V2-D: reworded. The original text framed the no-key route as a missing feature; it is the primary, deterministic intake path and the only one a tester without a key can use.)</p>
 
     <h3 id="form-fields">5.2 Form Fields</h3>
     <p>The form presents one field per graph attribute. All permitted values come from the loaded policy file (no hardcoded enums):</p>

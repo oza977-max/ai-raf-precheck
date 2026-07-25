@@ -82,8 +82,10 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
   return (
     <section aria-label="Structured intake form">
       <p role="status">
-        Structured intake mode — LLM graph extraction is not configured. Answer the fields below to
-        describe your use case.
+        Guided intake — answer the fields below to describe your use case. No AI is involved in
+        reading your answers or in the decision that follows, so the same answers always produce the
+        same outcome. (Adding an API key in Settings unlocks an optional plain-English alternative
+        to this form; it changes how the description is read in, not how it is scored.)
       </p>
 
       <label htmlFor="sf-name">Use case name</label>

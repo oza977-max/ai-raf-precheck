@@ -25,8 +25,26 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 215 tests
+npm test         # 219 tests
 ```
+
+No backend, no database, no API key required. The whole app is a static
+build (`npm run build` → `dist/`), so it can be hosted anywhere; a GitHub
+Pages workflow is included at `.github/workflows/deploy.yml` (enable Pages
+in repository settings to activate it). Note that the built page loads as a
+JavaScript module, so it must be *served* — opening `dist/index.html` from
+the filesystem will not work.
+
+An Anthropic API key is optional and only enables plain-language intake,
+semantic duplicate matching, and a narrative retelling of a verdict. Nothing
+in the decision path uses it.
+
+**Handing this to someone to test?** Send them
+[`docs/tester-guide.md`](docs/tester-guide.md) — what to try, what to
+ignore, and the known gaps — and ask them to fill in
+[`backtest/capture-template.md`](backtest/capture-template.md). In the app,
+**Demo data → Load sample use cases** seeds six worked examples spanning
+Low→Critical and in/out of appetite, all scored by the real engine.
 
 ---
 
@@ -100,7 +118,7 @@ This means:
 2. Open `policy/appetite.yaml` — read the preamble, understand the starter rules
 3. Replace `[FIRM]` placeholders with your organisation's details
 4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
-5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts
+5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts, or load the six in-app samples from **Demo data**
 
 Full documentation: `requirements/requirements.html`
 

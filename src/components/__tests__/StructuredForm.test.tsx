@@ -55,7 +55,7 @@ describe('StructuredForm', () => {
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
     expect(
       screen.getByText(
-        /structured intake mode — llm graph extraction is not configured\. answer the fields below to describe your use case\./i,
+        /guided intake — answer the fields below to describe your use case\. no ai is involved in reading your answers or in the decision that follows, so the same answers always produce the same outcome\./i,
       ),
     ).toBeInTheDocument();
   });

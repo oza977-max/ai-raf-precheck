@@ -179,7 +179,11 @@ The response is parsed with a Zod schema matching `DataFlowGraph`. If parsing fa
 
 The `usePolicy` hook exposes `hasApiKey: boolean`. If false, `IntakeFlow.tsx` sets `method: 'form'` in the `graph_extraction` state and renders `StructuredForm.tsx` instead of calling the LLM.
 
-A banner is shown: **"Structured intake mode — LLM graph extraction is not configured. Answer the fields below to describe your use case."**
+A banner is shown: **"Guided intake — answer the fields below to describe your use case. No AI is involved in reading your answers or in the decision that follows, so the same answers always produce the same outcome. (Adding an API key in Settings unlocks an optional plain-English alternative to this form; it changes how the description is read in, not how it is scored.)"**
+
+(V2-D: reworded. The original text framed the no-key route as a missing
+feature; it is the primary, deterministic intake path and the only one a
+tester without a key can use.)
 
 ### 5.2 Form fields
 
