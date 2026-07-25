@@ -7,7 +7,10 @@ minimal control set that fixes it, and the regulatory citation behind every
 step. Source-of-truth rulebook: `grounding/raf-extraction.md` (derived from
 `grounding/ai-raf-template.html`). Built via the GVM pipeline.
 
-GitHub: https://github.com/oza977-max/ai-raf-precheck (private).
+GitHub: https://github.com/oza977-max/ai-raf-precheck — **PUBLIC**. Live at
+https://oza977-max.github.io/ai-raf-precheck/ (served from the `gh-pages`
+branch). Every push is world-readable the moment it lands, so the
+confidentiality rule below has no margin for a quiet fix-up.
 
 The product's value is determinism + auditability + minimal-fix solving. It
 is deliberately *not* a chatbot and not a Big-4 deliverable generator.
@@ -86,7 +89,7 @@ Load these when the task needs them, not upfront.
 | The contract a chunk was built against | `build/prompts/*.md` |
 | Remaining gaps vs. the design mockup | `build/design-gap-audit.md` |
 | Worked cases with engine-verified expected verdicts | `backtest/use-cases.md` (predictions pinned by `src/engine/backtest-predictions.test.ts`) |
-| Product north star, honest limitations, moat, deployment phases | `Mockup prototype request/uploads/RAF/design-vision.md` (local reference, untracked) |
+| Product north star, honest limitations, moat, deployment phases | `design-vision.md` — **tracked and public**; contains commercial strategy and the internal-adoption plan |
 | Rule/pack authoring — human-led, never generated | `grounding/PACK-AUTHORING.md` |
 | Engine, intake, register, policy schema, cross-cutting specs | `specs/` |
 | Long-form project history and standing user rules | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
