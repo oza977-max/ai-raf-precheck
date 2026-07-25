@@ -106,19 +106,19 @@ describe('Walking Skeleton', () => {
     // Structured intake banner renders instead of the old dead-end message.
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/use case name/i), 'Email drafting tool');
-    await user.type(screen.getByLabelText(/brief description/i), 'Drafts client emails from notes.');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafting tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
 
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
@@ -472,19 +472,19 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/use case name/i), 'No track match tool');
-    await user.type(screen.getByLabelText(/brief description/i), 'A tool with no matching track rule.');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'No track match tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A tool with no matching track rule.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
     // deep-learning + non-binding matches no TRACK-* rule in appetite.yaml — a genuine no-track-match.
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'deep-learning');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'read');
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'deep-learning');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -507,19 +507,19 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/use case name/i), 'High tier tool');
-    await user.type(screen.getByLabelText(/brief description/i), 'Client-facing decision support.');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'recommend');
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'High tier tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Client-facing decision support.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'recommend');
     // client-facing exposure trips TIER-HIGH (policy/appetite.yaml).
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'client-facing');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'material');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'client-facing');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'material');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));

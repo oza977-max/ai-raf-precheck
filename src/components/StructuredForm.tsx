@@ -8,6 +8,18 @@ import {
   EXPOSURES,
   MODEL_TYPES,
 } from '../engine/canonical-vocabulary';
+import {
+  ACTION_TYPE_LABELS,
+  AUTONOMY_LABELS,
+  BINDINGNESS_LABELS,
+  DATA_CLASS_LABELS,
+  DATA_ZONE_LABELS,
+  DECISION_TYPE_LABELS,
+  EXPOSURE_LABELS,
+  MODEL_TYPE_LABELS,
+  REVERSIBILITY_LABELS,
+  SCALE_LABELS,
+} from './field-copy';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
 import type { DataFlowGraph, JurisdictionEntry } from '../engine/types';
@@ -22,14 +34,6 @@ import type { DataFlowGraph, JurisdictionEntry } from '../engine/types';
 // sourced from src/engine/canonical-vocabulary.ts instead, consistent with
 // P4-C01's extractGraph() deviation. jurisdictions IS a real PolicyFile
 // field and is genuinely sourced from the loaded policy below.
-
-const AUTONOMY_DESCRIPTIONS: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: '0 — No autonomy: purely informational, no action taken',
-  1: '1 — Human approves every action before it happens',
-  2: '2 — Human reviews actions after the fact (post-hoc)',
-  3: '3 — Acts independently within a narrow, pre-approved scope',
-  4: '4 — Fully autonomous, no human checkpoint',
-};
 
 interface StructuredFormProps {
   jurisdictions: JurisdictionEntry[];
@@ -88,7 +92,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         to this form; it changes how the description is read in, not how it is scored.)
       </p>
 
-      <label htmlFor="sf-name">Use case name</label>
+      <label htmlFor="sf-name">What do you want to call it?</label>
       <input
         id="sf-name"
         type="text"
@@ -96,17 +100,16 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         onChange={(e) => update('useCaseName', e.target.value)}
       />
 
-      <label htmlFor="sf-description">Brief description</label>
+      <label htmlFor="sf-description">In a sentence or two, what does it do?</label>
       <textarea
         id="sf-description"
         value={values.description ?? ''}
         onChange={(e) => update('description', e.target.value)}
       />
 
-      <label htmlFor="sf-input-data-class">Input data class</label>
+      <label htmlFor="sf-input-data-class">What kind of information does it use?</label>
       <p className="field-help">
-        How sensitive is the data feeding this AI? Public → Internal → Confidential → Client PII (client
-        personal data) → MNPI (material non-public information).
+        Pick the most sensitive kind it touches, even if that&apos;s only occasionally.
       </p>
       <select
         id="sf-input-data-class"
@@ -116,17 +119,14 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {DATA_CLASSES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {DATA_CLASS_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-input-data-zone">Input data zone</label>
+      <label htmlFor="sf-input-data-zone">Where does that information sit today?</label>
       <p className="field-help">
-        Where the data lives today. Zone A — external / public internet (outside the firm&apos;s control).
-        Zone B — cloud or managed third party (vendor-hosted under contract, e.g. a cloud LLM API).
-        Zone C — internal only (firm-controlled infrastructure — the boundary sensitive data like MNPI must
-        not leave).
+        Before the AI touches it. If it is stored in more than one place, pick the least protected.
       </p>
       <select
         id="sf-input-data-zone"
@@ -136,12 +136,15 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {DATA_ZONES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {DATA_ZONE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-model-type">AI model type</label>
+      <label htmlFor="sf-model-type">What kind of AI is it?</label>
+      <p className="field-help">
+        If you are not sure, pick the closest description — you can correct it on the next screen.
+      </p>
       <select
         id="sf-model-type"
         value={values.modelType ?? ''}
@@ -150,12 +153,12 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {MODEL_TYPES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {MODEL_TYPE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-autonomy">Autonomy level</label>
+      <label htmlFor="sf-autonomy">How much can it do without a person?</label>
       <select
         id="sf-autonomy"
         value={values.autonomyLevel ?? 0}
@@ -163,16 +166,16 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       >
         {([0, 1, 2, 3, 4] as const).map((level) => (
           <option key={level} value={level}>
-            {AUTONOMY_DESCRIPTIONS[level]}
+            {AUTONOMY_LABELS[level]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-processing-zone">Processing data zone</label>
+      <label htmlFor="sf-processing-zone">Where does the AI itself run?</label>
       <p className="field-help">
-        Where the model itself runs and touches the data — a cloud LLM API is Zone B even if your data lives
-        in Zone C. Data crossing from a stricter zone to a looser one is exactly what the policy rules watch
-        for.
+        Not where the data is stored — where it gets sent to be processed. A cloud AI service counts as an
+        outside supplier even if your data normally never leaves the firm. Information moving from a more
+        protected place to a less protected one is the single thing these rules watch for most closely.
       </p>
       <select
         id="sf-processing-zone"
@@ -184,12 +187,12 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {DATA_ZONES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {DATA_ZONE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-action-type">Output action type</label>
+      <label htmlFor="sf-action-type">What does it actually produce or do?</label>
       <select
         id="sf-action-type"
         value={values.outputActionType ?? ''}
@@ -198,16 +201,13 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {ACTION_TYPES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {ACTION_TYPE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-exposure">Output exposure</label>
-      <p className="field-help">
-        Who sees the output: internal-only (one team) · internal-shared (multiple teams) · client-facing ·
-        market-facing.
-      </p>
+      <label htmlFor="sf-exposure">Who sees what it produces?</label>
+      <p className="field-help">Pick the widest audience it reaches.</p>
       <select
         id="sf-exposure"
         value={values.outputExposure ?? ''}
@@ -216,15 +216,16 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {EXPOSURES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {EXPOSURE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-bindingness">Decision bindingness</label>
+      <label htmlFor="sf-bindingness">How much weight does its output carry?</label>
       <p className="field-help">
-        How much weight the output carries: non-binding (informational) · advisory (input to a human
-        decision) · material (materially drives real decisions) · binding (directly determines the outcome).
+        Be honest about what happens in practice rather than what the process says. If people almost always
+        go with what it says, that is closer to &ldquo;substantially drives the decision&rdquo; than to
+        &ldquo;one input among several&rdquo;.
       </p>
       <select
         id="sf-bindingness"
@@ -236,12 +237,16 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {DECISION_BINDINGNESS.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {BINDINGNESS_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-reversibility">Output reversibility</label>
+      <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?</label>
+      <p className="field-help">
+        Think about the point at which someone would notice. Money already sent, a message already seen by
+        a client, or a filing already made generally cannot be taken back.
+      </p>
       <select
         id="sf-reversibility"
         value={values.outputReversibility ?? ''}
@@ -252,15 +257,15 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {['reversible', 'irreversible', 'unknown'].map((v) => (
           <option key={v} value={v}>
-            {v}
+            {REVERSIBILITY_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-decision-type">Decision type (optional)</label>
+      <label htmlFor="sf-decision-type">What kind of decision does it feed? (optional)</label>
       <p className="field-help">
-        What decision does the output feed? Drives hard lines and tier triggers (e.g. credit/lending →
-        Critical; regulatory-reporting → High). Leave blank if none applies.
+        Some areas carry extra legal duties — lending and hiring especially. Leave blank if none of these
+        fit.
       </p>
       <select
         id="sf-decision-type"
@@ -272,12 +277,12 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">None / not applicable</option>
         {DECISION_TYPES.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {DECISION_TYPE_LABELS[v]}
           </option>
         ))}
       </select>
 
-      <label htmlFor="sf-hitl">Human in the loop before the system acts? (optional)</label>
+      <label htmlFor="sf-hitl">Does a person check it before anything happens? (optional)</label>
       <select
         id="sf-hitl"
         value={values.hitl === undefined ? '' : values.hitl ? 'yes' : 'no'}
@@ -290,8 +295,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="no">No — the system acts without prior human review</option>
       </select>
 
-      <label htmlFor="sf-scale">Output scale</label>
-      <p className="field-help">limited — pilot or small population · at_scale — production-wide.</p>
+      <label htmlFor="sf-scale">How widely is it used?</label>
       <select
         id="sf-scale"
         value={values.outputScale ?? ''}
@@ -300,7 +304,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
         <option value="">Select…</option>
         {['limited', 'at_scale'].map((v) => (
           <option key={v} value={v}>
-            {v}
+            {SCALE_LABELS[v]}
           </option>
         ))}
       </select>
@@ -312,11 +316,14 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
           checked={values.replacesPriorModel ?? false}
           onChange={(e) => update('replacesPriorModel', e.target.checked)}
         />
-        Replaces a prior model
+        It replaces something we already use (a model, a tool or a manual process)
       </label>
 
       <fieldset>
-        <legend>Jurisdictions</legend>
+        <legend>Which countries or regions does it touch?</legend>
+        <p className="field-help">
+          Tick anywhere the clients, staff or data involved are based. This decides which local rules apply.
+        </p>
         {jurisdictions.map((j) => (
           <label key={j.code} htmlFor={`sf-jurisdiction-${j.code}`}>
             <input
@@ -331,7 +338,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
       </fieldset>
 
       <button type="button" onClick={handleSubmit} disabled={!isComplete(values)}>
-        Build graph
+        Continue
       </button>
     </section>
   );

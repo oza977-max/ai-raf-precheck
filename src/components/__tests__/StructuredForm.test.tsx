@@ -2,23 +2,28 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StructuredForm from '../StructuredForm';
-import { DATA_CLASSES, MODEL_TYPES } from '../../engine/canonical-vocabulary';
+import { DATA_CLASSES, DATA_ZONES, MODEL_TYPES } from '../../engine/canonical-vocabulary';
 
 const JURISDICTIONS = [{ code: 'UK', name: 'United Kingdom', pack_files: [] }];
 
+function optionValues(labelPattern: RegExp): string[] {
+  return [...screen.getByLabelText(labelPattern).querySelectorAll('option:not([value=""])')].map(
+    (o) => (o as HTMLOptionElement).value,
+  );
+}
+
 describe('StructuredForm', () => {
-  it('TC-UC-3a-03: sources select options from the canonical vocabulary, not hardcoded strings', () => {
+  // V2-E: strengthened. Previously this only counted options, which a
+  // hardcoded list of the right length would have passed. Since the labels
+  // are now plain English while the values stay canonical, asserting the
+  // VALUES is what actually pins the form to the vocabulary the policy
+  // rules match on.
+  it('TC-UC-3a-03: select option values are the canonical vocabulary, not hardcoded strings', () => {
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
 
-    const dataClassOptions = screen
-      .getByLabelText(/input data class/i)
-      .querySelectorAll('option:not([value=""])');
-    expect(dataClassOptions).toHaveLength(DATA_CLASSES.length);
-
-    const modelTypeOptions = screen
-      .getByLabelText(/ai model type/i)
-      .querySelectorAll('option:not([value=""])');
-    expect(modelTypeOptions).toHaveLength(MODEL_TYPES.length);
+    expect(optionValues(/what kind of information does it use/i)).toEqual([...DATA_CLASSES]);
+    expect(optionValues(/what kind of ai is it/i)).toEqual([...MODEL_TYPES]);
+    expect(optionValues(/where does that information sit today/i)).toEqual([...DATA_ZONES]);
   });
 
   it('TC-UC-3a-01/02: submitting a fully-filled form calls onSubmit with a valid structured_form graph', async () => {
@@ -26,19 +31,19 @@ describe('StructuredForm', () => {
     const user = userEvent.setup();
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
 
-    await user.type(screen.getByLabelText(/use case name/i), 'Test tool');
-    await user.type(screen.getByLabelText(/brief description/i), 'A test description.');
-    await user.selectOptions(screen.getByLabelText(/input data class/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/input data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/ai model type/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/processing data zone/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/output action type/i), 'read');
-    await user.selectOptions(screen.getByLabelText(/output exposure/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/decision bindingness/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/output reversibility/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/output scale/i), 'limited');
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
 
-    await user.click(screen.getByRole('button', { name: /build graph/i }));
+    await user.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const graph = onSubmit.mock.calls[0]?.[0];
@@ -48,7 +53,7 @@ describe('StructuredForm', () => {
 
   it('disables submit until all required fields are filled', () => {
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /build graph/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
   });
 
   it('shows the exact spec-mandated banner text (intake-flow.md §5.1)', () => {
@@ -61,11 +66,42 @@ describe('StructuredForm', () => {
   });
 });
 
-describe('StructuredForm — field help (V1.1-C01)', () => {
-  it('explains the Zone A/B/C taxonomy and the input-vs-processing zone distinction inline', () => {
+describe('StructuredForm — business-friendly wording (V2-E)', () => {
+  // The user feedback that drove this: the form asked for "input data
+  // class", "output reversibility" and so on — the engine's own field
+  // names. Nobody outside model risk can answer those. These assertions
+  // stop the internal vocabulary leaking back into the labels.
+  it('asks questions in business language, not engine field names', () => {
     render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
-    expect(screen.getByText(/Zone A — external \/ public internet/i)).toBeInTheDocument();
-    expect(screen.getByText(/where the model itself runs/i)).toBeInTheDocument();
-    expect(screen.getByText(/material non-public information/i)).toBeInTheDocument();
+
+    expect(screen.getByLabelText(/what kind of information does it use/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/where does the ai itself run/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/if it gets something wrong, can it be undone/i)).toBeInTheDocument();
+
+    expect(screen.queryByLabelText(/^input data class$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^output reversibility$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^decision bindingness$/i)).not.toBeInTheDocument();
+  });
+
+  // Plain language must not cost traceability: a model-validation reader
+  // has to be able to map an answer back to the term the policy and the
+  // verdict are written in.
+  it('keeps the canonical term visible on each option so answers stay traceable', () => {
+    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole('option', { name: /price-sensitive information.*\(MNPI\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /chatbot or writing assistant.*\(LLM\)/i })).toBeInTheDocument();
+    // Zone B appears on both zone questions — the point is that the
+    // canonical code survives alongside the plain wording.
+    expect(screen.getAllByRole('option', { name: /with an outside supplier.*\(Zone B\)/i })).toHaveLength(2);
+  });
+
+  it('explains the traps a first-time submitter falls into', () => {
+    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
+    // Storage location vs processing location is the distinction people get
+    // wrong, and it is the one the zone-crossing rules turn on.
+    expect(screen.getByText(/not where the data is stored — where it gets sent/i)).toBeInTheDocument();
+    // Bindingness is routinely understated relative to what happens in practice.
+    expect(screen.getByText(/be honest about what happens in practice/i)).toBeInTheDocument();
   });
 });
