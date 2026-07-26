@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 2 · AIGate — Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#rounds">Relationship to Previous Rounds</a></li>
+                <li><a href="#expert-panel">Expert Panel</a></li>
+                <li><a href="#purpose">Purpose &amp; Vision</a></li>
+                <li><a href="#target-users">Target Users</a></li>
+                <li><a href="#journeys">User Journeys</a></li>
+                <li><a href="#functional">Functional Requirements</a>
+                    <ul>
+                        <li><a href="#di">R2-DI — Shared Store</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <main>
+            <header>
+                <h1>AIGate — Requirements, Round 2</h1>
+                <p class="subtitle">V1.5 — The Server Tier</p>
+                <p class="meta">Round 2 · 26 July 2026 · Status: in elicitation</p>
+            </header>
+
+            <section id="rounds">
+                <h2>Relationship to Previous Rounds</h2>
+                <p>Round 1 (<code>requirements.md</code>) specified AIGate V1: a client-only, single-user proof of concept whose job was to prove the appetite-as-code thesis. It was built, tested (227 tests) and deployed as a public demo. Round 1 requirements are <strong>immutable</strong> — they record what was actually built.</p>
+                <p>Round 2 specifies <strong>V1.5</strong>: the server tier that turns that proof of concept into something more than one person can use at a time. It does not revisit any Round 1 decision. It adds the infrastructure V1 deliberately deferred, and resolves four defects in the V1 design that only appear once a second user exists.</p>
+                <p>Round 2 IDs are prefixed <code>R2-</code> and are independent of Round 1's sequence.</p>
+
+                <h3>The four V1 defects that forced this round</h3>
+                <p>Each was verified by reading the V1 source during elicitation, not asserted from memory.</p>
+                <table>
+                    <thead><tr><th>#</th><th>Defect</th><th>Where</th><th>Why it only appears with two users</th></tr></thead>
+                    <tbody>
+                        <tr><td>D-1</td><td>Policy YAML is stored per browser</td><td><code>src/store/policy-source.ts</code></td><td>Two users can hold different rulebooks. NF-1 determinism holds inside one browser and silently stops holding across two.</td></tr>
+                        <tr><td>D-2</td><td>Audit ordering uses module-level state</td><td><code>src/store/audit.ts</code></td><td>Single-writer only. Concurrent writers break chronological readback — a flake with one writer, the normal case with several.</td></tr>
+                        <tr><td>D-3</td><td><code>getRole()</code> is synchronous</td><td><code>src/store/role.ts</code></td><td>Server auth is asynchronous. The signature change ripples to every caller.</td></tr>
+                        <tr><td>D-4</td><td>Append-only relies on IndexedDB throwing</td><td><code>src/store/audit.ts</code></td><td>A server-side upsert would silently destroy the append-only property with nothing failing.</td></tr>
+                    </tbody>
+                </table>
+                <p>Three further V1 characteristics are in scope because they are unsafe once shared: IDs are generated client-side in eight places; the duplicate-write guard is a client-side <code>useRef</code> protecting one browser tab only; and the Anthropic API key sits in <code>localStorage</code>.</p>
+            </section>
+
+            <section id="expert-panel">
+                <h2>Expert Panel</h2>
+                <table>
+                    <thead><tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr></thead>
+                    <tbody>
+                        <tr><td>Karl Wiegers</td><td><em>Software Requirements</em> (3rd ed.)</td><td>Requirement classification, MoSCoW prioritisation, ambiguity detection</td></tr>
+                        <tr><td>Gause &amp; Weinberg</td><td><em>Exploring Requirements</em></td><td>Context-free questioning, assumption surfacing, the "how would you know it was satisfied?" test on every requirement</td></tr>
+                        <tr><td>Alan Cooper</td><td><em>About Face</em> (4th ed.)</td><td>Personas — specifically the elastic-user problem, which bites hard in V1.5 because the platform admin never opens the application</td></tr>
+                        <tr><td>Jeff Patton</td><td><em>User Story Mapping</em></td><td>Journey decomposition, now-versus-later slicing</td></tr>
+                        <tr><td>Christensen / Moesta</td><td><em>Competing Against Luck</em>, <em>Demand-Side Sales 101</em></td><td>Job framing — V1.5's job is shared truth, not speed</td></tr>
+                        <tr><td>Suzanne &amp; James Robertson</td><td><em>Mastering the Requirements Process</em> (3rd ed.)</td><td><strong>Activated.</strong> Signals: authentication, sensitive data, third-party API, multi-platform deployment, compliance. Supplies completeness categories and the fit-criterion discipline on every non-functional requirement.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="purpose">
+                <h2>1. Purpose &amp; Vision</h2>
+                <blockquote>
+                    <p><strong>When</strong> I need risk colleagues to test AIGate against real use cases and trust what they are looking at, <strong>I want</strong> one shared, access-controlled instance whose register and audit trail everyone sees the same way, <strong>so I can</strong> produce evidence a committee will accept — rather than screenshots from my laptop and a different rulebook in every browser.</p>
+                </blockquote>
+                <p>This is a materially different job from Round 1's. V1 existed to answer <em>"can a machine reach the verdict a committee would reach, in minutes?"</em> V1.5 exists to answer <em>"can several people rely on the same answer, and can the record of it survive scrutiny?"</em></p>
+                <p>The distinction matters for prioritisation: a V1.5 requirement that does not serve <strong>shared truth</strong> or <strong>a record that survives scrutiny</strong> is a Could at best, whatever its other merits.</p>
+                <h3>What V1.5 is not</h3>
+                <p>V1.5 does not make verdicts more correct. Correctness is a function of the rulebook and is tested by back-testing, not by infrastructure. A shared server that reproduces a wrong rulebook consistently is worse than a laptop that reproduces it inconsistently, because it looks authoritative. Round 2 inherits Round 1's honesty requirements unchanged (NF-2, NF-7) and adds no claim of correctness.</p>
+            </section>
+
+            <section id="target-users">
+                <h2>2. Target Users</h2>
+                <p>Round 1 had two personas and, in practice, one user. V1.5 has four, and the fourth generates requirements nobody else does.</p>
+
+                <h3>Priya — Head of AI Governance (2LoD) · also the operator</h3>
+                <p>Carried forward from Round 1, with a second hat. As <strong>reviewer</strong> she approves or returns use cases and must be able to trust the audit trail to do so honestly. As <strong>operator</strong> she runs the instance, owns the rulebook, and is the only person who can change it.</p>
+                <ul>
+                    <li><strong>End goal:</strong> see every submission in one register and defend any decision in it months later.</li>
+                    <li><strong>Experience goal:</strong> never wonder whether what she is looking at is complete.</li>
+                    <li><strong>Key frustration today:</strong> every tester's results live in their own browser, so there is no register — only a collection of disconnected ones.</li>
+                </ul>
+
+                <h3>James — AI Developer (1LoD)</h3>
+                <p>Carried forward from Round 1, unchanged in intent. Submits use cases. Wants nothing to do with infrastructure.</p>
+                <ul>
+                    <li><strong>End goal:</strong> find out whether his idea is in appetite before writing a paper about it.</li>
+                    <li><strong>Experience goal:</strong> log in and get on with it; never think about storage.</li>
+                    <li><strong>Key frustration today:</strong> he cannot show anyone his result except by sharing his screen.</li>
+                </ul>
+
+                <h3>The reviewer's counterpart — a second 2LoD approver</h3>
+                <p>Distinct from Priya because segregation of duties requires that the person who submits and the person who approves are not the same, and V1's role dropdown made that unenforceable.</p>
+                <ul>
+                    <li><strong>End goal:</strong> approve only what he has genuinely reviewed.</li>
+                    <li><strong>Key frustration today:</strong> anyone can select "2LoD" from a dropdown, so an approval carries no assurance about who gave it.</li>
+                </ul>
+
+                <h3>Sam — platform administrator (bank IT) · new in Round 2</h3>
+                <p><strong>Never opens the application.</strong> Deploys the container, wires it to the identity provider, and is accountable for it running. Generates a set of requirements — configuration, secrets handling, logs, backup, upgrade — that no other persona produces, and which projects routinely discover only at deployment.</p>
+                <ul>
+                    <li><strong>End goal:</strong> deploy it, connect it to the corporate IdP, back it up, and never think about it again.</li>
+                    <li><strong>Experience goal:</strong> confidence that it does not phone home, and that he can see what it is doing when it misbehaves.</li>
+                    <li><strong>Key frustration:</strong> applications that assume they will be run by their developers.</li>
+                </ul>
+            </section>
+
+            <section id="journeys">
+                <h2>3. User Journeys</h2>
+                <h3>Journey 1 — James submits, on a shared instance</h3>
+                <p>James opens the instance URL, is redirected to sign in, and authenticates. He submits a use case exactly as in V1 — the intake flow is unchanged. On submission, his entry appears in <strong>the</strong> register, not <em>his</em> register. His role comes from the session, so he cannot approve his own submission.</p>
+                <h3>Journey 2 — Priya reviews, and trusts the trail</h3>
+                <p>Priya signs in and sees every submission, not only her own. She opens a pre-checked case and reads its audit trail. The trail is ordered correctly even though three people submitted within the same second, and it is held somewhere she cannot edit through her own browser. She approves, and the approval records <strong>who she is</strong> rather than what she selected.</p>
+                <h3>Journey 3 — Priya changes the rulebook</h3>
+                <p>Priya edits the appetite. The change creates a new immutable policy version, recorded in the audit trail with her identity and the time. Everyone's next verdict uses the new version; existing cases are flagged for re-evaluation. No other user can make this change.</p>
+                <h3>Journey 4 — Sam deploys it · the journey V1 never had</h3>
+                <p>Sam receives a container image and a configuration reference. He supplies database location, session secret, identity-provider details, and (optionally) an Anthropic API key. He starts it, confirms a health endpoint reports healthy, connects it to the corporate IdP, and schedules a backup of a single file. He never creates an account in the application and never sees a use case.</p>
+            </section>
+
+            <section id="functional">
+                <h2>4. Functional Requirements</h2>
+
+                <h3 id="di">R2-DI — Shared Store &amp; Data Integrity</h3>
+                <p>The heart of Round 2. Every defect in the table above lands here. The governing constraint is that the store must become shared and durable <strong>without changing what a verdict says</strong> — the engine stays a pure island (Round 1 NF-1) and the adapter must be invisible to it.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Persistence shall be reached through a storage adapter interface with at least two interchangeable implementations — a browser-local implementation and a server-backed implementation — selected by configuration at startup, with no change to calling code.</p>
+                        <div class="fit-criterion">The same application build runs against either adapter with no source change. The existing Round 1 test suite (227 tests) passes unmodified against the browser-local adapter. A single configuration value switches to the server adapter. No file outside the adapter implementations imports a storage library directly — verifiable by grepping for the storage library import and finding it in the adapter module only.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The server-backed implementation shall persist to a single-file embedded database requiring no separate database server.</p>
+                        <div class="fit-criterion">A fresh deployment requires no database installation, provisioning or connection string beyond a filesystem path. Backup is a copy of one file taken while the service is running, and restoring that file to a new instance reproduces the register and audit trail exactly.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text"><em>(resolves D-2)</em> Audit event ordering shall be established by a server-assigned, strictly increasing sequence number. <code>occurred_at</code> becomes descriptive metadata and shall not be used as a sort key.</p>
+                        <div class="fit-criterion">A concurrency test writes events from at least three simultaneous clients within the same millisecond. Read-back returns them in the order the server accepted them, with sequence numbers strictly increasing and containing no duplicates. Removing the client's clock from the equation entirely — including setting a client clock to a wrong time — does not change read-back order.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text"><em>(resolves D-4)</em> The append-only property of the audit trail shall be enforced by a database-level uniqueness constraint that rejects a duplicate event identifier. Update and delete operations on audit events shall not exist in the server's interface.</p>
+                        <div class="fit-criterion">Submitting an event whose identifier already exists returns an explicit rejection and writes nothing; it does not overwrite. No code path in the server can modify or remove an existing audit row — verifiable by inspection: the audit table is written by exactly one INSERT statement and no UPDATE or DELETE statement references it.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Write operations shall be idempotent under retry, so that a duplicated request — from a double-click, a component re-mount, a browser tab duplicate, or a network retry after timeout — records the action once.</p>
+                        <div class="fit-criterion">Issuing the identical write request twice produces exactly one audit event and one register change. This is verified by test for each write path, not by relying on client-side guards. Round 1's client-side <code>useRef</code> guard protected a single browser tab; it is necessary but no longer sufficient and is not the mechanism relied upon here.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The server shall be the authority for the identity of any record it stores, and shall not accept a client-supplied identifier for an audit event.</p>
+                        <div class="fit-criterion">A client that supplies an arbitrary or colliding audit event identifier cannot cause an existing record to be replaced or a chosen identifier to be adopted. Round 1 generates identifiers client-side in eight locations; each is either moved server-side or explicitly documented as safe because the value is not an integrity boundary.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-7</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">All users of an instance shall see one register. What a given user may see within it is determined by their authenticated role, not by which browser they used.</p>
+                        <div class="fit-criterion">Two users signing in from different machines see the same register contents for their role. A submission made by one appears for the other (subject to role visibility rules) without any export or import step.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-8</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Switching storage implementation shall not change any verdict.</p>
+                        <div class="fit-criterion">The same use case evaluated against the same policy version produces a byte-identical verdict under both adapters. The engine's purity constraint (Round 1 NF-1) is unaffected: no adapter code, network call or server type is reachable from the engine's call graph.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-9</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">A browser-local mode requiring no server shall remain available, so the application can be demonstrated without provisioning accounts or infrastructure.</p>
+                        <div class="fit-criterion">The public demo build continues to run entirely in the browser with no backend. It is visibly labelled as demo mode, and its data is never presented as, nor capable of being confused with, an instance register.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-10</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">Each audit event shall carry a hash of its own content combined with the hash of the preceding event, forming a chain, and the server shall expose the current head hash for independent recording.</p>
+                        <div class="fit-criterion">Altering, inserting or removing any stored audit event without recomputing every subsequent hash is detectable by a verification routine that walks the chain and reports the first index at which it breaks. The routine is runnable on demand and its result is reproducible. A head hash recorded externally at time T and re-checked later proves no event at or before T was altered.<br><br><strong>Deliberately scoped as detection, not prevention.</strong> A chain catches accidental corruption, a restore from the wrong backup, and a partial edit by someone who does not recompute. It does NOT defeat an administrator with database access who recomputes the whole chain. This is included in Round 2 only because it cannot be retrofitted — events written without a chain can never be chained afterwards — not because it closes the threat.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-11</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The interface shall describe the audit trail's integrity properties accurately and shall not claim tamper-proofing, immutability, or evidential weight it does not possess.</p>
+                        <div class="fit-criterion">Wording referring to the audit trail is checked against what is actually implemented. With R2-DI-10 built, "tamper-detecting" is permitted and "tamper-proof" is not. If R2-DI-10 is dropped, neither is permitted. This inherits Round 1 NF-2 and is the reason R2-DI-10 is scoped honestly rather than sold as more than it is.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DI-12</span>
+                            <span class="priority-chip priority-wont">Won't (V2)</span>
+                        </div>
+                        <p class="requirement-text">External anchoring of the audit chain — publishing the head hash to a store outside the operator's control (a third-party timestamping service, an append-only log, or a counterparty).</p>
+                        <div class="fit-criterion">Not built in Round 2. This is the step that converts detection into evidence against a privileged insider, and it requires a decision about where the anchor lives that is premature before the product has been back-tested.</div>
+                    </div>
+
+                <p><em>Elicitation in progress — further domains follow.</em></p>
+            </section>
+
+            <footer>
+                Developed using the Grounded Vibe Methodology
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Sticky TOC highlighting
+        const sections = document.querySelectorAll('main section');
+        const tocLinks = document.querySelectorAll('.toc-nav a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
