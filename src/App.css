@@ -1196,6 +1196,10 @@ details input {
 
 /* V2-E: basis replaces the High/Medium/Low confidence grade. */
 .verdict__conf--verbatim { color: var(--low); }
+/* Registry membership is a different axis from pack-rule basis (code review
+   001, I-6) — same visual weight, separate vocabulary. */
+.verdict__conf--registered { color: var(--low); }
+.verdict__conf--unregistered { color: var(--critical); background: #fbeae8; }
 .verdict__conf--derived { color: var(--warn-text); background: var(--warn-bg); }
 .verdict__conf--judgement { color: var(--critical); background: #fbeae8; }
 

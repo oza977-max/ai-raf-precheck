@@ -333,9 +333,6 @@ controls:
     resolves: ["INV-DATA-01"]
     burden: 1
     verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
-    platform_satisfies:
-      - "azure-openai-internal"
-      - "azure-openai-eu"
     verification_evidence:
       status: "verified"
       detail: "Platform allow-list pins TLS 1.3; platform attestation on file"
@@ -348,7 +345,6 @@ controls:
     resolves: ["INV-DISCLOSE-01"]
     burden: 1
     verification: "Screenshot or UX spec showing the disclosure at first contact"
-    platform_satisfies: []
 
   - id: "CTRL-SYNTHMARK-01"
     name: "Synthetic content marking"
@@ -356,7 +352,6 @@ controls:
     resolves: []
     burden: 3
     verification: "Output carries provenance metadata (e.g. C2PA) detectable by a third party"
-    platform_satisfies: []
 
   - id: "CTRL-FINGERPRINT-01"
     name: "Output fingerprinting + version pinning"
@@ -364,7 +359,6 @@ controls:
     resolves: ["INV-TRACK2-01"]
     burden: 2
     verification: "Probe set and baseline fingerprints on file; alert on step-change in aggregate grounding confidence"
-    platform_satisfies: []
 
   - id: "CTRL-CITE-01"
     name: "Citation resolution"
@@ -372,7 +366,6 @@ controls:
     resolves: ["INV-CITE-01"]
     burden: 2
     verification: "Sampled outputs show citations resolving to retrievable sources"
-    platform_satisfies: []
 
   - id: "CTRL-ESCALATE-01"
     name: "Human escalation path"
@@ -380,7 +373,6 @@ controls:
     resolves: ["INV-ESCALATE-01"]
     burden: 2
     verification: "Escalation route documented, staffed, and exercised in testing"
-    platform_satisfies: []
 
   - id: "CTRL-LOG-01"
     name: "Tool-call logging, kill switch and minimal permissions"
@@ -388,7 +380,6 @@ controls:
     resolves: ["INV-AGENT-01"]
     burden: 2
     verification: "Log store is append-only; kill-switch procedure documented and tested"
-    platform_satisfies: ["azure-openai-internal"]
 
   - id: "CTRL-HITL-02"
     name: "Human decision gate (HITL L2)"
@@ -396,7 +387,6 @@ controls:
     resolves: ["INV-AUTONOMY-01"]
     burden: 3
     verification: "UI shows human approval step; audit trail records approval identity and timestamp"
-    platform_satisfies: []
 
   - id: "CTRL-DRIFT-01"
     name: "Drift monitoring"
@@ -404,7 +394,6 @@ controls:
     resolves: ["INV-DRIFT-01"]
     burden: 3
     verification: "Drift dashboard live; thresholds match the KRI table; breach routes to 2LoD"
-    platform_satisfies: []
 
   - id: "CTRL-EXPLAIN-01"
     name: "Explainability documentation"
@@ -412,7 +401,6 @@ controls:
     resolves: ["INV-EXPLAIN-01"]
     burden: 3
     verification: "Explainability pack reviewed by independent validation"
-    platform_satisfies: []
 
   - id: "CTRL-REDTEAM-01"
     name: "Adversarial red-teaming"
@@ -420,7 +408,6 @@ controls:
     resolves: ["INV-SEC-01"]
     burden: 3
     verification: "Red-team report on file within the last quarter; findings tracked to closure"
-    platform_satisfies: []
 
   - id: "CTRL-SAMPLE-01"
     name: "Behavioural sampling"
@@ -428,7 +415,6 @@ controls:
     resolves: ["INV-SAMPLE-01"]
     burden: 3
     verification: "Sampling rate and triage process documented; disagreement rate tracked"
-    platform_satisfies: []
 
   - id: "CTRL-GROUND-01"
     name: "Grounding verification"
@@ -436,7 +422,6 @@ controls:
     resolves: ["INV-HALLUC-01"]
     burden: 4
     verification: "Audit log records claim, source, confidence, timestamp and model version; failed grounding routes to human review"
-    platform_satisfies: []
 
   - id: "CTRL-CONDUCT-01"
     name: "Conduct testing + transcript audit"
@@ -444,7 +429,6 @@ controls:
     resolves: ["INV-CONDUCT-01"]
     burden: 4
     verification: "Conduct test results and transcript audit sampling on file"
-    platform_satisfies: []
 
 kri_thresholds:
   performance:

@@ -29,7 +29,7 @@ rules:
       document: "SR 26-2"
       section: "Footnote 3"
       text: "Generative AI and agentic AI models are novel and rapidly evolving. As such, they are not within the scope of this guidance."
-      source_url: "https://www.federalreserve.gov/supervisionreg/srletters/srletters.htm"
+      source_url: "https://www.federalreserve.gov/supervisionreg/srletters/SR2602.htm"
       retrieved_date: "2026-07-26"
     effect:
       type: "required_review"

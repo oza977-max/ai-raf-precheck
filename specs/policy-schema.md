@@ -363,7 +363,6 @@ controls:
     resolves: ["INV-DATA-01", "INV-ZONE-03"]   # Which invariants this control satisfies
     burden: 1                     # 1=low, 5=high — used by solver for tie-breaking (CS-1)
     verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
-    platform_satisfies:           # Platforms whose approval already satisfies this control
       - "azure-openai-internal"
       - "azure-openai-eu"
   
@@ -373,7 +372,6 @@ controls:
     resolves: ["INV-AUTO-01", "INV-AUTO-02"]
     burden: 3
     verification: "UI shows human approval step; audit trail records approval identity and timestamp"
-    platform_satisfies: []
   
   - id: "CTRL-LOG-01"
     name: "Full tool-call logging with kill switch"
@@ -381,7 +379,6 @@ controls:
     resolves: ["INV-AGENT-01", "INV-AGENT-02"]
     burden: 2
     verification: "Log store is append-only; kill-switch procedure documented and tested"
-    platform_satisfies: ["azure-openai-internal"]
 ```
 
 ### 3.7 KRI thresholds
@@ -513,6 +510,9 @@ NF-7 is unchanged in effect: a `[..]` placeholder in the governing
 sign-off — pack-level, or rule-level where present — means unadopted, and
 any verdict relying on that rule renders provisional.
 
+
+> **V2-F (code review 001, C-1/C-2):** `controls[].platform_satisfies` was removed. It expressed the same fact as `platforms[].satisfies_controls` in the opposite direction — two representations of one piece of knowledge (Hunt & Thomas, DRY). Nothing ever read the control-keyed form, so its platform ids drifted to values that existed nowhere (`azure-openai-internal`) and could never fail at runtime. PV-1 words the relationship platform-first, so the registry direction is the requirement-sanctioned one.
+
 ### Pack rule effects
 
 | Effect type | What it does |
@@ -598,7 +598,6 @@ export interface Control {
     attested_at?: string;
   };
   verification: string;
-  platform_satisfies: string[]; // Platform IDs whose approval satisfies this control
 }
 
 export interface JurisdictionPack {

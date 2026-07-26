@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review 001 · AIGate — Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<style>
+.verdict-box{border:2px solid var(--rule,#d8d6c6);padding:1.2rem 1.4rem;margin:1.5rem 0;background:#fffff8}
+.verdict-text{font-size:1.3rem;font-weight:700;margin:0 0 .3rem}
+.sev-critical{color:#8f2a2a;font-weight:700}
+.sev-important{color:#7d5a10;font-weight:700}
+.sev-minor{color:#33475e}
+.finding{border-left:4px solid var(--rule,#d8d6c6);padding:.6rem 0 .6rem 1rem;margin:1.1rem 0}
+.finding.critical{border-left-color:#8f2a2a}
+.finding.important{border-left-color:#7d5a10}
+.mine{background:#f6ece9;padding:.15rem .4rem;border-radius:3px;font-size:.8rem;font-weight:700;color:#8f2a2a}
+</style><body><div class="container"><main>
+<header><h1>Code Review 001</h1><p class="subtitle">AIGate · Round 1 · 26 July 2026</p>
+<p class="meta">First code review in the project's history. 24 build chunks, previously unreviewed.</p></header>
+
+<div class="verdict-box">
+<p class="verdict-text">Verdict: pending user triage</p>
+<p>Per shared rule 28, the verdict follows triage rather than preceding it. Seven Critical and six Important findings are surfaced below for the practitioner's disposition.</p>
+</div>
+
+<section><h2>Summary</h2>
+<table><thead><tr><th>Panel</th><th>Defect class</th><th>Findings</th></tr></thead><tbody>
+<tr><td>A</td><td>References &amp; dependencies</td><td>1 Critical, 2 Important, 2 borderline</td></tr>
+<tr><td>B</td><td>Contracts &amp; interfaces</td><td>2 Important, 2 Minor, 1 borderline, 1 suggestion</td></tr>
+<tr><td>C</td><td>Logic &amp; completeness</td><td>3 Critical, 2 Important, 1 borderline, 2 minor/suggestion</td></tr>
+<tr><td>D</td><td>Naming &amp; spec compliance</td><td>2 Critical, 1 Important, 1 Minor, 1 borderline, 1 suggestion</td></tr>
+<tr><td>E</td><td>Stub detection</td><td>0 Critical, 1 Important, 1 borderline</td></tr>
+</tbody></table>
+
+<h3>Cross-cutting theme</h3>
+<p>Nine of the thirteen Critical and Important findings are in code written during this session. The review is doing exactly what it exists for — the most recently written code is the least reviewed code.</p>
+<p>The project's signature defect class — <em>declared, threaded, never consumed</em> — appeared <strong>three more times</strong>: <code>platform_satisfies</code> (still unfixed, found by two panels independently), the CS-1 margin fields (fixed at the data layer, reproduced at the UI layer in the same session), and <code>ConfidenceCaveat.field</code>. Parity rule R6 catches only the <code>_paramName</code> spelling and none of these three.</p>
+
+<h3>Capture-recapture</h3>
+<p>Panels A and B independently found the same defect (<code>platform_satisfies</code>), giving one overlapping pair. Lincoln-Petersen on that single pair estimates ~30 total defects against 26 unique found, i.e. roughly 87% coverage. <strong>A single overlap makes this estimate very noisy</strong> and it should be read as "probably most of them" rather than a number. Round 2 is optional on this evidence, not indicated.</p>
+
+<h3>Verified sound — worth recording</h3>
+<ul>
+<li>Ordinal envelope ceilings <em>are</em> correctly inclusive — the highest-consequence defect available in the new code, and it is absent.</li>
+<li>Every <code>required_controls</code>, <code>resolves</code> and <code>effect.control_id</code> id resolves. No dangling policy references besides C-1.</li>
+<li>The honesty machinery works: <code>hasPlaceholderQuote</code> fires for all three placeholder packs and outranks the unsigned caveat; <code>isUnsigned</code> handles <code>[FIRM]</code>/<code>[DATE]</code>; samples cannot be mistaken for real entries; OB-1..5, PV-4 and PV-7 are unbuilt and <em>unclaimed anywhere in code</em>.</li>
+<li>Both <code>.parity-allowlist</code> rationales match the code exactly rather than being stale cover.</li>
+</ul>
+</section>
+
+<section><h2>Critical findings</h2>
+<div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-1 — <code>platform_satisfies</code> references platform ids that do not exist</h3>
+<p><strong>Location:</strong> <code>policy/appetite.yaml:337,338,391</code><br><strong>Found by:</strong> Panel A · Hunt &amp; Thomas (<em>The Pragmatic Programmer</em>)</p>
+<p><strong>Issue:</strong> <code>CTRL-ENC-01</code> lists <code>azure-openai-internal</code> and <code>azure-openai-eu</code>; <code>CTRL-LOG-01</code> lists <code>azure-openai-internal</code>. The registry defines <code>PLAT-INTERNAL-ML</code> and <code>PLAT-CLOUD-LLM</code>. Verified mechanically: the referenced ids appear nowhere else in the repository.</p>
+<p><strong>Fix:</strong> Delete the stale entries, or rename to the registry ids. But see C-2 — the field has no consumer, which is why this could never fail at runtime.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-2 — <code>Control.platform_satisfies</code> still has zero production consumers — the defect I claimed to have fixed <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/engine/types.ts:432</code><br><strong>Found by:</strong> Panels A <em>and</em> B, independently → severity elevated</p>
+<p><strong>Issue:</strong> PV-A built inheritance on <code>platforms[].satisfies_controls</code> (the inverse relation, keyed by platform id). The original <code>controls[].platform_satisfies</code> is still declared, still populated, still read by nothing. A second working mechanism was added <em>alongside</em> the dead one rather than replacing it. Two panels found this independently.</p>
+<p><strong>Fix:</strong> Either wire it into <code>envelope.ts</code>, or delete it from the schema, appetite.yaml and fixtures. Leaving both is what makes C-1 silent.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-3 — <code>resolved</code> conflates platform and vendor, masking an unapproved component <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/engine/evaluate.ts:302</code><br><strong>Found by:</strong> Panel C · Michael Fagan (formal inspection)</p>
+<p><strong>Issue:</strong> <code>resolved: entries.length &gt; 0</code> is true if <em>either</em> matched. A use case declaring an approved platform and an <strong>unapproved vendor</strong> emits zero unapproved-component reviews. PV-5 exists precisely to prevent this.</p>
+<p><strong>Fix:</strong> Track <code>platformResolved</code> and <code>vendorResolved</code> independently; fire a review per declared-but-unmatched component.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-4 — Asymmetric guards drop the declared-but-unrecognised vendor case entirely <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/engine/evaluate.ts:274-275</code><br><strong>Found by:</strong> Panel C · Boris Beizer (<em>Software Testing Techniques</em>)</p>
+<p><strong>Issue:</strong> Guard 1 tests <code>!platformId &amp;&amp; !vendor</code> — a pre-lookup id paired with a post-lookup object. When only a vendor is declared and it is absent from a non-empty registry, the function returns <code>undefined</code> before guard 2 can distinguish 'no registry' from 'registry does not recognise this'. The caller never learns a vendor was declared.</p>
+<p><strong>Fix:</strong> Short-circuit only when nothing was declared (<code>!platformId &amp;&amp; !vendorId</code>). Any declared-but-unresolved id must produce a chain with <code>resolved: false</code>.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-5 — Check-then-act race on an append-only audit trail <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/seeds/sample-register.ts:151</code><br><strong>Found by:</strong> Panel C · Kent Beck / the project's own CLAUDE.md</p>
+<p><strong>Issue:</strong> <code>if (await getUseCase(id)) continue</code> is TOCTOU across an async boundary. Two concurrent calls both see 'absent' and both write, producing duplicate audit events — which by design cannot be cleaned up. <code>aigate-self-assessment.ts</code> sitting beside it does this correctly with a synchronous in-flight promise, and CLAUDE.md documents the lesson explicitly.</p>
+<p><strong>Fix:</strong> Wrap the body in the same synchronous in-flight promise guard used by <code>aigate-self-assessment.ts</code>.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-6 — PV-6 inheritance copy reintroduces the banned word &quot;approved&quot; <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/components/VerdictDisplay.tsx:241,253,259</code><br><strong>Found by:</strong> Panel D · McConnell / project convention</p>
+<p><strong>Issue:</strong> Acceptance tests use a <em>single-match</em> <code>getByText(/approved|rejected/i)</code>. The new inheritance block renders 'ON THE APPROVED REGISTRY', 'approved envelope', 'approved registry'. Currently latent — WalkingSkeleton declares no platform, so the block never renders there. It breaks the moment anyone tests a use case with a platform.</p>
+<p><strong>Fix:</strong> Reword to 'covered' / 'registered'. A landmine, not a live failure — which is worse, because it detonates for the next person.</p>
+</div><div class="finding critical">
+<h3><span class="sev-critical">CRITICAL</span> · C-7 — Spec HTML silently stale against its own .md <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>specs/verdict-audit.html</code><br><strong>Found by:</strong> Panel D · project convention</p>
+<p><strong>Issue:</strong> The V2-D reword landed in <code>verdict-audit.md</code> and never in <code>verdict-audit.html</code>. Verified: the new string appears once in .md, zero times in .html. <code>spec-parity-check.py</code> reads only .md by design, so it cannot see this.</p>
+<p><strong>Fix:</strong> Port the V2-D wording into the .html. Consider extending the parity script to diff .md/.html pairs.</p>
+</div>
+</section>
+
+<section><h2>Important findings</h2>
+<div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-1 — CS-1 margin fields computed, persisted, never rendered <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/components/VerdictDisplay.tsx</code><br><strong>Found by:</strong> Panel B · Keeling (<em>Design It!</em>)</p>
+<p><strong>Issue:</strong> <code>margin_achieved</code>, <code>margin_target</code>, <code>single_covered_invariants</code> and <code>boundary_proximity</code> are computed, written onto every verdict, present in fixtures — and read by zero components. Verified mechanically. <strong>HR-14 was fixed at the data layer and the identical defect reproduced at the UI layer in the same session.</strong></p>
+<p><strong>Fix:</strong> Render a margin section, or accept that CS-1 remains unsurfaced to the reviewer it was built for.</p>
+</div><div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-2 — Partial cluster declaration is more permissive than none <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/engine/envelope.ts:129-135</code><br><strong>Found by:</strong> Panel C · Robert C. Martin (<em>Clean Code</em>)</p>
+<p><strong>Issue:</strong> A control in no declared cluster survives an exceeded envelope, while with no clusters at all the entire approval is withdrawn. The file's own stated policy argues the conservative reading — the code inverts it.</p>
+<p><strong>Fix:</strong> Treat uncatalogued controls as implicit singleton clusters that also fall away, or document the divergence and test it.</p>
+</div><div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-3 — <code>deleteDatabase</code> resolves identically on success, error and blocked <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/store/reset.ts:17-19</code><br><strong>Found by:</strong> Panel C · Robert C. Martin (<em>Clean Code</em> Ch. 7)</p>
+<p><strong>Issue:</strong> A blocked delete (another tab holding a connection) resolves as success. The UI reports a clean reset while the audit trail may still be present.</p>
+<p><strong>Fix:</strong> Resolve with a status or reject; let the caller warn or retry.</p>
+</div><div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-4 — Stale comment describes working code as scaffolding</h3>
+<p><strong>Location:</strong> <code>src/engine/types.ts:83-86</code><br><strong>Found by:</strong> Panel E · stub-detection heuristic</p>
+<p><strong>Issue:</strong> The comment says <code>confidence_caveats</code> is 'always []'. It is populated by <code>caveatForFiredRule()</code>, rendered by VerdictDisplay, and asserted by a test. The inverse of this project's usual defect: documentation claiming <em>less</em> than the code delivers. Risk — a reader trusts it and deletes the mechanism that makes verdicts provisional.</p>
+<p><strong>Fix:</strong> Update the comment to reflect V2-A behaviour.</p>
+</div><div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-5 — <code>source_url</code> points at an index, not the cited letter</h3>
+<p><strong>Location:</strong> <code>policy/packs/sr-26-2.yaml:29</code><br><strong>Found by:</strong> Panel A · McConnell</p>
+<p><strong>Issue:</strong> The URL is the SR-letters index. The pack author flagged this in a trailing comment; the fix was never applied. A reviewer cannot verify the quote without searching — which defeats the point of carrying a source_url.</p>
+<p><strong>Fix:</strong> Replace with the direct URL to SR 26-2.</p>
+</div><div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · I-6 — <code>basis</code> vocabulary reused for an unrelated concept <span class="mine">INTRODUCED THIS SESSION</span></h3>
+<p><strong>Location:</strong> <code>src/components/VerdictDisplay.tsx:239</code><br><strong>Found by:</strong> Panel D · Brooks (conceptual integrity)</p>
+<p><strong>Issue:</strong> <code>verbatim</code>/<code>judgement</code> are the canonical basis values for pack-rule interpretation, rendered with that meaning at lines 147-155 of the same file. Line 239 reuses those class names to colour-code registry membership.</p>
+<p><strong>Fix:</strong> Give the registry indicator its own class names.</p>
+</div>
+</section>
+
+<section><h2>Minor and suggestions</h2>
+<ul>
+<li><strong>Minor</strong> — <code>ConfidenceCaveat.field</code> written by jurisdiction.ts, never read (Panel B).</li>
+<li><strong>Minor</strong> — <code>autonomy_level</code> ceiling hand-rolled rather than reusing <code>maxBy</code>; divergence risk (Panel C).</li>
+<li><strong>Minor</strong> — inheritance heading cites only PV-6 though the block implements PV-3/5/6 (Panel D).</li>
+<li><strong>Suggestion</strong> — <code>-1</code> sentinel rationale documented at one of three sites in envelope.ts (Panel C).</li>
+<li><strong>Suggestion</strong> — <code>EnvelopeDimensionFit</code> stringifies numeric dimensions, losing ordering for future consumers (Panel B).</li>
+<li><strong>Borderline, kept</strong> — CS-1 margin metric is degenerate at N=1: with one tripped invariant any non-zero target forces redundancy (Panels B and C, independently).</li>
+<li><strong>Borderline, kept</strong> — <code>jurisdictions[].pack_files</code> is never validated against the glob's actual file set; an orphaned pack would load with no diagnostic (Panel A).</li>
+</ul>
+</section>
+
+<section><h2>Surfaced requirements</h2>
+<p>Per shared rule 27, a requirement gap found during review is promoted to <code>requirements/requirements.md</code>, never parked. This section is the staging ground, not the destination.</p>
+<div class="finding important">
+<h3><span class="sev-important">IMPORTANT</span> · SR-1 — PV-2 and PV-5 are unreachable from the product's own intake</h3>
+<p><strong>Status:</strong> deferred — awaiting triage</p>
+<p><strong>Found:</strong> while fixing C-3. <code>build-graph-from-form.ts:58</code> hardcodes <code>vendor: 'internal'</code> and <code>StructuredForm.tsx</code> never asks for a vendor or a platform (zero mentions). Every use case submitted through the app therefore declares the same vendor and no platform.</p>
+<p><strong>Consequence:</strong> PV-2 (Must — an unregistered model is treated as a new vendor) can never fire, and PV-5 (Must — unapproved-component routing) is reachable for platforms only. Both are specified, implemented in the engine, and now test-covered, with no path from the UI. Testers cannot exercise inheritance at all.</p>
+<p><strong>Not fixed in this pass</strong> — it is a requirements question (PV-4's neighbour), and adding a feature during a fix pass is the scope confusion that produced HR-12 earlier the same day. Narrow mitigation applied instead: <code>'internal'</code> is treated as a reserved sentinel meaning "no third-party vendor", since it is not user input. Any other value remains a real registry claim.</p>
+<p><strong>Promotion route pending:</strong> acceptance criterion on PV-2/PV-5, a new requirement in the PV domain, or Round 2.</p>
+</div>
+</section>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+</main></div>
+</body>
+</html>

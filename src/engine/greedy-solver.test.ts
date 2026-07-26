@@ -12,7 +12,6 @@ function control(overrides: Partial<Control> & Pick<Control, 'id' | 'resolves' |
     name: overrides.id,
     description: '',
     verification: '',
-    platform_satisfies: [],
     ...overrides,
   };
 }

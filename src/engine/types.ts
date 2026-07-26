@@ -81,7 +81,11 @@ export interface ConfidenceCaveat {
   field: string;
   reason: string;
   // RA-11 (verdict-audit.md §5.3) — P5-C01 addition. Note: evaluate()
-  // does not yet populate confidence_caveats with real data (always []);
+  // Populated since V2-A by caveatForFiredRule() in jurisdiction.ts,
+// rendered by VerdictDisplay, asserted by evaluate.test.ts. The prior
+// comment said this was 'always []' — stale, and a reader trusting it
+// could have deleted the mechanism that makes verdicts provisional
+// (code review 001, I-4).
   // this field exists so VerdictDisplay.tsx can render correctly once a
   // future engine chunk starts producing real caveats.
   confidence: 'low' | 'medium' | 'high';
@@ -231,7 +235,9 @@ export interface RegistryEntry {
 export interface EnvelopeDimensionFit {
   dimension: string;
   fits: boolean;
-  approved: string;
+  // Renamed from `approved` (code review 001, C-6): the banned word must
+  // not re-enter the verdict screen through interpolated data.
+  ceiling: string;
   observed?: string;
 }
 
@@ -241,6 +247,10 @@ export interface InheritanceChain {
   declared_platform?: string;
   declared_vendor?: string;
   resolved: boolean;
+  // C-3: every declared component that is absent from the registry. `resolved`
+  // is now `unresolved_components.length === 0`, so an approved platform can
+  // no longer mask an unapproved vendor.
+  unresolved_components: string[];
   inherited_controls: string[];
   dimensions: EnvelopeDimensionFit[];
 }
@@ -429,7 +439,6 @@ export interface Control {
   resolves: string[];
   burden: 1 | 2 | 3 | 4 | 5;
   verification: string;
-  platform_satisfies: string[];
   // V1.3 (design-vision decision #3, proof-carrying controls): current
   // verification status + evidence binding. ABSENT = unverified — the
   // honest default (BC-V13-02). V1 statuses are attested by hand in the

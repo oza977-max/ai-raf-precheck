@@ -223,12 +223,39 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} />}
 
+      {explanation && explanation.tripped_invariants.length > 0 && (
+        <div className="verdict__chain">
+          <h3>Governance margin (CS-1)</h3>
+          <p className="verdict__chain-sub">
+            How much headroom this control set leaves. An invariant closed by exactly one control
+            sits on the appetite boundary — remove that control and the use case falls outside.
+          </p>
+          <p className="verdict__chain-derived">
+            → MARGIN&ensp;{Math.round(verdict.margin_achieved * 100)}% achieved against a{' '}
+            {Math.round(verdict.margin_target * 100)}% target
+            {verdict.boundary_proximity && ' — below target'}
+          </p>
+          {verdict.single_covered_invariants.length > 0 && (
+            <>
+              <p className="verdict__chain-derived">
+                → NO HEADROOM&ensp;{verdict.single_covered_invariants.join(', ')}
+              </p>
+              <p className="verdict__chain-basis-help">
+                {verdict.margin_achieved === 0
+                  ? 'No invariant here has an alternative control in the library, so no control set can create headroom. This is a limit of the rulebook, not of this use case.'
+                  : 'These invariants rest on a single control each.'}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       {verdict.inheritance && (
         <div className="verdict__chain">
-          <h3>Platform &amp; vendor inheritance (PV-6)</h3>
+          <h3>Platform &amp; vendor inheritance</h3>
           <p className="verdict__chain-sub">
             What an existing platform or vendor approval already covered, and the envelope that
-            justified it. Controls are inherited only where this use case sits inside the approved
+            justified it. Controls are inherited only where this use case sits inside the covered
             envelope.
           </p>
 
@@ -236,9 +263,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             <div className="verdict__chain-head">
               <code>{verdict.inheritance.declared_platform ?? verdict.inheritance.declared_vendor}</code>
               <span
-                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'verbatim' : 'judgement'}`}
+                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'registered' : 'unregistered'}`}
               >
-                {verdict.inheritance.resolved ? 'ON THE APPROVED REGISTRY' : 'NOT ON THE REGISTRY'}
+                {verdict.inheritance.resolved ? 'ON THE COVERED REGISTRY' : 'NOT ON THE REGISTRY'}
               </span>
             </div>
 
@@ -250,13 +277,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 </p>
               ) : (
                 <p className="verdict__chain-derived">
-                  → NOTHING INHERITED&ensp;this use case falls outside the approved envelope, so its
+                  → NOTHING INHERITED&ensp;this use case falls outside the covered envelope, so its
                   controls are assessed from scratch.
                 </p>
               )
             ) : (
               <p className="verdict__chain-derived">
-                → NOTHING INHERITED&ensp;this component is not on the approved registry. A full
+                → NOTHING INHERITED&ensp;this component is not on the covered registry. A full
                 vendor and platform risk assessment is required.
               </p>
             )}
@@ -271,7 +298,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                     >
                       {d.fits ? 'WITHIN ENVELOPE' : 'OUTSIDE ENVELOPE'}
                     </span>{' '}
-                    — cleared to {d.approved}
+                    — cleared for {d.ceiling}
                     {d.observed !== undefined && <>; this use case has {d.observed}</>}
                   </li>
                 ))}

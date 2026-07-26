@@ -143,9 +143,29 @@ export function sampleCount(): number {
   return SAMPLES.length;
 }
 
-// Idempotent: a sample already in the register is skipped, so re-running
-// never duplicates. Returns how many were newly seeded.
-export async function seedSampleRegister(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<number> {
+// Code review 001, C-5. The per-item `if (await getUseCase(id)) continue`
+// below is check-then-act across an async boundary: two concurrent callers
+// both observe "absent" before either writes, and both proceed. The audit
+// trail is append-only, so the duplicate events they write can never be
+// removed — and the second addNode then throws ConstraintError, leaving the
+// trail corrupted AND the seed half-finished.
+//
+// The existence check is necessary but not sufficient. This in-flight
+// promise collapses concurrent calls onto one execution, the same guard
+// aigate-self-assessment.ts has always used. A synchronous assignment is
+// required: any `await` before the guard is set reopens the window.
+let inFlight: Promise<number> | null = null;
+
+export function seedSampleRegister(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<number> {
+  if (!inFlight) {
+    inFlight = runSeed(policy, packs).finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<number> {
   let seeded = 0;
 
   for (const sample of SAMPLES) {

@@ -43,7 +43,6 @@ controls:
     resolves: []
     burden: 1
     verification: "manual check"
-    platform_satisfies: []
 
 kri_thresholds: {}
 
@@ -99,7 +98,7 @@ describe('loadPolicy', () => {
 
   it('rejects a policy with an empty controls array', () => {
     const yaml = VALID_YAML.replace(
-      /controls:\n(.|\n)*?platform_satisfies: \[\]\n/,
+      /controls:\n(.|\n)*?verification: \"manual check\"\n/,
       'controls: []\n',
     );
     const result = loadPolicy(yaml);

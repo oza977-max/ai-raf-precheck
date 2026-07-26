@@ -33,7 +33,6 @@ function ctrl(id: string, resolves: string[], burden: number): Control {
     resolves,
     burden,
     verification: 'test fixture',
-    platform_satisfies: [],
   } as Control;
 }
 
