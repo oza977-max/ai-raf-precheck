@@ -223,6 +223,64 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} />}
 
+      {verdict.inheritance && (
+        <div className="verdict__chain">
+          <h3>Platform &amp; vendor inheritance (PV-6)</h3>
+          <p className="verdict__chain-sub">
+            What an existing platform or vendor approval already covered, and the envelope that
+            justified it. Controls are inherited only where this use case sits inside the approved
+            envelope.
+          </p>
+
+          <div className="verdict__chain-entry">
+            <div className="verdict__chain-head">
+              <code>{verdict.inheritance.declared_platform ?? verdict.inheritance.declared_vendor}</code>
+              <span
+                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'verbatim' : 'judgement'}`}
+              >
+                {verdict.inheritance.resolved ? 'ON THE APPROVED REGISTRY' : 'NOT ON THE REGISTRY'}
+              </span>
+            </div>
+
+            {verdict.inheritance.resolved ? (
+              verdict.inheritance.inherited_controls.length > 0 ? (
+                <p className="verdict__chain-derived">
+                  → INHERITED&ensp;{verdict.inheritance.inherited_controls.join(', ')} — already
+                  satisfied by this approval, so not re-imposed here.
+                </p>
+              ) : (
+                <p className="verdict__chain-derived">
+                  → NOTHING INHERITED&ensp;this use case falls outside the approved envelope, so its
+                  controls are assessed from scratch.
+                </p>
+              )
+            ) : (
+              <p className="verdict__chain-derived">
+                → NOTHING INHERITED&ensp;this component is not on the approved registry. A full
+                vendor and platform risk assessment is required.
+              </p>
+            )}
+
+            {verdict.inheritance.dimensions.length > 0 && (
+              <ul className="verdict__tripped">
+                {verdict.inheritance.dimensions.map((d) => (
+                  <li key={d.dimension}>
+                    <code>{d.dimension}</code>{' '}
+                    <span
+                      className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}
+                    >
+                      {d.fits ? 'WITHIN ENVELOPE' : 'OUTSIDE ENVELOPE'}
+                    </span>{' '}
+                    — cleared to {d.approved}
+                    {d.observed !== undefined && <>; this use case has {d.observed}</>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {explanation?.regulatory_chain && explanation.regulatory_chain.length > 0 && (
         <div className="verdict__chain">
           <h3>Regulatory reasoning chain (RA-9)</h3>

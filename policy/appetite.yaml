@@ -494,3 +494,60 @@ tier_workflow:
   Low: "self-service"
 
 safety_margin: 0.10
+
+# ==============================================================================
+# APPROVED PLATFORM REGISTRY (PV-1) — [FIRM] MUST REPLACE
+# ==============================================================================
+# Illustrative entries so the inheritance mechanics are visible before a firm
+# builds its own registry (PV-8). These are NOT your firm's approvals.
+#
+# How it works: a use case declaring one of these platforms inherits the
+# controls its approval already satisfies — but ONLY where the use case sits
+# inside the approved envelope. Exceed any dimension and the inheritance is
+# withdrawn (PV-3), because a platform approval is granted as a package and
+# partially exceeding its basis does not leave the remainder justified.
+#
+# Every inheritance is shown on the verdict with the envelope that justified
+# it, so "was residency assessed?" has an answer (PV-6).
+platforms:
+  - id: "PLAT-INTERNAL-ML"
+    name: "[FIRM] internal ML platform"
+    approved_envelope:
+      max_data_class: "Confidential"
+      max_exposure: "internal-shared"
+      max_autonomy_level: 2
+      data_zones: ["Zone B", "Zone C"]
+      jurisdictions: ["UK", "EU"]
+    satisfies_controls:
+      - "CTRL-ENC-01"
+      - "CTRL-FINGERPRINT-01"
+      - "CTRL-DRIFT-01"
+
+  - id: "PLAT-CLOUD-LLM"
+    name: "[FIRM] approved cloud LLM service"
+    # Deliberately narrower: cleared for drafting work, not for client-facing
+    # output or personal data. A client-facing chatbot on this platform
+    # exceeds it and inherits nothing — the visible over-envelope case PV-8
+    # asks for.
+    approved_envelope:
+      max_data_class: "Internal"
+      max_exposure: "internal-shared"
+      max_autonomy_level: 1
+      data_zones: ["Zone B"]
+      jurisdictions: ["UK", "EU"]
+    satisfies_controls:
+      - "CTRL-ENC-01"
+      - "CTRL-FINGERPRINT-01"
+
+# APPROVED VENDOR / MODEL REGISTRY (PV-2) — [FIRM] MUST REPLACE
+# A model not on this registry is treated as a new vendor and inherits
+# nothing (PV-5). Ids must match the `vendor` recorded on the use case.
+vendors:
+  - id: "VENDOR-APPROVED-LLM"
+    name: "[FIRM]-approved third-party LLM"
+    approved_envelope:
+      max_data_class: "Internal"
+      max_exposure: "internal-shared"
+      data_zones: ["Zone B"]
+    satisfies_controls:
+      - "CTRL-ENC-01"
