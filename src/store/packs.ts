@@ -22,6 +22,10 @@ const PackRuleSchema = z.object({
     document: z.string().min(1),
     section: z.string().min(1),
     text: z.string().min(1),
+    // V2-F: optional so pre-V2-F packs still load, but every rule a human
+    // is expected to sign should carry one.
+    source_url: z.string().min(1).optional(),
+    retrieved_date: z.string().min(1).optional(),
   }),
   effect: PackRuleEffectSchema,
   condition: z.record(z.string(), z.unknown()),

@@ -6,7 +6,21 @@
 # READ THIS BEFORE USING
 # ----------------------
 # This file is a template. It is grounded in SR 26-2 (US), SS1/23 (UK PRA),
-# EU AI Act, OSFI E-23 (Canada), MAS FEAT (Singapore), DORA, and FSA Japan.
+# EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
+#
+# REGULATORY CURRENCY — last reviewed 2026-07-26. What changed at that review:
+#   * SR 26-2 issued 2026-04-17 (replaces SR 11-7). Generative and agentic AI
+#     are carved OUT of the model definition (footnote 3) but remain subject to
+#     general risk management. TRACK-III exists to catch exactly that gap.
+#   * EU AI Act Digital Omnibus postponed Annex III high-risk obligations to
+#     2 December 2027. Article 50 transparency was NOT postponed and applies
+#     from 2 August 2026 — this drove INV-DISCLOSE-01 below.
+#   * OSFI E-23 final published 2025-09-11, in force 1 May 2027.
+#   * MAS: FEAT is non-binding; formal AI Risk Management Guidelines were
+#     consulted on (closed 31 Jan 2026) with a 12-month transition. Not yet
+#     a stable rule source.
+# A verdict is only as current as this date. Re-check on each regulator alert;
+# see docs/approach.md for the maintenance loop.
 # It is a credible, defensible starting point — but it is not your framework
 # until your CRO or equivalent has reviewed and formally adopted it.
 #
@@ -124,14 +138,14 @@ tracks:
 
   - id: "TRACK-III"
     name: "Track III — AI Governance"
-    description: "Generative and agentic AI outside MRM scope (SR 26-2 exclusion); governed by AI Governance Track"
+    description: "Generative and agentic AI carved out of MRM by SR 26-2 footnote 3 — outside model risk, NOT outside governance; routed here"
     conditions:
       - field: "model_type"
         value: { in: ["llm", "generative-ai", "agentic"] }
       - field: "decision_bindingness"
         value: { in: ["non-binding"] }
     short_circuit: true
-    regulatory_basis: "SR 26-2 §III.C (GenAI excluded from MRM pending RFI)"
+    regulatory_basis: "SR 26-2 footnote 3 (generative and agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary)"
 
 tiers:
   - id: "TIER-CRITICAL"
@@ -197,6 +211,15 @@ invariants:
     required_controls: []
     severity: "Critical"
     regulatory_basis: "MAR Article 8; MiFID II"
+
+  - id: "INV-DISCLOSE-01"
+    description: "A person dealing with an AI must be told they are dealing with an AI"
+    condition:
+      exposure: { in: ["client-facing"] }
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+    required_controls: ["CTRL-DISCLOSE-01"]
+    severity: "High"
+    regulatory_basis: "EU AI Act Art. 50(1) — applies from 2026-08-02, NOT postponed by the Digital Omnibus"
 
   - id: "INV-TRACK2-01"
     description: "Track II baseline — hosted models can be substituted without notice; output fingerprinting and version pinning are mandatory"
@@ -318,6 +341,22 @@ controls:
       detail: "Platform allow-list pins TLS 1.3; platform attestation on file"
       attested_by: "[FIRM] — Platform Engineering"
       attested_at: "[DATE]"
+
+  - id: "CTRL-DISCLOSE-01"
+    name: "AI interaction disclosure"
+    description: "The interface states plainly that the user is interacting with an AI system, before or at the point of interaction"
+    resolves: ["INV-DISCLOSE-01"]
+    burden: 1
+    verification: "Screenshot or UX spec showing the disclosure at first contact"
+    platform_satisfies: []
+
+  - id: "CTRL-SYNTHMARK-01"
+    name: "Synthetic content marking"
+    description: "AI-generated content leaving the firm is marked in a machine-readable format as artificially generated"
+    resolves: []
+    burden: 3
+    verification: "Output carries provenance metadata (e.g. C2PA) detectable by a third party"
+    platform_satisfies: []
 
   - id: "CTRL-FINGERPRINT-01"
     name: "Output fingerprinting + version pinning"

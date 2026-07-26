@@ -196,7 +196,13 @@ export type PackBasis =
 export interface PackRuleSource {
   document: string;
   section: string;
-  text: string; // verbatim — or carrying the [ILLUSTRATIVE …] marker until pack authoring copies from a retrieved source
+  text: string;
+  // V2-F: a reviewer's first question is "is this quote real?". Without a
+  // link they have to go and find the provision themselves, which is the
+  // step that makes pack sign-off feel like reading the whole regulation.
+  // Optional so pre-V2-F packs still load.
+  source_url?: string;
+  retrieved_date?: string;
 }
 
 export type PackRuleEffect =

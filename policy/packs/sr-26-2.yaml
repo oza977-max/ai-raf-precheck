@@ -1,24 +1,44 @@
-# US Fed/OCC/FDIC SR 26-2 pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+# ==============================================================================
+# SR 26-2 (US) — DRAFT STARTER PACK. NOT ADOPTED. NOT LEGAL ADVICE.
+# ==============================================================================
+# Quote retrieved 2026-07-26 and copied verbatim; NOT verified by counsel.
+#
+# ISSUED 17 APRIL 2026 by the Federal Reserve, FDIC and OCC, replacing SR 11-7.
+# The change that matters for AI: generative and agentic AI are carved OUT of
+# the model definition, so they fall outside formal MRM — but the agencies are
+# explicit that general risk management still applies. That gap is exactly what
+# a firm's own AI appetite has to fill, and it is why AIGate routes generative
+# and agentic systems to a separate AI Governance track rather than treating
+# "not a model" as "not governed".
+#
+# The exclusion is described as temporary. Re-check on each SR update.
 pack_id: "SR-26-2"
-version: "0.1-proposed"
+version: "0.2-draft"
 jurisdiction: "US"
-regulator: "Fed/OCC/FDIC"
-document: "SR 26-2 — Model Risk Management: AI/ML Scope"
-effective_date: "2026-01-15"
+regulator: "Federal Reserve / FDIC / OCC"
+document: "SR 26-2 — Revised Guidance on Model Risk Management"
+effective_date: "2026-04-17"
 reviewer_name: "[FIRM] — Model Risk"
 reviewer_role: "Head of Model Risk"
 sign_off_date: "[DATE]"
 
 rules:
   - id: "SR262-US-REV-01"
-    title: "US MRM scope assessment for material AI/ML models"
+    title: "Generative and agentic AI are outside MRM scope — governed elsewhere, not ungoverned"
     source:
       document: "SR 26-2"
-      section: "§II.A"
-      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] AI/ML models whose outputs materially inform decisions fall within model risk management scope and require a scope assessment."
+      section: "Footnote 3"
+      text: "Generative AI and agentic AI models are novel and rapidly evolving. As such, they are not within the scope of this guidance."
+      source_url: "https://www.federalreserve.gov/supervisionreg/srletters/srletters.htm"
+      retrieved_date: "2026-07-26"
     effect:
       type: "required_review"
-      review: "US MRM scope assessment"
+      review: "AI Governance review (outside MRM scope per SR 26-2)"
     condition:
-      decision_bindingness: { in: ["material", "binding"] }
-    basis: "derived"
+      model_type: { in: ["generative-ai", "llm", "agentic"] }
+    # The quote states an exclusion. It does NOT say "therefore run an AI
+    # governance review" — that is the firm's own response to the gap the
+    # exclusion leaves. Reviewer: confirm the firm wants this routing, and
+    # confirm the source_url still resolves to SR 26-2 (link is to the SR
+    # letter index, not the letter itself — replace with the direct URL).
+    basis: "judgement"

@@ -84,7 +84,7 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     expect(r.value.track).toBe('II');
     expect(r.value.controls).toContain('CTRL-ENC-01');
     expect(r.value.downstream_reviews).toEqual([
-      'ICT third-party concentration review',
+      'ICT third-party concentration review (DORA Art. 28/29)',
       'Independent model validation (2LoD)',
     ]);
     const chain = r.value.explanation.regulatory_chain ?? [];
@@ -126,8 +126,8 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     if (!r.ok) return;
     expect(r.value.tier).toBe('High');
     expect(r.value.downstream_reviews).toEqual([
-      'Explainability documentation review',
-      'Fairness & accountability review (FEAT)',
+      'AI governance review',
+      'Fairness and conduct assessment',
     ]);
     expect(r.value.confidence_caveats.length).toBeGreaterThan(0);
   });

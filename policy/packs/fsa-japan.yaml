@@ -1,24 +1,34 @@
-# FSA Japan pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+# ==============================================================================
+# FSA Japan — NOT AUTHORED. PLACEHOLDER TEXT. DO NOT SIGN.
+# ==============================================================================
+# No primary source has been retrieved for this pack. The rule below exists to
+# hold the shape of a Japan pack, not to be relied on. The engine flags any
+# verdict touching it as unreviewable.
+#
+# If Japan is not a jurisdiction your firm operates in, the right action is to
+# DELETE this file rather than carry an unauthored pack — see docs/approach.md
+# on doing one jurisdiction properly instead of seven badly.
 pack_id: "FSA-JP"
-version: "0.1-proposed"
+version: "0.2-unauthored"
 jurisdiction: "JP"
-regulator: "FSA Japan"
-document: "FSA AI Guidance — Explainability and Audit Trail Expectations"
-effective_date: "2025-06-01"
+regulator: "Financial Services Agency of Japan"
+document: "[PRIMARY SOURCE NOT YET IDENTIFIED]"
+effective_date: "[TBC]"
 reviewer_name: "[FIRM] — Compliance"
 reviewer_role: "Head of Compliance"
 sign_off_date: "[DATE]"
 
 rules:
   - id: "FSAJP-REV-01"
-    title: "Explainability documentation for generative models"
+    title: "Governance review for AI in customer-facing financial services"
     source:
-      document: "FSA AI Guidance"
-      section: "§2"
-      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Firms deploying generative AI should maintain explainability documentation and audit trails for material outputs."
+      document: "[PRIMARY SOURCE NOT YET IDENTIFIED]"
+      section: "[SECTION TBC]"
+      text: "[ILLUSTRATIVE — NOT VERBATIM — no primary source retrieved for this pack]"
+      retrieved_date: "[NOT RETRIEVED]"
     effect:
       type: "required_review"
-      review: "Explainability documentation review"
+      review: "AI governance review"
     condition:
-      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["client-facing"] }
     basis: "judgement"

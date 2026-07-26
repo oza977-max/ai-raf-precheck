@@ -154,10 +154,13 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.getByText('EU')).toBeInTheDocument();
     // V2-A: packs genuinely load now; every chip carries the pending-
     // adoption qualifier because all sign-offs are [FIRM] placeholders.
-    const chips = screen.getAllByText(/loaded — .+\(\d+ rules?, v[\d.]+-proposed\).*· pending adoption/);
+    // V2-F: version suffixes are now -draft (real text retrieved, awaiting
+    // human review) or -unauthored (no primary source retrieved yet), so the
+    // match is on the version shape rather than the old "-proposed" literal.
+    const chips = screen.getAllByText(/loaded — .+\(\d+ rules?, v[\d.]+-\w+\).*· pending adoption/);
     expect(chips.length).toBeGreaterThanOrEqual(6);
     // Review fix, pass 1: EU declares TWO packs — both must be visible.
-    expect(screen.getByText(/EU-AIACT \(2 rules, v0\.1-proposed\) \+ DORA \(1 rule, v0\.1-proposed\)|DORA \(1 rule, v0\.1-proposed\) \+ EU-AIACT \(2 rules, v0\.1-proposed\)/)).toBeInTheDocument();
+    expect(screen.getByText(/EU-AIACT \(4 rules, v0\.2-draft\) \+ DORA \(1 rule, v0\.2-draft\)|DORA \(1 rule, v0\.2-draft\) \+ EU-AIACT \(4 rules, v0\.2-draft\)/)).toBeInTheDocument();
     // "fired" remains a per-verdict concept (the RA-9 chain), never a
     // static pack state.
     expect(screen.queryByText(/fired/i)).not.toBeInTheDocument();

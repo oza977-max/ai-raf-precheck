@@ -1,9 +1,18 @@
-# EU DORA pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+# ==============================================================================
+# DORA (EU) — DRAFT STARTER PACK. NOT ADOPTED. NOT LEGAL ADVICE.
+# ==============================================================================
+# Quotes retrieved 2026-07-26 and copied verbatim; NOT verified by counsel.
+#
+# Applicable since 17 January 2025. DORA is not an AI regulation — it is an ICT
+# resilience regulation that catches AI when the AI is delivered by a third
+# party, which most useful AI is. The concentration-risk angle is the one that
+# actually bites: several critical use cases on one model vendor is a DORA
+# problem before it is an AI problem.
 pack_id: "DORA"
-version: "0.1-proposed"
+version: "0.2-draft"
 jurisdiction: "EU"
-regulator: "European Commission / ESAs"
-document: "Digital Operational Resilience Act (Reg. (EU) 2022/2554)"
+regulator: "European Supervisory Authorities"
+document: "Regulation (EU) 2022/2554 (DORA)"
 effective_date: "2025-01-17"
 reviewer_name: "[FIRM] — Technology Risk"
 reviewer_role: "Head of Technology Risk"
@@ -11,14 +20,21 @@ sign_off_date: "[DATE]"
 
 rules:
   - id: "DORA-EU-REV-01"
-    title: "ICT third-party risk review for cloud-processed workloads"
+    title: "Third-party AI concentration risk must be assessed"
     source:
       document: "DORA"
-      section: "Art. 28"
-      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Financial entities shall manage ICT third-party risk, including concentration risk arising from reliance on cloud service providers."
+      section: "Article 28(4)(c)"
+      text: "identify and assess all relevant risks in relation to the contractual arrangement, including the possibility that such contractual arrangement may contribute to reinforcing ICT concentration risk as referred to in Article 29"
+      source_url: "https://www.digital-operational-resilience-act.com/Article_28.html"
+      retrieved_date: "2026-07-26"
     effect:
       type: "required_review"
-      review: "ICT third-party concentration review"
+      review: "ICT third-party concentration review (DORA Art. 28/29)"
     condition:
       data_zone: { in: ["Zone B"] }
+    # Zone B (vendor-hosted) is used as the proxy for "supported by an ICT
+    # third-party service provider". That is close but not identical — a
+    # self-hosted open-weights model in Zone B would trip this wrongly, and a
+    # Zone C deployment of vendor software would be missed. Reviewer: consider
+    # whether the graph needs an explicit third-party flag.
     basis: "derived"
