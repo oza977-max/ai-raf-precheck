@@ -26,6 +26,7 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 npm install
 npm run dev      # app on http://localhost:5173
 npm test         # 227 tests
+npm run docs:rules   # regenerate docs/rules.md from the policy files
 ```
 
 No backend, no database, no API key required. The whole app is a static
