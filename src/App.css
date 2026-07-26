@@ -1648,3 +1648,19 @@ details input {
 .verdict__trace summary:hover {
   color: var(--ink);
 }
+
+/* explore-001 D-002/D-003: a restored draft must announce itself — dropping
+   the user mid-flow with no explanation is the surprise NF-2 guards against. */
+.intake-flow__resumed {
+  margin: 0 0 1rem;
+  padding: .7rem .9rem;
+  border-left: 4px solid var(--low);
+  background: #eef4ee;
+  font-size: .88rem;
+  line-height: 1.5;
+}
+.intake-flow__resumed button {
+  margin-left: .6rem;
+  font-size: .82rem;
+  padding: .2rem .6rem;
+}

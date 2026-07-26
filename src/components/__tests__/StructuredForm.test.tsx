@@ -105,3 +105,64 @@ describe('StructuredForm — business-friendly wording (V2-E)', () => {
     expect(screen.getByText(/be honest about what happens in practice/i)).toBeInTheDocument();
   });
 });
+
+// SR-1 (code review 001). PV-2 and PV-5 were implemented in the engine, test-
+// covered, and unreachable from the product: build-graph-from-form hardcoded
+// vendor:'internal' and the form never asked for a platform or vendor. The
+// engine capability existed with no path from the UI.
+describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => {
+  const PLATFORMS = [
+    { id: 'PLAT-A', name: 'Internal ML platform', approved_envelope: {}, satisfies_controls: [] },
+  ];
+  const VENDORS = [
+    { id: 'VENDOR-A', name: 'Approved LLM vendor', approved_envelope: {}, satisfies_controls: [] },
+  ];
+
+  async function fill(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'SR-1 probe');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+  }
+
+  it('offers the approved platforms and vendors from the policy registries', () => {
+    render(<StructuredForm jurisdictions={JURISDICTIONS} platforms={PLATFORMS} vendors={VENDORS} onSubmit={vi.fn()} />);
+    expect(screen.getByRole('option', { name: /Internal ML platform \(PLAT-A\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Approved LLM vendor \(VENDOR-A\)/ })).toBeInTheDocument();
+    // PV-5 must be reachable: a component NOT on the registry has to be sayable.
+    expect(screen.getAllByRole('option', { name: /not on the list/i }).length).toBe(2);
+  });
+
+  it('carries a selected platform and vendor onto the graph, so PV-3 and PV-5 can fire', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<StructuredForm jurisdictions={JURISDICTIONS} platforms={PLATFORMS} vendors={VENDORS} onSubmit={onSubmit} />);
+    await fill(user);
+    await user.selectOptions(screen.getByLabelText(/which approved platform/i), 'PLAT-A');
+    await user.selectOptions(screen.getByLabelText(/whose model or service/i), 'VENDOR-A');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    const graph = onSubmit.mock.calls[0]?.[0];
+    expect(graph.processing_nodes[0].platform).toBe('PLAT-A');
+    expect(graph.processing_nodes[0].vendor).toBe('VENDOR-A');
+  });
+
+  it("defaults to the 'internal' sentinel when nothing is chosen, so existing behaviour is unchanged", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    const graph = onSubmit.mock.calls[0]?.[0];
+    expect(graph.processing_nodes[0].vendor).toBe('internal');
+    expect(graph.processing_nodes[0].platform).toBeUndefined();
+  });
+});

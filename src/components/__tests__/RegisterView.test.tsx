@@ -265,12 +265,12 @@ describe('RegisterDetail (V1.2-A)', () => {
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Timeline probe case'));
 
-    expect(await screen.findByText(/immutable audit trail/i)).toBeInTheDocument();
+    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
     expect(screen.getByText('graph_confirmed')).toBeInTheDocument();
     expect(screen.getByText('verdict_produced')).toBeInTheDocument();
     expect(screen.getByText(/approved with controls · High · Track II/i)).toBeInTheDocument();
     // honest NF-2 caveat (design-vision L-3)
-    expect(screen.getByText(/provisional \/ proof-of-concept grade/i)).toBeInTheDocument();
+    expect(screen.getByText(/proof-of-concept grade, not\s+tamper-evident/i)).toBeInTheDocument();
   });
 
   it('B5: 2LoD Approve appends twoloD_reviewed then lifecycle_stage_changed and advances the stage to approved', async () => {
@@ -379,7 +379,34 @@ describe('RegisterDetail (V1.2-A)', () => {
     expect(await screen.findByText(/viewing as 1LoD/i)).toBeInTheDocument();
 
     await user.click(screen.getByText('Role gate probe'));
-    expect(await screen.findByText(/immutable audit trail/i)).toBeInTheDocument();
+    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
+  });
+});
+
+// explore-002 observation. The heading asserted "Immutable audit trail" above
+// the events while the client-side qualifier sat below them — the strong word
+// read first, the qualifier last or not at all on a long trail. "Immutable"
+// also overstates what a browser-held store can support (NF-2: never claim
+// more than can be proved).
+describe('RegisterDetail — audit trail honesty (explore-002)', () => {
+  it('does not claim immutability, and qualifies the trail before the events are read', async () => {
+    const user = userEvent.setup();
+    const node = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'Honesty probe case' });
+    await addNode(node);
+    await seedVerdictEvent(node.node_id);
+
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    await user.click(await screen.findByText('Honesty probe case'));
+
+    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
+    expect(screen.queryByText(/immutable/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/not tamper-evident/i)).toBeInTheDocument();
+
+    // The qualifier must PRECEDE the events in document order — that was the
+    // whole finding, not the wording alone.
+    const caveat = screen.getByText(/proof-of-concept grade/i);
+    const firstEvent = screen.getByText('graph_confirmed');
+    expect(caveat.compareDocumentPosition(firstEvent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -20,6 +20,7 @@ import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/a
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
 import { intakeReducer } from './intake-state';
+import { saveDraft, loadDraft, clearDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import GraphView from './GraphView';
@@ -35,7 +36,22 @@ import VerdictDisplay from './VerdictDisplay';
 const INITIAL_STATE: IntakeState = { step: 'description_entry', description: '' };
 
 export default function IntakeFlow() {
-  const [state, dispatch] = useReducer(intakeReducer, INITIAL_STATE);
+  // explore-001 D-002/D-003: restore any in-flight draft so a refresh,
+  // browser Back, or a trip to the Register mid-intake no longer discards
+  // the description, the guided-form answers and the extracted graph.
+  // Lazy init so the read happens once, before first paint.
+  const restoredDraft = useRef<boolean>(loadDraft() !== null);
+  const [state, dispatch] = useReducer(intakeReducer, INITIAL_STATE, (initial) => loadDraft() ?? initial);
+  // Restoring silently would drop the user somewhere they did not navigate
+  // to, with no explanation — the same class of surprise NF-2 exists to
+  // prevent. Say what happened and offer a way out.
+  const [showResumed, setShowResumed] = useState(restoredDraft.current);
+
+  function handleStartOver() {
+    clearDraft();
+    setShowResumed(false);
+    dispatch({ type: 'DESCRIPTION_CHANGED', description: '' });
+  }
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
   const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
@@ -185,6 +201,13 @@ export default function IntakeFlow() {
   // pattern as RegisterDetail's 2LoD action guard and the seed function's
   // in-flight promise (code review C-5).
   const confirmInFlight = useRef(false);
+
+  useEffect(() => {
+    // The draft is UI convenience only — never the audit trail, which is
+    // written exclusively through appendAuditEvent.
+    if (state.step === 'verdict') clearDraft();
+    else saveDraft(state);
+  }, [state]);
 
   async function handleConfirmAndEvaluate() {
     if (state.step !== 'confirmation') return;
@@ -411,6 +434,16 @@ export default function IntakeFlow() {
         and returns a defensible verdict.
       </p>
 
+      {showResumed && state.step !== 'description_entry' && (
+        <div className="intake-flow__resumed" role="status">
+          <strong>Picked up where you left off.</strong> Your unfinished pre-check was restored — you were
+          part-way through, and refreshing or navigating away no longer loses it.
+          <button type="button" onClick={handleStartOver}>
+            Start over instead
+          </button>
+        </div>
+      )}
+
       <StepTracker current={state.step} />
 
       <div className="card">
@@ -478,6 +511,8 @@ export default function IntakeFlow() {
         {state.step === 'graph_extraction' && state.method === 'form' && (
           <StructuredForm
             jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
+            platforms={policyResult.valid ? policyResult.policy.platforms ?? [] : []}
+            vendors={policyResult.valid ? policyResult.policy.vendors ?? [] : []}
             onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph, useCaseId: crypto.randomUUID() })}
           />
         )}

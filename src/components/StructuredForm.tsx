@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ACTION_TYPES,
   DATA_CLASSES,
@@ -21,8 +21,9 @@ import {
   SCALE_LABELS,
 } from './field-copy';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
+import { saveFormDraft, loadFormDraft, clearFormDraft } from './intake-draft';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
-import type { DataFlowGraph, JurisdictionEntry } from '../engine/types';
+import type { DataFlowGraph, JurisdictionEntry, RegistryEntry } from '../engine/types';
 
 // UC-3a (intake-flow.md §5). Rule 4 (cross-cutting.md §7): presentation-only
 // — calls buildGraphFromForm(), no business logic inline.
@@ -37,15 +38,26 @@ import type { DataFlowGraph, JurisdictionEntry } from '../engine/types';
 
 interface StructuredFormProps {
   jurisdictions: JurisdictionEntry[];
+  platforms?: RegistryEntry[];
+  vendors?: RegistryEntry[];
   onSubmit: (graph: DataFlowGraph) => void;
 }
 
-export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFormProps) {
-  const [values, setValues] = useState<Partial<StructuredFormValues>>({
-    autonomyLevel: 0,
-    replacesPriorModel: false,
-    jurisdictions: [],
-  });
+export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], onSubmit }: StructuredFormProps) {
+  // D-002/D-003: restore any half-filled form so a refresh or a trip to the
+  // register no longer costs the user eleven answers.
+  const [values, setValues] = useState<Partial<StructuredFormValues>>(
+    () =>
+      loadFormDraft<Partial<StructuredFormValues>>() ?? {
+        autonomyLevel: 0,
+        replacesPriorModel: false,
+        jurisdictions: [],
+      },
+  );
+
+  useEffect(() => {
+    saveFormDraft(values);
+  }, [values]);
 
   function update<K extends keyof StructuredFormValues>(field: K, value: StructuredFormValues[K]) {
     setValues((v) => ({ ...v, [field]: value }));
@@ -72,6 +84,7 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
 
   function handleSubmit() {
     if (!isComplete(values)) return;
+    clearFormDraft();
     onSubmit(buildGraphFromForm(values));
   }
 
@@ -260,6 +273,45 @@ export default function StructuredForm({ jurisdictions, onSubmit }: StructuredFo
             {REVERSIBILITY_LABELS[v]}
           </option>
         ))}
+      </select>
+
+      <label htmlFor="sf-platform">Which approved platform does it run on? (optional)</label>
+      <p className="field-help">
+        If it runs on a platform your firm has already approved, say so — the controls that approval
+        already covers are not asked for again. Choosing one your firm has not approved routes it to a
+        full platform risk assessment.
+      </p>
+      <select
+        id="sf-platform"
+        value={values.platform ?? ''}
+        onChange={(e) => update('platform', e.target.value || undefined)}
+      >
+        <option value="">Not on an approved platform / don&apos;t know</option>
+        {platforms.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} ({p.id})
+          </option>
+        ))}
+        <option value="__other__">Something else — not on the list</option>
+      </select>
+
+      <label htmlFor="sf-vendor">Whose model or service is it? (optional)</label>
+      <p className="field-help">
+        Leave as internal if the firm built it. A vendor not on the approved list is treated as a new
+        vendor and triggers a full vendor risk assessment.
+      </p>
+      <select
+        id="sf-vendor"
+        value={values.vendor ?? ''}
+        onChange={(e) => update('vendor', e.target.value || undefined)}
+      >
+        <option value="">Built in-house (internal)</option>
+        {vendors.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.name} ({v.id})
+          </option>
+        ))}
+        <option value="__other__">Another vendor — not on the list</option>
       </select>
 
       <label htmlFor="sf-decision-type">What kind of decision does it feed? (optional)</label>

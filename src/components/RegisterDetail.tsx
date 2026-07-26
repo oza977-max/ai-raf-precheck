@@ -204,7 +204,18 @@ export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDeta
       )}
 
       <div className="register-detail__timeline">
-        <h3>Immutable audit trail (VD-4 / NF-2) · append-only</h3>
+        <h3>Audit trail (VD-4 / NF-2) · append-only</h3>
+        {/* explore-002 observation: the heading previously read "Immutable
+            audit trail" with this caveat placed BELOW the event list, so the
+            strong word was read first and the qualifier last — if at all, on
+            a long trail. "Immutable" also overstates what a browser-held
+            store can support. The caveat now sits directly under the heading,
+            before any event. */}
+        <p className="register-detail__caveat">
+          Append-only by construction: nothing here can be edited or deleted through the application.
+          But this is V1 — the trail is held in your browser, so it is proof-of-concept grade, not
+          tamper-evident against anyone with access to this machine (NF-2).
+        </p>
         <ul className="timeline">
           {events.map((event) => (
             <li key={event.event_id} className="timeline__row">
@@ -220,10 +231,6 @@ export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDeta
             </li>
           ))}
         </ul>
-        <p className="register-detail__caveat">
-          Audit trail is append-only. V1 is client-side — provisional / proof-of-concept grade for audit purposes
-          (NF-2).
-        </p>
       </div>
     </section>
   );
