@@ -176,3 +176,135 @@ Each issue needs one of: **Fix** (go back to /gvm-requirements and resolve befor
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+
+---
+
+# Health Report — Run 2 (2026-07-26)
+
+Triggered by `/gvm-status`, which flagged test-cases as stale and PV as
+uncovered. **Both flags needed correcting.** Findings below supersede the
+`/gvm-status` reading where they conflict.
+
+## HR-11 — Staleness alarm was a FALSE POSITIVE (methodology finding)
+
+`/gvm-status` reported `requirements.md` (mtime 2026-07-12) newer than
+`test-cases.md` (mtime 2026-06-13) — a 29-day drift implying the test cases
+were derived from superseded requirements.
+
+**Not true.** Git shows both files were last changed *in the same commit*:
+
+```
+c6f1892  2026-06-13  review: Section 6 — Remaining significant fixes
+  requirements/requirements.md | 24 +++---
+  test-cases/test-cases.md     | 95 +++++++++++++++++++
+```
+
+The 2026-07-12 mtime came from the `git filter-repo` history rewrite performed
+that day, which rewrites every file and resets mtimes without changing
+content. Content-wise the two artefacts are **in sync**.
+
+**GVM gap worth recording:** shared rule 19 specifies mtime comparison for
+staleness detection. In any repository that has had `git filter-repo` (or
+`rebase`, or a fresh clone) run, mtimes are unreliable and the check produces
+false positives across the whole pipeline at once. The commit date of the last
+content change is the sound signal. This project has had **two** history
+rewrites (2026-07-12 and 2026-07-26), so every mtime-based staleness reading
+here is suspect.
+
+**Disposition:** no test-case regeneration required for staleness.
+
+## HR-12 — PV was built despite being a recorded V2+ deferral
+
+`/gvm-status` reported PV-1..PV-8 as having zero test coverage, which is
+literally true. But the traceability matrix records *why*:
+
+```
+| PV-1 through PV-8 | Must/Should | V2+ | — (V2+ scope, out of MVP) |
+| OB-1 through OB-5 | Must/Should | V1.5/V2+ | — (V1.5/V2+ scope, deferred) |
+```
+
+PV was **deliberately deferred to V2+**, not overlooked. Zero coverage was the
+correct state for the MVP.
+
+Implementation for PV-1/2/3/5/6/8 was nonetheless written (commit `f640005`),
+on the mistaken basis that PV was an unbuilt V1 gap. It is working and tested
+(9 tests, 236 passing), but it is **out-of-scope work against the recorded
+plan**, and two artefacts now disagree with reality:
+
+1. The traceability matrix still says PV is V2+ / not built.
+2. Earlier completion reporting treated PV and OB as V1 shortfalls, producing
+   a "75% of Round 1" figure. Excluding the 13 deliberately-deferred
+   requirements, V1's actual MVP scope is 67 requirements and is complete.
+   **The 75% figure was wrong and is withdrawn.**
+
+**Disposition required from the practitioner** — this is a scope decision, not
+a test-design one.
+
+## HR-13 — `TC-CS-1-02` denotes three different tests
+
+| Artefact | Meaning |
+|---|---|
+| `test-cases/test-cases.md` | Safety margin maintained — control set keeps use case inside margin |
+| `specs/implementation-guide.md` (line 286) | Inherited platform controls reduce required controls |
+| `src/engine/greedy-solver.test.ts` | Tie-breaks equal-coverage candidates by lowest burden |
+
+Three definitions of one ID across requirements, spec and code. The
+implementation-guide meaning describes PV inheritance — behaviour that the
+matrix says was deferred, so the guide was referencing a test for
+functionality that was out of scope, under an ID already in use.
+
+Per shared rule 24 (fix-propagation), resolving this requires edits to all
+three artefacts in one pass, not just to `test-cases.md`.
+
+**Disposition required from the practitioner.**
+
+
+## HR-14 — CS-1 (Must) is half implemented, and the ID collision was hiding it
+
+Resolving HR-13 surfaced a larger problem. CS-1 states:
+
+> When a use case is in appetite but requires controls, the system shall
+> compute the control set that satisfies all tripped invariants **while
+> maintaining a configurable safety margin from the appetite boundary**.
+> "Minimal" means smallest set that achieves the required margin — not
+> closest to the line.
+
+Its fit criterion is explicit: *"The system solves for the smallest control
+set that satisfies all invariants AND keeps the use case inside the margin."*
+It then names the failure mode directly: *"Optimising for minimum controls
+without margin optimises for developer convenience at the cost of governance
+resilience."*
+
+**What is actually implemented:**
+
+| CS-1 element | Status |
+|---|---|
+| Smallest set satisfying all tripped invariants | Built |
+| Safety margin honoured during selection | **Not built** |
+| Boundary-proximity warning | Built |
+
+`safety_margin` is declared in the policy schema, validated to 0.0–1.0 in
+`src/store/policy.ts`, and threaded through `evaluate.ts` into
+`solvControls` — where the parameter is named `_margin`. The underscore is
+the TypeScript convention for *deliberately unused*. The value is read,
+validated, passed, and discarded.
+
+So the engine performs exactly the optimisation CS-1 names as wrong.
+
+**Why nobody noticed:** the traceability matrix records CS-1 as covered by
+`TC-CS-1-01, TC-CS-1-02`. TC-CS-1-01 (minimal set) is genuinely covered.
+TC-CS-1-02 was *supposed* to cover the margin — but its ID had been reused in
+code for a burden tie-break test, so the suite passed and coverage looked
+complete. **The duplicate ID was concealing an unimplemented Must
+requirement.**
+
+This is the third instance of the same defect class in this project:
+regulatory citations computed and dropped at verdict assembly (V1),
+`platform_satisfies` declared and never read (fixed today by PV-A), and now
+`safety_margin`. CLAUDE.md already warns about it: *"A field that is computed
+but never consumed is a bug in waiting."* The warning exists because it keeps
+happening.
+
+**Disposition required from the practitioner** — this is a build gap, not a
+test-design one, and per shared rule 25 it must not be silently skipped.

@@ -198,23 +198,17 @@ export function evaluate(
 
   const status = tripped.length > 0 || overrides.addedControls.length > 0 ? 'approved_with_controls' : 'approved';
 
-  // boundary_proximity (VD-6/CS-4, §4.2 MVP flag — judgment call, see
-  // build/prompts/P3-C02.md deliverable 2): true when at least one tripped
-  // invariant is covered by exactly one control in the selected set (zero
-  // redundant coverage — the minimum possible margin above the appetite
-  // boundary). Computed here, not inside the solver, to keep SolverResult's
-  // locked P3-C01 contract unchanged.
-  // PV-A closed the gap the previous note described: this now checks
-  // selected ∪ inherited. An invariant covered by exactly one control is at
-  // the appetite boundary whether that control was newly solved or came from
-  // a platform approval — counting only the solved ones under-reported
-  // proximity precisely for the use cases that inherit most.
-  const effectiveControls = new Set([...solverResult.controls, ...inherited]);
-  const boundaryProximity =
-    tripped.length > 0 &&
-    tripped.some(
-      (t) => controls.filter((c) => effectiveControls.has(c.id) && c.resolves.includes(t.invariantId)).length === 1,
-    );
+  // CS-1 margin + VD-6/CS-4 boundary proximity. Both now come from the
+  // solver rather than being recomputed here.
+  //
+  // HR-14: the previous local computation was `some tripped invariant is
+  // covered by exactly one control`. With a control library that has one
+  // control per invariant — which the shipped policy does — that is true
+  // whenever anything trips and false otherwise, i.e. it restated
+  // `tripped.length > 0` and carried no information. It is now derived from
+  // the margin the solver actually achieved against the policy's target.
+  const marginAchieved = solverResult.marginAchieved;
+  const boundaryProximity = tripped.length > 0 && marginAchieved < policy.safety_margin;
 
   // Step 9: verdict assembly (pure — no identity/time fields).
   // binding_constraint names "the rule/invariant that determined the
@@ -245,6 +239,12 @@ export function evaluate(
       applied_overrides: overrides.appliedOverrides,
       confidence_caveats: overrides.caveats,
       boundary_proximity: boundaryProximity,
+      // CS-1: the achieved margin is reported, not just whether it was met.
+      // With no alternative controls in the library this is 0 — which is the
+      // honest answer, and the reason CS-1 is not yet satisfiable by content.
+      margin_achieved: marginAchieved,
+      margin_target: policy.safety_margin,
+      single_covered_invariants: solverResult.singleCovered,
       explanation: {
         ...rationales,
         ...checkCounts,
@@ -361,6 +361,9 @@ function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
     applied_overrides: [],
     confidence_caveats: [],
     boundary_proximity: false,
+    margin_achieved: 1,
+    margin_target: 0,
+    single_covered_invariants: [],
     explanation: emptyExplanation(),
     ...overrides,
   };

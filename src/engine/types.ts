@@ -20,6 +20,13 @@ export interface EvaluationResult {
   applied_overrides: AppliedOverride[];
   confidence_caveats: ConfidenceCaveat[];
   boundary_proximity: boolean;
+  // CS-1 (HR-14): the margin actually achieved, its target, and the
+  // invariants left at coverage depth 1. Reporting the number rather than a
+  // boolean is what makes the gap visible — with one control per invariant
+  // the achieved margin is 0 and no control set can improve it.
+  margin_achieved: number;
+  margin_target: number;
+  single_covered_invariants: string[];
   explanation: VerdictExplanation;
   // PV-6: absent when no platform or vendor was declared.
   inheritance?: InheritanceChain;
