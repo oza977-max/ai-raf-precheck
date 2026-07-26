@@ -6,6 +6,7 @@ import {
   resolveActivePacks,
 } from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
+import { fitsEnvelope, inheritableControls } from './envelope';
 import { assignTrack } from './track';
 import type { TrackAssignment } from './track';
 import { assignTier } from './tier';
@@ -16,6 +17,8 @@ import { buildStandingConditions } from './conditions';
 import { solvControls } from './greedy-solver';
 import type {
   DataFlowGraph,
+  InheritanceChain,
+  RegistryEntry,
   EngineError,
   EvaluationResult,
   JurisdictionPack,
@@ -129,11 +132,18 @@ export function evaluate(
   // Step 6: invariant evaluation (no short-circuit — solver needs the full set).
   const tripped = evaluateInvariants(graph, invariants);
 
-  // Step 7: control solving.
+  // Step 6b (PV-A): resolve any declared platform/vendor against the
+  // registries and work out what its approval already covers. Sorted by id
+  // before iteration (NF-1 determinism).
+  const inheritance = resolveInheritance(graph, policy);
+  const inherited = inheritance?.inherited_controls ?? [];
+
+  // Step 7: control solving. `inherited` was the parameter solvControls has
+  // accepted since P3-C01 and never been given — PV-A closes that seam.
   const solverResult = solvControls(
     tripped.map((t) => t.invariantId),
     controls,
-    [],
+    inherited,
     policy.safety_margin,
   );
 
@@ -168,6 +178,12 @@ export function evaluate(
         pack_versions: packVersions,
         applied_overrides: overrides.appliedOverrides,
         confidence_caveats: overrides.caveats,
+        // PV-6: the inheritance chain is part of the record of what was
+        // assessed, so it survives a rejection. Dropping it here would lose
+        // the answer to "was residency assessed?" for precisely the cases
+        // that failed — found by driving an over-envelope case through the
+        // engine, not by a unit test.
+        ...(inheritance ? { inheritance } : {}),
         explanation: {
           ...rationales,
           ...checkCounts,
@@ -188,17 +204,16 @@ export function evaluate(
   // redundant coverage — the minimum possible margin above the appetite
   // boundary). Computed here, not inside the solver, to keep SolverResult's
   // locked P3-C01 contract unchanged.
-  // NOTE: this only checks `solverResult.controls` (newly selected), not
-  // `inheritedControls` — harmless today because evaluate() always calls
-  // solvControls() with `[]` for inherited (platform inheritance isn't
-  // wired yet). Whichever future chunk wires real platform inheritance
-  // must extend this check to `selected ∪ inherited`, per the original
-  // spec intent (§4.2), or this will silently under-report boundary
-  // proximity for invariants covered by an inherited control.
+  // PV-A closed the gap the previous note described: this now checks
+  // selected ∪ inherited. An invariant covered by exactly one control is at
+  // the appetite boundary whether that control was newly solved or came from
+  // a platform approval — counting only the solved ones under-reported
+  // proximity precisely for the use cases that inherit most.
+  const effectiveControls = new Set([...solverResult.controls, ...inherited]);
   const boundaryProximity =
     tripped.length > 0 &&
     tripped.some(
-      (t) => controls.filter((c) => solverResult.controls.includes(c.id) && c.resolves.includes(t.invariantId)).length === 1,
+      (t) => controls.filter((c) => effectiveControls.has(c.id) && c.resolves.includes(t.invariantId)).length === 1,
     );
 
   // Step 9: verdict assembly (pure — no identity/time fields).
@@ -217,7 +232,10 @@ export function evaluate(
       // Pack-required controls supplement the solver's minimal set
       // (BC-V2A-01: obligations only ever add).
       controls: [...new Set([...solverResult.controls, ...overrides.addedControls])].sort(),
-      downstream_reviews: overrides.addedReviews,
+      downstream_reviews: [
+        ...new Set([...overrides.addedReviews, ...unapprovedComponentReviews(inheritance)]),
+      ].sort(),
+      ...(inheritance ? { inheritance } : {}),
       // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
       // statically populated from kri_thresholds + graph pins. Rejection
       // paths keep hypotheses empty (nothing was approved to condition).
@@ -237,6 +255,53 @@ export function evaluate(
       },
     }),
   };
+}
+
+// PV-1/2/3/5/6. Pure: registries sorted by id, no I/O.
+function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): InheritanceChain | undefined {
+  const platformId = graph.processing_nodes.find((n) => n.platform)?.platform;
+  const vendorId = graph.processing_nodes.find((n) => n.vendor)?.vendor;
+
+  const platforms = sortedById(policy.platforms ?? []);
+  const vendors = sortedById(policy.vendors ?? []);
+
+  const platform = platformId ? platforms.find((p) => p.id === platformId) : undefined;
+  const vendor = vendorId ? vendors.find((v) => v.id === vendorId) : undefined;
+
+  // Nothing declared that the registry knows or should know about. A bare
+  // `vendor: 'internal'` string on a policy with no vendor registry is not a
+  // claim of approval, so no chain is fabricated.
+  if (!platformId && !vendor) return undefined;
+  if (platformId === undefined && vendorId !== undefined && vendors.length === 0) return undefined;
+
+  const entries: RegistryEntry[] = [platform, vendor].filter((e): e is RegistryEntry => e !== undefined);
+
+  const dimensions = entries.flatMap((e) => fitsEnvelope(graph, e.approved_envelope));
+  const inheritedControls = [
+    ...new Set(
+      entries.flatMap((e) =>
+        inheritableControls(e.satisfies_controls, fitsEnvelope(graph, e.approved_envelope), e.coupled_clusters),
+      ),
+    ),
+  ].sort();
+
+  return {
+    ...(platformId ? { declared_platform: platformId } : {}),
+    ...(vendorId && vendor ? { declared_vendor: vendorId } : {}),
+    // PV-5: a declared component absent from the registry resolves to
+    // nothing and inherits nothing.
+    resolved: entries.length > 0,
+    inherited_controls: inheritedControls,
+    dimensions,
+  };
+}
+
+// PV-5: the verdict must name the unapproved component, not merely report
+// that something was unapproved.
+function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): string[] {
+  if (!inheritance || inheritance.resolved) return [];
+  const named = inheritance.declared_platform ?? inheritance.declared_vendor ?? 'unnamed component';
+  return [`Full vendor/platform risk assessment required — ${named} is not on the approved registry`];
 }
 
 function tierRationale(assignment: TierAssignment): RuleRationale {

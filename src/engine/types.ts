@@ -21,6 +21,9 @@ export interface EvaluationResult {
   confidence_caveats: ConfidenceCaveat[];
   boundary_proximity: boolean;
   explanation: VerdictExplanation;
+  // PV-6: absent when no platform or vendor was declared.
+  inheritance?: InheritanceChain;
+
 }
 
 // V1.1-C01: the "why" behind a verdict, wired from data the engine was
@@ -112,6 +115,9 @@ export interface ProcessingNode {
   autonomy_level: 0 | 1 | 2 | 3 | 4;
   data_zone: DataZone;
   vendor: string;
+  // PV-1: the approved platform this runs on, if declared. Optional so every
+  // pre-PV graph remains valid.
+  platform?: string;
   replaces_prior_model: boolean;
   uncertain?: boolean;
 }
@@ -192,6 +198,45 @@ export type PackBasis =
   | 'verbatim'   // rule restates the quoted text; nothing inferred
   | 'derived'    // a direct inference from the quoted text
   | 'judgement'; // rests on legal interpretation — needs a named human
+
+// PV-1/PV-2. An approved platform or vendor records the envelope its
+// approval covers and the controls that approval already satisfies.
+export interface Envelope {
+  max_data_class?: DataClass;
+  max_exposure?: Exposure;
+  max_autonomy_level?: 0 | 1 | 2 | 3 | 4;
+  data_zones?: DataZone[];
+  jurisdictions?: string[];
+}
+
+export interface RegistryEntry {
+  id: string;
+  name: string;
+  approved_envelope: Envelope;
+  satisfies_controls: string[];
+  // PV-3: controls whose justification stands or falls together. Exceeding
+  // any dimension named in a cluster drops every control in it.
+  coupled_clusters?: string[][];
+}
+
+// PV-3: one per dimension the envelope constrains. Never collapsed to a
+// single boolean — inheritance is per-dimension.
+export interface EnvelopeDimensionFit {
+  dimension: string;
+  fits: boolean;
+  approved: string;
+  observed?: string;
+}
+
+// PV-6: the chain that justifies any inheritance. Present only when a
+// platform or vendor was declared — absent means nothing was claimed.
+export interface InheritanceChain {
+  declared_platform?: string;
+  declared_vendor?: string;
+  resolved: boolean;
+  inherited_controls: string[];
+  dimensions: EnvelopeDimensionFit[];
+}
 
 export interface PackRuleSource {
   document: string;
@@ -321,6 +366,10 @@ export interface PolicyFile {
   roles: Record<string, RoleConfig>;
   tier_workflow: Record<Tier, WorkflowType>;
   safety_margin: number;
+  // PV-1/PV-2: optional so every existing policy still loads unchanged.
+  platforms?: RegistryEntry[];
+  vendors?: RegistryEntry[];
+
 }
 
 export interface TranslationAttestation {

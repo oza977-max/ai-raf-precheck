@@ -391,6 +391,19 @@
                 <li><a href="#functional">Functional Requirements</a>
                     <ul>
                         <li><a href="#di">R2-DI — Shared Store</a></li>
+                        <li><a href="#ia">R2-IA — Identity &amp; Access</a></li>
+                        <li><a href="#pg">R2-PG — Policy Governance</a></li>
+                        <li><a href="#lp">R2-LP — Model Proxy</a></li>
+                        <li><a href="#de">R2-DE — Deployment</a></li>
+                    </ul>
+                </li>
+                <li><a href="#nonfunctional">Non-Functional</a></li>
+                <li><a href="#assumptions">Assumptions</a></li>
+                <li><a href="#constraints">Constraints</a></li>
+                <li><a href="#outofscope">Out of Scope</a></li>
+                <li><a href="#openquestions">Open Questions</a></li>
+                <li><a href="#index">Requirements Index</a></li>
+                <li><a href="#priority">Priority Model</a>
                     </ul>
                 </li>
             </ul>
@@ -611,7 +624,399 @@
                         <div class="fit-criterion">Not built in Round 2. This is the step that converts detection into evidence against a privileged insider, and it requires a decision about where the anchor lives that is premature before the product has been back-tested.</div>
                     </div>
 
+
+                <h3 id="ia">R2-IA — Identity &amp; Access</h3>
+                <p>Round 1's role was a dropdown: any user could select "2LoD" and approve anything. That made every approval evidentially worthless — it recorded a choice, not a person. This domain replaces it, and must do so twice over, because the two deployment targets authenticate differently.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The same build shall support at least two authentication mechanisms — locally-held accounts and an external identity provider — selected by configuration, with no code change between them.</p>
+                        <div class="fit-criterion">One container image runs in both modes. Switching is a configuration change and a restart. The application's own code does not branch on deployment target anywhere outside the authentication module — verifiable by inspection.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text"><em>(resolves D-3)</em> A user's role shall be derived from their authenticated session on the server and shall not be settable by the client.</p>
+                        <div class="fit-criterion">A user cannot change their own role by any client-side means — editing browser storage, altering a request payload, or replaying a modified request. A request asserting a role the session does not hold is rejected by the server, not merely hidden in the interface. The Round 1 role dropdown is removed, not disabled.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The system shall prevent a user from approving a use case they submitted, unless the operator has explicitly enabled single-reviewer operation for the instance.</p>
+                        <div class="fit-criterion">By default an approval attempt by the submitting user is rejected by the server with an explicit reason, testable independently of the interface. Enabling self-approval is a deliberate operator configuration act, never an automatic fallback the system takes when it finds no second reviewer.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-3a</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Where self-approval has been enabled, every approval given by the submitter shall be recorded and displayed as such, and shall never be presented as equivalent to an independent review.</p>
+                        <div class="fit-criterion">A self-approved case is distinguishable from an independently reviewed one in the register, on the case itself, in the audit trail, and in any export — without needing to compare the submitter and approver fields by eye. The instance also states that single-reviewer operation is in force. This applies Round 1's NF-7 pattern (unsigned pack rules make a verdict provisional rather than blocking it) to segregation of duties: the weaker state is permitted, but it is never allowed to look like the stronger one.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Every recorded action shall attribute to an authenticated identity that persists after the session ends.</p>
+                        <div class="fit-criterion">Audit events carry a stable user identifier and the display name in force at the time. Deleting or disabling a user account does not remove or anonymise their historical audit entries. An approval read back six months later still names who gave it.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Sessions shall expire, and expiry shall not cause silent data loss.</p>
+                        <div class="fit-criterion">A session has a bounded lifetime and can be ended deliberately by the user. A request made with an expired session is rejected and the user is returned to sign-in with an explanation. Work in progress that has not been submitted is either preserved or the user is warned before it is lost — it is not discarded without notice.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Locally-held account credentials shall never be stored or logged in a recoverable form.</p>
+                        <div class="fit-criterion">Stored credentials are verified against a salted, computationally-expensive one-way hash. No credential appears in any log, error message, backup, or diagnostic output — verifiable by searching all output streams during an authentication test. The database file, if read directly, does not yield a usable credential.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-7</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">Repeated failed authentication attempts shall be throttled.</p>
+                        <div class="fit-criterion">After a defined number of consecutive failures for an account, further attempts are delayed or refused for a defined period, and the event is recorded. The threshold and period are configurable by the operator, not hard-coded.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-8</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Provisioning and de-provisioning of users shall be possible without database surgery.</p>
+                        <div class="fit-criterion">An operator (local mode) or the identity provider (external mode) can add, disable and change the role of a user through a supported path. Disabling a user prevents sign-in immediately and does not alter their audit history (per R2-IA-4).</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-IA-9</span>
+                            <span class="priority-chip priority-wont">Won't (V2)</span>
+                        </div>
+                        <p class="requirement-text">Self-service registration, group-based role mapping, and automated user synchronisation.</p>
+                        <div class="fit-criterion">Not built in Round 2. A pilot of a handful of named testers does not need them, and in a bank deployment the identity provider owns this. Named explicitly so it is not mistaken for an oversight.</div>
+                    </div>
+
+                <h3 id="pg">R2-PG — Policy Governance</h3>
+                <p>Resolves D-1. In Round 1 the rulebook lived in each user's browser, so determinism — the product's headline property — held within one browser and silently stopped holding across two. The rulebook must become a single, versioned, controlled artefact.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text"><em>(resolves D-1)</em> An instance shall have exactly one active policy, held on the server, used by every user.</p>
+                        <div class="fit-criterion">Two users evaluating the same use case at the same moment use the same policy version and obtain the same verdict. No client-side store can override, shadow or stale-cache the active policy. Round 1's per-browser policy storage is removed in server mode.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Only a user holding the operator role shall be able to change the active policy.</p>
+                        <div class="fit-criterion">A non-operator attempting to change the policy is refused by the server, not merely prevented in the interface. The refusal is testable by request, independent of the UI.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Every policy change shall produce a new immutable version and an audit event naming the authenticated user and the time.</p>
+                        <div class="fit-criterion">Policy versions are retained, not overwritten. Any historical version can be retrieved and compared against the one that replaced it. The audit event records who made the change; it cannot be attributed to "system" or left blank.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Every verdict shall record the exact policy version used to produce it, and that version shall remain retrievable for as long as the verdict is retained.</p>
+                        <div class="fit-criterion">A verdict from six months ago can be re-evaluated against the policy version actually in force at the time, reproducing the original result byte-for-byte. This carries forward Round 1's provenance behaviour and adds the guarantee that the referenced version still exists.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">When the active policy changes, existing use cases shall be flagged for re-evaluation rather than silently re-scored or silently left stale.</p>
+                        <div class="fit-criterion">After a policy change, affected cases display as awaiting re-evaluation. Their recorded verdicts are not altered in place, and the register does not present a stale verdict as current without a marker.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-PG-6</span>
+                            <span class="priority-chip priority-wont">Won't (V2)</span>
+                        </div>
+                        <p class="requirement-text">Four-eyes approval of policy changes, and staged promotion of a draft policy through review before it becomes active.</p>
+                        <div class="fit-criterion">Not built in Round 2. The rulebook is a control document and in a production bank deployment its change process would itself need approval. Round 2 makes changes attributable and reversible, which is the prerequisite; it does not add a workflow. Named explicitly so its absence is a recorded decision rather than an oversight.</div>
+                    </div>
+
+                <h3 id="lp">R2-LP — Language Model Proxy</h3>
+                <p>The Anthropic key currently sits in browser storage, readable by anyone with access to that browser. It moves server-side. This is also the first time the language-model path will run against the real API — in Round 1 it was only ever exercised against a mock, so its real behaviour, failure modes and cost are unknown.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The language-model API key shall be held only by the server and shall never be transmitted to, or stored by, a browser.</p>
+                        <div class="fit-criterion">No response from the server contains the key, and no client storage holds it. Inspecting all network traffic to a browser during a full intake including model use reveals no credential. Round 1's browser key field is removed in server mode.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Model calls shall be made by the server on behalf of an authenticated user, and shall be refused for an unauthenticated caller.</p>
+                        <div class="fit-criterion">The proxy endpoint rejects unauthenticated requests. It cannot be used as an open relay to the model provider by anyone who discovers the URL.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">No language model shall participate in producing a verdict.</p>
+                        <div class="fit-criterion">Carried forward from Round 1 unchanged and re-verified here because the proxy makes model access easier. With the model provider unreachable, every verdict is still produced and is identical to the verdict produced with it reachable. The engine's call graph contains no model client.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Failure or unavailability of the model provider shall degrade the application to its deterministic path, not break it.</p>
+                        <div class="fit-criterion">With the provider returning errors, timing out, or not configured at all, a user can complete an intake and obtain a verdict via guided questions. The failure is reported plainly and is not presented as a defect in the use case being assessed.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-5</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The operator shall be able to see model usage and disable model features for the instance.</p>
+                        <div class="fit-criterion">The operator can determine how many model calls have been made over a period, and can turn the feature off such that the application continues to function on its deterministic path. Cost is not knowable precisely without provider billing, so the requirement is usage visibility, not a currency figure.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-LP-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Content sent to the model provider shall be limited to what the feature requires, and the operator shall be told plainly what leaves the instance.</p>
+                        <div class="fit-criterion">Documentation states exactly which fields are transmitted for each model-backed feature. A use-case description sent for extraction does not carry register contents, audit history, user identity, or credentials alongside it.</div>
+                    </div>
+
+                <h3 id="de">R2-DE — Deployment &amp; Operation</h3>
+                <p>Sam's domain. Everything here is invisible to every other persona, and it is the set most often discovered at deployment rather than at design.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-1</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">One build artefact shall serve both deployment targets, with behaviour determined by configuration rather than by a separate build.</p>
+                        <div class="fit-criterion">The same image runs the self-hosted pilot (local accounts) and a bank deployment (external identity provider). There is no "pilot build" and "enterprise build".</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-2</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">All deployment-time settings shall be supplied as configuration, with a complete reference listing every setting, whether it is required, and its default.</p>
+                        <div class="fit-criterion">An administrator who has never seen the source can deploy the application using the reference alone. Every setting the application reads appears in the reference — verifiable by comparing the reference against the configuration the application actually consults.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-3</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Secrets shall be supplied as configuration and shall never appear in logs, error output, diagnostic pages, or the database in recoverable form.</p>
+                        <div class="fit-criterion">A deliberate misconfiguration and a forced error are both triggered while capturing all output; no secret value appears in any of it.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-4</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The application shall expose a health endpoint reporting whether it is able to serve requests.</p>
+                        <div class="fit-criterion">The endpoint returns a healthy result only when the application can reach its database. It requires no authentication, and reveals no configuration, version detail or internal state beyond health.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-5</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Backup and restore shall be documented and shall not require the application to be stopped.</p>
+                        <div class="fit-criterion">An administrator following the documented procedure produces a backup of a running instance, restores it to a new instance, and finds the register, audit trail, users and policy versions intact. The restored audit chain verifies (per R2-DI-10).</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-6</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">Upgrading to a newer version shall migrate existing data without loss, and shall fail safely rather than partially.</p>
+                        <div class="fit-criterion">Starting a newer version against an existing database migrates it and preserves all records. If migration cannot complete, the application refuses to start and leaves the database unmodified, rather than starting with partially-migrated data.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-7</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">The application shall make no outbound network connection other than to services the operator has explicitly configured.</p>
+                        <div class="fit-criterion">With the model provider unconfigured, an instance under normal use makes no outbound connections — verifiable by network capture. There is no telemetry, update check, or analytics call. This matters because a bank will ask, and the answer must be demonstrable rather than asserted.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R2-DE-8</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">Operational output shall be sufficient to diagnose a failure without access to the database or the source.</p>
+                        <div class="fit-criterion">Logs are written to standard output in a consistent structured form, include enough context to identify the request and user (by identifier, not credential), and record authentication failures, policy changes and migration events.</div>
+                    </div>
+
                 <p><em>Elicitation in progress — further domains follow.</em></p>
+            </section>
+
+            <section id="nonfunctional">
+                <h2>5. Non-Functional Requirements</h2>
+                <p>Volere categories, each with a fit criterion. Where Round 1 already stated a property, Round 2 restates it only if the server tier could break it.</p>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-1</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text">An instance shall support the concurrent use of a pilot population without degradation.</p>
+                        <div class="fit-criterion">20 concurrent authenticated users, each performing a full intake and evaluation, complete successfully with no failed writes and no audit-ordering violation. 20 is the stated pilot ceiling; it is a requirement, not a limit of the design.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-2</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text">Evaluation shall remain interactive.</p>
+                        <div class="fit-criterion">The time from submitting a confirmed graph to a rendered verdict is under 2 seconds at the 95th percentile under the concurrency of R2-NF-1, excluding any optional model call. Model-backed features are excluded because they depend on a third party.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-3</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text"><em>(carries forward Round 1 NF-1)</em> Evaluation shall remain deterministic, and the server tier shall not introduce any source of variation.</p>
+                        <div class="fit-criterion">Round 1's determinism test — the same input evaluated repeatedly, compared over the whole serialised result — passes unchanged. The engine acquires no clock, no random source, no network call and no server type. Verified by inspecting the engine's import graph, which must reach only engine types and the standard library.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-4</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text"><em>(carries forward Round 1 NF-2)</em> The interface shall not claim properties the system does not have.</p>
+                        <div class="fit-criterion">Claims about the audit trail, control verification, pack adoption and translation fidelity are each checked against implementation. Specifically: "tamper-detecting" only if R2-DI-10 is built; "verified" on a control only where evidence exists; "provisional" wherever an unsigned pack rule fired. A reviewer can trace each claim to the mechanism that makes it true.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-5</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text">Traffic between browser and server shall be encrypted in transit, and the application shall not be operable over an unencrypted connection outside local development.</p>
+                        <div class="fit-criterion">Session cookies are marked secure and http-only. An attempt to use the application over an unencrypted connection in a non-development configuration is refused rather than silently downgraded.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-6</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text">The stored database shall be protected at rest by the deployment environment, and the application shall document what it does and does not protect.</p>
+                        <div class="fit-criterion">Documentation states plainly that the application relies on filesystem and volume protection for encryption at rest and does not encrypt its own database file. This is stated rather than implied, so an administrator can apply the controls their environment requires. Overstating this would breach R2-NF-4.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-7</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text">The Round 1 test suite shall continue to pass unmodified against the browser-local adapter.</p>
+                        <div class="fit-criterion">All 227 Round 1 tests pass with no change to their source. Any test that must change is treated as evidence that a Round 1 behaviour was altered, and that alteration is recorded explicitly rather than absorbed into a test edit.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-8</span><span class="priority-chip priority-should">Should</span></div>
+                        <p class="requirement-text">An instance shall be recoverable from backup within a working day, by an administrator following documentation alone.</p>
+                        <div class="fit-criterion">A restore rehearsal performed by someone who did not build the system, using only the documentation, produces a working instance with its register, audit trail, users and policy history intact.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-9</span><span class="priority-chip priority-should">Should</span></div>
+                        <p class="requirement-text">Resource requirements shall be modest enough for a small virtual machine, and shall be documented.</p>
+                        <div class="fit-criterion">Documented memory, CPU and disk expectations for the pilot population of R2-NF-1, measured rather than estimated.</div>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header"><span class="req-id">R2-NF-10</span><span class="priority-chip priority-must">Must</span></div>
+                        <p class="requirement-text"><em>(carries forward Round 1 NF-3 in altered form)</em> The application shall not require any service the operator has not chosen.</p>
+                        <div class="fit-criterion">No managed database, message broker, cache, identity service or observability platform is required. The only mandatory dependency is a filesystem. Round 1's "no backend at all" property is superseded in server mode but survives in demo mode per R2-DI-9.</div>
+                    </div>
+            </section>
+
+            <section id="assumptions">
+                <h2>6. Assumptions</h2>
+                <p>Stated so that a wrong assumption fails visibly rather than silently.</p>
+                <ol><li><strong>The pilot population is small</strong> — of the order of 20 users, not 200. All capacity and concurrency requirements are sized to that.</li><li><strong>No real client or bank data reaches the self-hosted instance.</strong> Testing uses reconstructed or synthetic use cases. This is an operating instruction, and R2-CN-3 below turns it into a constraint.</li><li><strong>The bank deployment's identity provider speaks a standard protocol.</strong> If it does not, the external-authentication requirement is not satisfiable as written.</li><li><strong>The operator and the reviewer may be the same person during the pilot.</strong> This is why R2-IA-3 permits single-reviewer operation rather than assuming two people exist.</li><li><strong>The rulebook remains unadopted during Round 2.</strong> Verdicts stay provisional. Nothing in Round 2 changes the adoption state of the appetite or the packs.</li><li><strong>The audit trail is not yet evidence against a privileged insider.</strong> Round 2 moves it off the user's browser and adds detection; it does not defeat an administrator with database access.</li></ol>
+            </section>
+
+            <section id="constraints">
+                <h2>7. Constraints</h2>
+                <p><strong>R2-CN-1:</strong> The evaluation engine's purity is not negotiable. No requirement in Round 2 may cause the engine to perform input or output, read a clock, or depend on a server type.</p>
+                <p><strong>R2-CN-2:</strong> One build artefact serves both deployment targets. A requirement that can only be met by forking the build is out of scope by construction.</p>
+                <p><strong>R2-CN-3:</strong> The self-hosted instance is not approved for real client, personal or price-sensitive data, and the application shall state this on the instance itself.</p>
+                <blockquote><p>Fit criterion: The self-hosted deployment displays its data-classification limit to every signed-in user. The statement is configurable, because a bank deployment's limit differs from the pilot's.</p></blockquote>
+                <p><strong>R2-CN-4:</strong> The people available to build this are the same as for Round 1 — one practitioner working with an assistant. Requirements are sized accordingly; anything needing a specialist team is Won't.</p>
+            </section>
+
+            <section id="outofscope">
+                <h2>8. Out of Scope</h2>
+                <p>Explicitly excluded from Round 2. Distinct from "Won't (V2)" items, which are deferred rather than rejected.</p>
+                <ul><li><strong>Artifact binding</strong> — reading deployment configuration to verify what a system actually does, rather than believing its description. This is the single largest credibility gain available and it is deliberately <em>not</em> here: it is a body of work in its own right and depends on decisions Round 2 does not need to make.</li><li><strong>Live monitoring against standing conditions.</strong> The verdict records the bounds an approval assumes; nothing checks them at runtime. Round 1 designed the data model for this; Round 2 does not populate it.</li><li><strong>Multi-tenancy.</strong> One instance serves one organisation. No requirement assumes tenant isolation.</li><li><strong>Migration of Round 1 browser data into a server instance.</strong> Decided during elicitation: the server starts clean. Browser data was never evidence-grade, and importing it would launder proof-of-concept records into a system of record.</li><li><strong>Mobile-specific interfaces.</strong> The application remains desktop-oriented.</li></ul>
+            </section>
+
+            <section id="openquestions">
+                <h2>9. Open Questions</h2>
+                <p>Unresolved. Each names who must resolve it, because an open question with no owner is a defect in waiting.</p>
+                <p><strong>Q-1 — Audit retention versus the right to erasure.</strong> R2-IA-4 requires that disabling a user does not anonymise their historical audit entries, because an approval must remain attributable. This sits against a data-subject erasure request. Banks routinely resolve this (audit records carry a lawful basis for retention), but the resolution is a legal determination, not an engineering one. <strong>Owner: Legal / Data Protection.</strong> Until resolved, the requirement stands as written and the tension is recorded here rather than hidden.</p>
+                <p><strong>Q-2 — Where an external anchor for the audit chain would live.</strong> R2-DI-12 defers this. Resolving it needs a decision about which third party or internal system is trusted to hold the head hash. <strong>Owner: the operator, with Technology Risk.</strong> Not needed before back-testing.</p>
+                <p><strong>Q-3 — Session lifetime.</strong> R2-IA-5 requires expiry but does not set a duration. A pilot and a bank deployment would choose differently. <strong>Owner: the operator, per instance</strong> — which is why it is configuration, not a constant.</p>
+                <p><strong>Q-4 — Whether model-backed features are acceptable at all in a bank deployment.</strong> R2-LP-6 requires disclosure of what leaves the instance; whether that is permitted is a separate determination. <strong>Owner: the bank's Technology Risk and Data Protection functions.</strong> The application supports the feature being off entirely (R2-LP-5), so this does not block deployment.</p>
+                <p><strong>Q-5 — Whether the back-test outcome changes any of this.</strong> Round 2 assumes the appetite-as-code thesis holds. It has not been tested against historically decided cases. If back-testing shows verdicts need constant override, the correct action is not to build this round. <strong>Owner: the practitioner.</strong></p>
+            </section>
+
+            <section id="index">
+                <h2>11. Requirements Index</h2>
+                <p>52 requirements. Generated from the requirement entries above.</p>
+                <table><thead><tr><th>ID</th><th>Domain</th><th>Summary</th><th>Priority</th></tr></thead><tbody><tr><td><code>R2-DI-1</code></td><td>Shared Store &amp; Data Integrity</td><td>Persistence shall be reached through a storage adapter interface with at least two interchangeable…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-2</code></td><td>Shared Store &amp; Data Integrity</td><td>The server-backed implementation shall persist to a single-file embedded database requiring no separate…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-3</code></td><td>Shared Store &amp; Data Integrity</td><td>Audit event ordering shall be established by a server-assigned, strictly increasing sequence number.…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-4</code></td><td>Shared Store &amp; Data Integrity</td><td>The append-only property of the audit trail shall be enforced by a database-level uniqueness constraint that…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-5</code></td><td>Shared Store &amp; Data Integrity</td><td>Write operations shall be idempotent under retry, so that a duplicated request — from a double-click, a…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-6</code></td><td>Shared Store &amp; Data Integrity</td><td>The server shall be the authority for the identity of any record it stores, and shall not accept a…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-7</code></td><td>Shared Store &amp; Data Integrity</td><td>All users of an instance shall see one register. What a given user may see within it is determined by their…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-8</code></td><td>Shared Store &amp; Data Integrity</td><td>Switching storage implementation shall not change any verdict.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-9</code></td><td>Shared Store &amp; Data Integrity</td><td>A browser-local mode requiring no server shall remain available, so the application can be demonstrated without…</td><td><strong>Should</strong></td></tr><tr><td><code>R2-DI-10</code></td><td>Shared Store &amp; Data Integrity</td><td>Each audit event shall carry a hash of its own content combined with the hash of the preceding event, forming a…</td><td><strong>Should</strong></td></tr><tr><td><code>R2-DI-11</code></td><td>Shared Store &amp; Data Integrity</td><td>The interface shall describe the audit trail's integrity properties accurately and shall not claim…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DI-12</code></td><td>Shared Store &amp; Data Integrity</td><td>External anchoring of the audit chain — publishing the head hash to a store outside the operator's control (a…</td><td><strong>Won't (V2)</strong></td></tr><tr><td><code>R2-IA-1</code></td><td>Identity &amp; Access</td><td>The same build shall support at least two authentication mechanisms — locally-held accounts and an external…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-2</code></td><td>Identity &amp; Access</td><td>A user's role shall be derived from their authenticated session on the server and shall not be settable by the…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-3</code></td><td>Identity &amp; Access</td><td>The system shall prevent a user from approving a use case they submitted, unless the operator has explicitly…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-3a</code></td><td>Identity &amp; Access</td><td>Where self-approval has been enabled, every approval given by the submitter shall be recorded and displayed as…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-4</code></td><td>Identity &amp; Access</td><td>Every recorded action shall attribute to an authenticated identity that persists after the session ends.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-5</code></td><td>Identity &amp; Access</td><td>Sessions shall expire, and expiry shall not cause silent data loss.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-6</code></td><td>Identity &amp; Access</td><td>Locally-held account credentials shall never be stored or logged in a recoverable form.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-7</code></td><td>Identity &amp; Access</td><td>Repeated failed authentication attempts shall be throttled.</td><td><strong>Should</strong></td></tr><tr><td><code>R2-IA-8</code></td><td>Identity &amp; Access</td><td>Provisioning and de-provisioning of users shall be possible without database surgery.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-IA-9</code></td><td>Identity &amp; Access</td><td>Self-service registration, group-based role mapping, and automated user synchronisation.</td><td><strong>Won't (V2)</strong></td></tr><tr><td><code>R2-PG-1</code></td><td>Policy Governance</td><td>An instance shall have exactly one active policy, held on the server, used by every user.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-PG-2</code></td><td>Policy Governance</td><td>Only a user holding the operator role shall be able to change the active policy.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-PG-3</code></td><td>Policy Governance</td><td>Every policy change shall produce a new immutable version and an audit event naming the authenticated user and…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-PG-4</code></td><td>Policy Governance</td><td>Every verdict shall record the exact policy version used to produce it, and that version shall remain…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-PG-5</code></td><td>Policy Governance</td><td>When the active policy changes, existing use cases shall be flagged for re-evaluation rather than silently…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-PG-6</code></td><td>Policy Governance</td><td>Four-eyes approval of policy changes, and staged promotion of a draft policy through review before it becomes…</td><td><strong>Won't (V2)</strong></td></tr><tr><td><code>R2-LP-1</code></td><td>Language Model Proxy</td><td>The language-model API key shall be held only by the server and shall never be transmitted to, or stored by, a…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-LP-2</code></td><td>Language Model Proxy</td><td>Model calls shall be made by the server on behalf of an authenticated user, and shall be refused for an…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-LP-3</code></td><td>Language Model Proxy</td><td>No language model shall participate in producing a verdict.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-LP-4</code></td><td>Language Model Proxy</td><td>Failure or unavailability of the model provider shall degrade the application to its deterministic path, not…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-LP-5</code></td><td>Language Model Proxy</td><td>The operator shall be able to see model usage and disable model features for the instance.</td><td><strong>Should</strong></td></tr><tr><td><code>R2-LP-6</code></td><td>Language Model Proxy</td><td>Content sent to the model provider shall be limited to what the feature requires, and the operator shall be…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-1</code></td><td>Deployment &amp; Operation</td><td>One build artefact shall serve both deployment targets, with behaviour determined by configuration rather than…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-2</code></td><td>Deployment &amp; Operation</td><td>All deployment-time settings shall be supplied as configuration, with a complete reference listing every…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-3</code></td><td>Deployment &amp; Operation</td><td>Secrets shall be supplied as configuration and shall never appear in logs, error output, diagnostic pages, or…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-4</code></td><td>Deployment &amp; Operation</td><td>The application shall expose a health endpoint reporting whether it is able to serve requests.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-5</code></td><td>Deployment &amp; Operation</td><td>Backup and restore shall be documented and shall not require the application to be stopped.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-6</code></td><td>Deployment &amp; Operation</td><td>Upgrading to a newer version shall migrate existing data without loss, and shall fail safely rather than partially.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-7</code></td><td>Deployment &amp; Operation</td><td>The application shall make no outbound network connection other than to services the operator has explicitly…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-DE-8</code></td><td>Deployment &amp; Operation</td><td>Operational output shall be sufficient to diagnose a failure without access to the database or the source.</td><td><strong>Should</strong></td></tr><tr><td><code>R2-NF-1</code></td><td>Non-Functional</td><td>An instance shall support the concurrent use of a pilot population without degradation.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-2</code></td><td>Non-Functional</td><td>Evaluation shall remain interactive.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-3</code></td><td>Non-Functional</td><td>(carries forward Round 1 NF-1) Evaluation shall remain deterministic, and the server tier shall not introduce…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-4</code></td><td>Non-Functional</td><td>(carries forward Round 1 NF-2) The interface shall not claim properties the system does not have.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-5</code></td><td>Non-Functional</td><td>Traffic between browser and server shall be encrypted in transit, and the application shall not be operable…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-6</code></td><td>Non-Functional</td><td>The stored database shall be protected at rest by the deployment environment, and the application shall…</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-7</code></td><td>Non-Functional</td><td>The Round 1 test suite shall continue to pass unmodified against the browser-local adapter.</td><td><strong>Must</strong></td></tr><tr><td><code>R2-NF-8</code></td><td>Non-Functional</td><td>An instance shall be recoverable from backup within a working day, by an administrator following documentation…</td><td><strong>Should</strong></td></tr><tr><td><code>R2-NF-9</code></td><td>Non-Functional</td><td>Resource requirements shall be modest enough for a small virtual machine, and shall be documented.</td><td><strong>Should</strong></td></tr><tr><td><code>R2-NF-10</code></td><td>Non-Functional</td><td>(carries forward Round 1 NF-3 in altered form) The application shall not require any service the operator has…</td><td><strong>Must</strong></td></tr></tbody></table>
+                <table><thead><tr><th>Priority</th><th>Count</th></tr></thead><tbody><tr><td>Must</td><td>42</td></tr><tr><td>Should</td><td>7</td></tr><tr><td>Won't (V2)</td><td>3</td></tr></tbody></table>
+            </section>
+
+            <section id="priority">
+                <h2>12. Priority Model</h2>
+                <table><thead><tr><th>Priority</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>Must</strong></td><td>V1.5 fails its purpose without it. A shared instance that lacks any Must is not deployable to testers.</td></tr><tr><td><strong>Should</strong></td><td>High value, included unless it prevents delivery.</td></tr><tr><td><strong>Could</strong></td><td>Included only if every Must and Should is complete.</td></tr><tr><td><strong>Won't (V2)</strong></td><td>Explicitly deferred, with the reason recorded. Not a rejection — a scheduling decision captured so its absence is deliberate.</td></tr></tbody></table>
+                <p>The prioritisation rule from §1 applies throughout: a requirement that serves neither <strong>shared truth</strong> nor <strong>a record that survives scrutiny</strong> is a Could at best, whatever its other merits.</p>
             </section>
 
             <footer>

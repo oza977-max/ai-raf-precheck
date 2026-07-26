@@ -114,7 +114,28 @@ const TranslationAttestationSchema = z.object({
   raf_version_checked: z.string(),
 });
 
+// PV-1/PV-2: approved platform and vendor registries. Optional — a policy
+// without them loads exactly as before, which is what keeps the 227-test
+// suite and the published demo working.
+const EnvelopeSchema = z.object({
+  max_data_class: z.enum(['Public', 'Internal', 'Confidential', 'Client PII', 'MNPI']).optional(),
+  max_exposure: z.enum(['internal-only', 'internal-shared', 'client-facing', 'market-facing']).optional(),
+  max_autonomy_level: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+  data_zones: z.array(z.enum(['Zone A', 'Zone B', 'Zone C'])).optional(),
+  jurisdictions: z.array(z.string().min(1)).optional(),
+});
+
+const RegistryEntrySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  approved_envelope: EnvelopeSchema,
+  satisfies_controls: z.array(z.string().min(1)),
+  coupled_clusters: z.array(z.array(z.string().min(1))).optional(),
+});
+
 const PolicyFileSchema = z.object({
+  platforms: z.array(RegistryEntrySchema).optional(),
+  vendors: z.array(RegistryEntrySchema).optional(),
   version: z.string(),
   policy_id: z.string(),
   firm_name: z.string(),
