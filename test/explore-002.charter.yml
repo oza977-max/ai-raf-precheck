@@ -1,0 +1,23 @@
+---
+schema_version: 1
+session_id: explore-002
+mission: >-
+  Confirmation session following the D-001 fix. Three objectives. First,
+  re-test D-001's area against the fixed build: double-click confirm, and
+  probe adjacent double-submit surfaces the fix did not touch (2LoD approve,
+  request-correction, policy save, sample seeding) to check the same
+  state-lands-too-late pattern does not survive elsewhere. Second, regression
+  sweep of the correction path, since releasing the new guard on correction
+  re-entry was itself a defect caught only by an existing test. Third,
+  honestly re-test D-002 and D-003, which remain unfixed, and record whether
+  they still reproduce rather than quietly omitting them.
+timebox_minutes: 30
+target:
+  - http://localhost:5173
+  - src/components/IntakeFlow.tsx
+  - src/components/RegisterDetail.tsx
+  - src/components/PolicyEditor.tsx
+  - src/components/SettingsPanel.tsx
+tour: interruption
+runner: unassigned
+---
