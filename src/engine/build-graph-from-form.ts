@@ -27,6 +27,11 @@ export interface StructuredFormValues {
   outputReversibility: 'reversible' | 'irreversible' | 'unknown';
   outputScale: 'limited' | 'at_scale';
   replacesPriorModel: boolean;
+  // SR-1 (code review 001): PV-2 and PV-5 were implemented in the engine and
+  // unreachable from the product, because vendor was hardcoded and the form
+  // never asked. Optional so every existing caller stays valid.
+  platform?: string;
+  vendor?: string;
   decisionType?: DecisionType;
   hitl?: boolean;
   jurisdictions: string[];
@@ -55,7 +60,9 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
         model_type: values.modelType,
         autonomy_level: values.autonomyLevel,
         data_zone: values.processingDataZone,
-        vendor: 'internal',
+        // 'internal' remains the sentinel for "no third-party vendor".
+        vendor: values.vendor && values.vendor.trim() ? values.vendor : 'internal',
+        ...(values.platform ? { platform: values.platform } : {}),
         replaces_prior_model: values.replacesPriorModel,
       },
     ],
