@@ -25,7 +25,7 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 225 tests
+npm test         # 227 tests
 ```
 
 No backend, no database, no API key required. The whole app is a static
@@ -54,6 +54,11 @@ ignore, and the known gaps — and ask them to fill in
 Low→Critical and in/out of appetite, all scored by the real engine.
 
 ---
+
+**New here?** [`docs/approach.md`](docs/approach.md) explains the thinking —
+what question this actually answers, why a 200-page regulation yields two
+rules, how pack sign-off works in practice and what it costs, and what the
+approach honestly cannot do.
 
 ## Before you use this — read this first
 
@@ -85,7 +90,7 @@ AIGate evaluates use cases against **regulatory override packs** — structured 
 
 **Regulations evolve. This is the hardest problem in the product.**
 
-SR 26-2 RFI will land and change the US position on generative AI. EU AI Act Annex III obligations take effect December 2027. OSFI E-23 becomes effective January 2027. Supervisory statements and implementing acts change the picture continuously. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability.
+SR 26-2 landed in April 2026 and carved generative and agentic AI out of the model definition entirely — the US position moved, and a firm's own appetite now has to cover the gap. The EU AI Act's Digital Omnibus postponed Annex III high-risk obligations to 2 December 2027, while leaving Article 50 transparency live from 2 August 2026. OSFI E-23 comes into force 1 May 2027. Supervisory statements and implementing acts change the picture continuously. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability.
 
 ### How AIGate approaches this
 

@@ -91,6 +91,7 @@ Load these when the task needs them, not upfront.
 | Worked cases with engine-verified expected verdicts | `backtest/use-cases.md` (predictions pinned by `src/engine/backtest-predictions.test.ts`) |
 | Product north star, honest limitations, moat, deployment phases | `design-vision.md` — local only, gitignored, **purged from history 2026-07-26**. Never commit it: it holds the moat analysis and the internal-adoption plan. |
 | Rule/pack authoring — human-led, never generated | `grounding/PACK-AUTHORING.md` |
+| The approach explained for firms: two rule sets, sign-off economics, corpus-from-decisions | `docs/approach.md` |
 | Engine, intake, register, policy schema, cross-cutting specs | `specs/` |
 | Long-form project history and standing user rules | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
 

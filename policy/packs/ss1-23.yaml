@@ -1,9 +1,20 @@
-# UK PRA SS1/23 pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
+# ==============================================================================
+# PRA SS1/23 — DRAFT STARTER PACK. NOT ADOPTED. NOT LEGAL ADVICE.
+# ==============================================================================
+# Quote retrieved 2026-07-26 and copied verbatim; NOT verified by a lawyer.
+# The text-to-condition mapping is a drafting judgement for a qualified person
+# to confirm. See docs/approach.md and grounding/PACK-AUTHORING.md.
+#
+# In force since 17 May 2024. SS1/23 is deliberately technology-neutral, which
+# is why it needs so few rules here: it does not carve AI out, so a firm's
+# ordinary model-risk appetite already covers most of it. The one thing worth
+# encoding is the scope point people get wrong — that an ML model used for
+# scoring is a model, and inherits the full validation obligation.
 pack_id: "SS1-23"
-version: "0.1-proposed"
+version: "0.2-draft"
 jurisdiction: "UK"
-regulator: "PRA"
-document: "Supervisory Statement SS1/23 — Model Risk Management Principles for Banks"
+regulator: "Bank of England / Prudential Regulation Authority"
+document: "SS1/23 — Model risk management principles for banks"
 effective_date: "2024-05-17"
 reviewer_name: "[FIRM] — Model Risk"
 reviewer_role: "Head of Model Risk"
@@ -11,14 +22,21 @@ sign_off_date: "[DATE]"
 
 rules:
   - id: "SS1-UK-REV-01"
-    title: "Independent validation for models feeding material decisions"
+    title: "Quantitative models informing decisions are in scope regardless of technique"
     source:
       document: "SS1/23"
-      section: "§3.4"
-      text: "[ILLUSTRATIVE — NOT VERBATIM — replace during pack authoring] Models producing quantitative outputs used in material decisions require independent validation, regardless of the underlying technique."
+      section: "Model definition (Principle 1)"
+      text: "a quantitative method, system, or approach that applies statistical, economic, financial, or mathematical theories, techniques, and assumptions to process input data into output"
+      source_url: "https://www.bankofengland.co.uk/prudential-regulation/publication/2023/may/model-risk-management-principles-for-banks-ss"
+      retrieved_date: "2026-07-26"
     effect:
       type: "required_review"
       review: "Independent model validation (2LoD)"
     condition:
       decision_bindingness: { in: ["material", "binding"] }
+    # The quote defines what a model IS; it does not itself say "validate
+    # material models" — that obligation sits in Principle 4. This rule
+    # therefore infers the validation trigger from the scope definition plus
+    # the statement's technology-neutral stance. Reviewer: check this against
+    # Principle 4 directly and correct the section reference if needed.
     basis: "derived"

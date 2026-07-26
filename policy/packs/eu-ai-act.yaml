@@ -1,9 +1,39 @@
-# EU AI Act pack — PROPOSED INTERPRETATION, PENDING FIRM ADOPTION.
-# The two Annex III quotes below are believed accurate but MUST be
-# verified against the retrieved Official Journal text during pack
-# authoring (grounding/PACK-AUTHORING.md) before any sign-off.
+# ==============================================================================
+# EU AI Act — DRAFT STARTER PACK. NOT ADOPTED. NOT LEGAL ADVICE.
+# ==============================================================================
+#
+# Same status as policy/appetite.yaml: a credible starting point that becomes
+# YOUR firm's position only when a qualified person has checked it and signed
+# it off. Every verdict relying on an unsigned rule renders provisional.
+#
+# HOW THIS WAS PRODUCED, HONESTLY
+# -------------------------------
+# The quoted text below was retrieved from each rule's source_url on
+# 2026-07-26 and copied verbatim. It has NOT been verified by a lawyer, and
+# the mapping from text to machine condition is a drafting judgement a
+# qualified person must confirm or correct. grounding/PACK-AUTHORING.md is
+# explicit that rules are authored, not generated. Treat this as a first draft
+# prepared for review: the reviewer checks each quote against its source_url
+# and challenges each condition. Rules carrying a "Reviewer:" note below are
+# the ones drafted with least confidence — start there.
+#
+# TIMING — THIS CHANGED RECENTLY
+# ------------------------------
+# The Digital Omnibus on AI postponed Annex III high-risk obligations from
+# 2 August 2026 to 2 December 2027. The Article 50 transparency obligations
+# were NOT postponed and apply from 2 August 2026. The two TIER rules below
+# are therefore forward-looking; the two TRANS rules bite imminently.
+#
+# WHAT IS DELIBERATELY NOT HERE
+# -----------------------------
+# Six of Annex III's eight categories (education, essential services, law
+# enforcement, migration, justice, biometrics), most Article 5 prohibitions,
+# and the GPAI obligations in Chapter V. Only provisions that change a verdict
+# for a *banking* AI use case are encoded — see docs/approach.md for why a
+# large regulation yields few rules.
+
 pack_id: "EU-AIACT"
-version: "0.1-proposed"
+version: "0.2-draft"
 jurisdiction: "EU"
 regulator: "European Commission"
 document: "EU AI Act (Regulation (EU) 2024/1689)"
@@ -19,11 +49,18 @@ rules:
       document: "EU AI Act"
       section: "Annex III §5(b)"
       text: "AI systems intended to be used to evaluate the creditworthiness of natural persons or establish their credit score, with the exception of AI systems used for the purpose of detecting financial fraud"
+      source_url: "https://artificialintelligenceact.eu/annex/3/"
+      retrieved_date: "2026-07-26"
     effect:
       type: "tier_floor"
       minimum_tier: "Critical"
     condition:
       decision_type: { in: ["credit-decision", "lending-decision"] }
+    # Text names creditworthiness of NATURAL PERSONS and carves out fraud
+    # detection. Our condition covers credit/lending generally, so it is
+    # broader than the text on corporate lending, and correctly excludes
+    # fraud-detection. Reviewer: is over-capture of corporate lending
+    # acceptable, or should this be narrowed to retail?
     basis: "derived"
 
   - id: "EU-AIACT-TIER-02"
@@ -32,9 +69,50 @@ rules:
       document: "EU AI Act"
       section: "Annex III §4(a)"
       text: "AI systems intended to be used for the recruitment or selection of natural persons, in particular to place targeted job advertisements, to analyse and filter job applications, and to evaluate candidates"
+      source_url: "https://artificialintelligenceact.eu/annex/3/"
+      retrieved_date: "2026-07-26"
     effect:
       type: "tier_floor"
       minimum_tier: "Critical"
     condition:
       decision_type: { in: ["hiring"] }
     basis: "derived"
+
+  - id: "EU-AIACT-TRANS-01"
+    title: "Article 50: people must be told they are dealing with an AI"
+    source:
+      document: "EU AI Act"
+      section: "Article 50(1)"
+      text: "Providers shall ensure that AI systems intended to interact directly with natural persons are designed and developed in such a way that the natural persons concerned are informed that they are interacting with an AI system, unless this is obvious from the point of view of a natural person who is reasonably well-informed, observant and circumspect, taking into account the circumstances and the context of use."
+      source_url: "https://artificialintelligenceact.eu/article/50/"
+      retrieved_date: "2026-07-26"
+    effect:
+      type: "required_control"
+      control_id: "CTRL-DISCLOSE-01"
+    condition:
+      exposure: { in: ["client-facing"] }
+    # The text carries an "unless this is obvious" exemption that no machine
+    # condition can evaluate. Disclosure is required whenever output is
+    # client-facing, leaving the exemption to be argued case by case — the
+    # conservative reading. Reviewer: confirm that is the firm's position.
+    basis: "derived"
+
+  - id: "EU-AIACT-TRANS-02"
+    title: "Article 50: synthetic content must be machine-readably marked"
+    source:
+      document: "EU AI Act"
+      section: "Article 50(2)"
+      text: "Providers of AI systems, including general-purpose AI systems, generating synthetic audio, image, video or text content, shall ensure that the outputs of the AI system are marked in a machine-readable format and detectable as artificially generated or manipulated."
+      source_url: "https://artificialintelligenceact.eu/article/50/"
+      retrieved_date: "2026-07-26"
+    effect:
+      type: "required_control"
+      control_id: "CTRL-SYNTHMARK-01"
+    condition:
+      model_type: { in: ["generative-ai", "llm"] }
+      exposure: { in: ["market-facing"] }
+    # Text says "generating synthetic ... text content" with no exposure
+    # qualifier — on its face it covers internal drafting too. Scoped here to
+    # content published outside the firm, which is NARROWER than the text.
+    # Reviewer: this is the most likely place this pack is wrong.
+    basis: "judgement"
