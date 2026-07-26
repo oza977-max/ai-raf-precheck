@@ -642,19 +642,67 @@ And the output MUST NOT contain: additional controls not required to satisfy the
 [Trace: not-yet-traced]
 ```
 
-### TC-CS-1-02: Safety margin maintained — control set keeps use case inside margin, not just at boundary [EXAMPLE]
+### TC-CS-1-02: Safety margin honoured during control selection [EXAMPLE]
 ```
-Input: Graph borderline on appetite. Control set A keeps it just inside the line. Control set B keeps it inside with 10% margin. Policy safety_margin = 10%.
-Given a graph that requires the safety margin to be satisfied
-When the solver selects between two equally minimal sets
-Then the set providing the 10% margin (set B) is selected
-And the output MUST contain: a "boundary proximity" indicator if only a margin-satisfying set exists but no set with comfortable headroom
-And the output MUST NOT contain: a set that puts the use case exactly on the appetite line
+Input: Two tripped invariants INV-A and INV-B. Controls: C-A1 (resolves INV-A, burden 1), C-A2 (resolves INV-A, burden 2), C-B1 (resolves INV-B, burden 1). Policy safety_margin = 0.5.
+Given a control library in which one invariant has an alternative control
+When the solver runs with a margin target of 0.5
+Then the minimal cover [C-A1, C-B1] is extended by the lowest-burden redundant control
+And the output MUST contain: C-A2, raising INV-A to coverage depth 2, with margin achieved 0.5
+And the output MUST NOT contain: controls beyond what the target requires
 [Requirement: CS-1] [Priority: MUST]
 [Trace: not-yet-traced]
 ```
 
----
+> **The metric is a recorded design decision, not derived from CS-1.** CS-1's
+> fit criterion says "10% of the distance from the appetite boundary". Control
+> solving is discrete set cover; there is no continuous distance to take a
+> percentage of. The implemented metric is coverage depth — an invariant
+> covered by exactly one control is at the boundary (remove it and the use
+> case falls out of appetite); depth 2 or more has margin; achieved margin is
+> the fraction of tripped invariants at depth 2 or more. A reviewer should
+> challenge this metric on its merits rather than assume CS-1 specified it.
+
+> **HR-14:** this test case previously described behaviour that did not
+> exist. `safety_margin` was validated, threaded into the solver as `_margin`
+> and discarded, while this id was simultaneously in use in
+> `greedy-solver.test.ts` for an unrelated burden tie-break — so the suite
+> passed and the traceability matrix reported CS-1 covered. Implemented
+> 2026-07-26.
+
+### TC-CS-1-02b: Margin is reported honestly when it cannot be achieved [EXAMPLE]
+```
+Input: Control library with exactly one resolving control per invariant — the shipped policy's actual shape. Policy safety_margin = 0.10.
+Given a control library offering no alternative for any invariant
+When the solver runs with a non-zero margin target
+Then no redundant control can be added and the solver stops rather than looping
+And the output MUST contain: margin achieved 0, and every tripped invariant listed as single-covered
+And the output MUST NOT contain: a result presented as though the margin target had been met
+[Requirement: CS-1] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> This is the shipped policy's real state: all 13 resolvable invariants have
+> exactly one resolving control, so no margin is reachable at any target. The
+> mechanism is correct; the control library gives it nothing to work with.
+> That is a policy-content gap and the verdict must say so rather than imply
+> resilience it does not have (NF-2).
+
+### TC-CS-1-03: Equal-coverage candidates tie-break by lowest burden [EXAMPLE]
+```
+Input: Two controls resolving the same single invariant — C-LOW-BURDEN (burden 1) and C-HIGH-BURDEN (burden 4). Margin target 0.
+Given two controls that cover exactly the same tripped invariants
+When the solver selects between them
+Then the lower-burden control is chosen
+And the output MUST contain: C-LOW-BURDEN
+And the output MUST NOT contain: C-HIGH-BURDEN
+[Requirement: CS-1] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> Allocated 2026-07-26 (HR-13). This behaviour was previously asserted in
+> `greedy-solver.test.ts` under the id TC-CS-1-02, which belongs to the
+> safety-margin case above. One id, two meanings, is what concealed HR-14.
 
 ### TC-CS-2-01: Rejected when no control set satisfies all invariants [EXAMPLE]
 ```
@@ -1205,6 +1253,164 @@ And the output MUST NOT contain: the verdict marked as final when a Low-confiden
 
 ---
 
+## PV — Platform & Vendor Envelope
+
+Promoted into scope 2026-07-26 (health report HR-12). Previously recorded as
+"V2+ scope, out of MVP"; implementation landed in commit `f640005`, so the
+scope record was corrected rather than the code reverted. PV-4 (question-budget
+reduction) and PV-7 (re-evaluation on approval change) remain deferred.
+
+Techniques: boundary value analysis on the ordinal ceilings (Copeland Ch. 5 —
+the envelope ceiling is exactly a boundary), equivalence partitioning on
+registry membership, decision table on coupled clusters.
+
+### TC-PV-1-01: A platform registry entry declares an envelope and the controls its approval satisfies [EXAMPLE]
+```
+Input: Policy containing platform PLAT-INTERNAL-ML with approved_envelope {max_data_class: Confidential, max_exposure: internal-shared, max_autonomy_level: 2, data_zones: [Zone B, Zone C], jurisdictions: [UK, EU]} and satisfies_controls [CTRL-ENC-01, CTRL-FINGERPRINT-01, CTRL-DRIFT-01].
+Given a policy file declaring an approved-platform registry
+When the policy is loaded
+Then the registry is available to evaluation
+And the output MUST contain: the platform id, its envelope dimensions, and its satisfied control ids
+And the output MUST NOT contain: a validation error for a policy that declares no registry at all
+[Requirement: PV-1] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-2-01: A vendor absent from the registry is treated as a new vendor [EXAMPLE]
+```
+Input: Graph declaring vendor "VENDOR-UNKNOWN"; policy vendor registry contains only VENDOR-APPROVED-LLM.
+Given a use case naming a vendor that is not on the approved registry
+When the use case is evaluated
+Then no controls are inherited from that vendor
+And the output MUST contain: the unapproved vendor named explicitly in a downstream review
+And the output MUST NOT contain: any inherited control attributed to that vendor
+[Requirement: PV-2, PV-5] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-3-01: Inherited platform controls reduce the required control set [EXAMPLE]
+```
+Input: Use case tripping INV-TRACK2-01 (ml model, advisory output). Platform PLAT-INTERNAL-01 satisfies CTRL-FINGERPRINT-01 and the use case sits inside its envelope on every dimension.
+Given a use case running on a platform whose approval already satisfies a required control
+When the control set is solved
+Then that control is not re-imposed on the use case
+And the output MUST contain: a smaller required-control set than the same use case with no platform declared
+And the output MUST NOT contain: CTRL-FINGERPRINT-01 in the newly-required controls
+[Requirement: PV-3] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> Supersedes the reference at `specs/implementation-guide.md` line 286, which
+> cited `TC-CS-1-02` for this behaviour. That id belongs to CS-1's safety
+> margin (HR-13).
+
+### TC-PV-3-02: Inheritance is withdrawn per dimension when the envelope is exceeded [EXAMPLE]
+```
+Input: Platform approved for max_data_class Internal. Use case carries Client PII.
+Given a use case that exceeds one dimension of its platform's approved envelope
+When the use case is evaluated
+Then the data-class dimension reports as outside the envelope
+And the output MUST contain: CTRL-ENC-01 in the required controls, evaluated directly rather than inherited
+And the output MUST NOT contain: a claim that the platform covered the exceeded dimension
+[Requirement: PV-3] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-3-03: Ordinal envelope ceilings are inclusive at the boundary [EXAMPLE]
+```
+Input: Platform with max_autonomy_level 2. Three use cases at autonomy 1, 2 and 3.
+Given a platform approved to a stated autonomy ceiling
+When use cases at, below and above that ceiling are evaluated
+Then autonomy 1 fits, autonomy 2 fits (the ceiling is inclusive), autonomy 3 does not
+And the output MUST contain: fits=true at the ceiling value itself
+And the output MUST NOT contain: fits=true one level above the ceiling
+[Requirement: PV-3] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> Boundary value analysis (Copeland Ch. 5). `max_` semantics are inclusive;
+> an off-by-one here would silently widen every platform approval by one
+> level, which is the highest-consequence defect available in this domain.
+
+### TC-PV-3-04: A coupled cluster falls away entirely when any of its dimensions is exceeded [EXAMPLE]
+```
+Input: Platform declaring coupled_clusters [[data_class, exposure]] and satisfying controls tied to that cluster. Use case exceeds data_class only.
+Given a platform whose approval couples several dimensions
+When the use case exceeds any one dimension in the cluster
+Then every control in that cluster is withdrawn, not only the exceeded dimension's
+And the output MUST contain: zero inherited controls from the broken cluster
+And the output MUST NOT contain: partial inheritance from a cluster whose basis was exceeded
+[Requirement: PV-3] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-5-01: An unapproved platform inherits nothing and is named in the verdict [EXAMPLE]
+```
+Input: Graph declaring platform "PLAT-NOT-REGISTERED"; policy registry does not contain it.
+Given a use case declaring a platform absent from the approved registry
+When the use case is evaluated
+Then no controls are inherited
+And the output MUST contain: "PLAT-NOT-REGISTERED" in the required downstream reviews
+And the output MUST NOT contain: a generic "unapproved component" message that omits the component name
+[Requirement: PV-5] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-6-01: The inheritance chain is recorded on every verdict that claims inheritance [EXAMPLE]
+```
+Input: Use case on PLAT-INTERNAL-01, within envelope.
+Given a verdict whose control set was reduced by platform inheritance
+When the verdict is read
+Then the chain names what was declared, what was inherited, and every dimension assessed
+And the output MUST contain: each dimension with a fits/does-not-fit determination and the approved value
+And the output MUST NOT contain: an inherited control with no envelope stated to justify it
+[Requirement: PV-6] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-6-02: The inheritance chain survives a rejection [EXAMPLE]
+```
+Input: Use case on PLAT-INTERNAL-01 carrying MNPI outside Zone C — unsatisfiable (INV-ZONE-01).
+Given a use case that is rejected while also declaring a platform
+When the verdict is read
+Then the inheritance chain is still present
+And the output MUST contain: the declared platform and the dimension that fell outside the envelope
+And the output MUST NOT contain: an empty or absent inheritance record merely because the verdict was a rejection
+[Requirement: PV-6] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> Found by driving an over-envelope case through the engine, not by a unit
+> test: the rejection path originally dropped the chain, losing the answer to
+> "was residency assessed?" for exactly the cases that failed.
+
+### TC-PV-8-01: Starter registry entries demonstrate both inheritance and envelope breach [EXAMPLE]
+```
+Input: Shipped policy/appetite.yaml with no firm-specific edits.
+Given a bank evaluating the tool before defining its own registry
+When the shipped starter policy is used
+Then at least one platform covers a sample use case and at least one case exceeds an envelope
+And the output MUST contain: a worked example of inheritance reducing controls
+And the output MUST NOT contain: a registry entry presented as a real firm approval rather than a template
+[Requirement: PV-8] [Priority: SHOULD]
+[Trace: not-yet-traced]
+```
+
+### TC-PV-A-01: Declaring no platform changes nothing [EXAMPLE]
+```
+Input: The same graph evaluated against a policy with a registry and a policy without one, declaring no platform in either case.
+Given a use case that declares no platform or vendor
+When it is evaluated
+Then the verdict is byte-identical to the pre-PV behaviour
+And the output MUST contain: no inheritance block at all
+And the output MUST NOT contain: a fabricated inheritance record asserting that nothing was inherited
+[Requirement: PV-3, NF-1] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+> The safety rail. Regression risk for PV is not that inheritance fails — it
+> is that inheritance leaks into use cases that never asked for it.
+
 ## NF — Non-Functional Requirements
 
 **Techniques applied:** Property-based (MacIver), boundary value (Beizer).
@@ -1325,7 +1531,7 @@ And the output MUST NOT contain: a verdict displaying as fully authoritative whe
 | PE-6 | Must | V1 | TC-PE-6-01, TC-PE-6-02 |
 | PE-7 | Must | V1 | TC-PE-7-01, TC-PE-7-02 |
 | PE-8 | Must | V1 | TC-PE-8-01, TC-PE-8-02 |
-| CS-1 | Must | V1 | TC-CS-1-01, TC-CS-1-02 |
+| CS-1 | Must | V1 | TC-CS-1-01, TC-CS-1-02, TC-CS-1-02b, TC-CS-1-03 |
 | CS-2 | Must | V1 | TC-CS-2-01 |
 | CS-3 | Must | V1 | TC-CS-3-01, TC-CS-3-02 |
 | CS-4 | Should | V1.5 | — (V1.5 scope, deferred) |
@@ -1343,8 +1549,19 @@ And the output MUST NOT contain: a verdict displaying as fully authoritative whe
 | LC-4 | Must | V1 | TC-LC-4-01 |
 | LC-5 | Must | V2+ | — (V2+ scope, out of MVP) |
 | LC-6 | Must | V1 | TC-LC-4-02 |
-| OB-1 through OB-5 | Must/Should | V1.5/V2+ | — (V1.5/V2+ scope, deferred) |
-| PV-1 through PV-8 | Must/Should | V2+ | — (V2+ scope, out of MVP) |
+| OB-1 | Must | **DEFERRED** | — (artifact binding; no implementation exists) |
+| OB-2 | Must | **DEFERRED** | — (artifact binding; no implementation exists) |
+| OB-3 | Should | **DEFERRED** | — (artifact binding; no implementation exists) |
+| OB-4 | Should | **DEFERRED** | — (artifact binding; no implementation exists) |
+| OB-5 | Must | **DEFERRED** | — (artifact binding; no implementation exists) |
+| PV-1 | Must | V1.4 | TC-PV-1-01 |
+| PV-2 | Must | V1.4 | TC-PV-2-01 |
+| PV-3 | Must | V1.4 | TC-PV-3-01, TC-PV-3-02, TC-PV-3-03, TC-PV-3-04, TC-PV-A-01 |
+| PV-4 | Must | **DEFERRED** | — (question-budget reduction; not built) |
+| PV-5 | Must | V1.4 | TC-PV-2-01, TC-PV-5-01 |
+| PV-6 | Must | V1.4 | TC-PV-6-01, TC-PV-6-02 |
+| PV-7 | Must | **DEFERRED** | — (re-evaluation on approval change; not built) |
+| PV-8 | Should | V1.4 | TC-PV-8-01 |
 | RG-1 | Must | V1 | TC-RG-1-01, TC-RG-1-02 |
 | RG-2 | Must | V1 | TC-RG-2-01, TC-RG-2-02 |
 | RG-3 | Should | V1 | TC-RG-3-01 |
@@ -1467,25 +1684,43 @@ Counterexample strategy: fast-check — generate a tripped invariant set T and c
 
 ## Test Summary
 
-| Metric | Count |
+*Regenerated 2026-07-26 (`/gvm-test-cases`, run 2).*
+
+| | Count |
 |---|---|
-| Total test cases | 97 |
-| Must priority | 82 |
-| Should priority | 9 |
-| Could priority | 1 |
-| Property-based [PROPERTY] | 7 |
-| Example-based [EXAMPLE] | 43 |
-| Security [SECURITY] | 5 |
-| V1 requirements with ≥1 test | 46/46 |
-| V1.5 requirements deferred | 11 |
-| V2+ requirements deferred | 12 |
-| Acknowledged coverage gaps | 8 (HR-01 through HR-10, recorded in decisions file) |
+| Requirements | 80 |
+| Test cases defined | 116 |
+| Requirements in traceability matrix | 80 (100%) |
+| Orphan tests (no requirement) | 0 |
+| Uncovered requirements | 20 — every one a recorded deferral |
+| Uncovered **Must** requirements | 6 — OB-1/2/5 (artifact binding), PV-4, PV-7, RA-10; all deferred |
+| In-scope Must requirements without coverage | **0** |
 
-**Coverage:** All V1 Must and Should requirements have at least one test. V1.5 and V2+ requirements are deferred — not untested, out of MVP scope.
+### What changed in this run
 
-**Techniques applied:** Equivalence class, boundary value, decision table, state transition, use case, property-based, security (OWASP).
+- **PV domain added** — 11 cases (TC-PV-1-01 … TC-PV-A-01) following HR-12's
+  decision to promote PV into scope rather than revert the implementation.
+  Boundary value analysis on the ordinal ceilings, because `max_` semantics
+  being off by one would silently widen every platform approval by a level.
+- **CS-1 rewritten** — TC-CS-1-02 described behaviour that did not exist
+  (HR-14). It now specifies the implemented coverage-depth metric, with the
+  metric flagged as a design decision rather than something CS-1 specified.
+  TC-CS-1-02b covers the honest-reporting case; TC-CS-1-03 takes the burden
+  tie-break that had been squatting on TC-CS-1-02's id.
+- **Nine cases recovered into the HTML** — the entire "Additional Tests
+  (review-fixes batch, June 2026)" section had been written to Markdown and
+  never rendered. Caught by the sync check, not by review.
 
-**Regulatory grounding:** Test scenarios for jurisdiction override, confidence scoring, reasoning trace, and provisional verdicts are grounded in SS1/23, SR 26-2, EU AI Act Annex III, OSFI E-23, and MAS FEAT as loaded from industry reference files.
+### Known limitations of this suite
+
+- **No impact map exists**, so every case carries `[Trace: not-yet-traced]`.
+  ADR-505 treats that as a countable gap rather than a failure.
+- **`/gvm-code-review` and `/gvm-test` have never run** on this project across
+  24 build chunks. Test cases describe intended behaviour; nothing has yet
+  independently verified the code against them.
+- Coverage is measured as *a test case exists*, not as *the test passes and
+  asserts the right thing*. HR-14 is the cautionary example: CS-1 read as
+  covered for two months while half unimplemented.
 
 ---
 
