@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest",
-    "publish-site": "npm run build && bash scripts/publish-site.sh"
+    "publish-site": "npm run build && bash scripts/publish-site.sh",
+    "docs:rules": "node scripts/generate-rules-doc.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
