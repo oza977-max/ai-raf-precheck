@@ -1,0 +1,21 @@
+---
+schema_version: 1
+session_id: explore-001
+mission: >-
+  Probe AIGate's built behaviour for defects structured tests could not
+  anticipate: interrupted and resumed flows (browser back, refresh mid-intake,
+  second tab, double-click), the correction path, role switching mid-flow and
+  whether 1LoD/2LoD visibility actually holds, policy edits while use cases
+  exist, empty and boundary states, and whether the NF-2/NF-7 honesty claims
+  are genuinely present where they should be. Known-weak areas from the brief
+  are explicitly out of scope.
+timebox_minutes: 60
+target:
+  - http://localhost:5173
+  - src/components/IntakeFlow.tsx
+  - src/components/RegisterView.tsx
+  - src/components/PolicyEditor.tsx
+  - src/components/SettingsPanel.tsx
+tour: interruption
+runner: unassigned
+---
