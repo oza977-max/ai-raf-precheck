@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
+import appetiteYaml from '../../../policy/appetite.yaml?raw';
+import { setCurrentPolicyYaml } from '../../store/policy-source';
 
 // TDD-2 mock budget = 1: the only mock is the external boundary (Anthropic SDK).
 // Everything else — IndexedDB via fake-indexeddb, React rendering — is real.
@@ -84,12 +86,14 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText('Register', { selector: '.register-view h2' })).toBeInTheDocument();
     expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
 
-    // TC-LC-2-01 (P6-C02): this fixture is internal-only exposure → Low
-    // tier → self-service workflow → the register node is created with
-    // lifecycle_stage 'approved' directly (routeToWorkflow(), not the old
-    // hardcoded 'idea'). Switch to 2LoD to see the stage filter chip.
+    // TC-LC-2-01 (P6-C02): routeToWorkflow() drives the lifecycle stage from
+    // the tier, not a hardcoded 'idea'. This fixture is internal-only but
+    // MATERIAL, which oracle round 001 made a Medium-tier trigger — tiering
+    // previously ignored how much weight the output carried, so an internal
+    // material decision self-served on exposure alone. Medium is 2LoD-notify,
+    // so the node lands at 'pre_checked'. Switch to 2LoD to see the chip.
     await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
-    expect(await screen.findByRole('button', { name: 'approved' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'pre_checked' })).toBeInTheDocument();
   });
 
   it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call', async () => {
@@ -541,6 +545,28 @@ describe('Walking Skeleton', () => {
   it('a genuine engine failure (no-track-match) shows an error and returns to graph_review instead of hanging on "Evaluating..." forever (live-found gap, now fixed)', async () => {
     localStorage.clear(); // no API key — structured form path, reproduces the exact scenario found live
 
+    // Oracle round 001 made the shipped track list TOTAL, so no combination of
+    // form answers can reach no-track-match any more. The error path still
+    // matters: a firm edits its own policy, and a policy with a routing hole
+    // must produce an honest error rather than a wrong verdict or a hang. So
+    // the hole is now injected deliberately, by loading a policy whose tracks
+    // have been stripped to TRACK-III only.
+    const holed = appetiteYaml.replace(
+      /^tracks:[\s\S]*?(?=^tiers:)/m,
+      `tracks:
+  - id: "TRACK-III"
+    name: "Track III — AI Governance"
+    description: "Deliberately incomplete track list — test fixture only"
+    regulatory_basis: "test fixture"
+    conditions:
+      - field: "model_type"
+        value: { in: ["llm"] }
+    short_circuit: true
+
+`,
+    );
+    setCurrentPolicyYaml(holed);
+
     const user = userEvent.setup();
     render(<App />);
 
@@ -554,7 +580,7 @@ describe('Walking Skeleton', () => {
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'A tool with no matching track rule.');
     await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
     await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    // deep-learning + non-binding matches no TRACK-* rule in appetite.yaml — a genuine no-track-match.
+    // deep-learning matches no track in the holed policy above.
     await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'deep-learning');
     await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
     await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
@@ -677,9 +703,15 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByText('§ Appetite framework'));
     const textarea = await screen.findByLabelText(/policy yaml/i);
     const originalYaml = (textarea as HTMLTextAreaElement).value;
-    expect(originalYaml).toContain('version: "1.0"');
+    // Version-agnostic: derive the current version and bump it, rather than
+    // hardcoding a pair. The hardcoded 1.0 -> 1.1 broke the moment the starter
+    // policy was itself revised (oracle round 001), which is a test coupled to
+    // content it is not testing.
+    const currentVersion = /version: "([^"]+)"/.exec(originalYaml)?.[1];
+    expect(currentVersion).toBeDefined();
+    const bumped = `${currentVersion!.split('.')[0]}.${Number(currentVersion!.split('.')[1]) + 1}`;
 
-    const updatedYaml = originalYaml.replace('version: "1.0"', 'version: "1.1"');
+    const updatedYaml = originalYaml.replace(`version: "${currentVersion}"`, `version: "${bumped}"`);
     await user.click(textarea);
     await user.clear(textarea);
     await user.paste(updatedYaml);
@@ -693,7 +725,7 @@ describe('Walking Skeleton', () => {
     // Header badge reflects the newly saved version without a page reload.
     // (findAllBy: the V1.2-C appetite view's meta line also shows the
     // version, so a single-match query would be ambiguous.)
-    expect((await screen.findAllByText(/policy v1\.1/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(new RegExp(`policy v${bumped.replace('.', '\\.')}`))).length).toBeGreaterThan(0);
 
     // A real save, not just a UI message: at least one previously-existing
     // active use case (from earlier tests in this file, sharing IndexedDB)
@@ -706,7 +738,7 @@ describe('Walking Skeleton', () => {
       const events = await getAll(uc.use_case_id);
       if (
         events.some(
-          (e) => e.event_type === 're_evaluation_queued' && e.payload.type === 're_evaluation_queued' && e.payload.policy_version === '1.1',
+          (e) => e.event_type === 're_evaluation_queued' && e.payload.type === 're_evaluation_queued' && e.payload.policy_version === bumped,
         )
       ) {
         foundQueuedEvent = true;

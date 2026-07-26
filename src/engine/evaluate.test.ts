@@ -84,14 +84,16 @@ const TRACK_I_OUTPUT = {
   scale: 'limited' as const,
 };
 
-// V2-C: with a realistic 13-invariant policy, a Track I quantitative model
-// necessarily trips drift monitoring — "nothing tripped" now requires a
-// genuinely trivial use case. This is grounding §E row 1: an internal
-// productivity copilot, Low tier / Track III, no client data.
+// Oracle round 001 widened INV-CITE-01 from action_type [draft] to
+// [read, draft, recommend], because a retrieval-and-summarisation assistant is
+// the canonical hallucination surface and previously owed no citations at all.
+// A consequence, and an intended one: NO generative model can reach a clean
+// `approved` any more — presenting generated text to a human always owes a
+// citation. The clean case is therefore now a non-generative model.
 const CLEAN_PROCESSING = {
   id: 'p1',
-  label: 'internal copilot',
-  model_type: 'llm' as const,
+  label: 'internal scorecard',
+  model_type: 'statistical' as const,
   autonomy_level: 0 as const,
   data_zone: 'Zone C' as const,
   vendor: 'internal',
@@ -159,21 +161,36 @@ describe('evaluate — approved_with_controls path', () => {
       // Client PII into Zone A trips INV-DATA-01; the traditional-ml model
       // feeding a material decision also trips INV-DRIFT-01. The real
       // greedy solver must cover both from the control library.
-      expect(result.value.controls).toEqual(['CTRL-DRIFT-01', 'CTRL-ENC-01']);
+      //
+      // CTRL-INDEP-VAL-01 joins the set because it resolves INV-DRIFT-01 too,
+      // taking that invariant to coverage depth 2 and letting the solver meet
+      // the CS-1 safety margin. Before oracle round 001 the library had exactly
+      // one control per invariant, so no margin above zero was ever reachable.
+      expect(result.value.controls).toEqual(['CTRL-DRIFT-01', 'CTRL-ENC-01', 'CTRL-INDEP-VAL-01']);
     }
   });
 
-  it('sets boundary_proximity when a tripped invariant has exactly one resolving control selected (P3-C02 CS-4)', () => {
+  it('sets boundary_proximity when every tripped invariant has exactly one resolving control (P3-C02 CS-4)', () => {
+    // A generative model reading internally trips INV-CITE-01 and nothing
+    // else. CTRL-CITE-01 is its only resolver, so coverage depth is 1, the
+    // achieved margin is 0, and the verdict sits on the boundary.
+    //
+    // This fixture moved in oracle round 001: the previous one (Client PII +
+    // traditional-ml) now ALSO trips INV-DRIFT-01, which CTRL-INDEP-VAL-01
+    // takes to depth 2 — so it achieves margin and is no longer at the
+    // boundary. That is the control library getting better, not the test
+    // getting weaker.
     const g = graph({
-      input_nodes: [{ id: 'i1', label: 'client notes', data_class: 'Client PII', data_zone: 'Zone A' }],
-      processing_nodes: [TRACK_I_PROCESSING],
-      output_nodes: [TRACK_I_OUTPUT],
+      processing_nodes: [{ ...CLEAN_PROCESSING, model_type: 'llm' as const }],
+      output_nodes: [CLEAN_OUTPUT],
     });
     const result = evaluate(g, policy);
     expect(result.ok).toBe(true);
-    // appetite.yaml's INV-DATA-01 is resolved by exactly one control
-    // (CTRL-ENC-01) — zero redundant coverage, so boundary_proximity is true.
-    if (result.ok) expect(result.value.boundary_proximity).toBe(true);
+    if (result.ok) {
+      expect(result.value.binding_constraint).toBe('INV-CITE-01');
+      expect(result.value.margin_achieved).toBe(0);
+      expect(result.value.boundary_proximity).toBe(true);
+    }
   });
 
   it('leaves boundary_proximity false on the plain approved path (nothing tripped)', () => {
@@ -188,15 +205,45 @@ describe('evaluate — approved_with_controls path', () => {
 });
 
 describe('evaluate — no-track-match', () => {
+  // The SHIPPED policy can no longer produce this error: oracle round 001 found
+  // 9 of 28 model_type x bindingness combinations unrouted and made the track
+  // list total (see track.test.ts, which enumerates the cross-product).
+  //
+  // The error path stays, and stays tested, because a FIRM's edited policy can
+  // reintroduce the hole at any time — and returning a wrong verdict would be
+  // far worse than returning none. So the fixture now truncates the tracks
+  // deliberately rather than relying on the shipped policy being incomplete.
   it('surfaces a no-track-match EngineError when no track rule matches', () => {
+    const holed: PolicyFile = {
+      ...policy,
+      tracks: policy.tracks.filter((t) => t.id === 'TRACK-III'),
+    };
     const g = graph({
       processing_nodes: [
         { id: 'p1', label: 'x', model_type: 'deep-learning', autonomy_level: 1, data_zone: 'Zone A', vendor: 'internal', replaces_prior_model: false },
       ],
     });
-    const result = evaluate(g, policy);
+    const result = evaluate(g, holed);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('no-track-match');
+  });
+
+  it('the shipped policy routes every model_type / bindingness pair — the hole is closed', () => {
+    const result = evaluate(
+      graph({
+        processing_nodes: [
+          { id: 'p1', label: 'x', model_type: 'statistical', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+        ],
+        output_nodes: [
+          { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'at_scale' },
+        ],
+      }),
+      policy,
+    );
+    // Corpus case D-01 — an advisory market-impact model. Returned
+    // no-track-match before oracle round 001.
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.track).toBe('I');
   });
 });
 
@@ -233,7 +280,9 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
     const ex = result.value.explanation;
     expect(ex.tier_rationale?.rule_id).toMatch(/^TIER-/);
     expect(ex.tier_rationale?.matched_field).toBe('exposure');
-    expect(ex.track_rationale?.rule_id).toBe('TRACK-III');
+    // TRACK-I since oracle round 001: the clean fixture is a statistical
+    // model, because widening INV-CITE-01 means no generative model is clean.
+    expect(ex.track_rationale?.rule_id).toBe('TRACK-I');
     expect(ex.track_rationale?.regulatory_basis).toContain('SR 26-2');
     expect(ex.hard_lines_checked).toBe(policy.hard_lines.length);
     expect(ex.invariants_checked).toBe(policy.invariants.length);
@@ -262,7 +311,13 @@ describe('evaluate — verdict explanation (V1.1-C01)', () => {
     expect(detail.severity).toBe('High');
     expect(detail.required_controls).toEqual(['CTRL-ENC-01']);
     expect(detail.regulatory_basis).toBe('GDPR Art. 32(1)(a)');
-    expect(ex.binding_regulatory_basis).toBe('GDPR Art. 32(1)(a)');
+    // The BINDING invariant is INV-DRIFT-01, not INV-DATA-01. Both are
+    // severity High, and oracle round 001 replaced the alphabetical tie-break
+    // with one on the cheapest resolving control — the invariant's unavoidable
+    // cost. Drift monitoring (burden 3) outweighs encryption in transit
+    // (burden 2), so drift is what actually determines this verdict.
+    expect(result.value.binding_constraint).toBe('INV-DRIFT-01');
+    expect(ex.binding_regulatory_basis).toBe('RAF §8 — drift signals; SS1/23 §3.4');
   });
 });
 
@@ -348,16 +403,23 @@ describe('evaluate — jurisdiction packs (V2-A)', () => {
     expect(result.value.confidence_caveats.some((c) => c.confidence === 'low')).toBe(true);
   });
 
-  it('without the pack (or without the jurisdiction) the same case stays Medium — behavior is byte-identical to pre-V2-A', () => {
+  it('without the pack (or without the jurisdiction) the same case sits at the FIRM tier, and only the pack lifts it', () => {
+    // Oracle round 001: decision_type 'hiring' triggered no base tier at all,
+    // so a CV screener was Critical only when the EU pack happened to be
+    // loaded — the firm had no position of its own on employment decisions.
+    // Hiring now sits at High in the firm's own tiers, and the EU pack floors
+    // it to Critical under Annex III §4(a). The pack still demonstrably FORCES
+    // a change; it is no longer the only thing standing between a CV screener
+    // and a Low-tier verdict.
     const noPack = evaluate(hiringGraph(), policy);
     if (!noPack.ok) return;
-    expect(noPack.value.tier).toBe('Medium');
+    expect(noPack.value.tier).toBe('High');
     expect(noPack.value.confidence_caveats).toEqual([]);
     expect(noPack.value.applied_overrides).toEqual([]);
 
     const wrongJurisdiction = evaluate(graph({ ...hiringGraph(), jurisdictions: ['US'] }), policy, [euPack]);
     if (!wrongJurisdiction.ok) return;
-    expect(wrongJurisdiction.value.tier).toBe('Medium');
+    expect(wrongJurisdiction.value.tier).toBe('High');
   });
 
   it('is deterministic with packs — byte-identical across 10 runs', () => {

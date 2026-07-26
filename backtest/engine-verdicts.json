@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.0",
+  "policy_version": "1.1",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",
@@ -10,6 +10,7 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01"
       ],
       "downstream_reviews": [],
@@ -23,17 +24,12 @@
     "A-02": {
       "title": "The same commentary tool, with private-side names in the input",
       "status": "rejected",
-      "tier": "High",
-      "track": "II",
-      "binding_constraint": "INV-ZONE-01",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "HL-002",
       "controls": [],
       "downstream_reviews": [],
-      "tripped_invariants": [
-        "INV-CITE-01",
-        "INV-SEC-01",
-        "INV-TRACK2-01",
-        "INV-ZONE-01"
-      ],
+      "tripped_invariants": [],
       "applied_overrides": []
     },
     "B-01": {
@@ -43,11 +39,13 @@
       "track": "III",
       "binding_constraint": "INV-AGENT-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-LOG-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
-        "INV-AGENT-01"
+        "INV-AGENT-01",
+        "INV-CITE-01"
       ],
       "applied_overrides": []
     },
@@ -55,13 +53,15 @@
       "title": "Internal policy document search and summarisation",
       "status": "approved_with_controls",
       "tier": "Medium",
-      "track": "III",
+      "track": "II",
       "binding_constraint": "INV-SEC-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-REDTEAM-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-SEC-01"
       ],
       "applied_overrides": []
@@ -71,24 +71,31 @@
       "status": "approved_with_controls",
       "tier": "High",
       "track": "II",
-      "binding_constraint": "INV-CONDUCT-01",
+      "binding_constraint": "INV-AUTONOMY-02",
       "controls": [
+        "CTRL-AUTONOMY-BOUND-01",
+        "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
         "CTRL-DISCLOSE-01",
         "CTRL-ENC-01",
         "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-HITL-02",
         "CTRL-REDTEAM-01",
-        "CTRL-SAMPLE-01"
+        "CTRL-SAMPLE-01",
+        "CTRL-SYNTHMARK-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-AUTONOMY-02",
+        "INV-CITE-01",
         "INV-CONDUCT-01",
         "INV-DATA-01",
         "INV-DISCLOSE-01",
         "INV-ESCALATE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
+        "INV-SYNTHMARK-01",
         "INV-TRACK2-01"
       ],
       "applied_overrides": []
@@ -109,14 +116,17 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "I",
-      "binding_constraint": "INV-DRIFT-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
+        "CTRL-BIAS-01",
         "CTRL-DRIFT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-DRIFT-01",
+        "INV-FAIRNESS-01",
         "INV-SAMPLE-01"
       ],
       "applied_overrides": []
@@ -126,17 +136,24 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "II",
-      "binding_constraint": "INV-DATA-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
+        "CTRL-BIAS-01",
+        "CTRL-CITE-01",
         "CTRL-ENC-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-DATA-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-HALLUC-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
@@ -160,17 +177,18 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "II",
-      "binding_constraint": "INV-DRIFT-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-BIAS-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-SAMPLE-01",
         "INV-TRACK2-01"
       ],
@@ -181,17 +199,18 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "II",
-      "binding_constraint": "INV-DRIFT-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-BIAS-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-SAMPLE-01",
         "INV-TRACK2-01"
       ],
@@ -199,11 +218,18 @@
     },
     "D-01": {
       "title": "Execution-cost and market-impact estimation",
-      "status": "ENGINE-ERROR",
-      "error": {
-        "kind": "no-track-match",
-        "reason": "no track rule matched this graph"
-      }
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "I",
+      "binding_constraint": "INV-SAMPLE-01",
+      "controls": [
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-SAMPLE-01"
+      ],
+      "applied_overrides": []
     },
     "D-02": {
       "title": "Autonomous execution agent",
@@ -226,11 +252,14 @@
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-CITE-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
         "INV-HALLUC-01",
         "INV-SEC-01",
         "INV-TRACK2-01"
@@ -244,12 +273,15 @@
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
         "INV-TRACK2-01"
@@ -263,12 +295,15 @@
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
         "INV-TRACK2-01"
@@ -282,10 +317,9 @@
       "track": "II",
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-HITL-02"
+        "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
@@ -298,13 +332,22 @@
     },
     "E-04": {
       "title": "Automated data deletion for retention compliance",
-      "status": "rejected",
-      "tier": "Critical",
+      "status": "approved_with_controls",
+      "tier": "High",
       "track": "I",
-      "binding_constraint": "HL-005",
-      "controls": [],
+      "binding_constraint": "INV-AUTONOMY-01",
+      "controls": [
+        "CTRL-AUTONOMY-BOUND-01",
+        "CTRL-DRIFT-01",
+        "CTRL-HITL-02",
+        "CTRL-REVERSAL-01"
+      ],
       "downstream_reviews": [],
-      "tripped_invariants": [],
+      "tripped_invariants": [
+        "INV-AUTONOMY-01",
+        "INV-DRIFT-01",
+        "INV-IRREV-01"
+      ],
       "applied_overrides": []
     },
     "F-01": {
@@ -314,16 +357,17 @@
       "track": "II",
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-AUTONOMY-BOUND-01",
+        "CTRL-BIAS-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-HITL-02"
+        "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-TRACK2-01"
       ],
       "applied_overrides": []
@@ -335,11 +379,11 @@
       "track": "II",
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
-        "CTRL-DRIFT-01",
+        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-ENC-01",
-        "CTRL-EXPLAIN-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-HITL-02",
+        "CTRL-INDEP-VAL-01",
+        "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
@@ -349,6 +393,7 @@
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
         "INV-SAMPLE-01",
+        "INV-SEC-01",
         "INV-TRACK2-01"
       ],
       "applied_overrides": []
@@ -362,16 +407,23 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
+        "CTRL-DISCLOSE-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
-        "CTRL-REDTEAM-01"
+        "CTRL-INDEP-VAL-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SYNTHMARK-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
+        "INV-DISCLOSE-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
         "INV-HALLUC-01",
         "INV-SEC-01",
+        "INV-SYNTHMARK-01",
         "INV-TRACK2-01"
       ],
       "applied_overrides": []
@@ -383,13 +435,18 @@
       "track": "II",
       "binding_constraint": "INV-HALLUC-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
+        "INV-CITE-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
         "INV-HALLUC-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
@@ -402,17 +459,18 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "II",
-      "binding_constraint": "INV-DRIFT-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-BIAS-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-SAMPLE-01",
         "INV-TRACK2-01"
       ],
@@ -427,7 +485,8 @@
       "track": "I",
       "binding_constraint": "INV-DRIFT-01",
       "controls": [
-        "CTRL-DRIFT-01"
+        "CTRL-DRIFT-01",
+        "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [
         "Independent model validation (2LoD)"
@@ -443,7 +502,7 @@
       "title": "US generative-AI drafting assistant",
       "status": "approved_with_controls",
       "tier": "Low",
-      "track": "III",
+      "track": "II",
       "binding_constraint": "INV-CITE-01",
       "controls": [
         "CTRL-CITE-01"
@@ -465,10 +524,9 @@
       "track": "II",
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-EXPLAIN-01",
+        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-HITL-02",
+        "CTRL-INDEP-VAL-01",
         "CTRL-LOG-01",
         "CTRL-SAMPLE-01"
       ],
@@ -491,25 +549,30 @@
       "track": "II",
       "binding_constraint": "INV-CONDUCT-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
         "CTRL-DISCLOSE-01",
         "CTRL-ENC-01",
         "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
-        "CTRL-SAMPLE-01"
+        "CTRL-SAMPLE-01",
+        "CTRL-SYNTHMARK-01"
       ],
       "downstream_reviews": [
         "AI governance review",
         "Fairness and conduct assessment"
       ],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-CONDUCT-01",
         "INV-DATA-01",
         "INV-DISCLOSE-01",
         "INV-ESCALATE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
+        "INV-SYNTHMARK-01",
         "INV-TRACK2-01"
       ],
       "applied_overrides": [
@@ -522,12 +585,12 @@
       "status": "approved_with_controls",
       "tier": "Critical",
       "track": "II",
-      "binding_constraint": "INV-DATA-01",
+      "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
-        "CTRL-DRIFT-01",
+        "CTRL-BIAS-01",
         "CTRL-ENC-01",
-        "CTRL-EXPLAIN-01",
         "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [
@@ -537,6 +600,7 @@
         "INV-DATA-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
+        "INV-FAIRNESS-01",
         "INV-SAMPLE-01",
         "INV-TRACK2-01"
       ],
@@ -551,7 +615,9 @@
       "tier": "Medium",
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
-      "controls": [],
+      "controls": [
+        "CTRL-INDEP-VAL-01"
+      ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-TRACK2-01"
@@ -565,7 +631,8 @@
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
       "controls": [
-        "CTRL-FINGERPRINT-01"
+        "CTRL-FINGERPRINT-01",
+        "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
@@ -578,17 +645,22 @@
       "status": "approved_with_controls",
       "tier": "Medium",
       "track": "II",
-      "binding_constraint": "INV-TRACK2-01",
+      "binding_constraint": "INV-VENDOR-01",
       "controls": [
+        "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-REDTEAM-01"
+        "CTRL-INDEP-VAL-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-TPRM-01"
       ],
       "downstream_reviews": [
         "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved registry"
       ],
       "tripped_invariants": [
+        "INV-CITE-01",
         "INV-SEC-01",
-        "INV-TRACK2-01"
+        "INV-TRACK2-01",
+        "INV-VENDOR-01"
       ],
       "applied_overrides": []
     }

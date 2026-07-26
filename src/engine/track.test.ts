@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { assignTrack } from './track';
+import { loadPolicy } from '../store/policy';
 import type { DataFlowGraph, TrackRule } from './types';
 
 function graph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
@@ -69,5 +72,52 @@ describe('assignTrack', () => {
     const result = assignTrack(withModelType('deep-learning'), TRACKS);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('no-track-match');
+  });
+});
+
+// Oracle round 001. The shipped track list must be TOTAL over the field space:
+// every model_type x decision_bindingness pair must route somewhere. Before
+// this round 9 of 28 pairs matched no track and the engine returned no verdict
+// at all — including `agentic` on advisory, material AND binding decisions, the
+// highest-risk shape in the taxonomy falling straight through the routing.
+//
+// This enumerates the cross-product rather than sampling it, because sampling
+// is exactly what missed the hole for two months.
+describe('track totality (oracle round 001)', () => {
+  const MODEL_TYPES = [
+    'statistical', 'traditional-ml', 'ml', 'deep-learning', 'llm', 'generative-ai', 'agentic',
+  ] as const;
+  const BINDINGNESS = ['non-binding', 'advisory', 'material', 'binding'] as const;
+
+  it('routes every model_type x decision_bindingness pair at autonomy 0-2, replacement or not', () => {
+    const policyFile = loadPolicy(
+      readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8'),
+    );
+    if (!policyFile.valid) throw new Error('shipped policy invalid');
+    const tracks = policyFile.policy.tracks;
+
+    const unrouted: string[] = [];
+    for (const model_type of MODEL_TYPES) {
+      for (const decision_bindingness of BINDINGNESS) {
+        for (const autonomy_level of [0, 1, 2] as const) {
+          for (const replaces_prior_model of [false, true]) {
+            const g = graph({
+              processing_nodes: [{
+                id: 'p1', label: 'x', model_type, autonomy_level,
+                data_zone: 'Zone C', vendor: 'internal', replaces_prior_model,
+              }],
+              output_nodes: [{
+                id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared',
+                decision_bindingness, output_reversibility: 'reversible', scale: 'limited',
+              }],
+            });
+            if (!assignTrack(g, tracks)) {
+              unrouted.push(`${model_type} + ${decision_bindingness} (autonomy ${autonomy_level}, replaces=${replaces_prior_model})`);
+            }
+          }
+        }
+      }
+    }
+    expect(unrouted).toEqual([]);
   });
 });

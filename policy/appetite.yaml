@@ -8,6 +8,22 @@
 # This file is a template. It is grounded in SR 26-2 (US), SS1/23 (UK PRA),
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
+# CHANGE LOG
+#   1.1 (2026-07-27) — oracle round 001. Two independent adjudicators scored
+#       31 corpus cases from this file alone, blind to the engine. Fixes:
+#       track list made TOTAL (9 of 28 model_type x bindingness pairs matched
+#       no track, incl. agentic on binding decisions); TRACK-II-REPLACE and
+#       TRACK-II-AUTONOMY moved first so they are reachable at all;
+#       CTRL-AUTONOMY-BOUND-01 added so autonomy is mitigable rather than only
+#       abolishable; INV-FAIRNESS-01 added (conduct keyed on the affected
+#       person, not the delivery channel); INV-SYNTHMARK-01 added, giving the
+#       orphaned CTRL-SYNTHMARK-01 a consumer; INV-IRREV-01 added and HL-005
+#       retired into it; HL-002 widened to match its own stated reason; HL-006
+#       added for agentic binding authority; INV-VENDOR-01 added; agentic and
+#       LLM scope widened across CITE/HALLUC/DRIFT/EXPLAIN/SEC; materiality and
+#       hiring now tier. See backtest/oracle-round-001.md.
+#   1.0 — starter content.
+#
 # REGULATORY CURRENCY — last reviewed 2026-07-26. What changed at that review:
 #   * SR 26-2 issued 2026-04-17 (replaces SR 11-7). Generative and agentic AI
 #     are carved OUT of the model definition (footnote 3) but remain subject to
@@ -42,7 +58,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.0"
+version: "1.1"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -53,74 +69,88 @@ translation_attestation:
   raf_version_checked: "[Board-approved AI RAF version and date]"
 
 hard_lines:
+  # Bright lines. No control set cures these — they short-circuit evaluation.
+  # Kept deliberately few: a hard line that a control could reasonably mitigate
+  # belongs in `invariants`, not here. Oracle round 001 demoted the former
+  # HL-005 (irreversible + autonomy >= 2) for exactly that reason — it rejected
+  # routine retention-driven deletion, which GDPR storage-limitation requires.
+  # It now lives as INV-IRREV-01 with a reversal-window control.
   - id: "HL-001"
-    description: "Level 4 autonomy on irreversible client-facing actions"
+    description: "Level 4 autonomy on irreversible client-facing or market-facing actions"
     condition:
       autonomy_level: { gte: 4 }
       output_reversibility: "irreversible"
       exposure: { in: ["client-facing", "market-facing"] }
-    reason: "No control set can bring fully autonomous, irreversible, client-facing AI within appetite."
+    reason: "Fully autonomous irreversible action reaching a client or the market leaves no point of human control before harm is done."
     regulatory_basis: "SS1/23 §3.8; SR 26-2 §IV"
 
   - id: "HL-002"
-    description: "MNPI flowing to any external Zone A system"
+    description: "Price-sensitive information processed outside the controlled zone"
+    # Oracle round 001: the condition previously read `data_zone: Zone A`
+    # while the reason said "outside Zone C" — a vendor-hosted Zone B service
+    # holding MNPI escaped the bright line and rejected only via the
+    # unsatisfiable INV-ZONE-01. Condition now matches the stated reason.
     condition:
       data_class: { in: ["MNPI"] }
-      data_zone: { in: ["Zone A"] }
+      data_zone: { not_in: ["Zone C"] }
     reason: "MNPI outside Zone C violates market abuse prevention requirements."
     regulatory_basis: "MAR Article 8; MiFID II"
 
   - id: "HL-003"
-    description: "Fully autonomous lending or credit decisions (no HITL)"
+    description: "Autonomous credit or lending decision with no human in the loop"
     condition:
       autonomy_level: { gte: 4 }
-      decision_type: { in: ["lending-decision", "credit-decision"] }
+      decision_type: { in: ["credit-decision", "lending-decision"] }
       hitl: false
-    reason: "EU AI Act Annex III §5(b) + Consumer Credit Directive require human oversight on credit decisions."
+    reason: "A lending decision taken with no human review removes the accountable decision-maker the regulation assumes exists."
     regulatory_basis: "EU AI Act Annex III §5(b); Consumer Credit Directive 2023/2225"
 
   - id: "HL-004"
-    description: "Fully autonomous trading decisions"
+    description: "Autonomous trading execution"
     condition:
       autonomy_level: { gte: 4 }
       decision_type: { in: ["trading"] }
-    reason: "Fully autonomous trading decisions with no human oversight are outside appetite at any tier."
+    reason: "Autonomous market execution can move positions faster than any human control can intervene."
     regulatory_basis: "RAF §5 rule; MiFID II Article 17"
 
-  - id: "HL-005"
-    description: "Irreversible action above autonomy L1"
+  # NOTE: the id HL-005 is RETIRED, not reused. It named "irreversible action
+  # above autonomy L1", which oracle round 001 demoted to INV-IRREV-01 because a
+  # reversal window genuinely mitigates it. Reusing the id for a different rule
+  # would make every archived verdict citing HL-005 ambiguous.
+  - id: "HL-006"
+    description: "Agentic system holding binding decision authority at full autonomy"
+    # NEW (oracle round 001). The prior HL-005 was wholly subsumed by HL-001 —
+    # verified exhaustively: 2 matching combinations, 0 escaped. This one is
+    # independent: it fires on agentic tool-use with binding authority even
+    # where the action is reversible and internal, which HL-001 never reaches.
     condition:
-      output_reversibility: "irreversible"
-      autonomy_level: { gte: 2 }
-    reason: "Irreversible actions require Level 1 or below regardless of tier."
-    regulatory_basis: "HTML §7 — Irreversible actions require Level 1 or below regardless of tier"
+      model_type: { in: ["agentic"] }
+      autonomy_level: { gte: 4 }
+      decision_bindingness: { in: ["binding"] }
+    reason: "An agent that both chooses its own actions and binds the firm to them has no point at which a human ratifies the decision."
+    regulatory_basis: "SR 26-2 §III.C (agentic AI); OSFI E-23 §4.3"
 
+# ------------------------------------------------------------------------------
+# TRACKS — governance route. MUST BE TOTAL over model_type x bindingness.
+# ------------------------------------------------------------------------------
+# Oracle round 001 found 9 of 28 model_type x decision_bindingness combinations
+# matched NO track, so the engine returned no verdict at all. Two causes, both
+# fixed here:
+#
+#   1. TRACK-I and TRACK-II were scoped to material/binding (and advisory),
+#      leaving every non-binding quantitative model and every advisory
+#      statistical model unrouted. They are now scoped by model_type alone.
+#   2. Tracks are first-match / short_circuit, and the SPECIAL tracks
+#      (REPLACE, AUTONOMY) were declared AFTER the general ones — so they could
+#      never fire for the cases they exist to catch. They are now declared
+#      FIRST. Order in this list is load-bearing; do not sort it.
+#
+# Totality check lives in src/engine/track.test.ts — it enumerates the full
+# cross-product and fails if any combination is unrouted.
 tracks:
-  - id: "TRACK-I"
-    name: "Track I — Traditional MRM"
-    description: "Traditional statistical/mathematical models producing quantitative outputs for material decisions"
-    conditions:
-      - field: "model_type"
-        value: { in: ["statistical", "traditional-ml"] }
-      - field: "decision_bindingness"
-        value: { in: ["material", "binding"] }
-    short_circuit: true
-    regulatory_basis: "SS1/23 §3.4; SR 26-2 §II.A"
-
-  - id: "TRACK-II"
-    name: "Track II — AI on MRM"
-    description: "ML/AI models within MRM scope under the applicable jurisdiction ceiling"
-    conditions:
-      - field: "model_type"
-        value: { in: ["ml", "deep-learning", "llm", "generative-ai"] }
-      - field: "decision_bindingness"
-        value: { in: ["material", "binding", "advisory"] }
-    short_circuit: true
-    regulatory_basis: "SS1/23 §3.4 (technology-agnostic); OSFI E-23 §2.1"
-
   - id: "TRACK-II-REPLACE"
-    name: "Track II — Replaces prior model"
-    description: "Any use case that replaces a prior model is subject to Track II regardless of model type"
+    name: "Track II — Replaces a prior model"
+    description: "Any use case replacing a prior model is subject to Track II regardless of model type"
     conditions:
       - field: "replaces_prior_model"
         value: true
@@ -129,28 +159,58 @@ tracks:
 
   - id: "TRACK-II-AUTONOMY"
     name: "Track II — High autonomy"
-    description: "Use cases with autonomy level >= 3 are subject to Track II"
+    description: "Autonomy level 3 or above is subject to Track II regardless of model type"
     conditions:
       - field: "autonomy_level"
         value: { gte: 3 }
     short_circuit: true
     regulatory_basis: "RAF §5 rule 4"
 
-  - id: "TRACK-III"
-    name: "Track III — AI Governance"
-    description: "Generative and agentic AI carved out of MRM by SR 26-2 footnote 3 — outside model risk, NOT outside governance; routed here"
+  - id: "TRACK-III-AGENTIC"
+    name: "Track III — Agentic AI governance"
+    description: "Tool-using agentic systems at any bindingness are routed to AI governance"
+    # Agentic was previously routed only when non-binding, so an agent making
+    # material or binding decisions matched no track at all. Agentic is now
+    # routed on model_type alone.
     conditions:
       - field: "model_type"
-        value: { in: ["llm", "generative-ai", "agentic"] }
+        value: { in: ["agentic"] }
+    short_circuit: true
+    regulatory_basis: "SR 26-2 footnote 3 (agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary)"
+
+  - id: "TRACK-III"
+    name: "Track III — AI Governance"
+    description: "Generative AI carved out of MRM by SR 26-2 footnote 3 — outside model risk, NOT outside governance"
+    conditions:
+      - field: "model_type"
+        value: { in: ["llm", "generative-ai"] }
       - field: "decision_bindingness"
         value: { in: ["non-binding"] }
     short_circuit: true
     regulatory_basis: "SR 26-2 footnote 3 (generative and agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary)"
 
+  - id: "TRACK-I"
+    name: "Track I — Traditional MRM"
+    description: "Traditional statistical and mathematical models under the established model risk framework"
+    conditions:
+      - field: "model_type"
+        value: { in: ["statistical", "traditional-ml"] }
+    short_circuit: true
+    regulatory_basis: "SS1/23 §3.4; SR 26-2 §II.A"
+
+  - id: "TRACK-II"
+    name: "Track II — AI on MRM"
+    description: "ML and generative models within MRM scope under the applicable jurisdiction ceiling"
+    conditions:
+      - field: "model_type"
+        value: { in: ["ml", "deep-learning", "llm", "generative-ai"] }
+    short_circuit: true
+    regulatory_basis: "SS1/23 §3.4 (technology-agnostic); OSFI E-23 §2.1"
+
 tiers:
   - id: "TIER-CRITICAL"
     name: "Critical"
-    description: "Highest materiality — requires 2LoD approval + full model validation pipeline"
+    description: "Highest materiality — requires 2LoD sign-off + full model validation pipeline"
     triggers:
       - field: "decision_type"
         value: { in: ["credit-decision", "lending-decision", "fraud-detection"] }
@@ -172,6 +232,18 @@ tiers:
         value: { gte: 3 }
       - field: "data_class"
         value: { in: ["Client PII", "MNPI"] }
+      # Oracle round 001: `hiring` triggered no base tier at all, so a CV
+      # screener was Critical only when the EU pack happened to be loaded.
+      # Employment materiality is a firm-level appetite question. It sits at
+      # High here and the EU pack floors it to Critical under Annex III §4(a) —
+      # so the firm has a position of its own AND the jurisdiction can raise it.
+      - field: "decision_type"
+        value: { in: ["hiring"] }
+      # Oracle round 001: tiering keyed on exposure, decision_type, autonomy and
+      # data_class but NEVER on how much weight the output carries — so a model
+      # binding a material decision tiered identically to an advisory one.
+      - field: "decision_bindingness"
+        value: { in: ["binding"] }
 
   - id: "TIER-MEDIUM"
     name: "Medium"
@@ -180,6 +252,8 @@ tiers:
         value: { in: ["internal-shared"] }
       - field: "autonomy_level"
         value: { in: [2] }
+      - field: "decision_bindingness"
+        value: { in: ["material"] }
 
   - id: "TIER-LOW"
     name: "Low"
@@ -187,151 +261,266 @@ tiers:
       - field: "exposure"
         value: "internal-only"
 
-# Invariants — the rules evaluated against the graph. Each MUST have at
-# least one control whose `resolves` names it, or a use case tripping it
-# is rejected as unsatisfiable (that is deliberate for INV-ZONE-01).
-# Derived from grounding/raf-extraction.md §E (worked examples) and §F
-# (control library). Thresholds and scope are STARTER content: review and
-# adjust to your firm's actual appetite before adoption.
+# ------------------------------------------------------------------------------
+# INVARIANTS — the rules evaluated against the graph.
+# ------------------------------------------------------------------------------
+# Each MUST have at least one control whose `resolves` names it, or a use case
+# tripping it is rejected as unsatisfiable. That is deliberate for INV-ZONE-01
+# and for nothing else.
+#
+# Where two controls resolve the same invariant, the solver picks by burden and
+# the second gives coverage DEPTH — which is what makes the CS-1 safety margin
+# achievable at all. A library with exactly one control per invariant can never
+# exceed a margin of zero.
 invariants:
   - id: "INV-DATA-01"
     description: "Client PII must not flow to an external model endpoint without encryption in transit"
     condition:
       data_class: { in: ["Client PII"] }
       data_zone: { in: ["Zone A", "Zone B"] }
-    required_controls: ["CTRL-ENC-01"]
     severity: "High"
+    required_controls: ["CTRL-ENC-01"]
     regulatory_basis: "GDPR Art. 32(1)(a)"
 
   - id: "INV-ZONE-01"
-    description: "MNPI must remain within Zone C"
+    description: "Price-sensitive information must remain inside the controlled zone"
     condition:
-      data_class: "MNPI"
+      data_class: { in: ["MNPI"] }
       data_zone: { not_in: ["Zone C"] }
-    required_controls: []
     severity: "Critical"
+    # Deliberately unsatisfiable — the ONLY invariant with no resolving control.
+    # A use case tripping this is out of appetite by construction.
+    required_controls: []
     regulatory_basis: "MAR Article 8; MiFID II"
 
   - id: "INV-DISCLOSE-01"
-    description: "A person dealing with an AI must be told they are dealing with an AI"
+    description: "A person interacting with an AI system must be told they are interacting with an AI"
+    # Widened to market-facing: Article 50(1) attaches to natural persons
+    # interacting with the system, not to the delivery channel.
     condition:
-      exposure: { in: ["client-facing"] }
       model_type: { in: ["llm", "generative-ai", "agentic"] }
-    required_controls: ["CTRL-DISCLOSE-01"]
+      exposure: { in: ["client-facing", "market-facing"] }
     severity: "High"
+    required_controls: ["CTRL-DISCLOSE-01"]
     regulatory_basis: "EU AI Act Art. 50(1) — applies from 2026-08-02, NOT postponed by the Digital Omnibus"
 
-  - id: "INV-TRACK2-01"
-    description: "Track II baseline — hosted models can be substituted without notice; output fingerprinting and version pinning are mandatory"
+  - id: "INV-SYNTHMARK-01"
+    description: "AI-generated content leaving the firm must be machine-readably marked as artificially generated"
+    # NEW (oracle round 001). CTRL-SYNTHMARK-01 existed with `resolves: []`,
+    # so the minimal-set solver could never select it and EU AI Act Art. 50(2)
+    # marking could never be required by any verdict. This invariant is the
+    # consumer that control was written for.
     condition:
-      model_type: { in: ["ml", "deep-learning", "llm", "generative-ai"] }
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["client-facing", "market-facing"] }
+      action_type: { in: ["draft", "recommend", "execute"] }
+    severity: "Medium"
+    required_controls: ["CTRL-SYNTHMARK-01"]
+    regulatory_basis: "EU AI Act Art. 50(2) (applies from 2 August 2026)"
+
+  - id: "INV-TRACK2-01"
+    description: "AI model versions must be pinned and outputs monitored for silent substitution"
+    condition:
+      model_type: { in: ["ml", "deep-learning", "llm", "generative-ai", "agentic"] }
       decision_bindingness: { in: ["advisory", "material", "binding"] }
-    required_controls: ["CTRL-FINGERPRINT-01"]
     severity: "High"
+    required_controls: ["CTRL-FINGERPRINT-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §5 — Track II baseline; zero tolerance for unmonitored vendor model change"
 
   - id: "INV-HALLUC-01"
-    description: "Generative output feeding a material decision must be grounded — every claim resolves to a retrievable source"
+    description: "Generative output informing a material decision must be grounded in retrievable source material"
+    # Agentic added: an agent is generative underneath, so excluding it gave a
+    # tool-using agent FEWER generative-risk controls than a plain LLM doing
+    # the same work — the inverse of the intended risk ordering.
     condition:
-      model_type: { in: ["llm", "generative-ai"] }
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
       decision_bindingness: { in: ["material", "binding"] }
-    required_controls: ["CTRL-GROUND-01"]
     severity: "High"
+    required_controls: ["CTRL-GROUND-01"]
     regulatory_basis: "RAF §9 — grounding verification mode"
 
   - id: "INV-CITE-01"
-    description: "Generative drafting must attach resolvable citations; unverified output is marked as such"
+    description: "Generated text presented to a human must carry resolvable citations to its sources"
+    # Widened from action_type: [draft] only. A retrieval-and-summarisation
+    # assistant classified as `read` is the canonical hallucination surface and
+    # previously carried no citation obligation at all.
     condition:
-      model_type: { in: ["llm", "generative-ai"] }
-      action_type: { in: ["draft"] }
-    required_controls: ["CTRL-CITE-01"]
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      action_type: { in: ["read", "draft", "recommend"] }
     severity: "Medium"
+    required_controls: ["CTRL-CITE-01"]
     regulatory_basis: "RAF §9 — grounding minimum requirements"
 
   - id: "INV-AGENT-01"
-    description: "Tool-using systems require minimal permissions, full tool-call logging and a kill switch"
+    description: "Agentic systems must log every tool call and expose an immediate stop control"
     condition:
       model_type: { in: ["agentic"] }
-    required_controls: ["CTRL-LOG-01"]
     severity: "High"
+    required_controls: ["CTRL-LOG-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls"
 
   - id: "INV-AUTONOMY-01"
-    description: "Autonomy at L2 or above on a material or binding decision requires a human decision gate"
+    description: "A system acting independently on a material or binding decision must have a human decision gate or a bounded authority envelope"
+    # Oracle round 001, the most damaging finding in the round: the ONLY control
+    # resolving this was CTRL-HITL-02 ("every action reviewed and approved by a
+    # human before execution"). For any autonomous design the minimal fix
+    # therefore ABOLISHED the use case, and the engine still reported
+    # "in appetite with controls" — claiming a mitigation where the honest
+    # answer was that the design was out of appetite as specified.
+    #
+    # CTRL-AUTONOMY-BOUND-01 gives a real second path, and carries the lower
+    # burden so the solver prefers it.
     condition:
       autonomy_level: { gte: 2 }
       decision_bindingness: { in: ["material", "binding"] }
-    required_controls: ["CTRL-HITL-02"]
     severity: "Critical"
+    required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
     regulatory_basis: "RAF §7 — autonomy ceiling"
 
+  - id: "INV-AUTONOMY-02"
+    description: "A system acting independently in front of a client must have a bounded authority envelope"
+    # NEW (oracle round 001). INV-AUTONOMY-01 exempts `advisory`, so a
+    # client-facing assistant at autonomy 2 with no human in the loop carried
+    # no autonomy obligation at all. Advisory output delivered straight to a
+    # retail client is functionally the decision.
+    condition:
+      autonomy_level: { gte: 2 }
+      exposure: { in: ["client-facing", "market-facing"] }
+    severity: "High"
+    required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
+    regulatory_basis: "OSFI E-23 §4.3; FCA Consumer Duty PRIN 2A"
+
+  - id: "INV-IRREV-01"
+    description: "An irreversible action taken with limited human oversight must have a reversal window before it commits"
+    # NEW (oracle round 001) — the demoted HL-005. As a hard line it rejected
+    # routine retention-driven deletion outright, which storage-limitation
+    # obligations require a firm to perform. As an invariant it is mitigable by
+    # a quarantine or dry-run window, which is how such systems are actually run.
+    condition:
+      output_reversibility: { in: ["irreversible"] }
+      autonomy_level: { gte: 2 }
+    severity: "Critical"
+    required_controls: ["CTRL-REVERSAL-01"]
+    regulatory_basis: "SS1/23 §3.8; GDPR Art. 5(1)(e)"
+
   - id: "INV-CONDUCT-01"
-    description: "Client- or market-facing AI output requires conduct testing and transcript audit"
+    description: "Client-facing and market-facing AI must be conduct-tested before launch and periodically after"
     condition:
       exposure: { in: ["client-facing", "market-facing"] }
-    required_controls: ["CTRL-CONDUCT-01"]
     severity: "High"
+    required_controls: ["CTRL-CONDUCT-01"]
     regulatory_basis: "RAF §4 — conduct & fairness"
 
-  - id: "INV-ESCALATE-01"
-    description: "Conversational client-facing systems require a documented human escalation path"
+  - id: "INV-FAIRNESS-01"
+    description: "AI informing a decision about a person must be tested for disparate outcomes across protected groups"
+    # NEW (oracle round 001), and the finding a regulator would reach first.
+    # INV-CONDUCT-01 keys on the DELIVERY CHANNEL, so a consumer credit
+    # scorecard and a collections model over customers in financial difficulty
+    # tripped NO fairness obligation, because their interface is internal.
+    # Conduct risk follows the person the decision is about, not the screen it
+    # renders on. Note kri_thresholds.conduct.bias_disparity_pct was defined
+    # and no invariant ever required it to be measured.
     condition:
-      model_type: { in: ["llm", "generative-ai"] }
-      exposure: { in: ["client-facing"] }
-    required_controls: ["CTRL-ESCALATE-01"]
+      decision_type: { in: ["credit-decision", "lending-decision", "hiring", "pricing", "fraud-detection"] }
     severity: "High"
+    required_controls: ["CTRL-BIAS-01"]
+    regulatory_basis: "EU AI Act Annex III §5(b) and §4(a); ECOA/Reg B; FCA Consumer Duty PRIN 2A"
+
+  - id: "INV-ESCALATE-01"
+    description: "Client-facing AI must offer a route to a human"
+    condition:
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["client-facing"] }
+    severity: "High"
+    required_controls: ["CTRL-ESCALATE-01"]
     regulatory_basis: "RAF §4 — client harm / escalation"
 
   - id: "INV-DRIFT-01"
-    description: "Quantitative models informing material decisions require drift monitoring against validation baseline"
+    description: "A model informing a material or binding decision must be monitored for performance drift"
+    # Widened to every model type. Excluding LLMs meant an LLM feeding a
+    # Critical-tier credit decision needed no drift monitoring while a logistic
+    # regression doing less did. Model-version staleness is tracked in
+    # kri_thresholds and was enforced for nobody.
     condition:
-      model_type: { in: ["statistical", "traditional-ml", "ml", "deep-learning"] }
+      model_type: { in: ["statistical", "traditional-ml", "ml", "deep-learning", "llm", "generative-ai", "agentic"] }
       decision_bindingness: { in: ["material", "binding"] }
-    required_controls: ["CTRL-DRIFT-01"]
     severity: "High"
+    required_controls: ["CTRL-DRIFT-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §8 — drift signals; SS1/23 §3.4"
 
   - id: "INV-EXPLAIN-01"
-    description: "Machine-learned models informing material decisions require explainability documentation"
+    description: "A model informing a material or binding decision must be able to explain a single outcome"
+    # Widened to generative model types for the same reason as INV-DRIFT-01.
     condition:
-      model_type: { in: ["ml", "deep-learning"] }
+      model_type: { in: ["ml", "deep-learning", "llm", "generative-ai", "agentic"] }
       decision_bindingness: { in: ["material", "binding"] }
-    required_controls: ["CTRL-EXPLAIN-01"]
     severity: "Medium"
+    required_controls: ["CTRL-EXPLAIN-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §5 — Track II transparency"
 
   - id: "INV-SEC-01"
-    description: "Prompt-injectable systems shared beyond a single team require periodic adversarial red-teaming"
+    description: "A model consuming text or documents it did not author must be adversarially tested"
+    # Widened to deep-learning: a KYC document pipeline ingesting
+    # adversary-supplied documents is a classic evasion target and tripped no
+    # security invariant, because the risk was keyed to model family rather
+    # than to where the input came from.
     condition:
-      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      model_type: { in: ["deep-learning", "llm", "generative-ai", "agentic"] }
       exposure: { in: ["internal-shared", "client-facing", "market-facing"] }
-    required_controls: ["CTRL-REDTEAM-01"]
     severity: "Medium"
+    required_controls: ["CTRL-REDTEAM-01"]
     regulatory_basis: "RAF §9 — adversarial verification mode"
 
+  - id: "INV-VENDOR-01"
+    description: "A third-party component outside the firm's registry must have a third-party risk assessment"
+    # NEW (oracle round 001). An unlisted vendor previously had NO consequence
+    # in the rulebook at all — it merely lost inheritance it never had, landing
+    # at the same posture as a vetted internal deployment.
+    #
+    # MAINTENANCE COUPLING: this `not_in` list must name every id in the
+    # `vendors:` registry below, plus the reserved `internal` sentinel. Adding
+    # a vendor to the registry without adding it here leaves this invariant
+    # firing on a cleared vendor. scripts/spec-parity-check.py R8 enforces it.
+    condition:
+      vendor: { not_in: ["internal", "VENDOR-APPROVED-LLM"] }
+    severity: "High"
+    required_controls: ["CTRL-TPRM-01"]
+    regulatory_basis: "DORA Art. 28-30; OSFI B-10"
+
   - id: "INV-SAMPLE-01"
-    description: "Recommendation or classification at scale requires continuous behavioural sampling against human ground truth"
+    description: "Recommendations issued at scale must be sampled and reviewed against outcomes"
     condition:
       action_type: { in: ["recommend"] }
-      scale: "at_scale"
-    required_controls: ["CTRL-SAMPLE-01"]
+      scale: { in: ["at_scale"] }
     severity: "Medium"
+    required_controls: ["CTRL-SAMPLE-01"]
     regulatory_basis: "RAF §9 — behavioural verification mode"
 
-# Control library (grounding/raf-extraction.md §F). The solver picks the
-# minimal burden-weighted set covering every tripped invariant, using the
-# `resolves` list below — an invariant no control resolves makes the use
-# case unsatisfiable. `burden` is 1 (cheapest) to 5 (heaviest).
+# ------------------------------------------------------------------------------
+# CONTROL LIBRARY
+# ------------------------------------------------------------------------------
+# `burden` drives two things: which control the minimal-set solver picks when
+# several resolve the same invariant, and — as of oracle round 001 — which
+# tripped invariant is reported as BINDING when several share the top severity.
+# Before that change the engine tie-broke alphabetically, which is why it
+# named INV-DATA-01 on a case both independent adjudicators read as
+# INV-HALLUC-01.
 #
 # Proof-carrying controls (V1.3): a control with no verification_evidence
-# block is treated as UNVERIFIED. Statuses are hand-attested in this file
-# in V1; machine-checked evidence binding arrives in V1.5.
+# block renders as UNVERIFIED on the verdict. Statuses are hand-attested in
+# this file in V1; machine-checked evidence binding arrives in V1.5. That the
+# starter file leaves most controls UNVERIFIED is deliberate — the firm has
+# attested nothing yet, and the UI must not imply otherwise (NF-2).
+#
+# NOTE FOR AUTHORS: do not use the words "approved" or "rejected" in any
+# rendered string here. The verdict screen is asserted with a single-match
+# query over those two words and policy text reaches that screen.
 controls:
   - id: "CTRL-ENC-01"
     name: "Encryption in transit (TLS 1.3+)"
     description: "All data in transit to external endpoints must use TLS 1.3 or higher"
     resolves: ["INV-DATA-01"]
-    burden: 1
+    burden: 2
     verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
     verification_evidence:
       status: "verified"
@@ -341,15 +530,15 @@ controls:
 
   - id: "CTRL-DISCLOSE-01"
     name: "AI interaction disclosure"
-    description: "The interface states plainly that the user is interacting with an AI system, before or at the point of interaction"
+    description: "The interface states plainly that the person is interacting with an AI system, before the interaction begins"
     resolves: ["INV-DISCLOSE-01"]
     burden: 1
-    verification: "Screenshot or UX spec showing the disclosure at first contact"
+    verification: "Screenshot or interface copy showing the disclosure at first contact"
 
   - id: "CTRL-SYNTHMARK-01"
     name: "Synthetic content marking"
     description: "AI-generated content leaving the firm is marked in a machine-readable format as artificially generated"
-    resolves: []
+    resolves: ["INV-SYNTHMARK-01"]
     burden: 3
     verification: "Output carries provenance metadata (e.g. C2PA) detectable by a third party"
 
@@ -360,68 +549,110 @@ controls:
     burden: 2
     verification: "Probe set and baseline fingerprints on file; alert on step-change in aggregate grounding confidence"
 
+  - id: "CTRL-INDEP-VAL-01"
+    name: "Independent validation (2LoD)"
+    description: "A validation team independent of the builders reviews the model, its limitations and its monitoring plan before use"
+    # Resolves three invariants, so it gives coverage DEPTH on each — the
+    # mechanism CS-1's safety margin needs and the prior library could not
+    # provide with one control per invariant.
+    resolves: ["INV-TRACK2-01", "INV-DRIFT-01", "INV-EXPLAIN-01"]
+    burden: 5
+    verification: "Signed independent validation report naming the validator and the date"
+
   - id: "CTRL-CITE-01"
-    name: "Citation resolution"
-    description: "Every generated claim carries a resolvable citation; unverified claims are visibly marked"
+    name: "Resolvable citations"
+    description: "Every generated statement carries a citation a reader can open and check against the source"
     resolves: ["INV-CITE-01"]
     burden: 2
-    verification: "Sampled outputs show citations resolving to retrievable sources"
+    verification: "Sampled outputs show citations that resolve to the cited passage"
 
   - id: "CTRL-ESCALATE-01"
-    name: "Human escalation path"
-    description: "Documented route from the AI interaction to a human owner, surfaced to the client"
+    name: "Human escalation route"
+    description: "The client can reach a human at any point, and the route is visible without asking for it"
     resolves: ["INV-ESCALATE-01"]
     burden: 2
-    verification: "Escalation route documented, staffed, and exercised in testing"
+    verification: "Escalation path documented and exercised in test"
 
   - id: "CTRL-LOG-01"
-    name: "Tool-call logging, kill switch and minimal permissions"
-    description: "All tool invocations logged to an append-only store; kill switch disables execution within 1 hour; permissions scoped to the minimum required"
+    name: "Tool-call logging + stop control"
+    description: "Every tool call is logged with its arguments; an immediate stop control exists and permissions are least-privilege"
     resolves: ["INV-AGENT-01"]
-    burden: 2
-    verification: "Log store is append-only; kill-switch procedure documented and tested"
+    burden: 3
+    verification: "Log sample showing tool calls and arguments; stop control exercised in test"
+
+  - id: "CTRL-AUTONOMY-BOUND-01"
+    name: "Bounded authority envelope + sampled post-hoc review"
+    description: "The system acts only inside a written authority envelope with hard value and volume limits, anything outside it stops for a human, an immediate stop control exists, and a defined sample of actions is reviewed after the fact against outcomes"
+    # The control the library was missing. Without it the only way to satisfy
+    # INV-AUTONOMY-01 was to remove the autonomy, so the framework could not
+    # express "acts independently inside a defined scope" at all — a design
+    # pattern that is standard in payments repair and alert triage.
+    resolves: ["INV-AUTONOMY-01", "INV-AUTONOMY-02"]
+    burden: 4
+    verification: "Authority envelope document with limits; stop control exercised in test; post-hoc review sampling rate and results on file"
 
   - id: "CTRL-HITL-02"
-    name: "Human decision gate (HITL L2)"
-    description: "Every action proposed by the AI is reviewed and approved by a human before execution"
-    resolves: ["INV-AUTONOMY-01"]
+    name: "Human decision gate on every action"
+    description: "Every action proposed by the AI is reviewed and signed off by a human before it takes effect"
+    resolves: ["INV-AUTONOMY-01", "INV-AUTONOMY-02"]
+    burden: 5
+    verification: "Workflow evidence showing no action executes without a recorded human decision"
+
+  - id: "CTRL-REVERSAL-01"
+    name: "Reversal window before irreversible commit"
+    description: "The action is staged in a recoverable state for a defined window, reconciled, and only then committed; a dry-run mode exists"
+    resolves: ["INV-IRREV-01"]
     burden: 3
-    verification: "UI shows human approval step; audit trail records approval identity and timestamp"
+    verification: "Window length documented; a reversal exercised end-to-end in test; reconciliation report on file"
 
   - id: "CTRL-DRIFT-01"
     name: "Drift monitoring"
-    description: "Continuous monitoring of model drift against the validation baseline, with defined amber/red thresholds"
+    description: "Model performance is monitored against the KRI thresholds in this file, with a named owner for breaches"
     resolves: ["INV-DRIFT-01"]
     burden: 3
-    verification: "Drift dashboard live; thresholds match the KRI table; breach routes to 2LoD"
+    verification: "Monitoring dashboard and breach escalation history"
 
   - id: "CTRL-EXPLAIN-01"
-    name: "Explainability documentation"
-    description: "Documented account of how the model reaches its outputs, sufficient for independent validation"
+    name: "Single-outcome explanation"
+    description: "For any individual output the system can produce the factors that drove it, in language the affected person could follow"
     resolves: ["INV-EXPLAIN-01"]
     burden: 3
-    verification: "Explainability pack reviewed by independent validation"
+    verification: "Worked explanation for a sampled individual outcome"
 
   - id: "CTRL-REDTEAM-01"
-    name: "Adversarial red-teaming"
-    description: "Structured red-teaming for injection, jailbreak, exfiltration and role confusion; quarterly minimum, pre-launch for Track II"
+    name: "Adversarial testing"
+    description: "The system is tested against hostile input — injection, evasion and forged documents — before launch and after material change"
     resolves: ["INV-SEC-01"]
     burden: 3
-    verification: "Red-team report on file within the last quarter; findings tracked to closure"
+    verification: "Red-team report with findings and their remediation"
+
+  - id: "CTRL-TPRM-01"
+    name: "Third-party risk assessment"
+    description: "The supplier is assessed for security, resilience, data handling, concentration and exit before use, and reassessed periodically"
+    resolves: ["INV-VENDOR-01"]
+    burden: 4
+    verification: "Completed third-party assessment and a signed exit plan on file"
+
+  - id: "CTRL-BIAS-01"
+    name: "Disparate outcome testing"
+    description: "Outcomes are tested for disparity across protected groups against the bias thresholds in this file, before launch and periodically after"
+    resolves: ["INV-FAIRNESS-01"]
+    burden: 4
+    verification: "Disparity test results against kri_thresholds.conduct.bias_disparity_pct, with the population and method stated"
 
   - id: "CTRL-SAMPLE-01"
-    name: "Behavioural sampling"
-    description: "Continuous sampling of outputs against human ground truth, with disagreement triage"
+    name: "Outcome sampling"
+    description: "A defined sample of recommendations is reviewed against what actually happened, with the rate stated"
     resolves: ["INV-SAMPLE-01"]
-    burden: 3
-    verification: "Sampling rate and triage process documented; disagreement rate tracked"
+    burden: 2
+    verification: "Sampling rate documented and review results on file"
 
   - id: "CTRL-GROUND-01"
-    name: "Grounding verification"
-    description: "Claim-level source resolution, per-claim confidence scoring, citation attachment, and an immutable audit log available to 2LoD"
+    name: "Retrieval grounding + confidence reporting"
+    description: "Output is generated only from retrieved source material, and low-confidence answers say so rather than guessing"
     resolves: ["INV-HALLUC-01"]
     burden: 4
-    verification: "Audit log records claim, source, confidence, timestamp and model version; failed grounding routes to human review"
+    verification: "Retrieval logs showing sources per output; abstention behaviour exercised in test"
 
   - id: "CTRL-CONDUCT-01"
     name: "Conduct testing + transcript audit"
@@ -429,6 +660,7 @@ controls:
     resolves: ["INV-CONDUCT-01"]
     burden: 4
     verification: "Conduct test results and transcript audit sampling on file"
+
 
 kri_thresholds:
   performance:

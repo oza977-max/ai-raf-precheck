@@ -16,6 +16,7 @@ import type { TrippedInvariant } from './invariants';
 import { buildStandingConditions } from './conditions';
 import { solvControls } from './greedy-solver';
 import type {
+  Control,
   DataFlowGraph,
   InheritanceChain,
   RegistryEntry,
@@ -49,6 +50,19 @@ export function evaluate(
   const activePacks = resolveActivePacks(graph.jurisdictions, policy.jurisdictions, packs);
   const packVersions = Object.fromEntries(activePacks.map((p) => [p.pack_id, p.version]));
 
+  // PV-6: resolve the inheritance chain BEFORE the hard-line short-circuit.
+  // The chain records what a declared platform or vendor was assessed against
+  // and where this use case left the envelope — a question a reviewer asks
+  // just as often about a rejection as about an approval ("was residency
+  // assessed?" has an answer either way).
+  //
+  // It used to be computed after the hard-line returns, so it survived only
+  // rejections reached via an unsatisfiable invariant. Widening HL-002 in
+  // oracle round 001 moved MNPI-in-Zone-B from that path onto the hard-line
+  // path and exposed the gap — the requirement was never hard-line-specific,
+  // the coverage just happened to be.
+  const inheritance = resolveInheritance(graph, policy);
+
   // Step 2: hard lines — first trip is immediate rejection, no further steps.
   const hardLineResult = evaluateHardLines(graph, hardLines);
   if (hardLineResult.tripped) {
@@ -67,6 +81,7 @@ export function evaluate(
         binding_constraint: hardLineResult.hardLineId,
         binding_path: hardLineResult.graphPath,
         policy_version: policy.version,
+        ...(inheritance ? { inheritance } : {}),
         // Review finding, pass 1: the audit trail must record which pack
         // versions were in force even when a BASE hard line rejects —
         // otherwise indistinguishable from "no packs loaded".
@@ -103,6 +118,7 @@ export function evaluate(
         binding_path: packHardLine.graphPath,
         policy_version: policy.version,
         pack_versions: packVersions,
+        ...(inheritance ? { inheritance } : {}),
         confidence_caveats: caveat ? [caveat] : [],
         explanation: {
           tier_rationale: null,
@@ -132,10 +148,8 @@ export function evaluate(
   // Step 6: invariant evaluation (no short-circuit — solver needs the full set).
   const tripped = evaluateInvariants(graph, invariants);
 
-  // Step 6b (PV-A): resolve any declared platform/vendor against the
-  // registries and work out what its approval already covers. Sorted by id
-  // before iteration (NF-1 determinism).
-  const inheritance = resolveInheritance(graph, policy);
+  // Step 6b (PV-A): what the declared platform/vendor's approval already
+  // covers. Resolved above, before the hard-line short-circuit (PV-6).
   const inherited = inheritance?.inherited_controls ?? [];
 
   // Step 7: control solving. `inherited` was the parameter solvControls has
@@ -161,7 +175,7 @@ export function evaluate(
   // the first by id. With a realistic multi-invariant policy the
   // sorted-first choice names an essentially arbitrary rule on the
   // headline field. Ties break by id, preserving determinism.
-  const binding = mostSevere(tripped);
+  const binding = mostSevere(tripped, policy.controls);
 
   // Step 8: status determination.
   if (!solverResult.ok) {
@@ -347,12 +361,42 @@ function trackRationale(assignment: TrackAssignment): RuleRationale {
 
 const SEVERITY_RANK: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
-// Highest severity wins; ties break by id so the choice stays deterministic
-// regardless of policy ordering (NF-1).
-function mostSevere(tripped: TrippedInvariant[]): TrippedInvariant | undefined {
+// Which tripped invariant is THE binding one — the single string the verdict
+// screen leads with and the audit trail records as the reason.
+//
+// Highest severity wins. Ties then break on the CHEAPEST control that would
+// satisfy the invariant — its unavoidable cost — and only then on id.
+//
+// The burden tie-break is oracle round 001's fix. Previously ties broke on id
+// alone — alphabetically — so C-02 (three invariants, all severity High)
+// reported INV-DATA-01 purely because "DATA" sorts before "HALLUC". Two
+// independent adjudicators reading the same policy both named INV-HALLUC-01,
+// and both gave the same reason: the binding constraint is the one that drives
+// the heaviest requirement, not the one earliest in the alphabet. Six of the
+// seven binding-constraint disagreements in that round shared this cause.
+//
+// Deterministic (NF-1): burden is a fixed integer in the policy and id breaks
+// any remaining tie, so the ordering is total and independent of input order.
+function mostSevere(
+  tripped: TrippedInvariant[],
+  controls: Control[],
+): TrippedInvariant | undefined {
+  const burdenById = new Map(controls.map((c) => [c.id, c.burden]));
+  // Cheapest, not heaviest. Where an invariant lists several resolving
+  // controls the firm only has to do one of them, so the heaviest overstates
+  // what the invariant actually costs — an invariant offering a cheap route
+  // would outrank one with no route but its own expensive control.
+  const weight = (t: TrippedInvariant): number => {
+    const burdens = t.requiredControls.map((id) => burdenById.get(id) ?? 0);
+    return burdens.length > 0 ? Math.min(...burdens) : 0;
+  };
+
   return [...tripped].sort((a, b) => {
     const rank = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
-    return rank !== 0 ? rank : a.invariantId.localeCompare(b.invariantId);
+    if (rank !== 0) return rank;
+    const burden = weight(b) - weight(a);
+    if (burden !== 0) return burden;
+    return a.invariantId.localeCompare(b.invariantId);
   })[0];
 }
 
