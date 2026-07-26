@@ -295,6 +295,84 @@ describe('Walking Skeleton', () => {
     }
   });
 
+  // explore-001 D-001 (Critical, practitioner-classified). Double-clicking
+  // "Confirm and evaluate" wrote graph_confirmed TWICE to the append-only
+  // audit trail, produced no verdict, created no register node, and left the
+  // user stranded on the Graph step.
+  //
+  // The old guard was `if (state.step !== 'confirmation') return`. dispatch()
+  // is asynchronous, so two synchronous clicks both read the SAME render's
+  // closure, both see 'confirmation', and both proceed — exactly the failure
+  // CLAUDE.md describes: "a state update lands too late to prevent the second
+  // call." Code review C-5 fixed this class in sample-register.ts; the
+  // user-facing path had the same hole.
+  it('explore-001 D-001: double-clicking confirm writes graph_confirmed exactly once', async () => {
+    const uniqueLabel = 'double click guard model';
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            input_nodes: [],
+            processing_nodes: [
+              {
+                id: 'p1',
+                label: uniqueLabel,
+                model_type: 'traditional-ml',
+                autonomy_level: 0,
+                data_zone: 'Zone C',
+                vendor: 'internal',
+                replaces_prior_model: false,
+              },
+            ],
+            output_nodes: [
+              {
+                id: 'o1',
+                label: 'output',
+                action_type: 'recommend',
+                exposure: 'internal-only',
+                decision_bindingness: 'material',
+                output_reversibility: 'reversible',
+                scale: 'limited',
+              },
+            ],
+            edges: [{ from: 'p1', to: 'o1' }],
+            jurisdictions: [],
+          },
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Double click guard');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+
+    const confirm = await screen.findByRole('button', { name: /confirm and evaluate/i });
+    // Two clicks with NO await between them — the real double-click, where
+    // both handlers run against the same pre-dispatch state.
+    confirm.click();
+    confirm.click();
+
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+
+    const { getUseCases } = await import('../../store/register');
+    const { getAll } = await import('../../store/audit');
+    const useCase = (await getUseCases('all')).find((u) => u.label === uniqueLabel);
+    expect(useCase).toBeDefined();
+
+    const events = await getAll(useCase!.use_case_id);
+    const confirms = events.filter((e) => e.event_type === 'graph_confirmed');
+    // The damage is un-cleanable: the trail is append-only by design.
+    expect(confirms).toHaveLength(1);
+    expect(events.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
+  });
+
   it('P4-C04: a correction made during graph review survives through questionnaire and confirmation to the graph_confirmed audit event (BC-P4C04-03, review finding: full chain, not just one hop)', async () => {
     const uniqueLabel = 'correction survival check model';
     mockCreate.mockResolvedValueOnce({
