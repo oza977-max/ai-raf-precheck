@@ -1,0 +1,378 @@
+{
+ "fable": {
+  "A-01": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "A-02": [
+   "rejected",
+   "High",
+   "II",
+   "INV-ZONE-01"
+  ],
+  "B-01": [
+   "approved_with_controls",
+   "Low",
+   "III",
+   "INV-AGENT-01"
+  ],
+  "B-02": [
+   "approved_with_controls",
+   "Medium",
+   "III",
+   "INV-SEC-01"
+  ],
+  "B-03": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-DISCLOSE-01"
+  ],
+  "B-04": [
+   "rejected",
+   "High",
+   "II",
+   "HL-001"
+  ],
+  "C-01": [
+   "approved_with_controls",
+   "Critical",
+   "I",
+   "INV-DRIFT-01"
+  ],
+  "C-02": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "C-03": [
+   "rejected",
+   "Critical",
+   "II",
+   "HL-003"
+  ],
+  "C-04": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-DRIFT-01"
+  ],
+  "C-05": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-DRIFT-01"
+  ],
+  "D-01": [
+   "NO_TRACK_MATCH",
+   "Medium",
+   null,
+   "TRACK-I"
+  ],
+  "D-02": [
+   "rejected",
+   "Critical",
+   "II",
+   "HL-001"
+  ],
+  "D-03": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "E-01": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "E-02": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "E-03": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "E-04": [
+   "rejected",
+   null,
+   null,
+   "HL-005"
+  ],
+  "F-01": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "F-02": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "F-03": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "F-04": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "G-01": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "G-02": [
+   "approved_with_controls",
+   "Medium",
+   "I",
+   "INV-DRIFT-01"
+  ],
+  "G-03": [
+   "approved_with_controls",
+   "Low",
+   "III",
+   "INV-CITE-01"
+  ],
+  "G-04": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "G-05": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-DISCLOSE-01"
+  ],
+  "G-06": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "EU-AIACT-TIER-02"
+  ],
+  "H-01": [
+   "approved",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "H-02": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "H-03": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ]
+ },
+ "opus": {
+  "A-01": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "A-02": [
+   "rejected",
+   "High",
+   "II",
+   "INV-ZONE-01"
+  ],
+  "B-01": [
+   "approved_with_controls",
+   "Low",
+   "III",
+   "INV-AGENT-01"
+  ],
+  "B-02": [
+   "approved_with_controls",
+   "Medium",
+   "III",
+   "INV-SEC-01"
+  ],
+  "B-03": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-CONDUCT-01"
+  ],
+  "B-04": [
+   "rejected",
+   null,
+   null,
+   "HL-001"
+  ],
+  "C-01": [
+   "approved_with_controls",
+   "Critical",
+   "I",
+   "INV-DRIFT-01"
+  ],
+  "C-02": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "C-03": [
+   "rejected",
+   null,
+   null,
+   "HL-003"
+  ],
+  "C-04": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-DRIFT-01"
+  ],
+  "C-05": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-DRIFT-01"
+  ],
+  "D-01": [
+   "NO_TRACK_MATCH",
+   "Medium",
+   null,
+   "INV-SAMPLE-01"
+  ],
+  "D-02": [
+   "rejected",
+   null,
+   null,
+   "HL-001"
+  ],
+  "D-03": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "E-01": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "E-02": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "E-03": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "E-04": [
+   "rejected",
+   "Low",
+   "I",
+   "HL-005"
+  ],
+  "F-01": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "F-02": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "F-03": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "F-04": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-HALLUC-01"
+  ],
+  "G-01": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "EU-AIACT-TIER-01"
+  ],
+  "G-02": [
+   "approved_with_controls",
+   "Medium",
+   "I",
+   "INV-DRIFT-01"
+  ],
+  "G-03": [
+   "approved_with_controls",
+   "Low",
+   "III",
+   "INV-CITE-01"
+  ],
+  "G-04": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-AUTONOMY-01"
+  ],
+  "G-05": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-CONDUCT-01"
+  ],
+  "G-06": [
+   "approved_with_controls",
+   "Critical",
+   "II",
+   "EU-AIACT-TIER-02"
+  ],
+  "H-01": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "H-02": [
+   "approved_with_controls",
+   "High",
+   "II",
+   "INV-TRACK2-01"
+  ],
+  "H-03": [
+   "approved_with_controls",
+   "Medium",
+   "II",
+   "INV-TRACK2-01"
+  ]
+ }
+}
