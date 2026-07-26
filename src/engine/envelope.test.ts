@@ -5,7 +5,7 @@ import { load } from 'js-yaml';
 import { dump } from 'js-yaml';
 import { loadPolicy } from '../store/policy';
 import { evaluate } from './evaluate';
-import { fitsEnvelope } from './envelope';
+import { fitsEnvelope, inheritableControls } from './envelope';
 import type { DataFlowGraph, PolicyFile } from './types';
 
 // PV-A. Requirements PV-1, PV-2, PV-3, PV-5, PV-6 (requirements.md §PV).
@@ -198,5 +198,91 @@ describe('PV-6 — the inheritance chain survives a rejection', () => {
     expect(r.value.inheritance).toBeDefined();
     expect(r.value.inheritance?.declared_platform).toBe('PLAT-INTERNAL-01');
     expect(r.value.inheritance?.dimensions.find((d) => d.dimension === 'data_class')?.fits).toBe(false);
+  });
+});
+
+// Code review 001, C-3 and C-4 (Panel C — Fagan, Beizer).
+// C-3: `resolved` was `entries.length > 0` — true if EITHER platform or
+// vendor matched, so an approved platform alongside an unapproved vendor
+// emitted zero unapproved-component reviews. PV-5 exists to prevent exactly
+// that.
+// C-4: the early-return guards mixed a pre-lookup id with a post-lookup
+// object, so a declared-but-unrecognised vendor returned undefined before
+// the caller could learn a vendor had been declared at all.
+describe('C-3/C-4 — each declared component is resolved and reported independently', () => {
+  const VENDOR = {
+    id: 'VENDOR-OK',
+    name: 'Approved vendor',
+    approved_envelope: { max_data_class: 'Internal' },
+    satisfies_controls: [],
+  };
+
+  function policyWith(platforms: unknown[], vendors: unknown[]): PolicyFile {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const raw = load(yaml) as Record<string, unknown>;
+    raw.platforms = platforms;
+    raw.vendors = vendors;
+    const r = loadPolicy(dump(raw));
+    if (!r.valid) throw new Error(JSON.stringify(r.errors));
+    return r.policy;
+  }
+
+  it('an approved platform does not mask an unapproved vendor (C-3)', () => {
+    const p = policyWith([PLATFORM], [VENDOR]);
+    const g = graph({ platform: 'PLAT-INTERNAL-01', vendor: 'VENDOR-NOT-REGISTERED' });
+
+    const r = evaluate(g, p);
+    if (!r.ok) throw new Error('evaluation failed');
+
+    // The platform resolved. The vendor did not. The unapproved one must
+    // still be named — previously `resolved` was true and this was silent.
+    expect(r.value.downstream_reviews.join(' ')).toMatch(/VENDOR-NOT-REGISTERED/);
+  });
+
+  it('a declared vendor absent from a non-empty registry is still reported (C-4)', () => {
+    const p = policyWith([], [VENDOR]);
+    const g = graph({ vendor: 'VENDOR-NOT-REGISTERED' });
+
+    const r = evaluate(g, p);
+    if (!r.ok) throw new Error('evaluation failed');
+
+    // Previously guard 1 returned undefined here, so the caller never learned
+    // a vendor had been declared.
+    expect(r.value.inheritance).toBeDefined();
+    expect(r.value.inheritance?.declared_vendor).toBe('VENDOR-NOT-REGISTERED');
+    expect(r.value.downstream_reviews.join(' ')).toMatch(/VENDOR-NOT-REGISTERED/);
+  });
+
+  it('still fabricates nothing when no registry exists at all', () => {
+    // A bare `vendor: 'internal'` on a policy with no registries is not a
+    // claim of approval. This is the case the original guards were protecting
+    // and it must survive the fix.
+    const r = evaluate(graph(), basePolicy);
+    if (!r.ok) throw new Error('evaluation failed');
+    expect(r.value.inheritance).toBeUndefined();
+    expect(r.value.downstream_reviews).toEqual([]);
+  });
+});
+
+// Code review 001, I-2 (Panel C — Robert C. Martin).
+// Partial cluster declaration was strictly MORE permissive than declaring
+// none: with no clusters an exceeded envelope withdrew the whole approval,
+// but with one cluster declared, a control outside every cluster survived.
+// That inverts the conservative reading the module itself states.
+describe('I-2 — a control in no declared cluster still falls away when the envelope is exceeded', () => {
+  const FITS = [
+    { dimension: 'data_class', fits: false, ceiling: 'Internal', observed: 'MNPI' },
+    { dimension: 'exposure', fits: true, ceiling: 'internal-shared' },
+  ];
+
+  it('drops an uncatalogued control, matching the no-clusters behaviour', () => {
+    const got = inheritableControls(['C-IN-CLUSTER', 'C-UNCATALOGUED'], FITS, [['data_class', 'C-IN-CLUSTER']]);
+    expect(got).not.toContain('C-IN-CLUSTER');
+    expect(got).not.toContain('C-UNCATALOGUED');
+  });
+
+  it('a cluster whose own dimensions all fit still yields its controls', () => {
+    const got = inheritableControls(['C-EXPOSURE-ONLY'], FITS, [['exposure', 'C-EXPOSURE-ONLY']]);
+    expect(got).toEqual(['C-EXPOSURE-ONLY']);
   });
 });

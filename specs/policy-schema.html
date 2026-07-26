@@ -524,7 +524,6 @@ safety_margin: 0.10               # 10% safety margin for control solver (CS-1)<
     resolves: ["INV-DATA-01", "INV-ZONE-03"]   # Which invariants this control satisfies
     burden: 1                     # 1=low, 5=high — used by solver for tie-breaking (CS-1)
     verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
-    platform_satisfies:           # Platforms whose approval already satisfies this control
       - "azure-openai-internal"
       - "azure-openai-eu"
 
@@ -534,7 +533,6 @@ safety_margin: 0.10               # 10% safety margin for control solver (CS-1)<
     resolves: ["INV-AUTO-01", "INV-AUTO-02"]
     burden: 3
     verification: "UI shows human approval step; audit trail records approval identity and timestamp"
-    platform_satisfies: []
 
   - id: "CTRL-LOG-01"
     name: "Full tool-call logging with kill switch"
@@ -542,7 +540,6 @@ safety_margin: 0.10               # 10% safety margin for control solver (CS-1)<
     resolves: ["INV-AGENT-01", "INV-AGENT-02"]
     burden: 2
     verification: "Log store is append-only; kill-switch procedure documented and tested"
-    platform_satisfies: ["azure-openai-internal"]</code></pre>
 
     <h3 id="kri-thresholds">KRI thresholds</h3>
     <pre><code>kri_thresholds:
@@ -720,7 +717,6 @@ export interface Control {
     attested_at?: string;
   };
   verification: string;
-  platform_satisfies: string[]; // Platform IDs whose approval satisfies this control
 }
 
 export interface JurisdictionPack {

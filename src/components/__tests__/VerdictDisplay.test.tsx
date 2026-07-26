@@ -261,7 +261,6 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
         resolves: ['INV-DATA-01'],
         burden: 1,
         verification: 'manifest check',
-        platform_satisfies: [],
         verification_evidence: {
           status: 'verified' as const,
           detail: 'Platform pins TLS 1.3',
@@ -276,7 +275,6 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
         resolves: [],
         burden: 3,
         verification: 'UI shows approval step',
-        platform_satisfies: [],
         // no verification_evidence -> UNVERIFIED (BC-V13-02)
       },
     ],
@@ -302,5 +300,38 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
     expect(screen.getByText(/controls required: CTRL-ENC-01/i)).toBeInTheDocument();
     expect(screen.queryByText('VERIFIED')).not.toBeInTheDocument();
     expect(screen.queryByText('UNVERIFIED')).not.toBeInTheDocument();
+  });
+});
+
+// Code review 001, I-1 (Panel B). The CS-1 margin fields were computed by
+// evaluate(), persisted onto every verdict, present in fixtures — and read
+// by zero components. HR-14 was fixed at the data layer and the identical
+// defect reproduced at the UI layer in the same session.
+describe('VerdictDisplay — CS-1 governance margin (code review 001, I-1)', () => {
+  it('shows the margin achieved against its target', () => {
+    const verdict = makeVerdict({
+      margin_achieved: 0,
+      margin_target: 0.1,
+      boundary_proximity: true,
+      single_covered_invariants: ['INV-DATA-01', 'INV-TRACK2-01'],
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 5,
+        invariants_checked: 14,
+        tripped_invariants: [
+          { id: 'INV-DATA-01', description: 'x', severity: 'High', required_controls: [], graph_path: 'p' },
+        ],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+      },
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/0% achieved against a 10% target/i)).toBeInTheDocument();
+    expect(screen.getByText(/INV-DATA-01, INV-TRACK2-01/)).toBeInTheDocument();
+    // Honesty (NF-2): zero margin is a limit of the rulebook, and the UI
+    // must say so rather than implying the use case was at fault.
+    expect(screen.getByText(/limit of the rulebook, not of this use case/i)).toBeInTheDocument();
   });
 });

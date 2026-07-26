@@ -50,7 +50,6 @@ const CONTROL_LIBRARY: Control[] = [
     resolves: ['INV-DATA-01'],
     burden: 1,
     verification: 'x',
-    platform_satisfies: [],
   },
 ];
 

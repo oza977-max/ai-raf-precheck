@@ -48,7 +48,7 @@ export function fitsEnvelope(graph: DataFlowGraph, envelope: Envelope): Envelope
     out.push({
       dimension: 'data_class',
       fits: actual <= ceiling,
-      approved: envelope.max_data_class,
+      ceiling: envelope.max_data_class,
       ...(worst !== undefined ? { observed: worst } : {}),
     });
   }
@@ -60,7 +60,7 @@ export function fitsEnvelope(graph: DataFlowGraph, envelope: Envelope): Envelope
     out.push({
       dimension: 'exposure',
       fits: actual <= ceiling,
-      approved: envelope.max_exposure,
+      ceiling: envelope.max_exposure,
       ...(worst !== undefined ? { observed: worst } : {}),
     });
   }
@@ -71,7 +71,7 @@ export function fitsEnvelope(graph: DataFlowGraph, envelope: Envelope): Envelope
     out.push({
       dimension: 'autonomy_level',
       fits: worst <= envelope.max_autonomy_level,
-      approved: String(envelope.max_autonomy_level),
+      ceiling: String(envelope.max_autonomy_level),
       ...(worst >= 0 ? { observed: String(worst) } : {}),
     });
   }
@@ -87,7 +87,7 @@ export function fitsEnvelope(graph: DataFlowGraph, envelope: Envelope): Envelope
     out.push({
       dimension: 'data_zones',
       fits: outside.length === 0,
-      approved: [...envelope.data_zones].sort().join(', '),
+      ceiling: [...envelope.data_zones].sort().join(', '),
       ...(outside.length > 0 ? { observed: outside.join(', ') } : {}),
     });
   }
@@ -98,7 +98,7 @@ export function fitsEnvelope(graph: DataFlowGraph, envelope: Envelope): Envelope
     out.push({
       dimension: 'jurisdictions',
       fits: outside.length === 0,
-      approved: [...envelope.jurisdictions].sort().join(', '),
+      ceiling: [...envelope.jurisdictions].sort().join(', '),
       ...(outside.length > 0 ? { observed: outside.join(', ') } : {}),
     });
   }
@@ -126,11 +126,14 @@ export function inheritableControls(
 
   if (!anyExceeded) return [...satisfiesControls].sort();
 
-  const exceededClusterControls = new Set<string>();
+  // Code review 001, I-2: a control named in NO cluster is an implicit
+  // singleton cluster and falls away too. Without this, declaring one cluster
+  // was strictly more permissive than declaring none — which inverted the
+  // conservative reading stated above.
+  const survivors = new Set<string>();
   for (const cluster of coupledClusters) {
-    // A cluster is dropped if any of its dimensions is exceeded.
     const clusterExceeded = fits.some((d) => !d.fits && cluster.includes(d.dimension));
-    if (clusterExceeded) for (const c of cluster) exceededClusterControls.add(c);
+    if (!clusterExceeded) for (const c of cluster) survivors.add(c);
   }
-  return [...satisfiesControls].filter((c) => !exceededClusterControls.has(c)).sort();
+  return [...satisfiesControls].filter((c) => survivors.has(c)).sort();
 }

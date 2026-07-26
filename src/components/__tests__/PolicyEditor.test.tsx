@@ -44,7 +44,6 @@ controls:
     resolves: []
     burden: 1
     verification: "manual check"
-    platform_satisfies: []
 
 kri_thresholds: {}
 

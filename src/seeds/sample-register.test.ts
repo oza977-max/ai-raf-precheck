@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { IDBFactory } from 'fake-indexeddb';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadPolicy } from '../store/policy';
@@ -64,5 +65,44 @@ describe('seedSampleRegister (V2-D demo data)', () => {
     for (const row of await sampleRows()) {
       expect(row.label).toContain('[SAMPLE]');
     }
+  });
+});
+
+// Code review 001, C-5 (Panel C — Kent Beck, and the project's own CLAUDE.md).
+// `if (await getUseCase(id)) continue` is check-then-act across an async
+// boundary: two concurrent callers both observe "absent" before either
+// writes, and both write. On an append-only audit trail duplicates cannot be
+// cleaned up afterwards — this is a data-integrity bug, not a UX nit.
+// aigate-self-assessment.ts closes the same race with a synchronous
+// in-flight promise; this seed did not.
+describe('C-5 — concurrent seeding writes each sample exactly once', () => {
+  it('two simultaneous calls do not duplicate register entries or audit events', async () => {
+    // A clean database: the race only exists when BOTH callers observe
+    // "absent", which cannot happen once earlier tests in this file have
+    // seeded. Module-scoped db handles are reset alongside it.
+    globalThis.indexedDB = new IDBFactory();
+    vi.resetModules();
+    const { seedSampleRegister: seedFresh, sampleCount: countFresh, SAMPLE_PREFIX: prefixFresh } =
+      await import('./sample-register');
+    const { getUseCases: getRowsFresh } = await import('../store/register');
+    const { getAllForExport: getEventsFresh } = await import('../store/audit');
+
+    const [a, b] = await Promise.all([seedFresh(policy), seedFresh(policy)]);
+
+    // Both callers share one execution, so both observe the SAME result.
+    // (Without the guard they diverge — one seeds, the other throws
+    // ConstraintError after duplicate audit events have already landed.)
+    expect(a).toBe(b);
+    expect(a).toBe(countFresh());
+
+    const rows = (await getRowsFresh('all')).filter((r) => r.use_case_id.startsWith(prefixFresh));
+    expect(rows).toHaveLength(countFresh());
+
+    // The real damage would be here — duplicate graph_confirmed /
+    // verdict_produced pairs that can never be removed.
+    const events = await getEventsFresh();
+    const ids = events.filter((e) => e.use_case_id.startsWith(prefixFresh)).map((e) => e.event_id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(countFresh() * 2);
   });
 });

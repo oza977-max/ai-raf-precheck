@@ -62,7 +62,17 @@ export default function SettingsPanel() {
   async function handleClearAll() {
     setBusy('clearing');
     try {
-      await clearAllLocalData();
+      const result = await clearAllLocalData();
+      if (!result.complete) {
+        // Code review 001, I-3: a blocked delete used to resolve as success
+        // and the UI reported a clean reset over surviving data. Say so.
+        setBusy('none');
+        setMessage(
+          `Not everything could be deleted: ${result.incomplete.join(', ')}. ` +
+            'This usually means AIGate is open in another tab — close the others and try again.'
+        );
+        return;
+      }
       // Reload rather than reset React state: src/store/db.ts caches its
       // open-database handles at module scope, so only a fresh page load
       // guarantees the app is really looking at empty databases.

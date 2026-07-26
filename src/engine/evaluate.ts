@@ -258,6 +258,15 @@ export function evaluate(
 }
 
 // PV-1/2/3/5/6. Pure: registries sorted by id, no I/O.
+//
+// Code review 001, C-3 and C-4. Two defects lived here:
+//   C-3: `resolved` was `entries.length > 0` — true if EITHER component
+//        matched, so an approved platform masked an unapproved vendor and
+//        no unapproved-component review fired. PV-5 exists to prevent that.
+//   C-4: the guards mixed a pre-lookup id (`platformId`) with a post-lookup
+//        object (`vendor`), so a declared-but-unrecognised vendor returned
+//        undefined and the caller never learned a vendor had been declared.
+// Each declared component is now resolved and reported independently.
 function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): InheritanceChain | undefined {
   const platformId = graph.processing_nodes.find((n) => n.platform)?.platform;
   const vendorId = graph.processing_nodes.find((n) => n.vendor)?.vendor;
@@ -268,11 +277,20 @@ function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): Inheritan
   const platform = platformId ? platforms.find((p) => p.id === platformId) : undefined;
   const vendor = vendorId ? vendors.find((v) => v.id === vendorId) : undefined;
 
-  // Nothing declared that the registry knows or should know about. A bare
-  // `vendor: 'internal'` string on a policy with no vendor registry is not a
-  // claim of approval, so no chain is fabricated.
-  if (!platformId && !vendor) return undefined;
-  if (platformId === undefined && vendorId !== undefined && vendors.length === 0) return undefined;
+  // A bare `vendor: 'internal'` string on a policy with no vendor registry is
+  // not a claim of approval — no chain is fabricated. But once a registry
+  // EXISTS, a declared id that is absent from it is a real PV-5 finding and
+  // must be reported rather than silently dropped.
+  // `vendor` is NOT user input: build-graph-from-form.ts hardcodes
+  // 'internal' and the intake form never asks for a vendor. So 'internal' is
+  // a sentinel meaning "no third-party vendor", not a registry claim —
+  // treating it as one would flag every use case submitted through the app
+  // as using an unapproved vendor. Any OTHER value (e.g. the self-assessment
+  // graph's 'Anthropic') is a real claim and is checked.
+  const VENDOR_SENTINEL = 'internal';
+  const platformIsClaim = platformId !== undefined;
+  const vendorIsClaim = vendorId !== undefined && vendorId !== VENDOR_SENTINEL && vendors.length > 0;
+  if (!platformIsClaim && !vendorIsClaim) return undefined;
 
   const entries: RegistryEntry[] = [platform, vendor].filter((e): e is RegistryEntry => e !== undefined);
 
@@ -285,23 +303,30 @@ function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): Inheritan
     ),
   ].sort();
 
+  // Per-component resolution. `resolved` now means "every component that was
+  // claimed resolved", so it can no longer be true while something declared
+  // sits unrecognised.
+  const unresolved: string[] = [];
+  if (platformIsClaim && !platform) unresolved.push(platformId!);
+  if (vendorIsClaim && !vendor) unresolved.push(vendorId!);
+
   return {
-    ...(platformId ? { declared_platform: platformId } : {}),
-    ...(vendorId && vendor ? { declared_vendor: vendorId } : {}),
-    // PV-5: a declared component absent from the registry resolves to
-    // nothing and inherits nothing.
-    resolved: entries.length > 0,
+    ...(platformIsClaim ? { declared_platform: platformId } : {}),
+    ...(vendorIsClaim ? { declared_vendor: vendorId } : {}),
+    resolved: unresolved.length === 0,
+    unresolved_components: unresolved.sort(),
     inherited_controls: inheritedControls,
     dimensions,
   };
 }
 
-// PV-5: the verdict must name the unapproved component, not merely report
-// that something was unapproved.
+// PV-5: name every unapproved component, not merely report that something
+// was unapproved.
 function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): string[] {
-  if (!inheritance || inheritance.resolved) return [];
-  const named = inheritance.declared_platform ?? inheritance.declared_vendor ?? 'unnamed component';
-  return [`Full vendor/platform risk assessment required — ${named} is not on the approved registry`];
+  if (!inheritance || inheritance.unresolved_components.length === 0) return [];
+  return inheritance.unresolved_components.map(
+    (name) => `Full vendor/platform risk assessment required — ${name} is not on the approved registry`,
+  );
 }
 
 function tierRationale(assignment: TierAssignment): RuleRationale {
