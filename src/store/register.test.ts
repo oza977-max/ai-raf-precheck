@@ -28,6 +28,9 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     applied_overrides: [],
     confidence_caveats: [],
     boundary_proximity: false,
+  margin_achieved: 0,
+  margin_target: 0.1,
+  single_covered_invariants: [],
     explanation: {
       tier_rationale: null,
       track_rationale: null,

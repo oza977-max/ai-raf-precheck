@@ -158,7 +158,68 @@
     </div>
 
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
-  </main>
+  
+            <section id="run2">
+                <h2>Health Report — Run 2 (2026-07-26)</h2>
+                <p>Triggered by <code>/gvm-status</code>, which flagged test-cases as stale and PV as uncovered. <strong>Both flags needed correcting.</strong> Findings below supersede the <code>/gvm-status</code> reading where they conflict.</p>
+
+                <h3>HR-11 — Staleness alarm was a FALSE POSITIVE (methodology finding)</h3>
+                <p><code>/gvm-status</code> reported <code>requirements.md</code> (mtime 2026-07-12) newer than <code>test-cases.md</code> (mtime 2026-06-13) — a 29-day drift implying the test cases were derived from superseded requirements.</p>
+                <p><strong>Not true.</strong> Git shows both files were last changed <em>in the same commit</em>: <code>c6f1892</code> (2026-06-13), which touched requirements.md (24 lines) and test-cases.md (95 lines) together.</p>
+                <p>The 2026-07-12 mtime came from the <code>git filter-repo</code> history rewrite performed that day, which rewrites every file and resets mtimes without changing content. Content-wise the two artefacts are <strong>in sync</strong>.</p>
+                <p><strong>GVM gap worth recording:</strong> shared rule 19 specifies mtime comparison for staleness detection. In any repository that has had <code>git filter-repo</code> (or rebase, or a fresh clone) run, mtimes are unreliable and the check produces false positives across the whole pipeline at once. The commit date of the last content change is the sound signal. This project has had <strong>two</strong> history rewrites, so every mtime-based staleness reading here is suspect.</p>
+                <p><em>Disposition: no test-case regeneration required for staleness.</em></p>
+
+                <h3>HR-12 — PV was built despite being a recorded V2+ deferral</h3>
+                <p><code>/gvm-status</code> reported PV-1..PV-8 as having zero test coverage, which is literally true. But the traceability matrix records <em>why</em>: PV is marked <code>V2+ scope, out of MVP</code> and OB is marked <code>V1.5/V2+ scope, deferred</code>. PV was <strong>deliberately deferred</strong>, not overlooked. Zero coverage was the correct state for the MVP.</p>
+                <p>Implementation for PV-1/2/3/5/6/8 was nonetheless written (commit <code>f640005</code>), on the mistaken basis that PV was an unbuilt V1 gap. It works and is tested (9 tests, 236 passing), but it is <strong>out-of-scope work against the recorded plan</strong>, and two artefacts now disagree with reality: the traceability matrix still says PV is not built, and earlier completion reporting produced a &quot;75% of Round 1&quot; figure by counting PV and OB as shortfalls. Excluding the 13 deliberately-deferred requirements, V1's MVP scope is 67 requirements and is complete. <strong>The 75% figure was wrong and is withdrawn.</strong></p>
+                <p><em>Disposition required from the practitioner — this is a scope decision, not a test-design one.</em></p>
+
+                <h3>HR-13 — <code>TC-CS-1-02</code> denotes three different tests</h3>
+                <table>
+                    <thead><tr><th>Artefact</th><th>Meaning</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>test-cases/test-cases.md</code></td><td>Safety margin maintained — control set keeps use case inside margin</td></tr>
+                        <tr><td><code>specs/implementation-guide.md</code> (line 286)</td><td>Inherited platform controls reduce required controls</td></tr>
+                        <tr><td><code>src/engine/greedy-solver.test.ts</code></td><td>Tie-breaks equal-coverage candidates by lowest burden</td></tr>
+                    </tbody>
+                </table>
+                <p>Three definitions of one ID across requirements, spec and code. The implementation-guide meaning describes PV inheritance — behaviour the matrix says was deferred — so the guide referenced a test for out-of-scope functionality under an ID already in use.</p>
+                <p>Per shared rule 24 (fix-propagation), resolving this requires edits to all three artefacts in one pass, not just <code>test-cases.md</code>.</p>
+                <p><em>Disposition required from the practitioner.</em></p>
+
+                <h3>HR-14 — CS-1 (Must) is half implemented, and the ID collision was hiding it</h3>
+                <p>Resolving HR-13 surfaced a larger problem. CS-1 requires the solver to compute the smallest control set <strong>while maintaining a configurable safety margin from the appetite boundary</strong>, and states explicitly that &quot;minimal&quot; means smallest set that achieves the required margin — not closest to the line. It names the failure mode directly: <em>&quot;Optimising for minimum controls without margin optimises for developer convenience at the cost of governance resilience.&quot;</em></p>
+                <table>
+                    <thead><tr><th>CS-1 element</th><th>Status</th></tr></thead>
+                    <tbody>
+                        <tr><td>Smallest set satisfying all tripped invariants</td><td>Built</td></tr>
+                        <tr><td>Safety margin honoured during selection</td><td><strong>Not built</strong></td></tr>
+                        <tr><td>Boundary-proximity warning</td><td>Built</td></tr>
+                    </tbody>
+                </table>
+                <p><code>safety_margin</code> is declared in the policy schema, validated to 0.0–1.0, and threaded through <code>evaluate.ts</code> into <code>solvControls</code> — where the parameter is named <code>_margin</code>. The underscore is the TypeScript convention for <em>deliberately unused</em>. The value is read, validated, passed, and discarded. The engine performs exactly the optimisation CS-1 names as wrong.</p>
+                <p><strong>Why nobody noticed:</strong> the traceability matrix records CS-1 as covered by TC-CS-1-01 and TC-CS-1-02. The first is genuinely covered. The second was supposed to cover the margin — but its ID had been reused in code for a burden tie-break test, so the suite passed and coverage looked complete. <strong>The duplicate ID was concealing an unimplemented Must requirement.</strong></p>
+                <p>This is the third instance of the same defect class here: regulatory citations computed and dropped at verdict assembly (V1), <code>platform_satisfies</code> declared and never read (fixed today), and now <code>safety_margin</code>. CLAUDE.md already warns about it — the warning exists because it keeps happening.</p>
+                <p><em>Disposition required from the practitioner — this is a build gap, not a test-design one, and per shared rule 25 it must not be silently skipped.</em></p>
+            
+                <h3>HR-14 — CS-1 (Must) is half implemented, and the ID collision was hiding it</h3>
+                <p>Resolving HR-13 surfaced a larger problem. CS-1 requires the solver to compute the smallest control set <strong>while maintaining a configurable safety margin from the appetite boundary</strong>, and states explicitly that &quot;minimal&quot; means smallest set that achieves the required margin — not closest to the line. It names the failure mode directly: <em>&quot;Optimising for minimum controls without margin optimises for developer convenience at the cost of governance resilience.&quot;</em></p>
+                <table>
+                    <thead><tr><th>CS-1 element</th><th>Status</th></tr></thead>
+                    <tbody>
+                        <tr><td>Smallest set satisfying all tripped invariants</td><td>Built</td></tr>
+                        <tr><td>Safety margin honoured during selection</td><td><strong>Not built</strong></td></tr>
+                        <tr><td>Boundary-proximity warning</td><td>Built</td></tr>
+                    </tbody>
+                </table>
+                <p><code>safety_margin</code> is declared in the policy schema, validated to 0.0–1.0, and threaded through <code>evaluate.ts</code> into <code>solvControls</code> — where the parameter is named <code>_margin</code>. The underscore is the TypeScript convention for <em>deliberately unused</em>. The value is read, validated, passed, and discarded. The engine performs exactly the optimisation CS-1 names as wrong.</p>
+                <p><strong>Why nobody noticed:</strong> the traceability matrix records CS-1 as covered by TC-CS-1-01 and TC-CS-1-02. The first is genuinely covered. The second was supposed to cover the margin — but its ID had been reused in code for a burden tie-break test, so the suite passed and coverage looked complete. <strong>The duplicate ID was concealing an unimplemented Must requirement.</strong></p>
+                <p>This is the third instance of the same defect class here: regulatory citations computed and dropped at verdict assembly (V1), <code>platform_satisfies</code> declared and never read (fixed today), and now <code>safety_margin</code>. CLAUDE.md already warns about it — the warning exists because it keeps happening.</p>
+                <p><em>Disposition required from the practitioner — this is a build gap, not a test-design one, and per shared rule 25 it must not be silently skipped.</em></p>
+            </section>
+
+            </main>
 
   <script>
     const toc = document.getElementById('toc');

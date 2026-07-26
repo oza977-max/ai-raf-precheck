@@ -50,13 +50,26 @@ export function isUnsigned(rule: PackRule, pack?: { reviewer_name: string; sign_
   return PLACEHOLDER.test(name) || PLACEHOLDER.test(date);
 }
 
+// R6 finding (parity check R6, first run): `jurisdictionRegistry` was
+// previously `_jurisdictionRegistry` — accepted and ignored. A pack file
+// sitting in policy/packs/ therefore applied whenever a graph named its
+// jurisdiction, regardless of whether the firm's policy declared operating
+// there. The registry is the firm's statement of where it operates, so it
+// gates which packs may fire.
+//
+// An EMPTY registry is deliberately treated as "not configured" rather than
+// "nothing applies": every policy written before this was enforced has no
+// registry, and blocking all packs would silently change every
+// jurisdictional verdict — a worse failure than the one being fixed.
 export function resolveActivePacks(
   jurisdictions: string[],
-  _jurisdictionRegistry: JurisdictionEntry[],
+  jurisdictionRegistry: JurisdictionEntry[],
   loadedPacks: JurisdictionPack[] = [],
 ): JurisdictionPack[] {
+  const declared = new Set(jurisdictionRegistry.map((j) => j.code));
   return loadedPacks
     .filter((p) => jurisdictions.includes(p.jurisdiction))
+    .filter((p) => declared.size === 0 || declared.has(p.jurisdiction))
     .sort((a, b) => a.pack_id.localeCompare(b.pack_id));
 }
 

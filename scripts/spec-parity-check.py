@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cross-spec invariant checker (register-lifecycle.md §10.3, P7-C02).
 
-Checks five cross-spec invariants (R1-R5) that a human reviewer would
+Checks seven cross-spec invariants (R1-R7) that a human reviewer would
 otherwise have to catch by re-reading every spec file after every edit.
 
 Scope: only TypeScript identifiers/literals inside fenced ```typescript
@@ -292,6 +292,91 @@ def check_r5() -> list[str]:
     return findings
 
 
+
+def check_r6() -> list[str]:
+    """R6: every policy-schema field that is validated and threaded into the
+    engine is actually READ by something.
+
+    Regression this prevents — three occurrences before it existed:
+      * regulatory citations computed by the engine and dropped at verdict
+        assembly (V1; nothing asserted they reached the user)
+      * `platform_satisfies` declared on every control and never consulted
+      * `safety_margin` validated 0.0-1.0, threaded through evaluate() into
+        solvControls() as `_margin`, and discarded — leaving CS-1 half built
+        for two months while the traceability matrix reported it covered
+
+    The shared shape: a field is declared, validated, passed along, and never
+    consumed. Tests pass because nothing asserts consumption. Reviews miss it
+    because the field is visibly "wired". Only a mechanical check catches it.
+
+    Heuristic: a parameter whose name begins with `_` in an engine function
+    signature is TypeScript's marker for deliberately unused. If the caller
+    passes a real policy value into that position, the value is being
+    discarded. Flag it.
+    """
+    findings = []
+
+    # Exceptions must carry a written rationale — see .parity-allowlist.
+    allow: set[str] = set()
+    allow_path = REPO_ROOT / ".parity-allowlist"
+    if allow_path.exists():
+        for line in allow_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                allow.add(line)
+
+    engine_dir = SRC_DIR / "engine"
+    for path in sorted(engine_dir.glob("*.ts")):
+        if path.name.endswith(".test.ts"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"export function (\w+)\s*\(([^)]*)\)", text, re.S):
+            fn, params = m.group(1), m.group(2)
+            for pm in re.finditer(r"\b_(\w+)\s*:\s*[A-Za-z]", params):
+                key = f"{path.name}:{fn}:_{pm.group(1)}"
+                if key in allow:
+                    continue
+                findings.append(
+                    f"R6: {path.name}:{fn}() declares parameter `_{pm.group(1)}` as deliberately "
+                    f"unused. If a caller passes a policy value here it is silently discarded "
+                    f"(the safety_margin/HR-14 defect class). Consume it or stop passing it."
+                )
+    return findings
+
+
+def check_r7() -> list[str]:
+    """R7: no test-case ID is used by two different tests in code.
+
+    Regression this prevents: TC-CS-1-02 simultaneously denoted "safety margin
+    maintained" in test-cases.md and "tie-breaks equal-coverage candidates by
+    lowest burden" in greedy-solver.test.ts. The duplicate made a passing
+    suite look like coverage of an unimplemented requirement — CS-1's safety
+    margin went unbuilt for two months behind it.
+
+    Structural only. An earlier draft compared the doc description against the
+    code description by token overlap and produced four findings, three of
+    which were merely doc-describes-behaviour vs code-describes-mechanism.
+    A check that cries wolf gets ignored, so this one asserts the thing that
+    is unambiguously wrong: one id, two different tests.
+    """
+    findings = []
+    seen: dict[str, list[str]] = {}
+    for path in sorted(SRC_DIR.rglob("*.test.ts*")):
+        text = path.read_text(encoding="utf-8")
+        for m in re.finditer(r"it\(\s*['\"`](TC-[A-Z0-9-]+):\s*([^'\"`]{4,})", text):
+            tc_id, desc = m.group(1), " ".join(m.group(2).split())
+            seen.setdefault(tc_id, []).append(f"{path.name}: {desc[:70]}")
+
+    for tc_id, uses in sorted(seen.items()):
+        if len(uses) > 1:
+            findings.append(
+                f"R7: {tc_id} is used by {len(uses)} different tests — "
+                + " | ".join(uses)
+                + ". A reused id hides uncovered requirements (the TC-CS-1-02/HR-13 defect class)."
+            )
+    return findings
+
+
 def main() -> int:
     try:
         all_spec_text = {p.name: p.read_text(encoding="utf-8") for p in sorted(SPECS_DIR.glob("*.md"))}
@@ -302,6 +387,8 @@ def main() -> int:
         findings += check_r3()
         findings += check_r4()
         findings += check_r5()
+        findings += check_r6()
+        findings += check_r7()
 
         if findings:
             print(f"spec-parity-check: {len(findings)} finding(s)\n")
@@ -309,7 +396,7 @@ def main() -> int:
                 print(f"  - {f}")
             return 1
 
-        print("spec-parity-check: clean (R1-R5 all pass)")
+        print("spec-parity-check: clean (R1-R7 all pass)")
         return 0
     except Exception as exc:  # noqa: BLE001 — script-error exit code per spec
         print(f"spec-parity-check: script error: {exc}", file=sys.stderr)

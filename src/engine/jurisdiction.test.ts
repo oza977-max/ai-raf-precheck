@@ -215,3 +215,29 @@ describe('placeholder source text cannot be reviewed', () => {
     expect(caveatForFiredRule(r, pack([r], SIGNED))).toBeNull();
   });
 });
+
+// R6 finding (parity check, first run). `resolveActivePacks` accepted the
+// policy's jurisdiction registry as `_jurisdictionRegistry` and ignored it,
+// so a pack file present on disk applied whenever a graph named its
+// jurisdiction — whether or not the firm's policy declared that jurisdiction
+// at all. The registry is the firm's statement of where it operates; a pack
+// outside it should not be able to change a verdict.
+describe('R6 — the policy jurisdiction registry gates which packs may apply', () => {
+  const ukPack = pack([rule({ id: 'UK-1' })], { pack_id: 'SS1-23', jurisdiction: 'UK' });
+  const jpPack = pack([rule({ id: 'JP-1' })], { pack_id: 'FSA-JP', jurisdiction: 'JP' });
+  const registry = [{ code: 'UK', name: 'United Kingdom', pack_files: [] }];
+
+  it('excludes a pack whose jurisdiction the policy does not declare', () => {
+    const active = resolveActivePacks(['UK', 'JP'], registry, [ukPack, jpPack]);
+    expect(active.map((p) => p.pack_id)).toEqual(['SS1-23']);
+  });
+
+  it('an empty registry is treated as "not yet configured", not as "nothing applies"', () => {
+    // Every existing policy predates the registry being enforced. Treating an
+    // empty registry as a total block would silently disable all packs and
+    // change every jurisdictional verdict — a far worse failure than the one
+    // being fixed.
+    const active = resolveActivePacks(['UK', 'JP'], [], [ukPack, jpPack]);
+    expect(active.map((p) => p.pack_id)).toEqual(['FSA-JP', 'SS1-23']);
+  });
+});

@@ -1,0 +1,26 @@
+# R6 allowlist — deliberately-unused parameters with a recorded rationale.
+#
+# R6 flags any engine function parameter named `_x` (TypeScript's marker for
+# deliberately unused) because that shape has produced the same defect three
+# times: regulatory citations dropped at verdict assembly, platform_satisfies
+# never read, and safety_margin threaded and discarded (HR-14).
+#
+# An entry here is an EXCEPTION, not a fix. Each needs a rationale on the
+# line above it, and each is fair game at review — that is the point. A gap
+# with a written reason is an audit trail; a gap with no reason is the defect
+# R6 exists to catch.
+#
+# Format: <file>:<function>:<parameter>
+
+# Deliberate, recorded in P4-C03: the spec signature exposes only questionId,
+# not which graph field each answer targeted, so answer-vs-answer
+# contradiction is not derivable from it. Description-vs-graph contradiction
+# is implemented; extending this needs a spec change, not a code change.
+contradiction.ts:detectContradictions:_answers
+
+# Unbuilt: pack-aware question narrowing. Questions should shrink when a
+# jurisdiction rule already settles a dimension (the neighbour of PV-4).
+# Note the caller in IntakeFlow.tsx passes a literal [] as well, so the
+# feature is unimplemented at both ends. Removing the parameter would erase
+# the seam; it is kept and recorded instead.
+question-generator.ts:generateQuestions:_activePacks
