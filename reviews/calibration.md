@@ -14,6 +14,9 @@ against.
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-07-26 | code | A,B,C,D,E | 7 | 6 | 7 | Merge |
 | 1 | 2026-07-26 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
+| 1 | 2026-07-26 | explore | interruption | 1 | 1 | 1 | 3 defects, 1 obs |
+| 2 | 2026-07-27 | explore | confirmation | 0 | 1 | 1 | D-001 fix confirmed |
+| 2 | 2026-07-27 | test | full mode | 0 | 0 | 0 | **Ship-ready** |
 
 ## Round 1 measurements
 
@@ -126,5 +129,29 @@ the next checkpoint per shared rule 27.
 3. Weight panel attention toward recently-written code.
 4. Consider an R8 parity rule for `.md`/`.html` divergence.
 5. Dual review does not trigger until round 3.
-6. Ship-ready needs `/gvm-explore-test` (VV-2(c)) — it is the only gate
-   standing between the current build and the top verdict.
+6. Ship-ready achieved in run 002 after explore-001 found D-001 (Critical),
+   it was fixed, and explore-002 confirmed the fix.
+
+## Lesson from the 001 -> 002 sequence
+
+The verdict got WORSE before it got better. Run 001 returned Demo-ready with
+VV-2(c) failing purely because no exploratory session existed. Once one did,
+VV-2(c) passed but VV-4(d) triggered on the Critical that session found — a
+re-run at that moment would have been Not shippable. Only fixing D-001 and
+re-testing produced Ship-ready.
+
+Demo-ready in run 001 was therefore partly a reward for not having looked.
+Worth remembering when a gate passes on absence of evidence.
+
+**Methodology gap:** `ExploreDefect` has no `resolved` field, so a fixed
+defect cannot be marked fixed inside its artefact. Clearing VV-4(d) requires
+an entirely new session, which creates pressure to edit the record instead.
+`explore-001.md` was deliberately left unedited. A `resolved:` / `fixed_in:`
+field would close this.
+
+**RF-3 — the guard existed but not everywhere.** D-001 was the same
+state-lands-too-late pattern as code-review C-5, on a handler that lacked the
+ref guard its neighbours had. explore-002 checked adjacent surfaces (2LoD
+approve) and found them guarded, so the defect was isolated rather than
+systemic. When a defect class is fixed in one place, audit every sibling
+call site — not just the one that failed.

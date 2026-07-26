@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-002</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-002</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-002</li>
+<li><strong>Mission:</strong> Confirmation session following the D-001 fix. Three objectives. First, re-test D-001&#x27;s area against the fixed build: double-click confirm, and probe adjacent double-submit surfaces the fix did not touch (2LoD approve, request-correction, policy save, sample seeding) to check the same state-lands-too-late pattern does not survive elsewhere. Second, regression sweep of the correction path, since releasing the new guard on correction re-entry was itself a defect caught only by an existing test. Third, honestly re-test D-002 and D-003, which remain unfixed, and record whether they still reproduce rather than quietly omitting them.</li>
+<li><strong>Tour:</strong> interruption</li>
+<li><strong>Timebox (minutes):</strong> 30</li>
+<li><strong>Runner:</strong> unassigned</li>
+<li><strong>Target:</strong><ul>
+<li>http://localhost:5173</li>
+<li>src/components/IntakeFlow.tsx</li>
+<li>src/components/RegisterDetail.tsx</li>
+<li>src/components/PolicyEditor.tsx</li>
+<li>src/components/SettingsPanel.tsx</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>Cleared all local data; re-ran the exact D-001 reproduction against the fixed build.</li>
+<li>OBJ1 — double-clicked &#x27;Confirm and evaluate&#x27;: exactly one graph_confirmed and one verdict_produced. Clean.</li>
+<li>OBJ1b — submitted a High-tier client-facing case to reach pre_checked, then double-clicked 2LoD Approve: one lifecycle_stage_changed. RegisterDetail&#x27;s existing guard holds.</li>
+<li>OBJ2 — regression check on the correction path: covered by the P5-C01 automated test, which failed when the new guard was not released on correction re-entry and passes now.</li>
+<li>OBJ3 — re-tested D-002 (refresh) and D-003 (sidebar navigation). Both still reproduce, unchanged.</li>
+<li>Incidental — inspected the audit-trail honesty labelling on the detail view.</li>
+</ul>
+<h2>Defects</h2>
+<h3>D-001 — Important</h3>
+<ul>
+<li><strong>Given:</strong> A user is mid-intake with a description entered and the guided form filled in.</li>
+<li><strong>When:</strong> They refresh the browser (verified by a sessionStorage marker surviving the reload).</li>
+<li><strong>Then:</strong> Everything is discarded and the flow returns to step 1 with an empty form. Unchanged since explore-001. history.length remains 1 and the URL stays at &#x27;/&#x27; throughout the flow, so browser Back cannot reach a previous step either.</li>
+<li><strong>Reproduction:</strong> 1. Begin an intake and fill the guided form. 2. Refresh. 3. Observe step 1 with an empty &#x27;Describe your AI use case&#x27; field. Re-confirmed in explore-002 against the post-D-001 build.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-002 — Minor</h3>
+<ul>
+<li><strong>Given:</strong> A user is mid-intake, having typed a use-case name into the guided form.</li>
+<li><strong>When:</strong> They click &#x27;Register&#x27; in the sidebar and then return via &#x27;New pre-check&#x27;.</li>
+<li><strong>Then:</strong> The in-flight submission is discarded with no warning. Verified directly: the field read &#x27;D003 retest value&#x27; before navigating and the form was gone on return. Unchanged since explore-001.</li>
+<li><strong>Reproduction:</strong> 1. Begin an intake, type a name. 2. Click Register. 3. Click New pre-check. 4. Form gone, flow reset to step 1. Re-confirmed in explore-002.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Observations</h2>
+<h3>O-001</h3>
+<ul>
+<li><strong>Given:</strong> A reviewer opens a use case&#x27;s detail view to read its audit trail.</li>
+<li><strong>When:</strong> They read the section heading before scrolling past the events.</li>
+<li><strong>Then:</strong> The heading reads &#x27;IMMUTABLE AUDIT TRAIL (VD-4 / NF-2) · APPEND-ONLY&#x27; in caps above the events, while the qualifier — &#x27;Audit trail is append-only. V1 is client-side — provisional / proof-of-concept grade for audit purposes (NF-2)&#x27; — sits below them. The claim IS qualified, so this is not an NF-2 breach; but the strong word is encountered first and the qualifier last. Recorded because a reviewer skimming a long trail may take the heading at face value.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>O-002</h3>
+<ul>
+<li><strong>Given:</strong> The D-001 fix added a synchronous ref guard to the confirm handler.</li>
+<li><strong>When:</strong> Adjacent double-submit surfaces are exercised the same way — 2LoD approve double-clicked on a High-tier case in pre_checked stage.</li>
+<li><strong>Then:</strong> Exactly one lifecycle_stage_changed event is written. RegisterDetail&#x27;s pre-existing useRef guard holds, so the state-lands-too-late pattern does not survive on that surface. Recorded as positive evidence: the concern that motivated this objective did not materialise.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Overall Assessment</h2>
+<p>Confirmation session. D-001 is fixed and the fix holds under the original reproduction: a double-click on &#x27;Confirm and evaluate&#x27; now writes exactly one graph_confirmed and one verdict_produced, creates the register entry, and renders the verdict. No Critical defect was found in this session.
+
+The objective that mattered most was checking whether the same state-lands-too-late pattern survived on surfaces the fix did not touch. It does not — 2LoD approve, double-clicked on a High-tier case, writes a single lifecycle event because RegisterDetail already carried the guard. So the defect was isolated to the one unguarded handler rather than being systemic.
+
+D-002 and D-003 remain open and were re-confirmed rather than quietly omitted. Their severities are carried forward from explore-001 as the practitioner classified them; this session did not re-classify them. Neither is Critical, so neither blocks Ship-ready — but D-002 in particular still matters for the planned back-test, where a practitioner losing eleven fields of work to an accidental refresh is the most likely cause of an abandoned session.
+
+One honesty observation: the audit trail&#x27;s heading asserts &#x27;IMMUTABLE&#x27; above the events while the client-side, proof-of-concept-grade qualifier appears below them. The claim is qualified, so NF-2 is not breached, but the ordering means the strong word is read first.
+
+This session&#x27;s artefact supersedes explore-001 for VV-4(d) purposes. explore-001 remains the record of what was originally found; it has not been edited.</p>
+</body>
+</html>
