@@ -1,0 +1,933 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "A-01",
+      "title": "Daily VaR and IRC commentary",
+      "fsb_category": "front-office",
+      "boundary_tested": "TRACK-II baseline; INV-HALLUC-01",
+      "prose": "Drafts day-on-day market risk commentary from overnight VaR, stressed VaR and IRC moves plus desk P&L attribution. A market risk manager reads and approves every commentary before it circulates internally.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "A-02",
+      "title": "The same commentary tool, with private-side names in the input",
+      "fsb_category": "front-office",
+      "boundary_tested": "HL-002 / INV-ZONE-01",
+      "prose": "Identical to A-01, except the input now also includes an unannounced-transaction watchlist \u2014 price-sensitive information about deals not yet public \u2014 and the model runs on the vendor-hosted service.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "MNPI",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "B-01",
+      "title": "Coding assistant for risk analysts",
+      "fsb_category": "front-office",
+      "boundary_tested": "TRACK-III; INV-AGENT-01",
+      "prose": "An agentic coding assistant that proposes reconciliation scripts and data-quality checks. It can read the repository and run tests, but analysts review and apply every change themselves.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "agentic",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "internal-only",
+          "decision_bindingness": "non-binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "B-02",
+      "title": "Internal policy document search and summarisation",
+      "fsb_category": "front-office",
+      "boundary_tested": "TRACK-III; INV-CITE-01",
+      "prose": "Retrieval over internal policy and procedure documents. Staff ask questions in natural language and get answers with citations back to the source document. Read-only; no decision authority.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "read",
+          "exposure": "internal-shared",
+          "decision_bindingness": "non-binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "B-03",
+      "title": "Client-facing wealth chatbot",
+      "fsb_category": "front-office",
+      "boundary_tested": "INV-DISCLOSE-01; INV-ESCALATE-01; INV-CONDUCT-01",
+      "prose": "Answers wealth clients' questions about products and their own portfolio in natural language, directly in the client app. A human adviser escalation route exists but most conversations complete without one.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "generative-ai",
+          "autonomy_level": 2,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "client-facing",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "B-04",
+      "title": "Autonomous client communications",
+      "fsb_category": "front-office",
+      "boundary_tested": "HL-001",
+      "prose": "Generates and sends emails to clients about changes to their accounts with no human review at any point. Once sent, a message cannot be recalled.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "generative-ai",
+          "autonomy_level": 4,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "execute",
+          "exposure": "client-facing",
+          "decision_bindingness": "binding",
+          "output_reversibility": "irreversible",
+          "scale": "at_scale",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "C-01",
+      "title": "Retail credit scorecard (traditional)",
+      "fsb_category": "front-office",
+      "boundary_tested": "TRACK-I; INV-DRIFT-01",
+      "prose": "A logistic-regression scorecard producing a probability of default that feeds the retail lending decision. Statistical technique, no machine learning. Underwriters see the score and the reason codes.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "statistical",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "credit-decision",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "C-02",
+      "title": "Credit review drafting and covenant monitoring",
+      "fsb_category": "front-office",
+      "boundary_tested": "INV-DATA-01; INV-EXPLAIN-01",
+      "prose": "Summarises financial spreads and covenant history into annual credit review memos for corporate borrowers. The credit officer owns the rating and signs the final review.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "credit-decision",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "C-03",
+      "title": "Autonomous credit-line reduction",
+      "fsb_category": "front-office",
+      "boundary_tested": "HL-003",
+      "prose": "Identical population and data to C-02, but the system now automatically reduces credit limits on deteriorating retail accounts with no human review. Customers are notified after the fact.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 4,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "execute",
+          "exposure": "client-facing",
+          "decision_bindingness": "binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "credit-decision",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "C-04",
+      "title": "Collections prioritisation",
+      "fsb_category": "front-office",
+      "boundary_tested": "INV-CONDUCT-01 without a client-facing interface",
+      "prose": "Ranks delinquent retail accounts for collections contact. Output is advisory to the collections team, who choose whom to call. The population includes customers in financial difficulty.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "lending-decision",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "C-05",
+      "title": "Replacing an existing PD model with a gradient-boosted one",
+      "fsb_category": "front-office",
+      "boundary_tested": "TRACK-II-REPLACE",
+      "prose": "Same purpose, same population and same output as the incumbent probability-of-default model, but built with gradient boosting instead of logistic regression. The incumbent model is retired on go-live.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": true
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "credit-decision",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "D-01",
+      "title": "Execution-cost and market-impact estimation",
+      "fsb_category": "trading",
+      "boundary_tested": "TRACK-I; advisory bindingness",
+      "prose": "Estimates the market impact of a proposed order to inform execution strategy. Traders see the estimate and decide how to work the order themselves.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "statistical",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "trading",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "D-02",
+      "title": "Autonomous execution agent",
+      "fsb_category": "trading",
+      "boundary_tested": "HL-004",
+      "prose": "Places and adjusts live orders in the market within pre-set risk limits, with no human checkpoint between decision and execution.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 4,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "trade",
+          "exposure": "market-facing",
+          "decision_bindingness": "binding",
+          "output_reversibility": "irreversible",
+          "scale": "at_scale",
+          "decision_type": "trading",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "D-03",
+      "title": "Research summarisation for portfolio managers",
+      "fsb_category": "trading",
+      "boundary_tested": "INV-HALLUC-01 on material decisions",
+      "prose": "Summarises sell-side research and internal analyst notes into a daily digest for portfolio managers. Advisory input to position decisions; PMs read the underlying research when it matters.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "E-01",
+      "title": "Operational-risk event classification and RCSA drafting",
+      "fsb_category": "back-office",
+      "boundary_tested": "INV-SAMPLE-01 (recommendation at scale)",
+      "prose": "Classifies operational-risk incidents into the firm's taxonomy and drafts the narrative sections of RCSA submissions. Risk managers review before submission.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "E-02",
+      "title": "Reconciliation break investigation",
+      "fsb_category": "back-office",
+      "boundary_tested": "Medium tier; internal-shared exposure",
+      "prose": "Investigates unmatched items in daily reconciliations and proposes a probable cause and resolution. Operations staff confirm before anything is booked.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "E-03",
+      "title": "Payment exception auto-repair",
+      "fsb_category": "back-office",
+      "boundary_tested": "TRACK-II-AUTONOMY (autonomy >= 3)",
+      "prose": "Repairs malformed payment instructions within defined tolerances and releases them for settlement, acting independently inside a pre-approved scope. Exceptions outside tolerance go to a human.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 3,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "execute",
+          "exposure": "internal-shared",
+          "decision_bindingness": "binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "operational",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "E-04",
+      "title": "Automated data deletion for retention compliance",
+      "fsb_category": "back-office",
+      "boundary_tested": "HL-005 (irreversible above autonomy L1)",
+      "prose": "Identifies records that have passed their retention period and deletes them. Deletion is permanent and there is no recovery path once executed.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "traditional-ml",
+          "autonomy_level": 2,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "execute",
+          "exposure": "internal-only",
+          "decision_bindingness": "binding",
+          "output_reversibility": "irreversible",
+          "scale": "at_scale",
+          "decision_type": "operational",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "F-01",
+      "title": "AML transaction-monitoring alert triage",
+      "fsb_category": "regtech",
+      "boundary_tested": "Critical via fraud-detection; auto-close threshold",
+      "prose": "Scores and triages AML alerts, automatically closing the lowest-risk ones without human review. Financial-crime analysts handle everything above the threshold.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 3,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "execute",
+          "exposure": "internal-shared",
+          "decision_bindingness": "binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "fraud-detection",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "F-02",
+      "title": "KYC document extraction and verification",
+      "fsb_category": "regtech",
+      "boundary_tested": "INV-DATA-01; at-scale Client PII",
+      "prose": "Extracts identity-document data at onboarding and verifies it against the application. High volume. Onboarding staff review flagged mismatches only.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "deep-learning",
+          "autonomy_level": 2,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "operational",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "F-03",
+      "title": "Regulatory reporting narrative drafting",
+      "fsb_category": "regtech",
+      "boundary_tested": "regulatory-reporting; irreversible once filed",
+      "prose": "Drafts the narrative sections of regulatory submissions such as Pillar 3 disclosures. Finance reviews before filing, but once filed the submission is on the record with the regulator.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "market-facing",
+          "decision_bindingness": "material",
+          "output_reversibility": "irreversible",
+          "scale": "limited",
+          "decision_type": "regulatory-reporting",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "F-04",
+      "title": "Trade-surveillance alert review",
+      "fsb_category": "regtech",
+      "boundary_tested": "INV-SEC-01 (externally-authored content in the prompt)",
+      "prose": "Reviews trader communications and trade records for market-abuse indicators, summarising each alert for the surveillance team. The content it reads includes messages written by external counterparties.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "MNPI",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "G-01",
+      "title": "EU retail credit scoring",
+      "fsb_category": "front-office",
+      "boundary_tested": "EU pack \u2014 AI Act Annex III 5(b)",
+      "prose": "A machine-learning creditworthiness model used for retail lending to consumers in the European Union.",
+      "graph": {
+        "jurisdictions": [
+          "EU"
+        ],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "credit-decision",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "G-02",
+      "title": "UK-only quantitative model",
+      "fsb_category": "back-office",
+      "boundary_tested": "UK pack \u2014 SS1/23 independent validation",
+      "prose": "A quantitative model used for internal capital estimation, operating only in the United Kingdom.",
+      "graph": {
+        "jurisdictions": [
+          "UK"
+        ],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "statistical",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "limited",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "G-03",
+      "title": "US generative-AI drafting assistant",
+      "fsb_category": "back-office",
+      "boundary_tested": "US pack \u2014 SR 26-2 routing",
+      "prose": "A generative-AI assistant that drafts internal memoranda for a US banking entity. Output is reviewed by the author before use.",
+      "graph": {
+        "jurisdictions": [
+          "US"
+        ],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "generative-ai",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "draft",
+          "exposure": "internal-only",
+          "decision_bindingness": "non-binding",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "G-04",
+      "title": "Canadian model at autonomy level 2",
+      "fsb_category": "back-office",
+      "boundary_tested": "CA pack \u2014 OSFI E-23 required control",
+      "prose": "A model operating in Canada that takes limited independent action within a defined scope before a human sees the result.",
+      "graph": {
+        "jurisdictions": [
+          "CA"
+        ],
+        "input": {
+          "data_class": "Confidential",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 2,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": false
+        }
+      }
+    },
+    {
+      "id": "G-05",
+      "title": "Singapore and Japan client-facing assistant",
+      "fsb_category": "front-office",
+      "boundary_tested": "SG+JP packs stacking",
+      "prose": "A client-facing assistant deployed to retail customers in both Singapore and Japan.",
+      "graph": {
+        "jurisdictions": [
+          "SG",
+          "JP"
+        ],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "client-facing",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "G-06",
+      "title": "EU CV-screening tool",
+      "fsb_category": "back-office",
+      "boundary_tested": "EU pack \u2014 AI Act Annex III 4(a) hiring",
+      "prose": "Screens and ranks job applicants' CVs for recruiters hiring into European Union entities.",
+      "graph": {
+        "jurisdictions": [
+          "EU"
+        ],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "internal",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "material",
+          "output_reversibility": "reversible",
+          "scale": "at_scale",
+          "decision_type": "hiring",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "H-01",
+      "title": "Internal-platform model, inside the approved envelope",
+      "fsb_category": "back-office",
+      "boundary_tested": "PV-3 inheritance applies",
+      "prose": "A model running on an approved internal machine-learning platform, operating within every dimension that platform was approved for.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false,
+          "platform": "PLAT-INTERNAL-ML"
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "limited",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "H-02",
+      "title": "The same model, one envelope dimension exceeded",
+      "fsb_category": "back-office",
+      "boundary_tested": "PV-3 per-dimension withdrawal",
+      "prose": "Identical to H-01 and on the same approved internal platform, except it now processes Client PII, which that platform was not cleared for.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Client PII",
+          "data_zone": "Zone C"
+        },
+        "processing": {
+          "model_type": "ml",
+          "autonomy_level": 1,
+          "data_zone": "Zone C",
+          "vendor": "internal",
+          "replaces_prior_model": false,
+          "platform": "PLAT-INTERNAL-ML"
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "limited",
+          "hitl": true
+        }
+      }
+    },
+    {
+      "id": "H-03",
+      "title": "Model on an unlisted third-party service",
+      "fsb_category": "back-office",
+      "boundary_tested": "PV-5 unapproved-component routing",
+      "prose": "The same workload, but running on a third-party service that does not appear on the firm's approved-vendor registry.",
+      "graph": {
+        "jurisdictions": [],
+        "input": {
+          "data_class": "Internal",
+          "data_zone": "Zone B"
+        },
+        "processing": {
+          "model_type": "llm",
+          "autonomy_level": 1,
+          "data_zone": "Zone B",
+          "vendor": "VENDOR-NOT-LISTED",
+          "replaces_prior_model": false
+        },
+        "output": {
+          "action_type": "recommend",
+          "exposure": "internal-shared",
+          "decision_bindingness": "advisory",
+          "output_reversibility": "reversible",
+          "scale": "limited",
+          "hitl": true
+        }
+      }
+    }
+  ]
+}
