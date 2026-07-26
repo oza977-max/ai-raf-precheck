@@ -1,0 +1,596 @@
+{
+  "policy_version": "1.0",
+  "verdicts": {
+    "A-01": {
+      "title": "Daily VaR and IRC commentary",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [
+        "CTRL-CITE-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-CITE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "A-02": {
+      "title": "The same commentary tool, with private-side names in the input",
+      "status": "rejected",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-ZONE-01",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-CITE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01",
+        "INV-ZONE-01"
+      ],
+      "applied_overrides": []
+    },
+    "B-01": {
+      "title": "Coding assistant for risk analysts",
+      "status": "approved_with_controls",
+      "tier": "Low",
+      "track": "III",
+      "binding_constraint": "INV-AGENT-01",
+      "controls": [
+        "CTRL-LOG-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-AGENT-01"
+      ],
+      "applied_overrides": []
+    },
+    "B-02": {
+      "title": "Internal policy document search and summarisation",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "III",
+      "binding_constraint": "INV-SEC-01",
+      "controls": [
+        "CTRL-REDTEAM-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-SEC-01"
+      ],
+      "applied_overrides": []
+    },
+    "B-03": {
+      "title": "Client-facing wealth chatbot",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-CONDUCT-01",
+      "controls": [
+        "CTRL-CONDUCT-01",
+        "CTRL-DISCLOSE-01",
+        "CTRL-ENC-01",
+        "CTRL-ESCALATE-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-CONDUCT-01",
+        "INV-DATA-01",
+        "INV-DISCLOSE-01",
+        "INV-ESCALATE-01",
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "B-04": {
+      "title": "Autonomous client communications",
+      "status": "rejected",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "HL-001",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [],
+      "applied_overrides": []
+    },
+    "C-01": {
+      "title": "Retail credit scorecard (traditional)",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "INV-DRIFT-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-DRIFT-01",
+        "INV-SAMPLE-01"
+      ],
+      "applied_overrides": []
+    },
+    "C-02": {
+      "title": "Credit review drafting and covenant monitoring",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-DATA-01",
+      "controls": [
+        "CTRL-ENC-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-GROUND-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-DATA-01",
+        "INV-HALLUC-01",
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "C-03": {
+      "title": "Autonomous credit-line reduction",
+      "status": "rejected",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "HL-003",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [],
+      "applied_overrides": []
+    },
+    "C-04": {
+      "title": "Collections prioritisation",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-DRIFT-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "C-05": {
+      "title": "Replacing an existing PD model with a gradient-boosted one",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-DRIFT-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "D-01": {
+      "title": "Execution-cost and market-impact estimation",
+      "status": "ENGINE-ERROR",
+      "error": {
+        "kind": "no-track-match",
+        "reason": "no track rule matched this graph"
+      }
+    },
+    "D-02": {
+      "title": "Autonomous execution agent",
+      "status": "rejected",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "HL-001",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [],
+      "applied_overrides": []
+    },
+    "D-03": {
+      "title": "Research summarisation for portfolio managers",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-HALLUC-01",
+      "controls": [
+        "CTRL-CITE-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-GROUND-01",
+        "CTRL-REDTEAM-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-CITE-01",
+        "INV-HALLUC-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "E-01": {
+      "title": "Operational-risk event classification and RCSA drafting",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "E-02": {
+      "title": "Reconciliation break investigation",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "E-03": {
+      "title": "Payment exception auto-repair",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-AUTONOMY-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-HITL-02"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-AUTONOMY-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "E-04": {
+      "title": "Automated data deletion for retention compliance",
+      "status": "rejected",
+      "tier": "Critical",
+      "track": "I",
+      "binding_constraint": "HL-005",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [],
+      "applied_overrides": []
+    },
+    "F-01": {
+      "title": "AML transaction-monitoring alert triage",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-AUTONOMY-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-HITL-02"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-AUTONOMY-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "F-02": {
+      "title": "KYC document extraction and verification",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-AUTONOMY-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-ENC-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-HITL-02",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-AUTONOMY-01",
+        "INV-DATA-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "F-03": {
+      "title": "Regulatory reporting narrative drafting",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-CONDUCT-01",
+      "controls": [
+        "CTRL-CITE-01",
+        "CTRL-CONDUCT-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-GROUND-01",
+        "CTRL-REDTEAM-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-CITE-01",
+        "INV-CONDUCT-01",
+        "INV-HALLUC-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "F-04": {
+      "title": "Trade-surveillance alert review",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-HALLUC-01",
+      "controls": [
+        "CTRL-FINGERPRINT-01",
+        "CTRL-GROUND-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-HALLUC-01",
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "G-01": {
+      "title": "EU retail credit scoring",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-DRIFT-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": [
+        "EU-AIACT:EU-AIACT-TIER-01:Tier floor Critical already satisfied by Critical."
+      ]
+    },
+    "G-02": {
+      "title": "UK-only quantitative model",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "I",
+      "binding_constraint": "INV-DRIFT-01",
+      "controls": [
+        "CTRL-DRIFT-01"
+      ],
+      "downstream_reviews": [
+        "Independent model validation (2LoD)"
+      ],
+      "tripped_invariants": [
+        "INV-DRIFT-01"
+      ],
+      "applied_overrides": [
+        "SS1-23:SS1-UK-REV-01:Added downstream review \"Independent model validation (2LoD)\"."
+      ]
+    },
+    "G-03": {
+      "title": "US generative-AI drafting assistant",
+      "status": "approved_with_controls",
+      "tier": "Low",
+      "track": "III",
+      "binding_constraint": "INV-CITE-01",
+      "controls": [
+        "CTRL-CITE-01"
+      ],
+      "downstream_reviews": [
+        "AI Governance review (outside MRM scope per SR 26-2)"
+      ],
+      "tripped_invariants": [
+        "INV-CITE-01"
+      ],
+      "applied_overrides": [
+        "SR-26-2:SR262-US-REV-01:Added downstream review \"AI Governance review (outside MRM scope per SR 26-2)\"."
+      ]
+    },
+    "G-04": {
+      "title": "Canadian model at autonomy level 2",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-AUTONOMY-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-HITL-02",
+        "CTRL-LOG-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-AUTONOMY-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": [
+        "OSFI-E23:E23-CA-CTL-01:Added required control CTRL-LOG-01."
+      ]
+    },
+    "G-05": {
+      "title": "Singapore and Japan client-facing assistant",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-CONDUCT-01",
+      "controls": [
+        "CTRL-CONDUCT-01",
+        "CTRL-DISCLOSE-01",
+        "CTRL-ENC-01",
+        "CTRL-ESCALATE-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [
+        "AI governance review",
+        "Fairness and conduct assessment"
+      ],
+      "tripped_invariants": [
+        "INV-CONDUCT-01",
+        "INV-DATA-01",
+        "INV-DISCLOSE-01",
+        "INV-ESCALATE-01",
+        "INV-SAMPLE-01",
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": [
+        "FSA-JP:FSAJP-REV-01:Added downstream review \"AI governance review\".",
+        "MAS-FEAT:FEAT-SG-REV-01:Added downstream review \"Fairness and conduct assessment\"."
+      ]
+    },
+    "G-06": {
+      "title": "EU CV-screening tool",
+      "status": "approved_with_controls",
+      "tier": "Critical",
+      "track": "II",
+      "binding_constraint": "INV-DATA-01",
+      "controls": [
+        "CTRL-DRIFT-01",
+        "CTRL-ENC-01",
+        "CTRL-EXPLAIN-01",
+        "CTRL-FINGERPRINT-01",
+        "CTRL-SAMPLE-01"
+      ],
+      "downstream_reviews": [
+        "ICT third-party concentration review (DORA Art. 28/29)"
+      ],
+      "tripped_invariants": [
+        "INV-DATA-01",
+        "INV-DRIFT-01",
+        "INV-EXPLAIN-01",
+        "INV-SAMPLE-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": [
+        "DORA:DORA-EU-REV-01:Added downstream review \"ICT third-party concentration review (DORA Art. 28/29)\".",
+        "EU-AIACT:EU-AIACT-TIER-02:Tier forced to Critical (was High) — most demanding standard applies."
+      ]
+    },
+    "H-01": {
+      "title": "Internal-platform model, inside the approved envelope",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "H-02": {
+      "title": "The same model, one envelope dimension exceeded",
+      "status": "approved_with_controls",
+      "tier": "High",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [
+        "CTRL-FINGERPRINT-01"
+      ],
+      "downstream_reviews": [],
+      "tripped_invariants": [
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    },
+    "H-03": {
+      "title": "Model on an unlisted third-party service",
+      "status": "approved_with_controls",
+      "tier": "Medium",
+      "track": "II",
+      "binding_constraint": "INV-TRACK2-01",
+      "controls": [
+        "CTRL-FINGERPRINT-01",
+        "CTRL-REDTEAM-01"
+      ],
+      "downstream_reviews": [
+        "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved registry"
+      ],
+      "tripped_invariants": [
+        "INV-SEC-01",
+        "INV-TRACK2-01"
+      ],
+      "applied_overrides": []
+    }
+  }
+}
