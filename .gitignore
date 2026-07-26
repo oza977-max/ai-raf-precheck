@@ -14,3 +14,7 @@ Mockup prototype request/
 # Commercial strategy + internal adoption plan — deliberately not published.
 # Purged from git history 2026-07-26; keep it local.
 design-vision.md
+
+# Back-test outcomes hold real use cases and real committee decisions.
+# The repo is public — this never gets committed.
+backtest/outcomes-local.md
