@@ -393,8 +393,9 @@
 <p class="meta">First code review in the project's history. 24 build chunks, previously unreviewed.</p></header>
 
 <div class="verdict-box">
-<p class="verdict-text">Verdict: pending user triage</p>
-<p>Per shared rule 28, the verdict follows triage rather than preceding it. Seven Critical and six Important findings are surfaced below for the practitioner's disposition.</p>
+<p class="verdict-text">Verdict: Merge</p>
+<p>Practitioner elected to fix all findings. <strong>All 7 Critical and all 6 Important closed and verified</strong> — 253 tests across 3 consecutive runs, tsc, build, spec-parity R1–R7, engine purity, and a live browser check of both the margin section and the inheritance chain. One requirement gap (SR-1) is surfaced and recorded, not silently parked.</p>
+<p>The verdict follows triage rather than preceding it (shared rule 28).</p>
 </div>
 
 <section><h2>Summary</h2>
@@ -511,7 +512,7 @@
 <p>Per shared rule 27, a requirement gap found during review is promoted to <code>requirements/requirements.md</code>, never parked. This section is the staging ground, not the destination.</p>
 <div class="finding important">
 <h3><span class="sev-important">IMPORTANT</span> · SR-1 — PV-2 and PV-5 are unreachable from the product's own intake</h3>
-<p><strong>Status:</strong> deferred — awaiting triage</p>
+<p><strong>Status:</strong> deferred — awaiting triage (promotion route to requirements.md not yet chosen)</p>
 <p><strong>Found:</strong> while fixing C-3. <code>build-graph-from-form.ts:58</code> hardcodes <code>vendor: 'internal'</code> and <code>StructuredForm.tsx</code> never asks for a vendor or a platform (zero mentions). Every use case submitted through the app therefore declares the same vendor and no platform.</p>
 <p><strong>Consequence:</strong> PV-2 (Must — an unregistered model is treated as a new vendor) can never fire, and PV-5 (Must — unapproved-component routing) is reachable for platforms only. Both are specified, implemented in the engine, and now test-covered, with no path from the UI. Testers cannot exercise inheritance at all.</p>
 <p><strong>Not fixed in this pass</strong> — it is a requirements question (PV-4's neighbour), and adding a feature during a fix pass is the scope confusion that produced HR-12 earlier the same day. Narrow mitigation applied instead: <code>'internal'</code> is treated as a reserved sentinel meaning "no third-party vendor", since it is not user input. Any other value remains a real registry claim.</p>
