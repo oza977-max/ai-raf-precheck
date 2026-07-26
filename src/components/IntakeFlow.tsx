@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useReducer, useState } from 'react';
+import { useEffect, useCallback, useMemo, useReducer, useState, useRef } from 'react';
 import { extractGraph } from '../llm/graph-extractor';
 import { confirmSemanticDuplicate } from '../llm/duplicate-check';
 import { getApiKey } from '../llm/client';
@@ -174,8 +174,23 @@ export default function IntakeFlow() {
     }
   }
 
+  // explore-001 D-001 (Critical). The step check below is necessary but NOT
+  // sufficient: dispatch() is asynchronous, so two synchronous clicks both
+  // read the same render's closure, both observe step === 'confirmation',
+  // and both write to the append-only audit trail. Those duplicate events
+  // cannot be removed afterwards, by design.
+  //
+  // A ref is the fix rather than state because it updates synchronously —
+  // the second click sees the flag before React has re-rendered. Same
+  // pattern as RegisterDetail's 2LoD action guard and the seed function's
+  // in-flight promise (code review C-5).
+  const confirmInFlight = useRef(false);
+
   async function handleConfirmAndEvaluate() {
     if (state.step !== 'confirmation') return;
+    if (confirmInFlight.current) return;
+    confirmInFlight.current = true;
+
     const { graph, corrections, useCaseId, originalVerdictId } = state;
     dispatch({ type: 'CONFIRMED' });
     setEvaluationError(null);
@@ -188,6 +203,10 @@ export default function IntakeFlow() {
       // (P5-C01 review-flagged gap, fixed here).
       setEvaluationError(err instanceof Error ? err.message : String(err));
       dispatch({ type: 'EVALUATION_FAILED' });
+      // Released only on failure: a genuine engine error returns the user to
+      // graph_review and they must be able to retry. On success the flow
+      // leaves the confirmation step entirely, so the guard stays set.
+      confirmInFlight.current = false;
     }
   }
 
@@ -348,6 +367,11 @@ export default function IntakeFlow() {
 
   function handleCorrectVerdict() {
     if (state.step !== 'verdict' || !verdict || !lastGraph) return;
+    // Re-entering the flow for a correction pass means confirmation will be
+    // reached again, so the D-001 guard must be released. Missing this made
+    // the correction path silently un-confirmable — caught by the P5-C01
+    // test, which is why that test earns its keep.
+    confirmInFlight.current = false;
     dispatch({
       type: 'CORRECT_VERDICT',
       graph: lastGraph,
