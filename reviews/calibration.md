@@ -13,6 +13,7 @@ against.
 | Round | Date | Type | Panels | Critical | Important | Minor/Sugg | Verdict |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-07-26 | code | A,B,C,D,E | 7 | 6 | 7 | Merge |
+| 1 | 2026-07-26 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
 
 ## Round 1 measurements
 
@@ -31,6 +32,32 @@ provenance nits already covered by a stronger finding.
 written the same day as the review. The oldest untouched code produced almost
 nothing. This is the single most useful calibration signal from round 1:
 recency predicts defect density here far better than complexity does.
+
+## Build verification 001 (test phase)
+
+Verdict **Demo-ready**, emitted by `gvm_verdict.evaluate` over the
+thirteen-criterion table. Ship-ready blocked by a single gate:
+
+**VV-2(c) FAIL — exploratory testing has never been performed.** No
+`test/explore-NNN.md` charter exists. Every VV-3 gate passed and no VV-4
+trigger fired, so the fall-through is Demo-ready rather than Not shippable.
+
+Measurements worth carrying:
+- 60/80 requirements IMPLEMENTED, 0 PARTIAL, 0 STUB, 20 deferred. No
+  in-scope Must unimplemented.
+- Zero blocking integration seams.
+- **Acceptance-criterion traceability is 30/116 (26%).** A seven-case sample
+  of the untraceable ones found a verifying test for every one — so the gap
+  is traceability, not coverage. It is nonetheless the same mechanism that
+  hid CS-1 for two months behind a duplicate id, and it is a poor answer for
+  a product selling auditability.
+- Real-chain test is exemplary: whole App, real engine and store, with the
+  Anthropic SDK the only mock in the suite.
+
+**The verdict understates the real gap.** Demo-ready is about the build. The
+substantive issue is that zero historical committee decisions have ever been
+compared against an engine verdict — the product's core thesis is untested,
+and no amount of green suite changes that.
 
 ## Recurring findings
 
@@ -99,3 +126,5 @@ the next checkpoint per shared rule 27.
 3. Weight panel attention toward recently-written code.
 4. Consider an R8 parity rule for `.md`/`.html` divergence.
 5. Dual review does not trigger until round 3.
+6. Ship-ready needs `/gvm-explore-test` (VV-2(c)) — it is the only gate
+   standing between the current build and the top verdict.

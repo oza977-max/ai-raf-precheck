@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build Verification 001 · AIGate — Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<style>
+.verdict-box{border:3px solid #7d5a10;padding:1.3rem 1.5rem;margin:1.5rem 0;background:#f6f1e0}
+.verdict-text{font-size:1.6rem;font-weight:700;margin:0 0 .4rem;color:#7d5a10}
+.pass{color:#2f6b46;font-weight:700}.fail{color:#8f2a2a;font-weight:700}.na{color:#8a8a80}
+.big{font-size:1.1rem;padding:.8rem 1rem;background:#f6ece9;border-left:4px solid #8f2a2a;margin:1rem 0}
+</style><body><div class="container"><main>
+<header><h1>Build Verification 001</h1><p class="subtitle">AIGate · Full mode · 26 July 2026</p>
+<p class="meta">First /gvm-test run in the project's history. 24 build chunks.</p></header>
+
+<div class="verdict-box">
+<p class="verdict-text">Verdict: Demo-ready</p>
+<p>Emitted by <code>gvm_verdict.evaluate</code> over the thirteen-criterion decision table — not an author judgement. One VV-2 gate fails, so Ship-ready is unreachable; all VV-3 gates pass and no VV-4 trigger fired, so the product is Demo-ready.</p>
+<p><strong>The single blocker to Ship-ready is VV-2(c): exploratory testing has never been performed.</strong></p>
+</div>
+
+<section><h2>1. Executive summary</h2>
+<p>The build does what it was specified to do. 60 of 80 requirements are implemented; the other 20 are recorded deferrals. 253 automated tests pass, the production build is clean, and the deployed site serves the same asset hash as HEAD.</p>
+<div class="big"><strong>What green tests do not establish.</strong> Every automated test pins the engine against its own expected output. <strong>Zero historical committee decisions have ever been compared against an engine verdict.</strong> The product's core thesis — that this reproduces the decisions a risk committee would reach — remains entirely untested. A passing suite measures internal consistency, not correctness.</div>
+</section>
+
+<section><h2>2. Integration seam audit</h2>
+<p>Zero blocking seams. Grep across production code for <code>NotImplementedError</code>, <code>TODO</code>, <code>FIXME</code>, <code>XXX</code>, <code>HACK</code>, "not yet wired" and "deferred to integration" returned no hits. No <code>console.log</code> in any user-facing path. Every "placeholder" match was a comment describing the deliberate honesty machinery (<code>[FIRM]</code>/<code>[DATE]</code> sign-off detection), not a stub.</p>
+</section>
+
+<section><h2>3. Code review status</h2>
+<p><code>code-review/code-review-001.html</code> — verdict <strong>Merge</strong>. 7 Critical and 6 Important findings, all fixed and verified before this run. Hard Gate 1 satisfied.</p>
+</section>
+
+<section><h2>4. Acceptance test results</h2>
+<table><thead><tr><th>Measure</th><th>Count</th></tr></thead><tbody>
+<tr><td>Test cases defined</td><td>116</td></tr>
+<tr><td>Asserted by an automated test <em>citing the TC id</em></td><td>30 (26%)</td></tr>
+<tr><td>Behaviour covered but not ID-traceable</td><td>~66</td></tr>
+<tr><td>Covering a deferred requirement — correctly unverified</td><td>20</td></tr>
+<tr><td>Automated tests passing</td><td>253 (3 consecutive runs)</td></tr>
+</tbody></table>
+<p><strong>Finding — traceability, not coverage.</strong> A seven-case sample of untraceable TCs (PV inheritance, safety margin, invalid-policy rejection, register export, duplicate check, 2LoD approval, rejection chain) found a verifying test for <em>every one</em>. The behaviours are tested. What is missing is the ability to demonstrate <em>which acceptance criterion</em> a given test verifies without reading the suite. For a product whose selling point is auditability, that is a real gap — and it is precisely how <code>CS-1</code> stayed half-built for two months behind a duplicate id.</p>
+</section>
+
+<section><h2>5. Mutation testing</h2><p>Not run — offered as optional by the skill and out of scope for this pass. Recorded so its absence is deliberate rather than assumed.</p></section>
+
+<section><h2>6. Smoke run</h2>
+<p><strong>6a Real-chain integration.</strong> Passes. <code>WalkingSkeleton.test.tsx</code> renders the entire <code>&lt;App /&gt;</code> against the real engine, real IndexedDB store and real components. The Anthropic SDK is the <em>only</em> <code>vi.mock</code> in the whole suite — the external network boundary, exactly where Metz places it.</p>
+<p><strong>6b UI walkthrough.</strong> Full intake → duplicate check → graph → questions → attestation → verdict driven in-browser. The CS-1 margin section renders "0% achieved against a 10% target", names the three invariants with no headroom, and states honestly that this is a limit of the rulebook rather than a fault in the use case. The PV inheritance chain renders with its per-dimension envelope determinations.</p>
+</section>
+
+<section><h2>7. Requirement coverage audit</h2>
+<table><thead><tr><th>Classification</th><th>Count</th></tr></thead><tbody>
+<tr><td>IMPLEMENTED</td><td>60</td></tr><tr><td>PARTIAL</td><td>0</td></tr><tr><td>STUB</td><td>0</td></tr>
+<tr><td>NOT IMPLEMENTED (all recorded deferrals)</td><td>20</td></tr></tbody></table>
+<p>Six Must requirements are not implemented, every one a deliberate deferral: <code>OB-1/2/5</code> (artifact binding), <code>PV-4</code>, <code>PV-7</code>, <code>RA-10</code>. No in-scope Must is unimplemented, and nothing in the codebase claims to implement them.</p>
+<p><strong>Surfaced, unresolved (SR-1):</strong> PV-2 and PV-5 are unreachable from the product's own intake — <code>build-graph-from-form.ts</code> hardcodes <code>vendor: 'internal'</code> and the form never asks for a platform or vendor. Implemented and tested in the engine, with no path from the UI.</p>
+</section>
+
+<section><h2>8. Verdict</h2>
+<table><thead><tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr></thead><tbody><tr><td><code>VV-2(a)</code></td><td class="na">NA</td><td>No STUBS.md — no registered stubs, therefore none expired.</td></tr><tr><td><code>VV-2(b)</code></td><td class="pass">PASS</td><td>risks/risk-assessment.md validates clean (0 errors).</td></tr><tr><td><code>VV-2(c)</code></td><td class="fail">FAIL</td><td><strong>No exploratory-test charter.</strong> /gvm-explore-test has never run. The built product has not been exploratively tested.</td></tr><tr><td><code>VV-3(a)</code></td><td class="pass">PASS</td><td>253 tests pass across 3 consecutive runs; tsc, build, spec-parity R1–R7 clean. Zero blocking seams.</td></tr><tr><td><code>VV-3(b)</code></td><td class="pass">PASS</td><td>Real-chain integration test passes — whole App, real engine, real store, real components; Anthropic SDK the only mock in the suite.</td></tr><tr><td><code>VV-3(c)</code></td><td class="pass">PASS</td><td>Dev server and deployed site both HTTP 200; deployed asset hash matches HEAD. Full intake→verdict flow driven in-browser.</td></tr><tr><td><code>VV-3(d)</code></td><td class="na">NA</td><td>No boundaries.md — no sandbox divergence to audit.</td></tr><tr><td><code>VV-4(a)</code></td><td class="na">NA</td><td>code-review-001 verdict Merge; all 13 findings fixed and verified.</td></tr><tr><td><code>VV-4(b)</code></td><td class="na">NA</td><td>No blocking integration seam.</td></tr><tr><td><code>VV-4(c)</code></td><td class="na">NA</td><td>No expired accepted-unknown risk sections.</td></tr><tr><td><code>VV-4(d)</code></td><td class="na">NA</td><td>No exploratory charter exists, so no Critical tour defect could be recorded — absence of evidence, not evidence of absence.</td></tr><tr><td><code>VV-4(e)</code></td><td class="na">NA</td><td>No expired stub entries.</td></tr><tr><td><code>VV-4(f)</code></td><td class="na">NA</td><td>No further trigger.</td></tr></tbody></table>
+<h3>What Demo-ready means here</h3>
+<p>The product runs, does what it says, and is safe to demonstrate. It is not established as correct. Three things stand between this and a defensible claim:</p>
+<ol>
+<li><strong>The back-test.</strong> Twenty decided use cases, predictions written before evaluating. This is the practitioner's own kill criterion and it has never been run.</li>
+<li><strong>Exploratory testing</strong> — the VV-2(c) blocker. Structured tests confirm what was anticipated; exploration finds what was not.</li>
+<li><strong>The LLM path has never run against the real API.</strong> Only ever a mocked SDK. Prompt quality, failure modes and cost are unknown.</li>
+</ol>
+<p>The README currently describes the product as deployable. On this evidence that is true in the demo sense and not in the evidential sense.</p>
+</section>
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+</main></div>
+</body>
+</html>
