@@ -170,7 +170,7 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.getByText(/hard lines — no control set can fix/i)).toBeInTheDocument();
     expect(screen.getByText(/rejected immediately \(PE-4\)/i)).toBeInTheDocument();
     expect(screen.getByText('HL-001')).toBeInTheDocument();
-    expect(screen.getByText('HL-005')).toBeInTheDocument();
+    expect(screen.getByText('HL-006')).toBeInTheDocument();
   });
 
   it('invalid YAML shows the panels-unavailable note instead of stale panels', async () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cross-spec invariant checker (register-lifecycle.md §10.3, P7-C02).
 
-Checks seven cross-spec invariants (R1-R7) that a human reviewer would
+Checks eight cross-spec invariants (R1-R8) that a human reviewer would
 otherwise have to catch by re-reading every spec file after every edit.
 
 Scope: only TypeScript identifiers/literals inside fenced ```typescript
@@ -377,6 +377,61 @@ def check_r7() -> list[str]:
     return findings
 
 
+def check_r8() -> list[str]:
+    """R8: INV-VENDOR-01's `not_in` list must name every id in the vendors
+    registry, plus the reserved `internal` sentinel.
+
+    Oracle round 001 found that an unlisted third-party vendor had NO
+    consequence anywhere in the rulebook — it merely lost inheritance it never
+    had, landing at the same posture as a vetted internal deployment.
+    INV-VENDOR-01 closes that, but the condition language has no "is absent
+    from the registry" operator, so it enumerates the cleared vendors instead.
+
+    That enumeration is a coupling, and couplings rot. Adding a vendor to the
+    registry without adding it here leaves the invariant firing on a vendor the
+    firm HAS cleared — a false positive on every use case that vendor touches.
+    This is the same "two places must agree, nothing checks that they do"
+    failure class as R6 and R7.
+    """
+    policy_path = REPO_ROOT / "policy" / "appetite.yaml"
+    if not policy_path.exists():
+        return []
+    text = policy_path.read_text(encoding="utf-8")
+
+    registry = set(re.findall(r'^  - id: "(VENDOR-[A-Z0-9\-]+)"', text, re.M))
+
+    inv = re.search(
+        r'- id: "INV-VENDOR-01".*?vendor: \{ not_in: \[(.*?)\] \}',
+        text,
+        re.S,
+    )
+    if not inv:
+        if registry:
+            return ['R8: INV-VENDOR-01 is missing or its `vendor: { not_in: [...] }` '
+                    "condition could not be parsed, so no unapproved-vendor rule is in force"]
+        return []
+
+    listed = set(re.findall(r'"([^"]+)"', inv.group(1)))
+
+    findings = []
+    if "internal" not in listed:
+        findings.append(
+            'R8: INV-VENDOR-01 does not exempt the reserved "internal" sentinel — '
+            "every self-hosted use case would trip the third-party-risk invariant"
+        )
+    for missing in sorted(registry - listed):
+        findings.append(
+            f"R8: {missing} is in the vendors registry but not in INV-VENDOR-01's "
+            "not_in list — the invariant will fire on a vendor the firm has cleared"
+        )
+    for stale in sorted(listed - registry - {"internal"}):
+        findings.append(
+            f"R8: INV-VENDOR-01 exempts {stale}, which is not in the vendors "
+            "registry — an uncleared vendor is being treated as cleared"
+        )
+    return findings
+
+
 def main() -> int:
     try:
         all_spec_text = {p.name: p.read_text(encoding="utf-8") for p in sorted(SPECS_DIR.glob("*.md"))}
@@ -389,6 +444,7 @@ def main() -> int:
         findings += check_r5()
         findings += check_r6()
         findings += check_r7()
+        findings += check_r8()
 
         if findings:
             print(f"spec-parity-check: {len(findings)} finding(s)\n")
@@ -396,7 +452,7 @@ def main() -> int:
                 print(f"  - {f}")
             return 1
 
-        print("spec-parity-check: clean (R1-R7 all pass)")
+        print("spec-parity-check: clean (R1-R8 all pass)")
         return 0
     except Exception as exc:  # noqa: BLE001 — script-error exit code per spec
         print(f"spec-parity-check: script error: {exc}", file=sys.stderr)
