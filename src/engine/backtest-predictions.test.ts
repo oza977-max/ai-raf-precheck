@@ -122,24 +122,35 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     expect(r.value.downstream_reviews).toEqual(['Independent model validation (2LoD)']);
   });
 
-  it('UC-12 Canada autonomy-2 model: OSFI pack ADDS a required control -> approved_with_controls with zero tripped invariants', () => {
+  // v1.3 DELETED the CA/SG/JP packs — they emitted real controls from
+  // "[ILLUSTRATIVE — NOT VERBATIM]" text with "[NOT RETRIEVED]" dates. These
+  // two tests now pin the HONEST replacement behaviour: a declared
+  // jurisdiction with no pack applies the firm's own appetite and claims no
+  // jurisdictional coverage at all. That is a weaker verdict and a truthful
+  // one, and it must not silently regress back into fabricated obligations.
+  it('UC-12 Canada: the CA pack is gone, so the firm appetite stands alone and NO pack obligation is invented', () => {
     const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone C', model: 'ml', autonomy: 2, procZone: 'Zone C', action: 'recommend', exposure: 'internal-shared', bindingness: 'advisory', reversibility: 'reversible', scale: 'limited', jurisdictions: ['CA'] }), policy, packs);
     if (!r.ok) return;
     expect(r.value.status).toBe('approved_with_controls');
-    // V2-C: the enriched policy also trips INV-TRACK2-01 here, so the pack
-    // control now supplements a solved control rather than standing alone.
-    expect(r.value.controls).toEqual(['CTRL-FINGERPRINT-01', 'CTRL-LOG-01']);
+    expect(r.value.controls).toEqual(['CTRL-FINGERPRINT-01']);
+    // The load-bearing assertions: no pack rule applied, and nothing was
+    // added to the verdict on Canada's behalf.
+    expect(r.value.applied_overrides).toEqual([]);
+    expect(r.value.downstream_reviews).toEqual([]);
+    expect(r.value.pack_versions).toEqual({});
   });
 
-  it('UC-13 SG+JP client-facing LLM assistant: High tier, FEAT + explainability reviews, provisional', () => {
+  it('UC-13 SG+JP: both packs are gone, so the tier still holds but no review is claimed', () => {
     const r = evaluate(g2({ dataClass: 'Internal', inZone: 'Zone B', model: 'llm', autonomy: 1, procZone: 'Zone B', action: 'recommend', exposure: 'client-facing', bindingness: 'advisory', reversibility: 'reversible', scale: 'at_scale', jurisdictions: ['SG', 'JP'] }), policy, packs);
     if (!r.ok) return;
+    // The firm's own appetite still tiers this High on client-facing exposure —
+    // deleting a pack must not weaken the firm-level position.
     expect(r.value.tier).toBe('High');
-    expect(r.value.downstream_reviews).toEqual([
-      'AI governance review',
-      'Fairness and conduct assessment',
-    ]);
-    expect(r.value.confidence_caveats.length).toBeGreaterThan(0);
+    expect(r.value.downstream_reviews).toEqual([]);
+    expect(r.value.applied_overrides).toEqual([]);
+    // And no confidence caveat, because there is no unsigned pack rule to
+    // caveat any more. The honesty now lives in the absence, not in a footnote.
+    expect(r.value.confidence_caveats).toEqual([]);
   });
 
   it('UC-8b regulatory reporting WITH decision_type (now form-selectable): tiers High as grounding requires', () => {

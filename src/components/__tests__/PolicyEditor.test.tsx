@@ -157,7 +157,7 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     // human review) or -unauthored (no primary source retrieved yet), so the
     // match is on the version shape rather than the old "-proposed" literal.
     const chips = screen.getAllByText(/loaded — .+\(\d+ rules?, v[\d.]+-\w+\).*· pending adoption/);
-    expect(chips.length).toBeGreaterThanOrEqual(6);
+    expect(chips.length).toBeGreaterThanOrEqual(3);
     // Review fix, pass 1: EU declares TWO packs — both must be visible.
     expect(screen.getByText(/EU-AIACT \(4 rules, v0\.2-draft\) \+ DORA \(1 rule, v0\.2-draft\)|DORA \(1 rule, v0\.2-draft\) \+ EU-AIACT \(4 rules, v0\.2-draft\)/)).toBeInTheDocument();
     // "fired" remains a per-verdict concept (the RA-9 chain), never a

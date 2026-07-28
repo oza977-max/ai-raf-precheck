@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.2",
+  "policy_version": "1.3",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",
@@ -502,7 +502,6 @@
       "binding_constraint": "INV-DRIFT-01",
       "controls": [
         "CTRL-INDEP-VAL-01",
-        "CTRL-LOG-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
@@ -512,9 +511,7 @@
         "INV-SAMPLE-01",
         "INV-TRACK2-01"
       ],
-      "applied_overrides": [
-        "OSFI-E23:E23-CA-CTL-01:Added required control CTRL-LOG-01."
-      ]
+      "applied_overrides": []
     },
     "G-05": {
       "title": "Singapore and Japan client-facing assistant",
@@ -533,10 +530,7 @@
         "CTRL-SAMPLE-01",
         "CTRL-SYNTHMARK-01"
       ],
-      "downstream_reviews": [
-        "AI governance review",
-        "Fairness and conduct assessment"
-      ],
+      "downstream_reviews": [],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
@@ -548,10 +542,7 @@
         "INV-SYNTHMARK-01",
         "INV-TRACK2-01"
       ],
-      "applied_overrides": [
-        "FSA-JP:FSAJP-REV-01:Added downstream review \"AI governance review\".",
-        "MAS-FEAT:FEAT-SG-REV-01:Added downstream review \"Fairness and conduct assessment\"."
-      ]
+      "applied_overrides": []
     },
     "G-06": {
       "title": "EU CV-screening tool",
