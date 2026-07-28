@@ -17,6 +17,9 @@ against.
 | 1 | 2026-07-26 | explore | interruption | 1 | 1 | 1 | 3 defects, 1 obs |
 | 2 | 2026-07-27 | explore | confirmation | 0 | 1 | 1 | D-001 fix confirmed |
 | 2 | 2026-07-27 | test | full mode | 0 | 0 | 0 | **Ship-ready** |
+| 1 | 2026-07-27 | oracle | fable+opus, blind | — | — | — | 30/31 status, 24/31 binding |
+| 2 | 2026-07-27 | oracle | fable+opus, blind | — | — | — | 30/31 status, **31/31 binding** |
+| 2 | 2026-07-28 | code | A,B,C,D,E | 3 | 3 | 3 | **Merge with caveats** |
 
 ## Round 1 measurements
 
@@ -61,6 +64,48 @@ Measurements worth carrying:
 substantive issue is that zero historical committee decisions have ever been
 compared against an engine verdict — the product's core thesis is untested,
 and no amount of green suite changes that.
+
+## Oracle rounds (new artefact type — see backtest/oracle-protocol.md)
+
+A blind adjudication method with no GVM skill behind it, built because the
+back-test needed a ground truth and committee recollection was rejected as one.
+Two independent adjudicators (Claude Fable 5, Claude Opus 4.8) score every
+corpus case from `policy/appetite.yaml` alone — no sight of the engine's
+verdicts, its tests, its code, or any written prediction. Disagreements are the
+output; agreement is weak evidence.
+
+**Reading the disagreement pattern is the whole method:**
+
+| Pattern | Diagnosis |
+|---|---|
+| Both oracles agree, engine differs | Engine defect |
+| Oracles disagree with each other | The RULE is ambiguous |
+| All three agree but the answer is wrong | Rulebook defect |
+| Engine cannot decide | Coverage hole |
+
+**Round 001 → 002 measurements.** Binding-constraint agreement went 24/31 →
+**31/31** after the tie-break was fixed; status held at 30/31 (the persistent
+disagreement is H-01, inheritance semantics the policy never defines). Round
+001 found 9 of 28 model_type × bindingness pairs unrouted and five verified
+structural defects. Round 002's brief added a REGRESSION hunt, and that is what
+made it valuable.
+
+**RF-4 — a fix that displaces the defect one rule down.** NEW recurring
+finding, and the most important lesson of the two rounds. Both adjudicators
+independently observed that several round-001 fixes reintroduced the same
+defect one rule further on: promoting the special tracks made TRACK-III-AGENTIC
+unreachable for autonomy≥3 agents; widening HL-002 orphaned INV-ZONE-01;
+CTRL-AUTONOMY-BOUND-01 fixed abolish-the-use-case in INV-AUTONOMY-01 and
+INV-AUTONOMY-02 inherited it; fixing the tie-break in code left the rule absent
+from the policy; applying "obligations follow the affected person" to conduct
+and fairness left the sibling rules gated on model family.
+
+**The mechanism behind RF-4 is a process failure, not a reasoning failure.**
+All of it was built outside the GVM discipline — no chunk prompts, no
+handovers, and no independent review convergence loop. The convergence loop is
+exactly what catches a fix that displaces a defect. Code review 002 confirms
+it: the panels found the vacuous totality test in one pass, and it had already
+been cited three times as evidence.
 
 ## Recurring findings
 
@@ -116,13 +161,71 @@ Criticals on the product's core claim.
 All 13 Critical and Important findings fixed and verified (253 tests, 3
 consecutive runs, tsc, build, parity R1–R7, live browser check).
 
+## Round 2 (code) measurements — 2026-07-28
+
+Range `f256308..HEAD`: 8 commits, 38 files, +4652/-565, built entirely outside
+the GVM discipline. Verdict **Merge with caveats**. 3 Critical, 3 Important,
+3 Minor.
+
+**Capture-recapture.** Panels A (3) and D (4) overlapped on 1 finding.
+Lincoln-Petersen: (3×4)/1 = 12 estimated, 9 unique found, ≈75% coverage.
+**One overlapping pair makes this extremely noisy** — the same caveat as round
+1. Nominally <80% indicates a round 3; the finding distribution argues against
+it, because 7 of 9 share one mechanical root cause and a third round would
+mostly re-scan documentation.
+
+**The single most valuable finding of either code round: the vacuous test.**
+`track.test.ts` asserted `if (!assignTrack(g, tracks))`. `assignTrack` returns a
+`Result` OBJECT — always truthy — so `unrouted` could never be populated and the
+test passed against ANY policy. Proven by deleting TRACK-I and watching all four
+tests stay green. It was written specifically to guard the defect class that had
+already shipped twice, it guarded nothing, and its green tick was cited in the
+policy comments, the commit message and the round-002 report as proof of
+totality. **A test that cannot go red is worse than no test, because it is
+quoted as evidence.** Fixed, plus a mutation guard that breaks the routing on
+purpose and requires the checker to notice.
+
+**RF-2 confirmed again, at scale.** 7 of 9 findings are one root cause: the
+pack deletion was applied to code and policy and propagated to nothing else —
+README, `specs/policy-schema.md` + `.html`, two MUST-priority test cases in both
+twins, `docs/approach.md`, `docs/rules.md`, `backtest/use-cases.md`. Shared rule
+24. `spec-parity-check.py` reads only `.md` and structurally cannot see the
+`.html` half.
+
+**Cross-panel synthesis that neither panel could reach alone.** Panel A verified
+`docs/rules.md` regenerates byte-for-byte identical; Panel D found its header
+count wrong. Both correct — the defect is in the GENERATOR, not the file.
+
+**Where the defects were, again.** Zero engine defects survived inspection.
+Panel B returned zero findings and Panel C cleared totality, reachability,
+subsumption, termination and ordering by programmatic enumeration. Every
+Critical was either a test that could not fail or a document contradicting
+shipped behaviour. Recency still predicts density — but this round says
+something sharper: **the code was fine and the claims about it were not.**
+
 ## Open
 
 **SR-1 — PV-2 and PV-5 unreachable from intake.** `deferred — awaiting
 triage`. Promotion route to `requirements.md` not yet chosen. Re-prompt at
 the next checkpoint per shared rule 27.
 
-## For round 2
+## For round 3
+
+1. Strict criterion continues. **Dual review triggers** (shared rule 16 — two
+   completed code rounds now exist).
+2. **Standing mandate: hunt vacuous assertions.** Round 2's Critical was a test
+   that could never fail. For every test that guards a named defect class, the
+   reviewer must mutate the thing under guard and confirm the test goes red.
+   Reading the assertion is not verification.
+3. **Standing mandate: RF-4.** For every fix in the range, ask what it displaced
+   — check the rule immediately after it in any ordered list, and every sibling
+   of the rule that was changed.
+4. Verify documentation claims against behaviour, not against other documents.
+   Round 2's remaining Criticals were all prose contradicting shipped code.
+5. An R8 parity rule for `.md`/`.html` divergence is now overdue — RF-2 has
+   recurred in three consecutive rounds.
+
+## For round 2 (superseded — retained as the record)
 
 1. Apply the strict criterion (consumer FAIL only).
 2. Standing mandate: hunt the RF-1 variants R6 cannot pattern-match.

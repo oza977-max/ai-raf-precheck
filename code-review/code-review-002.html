@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review 002 · AIGate</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #333;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+        }
+
+        .metadata {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Context Box */
+        .context-box {
+            background-color: #fef8f0;
+            border: 2px solid #e67e22;
+            border-left: 4px solid #e67e22;
+            padding: 1.2rem 1.4rem;
+            margin: 2rem 0 2.5rem 0;
+            max-width: 640px;
+        }
+
+        .context-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #d9a23c;
+            margin-bottom: 0.5rem;
+        }
+
+        .context-box p {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 0.6rem;
+        }
+
+        /* Verdict Box */
+        .verdict {
+            border: 2px solid #333;
+            padding: 1.2rem 1.5rem;
+            margin: 2rem 0;
+            max-width: 640px;
+        }
+
+        .verdict-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #888;
+            margin-bottom: 0.3rem;
+        }
+
+        .verdict-text {
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #111;
+            margin-bottom: 0.4rem;
+        }
+
+        .verdict-basis {
+            font-size: 0.88rem;
+            color: #555;
+            max-width: 640px;
+        }
+
+        .verdict.caveats {
+            border-color: #e67e22;
+            background: #fef8f0;
+        }
+
+        .verdict.caveats .verdict-text {
+            color: #e67e22;
+        }
+
+        /* Finding Blocks */
+        .finding {
+            border-left: 4px solid;
+            padding: 0.8rem 1rem;
+            margin: 1.2rem 0;
+            max-width: 640px;
+        }
+
+        .finding.critical {
+            border-left-color: #8f2a2a;
+            background: #fdf0ef;
+        }
+
+        .finding.important {
+            border-left-color: #e67e22;
+            background: #fef8f0;
+        }
+
+        .finding.minor {
+            border-left-color: #7f8c8d;
+            background: #f7f7f4;
+        }
+
+        .finding h3 {
+            margin-top: 0;
+            margin-bottom: 0.6rem;
+            font-size: 1rem;
+        }
+
+        .sev-critical {
+            color: #8f2a2a;
+            font-weight: 700;
+        }
+
+        .sev-important {
+            color: #e67e22;
+            font-weight: 700;
+        }
+
+        .sev-minor {
+            color: #7f8c8d;
+            font-weight: 700;
+        }
+
+        .finding-detail {
+            font-size: 0.92rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .finding-meta {
+            font-size: 0.78rem;
+            color: #999;
+            font-style: italic;
+            margin-bottom: 0.6rem;
+        }
+
+        .fixed-badge {
+            display: inline-block;
+            background-color: #27ae60;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 2px;
+            margin-left: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        table tbody tr:last-child td {
+            border-bottom: 2px solid #333;
+        }
+
+        /* Inline code */
+        code {
+            font-family: "Menlo", "Consolas", "Monaco", monospace;
+            font-size: 0.88rem;
+            background: #f0f0e8;
+            padding: 0.1rem 0.35rem;
+            border-radius: 2px;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        .gvm-attribution {
+            font-size: 0.75rem;
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            margin-top: 3rem;
+            margin-bottom: 0;
+            max-width: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+                max-width: 100%;
+            }
+        }
+
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="toc-nav">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="#context">Context</a></li>
+            <li><a href="#verdict">Verdict</a></li>
+            <li><a href="#summary">Summary</a></li>
+            <li><a href="#cross-cutting">Cross-Cutting Theme</a></li>
+            <li><a href="#second-theme">Generator Defect Theme</a></li>
+            <li><a href="#findings">Findings</a></li>
+            <li><a href="#verified-clean">Verified Clean</a></li>
+            <li><a href="#capture-recapture">Capture-Recapture</a></li>
+            <li><a href="#open-gaps">Open Test Gap</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <h1>Code Review 002</h1>
+            <p class="subtitle">AIGate · Round 2, strict criterion · 5 panels, parallel dispatch</p>
+            <p class="metadata">Range f256308..HEAD (8 commits, 38 files, +4,652/−565)</p>
+        </header>
+
+        <section id="context">
+            <div class="context-box">
+                <div class="context-label">Context</div>
+                <p>This range was built <strong>outside the GVM discipline</strong> — no chunk prompts, no handovers, and no independent review convergence loop. This review is the first independent inspection of any of it. The work included a near-total rewrite of the machine-readable risk appetite (v1.0 → v1.3) and two rewrites of the engine's binding-constraint tie-break.</p>
+            </div>
+        </section>
+
+        <section id="verdict">
+            <div class="verdict caveats">
+                <div class="verdict-label">Verdict</div>
+                <div class="verdict-text">Merge with caveats</div>
+                <p class="verdict-basis">One Critical defect in the test suite was found and fixed under proof during the review. The remaining Criticals are documentation claims that contradict shipped behaviour on a PUBLIC repository — no engine defect survived inspection. Merge is conditional on the documentation findings being triaged by the practitioner.</p>
+            </div>
+        </section>
+
+        <section id="summary">
+            <h2>Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Panel</th>
+                        <th>Defect class</th>
+                        <th>Experts</th>
+                        <th>Findings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>A</td>
+                        <td>References & dependencies</td>
+                        <td>Hunt & Thomas, McConnell</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td>B</td>
+                        <td>Contracts & interfaces</td>
+                        <td>Keeling, Clements, Beck, Metz</td>
+                        <td>0</td>
+                    </tr>
+                    <tr>
+                        <td>C</td>
+                        <td>Logic & completeness</td>
+                        <td>Beizer, Beck, McConnell, Martin</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>D</td>
+                        <td>Naming & spec compliance</td>
+                        <td>Brooks, Fowler</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td>E</td>
+                        <td>Stub / unearned claim (honesty-triad)</td>
+                        <td>honesty-triad</td>
+                        <td>1</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Totals: 3 Critical, 3 Important, 3 Minor. 9 unique findings.</strong></p>
+        </section>
+
+        <section id="cross-cutting">
+            <h2>Cross-Cutting Theme: Single Root Cause</h2>
+            <p>Seven of nine findings have a single root cause: <strong>the deletion of three unauthored jurisdiction packs was applied to the code and the policy and propagated nowhere else.</strong></p>
+            <p>Affected files:</p>
+            <ul>
+                <li><code>README.md</code> (3 places)</li>
+                <li><code>specs/policy-schema.md</code> + <code>.html</code></li>
+                <li><code>test-cases/test-cases.md</code> + <code>.html</code> (two MUST-priority cases)</li>
+                <li><code>docs/approach.md</code></li>
+                <li><code>docs/rules.md</code></li>
+                <li><code>backtest/use-cases.md</code></li>
+            </ul>
+            <p>This is shared rule 24 (fix propagation) and recurring finding RF-2 (parallel .md/.html artefacts drift silently; <code>spec-parity-check.py</code> reads only .md and structurally cannot see it).</p>
+        </section>
+
+        <section id="second-theme">
+            <h2>Generator Defect Theme: Panel Convergence</h2>
+            <p>Panel A verified <code>docs/rules.md</code> regenerates byte-for-byte identical to the committed file; Panel D found its header count is wrong. Both are correct — which locates the defect in the <strong>GENERATOR</strong> (<code>scripts/generate-rules-doc.mjs</code>), not in the file. Neither panel could have reached that conclusion alone.</p>
+        </section>
+
+        <section id="findings">
+            <h2>Findings</h2>
+
+            <div class="finding critical">
+                <h3><span class="sev-critical">CRITICAL</span> · src/engine/track.test.ts:114 <span class="fixed-badge">FIXED</span></h3>
+                <p class="finding-meta"><strong>Expert:</strong> Kent Beck / Boris Beizer</p>
+                <p class="finding-detail"><strong>Issue:</strong> The track-totality assertion read <code>if (!assignTrack(g, tracks))</code>. <code>assignTrack</code> returns a Result OBJECT ({ok:true,value} or {ok:false,error}), which is always truthy, so the <code>unrouted</code> array could never be populated and <code>expect(unrouted).toEqual([])</code> passed against ANY policy. Proven empirically: TRACK-I was deleted from <code>policy/appetite.yaml</code> — stranding statistical and traditional-ml at autonomy&lt;3 — and all 4 tests still reported passed. With the <code>.ok</code> fix applied to the same broken policy the test goes red. This test was written specifically to guard the defect class that had already shipped twice (oracle rounds 001 and 002 both found track-routing holes), and it guarded nothing. Its green tick was cited in the policy file comments, the commit message, and <code>backtest/oracle-round-002.md</code> as evidence of totality.</p>
+                <p class="finding-detail"><strong>Fix applied:</strong> condition corrected to <code>.ok</code>, plus a new mutation-guard test that deliberately breaks the routing and asserts the checker notices — so the totality check can never silently go vacuous again.</p>
+            </div>
+
+            <div class="finding critical">
+                <h3><span class="sev-critical">CRITICAL</span> · README.md:7, :80, :90</h3>
+                <p class="finding-meta"><strong>Expert:</strong> honesty-triad Panel E</p>
+                <p class="finding-detail"><strong>Issue:</strong> README still advertises OSFI E-23, MAS FEAT and FSA Japan as active jurisdiction packs in three separate places. All three pack files were deleted in this range for carrying "[ILLUSTRATIVE — NOT VERBATIM]" rule text with "[NOT RETRIEVED]" source dates. A bank risk officer reading the README — the first document any evaluator opens, on a PUBLIC repository — would believe Canada, Singapore and Japan use cases receive real jurisdictional coverage. The engine and the Appetite view both handle this correctly (PolicyEditor renders "declared — no pack file loaded"), so the code is honest and the documentation is not.</p>
+                <p class="finding-detail"><strong>Fix:</strong> reduce the three lists to the four surviving packs (SS1/23, EU AI Act, SR 26-2, DORA) and state that CA/SG/JP are declared operating jurisdictions with no assessed pack.</p>
+            </div>
+
+            <div class="finding critical">
+                <h3><span class="sev-critical">CRITICAL</span> · specs/policy-schema.md:420-426 and specs/policy-schema.html:574-583</h3>
+                <p class="finding-meta"><strong>Expert:</strong> McConnell</p>
+                <p class="finding-detail"><strong>Issue:</strong> The jurisdiction registry example still shows CA/SG/JP with pack_files pointing at the three deleted files. <code>policy/appetite.yaml</code> now declares <code>pack_files: []</code> for all three. Both twins are affected.</p>
+                <p class="finding-detail"><strong>Fix:</strong> update both files to <code>pack_files: []</code> and mirror the deletion rationale comment from <code>appetite.yaml</code>.</p>
+            </div>
+
+            <div class="finding important">
+                <h3><span class="sev-important">IMPORTANT</span> · test-cases/test-cases.md:620 (TC-PE-8-02) and :1141 (TC-RA-1-03)</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Hunt & Thomas</p>
+                <p class="finding-detail"><strong>Issue:</strong> TC-PE-8-02 asserts "all seven packs are present and loadable"; TC-RA-1-03 asserts OSFI E-23 activates for a CA jurisdiction. Both are MUST-priority traceable acceptance criteria. A QA engineer executing them today would fail, and would reasonably conclude the product had REGRESSED rather than that policy v1.3 deliberately removed ungrounded packs.</p>
+                <p class="finding-detail"><strong>Fix:</strong> TC-PE-8-02 asserts four authored packs plus three declared-but-empty jurisdictions; TC-RA-1-03's CA scenario asserts no pack activates. Align with <code>src/store/packs.test.ts</code>.</p>
+            </div>
+
+            <div class="finding important">
+                <h3><span class="sev-important">IMPORTANT</span> · docs/rules.md:8</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Fowler</p>
+                <p class="finding-detail"><strong>Issue:</strong> Header reads "7 pack rules across 4 jurisdictions". The policy declares 6 jurisdictions; only 3 (UK, US, EU) carry a loaded pack; 4 is the pack-FILE count (EU alone contributes 2). The count conflates files with jurisdictions and undercounts the declared set, obscuring that CA/SG/JP are bare declarations by design — which is v1.3's entire point.</p>
+                <p class="finding-detail"><strong>Fix:</strong> correct the header logic in <code>scripts/generate-rules-doc.mjs</code> and regenerate.</p>
+            </div>
+
+            <div class="finding important">
+                <h3><span class="sev-important">IMPORTANT</span> · backtest/use-cases.md:263-264 (UC-12), :270-271 (UC-13)</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Brooks</p>
+                <p class="finding-detail"><strong>Issue:</strong> UC-12 prose still states "the OSFI E-23 pack ADDS CTRL-LOG-01"; UC-13 states "FEAT fairness (MAS) + explainability documentation (FSA Japan)". The paired test <code>src/engine/backtest-predictions.test.ts</code> was rewritten in the same commit to assert the opposite (applied_overrides, downstream_reviews and pack_versions all empty). CLAUDE.md states this document exists specifically to be pinned by that test file; the two now contradict each other on the same named cases.</p>
+                <p class="finding-detail"><strong>Fix:</strong> update UC-12/UC-13 prose to match the rewritten assertions, or mark the file superseded by <code>backtest/corpus.md</code>.</p>
+            </div>
+
+            <div class="finding minor">
+                <h3><span class="sev-minor">MINOR</span> · specs/policy-schema.md:570 (+ .html twin)</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Hunt & Thomas</p>
+                <p class="finding-detail"><strong>Issue:</strong> The new <code>binding_constraint_order</code> field on PolicyFile is undocumented in the schema spec. A firm author consulting the spec would not learn the binding-constraint tie-break is configurable.</p>
+                <p class="finding-detail"><strong>Fix:</strong> add it to the documented interface and field table in both twins, with the default <code>["severity","control_burden","id"]</code>.</p>
+            </div>
+
+            <div class="finding minor">
+                <h3><span class="sev-minor">MINOR</span> · docs/approach.md:36, :172; specs/policy-schema.md:780 (+ .html:916)</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Brooks</p>
+                <p class="finding-detail"><strong>Issue:</strong> "Seven jurisdictions/packs" described as the shipped state. Now four pack files across three jurisdictions with packs.</p>
+                <p class="finding-detail"><strong>Fix:</strong> correct the counts or add an explicit "as of v1.3" caveat.</p>
+            </div>
+
+            <div class="finding minor">
+                <h3><span class="sev-minor">MINOR</span> · src/engine/safety-margin.test.ts:8-9</h3>
+                <p class="finding-meta"><strong>Expert:</strong> Fowler</p>
+                <p class="finding-detail"><strong>Issue:</strong> The header comment describes the old <code>_margin</code> threading as history but never states that this range removed the parameter from <code>solvControls()</code> entirely. A reader skimming only this file could still believe margin flows into the solver.</p>
+                <p class="finding-detail"><strong>Fix:</strong> one sentence noting margin is now compared in <code>evaluate()</code> against <code>solverResult.marginAchieved</code>.</p>
+            </div>
+        </section>
+
+        <section id="verified-clean">
+            <h2>Verified Clean</h2>
+            <p>Panel C proved programmatically, against the real engine and the live policy:</p>
+            <ul>
+                <li><strong>Totality:</strong> all 280 combinations (7 model_types × 4 bindingness × 5 autonomy × 2 replaces_prior_model) route. Zero unrouted.</li>
+                <li><strong>TRACK-III-AGENTIC reachability:</strong> an agentic model at autonomy 3 with replaces_prior_model true still routes to TRACK-III-AGENTIC, not to TRACK-II-AUTONOMY or TRACK-II-REPLACE. The round-002 fix genuinely works at runtime.</li>
+                <li><strong>Hard-line vs invariant subsumption:</strong> exhaustively enumerated all 5 hard lines against all 17 invariants using the real matchesCondition. No invariant is fully subsumed. INV-ZONE-01 was the only true subsumption and is already retired.</li>
+                <li><strong>Hard-line vs hard-line subsumption:</strong> none of HL-001/002/003/004/006 is subsumed by another.</li>
+                <li><strong>Greedy-solver termination:</strong> <code>greedy-solver.ts</code> terminates in at most <code>trippedInvariants.length</code> iterations on every input including an empty library.</li>
+                <li><strong>Binding constraint order:</strong> <code>mostSevere()</code> ordering is total even if a firm omits 'id' from <code>binding_constraint_order</code>.</li>
+                <li><strong>PV-6 hoist safety:</strong> <code>resolveInheritance()</code> is pure with defensive fallbacks and cannot throw.</li>
+                <li><strong>Control library integrity:</strong> every <code>required_controls</code> set exactly matches the controls whose <code>resolves</code> names it. No dangling refs, no orphans.</li>
+            </ul>
+            <p>Panel B proved <code>binding_constraint_order</code> is genuinely consumed (<code>mostSevere</code> iterates it as an ordered comparator list with early return), that <code>safety_margin</code> is still consumed at the call site after the parameter removal, and that <code>margin_achieved</code> / <code>single_covered_invariants</code> / <code>boundary_proximity</code> all render in VerdictDisplay.tsx rather than being computed and dropped. This matters because RF-1 ("declared, threaded, never consumed") has eight confirmed instances in this codebase and the most recent was the very parameter removed here.</p>
+            <p>Panel D cleared: no banned words in policy or packs; no HL-005 or INV-ZONE-01 id reuse; no confidentiality leaks; <code>greedy-solver.ts</code> and <code>evaluate.ts</code> comments accurate line-by-line.</p>
+            <p>Panel E cleared: the four surviving packs all carry version 0.2-draft with honest [FIRM]/[DATE] placeholders and no [ILLUSTRATIVE — NOT VERBATIM] text — the deletion line was principled, not arbitrary. All five new controls render UNVERIFIED, matching stated intent.</p>
+        </section>
+
+        <section id="capture-recapture">
+            <h2>Capture-Recapture</h2>
+            <p><strong>Round 2 estimate:</strong> Panels A (3 findings) and D (4 findings) overlapped on 1 finding (stale pack references in specs/policy-schema). Lincoln-Petersen: (3×4)/1 = 12 estimated total; 9 unique found; coverage ≈ 75%.</p>
+            <p><strong>CAVEAT, stated plainly:</strong> a single overlapping pair makes this estimate extremely noisy — treat it as "probably most of them", not as a number. Coverage below 80% nominally indicates a round 3, but the finding distribution argues otherwise: 7 of 9 findings share one mechanical root cause, and once that propagation is completed a third round would mostly re-scan documentation.</p>
+        </section>
+
+        <section id="open-gaps">
+            <h2>Open Test Gap</h2>
+            <p>No test exercises a NON-DEFAULT <code>binding_constraint_order</code>. The field's consumption is proven by inspection, not pinned by an assertion, so a future refactor could make it decorative with the suite still green. This is precisely how the <code>_margin</code> parameter survived unnoticed for two months.</p>
+        </section>
+
+        <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+    </main>
+</div>
+
+<script>
+(function () {
+    const nav = document.querySelector('.toc-nav');
+    const links = nav.querySelectorAll('a');
+
+    function updateActive() {
+        const sections = document.querySelectorAll('section[id]');
+        let current = null;
+
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 100) {
+                current = section.id;
+            }
+        });
+
+        links.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    window.addEventListener('scroll', updateActive);
+    updateActive();
+})();
+</script>
+</body>
+</html>
