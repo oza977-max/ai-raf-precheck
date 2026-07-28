@@ -897,7 +897,8 @@
       <div class="tc-bdd">
         <p><strong>Given</strong> the starter policy file is loaded</p>
         <p><strong>When</strong> the system is inspected for available jurisdiction packs</p>
-        <p><strong>Then</strong> all seven packs are present and loadable: SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan</p>
+        <p><strong>Then</strong> all four AUTHORED packs are present and loadable: SR 26-2, SS1/23, EU AI Act, DORA</p>
+        <p><strong>And</strong> CA, SG and JP are declared jurisdictions with no pack file, so no pack activates for them</p>
       </div>
       <div class="tc-trace">Requirement: PE-8 | [EXAMPLE]</div>
     </div>
@@ -1376,7 +1377,8 @@
       <div class="tc-bdd">
         <p><strong>Given</strong> a confirmed graph specifying UK, EU, US, and Canada jurisdictions</p>
         <p><strong>When</strong> the engine resolves active packs</p>
-        <p><strong>Then</strong> SS1/23, EU AI Act, SR 26-2, and OSFI E-23 are all activated</p>
+        <p><strong>Then</strong> SS1/23, SR 26-2, EU AI Act and DORA are all activated</p>
+        <p><strong>And</strong> no pack activates for Canada, which is declared with no pack file</p>
       </div>
       <div class="tc-trace">Requirement: RA-1 | [EXAMPLE]</div>
     </div>

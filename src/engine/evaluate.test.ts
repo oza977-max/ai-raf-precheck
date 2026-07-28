@@ -204,6 +204,72 @@ describe('evaluate — approved_with_controls path', () => {
   });
 });
 
+// Code review 002, Panel B. `binding_constraint_order` was declared in the
+// policy schema, added to PolicyFile, and read by mostSevere() — and NOTHING
+// pinned it. Its consumption was provable by reading the code and by nothing
+// else, so a later refactor could quietly make it decorative with the suite
+// still green.
+//
+// That is exactly how the `_margin` parameter of solvControls() survived for
+// two months: declared, validated, threaded, discarded, and green throughout.
+// RF-1 has eight confirmed instances in this codebase. This test is the guard.
+describe('evaluate — binding_constraint_order is honoured (RF-1 guard)', () => {
+  // A graph tripping exactly two invariants that rank OPPOSITE ways under the
+  // two criteria, so the declared order alone decides the answer:
+  //   INV-TRACK2-01  severity High,   cheapest control burden 2
+  //   INV-SEC-01     severity Medium, cheapest control burden 3
+  const twoWayGraph = () =>
+    graph({
+      processing_nodes: [
+        { id: 'p1', label: 'x', model_type: 'llm', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'execute', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+
+  it('severity-first (the shipped default) names the higher-severity invariant', () => {
+    const r = evaluate(twoWayGraph(), policy);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.explanation.tripped_invariants.map((t) => t.id).sort()).toEqual([
+      'INV-SEC-01',
+      'INV-TRACK2-01',
+    ]);
+    expect(r.value.binding_constraint).toBe('INV-TRACK2-01');
+  });
+
+  it('burden-first FLIPS the answer — proving the policy field drives the engine', () => {
+    const burdenFirst: PolicyFile = {
+      ...policy,
+      binding_constraint_order: ['control_burden', 'severity', 'id'],
+    };
+    const r = evaluate(twoWayGraph(), burdenFirst);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // Same graph, same invariants tripped, DIFFERENT binding constraint. If
+    // this ever equals INV-TRACK2-01 again, the field has stopped being read.
+    expect(r.value.binding_constraint).toBe('INV-SEC-01');
+  });
+
+  it('omitting the field falls back to the documented default rather than throwing', () => {
+    const noOrder: PolicyFile = { ...policy };
+    delete (noOrder as { binding_constraint_order?: unknown }).binding_constraint_order;
+    const r = evaluate(twoWayGraph(), noOrder);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.binding_constraint).toBe('INV-TRACK2-01');
+  });
+
+  it('stays deterministic (NF-1) even when the declared order omits the id tie-break', () => {
+    const noIdTieBreak: PolicyFile = { ...policy, binding_constraint_order: ['severity'] };
+    const runs = Array.from({ length: 10 }, () => {
+      const r = evaluate(twoWayGraph(), noIdTieBreak);
+      return r.ok ? r.value.binding_constraint : 'ERR';
+    });
+    expect(new Set(runs).size).toBe(1);
+  });
+});
+
 describe('evaluate — no-track-match', () => {
   // The SHIPPED policy can no longer produce this error: oracle round 001 found
   // 9 of 28 model_type x bindingness combinations unrouted and made the track
