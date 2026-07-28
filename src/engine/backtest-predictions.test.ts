@@ -128,11 +128,7 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     expect(r.value.status).toBe('approved_with_controls');
     // V2-C: the enriched policy also trips INV-TRACK2-01 here, so the pack
     // control now supplements a solved control rather than standing alone.
-    // CTRL-INDEP-VAL-01 joins in oracle round 001 — it resolves INV-TRACK2-01
-    // as well, taking that invariant to coverage depth 2 so the solver can
-    // meet the CS-1 safety margin. The old library had one control per
-    // invariant and could never achieve a margin above zero.
-    expect(r.value.controls).toEqual(['CTRL-FINGERPRINT-01', 'CTRL-INDEP-VAL-01', 'CTRL-LOG-01']);
+    expect(r.value.controls).toEqual(['CTRL-FINGERPRINT-01', 'CTRL-LOG-01']);
   });
 
   it('UC-13 SG+JP client-facing LLM assistant: High tier, FEAT + explainability reviews, provisional', () => {
