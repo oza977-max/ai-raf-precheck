@@ -10,7 +10,6 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01"
       ],
       "downstream_reviews": [],
@@ -80,7 +79,6 @@
         "CTRL-ENC-01",
         "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-HITL-02",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01",
         "CTRL-SYNTHMARK-01"
@@ -120,7 +118,6 @@
       "controls": [
         "CTRL-BIAS-01",
         "CTRL-DRIFT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
@@ -141,7 +138,6 @@
         "CTRL-BIAS-01",
         "CTRL-CITE-01",
         "CTRL-ENC-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -180,7 +176,6 @@
       "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
         "CTRL-BIAS-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
@@ -202,7 +197,6 @@
       "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
         "CTRL-BIAS-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
@@ -250,7 +244,6 @@
       "binding_constraint": "INV-HALLUC-01",
       "controls": [
         "CTRL-CITE-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01"
@@ -275,7 +268,6 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
@@ -297,7 +289,6 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
@@ -318,7 +309,6 @@
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [],
@@ -339,7 +329,6 @@
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-DRIFT-01",
-        "CTRL-HITL-02",
         "CTRL-REVERSAL-01"
       ],
       "downstream_reviews": [],
@@ -359,7 +348,6 @@
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-BIAS-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01"
       ],
       "downstream_reviews": [],
@@ -381,7 +369,6 @@
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-ENC-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
@@ -408,7 +395,6 @@
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
         "CTRL-DISCLOSE-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -436,7 +422,6 @@
       "binding_constraint": "INV-HALLUC-01",
       "controls": [
         "CTRL-CITE-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -462,7 +447,6 @@
       "binding_constraint": "INV-FAIRNESS-01",
       "controls": [
         "CTRL-BIAS-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
@@ -485,8 +469,7 @@
       "track": "I",
       "binding_constraint": "INV-DRIFT-01",
       "controls": [
-        "CTRL-DRIFT-01",
-        "CTRL-INDEP-VAL-01"
+        "CTRL-DRIFT-01"
       ],
       "downstream_reviews": [
         "Independent model validation (2LoD)"
@@ -525,7 +508,6 @@
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-LOG-01",
         "CTRL-SAMPLE-01"
@@ -555,7 +537,6 @@
         "CTRL-ENC-01",
         "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01",
         "CTRL-SYNTHMARK-01"
@@ -589,7 +570,6 @@
       "controls": [
         "CTRL-BIAS-01",
         "CTRL-ENC-01",
-        "CTRL-FINGERPRINT-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
@@ -615,9 +595,7 @@
       "tier": "Medium",
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
-      "controls": [
-        "CTRL-INDEP-VAL-01"
-      ],
+      "controls": [],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-TRACK2-01"
@@ -631,8 +609,7 @@
       "track": "II",
       "binding_constraint": "INV-TRACK2-01",
       "controls": [
-        "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01"
+        "CTRL-FINGERPRINT-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
@@ -649,7 +626,6 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-FINGERPRINT-01",
-        "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
         "CTRL-TPRM-01"
       ],

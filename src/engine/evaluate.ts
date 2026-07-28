@@ -158,7 +158,6 @@ export function evaluate(
     tripped.map((t) => t.invariantId),
     controls,
     inherited,
-    policy.safety_margin,
   );
 
   // V1.1-C01: rationale + tripped detail — data the earlier steps already
@@ -221,6 +220,9 @@ export function evaluate(
   // whenever anything trips and false otherwise, i.e. it restated
   // `tripped.length > 0` and carried no information. It is now derived from
   // the margin the solver actually achieved against the policy's target.
+  // policy.safety_margin is consumed HERE, not in the solver. Oracle round 001
+  // moved the comparison out: the solver reports what depth the control library
+  // offers, and this line decides whether that clears the firm's target.
   const marginAchieved = solverResult.marginAchieved;
   const boundaryProximity = tripped.length > 0 && marginAchieved < policy.safety_margin;
 

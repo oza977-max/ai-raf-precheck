@@ -162,11 +162,11 @@ describe('evaluate — approved_with_controls path', () => {
       // feeding a material decision also trips INV-DRIFT-01. The real
       // greedy solver must cover both from the control library.
       //
-      // CTRL-INDEP-VAL-01 joins the set because it resolves INV-DRIFT-01 too,
-      // taking that invariant to coverage depth 2 and letting the solver meet
-      // the CS-1 safety margin. Before oracle round 001 the library had exactly
-      // one control per invariant, so no margin above zero was ever reachable.
-      expect(result.value.controls).toEqual(['CTRL-DRIFT-01', 'CTRL-ENC-01', 'CTRL-INDEP-VAL-01']);
+      // Exactly two controls, and no more. CTRL-INDEP-VAL-01 also resolves
+      // INV-DRIFT-01, but it is an ALTERNATIVE to CTRL-DRIFT-01, not a
+      // supplement — the CS-1 margin reports that the alternative exists
+      // without requiring the firm to do both (oracle round 001).
+      expect(result.value.controls).toEqual(['CTRL-DRIFT-01', 'CTRL-ENC-01']);
     }
   });
 
