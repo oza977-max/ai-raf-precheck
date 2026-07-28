@@ -1,0 +1,24 @@
+---
+schema_version: 1
+session_id: explore-003
+mission: >-
+  First-time-user tour. Nobody has ever walked AIGate as a person seeing it
+  for the first time, with no API key and no prior context. Drive the primary
+  journey end to end — landing page, free-text describe box, duplicate check,
+  guided intake form, graph review, confirm, verdict — then load the six
+  demo use cases and read the register and a register detail page the way a
+  2LoD reviewer would. The question the session answers is not "does it
+  work" (275 tests already say it does) but "can someone who has not built
+  it understand what it is asking, and can they reach the reasoning the
+  product exists to produce". Record every point where the product's own
+  explanation is missing, discarded, or contradicts what it then shows.
+timebox_minutes: 60
+target:
+  - http://localhost:5173
+  - src/components/IntakeFlow.tsx
+  - src/components/StructuredForm.tsx
+  - src/components/Register.tsx
+  - src/components/RegisterDetail.tsx
+tour: feature
+runner: unassigned
+---
