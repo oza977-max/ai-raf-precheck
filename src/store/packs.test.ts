@@ -3,15 +3,19 @@ import { loadPacks } from './packs';
 import { getPackSources } from './pack-source';
 
 describe('loadPacks (V2-A)', () => {
-  it('loads all seven starter packs from the real files, sorted by pack_id', () => {
+  it('loads the four AUTHORED packs from the real files, sorted by pack_id', () => {
     const { packs, errors } = loadPacks(getPackSources());
     expect(errors).toEqual([]);
+    // Four, not seven. v1.3 deleted OSFI-E23, MAS-FEAT and FSA-JP: their rule
+    // text was "[ILLUSTRATIVE — NOT VERBATIM]" with "[NOT RETRIEVED]" source
+    // dates, and they still added required controls and reviews to verdicts.
+    // A rule citing a source nobody retrieved is worse than no rule, because
+    // it looks like coverage. CA/SG/JP remain declared jurisdictions with an
+    // empty pack list — see the note in policy/appetite.yaml for what has to
+    // be retrieved to author them properly.
     expect(packs.map((p) => p.pack_id)).toEqual([
       'DORA',
       'EU-AIACT',
-      'FSA-JP',
-      'MAS-FEAT',
-      'OSFI-E23',
       'SR-26-2',
       'SS1-23',
     ]);

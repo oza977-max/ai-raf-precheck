@@ -5,7 +5,7 @@
 > change.** Conditions are rendered in plain English; the YAML is the
 > authority.
 
-Policy version **1.2** · 5 hard lines · 6 tracks · 4 tiers · 18 invariants · 19 controls · 10 pack rules across 7 jurisdictions
+Policy version **1.3** · 5 hard lines · 6 tracks · 4 tiers · 18 invariants · 19 controls · 7 pack rules across 4 jurisdictions
 
 ---
 
@@ -312,36 +312,6 @@ _v0.2-draft · in force 2024-08-01 · sign-off: [FIRM] — Legal/Compliance ([DA
 - **Source:** EU AI Act Article 50(2) ([link](https://artificialintelligenceact.eu/article/50/))
 - **Basis:** `judgement`
   > Providers of AI systems, including general-purpose AI systems, generating synthetic audio, image, video or text content, shall ensure that the outputs of the AI system are marked in a machine-readable format and detectable as artificially generated or manipulated.
-
-### FSA-JP · JP — [PRIMARY SOURCE NOT YET IDENTIFIED]
-
-_v0.2-unauthored · in force [TBC] · sign-off: [FIRM] — Compliance ([DATE]) · **1 of 1 rules have placeholder text — not reviewable**_
-
-**`FSAJP-REV-01`** — Governance review for AI in customer-facing financial services
-
-- **When:** who sees it is client-facing → require review: _AI governance review_
-- **Source:** [PRIMARY SOURCE NOT YET IDENTIFIED] [SECTION TBC]
-- **Basis:** `judgement` — ⚠️ **quote is a placeholder; this rule cannot be reviewed or relied on**
-
-### MAS-FEAT · SG — FEAT Principles (pending replacement by MAS Guidelines on AI Risk Management)
-
-_v0.2-unauthored · in force 2018-11-12 · sign-off: [FIRM] — Compliance ([DATE]) · **1 of 1 rules have placeholder text — not reviewable**_
-
-**`FEAT-SG-REV-01`** — Fairness assessment for AI affecting customer outcomes
-
-- **When:** who sees it is client-facing → require review: _Fairness and conduct assessment_
-- **Source:** MAS FEAT Principles [SECTION TBC] ([link](https://www.mas.gov.sg/news/media-releases/2025/mas-guidelines-for-artificial-intelligence-risk-management))
-- **Basis:** `judgement` — ⚠️ **quote is a placeholder; this rule cannot be reviewed or relied on**
-
-### OSFI-E23 · CA — Guideline E-23 — Model Risk Management
-
-_v0.2-unauthored · in force 2027-05-01 · sign-off: [FIRM] — Model Risk ([DATE]) · **1 of 1 rules have placeholder text — not reviewable**_
-
-**`E23-CA-CTL-01`** — Logging and kill-switch for autonomy above L1
-
-- **When:** autonomy ≥ 2 → require `CTRL-LOG-01`
-- **Source:** OSFI Guideline E-23 [SECTION TBC] ([link](https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/model-risk-management-guideline-2027))
-- **Basis:** `judgement` — ⚠️ **quote is a placeholder; this rule cannot be reviewed or relied on**
 
 ### SR-26-2 · US — SR 26-2 — Revised Guidance on Model Risk Management
 
