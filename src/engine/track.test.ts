@@ -111,7 +111,7 @@ describe('track totality (oracle round 001)', () => {
                 decision_bindingness, output_reversibility: 'reversible', scale: 'limited',
               }],
             });
-            if (!assignTrack(g, tracks)) {
+            if (!assignTrack(g, tracks).ok) {
               unrouted.push(`${model_type} + ${decision_bindingness} (autonomy ${autonomy_level}, replaces=${replaces_prior_model})`);
             }
           }
@@ -119,5 +119,50 @@ describe('track totality (oracle round 001)', () => {
       }
     }
     expect(unrouted).toEqual([]);
+  });
+
+  // The assertion above was VACUOUS until code review 002 caught it: it read
+  // `if (!assignTrack(g, tracks))`, and assignTrack returns a Result OBJECT,
+  // which is always truthy. `unrouted` could never be populated, so the test
+  // passed against ANY policy — including one with TRACK-I deleted entirely.
+  // A test guarding the exact defect class that had already shipped twice was
+  // guarding nothing, and its green tick was cited in the policy comments, the
+  // commit message and the round-002 report as evidence of totality.
+  //
+  // This is the mutation check that makes that impossible to repeat: break the
+  // routing on purpose and require the checker to notice. A totality test that
+  // cannot go red is worse than no test, because it is quoted as proof.
+  it('the totality check itself goes red when routing is broken (mutation guard)', () => {
+    const policyFile = loadPolicy(
+      readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8'),
+    );
+    if (!policyFile.valid) throw new Error('shipped policy invalid');
+
+    // Drop TRACK-I: statistical and traditional-ml are then routed only by the
+    // special tracks, so anything at autonomy < 3 that is not a replacement
+    // falls through.
+    const holed = policyFile.policy.tracks.filter((t) => t.id !== 'TRACK-I');
+
+    const unrouted = MODEL_TYPES.flatMap((model_type) =>
+      BINDINGNESS.filter(
+        (decision_bindingness) =>
+          !assignTrack(
+            graph({
+              processing_nodes: [{
+                id: 'p1', label: 'x', model_type, autonomy_level: 1,
+                data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false,
+              }],
+              output_nodes: [{
+                id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared',
+                decision_bindingness, output_reversibility: 'reversible', scale: 'limited',
+              }],
+            }),
+            holed,
+          ).ok,
+      ).map((b) => `${model_type} + ${b}`),
+    );
+
+    expect(unrouted.length).toBeGreaterThan(0);
+    expect(unrouted).toContain('statistical + advisory');
   });
 });
