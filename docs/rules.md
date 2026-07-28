@@ -5,7 +5,7 @@
 > change.** Conditions are rendered in plain English; the YAML is the
 > authority.
 
-Policy version **1.1** · 5 hard lines · 6 tracks · 4 tiers · 19 invariants · 19 controls · 10 pack rules across 7 jurisdictions
+Policy version **1.2** · 5 hard lines · 6 tracks · 4 tiers · 18 invariants · 19 controls · 10 pack rules across 7 jurisdictions
 
 ---
 
@@ -28,9 +28,9 @@ First match wins, evaluated in id order.
 
 | # | Track | When | Basis |
 |---|---|---|---|
+| `TRACK-III-AGENTIC` | Track III — Agentic AI governance | AI type is agentic | SR 26-2 footnote 3 (agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary) |
 | `TRACK-II-REPLACE` | Track II — Replaces a prior model | replaces a model = true | RAF §5 rule 3 |
 | `TRACK-II-AUTONOMY` | Track II — High autonomy | autonomy ≥ 3 | RAF §5 rule 4 |
-| `TRACK-III-AGENTIC` | Track III — Agentic AI governance | AI type is agentic | SR 26-2 footnote 3 (agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary) |
 | `TRACK-III` | Track III — AI Governance | AI type is llm / generative-ai **and** weight is non-binding | SR 26-2 footnote 3 (generative and agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary) |
 | `TRACK-I` | Track I — Traditional MRM | AI type is statistical / traditional-ml | SS1/23 §3.4; SR 26-2 §II.A |
 | `TRACK-II` | Track II — AI on MRM | AI type is ml / deep-learning / llm / generative-ai | SS1/23 §3.4 (technology-agnostic); OSFI E-23 §2.1 |
@@ -58,19 +58,11 @@ Client PII must not flow to an external model endpoint without encryption in tra
 - **Closed by:** `CTRL-ENC-01`
 - **Basis:** GDPR Art. 32(1)(a)
 
-### `INV-ZONE-01` — Critical
-
-Price-sensitive information must remain inside the controlled zone
-
-- **Trips when:** information type is MNPI **and** where it sits is NOT Zone C
-- **Closed by:** _no control resolves this — tripping it is a rejection_
-- **Basis:** MAR Article 8; MiFID II
-
 ### `INV-DISCLOSE-01` — High
 
 A person interacting with an AI system must be told they are interacting with an AI
 
-- **Trips when:** AI type is llm / generative-ai / agentic **and** who sees it is client-facing / market-facing
+- **Trips when:** AI type is llm / generative-ai / agentic **and** who sees it is client-facing
 - **Closed by:** `CTRL-DISCLOSE-01`
 - **Basis:** EU AI Act Art. 50(1) — applies from 2026-08-02, NOT postponed by the Digital Omnibus
 
@@ -118,7 +110,7 @@ Agentic systems must log every tool call and expose an immediate stop control
 
 A system acting independently on a material or binding decision must have a human decision gate or a bounded authority envelope
 
-- **Trips when:** autonomy ≥ 2 **and** weight is material / binding
+- **Trips when:** autonomy ≥ 2 **and** weight is material / binding **and** what it does is execute / trade / approve
 - **Closed by:** `CTRL-AUTONOMY-BOUND-01`, `CTRL-HITL-02`
 - **Basis:** RAF §7 — autonomy ceiling
 
@@ -126,7 +118,7 @@ A system acting independently on a material or binding decision must have a huma
 
 A system acting independently in front of a client must have a bounded authority envelope
 
-- **Trips when:** autonomy ≥ 2 **and** who sees it is client-facing / market-facing
+- **Trips when:** autonomy ≥ 2 **and** who sees it is client-facing / market-facing **and** what it does is execute / trade / approve
 - **Closed by:** `CTRL-AUTONOMY-BOUND-01`, `CTRL-HITL-02`
 - **Basis:** OSFI E-23 §4.3; FCA Consumer Duty PRIN 2A
 
@@ -158,7 +150,7 @@ AI informing a decision about a person must be tested for disparate outcomes acr
 
 Client-facing AI must offer a route to a human
 
-- **Trips when:** AI type is llm / generative-ai / agentic **and** who sees it is client-facing
+- **Trips when:** who sees it is client-facing
 - **Closed by:** `CTRL-ESCALATE-01`
 - **Basis:** RAF §4 — client harm / escalation
 

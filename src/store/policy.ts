@@ -149,6 +149,11 @@ const PolicyFileSchema = z.object({
   roles: z.record(z.string(), RoleConfigSchema),
   tier_workflow: z.record(z.string(), z.string()),
   safety_margin: z.number(),
+  // Oracle round 002: the binding-constraint tie-break was engine-only, so a
+  // comment about code was standing in for a rule of the appetite. Optional so
+  // a firm's existing policy stays valid; evaluate() falls back to the same
+  // order when it is absent.
+  binding_constraint_order: z.array(z.enum(['severity', 'control_burden', 'id'])).optional(),
 });
 
 // --- ADR-002 (policy-schema.md §8): only these operator keys are valid inside

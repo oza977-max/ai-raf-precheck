@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.1",
+  "policy_version": "1.2",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",
@@ -70,9 +70,8 @@
       "status": "approved_with_controls",
       "tier": "High",
       "track": "II",
-      "binding_constraint": "INV-AUTONOMY-02",
+      "binding_constraint": "INV-CONDUCT-01",
       "controls": [
-        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
         "CTRL-DISCLOSE-01",
@@ -85,7 +84,6 @@
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
-        "INV-AUTONOMY-02",
         "INV-CITE-01",
         "INV-CONDUCT-01",
         "INV-DATA-01",
@@ -365,9 +363,8 @@
       "status": "approved_with_controls",
       "tier": "High",
       "track": "II",
-      "binding_constraint": "INV-AUTONOMY-01",
+      "binding_constraint": "INV-DRIFT-01",
       "controls": [
-        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-ENC-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -375,7 +372,6 @@
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
-        "INV-AUTONOMY-01",
         "INV-DATA-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -394,7 +390,6 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
-        "CTRL-DISCLOSE-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -404,7 +399,6 @@
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
-        "INV-DISCLOSE-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
         "INV-HALLUC-01",
@@ -505,16 +499,14 @@
       "status": "approved_with_controls",
       "tier": "Medium",
       "track": "II",
-      "binding_constraint": "INV-AUTONOMY-01",
+      "binding_constraint": "INV-DRIFT-01",
       "controls": [
-        "CTRL-AUTONOMY-BOUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-LOG-01",
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
-        "INV-AUTONOMY-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
         "INV-SAMPLE-01",

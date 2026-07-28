@@ -9,6 +9,19 @@
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
 # CHANGE LOG
+#   1.2 (2026-07-27) — oracle round 002. Two blind adjudicators re-scored the
+#       corpus against v1.1 and were asked to hunt REGRESSIONS, not just gaps.
+#       They found that several v1.1 fixes had displaced the defect rather than
+#       removed it: TRACK-III-AGENTIC was promoted above the special tracks so
+#       high-autonomy agents stop being routed to MRM; INV-ZONE-01 retired (its
+#       condition had become byte-identical to the widened HL-002, making it
+#       unreachable); INV-DISCLOSE-01 narrowed back to client-facing (Art. 50(1)
+#       needs a person interacting, not a channel); INV-ESCALATE-01's model-type
+#       gate removed so escalation follows the affected person like conduct and
+#       fairness already do; INV-AUTONOMY-01/02 now require an ACTING
+#       action_type, so they stop demanding authority envelopes of
+#       recommend-only supervised systems; and the binding-constraint tie-break
+#       is declared here rather than living only in engine code.
 #   1.1 (2026-07-27) — oracle round 001. Two independent adjudicators scored
 #       31 corpus cases from this file alone, blind to the engine. Fixes:
 #       track list made TOTAL (9 of 28 model_type x bindingness pairs matched
@@ -58,7 +71,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.1"
+version: "1.2"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -148,6 +161,23 @@ hard_lines:
 # Totality check lives in src/engine/track.test.ts — it enumerates the full
 # cross-product and fails if any combination is unrouted.
 tracks:
+  - id: "TRACK-III-AGENTIC"
+    name: "Track III — Agentic AI governance"
+    description: "Tool-using agentic systems at any bindingness are routed to AI governance"
+    # Agentic is routed on model_type alone, and FIRST.
+    #
+    # v1.1 put this after TRACK-II-REPLACE/AUTONOMY, which meant any agentic
+    # system at autonomy >= 3 or replacing a prior model matched those instead
+    # and was routed to MRM — i.e. the highest-risk agents were the ones
+    # excluded from the agentic governance track that exists to catch them.
+    # Oracle round 002 found this independently on both models: v1.1 fixed one
+    # ordering bug by creating another, one rule further down.
+    conditions:
+      - field: "model_type"
+        value: { in: ["agentic"] }
+    short_circuit: true
+    regulatory_basis: "SR 26-2 footnote 3 (agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary)"
+
   - id: "TRACK-II-REPLACE"
     name: "Track II — Replaces a prior model"
     description: "Any use case replacing a prior model is subject to Track II regardless of model type"
@@ -165,18 +195,6 @@ tracks:
         value: { gte: 3 }
     short_circuit: true
     regulatory_basis: "RAF §5 rule 4"
-
-  - id: "TRACK-III-AGENTIC"
-    name: "Track III — Agentic AI governance"
-    description: "Tool-using agentic systems at any bindingness are routed to AI governance"
-    # Agentic was previously routed only when non-binding, so an agent making
-    # material or binding decisions matched no track at all. Agentic is now
-    # routed on model_type alone.
-    conditions:
-      - field: "model_type"
-        value: { in: ["agentic"] }
-    short_circuit: true
-    regulatory_basis: "SR 26-2 footnote 3 (agentic AI outside MRM scope; issued 2026-04-17, exclusion stated as temporary)"
 
   - id: "TRACK-III"
     name: "Track III — AI Governance"
@@ -282,24 +300,33 @@ invariants:
     required_controls: ["CTRL-ENC-01"]
     regulatory_basis: "GDPR Art. 32(1)(a)"
 
-  - id: "INV-ZONE-01"
-    description: "Price-sensitive information must remain inside the controlled zone"
-    condition:
-      data_class: { in: ["MNPI"] }
-      data_zone: { not_in: ["Zone C"] }
-    severity: "Critical"
-    # Deliberately unsatisfiable — the ONLY invariant with no resolving control.
-    # A use case tripping this is out of appetite by construction.
-    required_controls: []
-    regulatory_basis: "MAR Article 8; MiFID II"
+  # INV-ZONE-01 is RETIRED (oracle round 002), not merely unused.
+  #
+  # v1.1 widened HL-002 to `data_zone: not_in [Zone C]` so it matched its own
+  # stated reason. That made its condition byte-identical to INV-ZONE-01's —
+  # and because hard lines short-circuit, the invariant became unreachable by
+  # any input while still carrying a comment describing it as load-bearing.
+  # Both adjudicators found it. A rulebook that contains a rule the engine can
+  # never evaluate is worse than one that is missing it: a reader budgets for
+  # a control path that does not exist.
+  #
+  # MNPI outside the controlled zone is now solely HL-002's business. The id is
+  # not reused.
 
   - id: "INV-DISCLOSE-01"
     description: "A person interacting with an AI system must be told they are interacting with an AI"
-    # Widened to market-facing: Article 50(1) attaches to natural persons
-    # interacting with the system, not to the delivery channel.
+    # NARROWED BACK to client-facing (oracle round 002). v1.1 widened this to
+    # market-facing on the reasoning that Art. 50(1) follows the person rather
+    # than the channel — but the Article attaches to systems "intended to
+    # interact directly with natural persons", and a market-facing artefact
+    # like a Pillar 3 filing has no interaction and no interface to disclose
+    # on. Both adjudicators flagged CTRL-DISCLOSE-01 ("the interface states
+    # plainly... before the interaction begins") being demanded of a document.
+    # Art. 50(2) marking is the right rule for published artefacts, and
+    # INV-SYNTHMARK-01 already carries it.
     condition:
       model_type: { in: ["llm", "generative-ai", "agentic"] }
-      exposure: { in: ["client-facing", "market-facing"] }
+      exposure: { in: ["client-facing"] }
     severity: "High"
     required_controls: ["CTRL-DISCLOSE-01"]
     regulatory_basis: "EU AI Act Art. 50(1) — applies from 2026-08-02, NOT postponed by the Digital Omnibus"
@@ -370,9 +397,23 @@ invariants:
     #
     # CTRL-AUTONOMY-BOUND-01 gives a real second path, and carries the lower
     # burden so the solver prefers it.
+    # ACTING, not merely advising (oracle round 002). v1.1 keyed this on
+    # autonomy + bindingness alone, so it caught recommend-only pipelines
+    # with a human reviewing every flagged case — and then demanded either a
+    # "bounded authority envelope with hard value and volume limits" or a human
+    # gate the design already had. Both adjudicators flagged it: the file's most
+    # severe invariant was firing on half the corpus, which dilutes what a
+    # Critical binding constraint communicates.
+    #
+    # action_type is used rather than `hitl` deliberately. `hitl` is optional on
+    # the graph, and matchesCondition() treats an ABSENT field as no-match — so
+    # a condition on hitl would let a use case escape this invariant by simply
+    # leaving the question blank. Fail-open on the most severe rule in the file
+    # is not a trade worth making. action_type is always present.
     condition:
       autonomy_level: { gte: 2 }
       decision_bindingness: { in: ["material", "binding"] }
+      action_type: { in: ["execute", "trade", "approve"] }
     severity: "Critical"
     required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
     regulatory_basis: "RAF §7 — autonomy ceiling"
@@ -383,9 +424,13 @@ invariants:
     # client-facing assistant at autonomy 2 with no human in the loop carried
     # no autonomy obligation at all. Advisory output delivered straight to a
     # retail client is functionally the decision.
+    # Same correction as INV-AUTONOMY-01: a conversational assistant that only
+    # emits text was being told to impose value and volume limits on an
+    # authority envelope, which is not a coherent construct for it.
     condition:
       autonomy_level: { gte: 2 }
       exposure: { in: ["client-facing", "market-facing"] }
+      action_type: { in: ["execute", "trade", "approve"] }
     severity: "High"
     required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
     regulatory_basis: "OSFI E-23 §4.3; FCA Consumer Duty PRIN 2A"
@@ -428,8 +473,14 @@ invariants:
 
   - id: "INV-ESCALATE-01"
     description: "Client-facing AI must offer a route to a human"
+    # Model-type gate REMOVED (oracle round 002). Round 001's lesson was that
+    # conduct obligations follow the affected person, not the technology — and
+    # v1.1 applied it to INV-CONDUCT-01 and INV-FAIRNESS-01 while leaving the
+    # sibling rules gated on model family. A client turned down by a
+    # deep-learning system needs the human route exactly as much as one talking
+    # to an LLM. This is RF-3 in the project's own calibration file: when a
+    # defect class is fixed in one place, audit every sibling call site.
     condition:
-      model_type: { in: ["llm", "generative-ai", "agentic"] }
       exposure: { in: ["client-facing"] }
     severity: "High"
     required_controls: ["CTRL-ESCALATE-01"]
@@ -512,8 +563,14 @@ invariants:
 # starter file leaves most controls UNVERIFIED is deliberate — the firm has
 # attested nothing yet, and the UI must not imply otherwise (NF-2).
 #
-# NOTE FOR AUTHORS: do not use the words "approved" or "rejected" in any
-# rendered string here. The verdict screen is asserted with a single-match
+# NOTE FOR AUTHORS — THREE BANNED WORDS, INCLUDING IN COMMENTS.
+# The Appetite framework view renders this entire file, and three words are
+# asserted with single-match queries in the UI tests: the two verdict statuses
+# (approv-ed / reject-ed) and the past tense of "to fire", which is a
+# per-verdict concept and never a static pack state. Write "in appetite",
+# "out of appetite", and "matches" / "catches" instead.
+# This note originally contained the banned words themselves and broke the very
+# test it documents (oracle round 002) — hence the hyphens above. The verdict screen is asserted with a single-match
 # query over those two words and policy text reaches that screen.
 controls:
   - id: "CTRL-ENC-01"
@@ -708,6 +765,26 @@ tier_workflow:
   High: "2LoD-approve"
   Medium: "2LoD-notify"
   Low: "self-service"
+
+# Which tripped invariant a verdict reports as BINDING when several fire.
+# Comparators are applied in this order until one separates the candidates.
+#
+# This lived only in engine code until oracle round 002. An adjudicator put it
+# plainly: a comment about code is not a policy rule, and a determinism and
+# auditability claim cannot rest on one. Two conforming implementations could
+# disagree about the headline of a verdict. It is a rule of the appetite, so it
+# belongs in the appetite.
+#
+#   severity        — Critical > High > Medium > Low
+#   control_burden  — the CHEAPEST control that would satisfy the invariant,
+#                     i.e. its unavoidable cost. Highest wins.
+#   id              — last resort, alphabetical, so the result is total and
+#                     deterministic (NF-1). Ties still reaching this step mean
+#                     the two invariants are genuinely equal under the declared
+#                     criteria; if that is unacceptable for a given pair, the
+#                     fix is to price their controls differently, not to add a
+#                     hidden rule here.
+binding_constraint_order: ["severity", "control_burden", "id"]
 
 safety_margin: 0.10
 
