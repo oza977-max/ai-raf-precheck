@@ -687,6 +687,10 @@ export interface PolicyFile {
   roles: Record<string, RoleConfig>;
   tier_workflow: Record<Tier, WorkflowType>;
   safety_margin: number;
+  // Which tripped invariant a verdict reports as BINDING when several fire.
+  // Comparators applied in order until one separates the candidates. Optional;
+  // evaluate() falls back to ["severity", "control_burden", "id"].
+  binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
 }
 
 export interface TranslationAttestation {

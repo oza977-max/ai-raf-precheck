@@ -4,7 +4,7 @@
 
 A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
-Describe the AI use case (plain language or a short structured form). AIGate maps it to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, OSFI E-23, MAS FEAT, DORA, FSA Japan), and returns:
+Describe the AI use case (plain language or a short structured form). AIGate maps it to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
 
 - a **verdict with its "why"** — which rule set the tier, which invariant tripped, each with its regulatory citation;
 - the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
@@ -77,7 +77,7 @@ Most banks are here — a model risk policy, an AI ethics statement, some vendor
 
 ### If your bank has no AI-specific governance yet
 
-The starter config effectively becomes your AI risk appetite framework. It is grounded in SR 26-2 (US), SS1/23 (UK PRA), EU AI Act, OSFI E-23, MAS FEAT, DORA, and FSA Japan. It is a credible, defensible starting point — but it is not your framework until your CRO or equivalent has reviewed and adopted it.
+The starter config effectively becomes your AI risk appetite framework. It is grounded in SR 26-2 (US), SS1/23 (UK PRA), EU AI Act and DORA. Canada, Singapore and Japan are declared operating jurisdictions with no assessed pack — the starter packs for those were deleted in policy v1.3 because their rule text was illustrative and their sources were never retrieved, and a rule citing a source nobody read is worse than no rule. It is a credible, defensible starting point — but it is not your framework until your CRO or equivalent has reviewed and adopted it.
 
 **The starter config is a template. You own what you adopt.**
 
@@ -87,7 +87,7 @@ Using the starter config verbatim without review is an implicit governance decis
 
 ## How regulatory grounding works — and its limits
 
-AIGate evaluates use cases against **regulatory override packs** — structured rule files for SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, and FSA Japan. These drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers with credit-scoring characteristics triggers EU AI Act Annex III's forced-Critical classification.
+AIGate evaluates use cases against **regulatory override packs** — structured rule files for SR 26-2, SS1/23, EU AI Act and DORA. These drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers with credit-scoring characteristics triggers EU AI Act Annex III's forced-Critical classification.
 
 **Regulations evolve. This is the hardest problem in the product.**
 

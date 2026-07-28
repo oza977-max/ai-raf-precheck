@@ -417,13 +417,13 @@ jurisdictions:
     pack_files: ["packs/eu-ai-act.yaml", "packs/dora.yaml"]   # Selecting EU activates both; DORA is not a separate jurisdiction
   - code: "CA"
     name: "Canada"
-    pack_files: ["packs/osfi-e23.yaml"]
+    pack_files: []   # declared, no assessed pack (v1.3)
   - code: "SG"
     name: "Singapore"
-    pack_files: ["packs/mas-feat.yaml"]
+    pack_files: []   # declared, no assessed pack (v1.3)
   - code: "JP"
     name: "Japan"
-    pack_files: ["packs/fsa-japan.yaml"]
+    pack_files: []   # declared, no assessed pack (v1.3)
 ```
 
 **DORA modeling note:** DORA is not a separately selectable jurisdiction code. Selecting `EU` activates both `eu-ai-act.yaml` and `dora.yaml`. The `pack_files` field is an array to support this pattern; RA-1 fit criterion updated accordingly.
@@ -568,6 +568,10 @@ export interface PolicyFile {
   roles: Record<string, RoleConfig>;
   tier_workflow: Record<Tier, WorkflowType>;
   safety_margin: number;
+  // Which tripped invariant a verdict reports as BINDING when several fire.
+  // Comparators applied in order until one separates the candidates. Optional;
+  // evaluate() falls back to ["severity", "control_burden", "id"].
+  binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
 }
 
 export interface TranslationAttestation {
@@ -777,7 +781,7 @@ The starter `policy/appetite.yaml` ships pre-populated with:
 | `invariants` | 8 starter invariants covering data zone, MNPI, autonomy, agentic tool-calling, conduct/fairness, explainability |
 | `controls` | 12 starter controls (encryption, HITL, logging, grounding, fingerprinting, drift monitoring, red-teaming, tool-call logging + kill switch, conduct testing, sampling, output validation, zone enforcement) |
 | `kri_thresholds` | Default thresholds for all 6 KRI dimensions |
-| `jurisdictions` | All 7 pack files referenced |
+| `jurisdictions` | 6 jurisdictions declared; 4 pack files referenced across 3 of them (UK, US, EU). CA/SG/JP are declared with `pack_files: []` — see v1.3 |
 | `tier_workflow` | Default mappings |
 | `translation_attestation` | Placeholder with `[FIRM]` markers |
 

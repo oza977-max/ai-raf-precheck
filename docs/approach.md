@@ -33,7 +33,7 @@ rules, four tier rules, fourteen invariants, fourteen controls. This does
 almost all of the work. Turn every jurisdiction off and the tool still
 functions.
 
-**Jurisdiction packs — `policy/packs/*.yaml`.** Nine rules across seven
+**Jurisdiction packs — `policy/packs/*.yaml`.** Seven rules across four
 regulations. These only ever *modify* an answer the appetite already
 produced. A pack rule can do exactly four things:
 

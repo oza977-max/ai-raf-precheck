@@ -617,7 +617,8 @@ And the output MUST NOT contain: an error about missing policy fields or [FIRM] 
 ```
 Given the starter policy file is loaded
 When the system is inspected for available jurisdiction packs
-Then all seven packs are present and loadable: SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan
+Then all four AUTHORED packs are present and loadable: SR 26-2, SS1/23, EU AI Act, DORA
+And CA, SG and JP are declared jurisdictions with no pack file, so no pack activates for them
 [Requirement: PE-8] [Priority: MUST]
 [Trace: not-yet-traced]
 ```
@@ -1138,8 +1139,9 @@ Then SR 26-2 is activated and SS1/23, EU AI Act, OSFI E-23 are NOT activated
 Input: Use case with jurisdictions: ["UK", "EU", "US", "CA"]
 Given a confirmed graph specifying UK, EU, US, and Canada jurisdictions
 When the engine resolves active packs
-Then SS1/23, EU AI Act, SR 26-2, and OSFI E-23 are all activated
-And the output MUST contain: all four packs listed in the active packs set
+Then SS1/23, SR 26-2, EU AI Act and DORA are all activated
+And no pack activates for Canada, which is declared with no pack file
+And the output MUST contain: every matching jurisdiction's pack in the active packs set
 And the output MUST NOT contain: only the first matching jurisdiction's pack applied
 [Requirement: RA-1] [Priority: MUST]
 [Trace: not-yet-traced]

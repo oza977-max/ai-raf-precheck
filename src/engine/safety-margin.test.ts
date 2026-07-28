@@ -8,7 +8,10 @@ import type { Control } from './types';
 // CS-1 (Must). Health report HR-14: `safety_margin` was declared in the policy
 // schema, validated 0.0-1.0, threaded through evaluate() into solvControls()
 // as `_margin` — the TypeScript convention for deliberately unused — and
-// discarded. The engine performed exactly the optimisation CS-1 names as
+// discarded. Note that is HISTORY: solvControls() no longer takes a margin
+// parameter at all. policy.safety_margin is now compared in evaluate() against
+// solverResult.marginAchieved, because leaving an unused parameter behind was
+// itself the defect (code review 002). The engine performed exactly the optimisation CS-1 names as
 // wrong: "Optimising for minimum controls without margin optimises for
 // developer convenience at the cost of governance resilience."
 //

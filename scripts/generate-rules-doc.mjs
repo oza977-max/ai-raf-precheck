@@ -59,7 +59,14 @@ p('> `npm run docs:rules`. Do not edit by hand — regenerate after any policy')
 p('> change.** Conditions are rendered in plain English; the YAML is the');
 p('> authority.');
 p();
-p(`Policy version **${policy.version}** · ${policy.hard_lines.length} hard lines · ${policy.tracks.length} tracks · ${policy.tiers.length} tiers · ${policy.invariants.length} invariants · ${policy.controls.length} controls · ${packs.reduce((n, k) => n + k.rules.length, 0)} pack rules across ${packs.length} jurisdictions`);
+p(`Policy version **${policy.version}** · ${policy.hard_lines.length} hard lines · ${policy.tracks.length} tracks · ${policy.tiers.length} tiers · ${policy.invariants.length} invariants · ${policy.controls.length} controls · ${packs.reduce((n, k) => n + k.rules.length, 0)} pack rules`);
+// Code review 002: this line previously read "across ${packs.length} jurisdictions",
+// which counted PACK FILES, not jurisdictions — EU alone contributes two. It
+// undercounted the declared set and hid the fact that CA/SG/JP are deliberate
+// bare declarations, which is the whole point of policy v1.3.
+const withPacks = new Set(packs.map((k) => k.jurisdiction));
+const declared = policy.jurisdictions.length;
+p(`${declared} jurisdictions declared · ${withPacks.size} with an assessed pack (${[...withPacks].sort().join(', ')}) · ${declared - withPacks.size} declared with no pack`);
 p();
 p('---');
 p();
