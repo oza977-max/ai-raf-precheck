@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-003</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-003</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-003</li>
+<li><strong>Mission:</strong> First-time-user tour. Nobody has ever walked AIGate as a person seeing it for the first time, with no API key and no prior context. Drive the primary journey end to end — landing page, free-text describe box, duplicate check, guided intake form, graph review, confirm, verdict — then load the six demo use cases and read the register and a register detail page the way a 2LoD reviewer would. The question the session answers is not &quot;does it work&quot; (275 tests already say it does) but &quot;can someone who has not built it understand what it is asking, and can they reach the reasoning the product exists to produce&quot;. Record every point where the product&#x27;s own explanation is missing, discarded, or contradicts what it then shows.</li>
+<li><strong>Tour:</strong> feature</li>
+<li><strong>Timebox (minutes):</strong> 60</li>
+<li><strong>Runner:</strong> unassigned</li>
+<li><strong>Target:</strong><ul>
+<li>http://localhost:5173</li>
+<li>src/components/IntakeFlow.tsx</li>
+<li>src/components/StructuredForm.tsx</li>
+<li>src/components/Register.tsx</li>
+<li>src/components/RegisterDetail.tsx</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>Opened http://localhost:5173 with no API key configured. Landing screen: New pre-check, six-step rail (Describe / Duplicates / Graph / Questions / Confirm / Verdict).</li>
+<li>Typed a plain-language description of a mortgage servicing assistant into the Describe box and clicked &#x27;Read &amp; extract -&gt;&#x27;.</li>
+<li>Duplicate check reported &#x27;No similar use case found -- checked 7 register entries&#x27; before any demo data had been loaded. Logged as D-008.</li>
+<li>Clicked &#x27;This is a new use case -&gt;&#x27;. Guided intake form rendered completely blank -- the typed description was gone. Logged as D-001.</li>
+<li>Read the guided form. Fourteen selects plus two text fields. Field help text is unusually good -- plain language, worked examples, and honest framing (&#x27;Be honest about what happens in practice rather than what the process says&#x27;). No jurisdiction or region field anywhere. Logged as D-002.</li>
+<li>Filled name, description and nine selects. Continue stayed disabled with no indication of what was missing. Logged as D-003.</li>
+<li>Filled the remaining three selects; Continue enabled. Graph review screen showed &#x27;vendor: internal&#x27; though no vendor was chosen. Logged as D-007.</li>
+<li>Proceeded through Questions (auto-satisfied, no questions asked) to Confirm. JURISDICTIONS row read &#x27;None specified&#x27;.</li>
+<li>Confirmed and evaluated. Verdict: Approved with controls, High tier, Track II, binding constraint INV-AUTONOMY-01, 13 of 18 invariants triggered, 10 controls, governance margin 38% against a 10% target, eight invariants flagged NO HEADROOM, standing conditions listed. This screen is the product working as designed.</li>
+<li>Clicked &#x27;Load sample use cases&#x27;, then opened the Register. Five of six samples flagged Stale at policy v1.1 against current v1.3. Logged as D-005.</li>
+<li>Register row for the just-completed pre-check read &#x27;Mortgage servicing assistant -- input&#x27;. Logged as D-004.</li>
+<li>Opened &#x27;[SAMPLE] Client-facing wealth chatbot&#x27; (High tier, Provisional, awaiting 2LoD action). Detail page showed status, notes box, Approve / Request correction and the append-only audit trail -- and no verdict reasoning at all. Logged as D-006.</li>
+<li>Checked the browser console across the whole walk: no errors.</li>
+</ul>
+<h2>Defects</h2>
+<h3>D-001 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> a first-time user with no Anthropic API key configured, on the New pre-check screen</li>
+<li><strong>When:</strong> they write a plain-language paragraph into the &#x27;Describe your AI use case&#x27; box and click &#x27;Read &amp; extract -&gt;&#x27;</li>
+<li><strong>Then:</strong> the guided intake form that follows is completely blank -- neither the name field nor the description field carries any of what was typed. The invitation to describe the use case in plain language is decorative without a key, and nothing on the screen says so before the user does the work.</li>
+<li><strong>Reproduction:</strong> 1. Open http://localhost:5173 with no API key saved in Settings. 2. Type any paragraph into &#x27;Describe your AI use case&#x27;. 3. Click &#x27;Read &amp; extract -&gt;&#x27;, then &#x27;This is a new use case -&gt;&#x27;. 4. Inspect the guided form: name and description inputs are empty strings.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-002 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> a keyless user completing the guided intake form, which is the only intake path available to them</li>
+<li><strong>When:</strong> they fill every field the form offers and reach the Confirm and Verdict screens</li>
+<li><strong>Then:</strong> both screens report &#x27;JURISDICTIONS -- None specified&#x27;. The form has no jurisdiction or region field at all, so graph.jurisdictions is always empty, so resolveActivePacks can never activate a pack. The four authored jurisdiction packs built in V2-A, and the RA-9 regulatory reasoning chain that depends on them, are unreachable through the guided form. The form should ask for region either way -- a user writing free text cannot be expected to know that naming a jurisdiction is what unlocks the citations.</li>
+<li><strong>Reproduction:</strong> 1. Complete the guided form end to end with no API key. 2. On the Confirm screen, read the JURISDICTIONS row: &#x27;None specified&#x27;. 3. Evaluate; the verdict&#x27;s RECORD &amp; PROVENANCE block repeats &#x27;None specified&#x27; and no REGULATORY REASONING CHAIN panel renders. 4. Inspect the form&#x27;s select elements: fourteen selects, none of them jurisdiction.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-003 — Important</h3>
+<ul>
+<li><strong>Given:</strong> the guided intake form partially completed</li>
+<li><strong>When:</strong> nine of the fourteen fields are set and the user looks for the way forward</li>
+<li><strong>Then:</strong> the &#x27;Continue&#x27; button remains disabled with no indication of which fields are still required. No field is marked required, no validation message names the gap, and the button gives no reason. A user can dead-end here with no way to discover what the form still wants.</li>
+<li><strong>Reproduction:</strong> 1. Open the guided form. 2. Fill name, description, data classification, storage zone, model type, autonomy, processing zone, action type, audience, materiality and reversibility -- but leave purpose, replaces-human and scale unset. 3. Observe: button.disabled === true, with no accompanying message.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-004 — Important</h3>
+<ul>
+<li><strong>Given:</strong> a completed pre-check submitted under the use case name &#x27;Mortgage servicing assistant&#x27;</li>
+<li><strong>When:</strong> the user opens the Register to find the record of their decision</li>
+<li><strong>Then:</strong> the row is titled &#x27;Mortgage servicing assistant -- input&#x27; -- the name of the input NODE in the data-flow graph, not the use case name the user supplied. The register is the audit record of decisions; the name on that record is wrong.</li>
+<li><strong>Reproduction:</strong> 1. Complete any pre-check, giving a distinct name at the &#x27;What do you want to call it?&#x27; field. 2. Open the Register. 3. The Use Case Name column shows the supplied name with &#x27; -- input&#x27; appended.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-005 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> a first-time user evaluating whether the product is current and maintained</li>
+<li><strong>When:</strong> they click &#x27;Load sample use cases&#x27; and open the Register</li>
+<li><strong>Then:</strong> five of the six samples are immediately flagged &#x27;Stale&#x27; -- they are fixtures recorded against policy v1.1 while the shipped policy is v1.3. The staleness detection is behaving correctly; the demo fixtures have not been regenerated. The first impression of the product is a register that is mostly out of date.</li>
+<li><strong>Reproduction:</strong> 1. Open the app fresh. 2. Click &#x27;Load sample use cases&#x27; in the sidebar. 3. Open the Register: the Policy Version column reads 1.1 for all six samples and the Stale column is flagged on five of them (plus the AIGate self-assessment row at v1.0).</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-006 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> a 2LoD reviewer opening a High-tier use case that is awaiting their sign-off</li>
+<li><strong>When:</strong> they open it from the Register in order to decide whether to approve it</li>
+<li><strong>Then:</strong> the detail page shows the tier, the track, the status, the Approve and Request-correction buttons and the append-only audit trail -- but none of the verdict reasoning. No invariants, no minimal control set, no regulatory citations, no governance margin. The reviewer is asked to attest to a decision whose basis is not shown anywhere on the page. The reasoning exists only on the intake flow that produced it, which cannot be returned to.</li>
+<li><strong>Reproduction:</strong> 1. Load the sample use cases. 2. Open the Register and click &#x27;[SAMPLE] Client-facing wealth chatbot&#x27; (High tier, awaiting 2LoD action). 3. Read the full page: status banner, notes box, Approve / Request correction, audit trail. No invariant list, no control set, no citation panel.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-007 — Important</h3>
+<ul>
+<li><strong>Given:</strong> the guided form&#x27;s optional vendor field left blank by the user</li>
+<li><strong>When:</strong> the Review extracted graph screen renders the processing node</li>
+<li><strong>Then:</strong> the node displays &#x27;vendor: internal&#x27; -- a value the user never chose. The next screen asks the user to attest that this graph is accurate to the best of their knowledge, so a silently defaulted field is being folded into an attestation.</li>
+<li><strong>Reproduction:</strong> 1. Complete the guided form without selecting anything in &#x27;Whose model or service is it? (optional)&#x27;. 2. Click Continue. 3. The PROCESSING node on the graph review screen shows &#x27;vendor: internal&#x27;.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-008 — Important</h3>
+<ul>
+<li><strong>Given:</strong> a browser session in which the demo use cases have not been loaded</li>
+<li><strong>When:</strong> the user submits a description and the duplicate-check step runs</li>
+<li><strong>Then:</strong> the step reports &#x27;No similar use case found -- checked 7 register entries&#x27;, naming a count of entries that had not been loaded at that point in the walk. Either the count is stale/hardcoded or entries are seeded earlier than the sidebar implies. The duplicate check is a gate, so a count that does not match the register undermines what it claims to have checked.</li>
+<li><strong>Reproduction:</strong> 1. Open the app without clicking &#x27;Load sample use cases&#x27;. 2. Enter any description and click &#x27;Read &amp; extract -&gt;&#x27;. 3. Read the duplicate-check line: it cites 7 register entries. 4. Compare against the Register contents at that moment.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Observations</h2>
+<p><em>None recorded.</em></p>
+<h2>Overall Assessment</h2>
+<p>The product&#x27;s engine is not the problem. The verdict screen produces exactly what it promises -- tier, track, binding constraint, thirteen triggered invariants with citations, a minimal control set, governance margin, standing conditions -- and 275 tests, a clean type-check and a clean spec-parity run all pass. What this session found is that the reasoning is hard to reach and easy to lose. Two of the four Critical findings are the same defect in different places: the product asks a user to describe their use case and throws the answer away (D-001), and it produces a verdict a reviewer is then asked to sign off on without showing it to them (D-006). A third, D-002, means the regulatory-citation chain built in V2-A cannot be reached at all through the only intake a keyless user has -- the form never asks where the system operates. The fourth, D-005, is that the demo data a newcomer is invited to load is itself two policy versions out of date. None of these are engine defects and none were visible to the test suite, because nothing in the suite walks the product as a person seeing it for the first time. That walk had never been done until now.</p>
+</body>
+</html>
