@@ -383,6 +383,7 @@ export interface PolicyFile {
   roles: Record<string, RoleConfig>;
   tier_workflow: Record<Tier, WorkflowType>;
   safety_margin: number;
+  binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
   // PV-1/PV-2: optional so every existing policy still loads unchanged.
   platforms?: RegistryEntry[];
   vendors?: RegistryEntry[];

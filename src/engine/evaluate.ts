@@ -174,7 +174,7 @@ export function evaluate(
   // the first by id. With a realistic multi-invariant policy the
   // sorted-first choice names an essentially arbitrary rule on the
   // headline field. Ties break by id, preserving determinism.
-  const binding = mostSevere(tripped, policy.controls);
+  const binding = mostSevere(tripped, policy.controls, policy.binding_constraint_order);
 
   // Step 8: status determination.
   if (!solverResult.ok) {
@@ -379,9 +379,16 @@ const SEVERITY_RANK: Record<string, number> = { Critical: 4, High: 3, Medium: 2,
 //
 // Deterministic (NF-1): burden is a fixed integer in the policy and id breaks
 // any remaining tie, so the ordering is total and independent of input order.
+const DEFAULT_BINDING_ORDER: Array<'severity' | 'control_burden' | 'id'> = [
+  'severity',
+  'control_burden',
+  'id',
+];
+
 function mostSevere(
   tripped: TrippedInvariant[],
   controls: Control[],
+  order: Array<'severity' | 'control_burden' | 'id'> = DEFAULT_BINDING_ORDER,
 ): TrippedInvariant | undefined {
   const burdenById = new Map(controls.map((c) => [c.id, c.burden]));
   // Cheapest, not heaviest. Where an invariant lists several resolving
@@ -393,11 +400,21 @@ function mostSevere(
     return burdens.length > 0 ? Math.min(...burdens) : 0;
   };
 
+  // Comparators applied in the order the POLICY declares, so the rule the
+  // verdict is defended with is the rule a reader can find in appetite.yaml.
+  const comparators: Record<string, (a: TrippedInvariant, b: TrippedInvariant) => number> = {
+    severity: (a, b) => (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0),
+    control_burden: (a, b) => weight(b) - weight(a),
+    id: (a, b) => a.invariantId.localeCompare(b.invariantId),
+  };
+
   return [...tripped].sort((a, b) => {
-    const rank = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
-    if (rank !== 0) return rank;
-    const burden = weight(b) - weight(a);
-    if (burden !== 0) return burden;
+    for (const key of order) {
+      const cmp = comparators[key]?.(a, b) ?? 0;
+      if (cmp !== 0) return cmp;
+    }
+    // Total ordering guaranteed even if a firm omits `id` from the declared
+    // order — determinism (NF-1) is not the policy author's to opt out of.
     return a.invariantId.localeCompare(b.invariantId);
   })[0];
 }
