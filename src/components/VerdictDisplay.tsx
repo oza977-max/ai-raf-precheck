@@ -1,6 +1,8 @@
 import type { DataFlowGraph, PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
 import { findRuleDescription } from '../engine/find-rule-description';
 import { graphSummaryRows } from './graph-summary';
+import { isVerdictProvisional } from '../engine/provisional';
+import type { ProvisionalReason } from '../engine/provisional';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage } from '../store/types';
 
@@ -155,10 +157,29 @@ const BASIS_HELP: Record<string, string> = {
   judgement: 'This rule rests on a reading of the law that the quoted passage does not settle. A qualified person has to stand behind it.',
 };
 
+// R3-JU-6: the labelled cause, addressed to a later reader of the record. The
+// two reasons are different claims and must not collapse into one badge
+// (evaluation-engine.md §13.1) — "no regulatory basis" says none exists;
+// "unsigned rules" says one exists that the firm has not adopted. Neither
+// string contains the words "approved" or "rejected" (HR3-08).
+const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
+  unsigned_pack_rules:
+    'Rules from a jurisdiction pack were applied, but they are proposed readings of the law that your firm has not yet adopted.',
+  no_regulatory_basis:
+    'No jurisdiction pack applied to this use case, so no regulatory rules were used and no citations are available. It was assessed against your firm\u2019s own policy only.',
+};
+
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
+  // §13.1a: the caveats remain the per-rule DETAIL rendered underneath the
+  // banner — which rule is unadopted. They are no longer what determines
+  // Provisional; that is `provisional_reasons`, read below. Filtering them
+  // here is presentation, not a second derivation of the status.
   const lowCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'low');
   const mediumCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'medium');
-  const isProvisional = lowCaveats.length > 0;
+  // ADR-EE-R3-1: the engine determines Provisional and names its causes. This
+  // was `lowCaveats.length > 0` — one of two independent derivations of the
+  // same rule, the other in store/register.ts. Both are now reads.
+  const isProvisional = isVerdictProvisional(verdict);
 
   const reasoningTrace = findReasoningTrace(verdict, auditEvents);
   const fallbackDescription = findRuleDescription(policy, verdict.binding_constraint);
@@ -171,6 +192,23 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       {isProvisional && (
         <div className="verdict__provisional-banner" role="alert">
           <strong>Provisional — legal review required</strong>
+          {/* R3-JU-6 / review pass 2. The banner previously rendered only the
+              low-confidence caveats, which exist ONLY for the unsigned-rules
+              cause. A verdict provisional for the no-regulatory-basis cause
+              therefore showed "legal review required" and nothing else — an
+              unexplained demand, on the screen someone acts on. The engine had
+              computed the cause and no one rendered it: the same
+              computed-but-never-consumed defect that lost the regulatory
+              citations for all of V1.
+
+              P8-C05 owns the fuller prose statement for the submitter
+              (R3-JU-3). This is the labelled cause, and it is here because
+              this chunk is what made the empty banner reachable at scale. */}
+          {(verdict.provisional_reasons ?? []).map((reason) => (
+            <p key={reason} data-provisional-reason={reason}>
+              {PROVISIONAL_REASON_LABEL[reason]}
+            </p>
+          ))}
           {lowCaveats.map((c, i) => (
             <p key={i}>{c.reason}</p>
           ))}
@@ -178,7 +216,16 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       )}
 
       <p className="verdict__eyebrow">Verdict</p>
-      <h2 className="verdict__heading">{isProvisional ? 'Provisional' : STATUS_LABEL[verdict.status]}</h2>
+      {/* §13.3: Provisional is a qualifier carried ALONGSIDE the status, not a
+          fourth status. The heading used to be replaced by the word
+          "Provisional", which hid the underlying determination — a reader
+          could not tell whether the provisional verdict was in or out of
+          appetite. The banner above already states the qualifier and its
+          cause; the heading states what was decided. */}
+      <h2 className="verdict__heading">
+        {STATUS_LABEL[verdict.status]}
+        {isProvisional && <span className="verdict__heading-qualifier"> · Provisional</span>}
+      </h2>
       <p className="verdict__meta">
         <code>{verdict.use_case_id.slice(0, 8)}</code> · evaluated{' '}
         {new Date(verdict.attested_at).toLocaleDateString()}

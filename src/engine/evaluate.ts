@@ -6,6 +6,7 @@ import {
   resolveActivePacks,
 } from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
+import { provisionalReasons } from './provisional';
 import { fitsEnvelope, inheritableControls } from './envelope';
 import { assignTrack } from './track';
 import type { TrackAssignment } from './track';
@@ -435,7 +436,7 @@ function sortedById<T extends { id: string }>(items: T[]): T[] {
 }
 
 function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
-  return {
+  const base: EvaluationResult = {
     status: 'approved',
     tier: 'Low',
     track: 'III',
@@ -453,8 +454,14 @@ function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
     margin_target: 0,
     single_covered_invariants: [],
     explanation: emptyExplanation(),
+    provisional_reasons: [],
     ...overrides,
   };
+  // Derived AFTER the spread, at the single construction choke point every
+  // return path funnels through — so no path, including the early hard-line
+  // rejections, can omit it. A verdict silently lacking the field would read
+  // as "not provisional" to every consumer.
+  return { ...base, provisional_reasons: provisionalReasons(base.confidence_caveats, base.pack_versions) };
 }
 
 function emptyExplanation(): VerdictExplanation {

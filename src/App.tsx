@@ -7,6 +7,8 @@ import { getRole, setRole } from './store/role';
 import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
 import { getCurrentPolicyYaml } from './store/policy-source';
+import { loadPacks } from './store/packs';
+import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
 import './App.css';
 
@@ -52,9 +54,13 @@ export default function App() {
   // invalid policy) must not block the app from rendering (same pattern
   // as VD-8's reasoning-trace generation). Runs once per app lifetime —
   // seedAigateSelfAssessment() is idempotent and race-safe (P7-C01).
+  // P8-C04: seeded WITHOUT packs until now, so AIGate's own self-assessment
+  // was scored ignoring the UK pack its graph declares.
+  const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
+
   useEffect(() => {
     if (!policyResult.valid) return;
-    seedAigateSelfAssessment(policyResult.policy).catch((err) => {
+    seedAigateSelfAssessment(policyResult.policy, loadedPacks).catch((err) => {
       console.warn('AIGate self-assessment seeding failed:', err);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

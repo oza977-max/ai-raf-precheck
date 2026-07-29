@@ -5,7 +5,9 @@ import { loadPolicy } from '../store/policy';
 import { getUseCase, exportAll } from '../store/register';
 import { getAll } from '../store/audit';
 import { routeToWorkflow } from '../engine/workflow-router';
-import { seedAigateSelfAssessment, AIGATE_USE_CASE_ID } from './aigate-self-assessment';
+import { seedAigateSelfAssessment, AIGATE_USE_CASE_ID, AIGATE_USE_CASE_GRAPH } from './aigate-self-assessment';
+import { loadPacks } from '../store/packs';
+import { evaluate } from '../engine/evaluate';
 import type { PolicyFile } from '../engine/types';
 
 let policy: PolicyFile;
@@ -86,5 +88,33 @@ describe('seedAigateSelfAssessment (TC-LC-4-02)', () => {
       (e) => e.from_node_id === AIGATE_USE_CASE_ID && e.edge_type === 'provided_by_vendor' && e.to_node_id === vendorNode?.node_id,
     );
     expect(edge).toBeDefined();
+  });
+});
+
+// P8-C04, review pass 3. Every other test here calls the seed with no packs
+// and so relies on the default — meaning the App.tsx wiring could be dropped,
+// or getPackSources() could start returning nothing, and AIGate's own row
+// would quietly go back to claiming no regulatory basis applied to it while
+// its graph declares a jurisdiction. This asserts the packs actually reach
+// the evaluation.
+describe('seedAigateSelfAssessment — the declared jurisdiction is actually applied', () => {
+  it('supplying the packs changes the verdict: the no-regulatory-basis reason is not raised', async () => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/packs/ss1-23.yaml'), 'utf-8');
+    const { packs } = loadPacks({ 'policy/packs/ss1-23.yaml': yaml });
+    expect(packs.length).toBeGreaterThan(0);
+
+    const evaluated = evaluate(AIGATE_USE_CASE_GRAPH, policy, packs);
+    expect(evaluated.ok).toBe(true);
+    if (!evaluated.ok) return;
+
+    // The graph declares UK, so the UK pack activates and a basis exists.
+    expect(Object.keys(evaluated.value.pack_versions).length).toBeGreaterThan(0);
+    expect(evaluated.value.provisional_reasons).not.toContain('no_regulatory_basis');
+
+    // Without them, the same graph claims there is no basis — which is the
+    // false statement the wiring exists to prevent.
+    const withoutPacks = evaluate(AIGATE_USE_CASE_GRAPH, policy);
+    if (!withoutPacks.ok) return;
+    expect(withoutPacks.value.provisional_reasons).toContain('no_regulatory_basis');
   });
 });

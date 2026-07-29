@@ -1,6 +1,7 @@
 import { openRegisterDb } from './db';
 import { append, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
+import { isVerdictProvisional } from '../engine/provisional';
 
 // Rule 3 (cross-cutting.md §7): persistence-only, no evaluation logic, no LLM, no React.
 // Repository pattern (Fowler) — this is the only module that reaches into
@@ -52,7 +53,10 @@ function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyV
     ? auditEvents.find((e) => e.payload === latestVerdictEvent)
     : undefined;
 
-  const isProvisional = verdict ? verdict.confidence_caveats.some((c) => c.confidence === 'low') : false;
+  // ADR-EE-R3-1: read the engine's determination, never re-derive it. The
+  // register row and the verdict screen cannot disagree, because there is one
+  // determination.
+  const isProvisional = verdict ? isVerdictProvisional(verdict) : false;
 
   // Deviation (documented in build/prompts/P6-C01.md): compared against the
   // current loaded policy version, not "active pack versions" — jurisdiction
@@ -69,7 +73,8 @@ function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyV
     lifecycle_stage: metadata.lifecycle_stage,
     tier: metadata.tier,
     track: metadata.track,
-    current_verdict_status: verdict ? (isProvisional ? 'provisional' : verdict.status) : null,
+    current_verdict_status: verdict ? verdict.status : null,
+    provisional: isProvisional,
     last_evaluated_at: latestVerdictEventEntry?.occurred_at ?? null,
     policy_version_at_evaluation: verdict?.policy_version ?? null,
     stale_assessment: staleAssessment,

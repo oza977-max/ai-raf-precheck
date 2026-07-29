@@ -17,6 +17,7 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     pack_versions: {},
     applied_overrides: [],
     confidence_caveats: [],
+    provisional_reasons: [],
     boundary_proximity: false,
   margin_achieved: 0,
   margin_target: 0.1,
@@ -71,10 +72,16 @@ describe('VerdictDisplay', () => {
       confidence_caveats: [
         { ruleId: 'HL-003', field: 'decision_type', reason: 'Ambiguous regulatory text.', confidence: 'low' },
       ],
+      provisional_reasons: ['unsigned_pack_rules'],
     });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
     expect(screen.getByText(/provisional — legal review required/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /provisional/i })).toBeInTheDocument();
+    // P8-C04: the heading carries BOTH — what was decided, and that it is
+    // provisional. It used to show only the word "Provisional", which hid
+    // whether the case was in or out of appetite (§13.3).
+    const heading = screen.getByRole('heading', { name: /provisional/i });
+    expect(heading).toBeInTheDocument();
+    expect(heading.textContent).toMatch(/with controls/i);
     // The verdict body is still visible, not hidden, just clearly marked.
     expect(screen.getByText('INV-DATA-01')).toBeInTheDocument();
   });
@@ -333,5 +340,45 @@ describe('VerdictDisplay — CS-1 governance margin (code review 001, I-1)', () 
     // Honesty (NF-2): zero margin is a limit of the rulebook, and the UI
     // must say so rather than implying the use case was at fault.
     expect(screen.getByText(/limit of the rulebook, not of this use case/i)).toBeInTheDocument();
+  });
+});
+
+// P8-C04, review pass 2. The engine computed the cause and nothing rendered
+// it: a verdict provisional for the no-regulatory-basis reason showed
+// "legal review required" and no reason at all, because the banner only ever
+// listed low-confidence caveats — which exist solely for the OTHER cause.
+// This is the project's own computed-but-never-consumed defect class.
+describe('VerdictDisplay — the provisional cause is stated, not just the status', () => {
+  it('states the no-regulatory-basis cause when there are no caveats to fall back on', () => {
+    const verdict = makeVerdict({
+      confidence_caveats: [],
+      provisional_reasons: ['no_regulatory_basis'],
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    const banner = screen.getByRole('alert');
+    expect(banner).toHaveTextContent(/no jurisdiction pack applied/i);
+    // The honest part: the firm's own policy DID apply, so the text must not
+    // imply nothing was assessed.
+    expect(banner).toHaveTextContent(/own policy only/i);
+  });
+
+  it('states the unsigned-rules cause distinctly — the two do not collapse into one badge', () => {
+    const verdict = makeVerdict({
+      confidence_caveats: [],
+      provisional_reasons: ['unsigned_pack_rules'],
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    const banner = screen.getByRole('alert');
+    expect(banner).toHaveTextContent(/not yet adopted/i);
+    expect(banner).not.toHaveTextContent(/no jurisdiction pack applied/i);
+  });
+
+  it('states no cause when the verdict is not provisional', () => {
+    render(
+      <VerdictDisplay verdict={makeVerdict({ provisional_reasons: [] })} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

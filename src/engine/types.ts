@@ -1,6 +1,8 @@
 // Shared engine types. Rule 1 (cross-cutting.md §7): this file and evaluate.ts
 // import only from here and stdlib TS types — no React, no idb, no Anthropic SDK.
 
+import type { ProvisionalReason } from './provisional';
+
 export type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
 export type Track = 'I' | 'II' | 'III';
 export type VerdictStatus = 'approved' | 'approved_with_controls' | 'rejected';
@@ -19,6 +21,10 @@ export interface EvaluationResult {
   pack_versions: Record<string, string>;
   applied_overrides: AppliedOverride[];
   confidence_caveats: ConfidenceCaveat[];
+  // R3-JU-2 / R3-JU-6 (ADR-EE-R3-1). Empty when the verdict is not
+  // provisional; a verdict is Provisional if and only if this is non-empty.
+  // Consumers read it and never re-derive from confidence_caveats.
+  provisional_reasons: ProvisionalReason[];
   boundary_proximity: boolean;
   // CS-1 (HR-14): the margin actually achieved, its target, and the
   // invariants left at coverage depth 1. Reporting the number rather than a
