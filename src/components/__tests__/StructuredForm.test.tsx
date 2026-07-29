@@ -230,7 +230,11 @@ describe('StructuredForm — jurisdiction answered-state (P8-C01)', () => {
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
   });
 
-  it('TC-R3-JU-1-03: the two answers are mutually exclusive by construction', async () => {
+  // Supporting test for the "none" control's mechanics. No trace id: the two
+  // answers being mutually exclusive is how TC-R3-JU-1-02 and -03 are made to
+  // hold, not a test case of its own. Borrowing -03's id here made two tests
+  // claim the same coverage (spec-parity R7).
+  it('the two jurisdiction answers are mutually exclusive by construction', async () => {
     const user = userEvent.setup();
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
 
