@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 3 &middot; AIGate &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#expert-panel">Expert Panel</a></li>
+                <li><a href="#test-suite-overview">Test Suite Overview</a></li>
+                <li><a href="#r3-ju-jurisdiction-completeness">R3-JU — Jurisdiction Completeness</a></li>
+                <li><a href="#r3-rd-register-detail-verdict-visibility">R3-RD — Register Detail Verdict Visibility</a></li>
+                <li><a href="#r3-nf-non-functional">R3-NF — Non-Functional</a></li>
+                <li><a href="#traceability-matrix">Traceability Matrix</a></li>
+                <li><a href="#test-summary">Test Summary</a></li>
+</ul></nav>
+<main>
+<header>
+<h1>AIGate &mdash; Test Cases, Round 3</h1>
+<p class="subtitle">33 test cases across 13 requirements</p>
+<p class="meta">29 July 2026 &middot; Generated from test-cases-003.md &mdash; do not hand-edit</p>
+</header>
+                <p><em>Generated 2026-07-29 from <code>requirements/requirements-003.md</code> (commit 88ffd40).</em></p>
+                <p>Round 3 covers 13 requirements: R3-JU (7), R3-RD (4), R3-NF (2). Rounds 1 and 2 test cases live in <code>test-cases/test-cases.md</code> and are immutable.</p>
+            <section id="expert-panel">
+                <h2>Expert Panel</h2>
+                <table>
+                    <thead><tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr></thead>
+                    <tbody>
+                        <tr><td>Dan North</td><td><em>Introducing BDD</em> (2006)</td><td>Given/When/Then format; behaviour-focused names</td></tr>
+                        <tr><td>Lee Copeland</td><td><em>A Practitioner's Guide to Software Test Design</em> (2004)</td><td>Technique selection per requirement pattern</td></tr>
+                        <tr><td>Boris Beizer</td><td><em>Software Testing Techniques</em> (2nd ed., 1990)</td><td>Boundary and state-transition thoroughness</td></tr>
+                        <tr><td>Cem Kaner</td><td><em>Lessons Learned in Software Testing</em> (2001)</td><td>Realistic data; the states a real user actually reaches</td></tr>
+                        <tr><td>David MacIver</td><td>Hypothesis documentation</td><td>Property-based framing for the two non-functional requirements</td></tr>
+                        <tr><td>Nancy Leveson</td><td><em>Engineering a Safer World</em> (2012)</td><td>A silent default is an unenforced constraint — drives the negative assertions</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="test-suite-overview">
+                <h2>Test Suite Overview</h2>
+                <table>
+                    <thead><tr><th></th><th>Count</th></tr></thead>
+                    <tbody>
+                        <tr><td>Total test cases</td><td>33</td></tr>
+                        <tr><td>Must</td><td>26</td></tr>
+                        <tr><td>Should</td><td>7</td></tr>
+                        <tr><td><code>[EXAMPLE]</code>-tagged (EBT-1, one per Must requirement)</td><td>10</td></tr>
+                        <tr><td><code>[PROPERTY]</code>-tagged</td><td>2</td></tr>
+                        <tr><td><code>[SECURITY]</code>-tagged</td><td>1</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>Techniques applied.</strong> State-transition testing for the jurisdiction answered-state (three states, not two) and the correction/re-evaluation flow. Decision-table testing for the two independent causes of Provisional. Use-case testing for the reviewer's sign-off journey. Set-comparison assertions for R3-RD-1 and R3-JU-5, both of which are stated as set equality rather than rendered text. Property framing for the two non-functional requirements.</p>
+                <p><strong>Trace status.</strong> This project has no <code>impact-map.md</code>, so every test carries <code>[Trace: not-yet-traced]</code> — 33 of 33. Running <code>/gvm-impact-map</code> would close this; it is recorded, not silently omitted.</p>
+            </section>
+            <section id="r3-ju-jurisdiction-completeness">
+                <h2>R3-JU — Jurisdiction Completeness</h2>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-1-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">Untouched jurisdiction question blocks progress</div>
+                    <div class="tc-bdd"><p>Input: guided intake form, all other required fields completed, jurisdiction question never interacted with</p><p>Given a user completing the guided intake form</p><p>And every other required field has been answered</p><p>When the user has not interacted with the jurisdiction question at all</p><p>Then the output MUST contain: a disabled Continue action</p><p>And the output MUST NOT contain: an enabled Continue action</p><p>[Requirement: R3-JU-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-1-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Explicit "none / not sure" unblocks progress</div>
+                    <div class="tc-bdd"><p>Given a user completing the guided intake form</p><p>And every other required field has been answered</p><p>When the user explicitly selects "none / not sure" for jurisdiction</p><p>Then the Continue action is available</p><p>[Requirement: R3-JU-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-1-03 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">One or more jurisdictions selected unblocks progress</div>
+                    <div class="tc-bdd"><p>Given a user completing the guided intake form</p><p>And every other required field has been answered</p><p>When the user ticks UK and EU</p><p>Then the Continue action is available</p><p>[Requirement: R3-JU-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-1-04 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The three answered-states are distinguishable from persisted state</div>
+                    <div class="tc-bdd"><p>Given three intake drafts — one never interacted with, one answered "none / not sure",</p><p>  one with UK ticked</p><p>When each draft's persisted state is read</p><p>Then the three are distinguishable from one another</p><p>And "not answered" is not inferred from the selected set being empty</p><p>[Requirement: R3-JU-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Beizer state-transition. This is the test that would have failed before the requirement was amended: with <code>jurisdictions: string[]</code> alone, drafts one and two are byte-identical. The distinction is the requirement.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-1-05 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">Deselecting the last jurisdiction returns to answered, not unanswered</div>
+                    <div class="tc-bdd"><p>Given a user who has ticked UK</p><p>When the user unticks UK, leaving nothing selected</p><p>Then the jurisdiction question remains in an answered state</p><p>And the Continue action remains available</p><p>[Requirement: R3-JU-1] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Boundary case. Deselecting to empty must not be indistinguishable from never having answered — otherwise the user is silently returned to the blocked state with no explanation.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-2-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">"None / not sure" produces a Provisional verdict carrying its reason</div>
+                    <div class="tc-bdd"><p>Input: use case submitted with jurisdiction answered "none / not sure", data class Client PII, model type llm, autonomy L2, output execute, exposure client-facing, bindingness material, reversibility irreversible</p><p>Given a use case whose jurisdiction answer is "none / not sure"</p><p>When the engine evaluates it</p><p>Then the output MUST contain: a verdict status of Provisional</p><p>And the output MUST contain: a machine-readable reason identifying the no-regulatory-basis condition</p><p>And the output MUST NOT contain: an empty or absent provisional-reason value</p><p>[Requirement: R3-JU-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-2-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">A jurisdiction answer does not make a verdict Provisional by itself</div>
+                    <div class="tc-bdd"><p>Given a use case with UK ticked</p><p>And no unsigned pack rule fires for it</p><p>When the engine evaluates it</p><p>Then the verdict is not Provisional</p><p>[Requirement: R3-JU-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-2-03 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The register row shows Provisional for a no-jurisdiction submission</div>
+                    <div class="tc-bdd"><p>Given a use case submitted with jurisdiction answered "none / not sure"</p><p>When the register is opened</p><p>Then that use case's row shows Provisional</p><p>[Requirement: R3-JU-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-3-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">Verdict states in words that no regulatory basis was applied</div>
+                    <div class="tc-bdd"><p>Input: use case submitted with jurisdiction answered "none / not sure"</p><p>Given a verdict produced with no active jurisdiction packs</p><p>When the verdict is rendered</p><p>Then the output MUST contain: an explicit statement that no regulatory basis was applied</p><p>And the output MUST NOT contain: a silently omitted regulatory reasoning chain with no accompanying explanation</p><p>[Requirement: R3-JU-3] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Leveson. Absence communicated by absence is the defect; the assertion is on presence of the explanation, not on absence of the panel.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-3-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The statement is asserted separately from the labelled reason</div>
+                    <div class="tc-bdd"><p>Given a verdict produced with no active jurisdiction packs</p><p>When the verdict is rendered</p><p>Then the prose statement required by R3-JU-3 is present</p><p>And the labelled reason required by R3-JU-6 is present</p><p>And neither satisfies the assertion for the other</p><p>[Requirement: R3-JU-3] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Closes health-report issue HR3-03. An implementation providing only one of the two must fail exactly one of these assertions, not both and not neither.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-3-03 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">A verdict with active packs carries no no-basis statement</div>
+                    <div class="tc-bdd"><p>Given a use case with EU ticked, activating the EU AI Act pack</p><p>When the verdict is rendered</p><p>Then no statement claiming that no regulatory basis was applied is present</p><p>[Requirement: R3-JU-3] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-4-01 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">The jurisdiction question states what the answer controls</div>
+                    <div class="tc-bdd"><p>Given the guided intake form</p><p>When the jurisdiction question is read, including its help text</p><p>Then the text states that the answer determines which regulatory rules are applied</p><p>[Requirement: R3-JU-4] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-5-01 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">Every progress-blocking field carries both required signals</div>
+                    <div class="tc-bdd"><p>Given the guided intake form</p><p>When the set of fields whose absence disables the Continue action is enumerated</p><p>And the set of fields carrying a visible required-marker and aria-required="true" is enumerated</p><p>Then the two sets are identical</p><p>And neither set has a member outside the other</p><p>[Requirement: R3-JU-5] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Set equality in both directions. A one-directional assertion would pass an implementation that marks every field, including optional ones — which is as unhelpful to the user as marking none.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-5-02 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">Optional fields carry no required-marker</div>
+                    <div class="tc-bdd"><p>Given the guided intake form</p><p>When the optional platform and vendor fields are inspected</p><p>Then neither carries a required-marker</p><p>And neither carries aria-required="true"</p><p>[Requirement: R3-JU-5] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-6-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">A Provisional verdict names its cause</div>
+                    <div class="tc-bdd"><p>Input: use case submitted with jurisdiction answered "none / not sure", producing a Provisional verdict</p><p>Given a verdict marked Provisional because no jurisdiction was supplied</p><p>When the verdict is rendered</p><p>Then the output MUST contain: a stated reason identifying the no-regulatory-basis condition</p><p>And the output MUST NOT contain: an unexplained Provisional label with no cause given</p><p>[Requirement: R3-JU-6] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-6-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Unsigned pack rules give a different stated cause</div>
+                    <div class="tc-bdd"><p>Given a use case with UK ticked</p><p>And the SS1/23 pack carries a [FIRM] placeholder in its reviewer field, so its rules are unsigned</p><p>And one of its rules fires</p><p>When the verdict is rendered</p><p>Then the stated cause identifies the unsigned-pack-rules condition</p><p>And it does not identify the no-regulatory-basis condition</p><p>[Requirement: R3-JU-6] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Copeland decision table, condition pair one of four. This is the assertion that stops the two causes collapsing into one indistinguishable badge.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-6-03 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Both causes present are both stated</div>
+                    <div class="tc-bdd"><p>Given a use case answered "none / not sure" for jurisdiction</p><p>And a firing unsigned rule from a pack that is active for another reason</p><p>When the verdict is rendered</p><p>Then both causes are stated</p><p>[Requirement: R3-JU-6] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Decision table, condition pair four of four. If this combination is unreachable in the current policy, the test is marked unreachable with a recorded rationale rather than deleted — the requirement says "where more than one applies, all shall be stated".</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-6-04 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">A non-Provisional verdict states no cause</div>
+                    <div class="tc-bdd"><p>Given a use case with UK ticked and no unsigned rule firing</p><p>When the verdict is rendered</p><p>Then no provisional cause is stated</p><p>[Requirement: R3-JU-6] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Decision table, condition pair one of four — neither condition present.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-7-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">A pre-round-3 draft loads as unanswered</div>
+                    <div class="tc-bdd"><p>Input: a persisted intake draft in the pre-round-3 shape, carrying a jurisdictions array but no answered-state</p><p>Given a saved intake draft created before this round</p><p>When the draft is loaded into the guided form</p><p>Then the output MUST contain: an unanswered jurisdiction question and a disabled Continue action</p><p>And the output MUST NOT contain: an enabled Continue action derived from the draft's existing jurisdiction data</p><p>[Requirement: R3-JU-7] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-JU-7-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">A pre-round-3 draft with jurisdictions still requires a fresh answer</div>
+                    <div class="tc-bdd"><p>Given a saved draft created before this round with UK already in its jurisdictions array</p><p>When the draft is loaded</p><p>Then the jurisdiction question is unanswered</p><p>And the user must answer it before proceeding</p><p>[Requirement: R3-JU-7] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Kaner realistic data. The dangerous case is not the empty legacy draft — it is the populated one, which looks answered and is not.</div>
+                </div>
+            </section>
+            <section id="r3-rd-register-detail-verdict-visibility">
+                <h2>R3-RD — Register Detail Verdict Visibility</h2>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-1-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">Sign-off page shows all six decision-bearing elements</div>
+                    <div class="tc-bdd"><p>Input: register entry [SAMPLE] Client-facing wealth chatbot, High tier, Track II, with a persisted verdict</p><p>Given a use case with a persisted verdict</p><p>When a 2LoD reviewer opens it from the register</p><p>Then the output MUST contain: the verdict status and tier, the binding constraint id, every triggered invariant id with its citation, every control id in the minimal set with its evidence status, the governance margin figure with any no-headroom ids, and the standing conditions</p><p>And the output MUST NOT contain: a sign-off action presented without any of those six elements</p><p>[Requirement: R3-RD-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-1-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Invariant and control ids match the intake verdict as sets</div>
+                    <div class="tc-bdd"><p>Given a use case whose intake verdict listed 13 triggered invariants and 10 controls</p><p>When the same use case is opened from the register</p><p>Then the page lists the same 13 invariant ids</p><p>And the same 10 control ids</p><p>And the comparison is made on id sets, not on rendered text</p><p>[Requirement: R3-RD-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">The set framing is deliberate: ordering and surrounding prose may differ between the two views without failing, and content outside the six-element list is not asserted at all.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-1-03 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Each control shows its evidence status</div>
+                    <div class="tc-bdd"><p>Given a verdict whose minimal control set contains CTRL-ENC-01 (VERIFIED) and CTRL-REDTEAM-01 (UNVERIFIED)</p><p>When the use case is opened from the register</p><p>Then CTRL-ENC-01 is shown as VERIFIED</p><p>And CTRL-REDTEAM-01 is shown as UNVERIFIED</p><p>[Requirement: R3-RD-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">An unverified control rendered without its status would let a reviewer sign off believing evidence exists. Honesty is a functional requirement here.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-2-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">Entry with no recorded verdict says so and still permits sign-off</div>
+                    <div class="tc-bdd"><p>Input: a register entry with no verdict_produced audit event</p><p>Given a register entry for which no verdict was ever recorded</p><p>When a reviewer opens it</p><p>Then the output MUST contain: an explicit statement that no verdict is recorded, and available sign-off actions</p><p>And the output MUST NOT contain: an empty verdict panel presented as though it were the verdict</p><p>[Requirement: R3-RD-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-2-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The AIGate self-assessment entry renders without error</div>
+                    <div class="tc-bdd"><p>Given the seeded AIGate self-assessment register entry</p><p>When it is opened from the register</p><p>Then the page renders without error</p><p>And it either shows a verdict or states that none is recorded</p><p>[Requirement: R3-RD-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Kaner. This is the real legacy row on every install, not a hypothetical one.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-3-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">After correction and re-evaluation the latest verdict is shown</div>
+                    <div class="tc-bdd"><p>Input: a use case evaluated once, corrected, then re-evaluated to a different binding constraint</p><p>Given a use case that has been corrected and re-evaluated</p><p>When a reviewer opens it from the register</p><p>Then the output MUST contain: the binding constraint id from the latest verdict</p><p>And the output MUST NOT contain: the binding constraint id from the superseded verdict presented as current</p><p>[Requirement: R3-RD-3] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-3-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The sign-off audit event refers to the verdict displayed</div>
+                    <div class="tc-bdd"><p>Given a reviewer viewing a use case's latest verdict</p><p>When the reviewer approves it</p><p>Then the audit event written refers to that same verdict</p><p>[Requirement: R3-RD-3] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-4-01 <span class="priority should">Should</span> </div>
+                    <div class="tc-name">The verdict is readable without leaving the sign-off page</div>
+                    <div class="tc-bdd"><p>Given a use case with a persisted verdict open in the register detail</p><p>When the reviewer reads each of the six decision-bearing elements</p><p>Then no navigation away from the page is required</p><p>[Requirement: R3-RD-4] [Priority: SHOULD]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-RD-5-01 <span class="priority must">Must</span> <span class="priority-chip">SECURITY</span></div>
+                    <div class="tc-name">Verdict content is rendered as text, not interpreted as markup</div>
+                    <div class="tc-bdd"><p>Given a policy whose control evidence string contains markup characters</p><p>When the verdict is rendered on the register detail page</p><p>Then the characters appear as literal text</p><p>And no markup is interpreted</p><p>[Requirement: R3-RD-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">OWASP. R3-RD-1 renders policy-authored strings — evidence text, citations — onto a new surface. Pack content is human-authored and partly external in origin, so it is untrusted input to this view.</div>
+                </div>
+            </section>
+            <section id="r3-nf-non-functional">
+                <h2>R3-NF — Non-Functional</h2>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-NF-1-01 <span class="priority must">Must</span> <span class="priority-chip">PROPERTY</span></div>
+                    <div class="tc-name">Engine output is unchanged by round 3</div>
+                    <div class="tc-bdd"><p>Given any data-flow graph and policy</p><p>When evaluate() is called ten times with identical inputs</p><p>Then every serialized result is byte-identical</p><p>And the existing determinism test passes without modification</p><p>[Requirement: R3-NF-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Property: determinism. For all inputs i, evaluate(i) == evaluate(i). The property-detection heuristic returned no match for this requirement; the [PROPERTY] tag is applied on reviewer judgement and the mismatch is recorded in the Test Summary rather than resolved silently.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-NF-1-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">The engine island holds</div>
+                    <div class="tc-bdd"><p>Given the round 3 implementation is complete</p><p>When src/engine/* is inspected for imports</p><p>Then it imports only engine types and stdlib</p><p>And no React, storage, Date.now() or Math.random() appears in its call graph</p><p>[Requirement: R3-NF-1] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-NF-2-01 <span class="priority must">Must</span> <span class="priority-chip">PROPERTY</span></div>
+                    <div class="tc-name">Rendering the verdict writes no audit events</div>
+                    <div class="tc-bdd"><p>Given a register entry with N audit events</p><p>When the register detail page is opened and the verdict rendered</p><p>And the page is opened again</p><p>Then the entry still has exactly N audit events</p><p>[Requirement: R3-NF-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">Property: idempotence of a read. Opening a page any number of times leaves the trail unchanged. Stated over two opens because React StrictMode double-invokes mount effects, which is how the seeding race was introduced previously — a single open would not catch it.</div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R3-NF-2-02 <span class="priority must">Must</span> </div>
+                    <div class="tc-name">Sign-off writes exactly one event under double submission</div>
+                    <div class="tc-bdd"><p>Given a reviewer viewing a use case awaiting sign-off</p><p>When the Approve action is triggered twice in rapid succession</p><p>Then exactly one approval event is appended</p><p>[Requirement: R3-NF-2] [Priority: MUST]</p><p>[Trace: not-yet-traced]</p></div>
+                    <div class="fit-criterion">The audit trail is append-only evidence, so a duplicate cannot be cleaned up afterwards. Rendering the verdict adds content to this page but must not add a second write path.</div>
+                </div>
+            </section>
+            <section id="traceability-matrix">
+                <h2>Traceability Matrix</h2>
+                <table>
+                    <thead><tr><th>Requirement</th><th>Priority</th><th>Test Cases</th><th>Covered</th></tr></thead>
+                    <tbody>
+                        <tr><td>R3-JU-1</td><td>Must</td><td>TC-R3-JU-1-01, -02, -03, -04, -05</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-2</td><td>Must</td><td>TC-R3-JU-2-01, -02, -03</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-3</td><td>Must</td><td>TC-R3-JU-3-01, -02, -03</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-4</td><td>Should</td><td>TC-R3-JU-4-01</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-5</td><td>Should</td><td>TC-R3-JU-5-01, -02</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-6</td><td>Must</td><td>TC-R3-JU-6-01, -02, -03, -04</td><td>Yes</td></tr>
+                        <tr><td>R3-JU-7</td><td>Must</td><td>TC-R3-JU-7-01, -02</td><td>Yes</td></tr>
+                        <tr><td>R3-RD-1</td><td>Must</td><td>TC-R3-RD-1-01, -02, -03, TC-R3-RD-5-01</td><td>Yes</td></tr>
+                        <tr><td>R3-RD-2</td><td>Must</td><td>TC-R3-RD-2-01, -02</td><td>Yes</td></tr>
+                        <tr><td>R3-RD-3</td><td>Must</td><td>TC-R3-RD-3-01, -02</td><td>Yes</td></tr>
+                        <tr><td>R3-RD-4</td><td>Should</td><td>TC-R3-RD-4-01</td><td>Yes</td></tr>
+                        <tr><td>R3-NF-1</td><td>Must</td><td>TC-R3-NF-1-01, -02</td><td>Yes</td></tr>
+                        <tr><td>R3-NF-2</td><td>Must</td><td>TC-R3-NF-2-01, -02</td><td>Yes</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>Coverage: 13 of 13 requirements (100%). No orphan tests — every test names a round 3 requirement.</strong></p>
+            </section>
+            <section id="test-summary">
+                <h2>Test Summary</h2>
+                <table>
+                    <thead><tr><th>Priority</th><th>Requirements</th><th>Test cases</th></tr></thead>
+                    <tbody>
+                        <tr><td>Must</td><td>10</td><td>26</td></tr>
+                        <tr><td>Should</td><td>3</td><td>7</td></tr>
+                        <tr><td><strong>Total</strong></td><td><strong>13</strong></td><td><strong>33</strong></td></tr>
+                    </tbody>
+                </table>
+                <p>Every Must requirement carries at least one <code>[EXAMPLE]</code> test in the three-element shape (<code>Input:</code>, <code>MUST contain:</code>, <code>MUST NOT contain:</code>): R3-JU-1, R3-JU-2, R3-JU-3, R3-JU-6, R3-JU-7, R3-RD-1, R3-RD-2, R3-RD-3 plus the two non-functional requirements covered by property tests.</p>
+                <ul><li><strong>Trace integrity.</strong> All 33 tests carry <code>[Trace: not-yet-traced]</code>. This project has no <code>impact-map.md</code>, so the trace chain cannot resolve. Running <code>/gvm-impact-map</code> would close it. Recorded, not omitted.</li><li><strong>Property detection disagreement.</strong> The <code>_property_detection</code> heuristic returned an empty match for all 13 requirements, including R3-NF-1 (determinism) and R3-NF-2 (no side effect on read). Both are properties in MacIver's sense — one is a same-input-same-output law, the other an idempotence law. The <code>[PROPERTY]</code> tag was applied on judgement against the heuristic's result. Either the heuristic under-matches non-functional requirements phrased as constraints, or the tag is being over-applied here; worth a look before the next round rather than assuming the tool is right.</li><li><strong>TC-R3-JU-6-03</strong> may be unreachable under the current policy, since it needs a use case that both answers "none / not sure" and has a firing unsigned rule. If unreachable it is marked so with a rationale, not deleted — the requirement covers the case regardless of whether today's policy can produce it.</li><li><strong>HR3-08 carried forward.</strong> R3-RD-1 puts the verdict status — commonly "Approved with controls" — onto the register detail page for the first time. Existing single-match <code>/approved|rejected/i</code> queries must be tightened before this lands. That is a tech-spec and build concern, recorded here so it is not discovered by a red suite.</li></ul>
+            </section>
+</main>
+</div>
+</body>
+</html>
