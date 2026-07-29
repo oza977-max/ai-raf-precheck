@@ -1,0 +1,28 @@
+---
+schema_version: 1
+session_id: explore-004
+mission: >-
+  Correction session for charter 003. Three objectives, in the shape charter
+  002 used. First, re-test D-002 against reality: 003 recorded that the guided
+  form has no jurisdiction field, which is false — the field exists as a
+  checkbox fieldset and was missed because the form was filled by script and
+  the page text was read truncated. Establish what the real defect is, if any,
+  and record it honestly rather than quietly dropping the wrong one. Second,
+  re-check D-001, D-003 and D-007, all observed through the same faulty
+  instrument, by driving the form by hand — clicking and typing, not setting
+  values through JavaScript — since a script-set value bypasses exactly the
+  React state paths those three findings describe. Third, re-confirm D-004,
+  D-005, D-006 and D-008 still reproduce, and record whether they do rather
+  than carrying them forward on trust. Charter 003 stays as the record of what
+  was found and what was got wrong; this charter supersedes it as the gate.
+timebox_minutes: 60
+target:
+  - http://localhost:5173
+  - src/components/StructuredForm.tsx
+  - src/components/IntakeFlow.tsx
+  - src/components/RegisterView.tsx
+  - src/components/RegisterDetail.tsx
+  - src/seeds/sample-register.ts
+tour: feature
+runner: unassigned
+---
