@@ -260,6 +260,14 @@ describe('StructuredForm — jurisdiction answered-state (P8-C01)', () => {
     await user.click(screen.getByLabelText(/united kingdom/i)); // untick
     expect(screen.getByLabelText(/united kingdom/i)).not.toBeChecked();
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+
+    // Review pass 1 strengthened this. Asserting only "Continue stays
+    // enabled" passes equally against a bug that never updates the state
+    // away from 'selected' — the observable facts are identical. Asserting
+    // the "none" box became checked is what distinguishes a real transition
+    // to 'none' from stale 'selected'. Round 2's Critical in this project
+    // was exactly a test that could not fail.
+    expect(screen.getByLabelText(/none.*not sure/i)).toBeChecked();
   });
 
   it('TC-R3-JU-1-02: "none" submits an empty jurisdictions array — the engine contract is unchanged', async () => {
@@ -278,5 +286,56 @@ describe('StructuredForm — jurisdiction answered-state (P8-C01)', () => {
   it('TC-R3-JU-4-01: the question states that the answer decides which regulatory rules apply', () => {
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
     expect(screen.getByText(/decides which local rules apply/i)).toBeInTheDocument();
+  });
+});
+
+describe('StructuredForm — draft envelope (P8-C01, review pass 1)', () => {
+  // Review pass 1, finding 2. Inferring 'selected' from a populated
+  // jurisdictions array would let a draft written BEFORE this chunk pass the
+  // new gate — reopening, for every user holding one, exactly the defect
+  // R3-JU-1 closes. A pre-round-3 draft is a bare values object with no
+  // envelope, so it carries no answered-state and must load as unanswered.
+  it('a pre-round-3 draft with jurisdictions already ticked still loads as unanswered', () => {
+    sessionStorage.setItem(
+      'aigate:intake-form-draft',
+      JSON.stringify({
+        useCaseName: 'Legacy draft',
+        description: 'Saved before round 3.',
+        inputDataClass: 'Internal',
+        inputDataZone: 'Zone C',
+        modelType: 'traditional-ml',
+        autonomyLevel: 0,
+        processingDataZone: 'Zone C',
+        outputActionType: 'read',
+        outputExposure: 'internal-only',
+        decisionBindingness: 'non-binding',
+        outputReversibility: 'reversible',
+        outputScale: 'limited',
+        replacesPriorModel: false,
+        jurisdictions: ['UK'],
+      }),
+    );
+
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+
+    // Everything else is complete, so the gate can only be held by the
+    // missing jurisdiction ANSWER.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
+    sessionStorage.clear();
+  });
+
+  it('an answered "none" survives a remount — the answer is persisted, not re-derived', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await fillEverythingExceptJurisdiction(user);
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    unmount();
+
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/none.*not sure/i)).toBeChecked();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    sessionStorage.clear();
   });
 });

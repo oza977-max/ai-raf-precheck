@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ACTION_TYPES,
   DATA_CLASSES,
@@ -43,35 +43,71 @@ interface StructuredFormProps {
   onSubmit: (graph: DataFlowGraph) => void;
 }
 
+type JurisdictionAnswer = 'unanswered' | 'none' | 'selected';
+
+/** Persisted draft shape from P8-C01 onward. A bare values object is the
+ *  pre-round-3 shape and carries no answered-state (R3-JU-7). */
+interface FormDraftEnvelope {
+  values: Partial<StructuredFormValues>;
+  jurisdictionAnswer: JurisdictionAnswer;
+}
+
 export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], onSubmit }: StructuredFormProps) {
   // D-002/D-003: restore any half-filled form so a refresh or a trip to the
   // register no longer costs the user eleven answers.
-  const [values, setValues] = useState<Partial<StructuredFormValues>>(
-    () =>
-      loadFormDraft<Partial<StructuredFormValues>>() ?? {
-        autonomyLevel: 0,
-        replacesPriorModel: false,
-        jurisdictions: [],
-      },
-  );
-
-  // R3-JU-1 / ADR-IF-R3-1. The three answered-states live HERE, alongside
-  // `values` and deliberately not inside StructuredFormValues:
+  // R3-JU-1 / ADR-IF-R3-1. The answered-state is persisted ALONGSIDE the
+  // form values in a draft envelope, not inside StructuredFormValues:
   // buildGraphFromForm consumes StructuredFormValues and must not see a
   // form-only concern (verified: src/engine/build-graph-from-form.ts:86 —
   // `jurisdictions: values.jurisdictions`, unchanged by this chunk).
   //
   // An empty array cannot express the difference between "never touched"
   // and "answered: none", and that difference is the requirement — a user
-  // who has answered "none" has told us something; a user who has not
-  // answered has not.
-  const [jurisdictionAnswer, setJurisdictionAnswer] = useState<
-    'unanswered' | 'none' | 'selected'
-  >(() => ((loadFormDraft<Partial<StructuredFormValues>>()?.jurisdictions?.length ?? 0) > 0 ? 'selected' : 'unanswered'));
+  // who answered "none" told us something; a user who did not answer did not.
+  //
+  // A draft written before this chunk is a BARE values object with no
+  // envelope. It therefore carries no answered-state and loads as
+  // 'unanswered' — which is R3-JU-7's rule falling out of the shape rather
+  // than being special-cased. Inferring 'selected' from a populated
+  // jurisdictions array would let a pre-round-3 draft pass the new gate and
+  // reopen, for every user holding one, exactly the defect R3-JU-1 closes.
+  // Read the draft ONCE, at mount. Review pass 2 caught this running on every
+  // render — harmless, because the values are only consumed by lazy useState
+  // initialisers, but a needless sessionStorage read and JSON.parse per
+  // keystroke.
+  const restoredRef = useRef<{
+    restored: FormDraftEnvelope | Partial<StructuredFormValues> | null;
+    envelope: FormDraftEnvelope | null;
+  } | null>(null);
+  if (restoredRef.current === null) {
+    const raw = loadFormDraft<FormDraftEnvelope | Partial<StructuredFormValues>>();
+    restoredRef.current = {
+      restored: raw,
+      envelope: raw && typeof raw === 'object' && 'values' in raw ? (raw as FormDraftEnvelope) : null,
+    };
+  }
+  const restored = restoredRef.current.restored;
+  const restoredEnvelope = restoredRef.current.envelope;
+
+  const [values, setValues] = useState<Partial<StructuredFormValues>>(
+    () =>
+      restoredEnvelope?.values ??
+      (restoredEnvelope
+        ? {}
+        : ((restored as Partial<StructuredFormValues> | null) ?? null)) ?? {
+        autonomyLevel: 0,
+        replacesPriorModel: false,
+        jurisdictions: [],
+      },
+  );
+
+  const [jurisdictionAnswer, setJurisdictionAnswer] = useState<JurisdictionAnswer>(
+    () => restoredEnvelope?.jurisdictionAnswer ?? 'unanswered',
+  );
 
   useEffect(() => {
-    saveFormDraft(values);
-  }, [values]);
+    saveFormDraft({ values, jurisdictionAnswer });
+  }, [values, jurisdictionAnswer]);
 
   function update<K extends keyof StructuredFormValues>(field: K, value: StructuredFormValues[K]) {
     setValues((v) => ({ ...v, [field]: value }));
