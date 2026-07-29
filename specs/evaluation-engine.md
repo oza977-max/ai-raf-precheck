@@ -498,3 +498,110 @@ The engine guarantees determinism through:
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+---
+
+## 13. Round 3 — Provisional Reasons (R3-JU-2, R3-JU-6)
+
+### ADR-EE-R3-1 — The engine determines Provisional and names its reasons
+
+**Status:** Accepted. Supersedes the implicit arrangement described below.
+
+**Context.** Before round 3, "Provisional" was not a value the engine produced.
+It was derived independently by two consumers from the same expression:
+
+| Site | Expression |
+|---|---|
+| `VerdictDisplay.tsx:161` | `lowCaveats.length > 0` |
+| `store/register.ts:55` | `verdict.confidence_caveats.some(c => c.confidence === 'low')` |
+
+Two copies of one rule, in two layers, with no shared definition. This is a
+single-source-contract violation (`cross-cutting.md` §13): the contract lived
+in neither place and in both.
+
+Round 3 adds a second, independent cause — no regulatory basis applied — and
+R3-JU-6 requires the two to be distinguishable. Under the existing arrangement
+that would mean editing the same rule in two files and hoping neither drifted.
+A partial update would produce a use case whose verdict screen says Provisional
+and whose register row does not, or the reverse, with no test asserting they
+agree.
+
+**Options considered.**
+
+1. **Extend both derivations in place.** Cheapest edit, preserves the defect.
+   Rejected: it doubles down on a duplication that round 3 is about to make
+   twice as costly.
+2. **Extract a shared helper in `src/store/`.** Removes the duplication but puts
+   an appetite judgement in the persistence layer, which `cross-cutting.md` §7
+   defines as persistence-only. Also leaves the engine unable to state its own
+   confidence, so the verdict object remains incomplete on its own terms.
+3. **The engine emits the determination.** `evaluate()` populates a
+   `provisional_reasons` collection on the `Verdict`; consumers read it and
+   never re-derive. **Chosen.**
+
+**Decision.** The `Verdict` gains `provisional_reasons` — an ordered collection
+of named reasons, empty when the verdict is not provisional. Two reasons are
+defined in round 3:
+
+| Reason | Meaning | Raised when |
+|---|---|---|
+| `unsigned_pack_rules` | Rules were applied, but they are proposed interpretations pending firm adoption (NF-7) | Any fired pack rule is unsigned |
+| `no_regulatory_basis` | No regulatory rules were applied at all | No jurisdiction pack activated |
+
+A verdict is Provisional if and only if `provisional_reasons` is non-empty.
+Both consumers read that; neither re-derives it.
+
+**Consequences.** The two conditions can co-occur and both are then listed, in
+a fixed order, satisfying R3-JU-6's "where more than one applies, all shall be
+stated". The register and the verdict screen cannot disagree, because there is
+one determination. `VerdictDisplay.tsx:161` and `store/register.ts:55` are
+replaced by reads, not edited in parallel.
+
+### 13.1 Why the reasons are not interchangeable
+
+The two reasons are different claims and the distinction is the point of
+R3-JU-6. `unsigned_pack_rules` means a basis exists and has not yet been
+adopted by the firm. `no_regulatory_basis` means there is no basis. Presenting
+the second as the first would claim more than the engine can support — the
+failure mode this product treats as functional, not cosmetic.
+
+The engine states the condition; it does not rank them. Which is more serious
+is a firm judgement, not an engine one.
+
+### 13.2 Determinism (NF-1)
+
+`provisional_reasons` is derived from the same inputs as the rest of the
+verdict, in the same pass, with no clock and no randomness. Reasons are emitted
+in a fixed declaration order, not in discovery order, so two runs over identical
+inputs produce identical collections — the same rule that already governs policy
+iteration (§7). TC-PE-1-01 compares the whole serialized result across ten runs,
+so the new field is covered by the existing determinism test without
+modification, which is what R3-NF-1 asserts.
+
+### 13.3 What round 3 does not change
+
+The verdict `status` enum is untouched. Provisional is not a fourth status: it
+is a qualifier carried alongside the status, exactly as it was before round 3,
+and a Provisional verdict still has an underlying in-appetite or out-of-appetite
+determination. The engine's input contract is unchanged — `DataFlowGraph` gains
+nothing (see `intake-flow.md` ADR-IF-R3-1).
+
+### 13.4 Traceability
+
+| Requirement | Section |
+|---|---|
+| R3-JU-2 | ADR-EE-R3-1, §13.1 |
+| R3-JU-6 | ADR-EE-R3-1, §13.1 |
+| R3-NF-1 | §13.2 |
+
+| Test cases | Covers |
+|---|---|
+| TC-R3-JU-2-01, -02 | Reason emitted; a jurisdiction answer alone does not make a verdict Provisional |
+| TC-R3-JU-6-01 … -04 | All four condition pairs of the two reasons |
+| TC-R3-NF-1-01, -02 | Determinism and the engine island |
+
+## 14. Changelog
+
+| Date | Change |
+|---|---|
+| 2026-07-29 | §13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations in `VerdictDisplay.tsx` and `store/register.ts` that round 3 would otherwise have required editing in parallel. |

@@ -615,6 +615,74 @@ await audit.append({
       </tbody>
     </table>
 
+
+    <h2 id="r3-ju">13. Round 3 &mdash; Jurisdiction Completeness (R3-JU)</h2>
+
+    <p>Round 3 closes a defect found by exploratory charter 004: the jurisdiction fieldset exists and is offered, but nothing requires an answer. The completeness predicate tests the selected set for presence only, and an empty array is truthy, so the form advances with nothing ticked. The user then attests to a graph reading &ldquo;JURISDICTIONS &mdash; None specified&rdquo; and receives a verdict with no packs, no regulatory chain and no citations, with nothing saying so.</p>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R3-1</span>
+        <span class="adr-title">The answered-state lives on the form, not on the graph</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>R3-JU-1 requires the form to distinguish three states: not answered, answered &ldquo;none / not sure&rdquo;, and one or more jurisdictions selected. <code>DataFlowGraph.jurisdictions</code> is <code>string[]</code>. An empty array cannot express the difference between the first two, and that difference is the requirement.</p>
+        <h4>Options Considered</h4>
+        <ol>
+          <li><strong>Widen the graph</strong> &mdash; add an answered flag to <code>DataFlowGraph</code>. Rejected: the graph is the engine&rsquo;s input contract, and by the time the engine sees it the question has necessarily been answered. &ldquo;Not answered&rdquo; is a state of an in-progress form, never of a confirmed graph. Adding it would leak a presentation concern across the boundary in <code>cross-cutting.md</code> &sect;7 and change the contract every existing engine test asserts against.</li>
+          <li><strong>Sentinel value in the array</strong> &mdash; e.g. <code>["__none__"]</code>. Rejected: every consumer of <code>jurisdictions</code> would need to know the sentinel, and one that forgot would treat it as a jurisdiction code matching no pack. A silent wrong answer rather than a loud one.</li>
+          <li><strong>Form-level answered-state</strong> &mdash; the intake form carries the answered flag in its own state and its persisted draft; the graph continues to carry only the selected codes. <strong>Chosen.</strong></li>
+        </ol>
+        <h4>Decision</h4>
+        <p>The answered-state is form state. <code>buildGraphFromForm</code> continues to emit <code>jurisdictions: string[]</code>, unchanged, and &ldquo;answered: none&rdquo; emits <code>[]</code>. The engine&rsquo;s input contract is untouched.</p>
+        <h4>Consequences</h4>
+        <p>The distinction exists only while the form is open and in the persisted draft &mdash; exactly the scope that needs it. The engine cannot distinguish &ldquo;answered none&rdquo; from a programmatically constructed graph with no jurisdictions; both correctly produce the same verdict, because in both cases no regulatory basis was applied. That equivalence is intended, not a gap.</p>
+      </div>
+    </details>
+
+    <h3>13.1 The three answered-states</h3>
+    <table>
+      <thead><tr><th>State</th><th>Selected set</th><th>Continue</th><th>How reached</th></tr></thead>
+      <tbody>
+        <tr><td>Not answered</td><td><code>[]</code></td><td><strong>Disabled</strong></td><td>Initial state of a new form; a pre-round-3 draft (&sect;13.4)</td></tr>
+        <tr><td>Answered: none</td><td><code>[]</code></td><td>Enabled</td><td>User explicitly chooses &ldquo;none / not sure&rdquo;</td></tr>
+        <tr><td>Answered: selected</td><td>one or more codes</td><td>Enabled</td><td>User ticks at least one jurisdiction</td></tr>
+      </tbody>
+    </table>
+    <p>Deselecting the last ticked jurisdiction returns the question to <strong>answered: none</strong>, not to <em>not answered</em> (TC-R3-JU-1-05). A user who ticks and unticks has engaged with the question; silently returning them to a blocked state with no explanation would be a worse defect than the one being fixed.</p>
+
+    <h3>13.2 The &ldquo;none / not sure&rdquo; control</h3>
+    <p>Rendered as part of the same fieldset, not as a separate question. Choosing it clears any selected jurisdictions; ticking a jurisdiction clears it. The two are mutually exclusive by construction rather than by validation. The label is a plain-language question, per the &sect;5.2 convention: the submitter is told what the answer controls, not what the field is called.</p>
+
+    <h3>13.3 Required-field marking (R3-JU-5)</h3>
+    <p>Every field whose absence disables Continue carries <strong>both</strong> a visible required-marker and <code>aria-required="true"</code>. The two sets &mdash; fields that block progress, and fields that are marked &mdash; must be identical in both directions (TC-R3-JU-5-01). Marking every field, including the optional platform and vendor selects, fails the requirement as surely as marking none: it tells the user nothing.</p>
+
+    <h3>13.4 Draft migration (R3-JU-7)</h3>
+    <p><code>loadFormDraft</code> may return a draft persisted before round 3, carrying a <code>jurisdictions</code> array and no answered-state. Such a draft loads as <strong>not answered</strong>, regardless of whether its array is empty or populated.</p>
+    <p>The populated case is the dangerous one and the reason this is a requirement rather than an implementation note: a draft with <code>["UK"]</code> already in it looks answered. Accepting it would re-open the round-3 defect for every user holding a draft, invisibly &mdash; they would never see the question they had not answered.</p>
+
+    <h3>13.5 Traceability</h3>
+    <table>
+      <thead><tr><th>Requirement</th><th>Section</th></tr></thead>
+      <tbody>
+        <tr><td>R3-JU-1</td><td>&sect;13.1, ADR-IF-R3-1</td></tr>
+        <tr><td>R3-JU-4</td><td>&sect;13.2</td></tr>
+        <tr><td>R3-JU-5</td><td>&sect;13.3</td></tr>
+        <tr><td>R3-JU-7</td><td>&sect;13.4</td></tr>
+      </tbody>
+    </table>
+    <p>R3-JU-2, R3-JU-3 and R3-JU-6 are specified in <code>evaluation-engine.md</code> &sect;12 and <code>verdict-audit.md</code> &sect;10 &mdash; they concern the verdict, not the form.</p>
+
+    <h2 id="changelog">14. Changelog</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine&rsquo;s input contract unchanged.</td></tr>
+      </tbody>
+    </table>
+
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
   </main>
 </body>
