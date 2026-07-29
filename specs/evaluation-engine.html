@@ -779,6 +779,11 @@ interface VerdictTraceData {
     <h3>13.1 Why the reasons are not interchangeable</h3>
     <p>The two reasons are different claims and the distinction is the point of R3-JU-6. <code>unsigned_pack_rules</code> means a basis exists and has not yet been adopted by the firm. <code>no_regulatory_basis</code> means there is no basis. Presenting the second as the first would claim more than the engine can support &mdash; the failure mode this product treats as functional, not cosmetic. The engine states the condition; it does not rank them.</p>
 
+        <h3>13.1a What happens to the existing low-confidence caveat</h3>
+    <p><strong>Design review round 1, I-3.</strong> Before round 3, a verdict became Provisional because a <code>ConfidenceCaveat</code> carried <code>confidence: 'low'</code>, and <code>VerdictDisplay</code> rendered each such caveat's <code>reason</code> text. That mechanism is not removed by round 3, and leaving both live would give the component two independent provisional-detection paths that can disagree.</p>
+    <p>They are reconciled as producer and label, not as rivals. A fired unsigned pack rule continues to emit its <code>ConfidenceCaveat</code> at low confidence — that is the per-rule detail, and it keeps its existing RA-11 rendering. The engine reads those caveats and, where any is low-confidence, adds <code>unsigned_pack_rules</code> to <code>provisional_reasons</code>. The caveat says <em>which rule</em> is unadopted; the reason says <em>why the verdict as a whole</em> is provisional.</p>
+    <p><code>provisional_reasons</code> is the single determinant of Provisional status. No consumer may re-derive it from <code>confidence_caveats</code>; the caveats remain the detail rendered underneath.</p>
+
     <h3>13.2 Determinism (NF-1)</h3>
     <p><code>provisional_reasons</code> is derived from the same inputs as the rest of the verdict, in the same pass, with no clock and no randomness. Reasons are emitted in a fixed declaration order, not discovery order, so two runs over identical inputs produce identical collections. TC-PE-1-01 compares the whole serialized result across ten runs, so the new field is covered by the existing determinism test without modification &mdash; which is what R3-NF-1 asserts.</p>
 

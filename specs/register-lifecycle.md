@@ -536,11 +536,73 @@ Control evidence status is called out separately (TC-R3-RD-1-03) because an
 UNVERIFIED control rendered without its status would let a reviewer sign off
 believing evidence exists.
 
-### 15.2 No verdict recorded (R3-RD-2)
+### 15.1a Control evidence status comes from current policy (C-2)
+
+**Design review round 1, C-2.** Element 4 asks for each control's evidence
+status. That status is not carried on the `Verdict` — it lives on
+`PolicyFile.controls[].verification_evidence`, which `VerdictDisplay` reads
+live. So element 4 requires **today's** policy, while ADR-RL-R3-1 requires the
+verdict itself to be historical. As first written the two contradicted each
+other.
+
+They are reconciled by scope, and the split is deliberate:
+
+| Shown | Sourced from | Why |
+|---|---|---|
+| The verdict — status, tier, binding constraint, invariants, citations, margin, standing conditions | The persisted `verdict_produced` / `verdict_corrected` payload | It is the record of what was decided and attested. Recomputing it would change history. |
+| Control evidence status (VERIFIED / UNVERIFIED) | The current `PolicyFile` | It is a statement about the world *now* — whether evidence exists today, not whether it existed at evaluation time. A reviewer signing off today needs today's answer. |
+
+Presenting stale evidence status would be the dishonest option: it would tell a
+reviewer that evidence exists when it may since have lapsed. The two are
+labelled distinctly on the page so a reader can tell which is historical record
+and which is current state.
+
+**Prop path.** `PolicyFile` is loaded in `App.tsx` and must be threaded
+`App → RegisterView → RegisterDetail`. Neither `RegisterViewProps` nor
+`RegisterDetailProps` carries it today; both gain it in P8-C06. Where policy is
+unavailable, evidence status renders as unknown rather than as UNVERIFIED —
+absence of a policy is not evidence of absent evidence.
+
+### 15.1b Reusing VerdictDisplay on a reviewer's page (I-1, I-2)
+
+**Design review round 1, I-1.** `VerdictDisplay`'s `onCorrect` prop is
+required, and its "Correct this classification?" button renders
+unconditionally. §15.1's statement that the reclassification affordance is "not
+carried over" is therefore unbuildable by reuse alone — reuse would either put
+the affordance on the sign-off page or force a no-op handler behind a button
+that still invites the click.
+
+`onCorrect` becomes optional. The button, and the reasoning-trace disclosure,
+render only when it is supplied. `RegisterDetail` supplies neither, so neither
+appears — correction is a submitter action (`verdict-audit.md` §6.1), not a
+reviewer one.
+
+**Design review round 1, I-2.** R3-JU-6 requires a Provisional verdict to state
+which condition caused it, and it is not scoped to one screen. The sign-off
+page is now a place a verdict is rendered, so the requirement reaches it. The
+six-element list is extended: where the verdict is Provisional, its
+`provisional_reasons` are stated here too. A Provisional badge with no cause is
+the defect TC-R3-JU-6-01 rejects, and it would be worse on the page where
+someone signs their name.
+
+**Design review round 1, I-4.** `findLatestVerdictEvent` already exists in
+`store/register.ts` but is not exported. P8-C06 exports and reuses it rather
+than writing a third copy of the same scan — the duplication ADR-EE-R3-1 was
+written to close.
+
+### 15.2 No verdict recorded, and verdicts without explanation (R3-RD-2)
 
 Where no verdict-bearing event exists — the seeded AIGate self-assessment is the
 real case on every install — the page states plainly that no verdict is
-recorded and leaves sign-off available. It does not render an empty panel, and
+recorded and leaves sign-off available.
+
+**Design review round 1, I-10.** A second legacy state exists and is
+distinct: a verdict persisted before V1.1-C01 has no `explanation`, so elements
+2 and 3 (binding constraint, triggered invariants with citations) have no
+source. The page states that the recorded verdict predates explanation capture
+and shows the elements it does have, rather than rendering an empty invariant
+list. An empty list would read as "nothing was triggered", which is a stronger
+and false claim. It does not render an empty panel, and
 it does not hide the section. An empty panel presented as a verdict is the same
 class of defect as the missing panel it replaces.
 

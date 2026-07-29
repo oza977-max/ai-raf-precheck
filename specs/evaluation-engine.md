@@ -568,6 +568,25 @@ failure mode this product treats as functional, not cosmetic.
 The engine states the condition; it does not rank them. Which is more serious
 is a firm judgement, not an engine one.
 
+### 13.1a What happens to the existing low-confidence caveat
+
+**Design review round 1, I-3.** Before round 3, a verdict became Provisional
+because a `ConfidenceCaveat` carried `confidence: 'low'`, and
+`VerdictDisplay` rendered each such caveat's `reason` text. That mechanism is
+not removed by round 3, and leaving both live would give the component two
+independent provisional-detection paths that can disagree.
+
+They are reconciled as producer and label, not as rivals. A fired unsigned pack
+rule continues to emit its `ConfidenceCaveat` at low confidence — that is the
+per-rule detail, and it keeps its existing RA-11 rendering. The engine reads
+those caveats and, where any is low-confidence, adds `unsigned_pack_rules` to
+`provisional_reasons`. The caveat says *which rule* is unadopted; the reason
+says *why the verdict as a whole* is provisional.
+
+`provisional_reasons` is the single determinant of Provisional status. No
+consumer may re-derive it from `confidence_caveats`; the caveats remain the
+detail rendered underneath.
+
 ### 13.2 Determinism (NF-1)
 
 `provisional_reasons` is derived from the same inputs as the rest of the

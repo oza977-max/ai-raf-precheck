@@ -530,7 +530,7 @@ Every rule in a pack **must** have:
 - `source.document` — the regulation name
 - `source.section` — the article/section number
 - `source.text` — verbatim regulatory text (not paraphrased)
-- `confidence` — `High | Medium | Low`
+- `basis` — `verbatim | derived | judgement` (V2-E; replaced `confidence`)
 - `reviewer_name` — name of the human reviewer
 - `reviewer_role` — role of the reviewer
 - `sign_off_date` — ISO 8601 date
@@ -671,7 +671,7 @@ The loader performs these checks on every load. All checks must pass before the 
 | Each rule has `source.document` | `pack-invalid: [pack-id] rule [rule-id] missing source.document` |
 | Each rule has `source.section` | `pack-invalid: [pack-id] rule [rule-id] missing source.section` |
 | Each rule has `source.text` | `pack-invalid: [pack-id] rule [rule-id] missing source.text` |
-| Each rule has `confidence` of `High | Medium | Low` | `pack-invalid: [pack-id] rule [rule-id] invalid confidence value` |
+| Each rule has `basis` of `verbatim | derived | judgement` | `pack-invalid: [pack-id] rule [rule-id] invalid basis value` |
 | Each rule has `reviewer_name` | `pack-invalid: [pack-id] rule [rule-id] missing reviewer_name` |
 | Each rule has `sign_off_date` | `pack-invalid: [pack-id] rule [rule-id] missing sign_off_date` |
 | Each rule has `source.source_url` | `pack-invalid: [pack-id] rule [rule-id] missing source.source_url` |

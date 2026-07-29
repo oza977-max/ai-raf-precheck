@@ -424,6 +424,25 @@ The two must be textually distinguishable, not merely both present under one
 "Provisional" banner. A reader must be able to tell, without opening the policy,
 whether rules were applied and not yet adopted, or not applied at all.
 
+### 13.2a Policy-authored content is rendered as text, never as markup (I-6)
+
+**Design review round 1, I-6.** R3-RD-1 puts policy-authored strings —
+`source_text`, control evidence detail, invariant descriptions, standing
+conditions — onto a second rendering surface. Pack content is human-authored
+and partly external in origin; `eu-ai-act.yaml` says in its own header that its
+text has not been verified by a lawyer.
+
+Today nothing is interpreted as markup, because JSX interpolates children as
+text and `dangerouslySetInnerHTML` appears nowhere in `src/`. But that is a
+framework default, not a stated rule, and TC-R3-RD-5-01 is a single test — a
+test is not a control.
+
+**Invariant:** all content sourced from `PolicyFile` or a `JurisdictionPack` is
+rendered as plain text through JSX child interpolation. `dangerouslySetInnerHTML`
+and any markdown or HTML renderer are prohibited on those fields. A future
+change adding markdown rendering for quoted `source_text` — plausible, since it
+already renders inside a blockquote — must not apply it to pack-sourced fields.
+
 ### 13.3 Constraint — the verdict-query collision (HR3-08)
 
 Existing UI tests assert the verdict screen with a single-match
@@ -434,7 +453,33 @@ first time. Any new string introduced by §13 must avoid the words "approved" an
 lands. This is a build-ordering constraint, recorded here so it is not
 discovered by a red suite.
 
-### 13.4 Traceability
+### 13.4 The sign-off event must name the verdict it attests to (R3-RD-3)
+
+**Design review round 1, C-1.** The `twoloD_reviewed` payload is
+`{ type, action, notes? }` — it carries no reference to the verdict being
+signed off. R3-RD-3's fit criterion ("the audit event written on sign-off
+refers to that same verdict") is therefore unimplementable as the schema
+stands, and TC-R3-RD-3-02 could only be written vacuously.
+
+The payload gains `verdict_id: string`, following the pattern the schema
+already uses — `verdict_corrected.original_verdict_id` and
+`reasoning_trace_generated.verdict_id`. The value is the id of the verdict the
+page actually rendered, threaded from the render, **not** re-derived by a
+second "latest event" lookup at write time. A second lookup would reintroduce
+precisely the race this closes.
+
+**The race it closes.** Without the id, a `verdict_corrected` event landing
+between the page's load and the reviewer's click means the attestation is
+recorded against whatever is current, with nothing recording what the reviewer
+saw. It could never afterwards be established — for or against — which verdict
+was attested. For an attestation this product frames as carrying legal weight,
+that is the defect, not an edge case.
+
+Where the rendered verdict's id no longer matches the latest verdict-bearing
+event at write time, the write is refused and the reviewer is told the verdict
+changed while they were reading, rather than silently attesting to the new one.
+
+### 13.5 Traceability
 
 | Requirement | Section | Test cases |
 |---|---|---|

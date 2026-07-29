@@ -457,6 +457,21 @@ Deselecting the last ticked jurisdiction returns the question to
 unticks has engaged with the question; silently returning them to a blocked
 state with no explanation would be a worse defect than the one being fixed.
 
+**Design review round 1, I-7 — the field is pinned here.** Three chunks
+(P8-C01, P8-C02, P8-C03) touch this state, potentially in parallel, so the
+shape is fixed in the spec rather than left to whoever builds first:
+`jurisdictionAnswer: 'unanswered' | 'none' | 'selected'`, held in the form's
+own state and its persisted draft, **alongside** `Partial<StructuredFormValues>`
+and not inside it — `buildGraphFromForm` consumes `StructuredFormValues` and
+must not see a form-only concern (ADR-IF-R3-1).
+
+**Design review round 1, I-11 — a boundary this builds on.** `intake-draft.ts`
+performs `sessionStorage` I/O from `src/components/`, which `cross-cutting.md`
+§7 reserves for `src/store/`. That crossing predates round 3. R3-JU-7 extends
+it rather than correcting it, knowingly: moving draft persistence into
+`src/store/` is a refactor of shipped code that round 3 did not scope. Recorded
+here so it is a decision on the record, not a blind spot.
+
 ### 13.2 The "none / not sure" control
 
 Rendered as part of the same fieldset, not as a separate question. Choosing it
@@ -474,6 +489,14 @@ progress, and fields that are marked — must be identical in both directions
 (TC-R3-JU-5-01). Marking every field, including the optional platform and vendor
 selects, fails the requirement as surely as marking none: it tells the user
 nothing.
+
+**Design review round 1, I-8.** `isComplete` is a hand-written boolean
+conjunction, so "the set of fields that block progress" is not enumerable and
+the test cannot check set equality without hardcoding the same list a second
+time — recreating, in test code, exactly the un-synced duplication this
+requirement exists to prevent. A single required-field list is therefore the
+source of truth: `isComplete` derives from it, the markers render from it, and
+the test reads it. P8-C02 budgets that refactor; it is not incidental work.
 
 ### 13.4 Draft migration (R3-JU-7)
 

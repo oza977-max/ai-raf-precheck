@@ -20,6 +20,7 @@ against.
 | 1 | 2026-07-27 | oracle | fable+opus, blind | — | — | — | 30/31 status, 24/31 binding |
 | 2 | 2026-07-27 | oracle | fable+opus, blind | — | — | — | 30/31 status, **31/31 binding** |
 | 2 | 2026-07-28 | code | A,B,C,D,E | 3 | 3 | 3 | **Merge with caveats** |
+| 1 | 2026-07-29 | design | A,B,C,D,E,F | 2 | 11 | 2 | **Build with caveats** |
 
 ## Round 1 measurements
 
@@ -258,3 +259,72 @@ ref guard its neighbours had. explore-002 checked adjacent surfaces (2LoD
 approve) and found them guarded, so the defect was isolated rather than
 systemic. When a defect class is fixed in one place, audit every sibling
 call site — not just the one that failed.
+
+---
+
+## Round 1 (design) measurements — 2026-07-29
+
+First recorded design round. `design-review-001.html` exists but carries no
+verdict string and no score-history row, so there was no design baseline; this
+round establishes one.
+
+**Capture-recapture.** 3 cross-panel overlaps (B∩C ×2 on `onCorrect` and
+`findLatestVerdictEvent`; C∩E ×1 on the missing `verdict_id`). Lincoln-Petersen
+across those pairs estimates ~11 against 15 unique found — coverage above the
+80% threshold, so R2 was not indicated. Treat the estimate as soft: three
+overlaps is a thin basis.
+
+**Panel yield.** A 2, B 5, C 4, D 5, E 3, F 1. Panel B and Panel D carried the
+round — both by reading source rather than specs. Panel A's single Important
+(R3-JU-6 untraced) was the one finding no code read could have produced.
+
+**The dominant failure mode, and it is not new.** Both Criticals and two
+Importants (I-1, I-5) have one cause: a claim written into a spec and never
+checked against the code it describes. Specifically — the sign-off payload was
+assumed able to carry a verdict reference; the reclassification affordance was
+assumed suppressible by not mentioning it; control evidence status was assumed
+to live on the Verdict; StrictMode semantics were assumed backwards. Each check
+was one command.
+
+This is the third occurrence in recent project history: charter 003's D-002
+(claimed a form field absent that was present), the Phase 8 query-tightening
+premise (claimed tests would break that could not), and now these four. Round
+2 (code) already recorded "verify documentation claims against behaviour, not
+against other documents" and its Criticals were all prose contradicting shipped
+code. **Two consecutive rounds is the promotion threshold under shared rule 21
+approaching; a third makes it mandatory.** Promoted to a build check now rather
+than waiting — see `build-checks.md` BC-001.
+
+**What held.** ADR-EE-R3-1 was probed by two panels as possible scope creep and
+independently defended by both. Panel F found the (H,H) risk lower than the tree
+assumed — `VerdictDisplay` has no effects at all. No vacuous tests in the
+original 33, which is a change from round 2 where the Critical was exactly that.
+
+## Anchor examples — design (new)
+
+**Worst, contracts (score 6):** register-lifecycle §15.1 stated the
+reclassification affordance was "deliberately not carried over" while
+`VerdictDisplay`'s `onCorrect` prop was required and its button ungated. The
+spec described an outcome the component could not produce.
+
+**Worst, coverage (score 8):** R3-JU-6 ("a Provisional verdict states its
+cause") was never traced onto the sign-off page — a rendering surface the same
+round created. The requirement was not scoped to one screen; the design assumed
+it was.
+
+**Best, structure (score 7 despite):** ADR-EE-R3-1 diagnosed a real pre-existing
+duplication, rejected the cheap fix with a stated reason, and disclosed the
+scope expansion in the chunk plan. Two panels probed it for scope creep and both
+cleared it.
+
+## For round 4
+
+1. Strict criterion continues. Dual review now genuinely triggers — three
+   completed rounds across types.
+2. **BC-001 applies** (see build-checks.md): every spec claim about an existing
+   symbol must cite the file:line it was verified against.
+3. RF-2 (.md/.html divergence) recurred again this round — four consecutive.
+   Round 3 mitigated it for requirements and test-cases by generating the HTML;
+   the four domain specs are still hand-maintained twins and drifted twice
+   during this session's edits, caught only by scripted probes. Generating them
+   is now overdue.
