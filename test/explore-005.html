@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-005</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-005</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-005</li>
+<li><strong>Mission:</strong> Micro-charter opened out of band. During the P8-C02 live smoke a reload on the Duplicates step left the flow hanging on its loading placeholder with no way forward, and the resumed-session banner&#x27;s escape hatch did not clear it either. The finding is unrelated to P8-C02&#x27;s changes and has no round-3 requirement, so it is recorded here rather than folded into a build chunk. Scope is deliberately narrow: establish, against the code and not against memory, what a restored draft does to state that was never persisted, and what &#x27;Start over instead&#x27; actually dispatches. Every claim below cites the file:line it was verified at, per BC-001.</li>
+<li><strong>Tour:</strong> feature</li>
+<li><strong>Timebox (minutes):</strong> 20</li>
+<li><strong>Runner:</strong> unassigned</li>
+<li><strong>Target:</strong><ul>
+<li>http://localhost:5173</li>
+<li>src/components/IntakeFlow.tsx</li>
+<li>src/components/intake-state.ts</li>
+<li>src/components/intake-draft.ts</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>Entered from the P8-C02 live smoke, not from a planned tour. Started a new pre-check, typed a description, clicked &#x27;Read &amp; extract -&gt;&#x27; to reach step 2 (Duplicates), then reloaded the page. The restored flow rendered &#x27;Checking the existing inventory for similar use cases...&#x27; and stayed there.</li>
+<li>Traced the placeholder to its condition. <code>duplicateCheckDone</code> is component state initialised false at IntakeFlow.tsx:62 and set true at exactly one site, IntakeFlow.tsx:123 -- the last statement of <code>handleSubmitDescription</code>. The render branch at IntakeFlow.tsx:468 shows the placeholder whenever it is false.</li>
+<li>Traced the restore. The reducer is lazily initialised from the persisted draft at IntakeFlow.tsx:44, so a reload re-enters <code>step: &#x27;duplicate_check&#x27;</code> directly. Nothing on that path calls <code>handleSubmitDescription</code>, so the flag stays false. <code>duplicateMatch</code> (IntakeFlow.tsx:61) is stranded the same way. Neither is in <code>IntakeState</code> (intake-state.ts:8-53), so neither is persisted -- the draft restores the step but not the work the step depends on.</li>
+<li>Confirmed there is no other way out of the step: the &#x27;This is a new use case -&gt;&#x27; button exists only inside the resolved arm of that same ternary (IntakeFlow.tsx:496), so it is not rendered while the placeholder is.</li>
+<li>Traced &#x27;Start over instead&#x27;. <code>handleStartOver</code> (IntakeFlow.tsx:50-54) dispatches <code>DESCRIPTION_CHANGED</code>, and the reducer&#x27;s first guard, intake-state.ts:87, returns the state object unchanged unless the step is already <code>description_entry</code>. No action in the union (intake-state.ts:55-82) resets the machine from an arbitrary step. The banner hides because <code>setShowResumed(false)</code> at IntakeFlow.tsx:52 is real; the screen does not change because the dispatch is a no-op.</li>
+<li>Checked what the failed reset does leave behind. <code>clearDraft()</code> at IntakeFlow.tsx:51 does run, and the persistence effect at IntakeFlow.tsx:205-210 does not re-run because the state identity is unchanged, so the draft stays cleared. A second reload therefore lands on a clean description entry. That is an accidental escape, not a designed one, and nothing on screen suggests it.</li>
+<li>Checked the same handler against the guided form&#x27;s separate draft. <code>clearFormDraft</code> exists at intake-draft.ts:84 and <code>handleStartOver</code> never calls it, so a start-over from the form step leaves the previous answers in sessionStorage under <code>aigate:intake-form-draft</code>.</li>
+<li>Noted in passing that <code>submittedDescription</code> (IntakeFlow.tsx:67) is set only in <code>handleSubmitDescription</code> and is read by <code>detectContradictions</code> at IntakeFlow.tsx:412. A draft restored at the questionnaire step therefore runs contradiction detection against an empty description. Recorded as O-001, not re-tested here.</li>
+</ul>
+<h2>Defects</h2>
+<h3>D-001 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> a user part-way through a new pre-check who has reached step 2 (Duplicates) and reloads the page, or navigates away and back</li>
+<li><strong>When:</strong> the draft is restored and the flow re-enters <code>step: &#x27;duplicate_check&#x27;</code></li>
+<li><strong>Then:</strong> the screen reads &#x27;Checking the existing inventory for similar use cases...&#x27; indefinitely. The duplicate check is not re-run and cannot be: <code>duplicateCheckDone</code> is component state (IntakeFlow.tsx:62) written at exactly one site, the tail of <code>handleSubmitDescription</code> (IntakeFlow.tsx:123), which a restored session never calls. The &#x27;This is a new use case -&gt;&#x27; button that would advance the flow is rendered only in the resolved arm of the same ternary (IntakeFlow.tsx:496), so no control to leave the step exists on screen. The draft restore was built to persist <code>IntakeState</code> (intake-state.ts:8-53), and the result of the duplicate check is not part of it -- the step is restored without the work it depends on.</li>
+<li><strong>Reproduction:</strong> 1. Start a new pre-check and type any description. 2. Click &#x27;Read &amp; extract -&gt;&#x27; to reach step 2 (Duplicates). 3. Reload the page. 4. The restored flow shows the loading placeholder and never resolves; no button is offered.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-002 — Important</h3>
+<ul>
+<li><strong>Given:</strong> a user looking at the &#x27;Picked up where you left off&#x27; banner on any restored step other than description entry</li>
+<li><strong>When:</strong> they click &#x27;Start over instead&#x27; -- the only escape offered from D-001</li>
+<li><strong>Then:</strong> the banner disappears and the screen does not change. <code>handleStartOver</code> (IntakeFlow.tsx:50-54) dispatches <code>DESCRIPTION_CHANGED</code>, which the reducer discards outright for any step but <code>description_entry</code> (intake-state.ts:87); the action union carries no reset action at all (intake-state.ts:55-82). The banner hides only because <code>setShowResumed(false)</code> (IntakeFlow.tsx:52) is a real state write. The draft is genuinely cleared (IntakeFlow.tsx:51) and is not rewritten, because the persistence effect (IntakeFlow.tsx:205-210) does not re-run on an unchanged state identity -- so a further reload does escape. Nothing tells the user that. Separately, the handler never calls <code>clearFormDraft</code> (intake-draft.ts:84), so the guided form&#x27;s answers survive a start-over under <code>aigate:intake-form-draft</code>.</li>
+<li><strong>Reproduction:</strong> 1. Reach any step past description entry and reload, so the resumed banner appears. 2. Click &#x27;Start over instead&#x27;. 3. The banner goes; the step does not. 4. Reload again: only now does the flow return to a blank description entry.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Observations</h2>
+<h3>O-001</h3>
+<ul>
+<li><strong>Given:</strong> a draft restored at the questionnaire step</li>
+<li><strong>When:</strong> the user submits an answer and <code>detectContradictions</code> runs at IntakeFlow.tsx:412</li>
+<li><strong>Then:</strong> its first argument, <code>submittedDescription</code> (IntakeFlow.tsx:67), is still the initial empty string, because it too is written only inside <code>handleSubmitDescription</code> (IntakeFlow.tsx:99). This is the same class as D-001 -- state the restored step depends on that the draft envelope does not carry -- but it degrades quietly rather than hanging, and it was traced in the code rather than reproduced in the browser this session. Recorded so it is not rediscovered as new.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>O-002</h3>
+<ul>
+<li><strong>Given:</strong> any first render of the app, restored draft or not</li>
+<li><strong>When:</strong> <code>refreshRegister</code> (IntakeFlow.tsx) reads <code>getUseCases(&#x27;all&#x27;)</code> while App&#x27;s seeding effect (App.tsx:56) is still in flight</li>
+<li><strong>Then:</strong> the duplicate-check screen can report &#x27;checked 0 register entries&#x27; although the AIGate self-assessment is about to appear. The seeding is deliberately fire-and-forget and best-effort (App.tsx:50-60, LC-6), and IntakeFlow has no way to know it is pending -- there is no completion signal to await. This is pre-existing and independent of D-001: it is reachable on the normal click path too. Found while fixing D-001, when a test written on the assumption that the register is seeded by first render failed against reality. Not fixed here -- the fix is a seeding-completion signal, which is a wider change than this charter&#x27;s scope, and stating a count the product has not established is an NF-2 honesty issue worth its own requirement.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>O-003</h3>
+<ul>
+<li><strong>Given:</strong> the test suite as it stands at <code>34efcdb</code>, P8-C02&#x27;s own required-field-marker test</li>
+<li><strong>When:</strong> the FULL suite is run repeatedly (<code>npm test</code>, not a single file)</li>
+<li><strong>Then:</strong> <code>TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set</code> fails intermittently on a 5000ms timeout. Measured, not inferred: at HEAD with this charter&#x27;s changes stashed it failed <strong>3 of 6</strong> full-suite runs; the same file run alone passed <strong>6 of 6</strong>; with this charter&#x27;s fix applied it failed 1 of 6. It is therefore pre-existing, unrelated to D-001/D-002, and load-dependent rather than ordering-dependent -- the test is slow enough that suite-level parallelism pushes it past its timeout. Not fixed here: it belongs to P8-C02 and needs that chunk&#x27;s author to decide between raising the timeout and making the test cheaper. Recorded because a flake at this rate defeats the standing &#x27;run the full suite 3x before calling anything done&#x27; rule -- it will keep producing failures that get attributed to whatever change happens to be in the tree.</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Overall Assessment</h2>
+<p>One Critical, one Important, one observation, all of a single shape: the draft restore persists <code>IntakeState</code> and nothing else, so any step whose screen depends on component state written by the handler that normally enters it comes back broken. The duplicate-check step is the visible case because its loading placeholder is the default arm of a ternary whose only exit button lives in the other arm -- restoring the step without the flag renders a screen with no way forward at all. The banner&#x27;s &#x27;Start over instead&#x27; is not a mitigation: it dispatches an action the reducer discards from that step, so it hides itself and changes nothing. The reset works only by accident, on a second reload, because the draft was already cleared before the no-op dispatch. The fix is not more persistence -- the duplicate check is a derived result and should be derived on entry to the step, however the step was entered -- plus a real reset action so the escape hatch is one the reducer can honour. O-001 says the same envelope gap has at least one other consumer, and it should be closed with the same reasoning rather than by widening the draft schema field by field.</p>
+</body>
+</html>

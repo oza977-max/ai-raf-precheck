@@ -1,0 +1,22 @@
+---
+schema_version: 1
+session_id: explore-005
+mission: >-
+  Micro-charter opened out of band. During the P8-C02 live smoke a reload on
+  the Duplicates step left the flow hanging on its loading placeholder with no
+  way forward, and the resumed-session banner's escape hatch did not clear it
+  either. The finding is unrelated to P8-C02's changes and has no round-3
+  requirement, so it is recorded here rather than folded into a build chunk.
+  Scope is deliberately narrow: establish, against the code and not against
+  memory, what a restored draft does to state that was never persisted, and
+  what 'Start over instead' actually dispatches. Every claim below cites the
+  file:line it was verified at, per BC-001.
+timebox_minutes: 20
+target:
+  - http://localhost:5173
+  - src/components/IntakeFlow.tsx
+  - src/components/intake-state.ts
+  - src/components/intake-draft.ts
+tour: feature
+runner: unassigned
+---
