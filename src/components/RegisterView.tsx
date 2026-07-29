@@ -15,7 +15,6 @@ const STATUS_LABEL: Record<NonNullable<UseCaseSummary['current_verdict_status']>
   approved: 'Approved',
   approved_with_controls: 'Approved with controls',
   rejected: 'Rejected',
-  provisional: 'Provisional',
 };
 
 export default function RegisterView({ role, currentPolicyVersion }: RegisterViewProps) {
@@ -242,7 +241,12 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
               {is2LoD && <td>{row.submitted_by}</td>}
               <td>{row.tier ?? '—'}</td>
               <td>{row.track ?? '—'}</td>
-              <td>{row.current_verdict_status ? STATUS_LABEL[row.current_verdict_status] : '—'}</td>
+              <td>
+                {row.current_verdict_status ? STATUS_LABEL[row.current_verdict_status] : '—'}
+                {/* §13.3: the qualifier sits ALONGSIDE the outcome. Replacing
+                    the outcome with it hid what was actually decided. */}
+                {row.provisional && <span className="register-provisional"> · Provisional</span>}
+              </td>
               <td>
                 <span className={`register-stage register-stage--${row.lifecycle_stage}`}>{row.lifecycle_stage}</span>
               </td>

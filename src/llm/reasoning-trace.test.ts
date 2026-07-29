@@ -17,6 +17,7 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     pack_versions: {},
     applied_overrides: [],
     confidence_caveats: [],
+  provisional_reasons: [],
     boundary_proximity: false,
   margin_achieved: 0,
   margin_target: 0.1,

@@ -94,7 +94,13 @@ export interface UseCaseSummary {
   lifecycle_stage: LifecycleStage;
   tier: string | null;
   track: string | null;
-  current_verdict_status: 'approved' | 'approved_with_controls' | 'rejected' | 'provisional' | null;
+  // evaluation-engine.md §13.3: Provisional is NOT a fourth status — it is a
+  // qualifier carried alongside the status. The register used to overwrite the
+  // status with 'provisional', which hid what was actually decided. Rare
+  // before round 3 (only unsigned pack rules triggered it); universal
+  // afterwards, which is what exposed it.
+  current_verdict_status: 'approved' | 'approved_with_controls' | 'rejected' | null;
+  provisional: boolean;
   last_evaluated_at: string | null;
   policy_version_at_evaluation: string | null;
   stale_assessment: boolean;

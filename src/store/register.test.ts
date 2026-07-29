@@ -27,6 +27,7 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     pack_versions: {},
     applied_overrides: [],
     confidence_caveats: [],
+    provisional_reasons: [],
     boundary_proximity: false,
   margin_achieved: 0,
   margin_target: 0.1,
@@ -234,14 +235,21 @@ describe('register store', () => {
     expect(summary?.policy_version_at_evaluation).toBe('1.0');
   });
 
-  it('current_verdict_status is "provisional" when the latest verdict carries a low-confidence caveat, overriding the raw status', async () => {
+  // TC-R3-JU-2-03. This is the "reaches a reader" assertion: the engine can
+  // compute provisional_reasons perfectly and it is worth nothing if no
+  // consumer surfaces it. Regulatory citations were computed and discarded for
+  // the whole of V1 with no test failing, because nothing asserted they got
+  // out of the engine.
+  it('TC-R3-JU-2-03: a submission with no regulatory basis shows Provisional on its register row', async () => {
     const nodeId = crypto.randomUUID();
-    const node = makeUseCaseNode({ node_id: nodeId, label: 'Provisional probe' });
-    await addNode(node);
+    await addNode(makeUseCaseNode({ node_id: nodeId, label: 'No jurisdiction answer' }));
 
     const verdict = makeVerdict({
-      status: 'approved_with_controls',
-      confidence_caveats: [{ ruleId: 'INV-DATA-01', field: 'model_type', confidence: 'low', reason: 'ambiguous description' }],
+      id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      status: 'approved',
+      pack_versions: {},
+      provisional_reasons: ['no_regulatory_basis'],
     });
     await append({
       event_id: crypto.randomUUID(),
@@ -253,7 +261,39 @@ describe('register store', () => {
     });
 
     const summary = await getUseCase(nodeId);
-    expect(summary?.current_verdict_status).toBe('provisional');
+    expect(summary?.provisional).toBe(true);
+    // And the outcome survives alongside it (§13.3).
+    expect(summary?.current_verdict_status).toBe('approved');
+  });
+
+  it('current_verdict_status keeps the real outcome and the provisional qualifier is carried alongside it', async () => {
+    const nodeId = crypto.randomUUID();
+    const node = makeUseCaseNode({ node_id: nodeId, label: 'Provisional probe' });
+    await addNode(node);
+
+    const verdict = makeVerdict({
+      status: 'approved_with_controls',
+      confidence_caveats: [{ ruleId: 'INV-DATA-01', field: 'model_type', confidence: 'low', reason: 'ambiguous description' }],
+      // P8-C04: the engine now names the cause; the row reads it (ADR-EE-R3-1).
+      provisional_reasons: ['unsigned_pack_rules'],
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict },
+    });
+
+    const summary = await getUseCase(nodeId);
+    // P8-C04 upstream fix. This asserted that Provisional REPLACED the status,
+    // which contradicts evaluation-engine.md §13.3 — Provisional is a
+    // qualifier carried alongside the status, not a fourth status. Replacing
+    // it hid whether the provisional verdict was in or out of appetite, on the
+    // page a reviewer signs off from.
+    expect(summary?.current_verdict_status).toBe('approved_with_controls');
+    expect(summary?.provisional).toBe(true);
   });
 
   it('a verdict_corrected event supersedes an earlier verdict_produced event for the computed summary', async () => {

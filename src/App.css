@@ -1149,6 +1149,15 @@ details input {
   font-weight: 600;
 }
 
+/* ── Provisional qualifier (P8-C04, §13.3) ──
+   Sits alongside the outcome rather than replacing it. Muted, because the
+   outcome is the headline and this qualifies it. */
+.verdict__heading-qualifier,
+.register-provisional {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
 /* ── Regulatory reasoning chain (V2-A, RA-9) ── */
 .verdict__chain {
   margin: 1rem 0;

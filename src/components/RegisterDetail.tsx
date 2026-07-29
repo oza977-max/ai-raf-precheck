@@ -17,7 +17,6 @@ const STATUS_LABEL: Record<string, string> = {
   approved: 'Approved',
   approved_with_controls: 'Approved with controls',
   rejected: 'Rejected',
-  provisional: 'Provisional',
 };
 
 // Per-type detail lines derived from the real payload union — never a
@@ -164,6 +163,8 @@ export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDeta
         <span className="graph-node__chip">
           {summary.current_verdict_status ? STATUS_LABEL[summary.current_verdict_status] : 'No verdict'}
         </span>
+        {/* §13.3: a qualifier, not a fourth status. */}
+        {summary.provisional && <span className="graph-node__chip">Provisional</span>}
         <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
       </div>
 

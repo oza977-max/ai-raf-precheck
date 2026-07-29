@@ -2,7 +2,7 @@ import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
 import { addNode, addEdge, getUseCase } from '../store/register';
 import { append } from '../store/audit';
-import type { DataFlowGraph, PolicyFile } from '../engine/types';
+import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
 // register-lifecycle.md §9 (LC-6). AIGate must appear in its own register
@@ -67,20 +67,26 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
 // finding, pass 1).
 let inFlight: Promise<void> | null = null;
 
-export function seedAigateSelfAssessment(policy: PolicyFile): Promise<void> {
+export function seedAigateSelfAssessment(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<void> {
   if (!inFlight) {
-    inFlight = runSeed(policy).finally(() => {
+    inFlight = runSeed(policy, packs).finally(() => {
       inFlight = null;
     });
   }
   return inFlight;
 }
 
-async function runSeed(policy: PolicyFile): Promise<void> {
+async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<void> {
   const existing = await getUseCase(AIGATE_USE_CASE_ID);
   if (existing) return;
 
-  const evalResult = evaluate(AIGATE_USE_CASE_GRAPH, policy);
+  // P8-C04, review pass 2. This evaluated with NO packs while the graph
+  // declares jurisdictions: ['UK'] — so AIGate's own self-assessment was
+  // scored without the UK pack it says applies to it. Harmless-looking until
+  // this chunk made the consequence visible: the row would read Provisional
+  // for "no regulatory basis", which is a false statement about a use case
+  // that named its jurisdiction. Pre-existing gap from P7-C01.
+  const evalResult = evaluate(AIGATE_USE_CASE_GRAPH, policy, packs);
   if (!evalResult.ok) {
     throw new Error(`AIGate self-assessment failed: ${evalResult.error.kind}`);
   }

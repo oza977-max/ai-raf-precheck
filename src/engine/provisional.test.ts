@@ -206,7 +206,7 @@ describe('provisional reasons — determinism and shape (R3-NF-1)', () => {
     const rejected = reasonsFor(
       graph({
         input_nodes: [
-          { id: 'i1', label: 'mnpi', data_class: 'MNPI', data_zone: 'Zone A', volume: 'low' },
+          { id: 'i1', label: 'mnpi', data_class: 'MNPI', data_zone: 'Zone A' },
         ],
         processing_nodes: [
           {
@@ -214,7 +214,7 @@ describe('provisional reasons — determinism and shape (R3-NF-1)', () => {
             label: 'x',
             model_type: 'llm',
             autonomy_level: 4,
-            data_zone: 'Zone D',
+            data_zone: 'Zone B',
             vendor: 'external',
             replaces_prior_model: false,
           },
@@ -224,7 +224,7 @@ describe('provisional reasons — determinism and shape (R3-NF-1)', () => {
             id: 'o1',
             label: 'y',
             action_type: 'execute',
-            exposure: 'public',
+            exposure: 'client-facing',
             decision_bindingness: 'binding',
             output_reversibility: 'irreversible',
             scale: 'at_scale',
@@ -262,5 +262,22 @@ describe('provisional reasons — verdicts persisted before this chunk', () => {
     delete legacy.provisional_reasons;
 
     expect(isVerdictProvisional(legacy as never)).toBe(false);
+  });
+});
+
+// TC-R3-NF-1-02 — the engine island holds (cross-cutting.md §7 rule 1). The
+// module this chunk adds is the one most likely to breach it, because both a
+// React component and the persistence layer now import from it: the pull is
+// towards moving it OUT of the engine to be "closer to its consumers", which
+// is exactly what ADR-EE-R3-1 rejected as option 2.
+describe('provisional reasons — the engine island (TC-R3-NF-1-02)', () => {
+  it('imports only engine types and stdlib, with no clock and no randomness', () => {
+    const source = readFileSync(resolve(__dirname, 'provisional.ts'), 'utf-8');
+
+    for (const forbidden of ['react', 'idb', '@anthropic-ai', '../store/', '../components/']) {
+      expect(source).not.toContain(forbidden);
+    }
+    expect(source).not.toContain('Date.now');
+    expect(source).not.toContain('Math.random');
   });
 });
