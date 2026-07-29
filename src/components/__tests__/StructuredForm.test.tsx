@@ -43,6 +43,10 @@ describe('StructuredForm', () => {
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
 
+    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
+    // answer, so this pre-existing test must answer it. It previously relied
+    // on being able to proceed having told the engine nothing.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -147,6 +151,10 @@ describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => 
     await fill(user);
     await user.selectOptions(screen.getByLabelText(/which approved platform/i), 'PLAT-A');
     await user.selectOptions(screen.getByLabelText(/whose model or service/i), 'VENDOR-A');
+    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
+    // answer, so this pre-existing test must answer it. It previously relied
+    // on being able to proceed having told the engine nothing.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     const graph = onSubmit.mock.calls[0]?.[0];
@@ -159,6 +167,10 @@ describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => 
     const user = userEvent.setup();
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
     await fill(user);
+    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
+    // answer, so this pre-existing test must answer it. It previously relied
+    // on being able to proceed having told the engine nothing.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     const graph = onSubmit.mock.calls[0]?.[0];

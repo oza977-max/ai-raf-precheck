@@ -122,6 +122,10 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
 
+    // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
+    // These journeys previously proceeded having told the engine nothing about
+    // where the system operates.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
@@ -588,6 +592,10 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
+    // These journeys previously proceeded having told the engine nothing about
+    // where the system operates.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
@@ -623,6 +631,10 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'material');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
+    // These journeys previously proceeded having told the engine nothing about
+    // where the system operates.
+    await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
