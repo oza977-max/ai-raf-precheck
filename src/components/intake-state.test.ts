@@ -294,6 +294,25 @@ describe('intakeReducer', () => {
     });
   });
 
+  it('RESTART returns to a blank description entry from every step (explore-005 D-002)', () => {
+    const g = graph({ version: 3 });
+    const states: IntakeState[] = [
+      { step: 'description_entry', description: 'x' },
+      { step: 'duplicate_check', description: 'x' },
+      { step: 'graph_extraction', description: 'x', method: 'form' },
+      { step: 'graph_review', graph: g, graphVersion: 3, corrections: [], useCaseId: 'uc-1' },
+      { step: 'evaluation_pending', graph: g, useCaseId: 'uc-1' },
+      { step: 'verdict', verdictId: 'uc-1' },
+    ];
+    // The step-by-step guards are the point of this test: RESTART is the one
+    // action deliberately valid from ALL of them, because the previous
+    // escape hatch dispatched an action the reducer discarded from every
+    // step but the first — so it silently did nothing.
+    for (const state of states) {
+      expect(intakeReducer(state, { type: 'RESTART' })).toEqual({ step: 'description_entry', description: '' });
+    }
+  });
+
   it('ignores an action that does not apply to the current state (exhaustive guard)', () => {
     const state: IntakeState = { step: 'description_entry', description: 'x' };
     const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'llm' });
