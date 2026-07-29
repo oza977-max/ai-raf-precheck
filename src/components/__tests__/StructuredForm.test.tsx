@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StructuredForm from '../StructuredForm';
 import { DATA_CLASSES, DATA_ZONES, MODEL_TYPES } from '../../engine/canonical-vocabulary';
@@ -299,7 +299,7 @@ describe('StructuredForm — draft envelope (P8-C01, review pass 1)', () => {
   // new gate — reopening, for every user holding one, exactly the defect
   // R3-JU-1 closes. A pre-round-3 draft is a bare values object with no
   // envelope, so it carries no answered-state and must load as unanswered.
-  it('a pre-round-3 draft with jurisdictions already ticked still loads as unanswered', () => {
+  it('TC-R3-JU-7-02: a pre-round-3 draft with jurisdictions already ticked still loads as unanswered', () => {
     sessionStorage.setItem(
       'aigate:intake-form-draft',
       JSON.stringify({
@@ -327,6 +327,96 @@ describe('StructuredForm — draft envelope (P8-C01, review pass 1)', () => {
     expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
     expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
     sessionStorage.clear();
+  });
+
+  // P8-C03 (FN-001). The behaviour was delivered by P8-C01's envelope shape;
+  // this chunk adds the trace. The empty legacy draft is the comfortable case
+  // and the populated one above is the case that bites (Kaner) — both are
+  // required, because an implementation that read "answered" off the array's
+  // presence rather than its contents would pass one and fail the other.
+  it('TC-R3-JU-7-01: an empty pre-round-3 draft loads unanswered, with Continue held shut', () => {
+    sessionStorage.setItem(
+      'aigate:intake-form-draft',
+      JSON.stringify({
+        useCaseName: 'Legacy draft',
+        description: 'Saved before round 3.',
+        inputDataClass: 'Internal',
+        inputDataZone: 'Zone C',
+        modelType: 'traditional-ml',
+        autonomyLevel: 0,
+        processingDataZone: 'Zone C',
+        outputActionType: 'read',
+        outputExposure: 'internal-only',
+        decisionBindingness: 'non-binding',
+        outputReversibility: 'reversible',
+        outputScale: 'limited',
+        replacesPriorModel: false,
+        jurisdictions: [],
+      }),
+    );
+
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+
+    // Every other field is restored and complete, so the gate can only be held
+    // by the absent answer.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    // Not merely blocked — blocked in the UNANSWERED state. A draft that
+    // loaded as 'none' would also be a migration failure, and it would look
+    // identical if only the button were asserted.
+    expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
+    expect(screen.getByLabelText(/united kingdom/i)).not.toBeChecked();
+    sessionStorage.clear();
+  });
+
+  // P8-C03 coverage confirmation. TC-R3-JU-1-04 was listed as delivered by
+  // P8-C01 and no test carried its id — found by cross-reading the ids in
+  // test-cases/test-cases-003.md against the ids present in this suite, rather
+  // than by trusting the prior handover's coverage claim.
+  it('TC-R3-JU-1-04: the three answered-states are distinguishable from persisted state', async () => {
+    const user = userEvent.setup();
+
+    function persisted() {
+      return JSON.parse(sessionStorage.getItem('aigate:intake-form-draft') ?? 'null');
+    }
+
+    // 1. Never interacted with.
+    const untouched = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'A');
+    const neverAnswered = persisted();
+    untouched.unmount();
+    sessionStorage.clear();
+
+    // 2. Answered "none".
+    const none = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+    const answeredNone = persisted();
+    none.unmount();
+    sessionStorage.clear();
+
+    // 3. UK ticked.
+    const uk = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await user.click(screen.getByLabelText(/united kingdom/i));
+    const answeredUk = persisted();
+    uk.unmount();
+    sessionStorage.clear();
+
+    expect(neverAnswered.jurisdictionAnswer).toBe('unanswered');
+    expect(answeredNone.jurisdictionAnswer).toBe('none');
+    expect(answeredUk.jurisdictionAnswer).toBe('selected');
+
+    // All three distinct — the point of the requirement.
+    expect(
+      new Set([
+        neverAnswered.jurisdictionAnswer,
+        answeredNone.jurisdictionAnswer,
+        answeredUk.jurisdictionAnswer,
+      ]).size,
+    ).toBe(3);
+
+    // And "not answered" is NOT inferred from the selected set being empty:
+    // states 1 and 2 both persist an empty array and are still distinguishable.
+    expect(neverAnswered.values.jurisdictions ?? []).toEqual([]);
+    expect(answeredNone.values.jurisdictions).toEqual([]);
   });
 
   it('an answered "none" survives a remount — the answer is persisted, not re-derived', async () => {
@@ -357,80 +447,57 @@ type FieldProbe = {
   /** The DOM id whose aria-required / marker state is being compared. */
   id: string;
   /** Answer this field. A no-op means the field is pre-answered by default. */
-  answer: (user: ReturnType<typeof userEvent.setup>) => Promise<void>;
+  answer: () => void;
 };
 
+// fireEvent, not userEvent, deliberately. This probe re-renders the whole form
+// once per field — 18 renders — and userEvent simulates every keystroke, which
+// took the test to the edge of the 5s timeout and then over it as soon as the
+// machine was busy. A timeout reads as a failure of the code under test and is
+// not one. These assertions are about the disabled state of one button, not
+// about typing behaviour, so the cheaper event is the honest one here; the
+// tests that DO exercise real user interaction still use userEvent.
+const setValue = (labelPattern: RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(labelPattern), { target: { value } });
+
 const FIELD_PROBES: FieldProbe[] = [
-  {
-    id: 'sf-name',
-    answer: (u) => u.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool'),
-  },
-  {
-    id: 'sf-description',
-    answer: (u) => u.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.'),
-  },
+  { id: 'sf-name', answer: () => setValue(/what do you want to call it/i, 'Test tool') },
+  { id: 'sf-description', answer: () => setValue(/in a sentence or two/i, 'A test description.') },
   {
     id: 'sf-input-data-class',
-    answer: (u) =>
-      u.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal'),
+    answer: () => setValue(/what kind of information does it use/i, 'Internal'),
   },
   {
     id: 'sf-input-data-zone',
-    answer: (u) =>
-      u.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C'),
+    answer: () => setValue(/where does that information sit today/i, 'Zone C'),
   },
-  {
-    id: 'sf-model-type',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml'),
-  },
+  { id: 'sf-model-type', answer: () => setValue(/what kind of ai is it/i, 'traditional-ml') },
   // Pre-answered: the select opens on "no autonomy", which is a real answer.
-  { id: 'sf-autonomy', answer: async () => {} },
-  {
-    id: 'sf-processing-zone',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C'),
-  },
-  {
-    id: 'sf-action-type',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read'),
-  },
-  {
-    id: 'sf-exposure',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only'),
-  },
+  { id: 'sf-autonomy', answer: () => {} },
+  { id: 'sf-processing-zone', answer: () => setValue(/where does the ai itself run/i, 'Zone C') },
+  { id: 'sf-action-type', answer: () => setValue(/what does it actually produce or do/i, 'read') },
+  { id: 'sf-exposure', answer: () => setValue(/who sees what it produces/i, 'internal-only') },
   {
     id: 'sf-bindingness',
-    answer: (u) =>
-      u.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding'),
+    answer: () => setValue(/how much weight does its output carry/i, 'non-binding'),
   },
-  {
-    id: 'sf-reversibility',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible'),
-  },
-  {
-    id: 'sf-scale',
-    answer: (u) => u.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited'),
-  },
+  { id: 'sf-reversibility', answer: () => setValue(/if it gets something wrong/i, 'reversible') },
+  { id: 'sf-scale', answer: () => setValue(/how widely is it used/i, 'limited') },
   // Pre-answered: an unticked box is the answer "no".
-  { id: 'sf-replaces', answer: async () => {} },
-  { id: 'sf-jurisdiction', answer: (u) => u.click(screen.getByLabelText(/none.*not sure/i)) },
+  { id: 'sf-replaces', answer: () => {} },
+  { id: 'sf-jurisdiction', answer: () => fireEvent.click(screen.getByLabelText(/none.*not sure/i)) },
   // Declared optional in their own labels — included so the probe covers the
   // whole form, not only the fields expected to block.
-  {
-    id: 'sf-platform',
-    answer: async () => {},
-  },
-  { id: 'sf-vendor', answer: async () => {} },
-  { id: 'sf-decision-type', answer: async () => {} },
-  { id: 'sf-hitl', answer: async () => {} },
+  { id: 'sf-platform', answer: () => {} },
+  { id: 'sf-vendor', answer: () => {} },
+  { id: 'sf-decision-type', answer: () => {} },
+  { id: 'sf-hitl', answer: () => {} },
 ];
 
-async function answerAllExcept(
-  user: ReturnType<typeof userEvent.setup>,
-  omittedId: string | null,
-): Promise<void> {
+function answerAllExcept(omittedId: string | null): void {
   for (const probe of FIELD_PROBES) {
     if (probe.id === omittedId) continue;
-    await probe.answer(user);
+    probe.answer();
   }
 }
 
@@ -440,13 +507,11 @@ function markedFieldIds(container: HTMLElement): string[] {
 
 describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
   // ACCEPTANCE TEST (TDD-1, outside-in — written first).
-  it('TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set', async () => {
-    const user = userEvent.setup();
-
+  it('TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set', () => {
     // Baseline: answering everything must open the gate, or "omitting X keeps
     // it shut" proves nothing.
     const baseline = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await answerAllExcept(user, null);
+    answerAllExcept(null);
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
     const marked = markedFieldIds(baseline.container);
 
@@ -466,7 +531,7 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     const blocking: string[] = [];
     for (const probe of FIELD_PROBES) {
       const view = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-      await answerAllExcept(user, probe.id);
+      answerAllExcept(probe.id);
       if ((screen.getByRole('button', { name: /continue/i }) as HTMLButtonElement).disabled) {
         blocking.push(probe.id);
       }
