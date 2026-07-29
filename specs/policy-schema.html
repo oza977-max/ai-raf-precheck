@@ -654,7 +654,7 @@ rules:
       <li><code>source.document</code> — the regulation name</li>
       <li><code>source.section</code> — the article/section number</li>
       <li><code>source.text</code> — verbatim regulatory text (not paraphrased)</li>
-      <li><code>confidence</code> — <code>High | Medium | Low</code></li>
+      <li><code>basis</code> — <code>verbatim | derived | judgement</code> (V2-E; replaced <code>confidence</code>)</li>
       <li><code>reviewer_name</code> — name of the human reviewer</li>
       <li><code>reviewer_role</code> — role of the reviewer</li>
       <li><code>sign_off_date</code> — ISO 8601 date</li>
@@ -791,7 +791,7 @@ export type PackRuleEffect =
         <tr><td>Each rule has <code>source.document</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.document</code></td></tr>
         <tr><td>Each rule has <code>source.section</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.section</code></td></tr>
         <tr><td>Each rule has <code>source.text</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing source.text</code></td></tr>
-        <tr><td>Each rule has <code>confidence</code> of <code>High | Medium | Low</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] invalid confidence value</code></td></tr>
+        <tr><td>Each rule has <code>basis</code> of <code>verbatim | derived | judgement</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] invalid basis value</code></td></tr>
         <tr><td>Each rule has <code>reviewer_name</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing reviewer_name</code></td></tr>
         <tr><td>Each rule has <code>sign_off_date</code></td><td><code>pack-invalid: [pack-id] rule [rule-id] missing sign_off_date</code></td></tr>
       </tbody>

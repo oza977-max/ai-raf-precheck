@@ -24,8 +24,8 @@ Rounds 1 and 2 test cases live in `test-cases/test-cases.md` and are immutable.
 
 | | Count |
 |---|---|
-| Total test cases | 33 |
-| Must | 26 |
+| Total test cases | 38 |
+| Must | 31 |
 | Should | 7 |
 | `[EXAMPLE]`-tagged (EBT-1, one per Must requirement) | 10 |
 | `[PROPERTY]`-tagged | 2 |
@@ -39,7 +39,7 @@ for R3-RD-1 and R3-JU-5, both of which are stated as set equality rather than
 rendered text. Property framing for the two non-functional requirements.
 
 **Trace status.** This project has no `impact-map.md`, so every test carries
-`[Trace: not-yet-traced]` — 33 of 33. Running `/gvm-impact-map` would close
+`[Trace: not-yet-traced]` — 38 of 38. Running `/gvm-impact-map` would close
 this; it is recorded, not silently omitted.
 
 ---
@@ -400,13 +400,93 @@ And the output MUST NOT contain: the binding constraint id from the superseded v
 [Trace: not-yet-traced]
 ```
 
-### TC-R3-RD-3-02: The sign-off audit event refers to the verdict displayed
+### TC-R3-RD-3-02: The sign-off audit event names the verdict displayed [EXAMPLE]
 
 ```
+Input: a use case with a persisted verdict; reviewer clicks Approve
 Given a reviewer viewing a use case's latest verdict
 When the reviewer approves it
-Then the audit event written refers to that same verdict
+Then the output MUST contain: a twoloD_reviewed event whose verdict_id equals the id of the verdict the page rendered
+And the output MUST NOT contain: a twoloD_reviewed event with no verdict reference
 [Requirement: R3-RD-3] [Priority: MUST]
+```
+> Added by design review round 1 (C-1). The payload previously had no field
+> capable of carrying this, so the original wording could only have been
+> satisfied vacuously.
+```
+[Trace: not-yet-traced]
+```
+
+### TC-R3-RD-3-03: A verdict changing under the reviewer refuses the write
+
+```
+Given a reviewer viewing a verdict
+And a correction is recorded after the page loaded but before Approve is clicked
+When the reviewer approves
+Then the write is refused and the reviewer is told the verdict changed
+And no attestation is recorded against the verdict they did not see
+[Requirement: R3-RD-3] [Priority: MUST]
+[Trace: not-yet-traced]
+```
+
+### TC-R3-RD-6-01: A Provisional verdict states its cause on the sign-off page
+
+```
+Given a use case whose verdict is Provisional for the no-regulatory-basis condition
+When a reviewer opens it from the register
+Then the stated cause is present on that page
+And a Provisional badge with no cause is not shown
+[Requirement: R3-JU-6, R3-RD-1] [Priority: MUST]
+```
+> Added by design review round 1 (I-2). R3-JU-6 is not scoped to one screen;
+> the sign-off page became a rendering surface and was not traced.
+```
+[Trace: not-yet-traced]
+```
+
+### TC-R3-RD-7-01: Control evidence status reflects current policy, verdict does not
+
+```
+Given a use case evaluated when CTRL-ENC-01 was VERIFIED
+And the policy has since been edited so CTRL-ENC-01 has no evidence
+When a reviewer opens the use case from the register
+Then the verdict's invariants and binding constraint are unchanged from evaluation time
+And CTRL-ENC-01 shows as UNVERIFIED, reflecting current policy
+[Requirement: R3-RD-1] [Priority: MUST]
+```
+> Added by design review round 1 (C-2). The historical/current split is the
+> reconciliation; this test pins it so the two halves cannot silently swap.
+```
+[Trace: not-yet-traced]
+```
+
+### TC-R3-RD-8-01: The reclassification affordance does not appear on the sign-off page
+
+```
+Given a use case with a persisted verdict opened from the register
+When the page renders the verdict
+Then no "Correct this classification?" control is present
+And no reasoning-trace disclosure is present
+[Requirement: R3-RD-1] [Priority: MUST]
+```
+> Added by design review round 1 (I-1). onCorrect was required and its button
+> ungated, so the exclusion was unbuildable by reuse alone.
+```
+[Trace: not-yet-traced]
+```
+
+### TC-R3-RD-2-03: A verdict without explanation states so rather than showing an empty list
+
+```
+Given a register entry whose persisted verdict predates explanation capture
+When a reviewer opens it
+Then the page states the verdict predates explanation capture
+And it does not render an empty invariant list
+[Requirement: R3-RD-2] [Priority: MUST]
+```
+> Added by design review round 1 (I-10). An empty list reads as "nothing was
+> triggered" — a stronger and false claim.
+```
 [Trace: not-yet-traced]
 ```
 
@@ -478,9 +558,15 @@ Then the entry still has exactly N audit events
 [Requirement: R3-NF-2] [Priority: MUST]
 ```
 > Property: idempotence of a read. Opening a page any number of times leaves the
-> trail unchanged. Stated over two opens because React StrictMode double-invokes
-> mount effects, which is how the seeding race was introduced previously —
-> a single open would not catch it.
+> trail unchanged.
+>
+> Corrected after design review round 1 (I-5): the original rationale had this
+> backwards. StrictMode double-invokes the mount effect within a *single* open,
+> so one open is already the more sensitive check for a double-firing effect.
+> The second open tests a different property — that a fresh mount after
+> navigating away and back does not re-write — which is the shape of the earlier
+> seeding race. Both are asserted because they are two properties, not one
+> property tested harder.
 ```
 [Trace: not-yet-traced]
 ```
@@ -529,9 +615,9 @@ round 3 requirement.**
 
 | Priority | Requirements | Test cases |
 |---|---|---|
-| Must | 10 | 26 |
+| Must | 10 | 31 |
 | Should | 3 | 7 |
-| **Total** | **13** | **33** |
+| **Total** | **13** | **38** |
 
 ### EBT-1 example-based coverage
 
@@ -542,7 +628,7 @@ non-functional requirements covered by property tests.
 
 ### Recorded gaps and judgement calls
 
-- **Trace integrity.** All 33 tests carry `[Trace: not-yet-traced]`. This
+- **Trace integrity.** All 38 tests carry `[Trace: not-yet-traced]`. This
   project has no `impact-map.md`, so the trace chain cannot resolve. Running
   `/gvm-impact-map` would close it. Recorded, not omitted.
 - **Property detection disagreement.** The `_property_detection` heuristic
@@ -562,3 +648,12 @@ non-functional requirements covered by property tests.
   Existing single-match `/approved|rejected/i` queries must be tightened before
   this lands. That is a tech-spec and build concern, recorded here so it is not
   discovered by a red suite.
+
+---
+
+## Changelog
+
+| Date | Change |
+|---|---|
+| 2026-07-29 | Round 3 test cases generated from requirements-003.md. |
+| 2026-07-29 | Design review round 1 applied. TC-R3-RD-3-02 rewritten to assert `verdict_id` on the sign-off event (C-1 — the payload previously had no field to carry it, so the original could only pass vacuously). Added TC-R3-RD-3-03 (verdict changed under the reviewer), TC-R3-RD-6-01 (Provisional cause on the sign-off page, I-2), TC-R3-RD-7-01 (historical verdict vs current evidence status, C-2), TC-R3-RD-8-01 (reclassification affordance absent, I-1), TC-R3-RD-2-03 (verdict without explanation, I-10). TC-R3-NF-2-01's StrictMode rationale corrected (I-5). 33 cases became 38. |

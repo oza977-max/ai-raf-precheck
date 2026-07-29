@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Review 002 &middot; AIGate Round 3</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+<style>.finding{margin:1.6rem 0;padding:1rem 1.2rem;background:#fbfbf7;border-left:3px solid #669}
+.verdict-banner{padding:1.2rem;border:2px solid #669;background:#f7f7f0;margin:1.5rem 0}
+.priority.critical{background:#8b2f2f;color:#fff;padding:2px 8px;border-radius:3px;font-size:.8em}
+.priority.important{background:#b5651d;color:#fff;padding:2px 8px;border-radius:3px;font-size:.8em}
+.priority.minor{background:#666;color:#fff;padding:2px 8px;border-radius:3px;font-size:.8em}</style>
+</head><body><div class="container"><main>
+<header><h1>Design Review 002 &mdash; AIGate Round 3</h1>
+<p class="subtitle">Reachable Reasoning &mdash; pre-build gate (DR-1)</p>
+<p class="meta">29 July 2026 &middot; Full review &middot; Strict criterion &middot; 6 panels</p></header>
+
+<div class="verdict-banner">
+<h2 style="margin-top:0">Verdict: Build with caveats</h2>
+<p>Two Critical findings were raised and <strong>both are fixed in the specs before this verdict was issued</strong>, together with ten of the eleven Important findings. The verdict describes the amended design, not the design as first submitted.</p>
+<p><strong>The caveats that remain:</strong></p>
+<ul>
+<li><strong>I-11 is recorded, not fixed.</strong> <code>intake-draft.ts</code> performs persistence I/O from <code>src/components/</code>, breaching cross-cutting &sect;7. Pre-existing; R3-JU-7 knowingly builds on it. A future round should move draft persistence into <code>src/store/</code>.</li>
+<li><strong>P8-C06 grew.</strong> It now carries the <code>verdict_id</code> schema change, the policy prop path, the <code>onCorrect</code> contract change, and the exported helper. It was already the closing chunk; it is now the largest. Consider splitting it at build time if it exceeds one session.</li>
+<li><strong>No design round preceded this one.</strong> <code>design-review-001.html</code> carries no verdict string and no calibration row, so there is no prior design baseline to calibrate against. Findings here are R1-quality evidence despite the strict criterion.</li>
+</ul>
+</div>
+
+<section><h2>Executive Summary</h2>
+<p>Six panels ran in parallel under a strict criterion: A Requirements Coverage, B Interface Contracts, C Structural Soundness, D Implementability, E Security, and one Panel F sub-panel dispatched from the ATAM utility tree's single (High importance, High risk) leaf &mdash; audit-write integrity under StrictMode.</p>
+<p><strong>15 unique findings: 2 Critical, 11 Important, 2 Minor.</strong> Capture-recapture across three cross-panel overlaps gives a Lincoln-Petersen estimate of roughly 11 against 15 unique found, so coverage sits above the 80% threshold and a second round is not indicated by the numbers.</p>
+<p><strong>The pattern worth naming.</strong> Both Criticals and two of the Importants (I-1, I-5) share one cause: a claim written into a spec without being checked against the code. In each case the check was one command. This is the third occurrence of that failure mode in this project's recent history &mdash; charter 003's D-002, the Phase 8 query-tightening premise, and now these four. The calibration mandate &ldquo;verify documentation claims against behaviour, not against other documents&rdquo; has now fired in two consecutive rounds and should be treated as a standing build check rather than a review note.</p>
+<p><strong>What held.</strong> ADR-EE-R3-1 was probed by two panels as possible scope creep and defended by both as design necessity, correctly disclosed in the chunk plan. Panel F confirmed <code>VerdictDisplay</code> has no effects at all, so mounting it on the sign-off page introduces no write path &mdash; the (H,H) scenario's risk is lower than the tree assumed. No vacuous tests were found in the 33 original cases.</p>
+</section>
+
+<section><h2>Requirements Coverage</h2>
+<p>13 of 13 round-3 requirements had design representation before this review. Two had gaps in that representation rather than absence: R3-JU-6 was untraced to the sign-off surface (I-2) and R3-RD-3's fit criterion was unimplementable (C-1). Both are now closed.</p>
+</section>
+
+<section><h2>Findings</h2>
+<table><thead><tr><th>ID</th><th>Severity</th><th>Finding</th><th>Panel</th></tr></thead><tbody><tr><td><strong>C-1</strong></td><td><span class="priority critical">Critical</span></td><td>R3-RD-3 unimplementable — sign-off event cannot name its verdict</td><td>C, E (independent → elevated)</td></tr><tr><td><strong>C-2</strong></td><td><span class="priority critical">Critical</span></td><td>The six-element list contradicts its own ADR</td><td>D</td></tr><tr><td><strong>I-1</strong></td><td><span class="priority important">Important</span></td><td>onCorrect required, its button ungated</td><td>B, C</td></tr><tr><td><strong>I-2</strong></td><td><span class="priority important">Important</span></td><td>R3-JU-6 never traced to the sign-off surface</td><td>A</td></tr><tr><td><strong>I-3</strong></td><td><span class="priority important">Important</span></td><td>Two unreconciled provisional mechanisms</td><td>B</td></tr><tr><td><strong>I-4</strong></td><td><span class="priority important">Important</span></td><td>findLatestVerdictEvent unexported</td><td>B, C</td></tr><tr><td><strong>I-5</strong></td><td><span class="priority important">Important</span></td><td>TC-R3-NF-2-01's StrictMode rationale backwards</td><td>F</td></tr><tr><td><strong>I-6</strong></td><td><span class="priority important">Important</span></td><td>XSS control implicit, never stated</td><td>E</td></tr><tr><td><strong>I-7</strong></td><td><span class="priority important">Important</span></td><td>Answered-state field never pinned</td><td>D</td></tr><tr><td><strong>I-8</strong></td><td><span class="priority important">Important</span></td><td>isComplete not enumerable; set-equality test needs an unbudgeted refactor</td><td>D</td></tr><tr><td><strong>I-9</strong></td><td><span class="priority important">Important</span></td><td>policy-schema validator row stale</td><td>E</td></tr><tr><td><strong>I-10</strong></td><td><span class="priority important">Important</span></td><td>Verdicts without explanation unspecified</td><td>D</td></tr><tr><td><strong>I-11</strong></td><td><span class="priority important">Important</span></td><td>intake-draft.ts breaches cross-cutting &sect;7</td><td>C</td></tr><tr><td><strong>M-1</strong></td><td><span class="priority minor">Minor</span></td><td>R3-RD-4 traced but not textually addressed</td><td>A</td></tr><tr><td><strong>M-2</strong></td><td><span class="priority minor">Minor</span></td><td>TC-R3-JU-6-03 unreachability is structural, not policy-dependent</td><td>D</td></tr></tbody></table>
+<div class="finding"><h3>C-1 — R3-RD-3 unimplementable — sign-off event cannot name its verdict <span class="priority critical">Critical</span></h3>
+<p class="meta">Found by panel C, E (independent → elevated)</p><p>The <code>twoloD_reviewed</code> payload is <code>{type, action, notes?}</code>. R3-RD-3's fit criterion requires the audit event to refer to the verdict signed off, and TC-R3-RD-3-02 asserts it. No field can carry the reference. The schema already uses this pattern elsewhere (<code>verdict_corrected.original_verdict_id</code>, <code>reasoning_trace_generated.verdict_id</code>) — only this payload lacks it. Without it, a correction landing between page load and Approve means the attestation records nothing about which verdict was seen.</p><p><strong>Disposition:</strong> Fixed. <code>verdict_id</code> added to the payload (verdict-audit &sect;13.4), threaded from the rendered verdict, with a refusal where the verdict changed under the reviewer. TC-R3-RD-3-02 rewritten; TC-R3-RD-3-03 added for the race.</p></div><div class="finding"><h3>C-2 — The six-element list contradicts its own ADR <span class="priority critical">Critical</span></h3>
+<p class="meta">Found by panel D</p><p>Element 4 (control evidence status) is sourced from <code>PolicyFile.controls</code> — today's policy. ADR-RL-R3-1 forbids showing anything recomputed against today's policy. Both were written into the same spec. <code>RegisterDetailProps</code> also has no <code>policy</code> field, so no path existed to supply it.</p><p><strong>Disposition:</strong> Fixed. register-lifecycle &sect;15.1a splits the two by scope: the verdict is historical, evidence status is current, and the split is argued rather than assumed — stale evidence status would tell a reviewer evidence exists when it may have lapsed. Prop path named. TC-R3-RD-7-01 pins the split.</p></div><div class="finding"><h3>I-1 — onCorrect required, its button ungated <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel B, C</p><p><code>onCorrect: () =&gt; void</code> is required and &ldquo;Correct this classification?&rdquo; renders unconditionally. &sect;15.1's claim that the reclassification affordance is &ldquo;not carried over&rdquo; was unbuildable by reuse.</p><p><strong>Disposition:</strong> Fixed. <code>onCorrect</code> becomes optional; button and reasoning-trace render only when supplied. TC-R3-RD-8-01 added.</p></div><div class="finding"><h3>I-2 — R3-JU-6 never traced to the sign-off surface <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel A</p><p>R3-JU-6 is not scoped to one screen, but &sect;15.1's list is explicitly closed, foreclosing the Provisional cause on the page where someone signs their name.</p><p><strong>Disposition:</strong> Fixed. &sect;15.1b extends the list; TC-R3-RD-6-01 added.</p></div><div class="finding"><h3>I-3 — Two unreconciled provisional mechanisms <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel B</p><p><code>ConfidenceCaveat.confidence === 'low'</code> stays live alongside the new <code>provisional_reasons</code>, giving one component two detection paths that can disagree.</p><p><strong>Disposition:</strong> Fixed. evaluation-engine &sect;13.1a reconciles them as producer and label: caveats remain the per-rule detail, <code>provisional_reasons</code> is the sole determinant of status.</p></div><div class="finding"><h3>I-4 — findLatestVerdictEvent unexported <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel B, C</p><p>The helper exists in <code>store/register.ts</code> but is private, so P8-C06 would likely write a third copy of the same scan — the duplication ADR-EE-R3-1 exists to close.</p><p><strong>Disposition:</strong> Fixed. Export and reuse named in &sect;15.1b.</p></div><div class="finding"><h3>I-5 — TC-R3-NF-2-01's StrictMode rationale backwards <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel F</p><p>StrictMode double-invokes the mount effect within a <em>single</em> open, so one open is the more sensitive check. The annotation claimed the opposite.</p><p><strong>Disposition:</strong> Fixed. Rationale corrected; the two opens are now described as two distinct properties, not one tested harder.</p></div><div class="finding"><h3>I-6 — XSS control implicit, never stated <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel E</p><p>R3-RD-1 puts policy-authored strings on a second surface. Safety today rests on a framework default plus one test. A test is not a control.</p><p><strong>Disposition:</strong> Fixed. verdict-audit &sect;13.2a states the invariant and prohibits markdown/HTML renderers on pack-sourced fields.</p></div><div class="finding"><h3>I-7 — Answered-state field never pinned <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel D</p><p>Three chunks touch it, potentially in parallel, with no named shape.</p><p><strong>Disposition:</strong> Fixed. <code>jurisdictionAnswer: 'unanswered' | 'none' | 'selected'</code> pinned in intake-flow &sect;13.1, held alongside <code>StructuredFormValues</code>, not inside it.</p></div><div class="finding"><h3>I-8 — isComplete not enumerable; set-equality test needs an unbudgeted refactor <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel D</p><p>The test would have to hardcode the field list a second time — recreating in test code the duplication R3-JU-5 exists to prevent.</p><p><strong>Disposition:</strong> Fixed. A single required-field list is now the source of truth; P8-C02 budgets the refactor.</p></div><div class="finding"><h3>I-9 — policy-schema validator row stale <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel E</p><p>&sect;6 validated <code>confidence: High|Medium|Low</code>; packs carry <code>basis</code> and the shipped validator checks <code>basis</code>. <strong>Code correct, spec stale</strong> — Panel E's catastrophic branch (no pack loads) does not occur.</p><p><strong>Disposition:</strong> Fixed. Row and field list corrected to <code>basis</code>.</p></div><div class="finding"><h3>I-10 — Verdicts without explanation unspecified <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel D</p><p>Verdicts persisted before V1.1-C01 lack <code>explanation</code>, so elements 2 and 3 have no source. Only the no-verdict case was specified.</p><p><strong>Disposition:</strong> Fixed. &sect;15.2 states the case; an empty invariant list would read as &ldquo;nothing triggered&rdquo;, a stronger and false claim. TC-R3-RD-2-03 added.</p></div><div class="finding"><h3>I-11 — intake-draft.ts breaches cross-cutting &sect;7 <span class="priority important">Important</span></h3>
+<p class="meta">Found by panel C</p><p>sessionStorage I/O from <code>src/components/</code>. Pre-existing; R3-JU-7 builds on it.</p><p><strong>Disposition:</strong> Recorded, not fixed. &sect;13.1 states it is knowingly built upon; the refactor was not scoped by round 3.</p></div><div class="finding"><h3>M-1 — R3-RD-4 traced but not textually addressed <span class="priority minor">Minor</span></h3>
+<p class="meta">Found by panel A</p><p>&sect;15.1 says what is shown, not that no navigation is required.</p><p><strong>Disposition:</strong> Accepted — inference is unambiguous.</p></div><div class="finding"><h3>M-2 — TC-R3-JU-6-03 unreachability is structural, not policy-dependent <span class="priority minor">Minor</span></h3>
+<p class="meta">Found by panel D</p><p>Pack activation is jurisdiction-gated, so &ldquo;none&rdquo; guarantees zero active packs; the two reasons can never co-occur by architecture.</p><p><strong>Disposition:</strong> Accepted — wording could be tightened; does not block.</p></div>
+</section>
+
+<section><h2>Panel F &mdash; Quality Attributes (ATAM utility tree)</h2>
+<p>Tree built from round 3's requirements. Four leaves in six-part scenario form; one rated (H,H) and was dispatched.</p>
+<table><thead><tr><th>Leaf</th><th>Importance</th><th>Risk</th><th>Dispatched</th></tr></thead><tbody>
+<tr><td>Reviewer opens the sign-off page twice under StrictMode &rarr; audit trail gains zero events</td><td>H</td><td>H</td><td>Yes</td></tr>
+<tr><td>Verdict with no regulatory basis states the absence explicitly</td><td>H</td><td>M</td><td>No</td></tr>
+<tr><td><code>evaluate()</code> byte-identical across 10 runs after <code>provisional_reasons</code></td><td>H</td><td>L</td><td>No</td></tr>
+<tr><td>Submitter completes intake knowing which fields are required</td><td>M</td><td>M</td><td>No</td></tr>
+</tbody></table>
+<p>Result: a real tactic exists (no write calls in the render path, verified by reading the component) rather than only a stated goal. No tactic trades away another high-importance attribute. The one defect was in the test rationale, not the design (I-5).</p>
+</section>
+
+<section><h2>What prevents a higher score</h2>
+<table><thead><tr><th>Defect class</th><th>Score</th><th>Gap</th></tr></thead><tbody>
+<tr><td>Requirements coverage</td><td>8/10</td><td>R3-JU-6 untraced to a surface the design itself created.</td></tr>
+<tr><td>Interface contracts</td><td>6/10</td><td>Three contract claims asserted without reading the producer: <code>onCorrect</code>, the payload shape, the evidence-status source.</td></tr>
+<tr><td>Structural soundness</td><td>7/10</td><td>ADRs stop at the boundary decision and do not follow through to the prop and type contracts the closing chunk needs.</td></tr>
+<tr><td>Implementability</td><td>7/10</td><td>Two mechanisms left to the implementer that three parallel chunks could have resolved differently.</td></tr>
+<tr><td>Security</td><td>7/10</td><td>The escaping property was real but accidental &mdash; a framework default, not a stated invariant.</td></tr>
+<tr><td>Quality attributes</td><td>9/10</td><td>Tactic sound; rationale for the governing test was wrong.</td></tr>
+</tbody></table>
+</section>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+</main></div></body></html>
