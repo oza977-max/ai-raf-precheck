@@ -109,6 +109,11 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 | `src/engine/question-generator.ts` | `DataFlowGraph`, `PolicyFile`, `JurisdictionPack[]` — internal engine module | P4-C03 | P4-C03 (question generation test: uncertain nodes generate targeted questions) |
 | `src/engine/contradiction.ts` | `DataFlowGraph`, `QuestionAnswer[]` — internal engine module | P4-C03 | P4-C03 (contradiction test: conflicting answers transition to contradiction_review) |
 | `scripts/spec-parity-check.py` | Reads `specs/*.md` — no runtime consumer | P7-C02 | Demanded by: internal helper, no consumer demanded — rationale: cross-spec parity tool used by CI and /gvm-design-review; not a runtime entry point |
+| `StructuredForm.tsx` (round 3) | jurisdiction answered-state, `loadFormDraft()` migration | P8-C01 | P8-C01 (form gate test: untouched jurisdiction question disables Continue) |
+| `evaluate.ts` (round 3) | `provisionalReasons()` — internal engine module | P8-C04 | P8-C04 (engine test: no active pack yields `no_regulatory_basis`) |
+| `VerdictDisplay.tsx` (round 3) | `verdict.provisional_reasons` — read, no longer derived locally | P8-C05 | P8-C05 (verdict test: statement and labelled cause both render) |
+| `RegisterDetail.tsx` (round 3) | `VerdictDisplay`, latest verdict-bearing `AuditEvent` payload | P8-C06 | P8-C06 (sign-off test: six decision-bearing elements present) |
+| `store/register.ts` (round 3) | `verdict.provisional_reasons` — read, no longer derived locally | P8-C04 | P8-C04 (register test: row status agrees with verdict status) |
 
 ---
 
@@ -608,3 +613,106 @@ Phase 7-C03 additionally verifies the product starts and the primary user flow c
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+---
+
+## 11. Phase 8 — Round 3: Reachable Reasoning
+
+Round 3 is an increment to a running product. It implements
+`requirements-003.md` (13 requirements) against `test-cases-003.md` (33 test
+cases), and touches four specs: `intake-flow.md` §13, `evaluation-engine.md`
+§13, `verdict-audit.md` §13, `register-lifecycle.md` §15.
+
+**Base phase number.** P8 — P1–P7 are in use by the V1 build (collision scan
+over `build/handovers/` and this guide, 2026-07-29). The intervening
+V1.1/V1.2/V2 handovers are ad-hoc chunk IDs from a period when the build
+departed from the P{N}-C{XX} scheme; round 3 returns to it.
+
+**MVP-1.** The first user-facing chunk is P8-C01, which delivers a complete
+user-visible behaviour end to end: the user is asked a question, cannot proceed
+without answering it, and the answer reaches the graph the engine evaluates.
+No MVP-1 exemption is claimed.
+
+### 11.1 The verdict-query constraint (HR3-08) — corrected
+
+An earlier draft of this guide made query-tightening a standalone first chunk,
+on the belief that rendering the verdict on the register detail page would break
+existing tests. **That was not verified and is not true.**
+
+The `/approved|rejected/i` assertions live at `WalkingSkeleton.test.tsx:79` and
+`:135`. Both fire on the **verdict screen**, before the test navigates to the
+register at line 85, and that navigation reaches `RegisterView` (the list), not
+`RegisterDetail`. There is no `RegisterDetail.test.tsx` at all. No existing
+query can break.
+
+The real risk is forward-looking, and it belongs to P8-C06: that chunk writes
+the first tests against a `RegisterDetail` that now renders "Approved with
+controls". Its queries must be scoped — to a container, a role, or a test id —
+never a bare single-match on verdict text. That is recorded as a constraint on
+P8-C06 rather than as a chunk of its own.
+
+The correction is kept in the record rather than quietly removed: the original
+claim was inherited from a standing warning in `CLAUDE.md` and applied without
+checking whether it fit this change.
+
+### 11.2 Chunks
+
+| Chunk | Delivers | Specs | Test cases | Depends on |
+|---|---|---|---|---|
+| **P8-C01** | Jurisdiction answered-state: three states, "none / not sure" control, help text naming the consequence | intake-flow §13.1, §13.2 | TC-R3-JU-1-01…-05, TC-R3-JU-4-01 | — |
+| **P8-C02** | Required-field markers — visible marker + `aria-required`, set-equal in both directions | intake-flow §13.3 | TC-R3-JU-5-01, -02 | P8-C01 |
+| **P8-C03** | Draft migration — pre-round-3 drafts load as unanswered | intake-flow §13.4 | TC-R3-JU-7-01, -02 | P8-C01 |
+| **P8-C04** | `Verdict.provisional_reasons`; both existing derivations replaced by reads | evaluation-engine §13 | TC-R3-JU-2-01…-03, TC-R3-JU-6-01…-04, TC-R3-NF-1-01, -02 | — |
+| **P8-C05** | Verdict renders the prose statement and the labelled causes | verdict-audit §13 | TC-R3-JU-3-01…-03 | P8-C04 |
+| **P8-C06** | Register detail renders the six decision-bearing elements; no-verdict case; no write on render. **Constraint:** its new `RegisterDetail` tests must scope queries to a container or role — never a bare single-match on verdict text (§11.1). | register-lifecycle §15 | TC-R3-RD-1-01…-03, -2-01, -02, -3-01, -02, -4-01, -5-01, TC-R3-NF-2-01, -02 | P8-C04 |
+
+### 11.3 Dependency network
+
+```
+P8-C01 ──┬── P8-C02
+         └── P8-C03
+
+P8-C04 ──── P8-C05
+   └────────────────────── P8-C06
+```
+
+**Critical path:** P8-C04 → P8-C06 (engine field, then the page that reads it).
+
+### 11.4 Parallelism (share-nothing)
+
+Two tracks touch disjoint files and may run in parallel:
+
+| Track | Chunks | Files |
+|---|---|---|
+| Intake | P8-C01 → P8-C02, P8-C03 | `StructuredForm.tsx`, `intake-draft.ts`, `build-graph-from-form.ts` |
+| Verdict | P8-C04 → P8-C05 | `src/engine/*`, `VerdictDisplay.tsx`, `store/register.ts` |
+
+P8-C06 is the closing chunk — it modifies
+`RegisterDetail.tsx`, which no other round-3 chunk touches, and depends on the
+verdict track's output.
+
+**The one shared file is `store/register.ts`**, edited by P8-C04 (replacing the
+local Provisional derivation with a read). No other chunk touches it, so the
+share-nothing rule holds.
+
+### 11.5 Integration closure
+
+P8-C06 is the closing chunk: after it, every round-3 seam is wired — the form
+produces an answered-state, the engine emits reasons, the verdict renders them,
+and the register page reads the verdict. The verification is a live walkthrough
+of both changed screens, plus `npm test` ×3 (per the ordering-sensitivity rule
+in `CLAUDE.md`), `npx tsc --noEmit`, `npm run build`, and
+`python3 scripts/spec-parity-check.py`.
+
+An exploratory re-walk (`/gvm-explore-test` charter 005) should follow, to
+confirm charter 004's D-001, D-002 and D-005 no longer reproduce. Charter 004's
+remaining defects — D-001 (intake description discarded), D-004 (register shows
+the input-node name), D-006 (vendor silently defaulted) — are **not** in Phase 8.
+They are defects against existing behaviour with no round-3 requirement, and
+need their own routing.
+
+### 11.6 Changelog
+
+| Date | Change |
+|---|---|
+| 2026-07-29 | Phase 8 added — round 3. Base phase P8 chosen after collision scan over `build/handovers/` (P1–P7 in use). Wiring matrix extended with five round-3 rows. The standalone query-tightening chunk from the first draft was dropped after verification showed no existing test breaks (§11.1); the constraint moved onto P8-C06. |

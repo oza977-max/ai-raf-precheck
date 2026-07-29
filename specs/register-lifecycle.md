@@ -473,3 +473,107 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+---
+
+## 15. Round 3 — The Sign-Off Page Shows the Verdict (R3-RD)
+
+Exploratory charter 004 found that the register detail page — where a 2LoD
+reviewer approves a High-tier use case or requests correction — shows the tier,
+the status, the sign-off actions and the audit trail, and does not show the
+verdict. The whole page measured 779 characters. The reviewer is asked to attest
+to a decision whose basis the page does not present.
+
+### ADR-RL-R3-1 — Read the verdict from the audit trail; do not recompute
+
+**Status:** Accepted
+
+**Context.** The register entry (`UseCaseSummary`) stores only a summary: tier,
+track, status, last-evaluated timestamp, policy version. The full `Verdict`
+object is already persisted, in the `verdict_produced` audit event payload
+(`store/types.ts`). `RegisterDetail` already loads all audit events for the use
+case.
+
+**Options considered.**
+
+1. **Re-run `evaluate()` on open.** Rejected outright. The verdict a reviewer
+   signs must be the verdict that was produced and attested, not a fresh one
+   computed against today's policy. Re-running would silently show a different
+   verdict after any policy change — the opposite of an audit record. It would
+   also put an engine call behind a page render.
+2. **Widen `UseCaseSummary` to carry the full verdict.** Duplicates data already
+   persisted, and the copy could drift from the audit trail after a correction.
+3. **Read the latest `verdict_produced` (or `verdict_corrected`) payload from
+   the audit trail the page already loads.** **Chosen.**
+
+**Decision.** The page renders the verdict from the latest verdict-bearing audit
+event. No recomputation, no new persistence.
+
+**Consequences.** R3-RD-3 follows directly: the latest event is by construction
+the verdict the sign-off attaches to. Entries with no such event render the
+R3-RD-2 statement instead. `VerdictDisplay` already accepts `verdict` and
+`auditEvents`; `graph` is *not* persisted on the register entry, so any
+provenance panel that depends on it degrades and must be omitted here rather
+than rendered empty.
+
+### 15.1 The six decision-bearing elements
+
+Per R3-RD-1, exactly these must appear:
+
+1. verdict status and tier
+2. binding constraint id
+3. every triggered invariant id, with its citation
+4. every control id in the minimal set, with evidence status (VERIFIED / UNVERIFIED)
+5. governance margin figure, and any ids flagged as having no headroom
+6. standing conditions
+
+Content outside this list may differ from the intake rendering without failing
+(TC-R3-RD-1-02 compares id **sets**, not rendered text). The intake verdict's
+reclassification affordance and reasoning trace are deliberately not carried
+over: they belong to the submitter's flow, not the reviewer's.
+
+Control evidence status is called out separately (TC-R3-RD-1-03) because an
+UNVERIFIED control rendered without its status would let a reviewer sign off
+believing evidence exists.
+
+### 15.2 No verdict recorded (R3-RD-2)
+
+Where no verdict-bearing event exists — the seeded AIGate self-assessment is the
+real case on every install — the page states plainly that no verdict is
+recorded and leaves sign-off available. It does not render an empty panel, and
+it does not hide the section. An empty panel presented as a verdict is the same
+class of defect as the missing panel it replaces.
+
+### 15.3 Rendering must not write (R3-NF-2)
+
+The audit trail is append-only evidence, so a write triggered by a render is a
+data-integrity defect, not a performance one. Opening the page any number of
+times leaves the event count unchanged (TC-R3-NF-2-01, stated over two opens
+because React StrictMode double-invokes mount effects — a single open would not
+catch it). The existing synchronous in-flight guard on the sign-off actions is
+unchanged and still required (TC-R3-NF-2-02).
+
+### 15.4 Constraint — the verdict-query collision (HR3-08)
+
+Rendering the verdict here puts its status — commonly "Approved with controls" —
+onto the register detail page for the first time. Existing tests query verdict
+text with a single-match `/approved|rejected/i` pattern. Those queries must be
+tightened **before** this section lands, not after the suite goes red. The
+implementation guide sequences this as its own chunk ahead of the rendering
+work.
+
+### 15.5 Traceability
+
+| Requirement | Section | Test cases |
+|---|---|---|
+| R3-RD-1 | §15.1, ADR-RL-R3-1 | TC-R3-RD-1-01, -02, -03, TC-R3-RD-5-01 |
+| R3-RD-2 | §15.2 | TC-R3-RD-2-01, -02 |
+| R3-RD-3 | ADR-RL-R3-1 | TC-R3-RD-3-01, -02 |
+| R3-RD-4 | §15.1 | TC-R3-RD-4-01 |
+| R3-NF-2 | §15.3 | TC-R3-NF-2-01, -02 |
+
+## 16. Changelog
+
+| Date | Change |
+|---|---|
+| 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |

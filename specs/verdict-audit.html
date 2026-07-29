@@ -747,6 +747,37 @@ const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&g
       </tbody>
     </table>
 
+
+    <h2 id="r3-not-checked">13. Round 3 &mdash; Stating What Was Not Checked (R3-JU-3, R3-JU-6)</h2>
+    <p>The verdict must carry two distinct things when no regulatory basis was applied. They are separate because they address separate readers, and an implementation providing one has met one requirement, not both.</p>
+    <table>
+      <thead><tr><th></th><th>R3-JU-3 &mdash; the consequence</th><th>R3-JU-6 &mdash; the cause</th></tr></thead>
+      <tbody>
+        <tr><td>Reader</td><td>The submitter, now</td><td>A later reader of the record</td></tr>
+        <tr><td>Form</td><td>Prose, in the verdict body</td><td>A labelled reason on the verdict</td></tr>
+        <tr><td>Says</td><td>&ldquo;No regulatory rules were applied, so there are no citations&rdquo;</td><td><code>no_regulatory_basis</code></td></tr>
+        <tr><td>Source</td><td>Rendered from <code>provisional_reasons</code></td><td><code>provisional_reasons</code> itself</td></tr>
+      </tbody>
+    </table>
+    <h3>13.1 Absence is never communicated by absence</h3>
+    <p>Before round 3, a verdict with no active packs simply had no REGULATORY REASONING CHAIN panel. A reader could not distinguish &ldquo;no regulation applies here&rdquo; from &ldquo;we did not check&rdquo; from &ldquo;the panel failed to render&rdquo;. All three look identical: nothing. R3-JU-3 requires the explanation to be <strong>present</strong>, not the panel to be absent.</p>
+    <h3>13.2 Rendering the reasons</h3>
+    <p>Where <code>provisional_reasons</code> is non-empty, the verdict states each reason it contains. Where both are present, both are stated (TC-R3-JU-6-03). The two must be textually distinguishable, not merely both present under one &ldquo;Provisional&rdquo; banner &mdash; a reader must be able to tell, without opening the policy, whether rules were applied and not yet adopted, or not applied at all.</p>
+    <h3>13.3 Constraint &mdash; the verdict-query collision (HR3-08)</h3>
+    <p>Existing UI tests assert the verdict screen with a single-match <code>/approved|rejected/i</code> query. Round 3 adds rendered strings here and, via <code>register-lifecycle.md</code> &sect;15, puts the verdict status on a second screen for the first time. Any new string must avoid the words &ldquo;approved&rdquo; and &ldquo;rejected&rdquo;, and the register-side queries must be tightened before that change lands.</p>
+    <h3>13.4 Traceability</h3>
+    <table>
+      <thead><tr><th>Requirement</th><th>Section</th><th>Test cases</th></tr></thead>
+      <tbody>
+        <tr><td>R3-JU-3</td><td>&sect;13, &sect;13.1</td><td>TC-R3-JU-3-01, -02, -03</td></tr>
+        <tr><td>R3-JU-6</td><td>&sect;13.2</td><td>TC-R3-JU-6-01 &hellip; -04</td></tr>
+      </tbody>
+    </table>
+    <h2 id="changelog-r3">14. Changelog</h2>
+    <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
+      <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); separate assertions because they serve separate readers.</td></tr>
+    </tbody></table>
+
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
   <p><strong>V2-D no-API-key fallback (ported from verdict-audit.md, code review 001 C-7):</strong> "Narrative summary not generated — this optional plain-English retelling needs an Anthropic API key (Settings). It adds nothing to the outcome above: the rules, citations and required controls shown on this page are the complete basis for the decision. (V2-D: reworded — the trace is an optional narrative layer over an already-complete explanation, not a missing capability.)"</p>
 </main>

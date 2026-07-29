@@ -735,6 +735,74 @@ interface VerdictTraceData {
       </tbody>
     </table>
 
+
+    <h2 id="r3-provisional">13. Round 3 &mdash; Provisional Reasons (R3-JU-2, R3-JU-6)</h2>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-EE-R3-1</span>
+        <span class="adr-title">The engine determines Provisional and names its reasons</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Context</h4>
+        <p>Before round 3, &ldquo;Provisional&rdquo; was not a value the engine produced. It was derived independently by two consumers from the same expression:</p>
+        <table>
+          <thead><tr><th>Site</th><th>Expression</th></tr></thead>
+          <tbody>
+            <tr><td><code>VerdictDisplay.tsx:161</code></td><td><code>lowCaveats.length &gt; 0</code></td></tr>
+            <tr><td><code>store/register.ts:55</code></td><td><code>verdict.confidence_caveats.some(c =&gt; c.confidence === 'low')</code></td></tr>
+          </tbody>
+        </table>
+        <p>Two copies of one rule, in two layers, with no shared definition &mdash; a single-source-contract violation (<code>cross-cutting.md</code> &sect;13). Round 3 adds a second independent cause and R3-JU-6 requires the two to be distinguishable. Under the existing arrangement that means editing the same rule in two files and hoping neither drifted. A partial update would produce a use case whose verdict screen says Provisional and whose register row does not, with no test asserting they agree.</p>
+        <h4>Options Considered</h4>
+        <ol>
+          <li><strong>Extend both derivations in place.</strong> Cheapest edit, preserves the defect. Rejected: it doubles down on a duplication round 3 is about to make twice as costly.</li>
+          <li><strong>Extract a shared helper in <code>src/store/</code>.</strong> Removes the duplication but puts an appetite judgement in the persistence layer, which <code>cross-cutting.md</code> &sect;7 defines as persistence-only. Also leaves the verdict incomplete on its own terms.</li>
+          <li><strong>The engine emits the determination.</strong> <code>evaluate()</code> populates <code>provisional_reasons</code> on the <code>Verdict</code>; consumers read it and never re-derive. <strong>Chosen.</strong></li>
+        </ol>
+        <h4>Decision</h4>
+        <p>The <code>Verdict</code> gains <code>provisional_reasons</code> &mdash; an ordered collection of named reasons, empty when the verdict is not provisional.</p>
+        <table>
+          <thead><tr><th>Reason</th><th>Meaning</th><th>Raised when</th></tr></thead>
+          <tbody>
+            <tr><td><code>unsigned_pack_rules</code></td><td>Rules were applied, but are proposed interpretations pending firm adoption (NF-7)</td><td>Any fired pack rule is unsigned</td></tr>
+            <tr><td><code>no_regulatory_basis</code></td><td>No regulatory rules were applied at all</td><td>No jurisdiction pack activated</td></tr>
+          </tbody>
+        </table>
+        <p>A verdict is Provisional if and only if <code>provisional_reasons</code> is non-empty. Both consumers read that; neither re-derives it.</p>
+        <h4>Consequences</h4>
+        <p>The two conditions can co-occur and both are then listed, in a fixed order, satisfying R3-JU-6. The register and the verdict screen cannot disagree, because there is one determination.</p>
+      </div>
+    </details>
+
+    <h3>13.1 Why the reasons are not interchangeable</h3>
+    <p>The two reasons are different claims and the distinction is the point of R3-JU-6. <code>unsigned_pack_rules</code> means a basis exists and has not yet been adopted by the firm. <code>no_regulatory_basis</code> means there is no basis. Presenting the second as the first would claim more than the engine can support &mdash; the failure mode this product treats as functional, not cosmetic. The engine states the condition; it does not rank them.</p>
+
+    <h3>13.2 Determinism (NF-1)</h3>
+    <p><code>provisional_reasons</code> is derived from the same inputs as the rest of the verdict, in the same pass, with no clock and no randomness. Reasons are emitted in a fixed declaration order, not discovery order, so two runs over identical inputs produce identical collections. TC-PE-1-01 compares the whole serialized result across ten runs, so the new field is covered by the existing determinism test without modification &mdash; which is what R3-NF-1 asserts.</p>
+
+    <h3>13.3 What round 3 does not change</h3>
+    <p>The verdict <code>status</code> enum is untouched. Provisional is not a fourth status: it is a qualifier carried alongside the status, and a Provisional verdict still has an underlying in-appetite or out-of-appetite determination. The engine&rsquo;s input contract is unchanged &mdash; <code>DataFlowGraph</code> gains nothing (see <code>intake-flow.md</code> ADR-IF-R3-1).</p>
+
+    <h3>13.4 Traceability</h3>
+    <table>
+      <thead><tr><th>Requirement</th><th>Section</th></tr></thead>
+      <tbody>
+        <tr><td>R3-JU-2</td><td>ADR-EE-R3-1, &sect;13.1</td></tr>
+        <tr><td>R3-JU-6</td><td>ADR-EE-R3-1, &sect;13.1</td></tr>
+        <tr><td>R3-NF-1</td><td>&sect;13.2</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="changelog-r3">14. Changelog</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>
+      </tbody>
+    </table>
+
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
   </main>
 

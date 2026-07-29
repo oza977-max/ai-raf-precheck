@@ -385,3 +385,64 @@ This shape is computed by `src/store/register.ts` by scanning `AuditEvent[]` —
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+---
+
+## 13. Round 3 — Stating What Was Not Checked (R3-JU-3, R3-JU-6)
+
+The verdict must carry two distinct things when no regulatory basis was
+applied. They are separate because they address separate readers, and an
+implementation providing one has met one requirement, not both.
+
+| | R3-JU-3 — the consequence | R3-JU-6 — the cause |
+|---|---|---|
+| Reader | The submitter, now | A later reader of the record |
+| Form | Prose, in the verdict body | A labelled reason on the verdict |
+| Says | "No regulatory rules were applied, so there are no citations" | `no_regulatory_basis` |
+| Source | Rendered from `provisional_reasons` | `provisional_reasons` itself |
+
+### 13.1 Absence is never communicated by absence
+
+Before round 3, a verdict with no active packs simply had no REGULATORY
+REASONING CHAIN panel. A reader could not distinguish "no regulation applies
+here" from "we did not check" from "the panel failed to render". All three look
+identical: nothing.
+
+R3-JU-3 requires the explanation to be **present**, not the panel to be absent.
+The assertion in TC-R3-JU-3-01 is therefore on the presence of a statement, and
+TC-R3-JU-3-03 asserts the converse — a verdict with active packs carries no such
+statement.
+
+### 13.2 Rendering the reasons
+
+Where `provisional_reasons` is non-empty, the verdict states each reason it
+contains. Where both are present, both are stated (TC-R3-JU-6-03). The
+`unsigned_pack_rules` reason keeps its existing NF-7 wording; the
+`no_regulatory_basis` reason is new.
+
+The two must be textually distinguishable, not merely both present under one
+"Provisional" banner. A reader must be able to tell, without opening the policy,
+whether rules were applied and not yet adopted, or not applied at all.
+
+### 13.3 Constraint — the verdict-query collision (HR3-08)
+
+Existing UI tests assert the verdict screen with a single-match
+`/approved|rejected/i` query. Round 3 adds rendered strings here and, via
+`register-lifecycle.md` §15, puts the verdict status on a second screen for the
+first time. Any new string introduced by §13 must avoid the words "approved" and
+"rejected", and the register-side queries must be tightened before that change
+lands. This is a build-ordering constraint, recorded here so it is not
+discovered by a red suite.
+
+### 13.4 Traceability
+
+| Requirement | Section | Test cases |
+|---|---|---|
+| R3-JU-3 | §13, §13.1 | TC-R3-JU-3-01, -02, -03 |
+| R3-JU-6 | §13.2 | TC-R3-JU-6-01 … -04 |
+
+## 14. Changelog
+
+| Date | Change |
+|---|---|
+| 2026-07-29 | §13 added — round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); they are separate assertions because they serve separate readers. |
