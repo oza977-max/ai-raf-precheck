@@ -5,6 +5,28 @@ marked, never deleted.
 
 ---
 
+## FN-002 — "What comes after Phase 8" is written nowhere
+
+**Raised by:** P8-C03 (2026-07-29). **Binds:** the Phase 8 closing handover.
+**Status:** open.
+
+`HANDOVER.md` documents the next *step*, not the next *phase*, so when Phase 8
+ends there is no single place answering "what now". The four known items are
+real but scattered: charter 004's unrouted defects (D-001 description
+discarded, D-004 register shows the input-node name, D-006 vendor silently
+defaulted) and the charter 005 re-walk are in `specs/implementation-guide.md`
+§11.5; the RF-2 spec-twin drift is a standing constraint in `HANDOVER.md`, not
+a work item; the duplicate-check hang found during P8-C02's smoke is only in
+that chunk's handover and a spawned task.
+
+Deferred deliberately, at the user's direction, to the Phase 8 closing handover
+rather than done mid-phase. **What it must contain:** an "After Phase 8"
+section listing each item with a pointer to where it is actually specified —
+not a restatement, a pointer, so there is one place to look and no second copy
+to drift.
+
+---
+
 ## FN-001 — P8-C03's scope is largely discharged by P8-C01
 
 **Raised by:** P8-C01 (2026-07-29). **Binds:** P8-C03.
