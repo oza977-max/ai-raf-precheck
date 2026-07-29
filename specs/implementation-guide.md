@@ -665,8 +665,8 @@ checking whether it fit this change.
 | **P8-C03** | Draft migration — pre-round-3 drafts load as unanswered | intake-flow §13.4 | TC-R3-JU-7-01, -02 | P8-C01 |
 | **P8-C04** | `Verdict.provisional_reasons`; both existing derivations replaced by reads | evaluation-engine §13 | TC-R3-JU-2-01…-03, TC-R3-JU-6-01…-04, TC-R3-NF-1-01, -02 | — |
 | **P8-C05** | Verdict renders the prose statement and the labelled causes | verdict-audit §13 | TC-R3-JU-3-01…-03 | P8-C04 |
-| **P8-C06** | `VerdictDisplay` becomes reusable on a reviewer's page: `onCorrect` optional, correction affordance and reasoning-trace disclosure gated on it; `findLatestVerdictEvent` exported | register-lifecycle §15.1b | TC-R3-RD-4-01 (partial — affordance absent) | — |
-| **P8-C07** | Register detail renders the verdict: policy prop path, the six decision-bearing elements plus provisional reasons, the no-verdict and pre-explanation states, no write on render. **Constraint:** its new `RegisterDetail` tests must scope queries to a container or role — never a bare single-match on verdict text (§11.1). | register-lifecycle §15.1, §15.1a, §15.2, §15.3 | TC-R3-RD-1-01…-03, -2-01, -02, -3-01, -4-01, -5-01, TC-R3-NF-2-01, -02 | P8-C04, P8-C06 |
+| **P8-C06** | `VerdictDisplay` becomes reusable on a reviewer's page: `onCorrect` optional, correction affordance and reasoning-trace disclosure gated on it; `findLatestVerdictEvent` exported | register-lifecycle §15.1b | TC-R3-RD-8-01 | — |
+| **P8-C07** | Register detail renders the verdict: policy prop path, the six decision-bearing elements plus provisional reasons, the no-verdict and pre-explanation states, no write on render. **Constraint:** its new `RegisterDetail` tests must scope queries to a container or role — never a bare single-match on verdict text (§11.1). | register-lifecycle §15.1, §15.1a, §15.2, §15.3 | TC-R3-RD-1-01…-03, -2-01, -02, -03, -3-01, -4-01, -5-01, -6-01, -7-01, TC-R3-NF-2-01, -02 | P8-C04, P8-C06 |
 | **P8-C08** | Sign-off names the verdict it attests to: `twoloD_reviewed.verdict_id`, threaded from the render, and the refusal when the verdict changed under the reviewer | verdict-audit §13.4, register-lifecycle §15.5 | TC-R3-RD-3-02, -03 | P8-C07 |
 
 ### 11.2a Why P8-C06 was split (design review 002)
@@ -704,6 +704,24 @@ The cut is by seam, not by size:
 covers the refusal path. It is picked up by P8-C08. TC-R3-RD-3-01 is a
 rendering assertion (the latest verdict is the one shown) and stays with
 P8-C07.
+
+**Second test-case correction (P8-C03, 2026-07-29).** Four more cases were
+unallocated — every one of them added by design review round 1 and never
+written back into this table when the review's findings were folded into the
+specs. Found by cross-reading every `TC-R3-*` id in `test-cases-003.md`
+against the ids named in this guide and present in the suite, which is now the
+routine at each chunk close:
+
+| Case | Added by | Now owned by |
+|---|---|---|
+| TC-R3-RD-8-01 — reclassification affordance absent | I-1 | P8-C06 (it is that chunk's whole point) |
+| TC-R3-RD-6-01 — Provisional states its cause on the sign-off page | I-2 | P8-C07 |
+| TC-R3-RD-7-01 — evidence status current, verdict historical | C-2 | P8-C07 |
+| TC-R3-RD-2-03 — verdict predating explanation capture | I-10 | P8-C07 |
+
+TC-R3-RD-4-01 (the verdict is readable without leaving the page) is a
+whole-page assertion and moves to P8-C07 with the rendering; P8-C06 now carries
+TC-R3-RD-8-01, which is the case that actually tests its deliverable.
 
 ### 11.3 Dependency network
 
