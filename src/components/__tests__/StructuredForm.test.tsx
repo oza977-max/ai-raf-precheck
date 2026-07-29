@@ -343,3 +343,193 @@ describe('StructuredForm — draft envelope (P8-C01, review pass 1)', () => {
     sessionStorage.clear();
   });
 });
+
+// ── P8-C02 — required-field markers (R3-JU-5) ────────────────────────────────
+//
+// The empirical blocking set is measured, not declared. Each candidate field
+// is omitted from an otherwise-complete form and Continue is observed. That
+// keeps the test independent of REQUIRED_FIELDS: if the component's list and
+// the form's real gate disagree, this test fails. Comparing REQUIRED_FIELDS to
+// markers rendered FROM REQUIRED_FIELDS would be tautological — it would pass
+// against any list, including a wrong one.
+
+type FieldProbe = {
+  /** The DOM id whose aria-required / marker state is being compared. */
+  id: string;
+  /** Answer this field. A no-op means the field is pre-answered by default. */
+  answer: (user: ReturnType<typeof userEvent.setup>) => Promise<void>;
+};
+
+const FIELD_PROBES: FieldProbe[] = [
+  {
+    id: 'sf-name',
+    answer: (u) => u.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool'),
+  },
+  {
+    id: 'sf-description',
+    answer: (u) => u.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.'),
+  },
+  {
+    id: 'sf-input-data-class',
+    answer: (u) =>
+      u.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal'),
+  },
+  {
+    id: 'sf-input-data-zone',
+    answer: (u) =>
+      u.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C'),
+  },
+  {
+    id: 'sf-model-type',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml'),
+  },
+  // Pre-answered: the select opens on "no autonomy", which is a real answer.
+  { id: 'sf-autonomy', answer: async () => {} },
+  {
+    id: 'sf-processing-zone',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C'),
+  },
+  {
+    id: 'sf-action-type',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read'),
+  },
+  {
+    id: 'sf-exposure',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only'),
+  },
+  {
+    id: 'sf-bindingness',
+    answer: (u) =>
+      u.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding'),
+  },
+  {
+    id: 'sf-reversibility',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible'),
+  },
+  {
+    id: 'sf-scale',
+    answer: (u) => u.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited'),
+  },
+  // Pre-answered: an unticked box is the answer "no".
+  { id: 'sf-replaces', answer: async () => {} },
+  { id: 'sf-jurisdiction', answer: (u) => u.click(screen.getByLabelText(/none.*not sure/i)) },
+  // Declared optional in their own labels — included so the probe covers the
+  // whole form, not only the fields expected to block.
+  {
+    id: 'sf-platform',
+    answer: async () => {},
+  },
+  { id: 'sf-vendor', answer: async () => {} },
+  { id: 'sf-decision-type', answer: async () => {} },
+  { id: 'sf-hitl', answer: async () => {} },
+];
+
+async function answerAllExcept(
+  user: ReturnType<typeof userEvent.setup>,
+  omittedId: string | null,
+): Promise<void> {
+  for (const probe of FIELD_PROBES) {
+    if (probe.id === omittedId) continue;
+    await probe.answer(user);
+  }
+}
+
+function markedFieldIds(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('[aria-required="true"]')].map((el) => el.id).sort();
+}
+
+describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
+  // ACCEPTANCE TEST (TDD-1, outside-in — written first).
+  it('TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set', async () => {
+    const user = userEvent.setup();
+
+    // Baseline: answering everything must open the gate, or "omitting X keeps
+    // it shut" proves nothing.
+    const baseline = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await answerAllExcept(user, null);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    const marked = markedFieldIds(baseline.container);
+    baseline.unmount();
+    sessionStorage.clear();
+
+    const blocking: string[] = [];
+    for (const probe of FIELD_PROBES) {
+      const view = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+      await answerAllExcept(user, probe.id);
+      if ((screen.getByRole('button', { name: /continue/i }) as HTMLButtonElement).disabled) {
+        blocking.push(probe.id);
+      }
+      view.unmount();
+      sessionStorage.clear();
+    }
+
+    // Set equality in BOTH directions. A one-directional assertion would pass
+    // an implementation that marks every field — as unhelpful as marking none.
+    expect(marked).toEqual(blocking.sort());
+    expect(blocking.length).toBeGreaterThan(0);
+  });
+
+  it('TC-R3-JU-5-01: every marked field also carries a visible marker, not only the attribute', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    await answerAllExcept(user, null);
+
+    for (const id of markedFieldIds(container)) {
+      const marker = container.querySelector(`[data-required-marker-for="${id}"]`);
+      // A screen-reader attribute alone is not a visible marker, and a visible
+      // asterisk alone is not accessible. R3-JU-5 requires both.
+      expect(marker, `no visible required-marker for ${id}`).not.toBeNull();
+      expect(marker?.textContent?.trim()).not.toBe('');
+    }
+    sessionStorage.clear();
+  });
+
+  it('TC-R3-JU-5-02: the optional platform and vendor fields carry neither signal', () => {
+    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+
+    for (const id of ['sf-platform', 'sf-vendor', 'sf-decision-type', 'sf-hitl']) {
+      expect(container.querySelector(`#${id}`)?.getAttribute('aria-required')).toBeNull();
+      expect(container.querySelector(`[data-required-marker-for="${id}"]`)).toBeNull();
+    }
+  });
+
+  // REALISTIC-FIXTURE VARIANT (TDD-3, web/UI). The happy path never produces
+  // this shape: a draft saved before round 3 that never carried the two
+  // defaulted keys at all. Restored as-is they are `undefined`, so the form
+  // would render a plausible-looking answer ("no autonomy", box unticked) over
+  // a value the gate rejects — Continue disabled, with no marker able to name
+  // the field, because those fields are deliberately unmarked.
+  it('a legacy draft missing the defaulted keys does not silently block Continue', async () => {
+    sessionStorage.setItem(
+      'aigate:intake-form-draft',
+      JSON.stringify({
+        useCaseName: 'Legacy draft',
+        description: 'Saved before round 3.',
+        inputDataClass: 'Internal',
+        inputDataZone: 'Zone C',
+        modelType: 'traditional-ml',
+        processingDataZone: 'Zone C',
+        outputActionType: 'read',
+        outputExposure: 'internal-only',
+        decisionBindingness: 'non-binding',
+        outputReversibility: 'reversible',
+        outputScale: 'limited',
+        jurisdictions: [],
+        // autonomyLevel and replacesPriorModel absent — the shape the current
+        // form never writes.
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+
+    // The jurisdiction answer is genuinely outstanding and IS marked.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+
+    // Nothing invisible is left holding the gate.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    sessionStorage.clear();
+  });
+});
