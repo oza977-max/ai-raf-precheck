@@ -20,7 +20,7 @@ import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/a
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
 import { intakeReducer } from './intake-state';
-import { saveDraft, loadDraft, clearDraft } from './intake-draft';
+import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import GraphView from './GraphView';
@@ -49,8 +49,15 @@ export default function IntakeFlow() {
 
   function handleStartOver() {
     clearDraft();
+    // explore-005 D-002: the guided form keeps its answers under a SECOND
+    // key, so clearing the reducer draft alone left the abandoned answers to
+    // reappear on the next visit to the form step.
+    clearFormDraft();
     setShowResumed(false);
-    dispatch({ type: 'DESCRIPTION_CHANGED', description: '' });
+    // RESTART, not DESCRIPTION_CHANGED — the latter is discarded by the
+    // reducer from every step but description_entry, so the banner hid
+    // itself and the screen never moved.
+    dispatch({ type: 'RESTART' });
   }
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
@@ -85,43 +92,82 @@ export default function IntakeFlow() {
   // on the Appetite screen; evaluation proceeds with the valid ones.
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
 
+  // explore-005 D-001: the effect below cannot run until the register has
+  // actually loaded, or a restored session would resolve the check against
+  // an empty array and report "checked 0 register entries" — a wrong answer
+  // rendered as a confident one.
+  const [registerLoaded, setRegisterLoaded] = useState(false);
+
   const refreshRegister = useCallback(async () => {
     const rows = await getUseCases('all');
     setRegisterRows(rows);
+    setRegisterLoaded(true);
   }, []);
 
   useEffect(() => {
     void refreshRegister();
   }, [refreshRegister]);
 
-  async function handleSubmitDescription() {
+  function handleSubmitDescription() {
     if (state.step !== 'description_entry') return;
     setSubmittedDescription(state.description);
-    dispatch({ type: 'SUBMIT_DESCRIPTION' });
     setDuplicateMatch(null);
     setDuplicateCheckDone(false);
-
-    const candidates = findPossibleDuplicates(
-      state.description,
-      registerRows.map((r) => ({ id: r.use_case_id, label: r.label })),
-    );
-    const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
-    if (topCandidate && getApiKey()) {
-      const confirmed = await confirmSemanticDuplicate(state.description, topCandidate.label);
-      if (confirmed) {
-        setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
-      }
-    } else if (topCandidate) {
-      setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
-    }
-    // V2-B (user feedback): the duplicate check is now a REAL GATE — the
-    // flow stops here and shows the result (match card, or an explicit
-    // "checked N entries, none similar"), and only proceeds on the
-    // user's "This is a new use case" confirmation. Previously it
-    // auto-proceeded past a green tick, making the inventory check
-    // invisible (the V1.2-C documented deviation, now user-rejected).
-    setDuplicateCheckDone(true);
+    dispatch({ type: 'SUBMIT_DESCRIPTION' });
   }
+
+  // explore-005 D-001 (Critical). The check used to run inside
+  // handleSubmitDescription, so its result existed only for a session that
+  // had passed through that click. A restored draft re-enters
+  // 'duplicate_check' directly (the lazy reducer init above), never calls
+  // the handler, and so sat on the loading placeholder forever — with the
+  // only button out of the step rendered in the other arm of that same
+  // ternary, leaving no control on screen at all.
+  //
+  // The fix is not to persist the result. The check is DERIVED from the
+  // description and the register, both of which the restored session has,
+  // so it is derived on entry to the step however the step was entered.
+  // Nothing here writes to the audit trail, so a re-run is free.
+  const dupCheckInFlight = useRef(false);
+
+  useEffect(() => {
+    if (state.step !== 'duplicate_check' || duplicateCheckDone || !registerLoaded) return;
+    // Synchronous, for the same reason as confirmInFlight below: StrictMode
+    // double-invokes mount effects within a single mount, and a state
+    // update lands too late to prevent the second call — which would mean
+    // two confirmSemanticDuplicate() calls per restore.
+    if (dupCheckInFlight.current) return;
+    dupCheckInFlight.current = true;
+
+    const description = state.description;
+    void (async () => {
+      try {
+        const candidates = findPossibleDuplicates(
+          description,
+          registerRows.map((r) => ({ id: r.use_case_id, label: r.label })),
+        );
+        const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
+        if (topCandidate) {
+          const confirmed = getApiKey() ? await confirmSemanticDuplicate(description, topCandidate.label) : true;
+          if (confirmed) {
+            setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
+          }
+        }
+      } finally {
+        // V2-B (user feedback): the duplicate check is a REAL GATE — the
+        // flow stops here and shows the result (match card, or an explicit
+        // "checked N entries, none similar"), and only proceeds on the
+        // user's "This is a new use case" confirmation. Previously it
+        // auto-proceeded past a green tick, making the inventory check
+        // invisible (the V1.2-C documented deviation, now user-rejected).
+        //
+        // In `finally` so an LLM failure still renders the gate rather than
+        // reinstating the hang this defect is about.
+        dupCheckInFlight.current = false;
+        setDuplicateCheckDone(true);
+      }
+    })();
+  }, [state, duplicateCheckDone, registerLoaded, registerRows]);
 
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;

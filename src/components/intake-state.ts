@@ -54,6 +54,11 @@ export type IntakeState =
 
 export type IntakeAction =
   | { type: 'DESCRIPTION_CHANGED'; description: string }
+  // explore-005 D-002: the only action valid from EVERY step. The resumed-
+  // draft banner's "Start over instead" previously dispatched
+  // DESCRIPTION_CHANGED, which the guard below discards from any step but
+  // description_entry — so the escape hatch hid itself and changed nothing.
+  | { type: 'RESTART' }
   | { type: 'SUBMIT_DESCRIPTION' }
   | { type: 'NO_DUPLICATE_FOUND'; method: 'llm' | 'form' }
   // useCaseId generated once by the caller at graph extraction (P5-C01 —
@@ -86,6 +91,12 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
     case 'DESCRIPTION_CHANGED':
       if (state.step !== 'description_entry') return state;
       return { step: 'description_entry', description: action.description };
+
+    case 'RESTART':
+      // Deliberately unguarded — see the action comment. Abandoning an
+      // in-flight intake is a UI reset only; nothing here touches the
+      // append-only audit trail, which is never written from the reducer.
+      return { step: 'description_entry', description: '' };
 
     case 'SUBMIT_DESCRIPTION':
       if (state.step !== 'description_entry') return state;
