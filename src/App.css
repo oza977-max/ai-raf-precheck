@@ -1140,6 +1140,15 @@ details input {
   line-height: 1.45;
 }
 
+/* ── Required-field marker (P8-C02, R3-JU-5) ──
+   Colour alone would carry the meaning for nobody who cannot see it, so the
+   glyph is the signal and the colour only reinforces it. The accessible half
+   of the pair is aria-required on the control itself. */
+.required-marker {
+  color: var(--danger, #a33);
+  font-weight: 600;
+}
+
 /* ── Regulatory reasoning chain (V2-A, RA-9) ── */
 .verdict__chain {
   margin: 1rem 0;

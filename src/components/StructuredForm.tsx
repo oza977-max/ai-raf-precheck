@@ -52,6 +52,81 @@ interface FormDraftEnvelope {
   jurisdictionAnswer: JurisdictionAnswer;
 }
 
+/** R3-JU-5 / intake-flow.md §13.3. ONE enumeration of the fields that hold the
+ *  Continue gate. `isComplete` derives from it and the required-markers render
+ *  from it, so the thing the user is told and the thing the gate enforces
+ *  cannot drift apart. Design review round 1, I-8 asked for exactly this: the
+ *  previous hand-written boolean conjunction (verified at
+ *  src/components/StructuredForm.tsx:116-137 as of commit e38ef98, the state
+ *  this chunk replaced) made the blocking set unenumerable, so a test could
+ *  only check it by restating the list.
+ *
+ *  `controlId` is the element the marker and `aria-required` attach to. For the
+ *  jurisdiction question that is the fieldset: the answer is the group, not any
+ *  one checkbox. ARIA defines `aria-required` for form controls rather than for
+ *  `group`, so this is a deliberate compromise — there is no conformant
+ *  attribute for "this checkbox group must be answered", and leaving the
+ *  question unmarked would be the larger failure. */
+interface RequiredField {
+  controlId: string;
+  isAnswered: (v: Partial<StructuredFormValues>, answer: JurisdictionAnswer) => boolean;
+}
+
+export const REQUIRED_FIELDS: RequiredField[] = [
+  { controlId: 'sf-name', isAnswered: (v) => Boolean(v.useCaseName) },
+  { controlId: 'sf-description', isAnswered: (v) => Boolean(v.description) },
+  { controlId: 'sf-input-data-class', isAnswered: (v) => Boolean(v.inputDataClass) },
+  { controlId: 'sf-input-data-zone', isAnswered: (v) => Boolean(v.inputDataZone) },
+  { controlId: 'sf-model-type', isAnswered: (v) => Boolean(v.modelType) },
+  { controlId: 'sf-processing-zone', isAnswered: (v) => Boolean(v.processingDataZone) },
+  { controlId: 'sf-action-type', isAnswered: (v) => Boolean(v.outputActionType) },
+  { controlId: 'sf-exposure', isAnswered: (v) => Boolean(v.outputExposure) },
+  { controlId: 'sf-bindingness', isAnswered: (v) => Boolean(v.decisionBindingness) },
+  { controlId: 'sf-reversibility', isAnswered: (v) => Boolean(v.outputReversibility) },
+  { controlId: 'sf-scale', isAnswered: (v) => Boolean(v.outputScale) },
+  // R3-JU-1: presence of the array is not an answer. `[]` is truthy, which is
+  // exactly how a user could previously proceed having told us nothing about
+  // where the system operates.
+  { controlId: 'sf-jurisdiction', isAnswered: (_v, answer) => answer !== 'unanswered' },
+];
+
+const REQUIRED_CONTROL_IDS = new Set(REQUIRED_FIELDS.map((f) => f.controlId));
+
+/** Marks a field required in both registers at once — the visible marker and
+ *  the accessible attribute always travel together, because either alone is a
+ *  half-kept promise. Spread onto the control; render `<RequiredMark>` in its
+ *  label. */
+function requiredProps(controlId: string) {
+  return REQUIRED_CONTROL_IDS.has(controlId) ? { 'aria-required': true as const } : {};
+}
+
+function RequiredMark({ controlId }: { controlId: string }) {
+  if (!REQUIRED_CONTROL_IDS.has(controlId)) return null;
+  return (
+    <span className="required-marker" data-required-marker-for={controlId} title="Required">
+      {' '}
+      *
+    </span>
+  );
+}
+
+/** The two fields the form opens with an answer already in: autonomy defaults
+ *  to "no autonomy" and the replaces-something box to unticked. Both are real
+ *  answers, so neither can be outstanding and neither is marked — marking a
+ *  field that can never block tells the user nothing, which §13.3 rejects as
+ *  firmly as marking none.
+ *
+ *  A draft written before those defaults existed can restore without them,
+ *  though, and then the gate is held by a field with no marker able to name it.
+ *  Normalising on restore is what keeps "cannot be outstanding" true. */
+function withDefaults(v: Partial<StructuredFormValues>): Partial<StructuredFormValues> {
+  return {
+    ...v,
+    autonomyLevel: v.autonomyLevel ?? 0,
+    replacesPriorModel: v.replacesPriorModel ?? false,
+  };
+}
+
 export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], onSubmit }: StructuredFormProps) {
   // D-002/D-003: restore any half-filled form so a refresh or a trip to the
   // register no longer costs the user eleven answers.
@@ -89,16 +164,15 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
   const restored = restoredRef.current.restored;
   const restoredEnvelope = restoredRef.current.envelope;
 
-  const [values, setValues] = useState<Partial<StructuredFormValues>>(
-    () =>
+  const [values, setValues] = useState<Partial<StructuredFormValues>>(() =>
+    withDefaults(
       restoredEnvelope?.values ??
-      (restoredEnvelope
-        ? {}
-        : ((restored as Partial<StructuredFormValues> | null) ?? null)) ?? {
-        autonomyLevel: 0,
-        replacesPriorModel: false,
-        jurisdictions: [],
-      },
+        (restoredEnvelope
+          ? {}
+          : ((restored as Partial<StructuredFormValues> | null) ?? null)) ?? {
+          jurisdictions: [],
+        },
+    ),
   );
 
   const [jurisdictionAnswer, setJurisdictionAnswer] = useState<JurisdictionAnswer>(
@@ -113,26 +187,16 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
     setValues((v) => ({ ...v, [field]: value }));
   }
 
+  // R3-JU-5: the gate is now the list, not a parallel restatement of it. The
+  // two defaulted fields are asserted here as a type-narrowing check rather
+  // than as a gate — `withDefaults` guarantees both are present, including for
+  // a restored legacy draft, so neither can hold Continue shut.
   function isComplete(v: Partial<StructuredFormValues>): v is StructuredFormValues {
     return Boolean(
-      v.useCaseName &&
-        v.description &&
-        v.inputDataClass &&
-        v.inputDataZone &&
-        v.modelType &&
-        v.autonomyLevel !== undefined &&
-        v.processingDataZone &&
-        v.outputActionType &&
-        v.outputExposure &&
-        v.decisionBindingness &&
-        v.outputReversibility &&
-        v.outputScale &&
-        v.replacesPriorModel !== undefined &&
+      REQUIRED_FIELDS.every((f) => f.isAnswered(v, jurisdictionAnswer)) &&
         v.jurisdictions &&
-        // R3-JU-1: presence of the array is not an answer. `[]` is truthy,
-        // which is exactly how a user could previously proceed having told
-        // us nothing about where the system operates.
-        jurisdictionAnswer !== 'unanswered',
+        v.autonomyLevel !== undefined &&
+        v.replacesPriorModel !== undefined,
     );
   }
 
@@ -169,27 +233,36 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         to this form; it changes how the description is read in, not how it is scored.)
       </p>
 
-      <label htmlFor="sf-name">What do you want to call it?</label>
+      <label htmlFor="sf-name">What do you want to call it?
+        <RequiredMark controlId="sf-name" />
+      </label>
       <input
         id="sf-name"
+        {...requiredProps('sf-name')}
         type="text"
         value={values.useCaseName ?? ''}
         onChange={(e) => update('useCaseName', e.target.value)}
       />
 
-      <label htmlFor="sf-description">In a sentence or two, what does it do?</label>
+      <label htmlFor="sf-description">In a sentence or two, what does it do?
+        <RequiredMark controlId="sf-description" />
+      </label>
       <textarea
         id="sf-description"
+        {...requiredProps('sf-description')}
         value={values.description ?? ''}
         onChange={(e) => update('description', e.target.value)}
       />
 
-      <label htmlFor="sf-input-data-class">What kind of information does it use?</label>
+      <label htmlFor="sf-input-data-class">What kind of information does it use?
+        <RequiredMark controlId="sf-input-data-class" />
+      </label>
       <p className="field-help">
         Pick the most sensitive kind it touches, even if that&apos;s only occasionally.
       </p>
       <select
         id="sf-input-data-class"
+        {...requiredProps('sf-input-data-class')}
         value={values.inputDataClass ?? ''}
         onChange={(e) => update('inputDataClass', e.target.value as StructuredFormValues['inputDataClass'])}
       >
@@ -201,12 +274,15 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-input-data-zone">Where does that information sit today?</label>
+      <label htmlFor="sf-input-data-zone">Where does that information sit today?
+        <RequiredMark controlId="sf-input-data-zone" />
+      </label>
       <p className="field-help">
         Before the AI touches it. If it is stored in more than one place, pick the least protected.
       </p>
       <select
         id="sf-input-data-zone"
+        {...requiredProps('sf-input-data-zone')}
         value={values.inputDataZone ?? ''}
         onChange={(e) => update('inputDataZone', e.target.value as StructuredFormValues['inputDataZone'])}
       >
@@ -218,12 +294,15 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-model-type">What kind of AI is it?</label>
+      <label htmlFor="sf-model-type">What kind of AI is it?
+        <RequiredMark controlId="sf-model-type" />
+      </label>
       <p className="field-help">
         If you are not sure, pick the closest description — you can correct it on the next screen.
       </p>
       <select
         id="sf-model-type"
+        {...requiredProps('sf-model-type')}
         value={values.modelType ?? ''}
         onChange={(e) => update('modelType', e.target.value as StructuredFormValues['modelType'])}
       >
@@ -248,7 +327,9 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-processing-zone">Where does the AI itself run?</label>
+      <label htmlFor="sf-processing-zone">Where does the AI itself run?
+        <RequiredMark controlId="sf-processing-zone" />
+      </label>
       <p className="field-help">
         Not where the data is stored — where it gets sent to be processed. A cloud AI service counts as an
         outside supplier even if your data normally never leaves the firm. Information moving from a more
@@ -256,6 +337,7 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
       </p>
       <select
         id="sf-processing-zone"
+        {...requiredProps('sf-processing-zone')}
         value={values.processingDataZone ?? ''}
         onChange={(e) =>
           update('processingDataZone', e.target.value as StructuredFormValues['processingDataZone'])
@@ -269,9 +351,12 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-action-type">What does it actually produce or do?</label>
+      <label htmlFor="sf-action-type">What does it actually produce or do?
+        <RequiredMark controlId="sf-action-type" />
+      </label>
       <select
         id="sf-action-type"
+        {...requiredProps('sf-action-type')}
         value={values.outputActionType ?? ''}
         onChange={(e) => update('outputActionType', e.target.value as StructuredFormValues['outputActionType'])}
       >
@@ -283,10 +368,13 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-exposure">Who sees what it produces?</label>
+      <label htmlFor="sf-exposure">Who sees what it produces?
+        <RequiredMark controlId="sf-exposure" />
+      </label>
       <p className="field-help">Pick the widest audience it reaches.</p>
       <select
         id="sf-exposure"
+        {...requiredProps('sf-exposure')}
         value={values.outputExposure ?? ''}
         onChange={(e) => update('outputExposure', e.target.value as StructuredFormValues['outputExposure'])}
       >
@@ -298,7 +386,9 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-bindingness">How much weight does its output carry?</label>
+      <label htmlFor="sf-bindingness">How much weight does its output carry?
+        <RequiredMark controlId="sf-bindingness" />
+      </label>
       <p className="field-help">
         Be honest about what happens in practice rather than what the process says. If people almost always
         go with what it says, that is closer to &ldquo;substantially drives the decision&rdquo; than to
@@ -306,6 +396,7 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
       </p>
       <select
         id="sf-bindingness"
+        {...requiredProps('sf-bindingness')}
         value={values.decisionBindingness ?? ''}
         onChange={(e) =>
           update('decisionBindingness', e.target.value as StructuredFormValues['decisionBindingness'])
@@ -319,13 +410,16 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
       </select>
 
-      <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?</label>
+      <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?
+        <RequiredMark controlId="sf-reversibility" />
+      </label>
       <p className="field-help">
         Think about the point at which someone would notice. Money already sent, a message already seen by
         a client, or a filing already made generally cannot be taken back.
       </p>
       <select
         id="sf-reversibility"
+        {...requiredProps('sf-reversibility')}
         value={values.outputReversibility ?? ''}
         onChange={(e) =>
           update('outputReversibility', e.target.value as StructuredFormValues['outputReversibility'])
@@ -411,9 +505,12 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         <option value="no">No — the system acts without prior human review</option>
       </select>
 
-      <label htmlFor="sf-scale">How widely is it used?</label>
+      <label htmlFor="sf-scale">How widely is it used?
+        <RequiredMark controlId="sf-scale" />
+      </label>
       <select
         id="sf-scale"
+        {...requiredProps('sf-scale')}
         value={values.outputScale ?? ''}
         onChange={(e) => update('outputScale', e.target.value as StructuredFormValues['outputScale'])}
       >
@@ -435,8 +532,11 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         It replaces something we already use (a model, a tool or a manual process)
       </label>
 
-      <fieldset>
-        <legend>Which countries or regions does it touch?</legend>
+      <fieldset id="sf-jurisdiction" {...requiredProps('sf-jurisdiction')}>
+        <legend>
+          Which countries or regions does it touch?
+          <RequiredMark controlId="sf-jurisdiction" />
+        </legend>
         <p className="field-help">
           Tick anywhere the clients, staff or data involved are based. This decides which local rules apply.
         </p>
