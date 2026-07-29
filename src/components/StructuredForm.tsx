@@ -55,6 +55,20 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
       },
   );
 
+  // R3-JU-1 / ADR-IF-R3-1. The three answered-states live HERE, alongside
+  // `values` and deliberately not inside StructuredFormValues:
+  // buildGraphFromForm consumes StructuredFormValues and must not see a
+  // form-only concern (verified: src/engine/build-graph-from-form.ts:86 —
+  // `jurisdictions: values.jurisdictions`, unchanged by this chunk).
+  //
+  // An empty array cannot express the difference between "never touched"
+  // and "answered: none", and that difference is the requirement — a user
+  // who has answered "none" has told us something; a user who has not
+  // answered has not.
+  const [jurisdictionAnswer, setJurisdictionAnswer] = useState<
+    'unanswered' | 'none' | 'selected'
+  >(() => ((loadFormDraft<Partial<StructuredFormValues>>()?.jurisdictions?.length ?? 0) > 0 ? 'selected' : 'unanswered'));
+
   useEffect(() => {
     saveFormDraft(values);
   }, [values]);
@@ -78,7 +92,11 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         v.outputReversibility &&
         v.outputScale &&
         v.replacesPriorModel !== undefined &&
-        v.jurisdictions,
+        v.jurisdictions &&
+        // R3-JU-1: presence of the array is not an answer. `[]` is truthy,
+        // which is exactly how a user could previously proceed having told
+        // us nothing about where the system operates.
+        jurisdictionAnswer !== 'unanswered',
     );
   }
 
@@ -90,10 +108,20 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
 
   function toggleJurisdiction(code: string) {
     const current = values.jurisdictions ?? [];
-    update(
-      'jurisdictions',
-      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
-    );
+    const next = current.includes(code) ? current.filter((c) => c !== code) : [...current, code];
+    update('jurisdictions', next);
+    // TC-R3-JU-1-05: unticking the last jurisdiction leaves the question
+    // ANSWERED, not unanswered. A user who ticked and unticked has engaged
+    // with it; silently re-blocking them with no explanation would be a
+    // worse defect than the one this chunk fixes.
+    setJurisdictionAnswer(next.length > 0 ? 'selected' : 'none');
+  }
+
+  function chooseNoJurisdiction() {
+    // Mutually exclusive with the checkboxes by construction rather than by
+    // validation — choosing this clears the selection outright.
+    update('jurisdictions', []);
+    setJurisdictionAnswer('none');
   }
 
   return (
@@ -387,6 +415,15 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
             {j.name}
           </label>
         ))}
+        <label htmlFor="sf-jurisdiction-none">
+          <input
+            id="sf-jurisdiction-none"
+            type="checkbox"
+            checked={jurisdictionAnswer === 'none'}
+            onChange={chooseNoJurisdiction}
+          />
+          None of these, or not sure yet
+        </label>
       </fieldset>
 
       <button type="button" onClick={handleSubmit} disabled={!isComplete(values)}>
