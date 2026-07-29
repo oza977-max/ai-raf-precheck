@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirements Health Report &middot; Round 3</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<main>
+<header>
+<h1>Requirements Health Report &mdash; Round 3</h1>
+<p class="subtitle">Assessed against requirements-003.md (commit 6ec6cc4)</p>
+<p class="meta">29 July 2026 &middot; 12 requirements assessed &middot; 7 issues + 1 constraint conflict</p>
+</header>
+<section>
+<h2>Summary</h2>
+<table><thead><tr><th>ID</th><th>Issue</th><th>Class</th></tr></thead><tbody>
+<tr><td><strong>HR3-01</strong></td><td>R3-RD-1: &quot;decision-bearing content&quot; is undefined</td><td>Untestable</td></tr>
+<tr><td><strong>HR3-02</strong></td><td>R3-JU-5: &quot;or equivalent&quot; defeats the assertion</td><td>Untestable</td></tr>
+<tr><td><strong>HR3-03</strong></td><td>R3-JU-3 and R3-JU-6 overlap on the same output</td><td>Inconsistency</td></tr>
+<tr><td><strong>HR3-04</strong></td><td>R3-JU-2: &quot;record the reason&quot; names no location</td><td>Weak</td></tr>
+<tr><td><strong>HR3-05</strong></td><td>R3-JU-1: no representation distinguishes &quot;not answered&quot; from &quot;answered: none&quot;</td><td>Weak</td></tr>
+<tr><td><strong>HR3-06</strong></td><td>Provisional verdicts and the 2LoD sign-off flow</td><td>Missing coverage</td></tr>
+<tr><td><strong>HR3-07</strong></td><td>Existing saved form drafts</td><td>Missing coverage</td></tr>
+<tr><td><strong>HR3-08</strong></td><td>Constraint conflict: rendering the verdict introduces &quot;Approved&quot; onto the register page</td><td>Not a requirements defect — flagged for the tech spec</td></tr>
+</tbody></table>
+</section>
+<section>
+<h2>Issues</h2>
+<div class="health-issue">
+  <h3 id="hr3-01">HR3-01 — R3-RD-1: &quot;decision-bearing content&quot; is undefined <span class="priority must">Untestable</span></h3>
+  <p>> Fit criterion: "Compared against the verdict rendered by the intake flow for
+> the same use case, the decision-bearing content matches."</p><p>A tester cannot write this assertion. "Decision-bearing" is not defined
+anywhere in the document, and the two views legitimately differ — the intake
+verdict carries a "Correct this classification?" affordance and a reasoning
+trace that make no sense on a sign-off page.</p><p><strong>To make it testable</strong>, enumerate what must be present. Proposed closed list:</p><p>1. the verdict status and tier
+2. the binding constraint id
+3. every triggered invariant id, with its citation text
+4. every control id in the minimal control set, with each control's evidence
+   status (VERIFIED / UNVERIFIED)
+5. the governance margin figure and the ids flagged NO HEADROOM
+6. the standing conditions</p><p>Anything outside that list may differ between the two views without failing.</p><p><strong>Suggested rewrite of the fit criterion:</strong> "The page contains each of the six
+elements enumerated in R3-RD-1. For a use case whose intake verdict listed N
+invariants and M controls, the sign-off page lists the same N ids and the same
+M ids."</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-02">HR3-02 — R3-JU-5: &quot;or equivalent&quot; defeats the assertion <span class="priority must">Untestable</span></h3>
+  <p>> "the form carries a visible required-marker <strong>or equivalent</strong>"</p><p>"Or equivalent" is an open set; a test cannot enumerate it. Wiegers lists this
+class of escape hatch as a primary ambiguity indicator.</p><p><strong>To make it testable</strong>, name the mechanism. Either: every field whose absence
+blocks progress carries <code>aria-required="true"</code> *and* a visible marker; or the
+form renders a named list of outstanding fields. Pick one — both are testable,
+"or equivalent" is not.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-03">HR3-03 — R3-JU-3 and R3-JU-6 overlap on the same output <span class="priority must">Inconsistency</span></h3>
+  <p>For the no-jurisdiction case both requirements demand a statement on the
+verdict:</p><p>- <strong>JU-3</strong> — "state plainly that no regulatory basis was applied and that
+  citations are absent for that reason"
+- <strong>JU-6</strong> — "state which condition made it Provisional"</p><p>For that case these are the same sentence. It is unclear whether the
+implementation must produce one statement or two, and a test written against
+one may pass while the other is unimplemented.</p><p><strong>Resolution needed:</strong> either (a) JU-6 subsumes JU-3 for the no-jurisdiction
+case, and JU-3 is folded in; or (b) they are distinct — JU-3 explains the
+consequence to the user, JU-6 labels the status for the record — and each gets
+its own assertion target. <strong>Recommend (b)</strong>, stated explicitly, because the two
+serve different readers: JU-3 is prose for the submitter, JU-6 is a labelled
+reason on the record for the auditor.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-04">HR3-04 — R3-JU-2: &quot;record the reason&quot; names no location <span class="priority must">Weak</span></h3>
+  <p>The requirement says the verdict "shall record the reason", and the fit
+criterion says it is "machine-readable", but nothing says where it lives. A
+test cannot assert on an unnamed field.</p><p><strong>To strengthen:</strong> name the carrier — e.g. the verdict gains a
+<code>provisional_reasons</code> collection, each entry naming a condition. This is close
+to an implementation detail, but a fit criterion needs *some* stable surface to
+assert against, and the alternative is asserting on rendered prose, which is
+brittle and duplicates JU-6.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-05">HR3-05 — R3-JU-1: no representation distinguishes &quot;not answered&quot; from &quot;answered: none&quot; <span class="priority must">Weak</span></h3>
+  <p>The requirement is sound but currently unimplementable as stated:
+<code>graph.jurisdictions</code> is a <code>string[]</code>, and an empty array cannot distinguish
+"the user chose none" from "the user never touched the field". The fit
+criterion acknowledges this ("an empty array alone does not satisfy it")
+without saying what does.</p><p>This is a genuine gap in the requirement, not merely an implementation concern
+— the distinction *is* the requirement.</p><p><strong>To strengthen:</strong> state that the intake form must carry an explicit
+answered-state for the jurisdiction question, separate from the selected set.
+Leave the mechanism to the tech spec.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-06">HR3-06 — Provisional verdicts and the 2LoD sign-off flow <span class="priority must">Missing coverage</span></h3>
+  <p>R3-JU-2 makes a class of verdict Provisional. Nothing in round 3 says what a
+2LoD reviewer may do with one.</p><p>Open: can a Provisional verdict be approved? Does approving it clear the
+Provisional status, or does the status persist on the record? Does the register
+show it differently from a Provisional caused by unsigned pack rules — R3-JU-6
+requires the *verdict* to distinguish them, but says nothing about the register
+row.</p><p>This matters because LC-2 (round 1) governs High-tier sign-off, and a
+Provisional verdict awaiting sign-off is a state round 1 never contemplated.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-07">HR3-07 — Existing saved form drafts <span class="priority must">Missing coverage</span></h3>
+  <p>The intake form persists a draft (<code>loadFormDraft</code>). Round 3 introduces a new
+required answered-state for the jurisdiction question. Nothing says what
+happens to a draft saved before this change: is the user re-prompted, is the
+draft treated as unanswered, or does it silently satisfy the new check?</p><p>Silently satisfying it would reintroduce the exact defect R3-JU-1 closes, for
+every user with an existing draft.</p><p>---</p>
+</div>
+<div class="health-issue">
+  <h3 id="hr3-08">HR3-08 — Constraint conflict: rendering the verdict introduces &quot;Approved&quot; onto the register page <span class="priority must">Not a requirements defect — flagged for the tech spec</span></h3>
+  <p>Round 3's own Constraints section notes that the verdict screen is asserted by
+a single-match <code>/approved|rejected/i</code> query, and warns new strings away from
+those words.</p><p>R3-RD-1 goes further than a new string: it renders the <strong>whole verdict</strong>,
+including its status — which for most use cases is literally "Approved with
+controls". Any existing test that queries the register detail page with a
+single-match pattern may now match more than once, or match text it did not
+before.</p><p>This is not a defect in the requirement. It is a known breakage the tech spec
+and build must plan for: tighten the queries before RD-1 lands, not after the
+suite goes red.</p>
+</div>
+</section>
+</main>
+</div>
+</body>
+</html>
