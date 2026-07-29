@@ -449,6 +449,17 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     await answerAllExcept(user, null);
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
     const marked = markedFieldIds(baseline.container);
+
+    // Both signals, not one. A screen-reader attribute alone is not a visible
+    // marker, and a visible asterisk alone is not accessible; R3-JU-5 asks for
+    // both, so asserting only the attribute would pass an implementation that
+    // tells sighted users nothing.
+    for (const id of marked) {
+      const mark = baseline.container.querySelector(`[data-required-marker-for="${id}"]`);
+      expect(mark, `no visible required-marker for ${id}`).not.toBeNull();
+      expect(mark?.textContent?.trim()).not.toBe('');
+    }
+
     baseline.unmount();
     sessionStorage.clear();
 
@@ -467,21 +478,6 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     // an implementation that marks every field — as unhelpful as marking none.
     expect(marked).toEqual(blocking.sort());
     expect(blocking.length).toBeGreaterThan(0);
-  });
-
-  it('TC-R3-JU-5-01: every marked field also carries a visible marker, not only the attribute', async () => {
-    const user = userEvent.setup();
-    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await answerAllExcept(user, null);
-
-    for (const id of markedFieldIds(container)) {
-      const marker = container.querySelector(`[data-required-marker-for="${id}"]`);
-      // A screen-reader attribute alone is not a visible marker, and a visible
-      // asterisk alone is not accessible. R3-JU-5 requires both.
-      expect(marker, `no visible required-marker for ${id}`).not.toBeNull();
-      expect(marker?.textContent?.trim()).not.toBe('');
-    }
-    sessionStorage.clear();
   });
 
   it('TC-R3-JU-5-02: the optional platform and vendor fields carry neither signal', () => {
