@@ -112,7 +112,8 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 | `StructuredForm.tsx` (round 3) | jurisdiction answered-state, `loadFormDraft()` migration | P8-C01 | P8-C01 (form gate test: untouched jurisdiction question disables Continue) |
 | `evaluate.ts` (round 3) | `provisionalReasons()` — internal engine module | P8-C04 | P8-C04 (engine test: no active pack yields `no_regulatory_basis`) |
 | `VerdictDisplay.tsx` (round 3) | `verdict.provisional_reasons` — read, no longer derived locally | P8-C05 | P8-C05 (verdict test: statement and labelled cause both render) |
-| `RegisterDetail.tsx` (round 3) | `VerdictDisplay`, latest verdict-bearing `AuditEvent` payload | P8-C06 | P8-C06 (sign-off test: six decision-bearing elements present) |
+| `RegisterDetail.tsx` (round 3) | `VerdictDisplay`, latest verdict-bearing `AuditEvent` payload | P8-C07 | P8-C07 (sign-off test: six decision-bearing elements present) |
+| `twoloD_reviewed` payload (round 3) | `verdict_id` — the id of the verdict the page rendered | P8-C08 | P8-C08 (audit test: the sign-off event names the rendered verdict) |
 | `store/register.ts` (round 3) | `verdict.provisional_reasons` — read, no longer derived locally | P8-C04 | P8-C04 (register test: row status agrees with verdict status) |
 
 ---
@@ -645,11 +646,11 @@ register at line 85, and that navigation reaches `RegisterView` (the list), not
 `RegisterDetail`. There is no `RegisterDetail.test.tsx` at all. No existing
 query can break.
 
-The real risk is forward-looking, and it belongs to P8-C06: that chunk writes
+The real risk is forward-looking, and it belongs to P8-C07: that chunk writes
 the first tests against a `RegisterDetail` that now renders "Approved with
 controls". Its queries must be scoped — to a container, a role, or a test id —
 never a bare single-match on verdict text. That is recorded as a constraint on
-P8-C06 rather than as a chunk of its own.
+P8-C07 rather than as a chunk of its own.
 
 The correction is kept in the record rather than quietly removed: the original
 claim was inherited from a standing warning in `CLAUDE.md` and applied without
@@ -664,7 +665,45 @@ checking whether it fit this change.
 | **P8-C03** | Draft migration — pre-round-3 drafts load as unanswered | intake-flow §13.4 | TC-R3-JU-7-01, -02 | P8-C01 |
 | **P8-C04** | `Verdict.provisional_reasons`; both existing derivations replaced by reads | evaluation-engine §13 | TC-R3-JU-2-01…-03, TC-R3-JU-6-01…-04, TC-R3-NF-1-01, -02 | — |
 | **P8-C05** | Verdict renders the prose statement and the labelled causes | verdict-audit §13 | TC-R3-JU-3-01…-03 | P8-C04 |
-| **P8-C06** | Register detail renders the six decision-bearing elements; no-verdict case; no write on render. **Constraint:** its new `RegisterDetail` tests must scope queries to a container or role — never a bare single-match on verdict text (§11.1). | register-lifecycle §15 | TC-R3-RD-1-01…-03, -2-01, -02, -3-01, -02, -4-01, -5-01, TC-R3-NF-2-01, -02 | P8-C04 |
+| **P8-C06** | `VerdictDisplay` becomes reusable on a reviewer's page: `onCorrect` optional, correction affordance and reasoning-trace disclosure gated on it; `findLatestVerdictEvent` exported | register-lifecycle §15.1b | TC-R3-RD-4-01 (partial — affordance absent) | — |
+| **P8-C07** | Register detail renders the verdict: policy prop path, the six decision-bearing elements plus provisional reasons, the no-verdict and pre-explanation states, no write on render. **Constraint:** its new `RegisterDetail` tests must scope queries to a container or role — never a bare single-match on verdict text (§11.1). | register-lifecycle §15.1, §15.1a, §15.2, §15.3 | TC-R3-RD-1-01…-03, -2-01, -02, -3-01, -4-01, -5-01, TC-R3-NF-2-01, -02 | P8-C04, P8-C06 |
+| **P8-C08** | Sign-off names the verdict it attests to: `twoloD_reviewed.verdict_id`, threaded from the render, and the refusal when the verdict changed under the reviewer | verdict-audit §13.4, register-lifecycle §15.5 | TC-R3-RD-3-02, -03 | P8-C07 |
+
+### 11.2a Why P8-C06 was split (design review 002)
+
+Design review 002's verdict recorded P8-C06 as having grown: it carried the
+`verdict_id` schema change, the policy prop path, the `onCorrect` contract
+change, the exported helper **and** the six-element rendering, while already
+being the closing chunk. The review advised splitting it at build time.
+
+The cut is by seam, not by size:
+
+- **P8-C06 is a contract change with no page work.** It touches
+  `VerdictDisplay` and the one export in `store/register.ts`, and it carries no
+  logical dependency on P8-C04 — but it shares both files with the verdict
+  track, so §11.4 sequences it after that track rather than beside it.
+  `onCorrect` is required today
+  (`src/components/VerdictDisplay.tsx:18`) and its button renders
+  unconditionally (`src/components/VerdictDisplay.tsx:335`);
+  `findLatestVerdictEvent` exists but is not exported
+  (`src/store/register.ts:23`).
+- **P8-C07 is the page work.** The policy prop is threaded here, in the chunk
+  that consumes it, not one chunk early — neither `RegisterViewProps`
+  (`src/components/RegisterView.tsx:9`) nor `RegisterDetailProps`
+  (`src/components/RegisterDetail.tsx:10`) carries it today, and a prop
+  threaded ahead of its reader is the "computed but never consumed" pattern
+  `CLAUDE.md` warns about.
+- **P8-C08 is the attestation change.** It is a store-schema edit
+  (`twoloD_reviewed`, `src/store/types.ts:29`) plus a write-path guard, and it
+  needs the rendered verdict's id — so it must follow the rendering, not
+  precede it. Separating it also keeps the schema edit out of a chunk whose
+  review is already reading a large component.
+
+**Test-case correction.** The pre-split P8-C06 row listed TC-R3-RD-3-01 and
+-02 but omitted **TC-R3-RD-3-03** (`test-cases/test-cases-003.md:420`), which
+covers the refusal path. It is picked up by P8-C08. TC-R3-RD-3-01 is a
+rendering assertion (the latest verdict is the one shown) and stays with
+P8-C07.
 
 ### 11.3 Dependency network
 
@@ -673,10 +712,12 @@ P8-C01 ──┬── P8-C02
          └── P8-C03
 
 P8-C04 ──── P8-C05
-   └────────────────────── P8-C06
+   └──────────────┬── P8-C07 ──── P8-C08
+P8-C06 ───────────┘
 ```
 
-**Critical path:** P8-C04 → P8-C06 (engine field, then the page that reads it).
+**Critical path:** P8-C04 → P8-C07 → P8-C08 (engine field, then the page that
+reads it, then the attestation that names what the page showed).
 
 ### 11.4 Parallelism (share-nothing)
 
@@ -687,19 +728,23 @@ Two tracks touch disjoint files and may run in parallel:
 | Intake | P8-C01 → P8-C02, P8-C03 | `StructuredForm.tsx`, `intake-draft.ts`, `build-graph-from-form.ts` |
 | Verdict | P8-C04 → P8-C05 | `src/engine/*`, `VerdictDisplay.tsx`, `store/register.ts` |
 
-P8-C06 is the closing chunk — it modifies
-`RegisterDetail.tsx`, which no other round-3 chunk touches, and depends on the
-verdict track's output.
+P8-C07 → P8-C08 is the closing track — it modifies `RegisterDetail.tsx`, which
+no other round-3 chunk touches, and depends on the verdict track's output.
 
-**The one shared file is `store/register.ts`**, edited by P8-C04 (replacing the
-local Provisional derivation with a read). No other chunk touches it, so the
-share-nothing rule holds.
+**Two files are shared and both are sequenced, not parallel.**
+`store/register.ts` is edited by P8-C04 (replacing the local Provisional
+derivation with a read) and by P8-C06 (exporting `findLatestVerdictEvent`) —
+these must not run concurrently. `VerdictDisplay.tsx` is edited by P8-C05
+(rendering) and P8-C06 (the `onCorrect` contract); likewise sequential. P8-C06
+is therefore best run **after** the verdict track rather than beside it, even
+though it carries no logical dependency on it.
 
 ### 11.5 Integration closure
 
-P8-C06 is the closing chunk: after it, every round-3 seam is wired — the form
+P8-C08 is the closing chunk: after it, every round-3 seam is wired — the form
 produces an answered-state, the engine emits reasons, the verdict renders them,
-and the register page reads the verdict. The verification is a live walkthrough
+the register page reads the verdict, and the sign-off names the verdict it
+attests to. The verification is a live walkthrough
 of both changed screens, plus `npm test` ×3 (per the ordering-sensitivity rule
 in `CLAUDE.md`), `npx tsc --noEmit`, `npm run build`, and
 `python3 scripts/spec-parity-check.py`.
@@ -716,3 +761,4 @@ need their own routing.
 | Date | Change |
 |---|---|
 | 2026-07-29 | Phase 8 added — round 3. Base phase P8 chosen after collision scan over `build/handovers/` (P1–P7 in use). Wiring matrix extended with five round-3 rows. The standalone query-tightening chunk from the first draft was dropped after verification showed no existing test breaks (§11.1); the constraint moved onto P8-C06. |
+| 2026-07-29 | P8-C06 split into three (§11.2a), per design review 002's recorded caveat that it had grown to carry the `verdict_id` schema change, the policy prop path, the `onCorrect` contract change, the exported helper and the rendering. New: P8-C06 (`VerdictDisplay` reuse contract), P8-C07 (register-detail rendering), P8-C08 (sign-off attestation). TC-R3-RD-3-03 was missing from the pre-split row and is now allocated. Phase 8 is eight chunks. |
