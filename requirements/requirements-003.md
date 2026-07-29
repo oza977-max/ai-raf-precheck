@@ -109,29 +109,49 @@ is either one or more jurisdictions selected, or an explicit
 "none / not sure" recorded as a deliberate choice. An untouched jurisdiction
 field is not an answer.
 
+The form shall carry an explicit answered-state for the jurisdiction question,
+separate from the set of jurisdictions selected. The mechanism is left to the
+technical specification; the distinction between "not answered" and
+"answered: none" is the requirement, and an empty selection alone cannot
+express it.
+
 > Fit criterion: with no jurisdiction control touched, the form's Continue
-> action is unavailable. With "none / not sure" chosen, it is available. The
-> completeness check distinguishes "not answered" from "answered: none" — an
-> empty array alone does not satisfy it.
+> action is unavailable. With "none / not sure" chosen, it is available. With
+> one or more jurisdictions ticked, it is available. The three states are
+> distinguishable from the form's persisted state, not inferred from the
+> selection being empty.
 
 **R3-JU-2 (Must):** Where the user has answered "none / not sure", the
 resulting verdict shall be marked **Provisional**, and shall record the reason
 for that status as *no regulatory basis applied* — a reason distinct from the
 unsigned-pack-rules reason of NF-7.
 
+The reason shall be carried on the verdict itself as a named, enumerable value
+— not inferred from rendered prose. The technical specification names the
+field; this requirement fixes only that a stable machine-readable surface
+exists and that `no_regulatory_basis` is distinct from the unsigned-rules
+condition.
+
 > Fit criterion: a use case submitted with "none / not sure" produces a verdict
 > whose status is Provisional, and the register row shows Provisional. The
-> verdict carries a machine-readable reason identifying which condition caused
-> it. A use case submitted with at least one jurisdiction is not made
-> Provisional by this requirement.
+> verdict carries a machine-readable reason whose value identifies the
+> no-regulatory-basis condition specifically. A use case submitted with at
+> least one jurisdiction is not made Provisional by this requirement.
 
 **R3-JU-3 (Must):** A verdict produced with no active jurisdiction packs shall
 state plainly, on the verdict itself, that no regulatory basis was applied and
 that citations are absent for that reason.
 
+This is distinct from R3-JU-6 and both apply. R3-JU-3 is prose addressed to
+the submitter explaining the consequence; R3-JU-6 is a labelled reason on the
+record addressed to a later reader. One satisfies the user; the other satisfies
+the audit. An implementation that provides only one has met only one.
+
 > Fit criterion: the verdict view for a "none / not sure" submission contains an
 > explicit statement to that effect. It does not merely omit the regulatory
-> reasoning chain. Absence is never communicated by absence.
+> reasoning chain. Absence is never communicated by absence. The statement
+> required here is asserted separately from the labelled reason required by
+> R3-JU-6.
 
 **R3-JU-4 (Should):** The jurisdiction question shall state, at the point of
 asking, that the answer determines which regulatory rules are applied.
@@ -139,14 +159,16 @@ asking, that the answer determines which regulatory rules are applied.
 > Fit criterion: the field's help text names the consequence. A user who reads
 > only the field and its help can tell that leaving it empty has an effect.
 
-**R3-JU-5 (Should):** Every field the form requires shall be identifiable as
-required before the user attempts to proceed.
+**R3-JU-5 (Should):** Every field the form requires shall carry a visible
+required-marker and the accessible attribute `aria-required="true"`, before the
+user attempts to proceed.
 
 > Fit criterion: for each field whose absence would disable the Continue
-> action, the form carries a visible required-marker or equivalent. Verified by
-> inspection: no field can block progress without being marked. *(Also closes
-> charter 004 D-003, filed Important — a disabled Continue with nothing naming
-> the outstanding field.)*
+> action, the rendered form carries both a visible required-marker and
+> `aria-required="true"`. Enumerated by query: the set of fields blocking
+> progress and the set carrying the marker are identical, with no member of
+> either outside the other. *(Also closes charter 004 D-003, filed Important —
+> a disabled Continue with nothing naming the outstanding field.)*
 
 **R3-JU-6 (Must):** Where a verdict is Provisional, it shall state which
 condition made it Provisional. Where more than one applies, all shall be
@@ -163,6 +185,19 @@ stated.
 > rules were applied at all — there is no basis. Presenting the second as the
 > first would claim more than the product can prove, which this product
 > treats as a functional defect rather than a matter of tone.
+
+**R3-JU-7 (Must):** A saved intake draft created before this round shall be
+treated as having no jurisdiction answer, and the user shall be required to
+answer before proceeding.
+
+> Fit criterion: a draft persisted without an explicit answered-state loads with
+> the jurisdiction question unanswered and Continue unavailable. It does not
+> silently satisfy R3-JU-1. Verified by loading a draft in the pre-round-3
+> shape.
+>
+> Rationale: a pre-existing draft that passes the new check would reintroduce,
+> for every user holding one, exactly the defect R3-JU-1 closes — and would do
+> so invisibly, because the user never sees the question they failed to answer.
 
 ### R3-RD — Register Detail Verdict Visibility
 
@@ -184,11 +219,24 @@ triggered invariant with its regulatory citation, the minimal control set with
 each control's evidence status, the governance margin, and the standing
 conditions.
 
-> Fit criterion: for a use case with a persisted verdict, the detail page
-> contains the binding constraint id, every triggered invariant id, every
-> control id in the minimal set, and the governance margin figure. Compared
-> against the verdict rendered by the intake flow for the same use case, the
-> decision-bearing content matches.
+The decision-bearing content is this closed list of six elements. Anything
+outside it may legitimately differ between the two views — the intake verdict
+carries affordances, such as the reclassification prompt and the reasoning
+trace, that have no place on a sign-off page.
+
+1. the verdict status and the tier
+2. the binding constraint id
+3. every triggered invariant id, each with its regulatory citation text
+4. every control id in the minimal control set, each with its evidence status
+   (VERIFIED or UNVERIFIED)
+5. the governance margin figure, and the ids flagged as having no headroom
+6. the standing conditions
+
+> Fit criterion: the page contains each of the six elements above. For a use
+> case whose intake verdict listed N triggered invariants and M controls in the
+> minimal set, the sign-off page lists the same N invariant ids and the same M
+> control ids — compared as sets, not as rendered text. Elements outside the
+> list are not asserted.
 
 **R3-RD-2 (Must):** Where no verdict is recorded for a register entry, the page
 shall say so explicitly and shall still permit sign-off.
@@ -253,6 +301,11 @@ as a side effect of rendering the verdict.
 
 - Changing which jurisdictions exist, or authoring further packs.
 - Any change to how the engine activates packs once a jurisdiction is supplied.
+- What a 2LoD reviewer may do with a Provisional verdict — whether it can be
+  approved, whether approval clears the status, and whether the register
+  distinguishes the two causes at row level (health report HR3-06). Deliberately
+  deferred, not omitted: deferred until both kinds of Provisional can be
+  observed together.
 - The remaining charter 004 findings — D-001 (intake description discarded),
   D-004 (register shows the input-node name), D-006 (vendor silently defaulted).
   These are defects against existing behaviour and belong in a build fix, not
@@ -280,6 +333,7 @@ as a side effect of rendering the verdict.
 | R3-JU-4 | Jurisdiction | Field states that the answer selects the regulatory rules | Should |
 | R3-JU-5 | Jurisdiction | Required fields are identifiable before attempting to proceed | Should |
 | R3-JU-6 | Jurisdiction | A Provisional verdict states which condition caused it | Must |
+| R3-JU-7 | Jurisdiction | Pre-round-3 drafts require a fresh jurisdiction answer | Must |
 | R3-RD-1 | Register detail | Full verdict shown on the sign-off page | Must |
 | R3-RD-2 | Register detail | Missing verdict stated explicitly; sign-off still permitted | Must |
 | R3-RD-3 | Register detail | Verdict shown is the verdict the sign-off attaches to | Must |
@@ -303,4 +357,5 @@ as a side effect of rendering the verdict.
 | Date | Change |
 |---|---|
 | 2026-07-29 | Round 3 created. R3-JU and R3-RD promoted from exploratory charter 004 (D-002, D-005), with D-003 closed by R3-JU-5. |
+| 2026-07-29 | Health report round 3 applied: R3-RD-1 fit criterion made a closed six-item list (HR3-01); R3-JU-5 given a named mechanism (HR3-02); R3-JU-3/JU-6 overlap resolved as distinct (HR3-03); R3-JU-2 reason given a stable carrier (HR3-04); R3-JU-1 given an explicit answered-state (HR3-05); R3-JU-7 added for draft migration (HR3-07); HR3-06 recorded as a deliberate deferral. |
 | 2026-07-29 | R3-JU-2 revised and R3-JU-6 added before approval: a Provisional verdict must name its cause, so "no regulatory basis applied" is never presented as "pending firm adoption". Closes the deferred open question. |

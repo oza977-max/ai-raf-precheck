@@ -383,39 +383,40 @@
         <nav class="toc-nav">
             <h3>Contents</h3>
             <ul>
-                <li><a href="#rounds">Relationship to Previous Rounds</a></li>
+                <li><a href="#round-3-reachable-reasoning">Round 3 — Reachable Reasoning</a></li>
+                <li><a href="#relationship-to-previous-rounds">Relationship to Previous Rounds</a></li>
                 <li><a href="#expert-panel">Expert Panel</a></li>
-                <li><a href="#purpose">Purpose &amp; Vision</a></li>
-                <li><a href="#target-users">Target User</a></li>
-                <li><a href="#functional">Functional Requirements</a>
-                    <ul>
-                        <li><a href="#ju">R3-JU &mdash; Jurisdiction</a></li>
-                        <li><a href="#rd">R3-RD &mdash; Register Detail</a></li>
-                    </ul>
-                </li>
-                <li><a href="#nonfunctional">Non-Functional</a></li>
-                <li><a href="#assumptions">Assumptions</a></li>
-                <li><a href="#constraints">Constraints</a></li>
-                <li><a href="#outofscope">Out of Scope</a></li>
-                <li><a href="#openquestions">Open Questions</a></li>
-                <li><a href="#index">Requirements Index</a></li>
-                <li><a href="#priority">Priority Model</a></li>
+                <li><a href="#1-purpose-vision">1. Purpose &amp; Vision</a></li>
+                <li><a href="#2-target-user">2. Target User</a></li>
+                <li><a href="#3-functional-requirements">3. Functional Requirements</a></li>
+                <li><a href="#4-non-functional-requirements">4. Non-Functional Requirements</a></li>
+                <li><a href="#5-assumptions">5. Assumptions</a></li>
+                <li><a href="#6-constraints">6. Constraints</a></li>
+                <li><a href="#7-out-of-scope">7. Out of Scope</a></li>
+                <li><a href="#8-open-questions">8. Open Questions</a></li>
+                <li><a href="#9-requirements-index">9. Requirements Index</a></li>
+                <li><a href="#10-priority-model">10. Priority Model</a></li>
+                <li><a href="#changelog">Changelog</a></li>
             </ul>
         </nav>
-
         <main>
             <header>
                 <h1>AIGate &mdash; Requirements, Round 3</h1>
                 <p class="subtitle">Reachable Reasoning</p>
-                <p class="meta">Round 3 &middot; 29 July 2026 &middot; Status: in elicitation</p>
+                <p class="meta">Round 3 &middot; 29 July 2026 &middot; Generated from requirements-003.md &mdash; do not hand-edit</p>
             </header>
-
-            <section id="rounds">
+            <section id="round-3-reachable-reasoning">
+                <h2>Round 3 — Reachable Reasoning</h2>
+                <p><em>Elicited 2026-07-29. Round 3 of 3.</em></p>
+            </section>
+            <section id="relationship-to-previous-rounds">
                 <h2>Relationship to Previous Rounds</h2>
                 <p>Round 1 (<code>requirements.md</code>) specified the pre-check engine and the V1 client. Round 2 (<code>requirements-002.md</code>) specified the V1.5 server tier.</p>
-                <p>Round 3 is smaller than either and has a single theme. Both requirements come from exploratory charter 004 (<code>test/explore-004.md</code>), the first time anyone walked AIGate as a person seeing it for the first time. Neither is a defect against Rounds 1 or 2 &mdash; in both cases the behaviour was never specified, so the build cannot be said to have got it wrong. That is why they are promoted here rather than parked as bugs.</p>
-                <p>The theme is that the product&rsquo;s reasoning exists and is correct but does not reliably reach the person who needs it. In one case the user can suppress the regulatory basis without knowing they have done so; in the other the reasoning is produced and then not shown to the reviewer asked to sign it off.</p>
-                <p><strong>Round 3 IDs are prefixed <code>R3-</code></strong> and are independent of Rounds 1 and 2. Rounds 1 and 2 remain immutable. Nothing here supersedes them.</p>
+                <p>Round 3 is smaller than either and has a single theme. Both requirements come from exploratory charter 004 (<code>test/explore-004.md</code>), the first time anyone walked AIGate as a person seeing it for the first time. Neither is a defect against Rounds 1 or 2 — in both cases the behaviour was never specified, so the build cannot be said to have got it wrong. That is why they are promoted here rather than parked as bugs.</p>
+                <p>The theme is that the product's reasoning exists and is correct but does not reliably reach the person who needs it. In one case the user can suppress the regulatory basis without knowing they have done so; in the other the reasoning is produced and then not shown to the reviewer asked to sign it off.</p>
+                <p><strong>Round 3 IDs are prefixed <code>R3-</code></strong> and are independent of Rounds 1 and 2.</p>
+                <p>Rounds 1 and 2 remain immutable. Nothing here supersedes them.</p>
+                <h3 id="provenance">Provenance</h3>
                 <table>
                     <thead><tr><th>Requirement</th><th>Source</th><th>Severity as filed</th></tr></thead>
                     <tbody>
@@ -425,58 +426,55 @@
                 </table>
                 <p>Charter 004 supersedes charter 003, which recorded D-002 with the wrong cause (it claimed the jurisdiction field did not exist; it does). The corrected finding is the one carried here.</p>
             </section>
-
             <section id="expert-panel">
                 <h2>Expert Panel</h2>
                 <table>
                     <thead><tr><th>Expert</th><th>Work</th><th>Role in This Document</th></tr></thead>
                     <tbody>
-                        <tr><td>Suzanne &amp; James Robertson</td><td><em>Mastering the Requirements Process</em> (3rd ed.)</td><td>Fit criteria &mdash; every requirement states how it is verified</td></tr>
+                        <tr><td>Suzanne &amp; James Robertson</td><td><em>Mastering the Requirements Process</em> (3rd ed.)</td><td>Fit criteria — every requirement below states how it is verified</td></tr>
                         <tr><td>Karl Wiegers</td><td><em>Software Requirements</em> (3rd ed.)</td><td>Ambiguity indicators; requirement classification</td></tr>
                         <tr><td>Donald Gause &amp; Gerald Weinberg</td><td><em>Exploring Requirements</em></td><td>Surfacing the assumption that a produced verdict is a delivered verdict</td></tr>
-                        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Tier 2b &mdash; why an absent jurisdiction is not a neutral default</td></tr>
-                        <tr><td>PRA</td><td><em>SS1/23</em> (2023)</td><td>Tier 2b &mdash; the reviewer&rsquo;s evidential basis for sign-off</td></tr>
-                        <tr><td>Federal Reserve/OCC/FDIC</td><td><em>SR 26-2</em> (2026)</td><td>Tier 2b &mdash; model risk governance sign-off expectations</td></tr>
-                        <tr><td>Nancy Leveson</td><td><em>Engineering a Safer World</em></td><td>Constraints enforced by control structure &mdash; a silent default is an unenforced constraint</td></tr>
+                        <tr><td>EU AI Act</td><td><em>Regulation (EU) 2024/1689</em></td><td>Tier 2b — why an absent jurisdiction is not a neutral default</td></tr>
+                        <tr><td>PRA</td><td><em>SS1/23</em> (2023)</td><td>Tier 2b — the reviewer's evidential basis for sign-off</td></tr>
+                        <tr><td>Federal Reserve/OCC/FDIC</td><td><em>SR 26-2</em> (2026)</td><td>Tier 2b — model risk governance sign-off expectations</td></tr>
+                        <tr><td>Nancy Leveson</td><td><em>Engineering a Safer World</em></td><td>Constraints enforced by control structure — a silent default is an unenforced constraint</td></tr>
                     </tbody>
                 </table>
             </section>
-
-            <section id="purpose">
+            <section id="1-purpose-vision">
                 <h2>1. Purpose &amp; Vision</h2>
                 <p><strong>Job statement.</strong> When I am deciding whether an AI use case is inside our risk appetite, I want the reasoning behind the verdict to be in front of me at the moment I act on it, so I can sign my name to a decision I can actually defend.</p>
-                <p>Round 3 exists because AIGate&rsquo;s value is auditability, and auditability is not a property of a computation &mdash; it is a property of what a person can see when they are asked to commit. A verdict that is computed correctly and then not shown is, from the auditor&rsquo;s point of view, indistinguishable from a verdict that was never computed.</p>
+                <p>Round 3 exists because AIGate's value is auditability, and auditability is not a property of a computation — it is a property of what a person can see when they are asked to commit. A verdict that is computed correctly and then not shown is, from the auditor's point of view, indistinguishable from a verdict that was never computed.</p>
                 <p>Both requirements below are presentation and validation requirements. Neither changes the engine. Neither changes a policy rule.</p>
             </section>
-
-            <section id="target-users">
+            <section id="2-target-user">
                 <h2>2. Target User</h2>
                 <p>Both requirements serve users already described in Round 2.</p>
-                <p><strong>Priya &mdash; Head of AI Governance (2LoD).</strong> R3-RD is hers. She is the person asked to approve or request correction on a High-tier use case, and today the page she does that from does not show her the verdict she is approving.</p>
-                <p><strong>James &mdash; AI Developer (1LoD).</strong> R3-JU is his. He completes the intake form without knowing which fields carry regulatory weight, and can produce a verdict with no regulatory basis without ever being told that is what happened.</p>
+                <p><strong>Priya — Head of AI Governance (2LoD).</strong> R3-RD is hers. She is the person asked to approve or request correction on a High-tier use case, and today the page she does that from does not show her the verdict she is approving.</p>
+                <p><strong>James — AI Developer (1LoD).</strong> R3-JU is his. He completes the intake form without knowing which fields carry regulatory weight, and can produce a verdict with no regulatory basis without ever being told that is what happened.</p>
             </section>
-
-            <section id="functional">
+            <section id="3-functional-requirements">
                 <h2>3. Functional Requirements</h2>
-
-                <h3 id="ju">R3-JU &mdash; Jurisdiction Completeness</h3>
-                <p>The guided intake form offers six jurisdiction checkboxes (UK, US, EU, CA, SG, JP). None is ticked by default. Nothing requires an answer: the completeness predicate tests the jurisdictions array for presence only, and an empty array is truthy. So Continue enables with nothing ticked, the user attests to a graph reading &ldquo;JURISDICTIONS &mdash; None specified&rdquo;, and the engine returns a full verdict with no jurisdiction packs activated, no regulatory reasoning chain, and no citations.</p>
-                <p>Nothing at any point tells the user that the regulatory basis is missing or why. The domain reason this matters: an absent jurisdiction is not a neutral default. Every authored pack &mdash; SR 26-2, SS1/23, EU AI Act, DORA &mdash; activates on jurisdiction, so an empty jurisdiction set silently disables the entire regulatory-citation feature, which is the product&rsquo;s central claim.</p>
+                <h3 id="r3-ju-jurisdiction-completeness">R3-JU — Jurisdiction Completeness</h3>
+                <p>The guided intake form offers six jurisdiction checkboxes (UK, US, EU, CA, SG, JP). None is ticked by default. Nothing requires an answer: the completeness predicate tests the jurisdictions array for presence only, and an empty array is truthy. So the form's Continue button enables with nothing ticked, the user attests to a graph reading "JURISDICTIONS — None specified", and the engine returns a full verdict with no jurisdiction packs activated, no regulatory reasoning chain, and no citations.</p>
+                <p>Nothing at any point tells the user that the regulatory basis is missing or why. The domain reason this matters: an absent jurisdiction is not a neutral default. Every authored pack — SR 26-2, SS1/23, EU AI Act, DORA — activates on jurisdiction, so an empty jurisdiction set silently disables the entire regulatory-citation feature, which is the product's central claim.</p>
                     <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-JU-1</span>
                             <span class="priority-chip priority-must">Must</span>
                         </div>
-                        <p class="requirement-text">The guided intake form shall require an explicit jurisdiction answer before allowing the use case to proceed. An explicit answer is either one or more jurisdictions selected, or an explicit &ldquo;none / not sure&rdquo; recorded as a deliberate choice. An untouched jurisdiction field is not an answer.</p>
-                        <div class="fit-criterion">With no jurisdiction control touched, the form&rsquo;s Continue action is unavailable. With &ldquo;none / not sure&rdquo; chosen, it is available. The completeness check distinguishes &ldquo;not answered&rdquo; from &ldquo;answered: none&rdquo; &mdash; an empty array alone does not satisfy it.</div>
+                        <p class="requirement-text">The guided intake form shall require an explicit jurisdiction answer before allowing the use case to proceed. An explicit answer is either one or more jurisdictions selected, or an explicit "none / not sure" recorded as a deliberate choice. An untouched jurisdiction field is not an answer.</p>
+                        <p>The form shall carry an explicit answered-state for the jurisdiction question, separate from the set of jurisdictions selected. The mechanism is left to the technical specification; the distinction between "not answered" and "answered: none" is the requirement, and an empty selection alone cannot express it.</p>
+                        <div class="fit-criterion">with no jurisdiction control touched, the form's Continue action is unavailable. With "none / not sure" chosen, it is available. With one or more jurisdictions ticked, it is available. The three states are distinguishable from the form's persisted state, not inferred from the selection being empty.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-JU-2</span>
                             <span class="priority-chip priority-must">Must</span>
                         </div>
-                        <p class="requirement-text">Where the user has answered &ldquo;none / not sure&rdquo;, the resulting verdict shall be marked <strong>Provisional</strong>, and shall record the reason for that status as <em>no regulatory basis applied</em> &mdash; a reason distinct from the unsigned-pack-rules reason of NF-7.</p>
-                        <div class="fit-criterion">A use case submitted with &ldquo;none / not sure&rdquo; produces a verdict whose status is Provisional, and the register row shows Provisional. The verdict carries a machine-readable reason identifying which condition caused it. A use case submitted with at least one jurisdiction is not made Provisional by this requirement.</div>
+                        <p class="requirement-text">Where the user has answered "none / not sure", the resulting verdict shall be marked <strong>Provisional</strong>, and shall record the reason for that status as <em>no regulatory basis applied</em> — a reason distinct from the unsigned-pack-rules reason of NF-7.</p>
+                        <p>The reason shall be carried on the verdict itself as a named, enumerable value — not inferred from rendered prose. The technical specification names the field; this requirement fixes only that a stable machine-readable surface exists and that <code>no_regulatory_basis</code> is distinct from the unsigned-rules condition.</p>
+                        <div class="fit-criterion">a use case submitted with "none / not sure" produces a verdict whose status is Provisional, and the register row shows Provisional. The verdict carries a machine-readable reason whose value identifies the no-regulatory-basis condition specifically. A use case submitted with at least one jurisdiction is not made Provisional by this requirement.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -484,7 +482,8 @@
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">A verdict produced with no active jurisdiction packs shall state plainly, on the verdict itself, that no regulatory basis was applied and that citations are absent for that reason.</p>
-                        <div class="fit-criterion">The verdict view for a &ldquo;none / not sure&rdquo; submission contains an explicit statement to that effect. It does not merely omit the regulatory reasoning chain. Absence is never communicated by absence.</div>
+                        <p>This is distinct from R3-JU-6 and both apply. R3-JU-3 is prose addressed to the submitter explaining the consequence; R3-JU-6 is a labelled reason on the record addressed to a later reader. One satisfies the user; the other satisfies the audit. An implementation that provides only one has met only one.</p>
+                        <div class="fit-criterion">the verdict view for a "none / not sure" submission contains an explicit statement to that effect. It does not merely omit the regulatory reasoning chain. Absence is never communicated by absence. The statement required here is asserted separately from the labelled reason required by R3-JU-6.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -492,43 +491,52 @@
                             <span class="priority-chip priority-should">Should</span>
                         </div>
                         <p class="requirement-text">The jurisdiction question shall state, at the point of asking, that the answer determines which regulatory rules are applied.</p>
-                        <div class="fit-criterion">The field&rsquo;s help text names the consequence. A user who reads only the field and its help can tell that leaving it empty has an effect.</div>
+                        <div class="fit-criterion">the field's help text names the consequence. A user who reads only the field and its help can tell that leaving it empty has an effect.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-JU-5</span>
                             <span class="priority-chip priority-should">Should</span>
                         </div>
-                        <p class="requirement-text">Every field the form requires shall be identifiable as required before the user attempts to proceed.</p>
-                        <div class="fit-criterion">For each field whose absence would disable the Continue action, the form carries a visible required-marker or equivalent. Verified by inspection: no field can block progress without being marked. Also closes charter 004 D-003.</div>
+                        <p class="requirement-text">Every field the form requires shall carry a visible required-marker and the accessible attribute <code>aria-required="true"</code>, before the user attempts to proceed.</p>
+                        <div class="fit-criterion">for each field whose absence would disable the Continue action, the rendered form carries both a visible required-marker and <code>aria-required="true"</code>. Enumerated by query: the set of fields blocking progress and the set carrying the marker are identical, with no member of either outside the other. <em>(Also closes charter 004 D-003, filed Important — a disabled Continue with nothing naming the outstanding field.)</em></div>
                     </div>
-
-                                    <div class="requirement">
+                    <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-JU-6</span>
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">Where a verdict is Provisional, it shall state which condition made it Provisional. Where more than one applies, all shall be stated.</p>
-                        <div class="fit-criterion">A Provisional verdict names its cause in the rendered output. A verdict provisional because no jurisdiction was supplied is distinguishable, by a reader and by a test, from one provisional because it relies on unsigned pack rules. A verdict that is both states both. <em>Rationale:</em> the two conditions are different claims. Unsigned pack rules mean rules <em>were</em> applied but are proposed interpretations pending firm adoption &mdash; a basis exists and is not yet adopted. No jurisdiction means no regulatory rules were applied at all &mdash; there is no basis. Presenting the second as the first would claim more than the product can prove, which this product treats as a functional defect rather than a matter of tone.</div>
+                        <div class="fit-criterion">a Provisional verdict names its cause in the rendered output. A verdict provisional because no jurisdiction was supplied is distinguishable, by a reader and by a test, from one provisional because it relies on unsigned pack rules. A verdict that is both states both. Rationale: the two conditions are different claims. Unsigned pack rules mean rules <em>were</em> applied but are proposed interpretations pending firm adoption — a basis exists and is not yet adopted. No jurisdiction means no regulatory rules were applied at all — there is no basis. Presenting the second as the first would claim more than the product can prove, which this product treats as a functional defect rather than a matter of tone.</div>
                     </div>
-                <h3 id="rd">R3-RD &mdash; Register Detail Verdict Visibility</h3>
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">R3-JU-7</span>
+                            <span class="priority-chip priority-must">Must</span>
+                        </div>
+                        <p class="requirement-text">A saved intake draft created before this round shall be treated as having no jurisdiction answer, and the user shall be required to answer before proceeding.</p>
+                        <div class="fit-criterion">a draft persisted without an explicit answered-state loads with the jurisdiction question unanswered and Continue unavailable. It does not silently satisfy R3-JU-1. Verified by loading a draft in the pre-round-3 shape. Rationale: a pre-existing draft that passes the new check would reintroduce, for every user holding one, exactly the defect R3-JU-1 closes — and would do so invisibly, because the user never sees the question they failed to answer.</div>
+                    </div>
+                <h3 id="r3-rd-register-detail-verdict-visibility">R3-RD — Register Detail Verdict Visibility</h3>
                 <p>The register detail page is where a 2LoD reviewer approves a High-tier use case or requests correction on it. It currently shows the tier, the track, the status, a notes box, the Approve and Request-correction actions, and the append-only audit trail. It does not show the verdict. There is no invariant list, no minimal control set, no regulatory citation, and no governance margin. The reviewer is asked to attest to a decision whose basis the page does not present.</p>
-                <p>The full verdict object is already persisted in the audit trail&rsquo;s <code>verdict_produced</code> payload, so nothing needs to be recomputed and no engine change is required. This is a presentation gap.</p>
+                <p>The full verdict object is already persisted in the audit trail's <code>verdict_produced</code> payload, so nothing needs to be recomputed and no engine change is required. This is a presentation gap.</p>
                     <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-RD-1</span>
                             <span class="priority-chip priority-must">Must</span>
                         </div>
-                        <p class="requirement-text">The register detail page shall display the full verdict for the use case, as the intake flow displays it: the binding constraint, every triggered invariant with its regulatory citation, the minimal control set with each control&rsquo;s evidence status, the governance margin, and the standing conditions.</p>
-                        <div class="fit-criterion">For a use case with a persisted verdict, the detail page contains the binding constraint id, every triggered invariant id, every control id in the minimal set, and the governance margin figure. Compared against the verdict rendered by the intake flow for the same use case, the decision-bearing content matches.</div>
+                        <p class="requirement-text">The register detail page shall display the full verdict for the use case, as the intake flow displays it: the binding constraint, every triggered invariant with its regulatory citation, the minimal control set with each control's evidence status, the governance margin, and the standing conditions.</p>
+                        <p>The decision-bearing content is this closed list of six elements. Anything outside it may legitimately differ between the two views — the intake verdict carries affordances, such as the reclassification prompt and the reasoning trace, that have no place on a sign-off page.</p>
                     </div>
+                <ol><li>the verdict status and the tier</li><li>the binding constraint id</li><li>every triggered invariant id, each with its regulatory citation text</li><li>every control id in the minimal control set, each with its evidence status (VERIFIED or UNVERIFIED)</li><li>the governance margin figure, and the ids flagged as having no headroom</li><li>the standing conditions</li></ol>
+                        <div class="fit-criterion">the page contains each of the six elements above. For a use case whose intake verdict listed N triggered invariants and M controls in the minimal set, the sign-off page lists the same N invariant ids and the same M control ids — compared as sets, not as rendered text. Elements outside the list are not asserted.</div>
                     <div class="requirement">
                         <div class="requirement-header">
                             <span class="req-id">R3-RD-2</span>
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">Where no verdict is recorded for a register entry, the page shall say so explicitly and shall still permit sign-off.</p>
-                        <div class="fit-criterion">An entry with no <code>verdict_produced</code> event renders a plain statement that no verdict is recorded, not an empty panel or a hidden section. The Approve and Request-correction actions remain available.</div>
+                        <div class="fit-criterion">an entry with no <code>verdict_produced</code> event renders a plain statement that no verdict is recorded, not an empty panel or a hidden section. The Approve and Request-correction actions remain available.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -536,7 +544,7 @@
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">The verdict shown to the reviewer shall be the verdict their sign-off attaches to.</p>
-                        <div class="fit-criterion">Where a use case has been corrected and re-evaluated, the page shows the latest verdict, and the audit event written on sign-off refers to that same verdict. A reviewer cannot approve one verdict while reading another.</div>
+                        <div class="fit-criterion">where a use case has been corrected and re-evaluated, the page shows the latest verdict, and the audit event written on sign-off refers to that same verdict. A reviewer cannot approve one verdict while reading another.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -544,12 +552,10 @@
                             <span class="priority-chip priority-should">Should</span>
                         </div>
                         <p class="requirement-text">The verdict shall be readable without leaving the page on which sign-off happens.</p>
-                        <div class="fit-criterion">No navigation away from the register detail page is required to read any decision-bearing element of the verdict.</div>
+                        <div class="fit-criterion">no navigation away from the register detail page is required to read any decision-bearing element of the verdict.</div>
                     </div>
-
             </section>
-
-            <section id="nonfunctional">
+            <section id="4-non-functional-requirements">
                 <h2>4. Non-Functional Requirements</h2>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -557,7 +563,7 @@
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">Neither requirement shall alter engine output. <code>evaluate()</code> remains byte-identical for identical inputs (NF-1), and the determinism test continues to pass unchanged.</p>
-                        <div class="fit-criterion">The existing determinism test passes without modification. R3-JU-1 and R3-JU-5 act on the intake form; R3-JU-2 and R3-JU-3 act on verdict status and presentation; R3-RD acts on presentation only.</div>
+                        <div class="fit-criterion">the existing determinism test passes without modification. R3-JU-1 and R3-JU-5 act on the intake form; R3-JU-2 and R3-JU-3 act on verdict status and presentation; R3-RD acts on presentation only.</div>
                     </div>
                     <div class="requirement">
                         <div class="requirement-header">
@@ -565,66 +571,47 @@
                             <span class="priority-chip priority-must">Must</span>
                         </div>
                         <p class="requirement-text">The register detail page shall not write to the audit trail as a side effect of rendering the verdict.</p>
-                        <div class="fit-criterion">Opening the detail page produces no new audit events. The trail is append-only evidence and a duplicate event is a data-integrity defect, not a UX nit.</div>
+                        <div class="fit-criterion">opening the detail page produces no new audit events. The trail is append-only evidence and a duplicate event is a data-integrity defect, not a UX nit.</div>
                     </div>
-
             </section>
-
-            <section id="assumptions">
+            <section id="5-assumptions">
                 <h2>5. Assumptions</h2>
-                <ul>
-                    <li>The persisted <code>verdict_produced</code> payload carries the complete verdict object for every entry created since V1. Entries predating it &mdash; including the AIGate self-assessment &mdash; are the case R3-RD-2 covers.</li>
-                    <li>&ldquo;None / not sure&rdquo; is a legitimate answer for a genuine pre-check, not only an escape hatch. A user who does not yet know where a system will operate should be able to get a provisional read.</li>
-                </ul>
+                <ul><li>The persisted <code>verdict_produced</code> payload carries the complete verdict object for every entry created since V1. Entries predating it — including the AIGate self-assessment — are the case R3-RD-2 covers.</li><li>"None / not sure" is a legitimate answer for a genuine pre-check, not only an escape hatch. A user who does not yet know where a system will operate should be able to get a provisional read.</li></ul>
             </section>
-
-            <section id="constraints">
+            <section id="6-constraints">
                 <h2>6. Constraints</h2>
-                <ul>
-                    <li>The verdict screen is asserted in UI tests by a single-match <code>/approved|rejected/i</code> query. Any new rendered string introduced by R3-JU-3 or R3-RD-1 must avoid those two words, or the query must be tightened first.</li>
-                    <li><code>src/engine/*</code> is a pure island. No requirement here may add I/O, React, or non-determinism to its call graph.</li>
-                </ul>
+                <ul><li>The verdict screen is asserted in UI tests by a single-match <code>/approved|rejected/i</code> query. Any new rendered string introduced by R3-JU-3 or R3-RD-1 must avoid those two words, or the query must be tightened first.</li><li><code>src/engine/*</code> is a pure island. No requirement here may add I/O, React, or non-determinism to its call graph.</li></ul>
             </section>
-
-            <section id="outofscope">
+            <section id="7-out-of-scope">
                 <h2>7. Out of Scope</h2>
-                <ul>
-                    <li>Changing which jurisdictions exist, or authoring further packs.</li>
-                    <li>Any change to how the engine activates packs once a jurisdiction is supplied.</li>
-                    <li>The remaining charter 004 findings &mdash; D-001 (intake description discarded), D-004 (register shows the input-node name), D-006 (vendor silently defaulted). These are defects against existing behaviour and belong in a build fix, not a requirements round. D-003 is closed by R3-JU-5.</li>
-                </ul>
+                <ul><li>Changing which jurisdictions exist, or authoring further packs.</li><li>Any change to how the engine activates packs once a jurisdiction is supplied.</li><li>What a 2LoD reviewer may do with a Provisional verdict — whether it can be approved, whether approval clears the status, and whether the register distinguishes the two causes at row level (health report HR3-06). Deliberately deferred, not omitted: deferred until both kinds of Provisional can be observed together.</li><li>The remaining charter 004 findings — D-001 (intake description discarded), D-004 (register shows the input-node name), D-006 (vendor silently defaulted). These are defects against existing behaviour and belong in a build fix, not in a requirements round. D-003 is closed by R3-JU-5.</li></ul>
             </section>
-
-            <section id="openquestions">
+            <section id="8-open-questions">
                 <h2>8. Open Questions</h2>
-                <ul>
-                    <li>Should a use case whose jurisdiction answer is &ldquo;none / not sure&rdquo; be re-promptable later without a full re-submission? Not decided; not blocking.</li>
-                    <li><em>(Resolved 2026-07-29, before approval.)</em> Whether the Provisional status introduced by R3-JU-2 must be distinguishable from the Provisional caused by unsigned pack rules: <strong>yes</strong>. Now specified by R3-JU-6. The two conditions are different claims and conflating them would overstate what the product checked.</li>
-                </ul>
+                <ul><li>Should a use case whose jurisdiction answer is "none / not sure" be re-promptable later without a full re-submission? Not decided; not blocking.</li><li><em>(Resolved 2026-07-29, before approval.)</em> Whether the Provisional status introduced by R3-JU-2 must be distinguishable from the Provisional caused by unsigned pack rules: <strong>yes</strong>. Now specified by R3-JU-6. The two conditions are different claims and conflating them would overstate what the product checked.</li></ul>
             </section>
-
-            <section id="index">
+            <section id="9-requirements-index">
                 <h2>9. Requirements Index</h2>
                 <table>
                     <thead><tr><th>ID</th><th>Domain</th><th>Summary</th><th>Priority</th></tr></thead>
                     <tbody>
-<tr><td><strong>R3-JU-1</strong></td><td>Jurisdiction</td><td>Explicit jurisdiction answer required before proceeding</td><td>Must</td></tr>
-<tr><td><strong>R3-JU-2</strong></td><td>Jurisdiction</td><td>&ldquo;None / not sure&rdquo; produces a Provisional verdict</td><td>Must</td></tr>
-<tr><td><strong>R3-JU-3</strong></td><td>Jurisdiction</td><td>Verdict states plainly when no regulatory basis was applied</td><td>Must</td></tr>
-<tr><td><strong>R3-JU-4</strong></td><td>Jurisdiction</td><td>Field states that the answer selects the regulatory rules</td><td>Should</td></tr>
-<tr><td><strong>R3-JU-5</strong></td><td>Jurisdiction</td><td>Required fields identifiable before attempting to proceed</td><td>Should</td></tr>
-<tr><td><strong>R3-JU-6</strong></td><td>Jurisdiction</td><td>A Provisional verdict states which condition caused it</td><td>Must</td></tr>
-<tr><td><strong>R3-RD-1</strong></td><td>Register detail</td><td>Full verdict shown on the sign-off page</td><td>Must</td></tr>
-<tr><td><strong>R3-RD-2</strong></td><td>Register detail</td><td>Missing verdict stated explicitly; sign-off still permitted</td><td>Must</td></tr>
-<tr><td><strong>R3-RD-3</strong></td><td>Register detail</td><td>Verdict shown is the verdict the sign-off attaches to</td><td>Must</td></tr>
-<tr><td><strong>R3-RD-4</strong></td><td>Register detail</td><td>Verdict readable without leaving the sign-off page</td><td>Should</td></tr>
-<tr><td><strong>R3-NF-1</strong></td><td>Non-functional</td><td>No change to engine output or determinism</td><td>Must</td></tr>
-<tr><td><strong>R3-NF-2</strong></td><td>Non-functional</td><td>Rendering the verdict writes no audit events</td><td>Must</td></tr>
+                        <tr><td>R3-JU-1</td><td>Jurisdiction</td><td>Explicit jurisdiction answer required before proceeding</td><td>Must</td></tr>
+                        <tr><td>R3-JU-2</td><td>Jurisdiction</td><td>"None / not sure" produces a Provisional verdict</td><td>Must</td></tr>
+                        <tr><td>R3-JU-3</td><td>Jurisdiction</td><td>Verdict states plainly when no regulatory basis was applied</td><td>Must</td></tr>
+                        <tr><td>R3-JU-4</td><td>Jurisdiction</td><td>Field states that the answer selects the regulatory rules</td><td>Should</td></tr>
+                        <tr><td>R3-JU-5</td><td>Jurisdiction</td><td>Required fields are identifiable before attempting to proceed</td><td>Should</td></tr>
+                        <tr><td>R3-JU-6</td><td>Jurisdiction</td><td>A Provisional verdict states which condition caused it</td><td>Must</td></tr>
+                        <tr><td>R3-JU-7</td><td>Jurisdiction</td><td>Pre-round-3 drafts require a fresh jurisdiction answer</td><td>Must</td></tr>
+                        <tr><td>R3-RD-1</td><td>Register detail</td><td>Full verdict shown on the sign-off page</td><td>Must</td></tr>
+                        <tr><td>R3-RD-2</td><td>Register detail</td><td>Missing verdict stated explicitly; sign-off still permitted</td><td>Must</td></tr>
+                        <tr><td>R3-RD-3</td><td>Register detail</td><td>Verdict shown is the verdict the sign-off attaches to</td><td>Must</td></tr>
+                        <tr><td>R3-RD-4</td><td>Register detail</td><td>Verdict readable without leaving the sign-off page</td><td>Should</td></tr>
+                        <tr><td>R3-NF-1</td><td>Non-functional</td><td>No change to engine output or determinism</td><td>Must</td></tr>
+                        <tr><td>R3-NF-2</td><td>Non-functional</td><td>Rendering the verdict writes no audit events</td><td>Must</td></tr>
                     </tbody>
                 </table>
             </section>
-
-            <section id="priority">
+            <section id="10-priority-model">
                 <h2>10. Priority Model</h2>
                 <table>
                     <thead><tr><th>Priority</th><th>Meaning</th></tr></thead>
@@ -632,7 +619,18 @@
                         <tr><td><strong>Must</strong></td><td>Round 3 is not complete without it</td></tr>
                         <tr><td><strong>Should</strong></td><td>Important; omit only with a recorded deferral</td></tr>
                         <tr><td><strong>Could</strong></td><td>Desirable if effort allows</td></tr>
-                        <tr><td><strong>Won&rsquo;t</strong></td><td>Explicitly not this round</td></tr>
+                        <tr><td><strong>Won't</strong></td><td>Explicitly not this round</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-07-29</td><td>Round 3 created. R3-JU and R3-RD promoted from exploratory charter 004 (D-002, D-005), with D-003 closed by R3-JU-5.</td></tr>
+                        <tr><td>2026-07-29</td><td>Health report round 3 applied: R3-RD-1 fit criterion made a closed six-item list (HR3-01); R3-JU-5 given a named mechanism (HR3-02); R3-JU-3/JU-6 overlap resolved as distinct (HR3-03); R3-JU-2 reason given a stable carrier (HR3-04); R3-JU-1 given an explicit answered-state (HR3-05); R3-JU-7 added for draft migration (HR3-07); HR3-06 recorded as a deliberate deferral.</td></tr>
+                        <tr><td>2026-07-29</td><td>R3-JU-2 revised and R3-JU-6 added before approval: a Provisional verdict must name its cause, so "no regulatory basis applied" is never presented as "pending firm adoption". Closes the deferred open question.</td></tr>
                     </tbody>
                 </table>
             </section>
