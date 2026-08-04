@@ -82,6 +82,23 @@ export function evaluate(
         track: 'I',
         binding_constraint: hardLineResult.hardLineId,
         binding_path: hardLineResult.graphPath,
+        // CS-3, round 4. A rejection says don't do this; it does not say the
+        // use case's other characteristics stopped being true. These are NOT
+        // obligations owed today — they are what this shape of use case would
+        // still require if it were re-scoped to come inside appetite, kept for
+        // whoever picks it up next. The verdict screen labels them that way;
+        // presenting them as current instructions would be the dishonest
+        // reading (user decision, 2026-08-05).
+        //
+        // Pack overrides are not available here: a hard line returns before
+        // jurisdiction resolution, by design (§3.1 step order). Firm rules and
+        // the unregistered-component path are.
+        downstream_reviews: [
+          ...new Set([
+            ...firmRequiredReviews(graph, policy).map((r) => r.review),
+            ...unapprovedComponentReviews(inheritance),
+          ]),
+        ].sort(),
         policy_version: policy.version,
         ...(inheritance ? { inheritance } : {}),
         // Review finding, pass 1: the audit trail must record which pack
@@ -189,6 +206,16 @@ export function evaluate(
         track: overrides.finalTrack,
         binding_constraint: solverResult.unsatisfiableInvariant,
         binding_path: bindingTripped?.graphPath ?? '',
+        // CS-3, round 4 — the forward path, as above. Jurisdiction overrides
+        // ARE resolved by this point, so a pack's required_review is included
+        // too.
+        downstream_reviews: [
+          ...new Set([
+            ...firmRequiredReviews(graph, policy).map((r) => r.review),
+            ...overrides.addedReviews,
+            ...unapprovedComponentReviews(inheritance),
+          ]),
+        ].sort(),
         policy_version: policy.version,
         pack_versions: packVersions,
         applied_overrides: overrides.appliedOverrides,
@@ -351,7 +378,14 @@ function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): Inheritan
 function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): string[] {
   if (!inheritance || inheritance.unresolved_components.length === 0) return [];
   return inheritance.unresolved_components.map(
-    (name) => `Full vendor/platform risk assessment required — ${name} is not on the approved registry`,
+    (name) =>
+      // The guided form's sentinel for "not on the list"
+      // (StructuredForm.tsx:453,478) was printing verbatim into verdict prose
+      // a banker reads. Naming it in words says the same thing without
+      // exposing an implementation detail as though it were a vendor.
+      name === '__other__'
+        ? 'Full vendor/platform risk assessment required — the declared component is not on the approved list'
+        : `Full vendor/platform risk assessment required — ${name} is not on the approved list`,
   );
 }
 

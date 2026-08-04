@@ -517,9 +517,29 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           </div>
         ))}
 
-      {verdict.downstream_reviews.length > 0 && (
-        <p className="verdict__downstream">Downstream reviews: {verdict.downstream_reviews.join(', ')}</p>
-      )}
+      {/* CS-3. On an approved verdict these are obligations the submitter owes
+          alongside the pre-check. On a REJECTED one they are not owed at all —
+          the pre-check said don't do this — so they are labelled as the
+          forward path: what this shape of use case would still require if it
+          were re-scoped to come inside appetite. Same data, different claim,
+          and presenting the second as the first would be an instruction nobody
+          is under (user decision, 2026-08-05). */}
+      {verdict.downstream_reviews.length > 0 &&
+        (verdict.status === 'rejected' ? (
+          <div className="verdict__downstream verdict__downstream--forward">
+            <p className="verdict__downstream-label">If this use case is re-scoped</p>
+            <p>
+              Nothing here is required of you now — this verdict is out of appetite. Kept for
+              whoever takes it forward: a use case of this shape would also need{' '}
+              {verdict.downstream_reviews.join(', ')}. Those are separate from the appetite
+              question, so bringing this inside appetite would not remove them.
+            </p>
+          </div>
+        ) : (
+          <p className="verdict__downstream">
+            Downstream reviews: {verdict.downstream_reviews.join(', ')}
+          </p>
+        ))}
 
       {verdict.conditions.hypotheses.length > 0 && (
         <div className="verdict__conditions">
