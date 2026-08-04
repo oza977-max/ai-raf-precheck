@@ -136,6 +136,8 @@ export type AuditEventType =
   | 'lifecycle_stage_changed'  // LC-1 transitions
   | 're_evaluation_queued'     // Policy/pack saved — re-eval queued; stage does NOT change here
   | 'twoloD_reviewed'          // LC-3 2LoD action
+  | 'duplicate_dismissed'      // UC-2 — a surfaced match was reviewed and set aside
+  | 'classification_adopted'   // UC-2 — this record's classification came from another use case
   | 'reasoning_trace_generated'; // VD-8 LLM call completed
 
 export interface AuditEvent {
@@ -155,7 +157,25 @@ export type AuditEventPayload =
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 'twoloD_reviewed'; action: 'approved' | 'rejected' | 'correction_requested'; notes?: string }
+  | { type: 'duplicate_dismissed'; candidate_use_case_id: string; candidate_label: string }
+  | {
+      type: 'classification_adopted';
+      adopted_from_use_case_id: string;
+      adopted_from_label: string;
+      tier: string | null;
+      track: string | null;
+    }
   | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string };
+
+**Both added by round 4 (UC-2).** The duplicate check surfaces a match and the
+submitter decides; both outcomes are decisions about the inventory and both are
+now recorded. Dismissing a match was previously invisible, so nobody could
+afterwards distinguish a genuinely new use case from a duplicate waved through.
+Adoption records where the classification came from — and the adopted record
+deliberately carries **no verdict of its own**, because nothing was evaluated
+for it. The sign-off page states that plainly (`register-lifecycle.md` §15.2),
+which is the honest reading: a reviewer must be able to see that this
+classification was inherited rather than derived.
 ```
 
 ### 4.4 AuditStore interface (`src/store/audit.ts`)

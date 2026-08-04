@@ -67,10 +67,40 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
 // finding, pass 1).
 let inFlight: Promise<void> | null = null;
 
+// O-002 (charter 005). The duplicate check reads the register while this
+// seeding is still in flight, and can report "checked 0 register entries"
+// moments before the AIGate self-assessment appears — stating a count the
+// product has not established, which is an NF-2 honesty problem rather than a
+// timing nit.
+//
+// The race is structural: React runs a CHILD's effect before its parent's, so
+// IntakeFlow's register read always beat App's seeding effect. `settled`
+// records the last completed run so a consumer that arrives after the fact is
+// not left waiting on a promise that no longer exists.
+let settled = false;
+
+/** Resolves once the self-assessment seeding has finished — immediately if it
+ *  already has, or was never started. A consumer awaiting this is saying "do
+ *  not tell the user what is in the register until the register is done being
+ *  written to". */
+export function selfAssessmentSeeded(): Promise<void> {
+  if (inFlight) return inFlight;
+  return Promise.resolve();
+}
+
+/** True once a seeding run has completed in this session. Exposed so a
+ *  consumer can tell "nothing to wait for, it is done" from "nothing to wait
+ *  for, it has not started" — those are different, and only the first makes a
+ *  register count trustworthy. */
+export function selfAssessmentSettled(): boolean {
+  return settled;
+}
+
 export function seedAigateSelfAssessment(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<void> {
   if (!inFlight) {
     inFlight = runSeed(policy, packs).finally(() => {
       inFlight = null;
+      settled = true;
     });
   }
   return inFlight;

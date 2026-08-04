@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import IntakeFlow from './components/IntakeFlow';
 import RegisterView from './components/RegisterView';
 import PolicyEditor from './components/PolicyEditor';
@@ -72,13 +72,24 @@ export default function App() {
   // was scored ignoring the UK pack its graph declares.
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
 
-  useEffect(() => {
-    if (!policyResult.valid) return;
+  // O-002 (charter 005). Started during the FIRST RENDER, not in an effect.
+  // React runs a child's effect before its parent's, so IntakeFlow's register
+  // read always beat this — the duplicate check could report "checked 0
+  // entries" moments before the self-assessment appeared. Starting here means
+  // the in-flight promise exists before any child effect runs, so a consumer
+  // can await it.
+  //
+  // A side effect during render is normally wrong. It is safe here for the
+  // specific reason P7-C01 built for: seedAigateSelfAssessment collapses
+  // concurrent callers onto one execution via an in-flight promise cache, and
+  // StrictMode's double render was the case it was written to survive.
+  const seedStarted = useRef(false);
+  if (!seedStarted.current && policyResult.valid) {
+    seedStarted.current = true;
     seedAigateSelfAssessment(policyResult.policy, loadedPacks).catch((err) => {
       console.warn('AIGate self-assessment seeding failed:', err);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
   return (
     <div className="app-shell">
