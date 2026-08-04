@@ -27,7 +27,9 @@
       "track": "I",
       "binding_constraint": "HL-002",
       "controls": [],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [],
       "applied_overrides": []
     },
@@ -105,7 +107,9 @@
       "track": "I",
       "binding_constraint": "HL-001",
       "controls": [],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [],
       "applied_overrides": []
     },
@@ -168,7 +172,9 @@
       "track": "I",
       "binding_constraint": "HL-003",
       "controls": [],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [],
       "applied_overrides": []
     },
@@ -640,7 +646,7 @@
         "CTRL-TPRM-01"
       ],
       "downstream_reviews": [
-        "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved registry",
+        "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved list",
         "Vendor risk assessment"
       ],
       "tripped_invariants": [

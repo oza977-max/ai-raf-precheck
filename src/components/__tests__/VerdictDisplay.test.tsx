@@ -622,3 +622,32 @@ describe('VerdictDisplay — reusable on a reviewer page (P8-C06)', () => {
     expect(screen.getByText('INV-DATA-01')).toBeInTheDocument();
   });
 });
+
+// Round 4, user decision (2026-08-05). A rejected verdict lists the reason and
+// then the forward path: what this shape of use case would still require if it
+// were re-scoped. The data is the same as an approved verdict's downstream
+// reviews; the CLAIM is different, and stating the second as the first would
+// put someone under an instruction they are not under.
+describe('VerdictDisplay — downstream reviews read differently on a rejection (CS-3)', () => {
+  const withReviews = (status: 'approved_with_controls' | 'rejected') =>
+    makeVerdict({ status, downstream_reviews: ['Information security review', 'Vendor risk assessment'] });
+
+  it('an approved verdict states them as obligations', () => {
+    render(<VerdictDisplay verdict={withReviews('approved_with_controls')} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/downstream reviews:/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing here is required of you now/i)).not.toBeInTheDocument();
+  });
+
+  it('a rejected verdict states them as a forward path, owed by nobody today', () => {
+    render(<VerdictDisplay verdict={withReviews('rejected')} auditEvents={[]} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText(/if this use case is re-scoped/i)).toBeInTheDocument();
+    // The disclaimer is the whole point — without it this is a to-do list
+    // attached to a verdict that told the user to stop.
+    expect(screen.getByText(/nothing here is required of you now/i)).toBeInTheDocument();
+    expect(screen.getByText(/Information security review/)).toBeInTheDocument();
+    // And it must not read as the obligations line.
+    expect(screen.queryByText(/^Downstream reviews:/)).not.toBeInTheDocument();
+  });
+});

@@ -1153,6 +1153,24 @@ details input {
   font-weight: 600;
 }
 
+/* ── Forward path on a rejected verdict (CS-3, round 4) ── */
+.verdict__downstream--forward {
+  background: var(--paper);
+  border-left: 3px solid var(--card-border);
+  padding: 0.7rem 1rem;
+  margin: 0.8rem 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+.verdict__downstream-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.3rem;
+}
+
 /* ── Submitted description, shown back (D-001) ── */
 .intake-flow__submitted-description {
   background: var(--paper);
