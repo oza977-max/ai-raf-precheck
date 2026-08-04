@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGate — Build Verification 003</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+main{max-width:1000px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+code.cmd{background:none;padding:0;color:#456}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.82rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+td{padding:.35rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+tbody tr:nth-child(even){background:#faf9f3}
+.st{font-weight:600;font-size:.72rem;white-space:nowrap}
+.st.p{color:#27ae60}.st.f{color:#c0392b}.st.s{color:#e67e22}.st.b{color:#7f8c8d}
+.st.d{color:#8e44ad}.st.pa{color:#e67e22}.st.u{color:#7f8c8d}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+.verdict.caveats{border-color:#e67e22;background:#fef8f0}
+.verdict.caveats .verdict-text{color:#e67e22}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:70ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+blockquote{border-left:3px solid #ddd;padding-left:1rem;color:#555;margin:1rem 0;max-width:66ch;font-style:italic}
+</style>
+</head>
+<body><main>
+<p class="date">4 August 2026 — Build Verification 003</p>
+<h1>AIGate</h1>
+<p class="subtitle">Full-mode verification after Phase 8 (round 3). Every test case walked with evidence; every claim below was produced by a command whose output is recorded.</p>
+
+<div class="verdict caveats">
+  <div class="verdict-label">Release verdict</div>
+  <div class="verdict-text">Demo-ready</div>
+  <p class="verdict-basis">Emitted by <code>gvm_verdict.evaluate</code>. No VV-4 trigger fired, so the build is not blocked. VV-2(a) fails: the acceptance walk found 7 FAIL and 9 STUB across 148 test cases, including one MUST requirement with no implementation at all. All VV-3 criteria pass — the product works end to end, the engine is deterministic, and its limitations are stated on screen rather than hidden.</p>
+</div>
+
+<h2>1. Executive summary</h2>
+<div class="tally">
+  <div><b>148</b> test cases walked</div>
+  <div><b>123</b> PASS</div>
+  <div><b>7</b> FAIL</div>
+  <div><b>9</b> STUB</div>
+  <div><b>5</b> deliberate deviations</div>
+  <div><b>1</b> BLOCKED</div>
+  <div><b>334</b> automated tests, 3 consecutive green runs</div>
+</div>
+<p>Full mode, not offered as Light: Phase 8 delivered eight chunks. Startup, build, typecheck and spec-parity all clean. The real-chain integration test passes with only the Anthropic SDK mocked. No blocking integration seams: every <code>placeholder</code> hit in the source is an HTML input attribute, a historical comment, or the product's own unsigned-rule concept.</p>
+
+<h3>The pattern worth naming</h3>
+<p>Five of the seven failures are not defects. They are <strong>deliberate build decisions that were never written back into the requirements</strong>. A reader auditing this codebase against <code>requirements.md</code> today would find "failures" that were in fact considered, decided, and recorded — in code comments, where no requirements reader will ever look.</p>
+<blockquote>The requirements document has drifted from the build. That is a documentation defect, and it is the one most likely to cause a future round to "fix" something that was decided on purpose.</blockquote>
+
+<h2>2. Prerequisite check (Hard Gate 1)</h2>
+<p><code>code-review/code-review-002.html</code> — verdict <strong>Merge with caveats</strong>, 0 unresolved critical findings. Gate passes.</p>
+<div class="issue important">
+  <div class="issue-title">The code review predates the slice under test</div>
+  <p class="issue-detail">code-review-002 was written 2026-07-28; Phase 8's first handover is dated 2026-07-29 and its last 2026-08-04. Phase 8's code has had per-chunk independent review inside <code>/gvm-build</code> (24 review passes across 8 chunks, all converged) but has never been through a formal <code>/gvm-code-review</code>. The gate passes on the letter of the rule; a reader should know it passes on a review of earlier code.</p>
+  <div class="issue-location">code-review/code-review-002.html vs build/handovers/P8-*.md</div>
+</div>
+
+<h2>3. Integration seam audit</h2>
+<p>No blocking seams. <code>grep</code> over <code>src/</code> for <code>NotImplementedError</code>, <code>TODO</code>, <code>FIXME</code>, "not yet wired" and "deferred to integration" returned no blocking hits. No <code>STUBS.md</code> exists — the honesty-triad stub registry was never adopted by this project, so nothing is parked there either.</p>
+
+<h2>4. Startup verification</h2>
+<table><thead><tr><th>Check</th><th>Command</th><th>Result</th></tr></thead><tbody>
+<tr><td>Dev server</td><td><code class="cmd">curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/</code></td><td>HTTP 200</td></tr>
+<tr><td>Production build</td><td><code class="cmd">npm run build</code></td><td>built in 75ms; dist/index.html 792 bytes</td></tr>
+<tr><td>Type check</td><td><code class="cmd">npx tsc --noEmit</code></td><td>clean</td></tr>
+<tr><td>Full suite x3</td><td><code class="cmd">npm test</code></td><td>334 passed (334), three consecutive runs</td></tr>
+<tr><td>Spec parity</td><td><code class="cmd">python3 scripts/spec-parity-check.py</code></td><td>clean (R1-R8)</td></tr>
+</tbody></table>
+
+<h2>5. Real-chain integration test</h2>
+<p><code class="cmd">npm test -- src/components/__tests__/WalkingSkeleton.test.tsx</code> &rarr; <strong>15 passed</strong>. The only mock is <code>@anthropic-ai/sdk</code> at line 42 — the external HTTP boundary. Every internal boundary is real: the form builds a real graph, the real engine evaluates it, the real store persists it, and the real verdict screen renders it. This is the test that would catch protocol drift between layers, and it is green.</p>
+
+<h2>6. Smoke run — user experience</h2>
+<p>Walked live at <code>http://localhost:5173</code> across both roles.</p>
+<table><thead><tr><th>Flow</th><th>Observed</th></tr></thead><tbody>
+<tr><td>Intake &rarr; guided form &rarr; verdict</td><td>Required markers render on 12 fields; jurisdiction gate holds; verdict headed "Approved with controls &middot; Provisional"</td></tr>
+<tr><td>Provisional cause</td><td>Banner states the labelled cause; body panel states the consequence; both distinguishable</td></tr>
+<tr><td>Register &rarr; sign-off page (2LoD)</td><td>All six decision-bearing elements present; evidence chips UNVERIFIED where policy carries no evidence; Approve and Request correction available</td></tr>
+<tr><td>Correction affordance on sign-off</td><td>Absent, as required — correction is a submitter action</td></tr>
+<tr><td>Sign-off write</td><td>Exactly one <code>twoloD_reviewed</code> event, payload carrying <code>verdict_id</code> of the rendered verdict</td></tr>
+<tr><td>Appetite framework, Register, New pre-check</td><td>All render; zero console errors; no TODO/placeholder text in any user-facing path</td></tr>
+</tbody></table>
+
+<h2>7. Findings</h2>
+
+<div class="issue critical">
+  <div class="issue-title">CS-3: no InfoSec review binding exists (MUST, V1 scope)</div>
+  <p class="issue-detail">CS-3 requires the verdict to list downstream reviews triggered by the use case's characteristics, naming InfoSec review as an example. <code>grep -rn 'InfoSec' policy/ src/</code> returns nothing. <code>downstream_reviews</code> is populated only from jurisdiction-pack <code>required_review</code> rules and the unapproved-component path. An MNPI-handling use case triggers no InfoSec review because no such rule exists in the policy or the engine.</p>
+  <div class="issue-location">TC-CS-3-01 · requirements.md CS-3 · evaluate.ts:246-248</div>
+</div>
+
+<div class="issue critical">
+  <div class="issue-title">PE-6: "most demanding standard governs" is half implemented (MUST, V1 scope)</div>
+  <p class="issue-detail">PE-6 says <em>"Track and tier assignments shall never be reduced below the jurisdictional minimum."</em> Tier floors work and are tested. Track floors do not exist — and their absence is deliberate: <code>engine/types.ts:198-200</code> records that <code>track_floor</code> is "intentionally absent — the supplement model was decided instead". So the requirement's own fit criterion (a UK Track II overriding a US Track III) cannot be produced by the engine. Found independently by two reviewers as TC-PE-6-01 and TC-RA-2-01.</p>
+  <div class="issue-location">TC-PE-6-01, TC-RA-2-01 · engine/types.ts:198-200 · jurisdiction.test.ts:86</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">UC-2: the submitter cannot adopt an existing classification (MUST, V1 scope)</div>
+  <p class="issue-detail">UC-2's fit criterion says the submitter "may adopt the existing classification or confirm their use case is genuinely new". Only the second action exists. The UI instead directs the user to "Contact AI Risk to adopt its classification" — an out-of-band human step. Honest in what it claims, but the in-product action the requirement describes was never built. The dismissal also writes no audit event.</p>
+  <div class="issue-location">TC-UC-2-02, TC-UC-2-03 · IntakeFlow.tsx:511-548, 172-187</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">NF-10: the translation-fidelity label is a static banner, not a computed one</div>
+  <p class="issue-detail">NF-10 requires that a policy file without a current attestation "produces verdicts marked translation fidelity unattested". The attestation block exists in the schema and is validated. Nothing reads it: the header string at <code>App.tsx:83</code> is unconditional, and no verdict carries the label. Today it happens to be true — the shipped policy is unattested — so the product under-claims rather than over-claims. But if someone attested, the UI would still say unattested. This is the computed-but-never-consumed pattern <code>CLAUDE.md</code> warns about, in its milder direction.</p>
+  <div class="issue-location">TC-NF-10-01 · App.tsx:83 · engine/types.ts:381</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">UC-1: the submitted description is discarded</div>
+  <p class="issue-detail">The description is captured and used for extraction, then never shown back to the submitter. This is charter 004's D-001, still unrouted — now confirmed by an independent walk of TC-UC-1-01.</p>
+  <div class="issue-location">TC-UC-1-01 · IntakeFlow.tsx:496-508 · charter 004 D-001</div>
+</div>
+
+<div class="issue minor">
+  <div class="issue-title">Nine test cases are structurally sound but unasserted</div>
+  <p class="issue-detail">TC-NF-2-01, NF-3-01, NF-5-01, NF-11-01, LC-1-02, RG-1-02, CS-3-02, VD-3-02, CF-5-04 are correct by source inspection with no test naming their scenario. Notable among them: no test asserts zero network calls during evaluation (NF-3), and no test asserts the API key cannot reach an export (NF-11). Both are true today by construction; neither is defended by a test.</p>
+  <div class="issue-location">see the evidence table</div>
+</div>
+
+<h2>8. Deliberate deviations never written back to requirements</h2>
+<p>Each of these was decided, recorded in a code comment, and left contradicting a live requirement.</p>
+<table><thead><tr><th>Requirement</th><th>What the code does instead</th><th>Where the decision is recorded</th></tr></thead><tbody>
+<tr><td>RA-8 — every pack rule carries a confidence score</td><td><code>confidence_score</code> does not exist; replaced by <code>basis</code> (verbatim / derived / judgement)</td><td>engine/types.ts:201-215 — V2-E, on user feedback that the score was "fabricated precision"</td></tr>
+<tr><td>PE-6 — track never reduced below jurisdictional minimum</td><td>Tier floors only; <code>track_floor</code> intentionally absent</td><td>engine/types.ts:198-200 — V2-A supplement model, BC-V2A-01</td></tr>
+<tr><td>UC-2 — proceed directly when no duplicate found</td><td>The duplicate check is always a gate requiring a click</td><td>IntakeFlow.tsx:157-165 — V2-B, explicit user decision</td></tr>
+<tr><td>RA-1 — US jurisdiction activates OSFI E-23</td><td>OSFI E-23, MAS-FEAT and FSA-JP packs deleted</td><td>packs.test.ts:9-15 — their source text was [NOT RETRIEVED]; shipping them would have been fabrication</td></tr>
+<tr><td>CF-3 — policy version increments on save</td><td>A documented human convention; no code enforces it</td><td>policy/appetite.yaml:74-78</td></tr>
+</tbody></table>
+<p>Four of the five are good decisions — three of them are the product refusing to fabricate. The defect is that <code>requirements.md</code> still asserts the opposite.</p>
+
+<h2>9. Requirement coverage</h2>
+<p>55 requirements are in V1 scope; 25 are explicitly deferred to V1.5 or V2+ and are correctly NOT IMPLEMENTED. Round 3 adds 13 more, all implemented and covered.</p>
+<table><thead><tr><th>Class</th><th>Count</th><th>Notes</th></tr></thead><tbody>
+<tr><td>IMPLEMENTED</td><td>62</td><td>49 of 55 V1-scope + all 13 round-3 requirements</td></tr>
+<tr><td>PARTIAL</td><td>4</td><td>PE-6 (tier only), UC-1 (description discarded), UC-2 (no adopt action), NF-10 (label not computed)</td></tr>
+<tr><td>SUPERSEDED</td><td>2</td><td>RA-8, CF-3 — decided against, requirement not updated</td></tr>
+<tr><td>NOT IMPLEMENTED</td><td>25</td><td>Deferred by scope column to V1.5 / V2+ — expected</td></tr>
+<tr><td>NOT IMPLEMENTED (in scope)</td><td>1</td><td><strong>CS-3</strong> — no InfoSec review binding</td></tr>
+</tbody></table>
+<p>Note: the PV-* platform and vendor requirements are marked V2+ in the traceability table but are built and tested. The product is ahead of its own scope column there.</p>
+
+<h2>10. Acceptance test walk — all 148 cases (Hard Gate 6)</h2>
+<p>One row per test-case id. 67 carry their id in a test file and were verified by running that file; 81 carry no id and were walked individually — by running the test that exercises the scenario, or by reading the implementing source and naming the file and line.</p>
+<table><thead><tr><th>Test case</th><th>Status</th><th>Command / evidence</th><th>Observed</th></tr></thead>
+<tbody>
+<tr><td><code>TC-CF-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: policy/appetite.yaml</code></td><td>plain YAML, 164 comment lines, human-editable</td></tr>
+<tr><td><code>TC-CF-3-01</code></td><td class="st d">DEVIATION</td><td><code class="cmd">read-only: policy/appetite.yaml:74-78</code></td><td>version increment is a documented human convention, not an app feature; no savePolicy version-bump exists</td></tr>
+<tr><td><code>TC-CF-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: policy/packs/*.yaml, evaluate.ts:52</code></td><td>each pack carries its own version; pack_versions computed independently of policy.version</td></tr>
+<tr><td><code>TC-CF-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/policy.test.ts</code></td><td>policy.test.ts:99,115 reject missing required fields via the same Zod mechanism</td></tr>
+<tr><td><code>TC-CF-5-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/packs.test.ts</code></td><td>packs.test.ts:25 rejects a pack whose rule lacks source.text, naming pack and field</td></tr>
+<tr><td><code>TC-CF-5-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/policy.test.ts src/store/packs.test.ts</code></td><td>real starter files load with errors: []</td></tr>
+<tr><td><code>TC-CF-5-04</code></td><td class="st s">STUB</td><td><code class="cmd">read-only: store/policy.ts:1, package.json</code></td><td>js-yaml v5 load() uses the safe schema by default; no dedicated malicious-payload test exists</td></tr>
+<tr><td><code>TC-CS-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- greedy-solver.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-CS-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- safety-margin.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-CS-1-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- greedy-solver.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-CS-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- greedy-solver.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-CS-3-01</code></td><td class="st f">FAIL</td><td><code class="cmd">grep -rn &#x27;InfoSec&#x27; policy/ src/</code></td><td>no MNPI-to-InfoSec review binding exists anywhere; downstream_reviews comes only from pack rules and the unapproved-component path</td></tr>
+<tr><td><code>TC-CS-3-02</code></td><td class="st s">STUB</td><td><code class="cmd">read-only: evaluate.ts:287-345</code></td><td>unapprovedComponentReviews() exists; no test exercises an unapproved-vendor case</td></tr>
+<tr><td><code>TC-LC-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/register.test.ts</code></td><td>15 passed; lifecycle_stage_changed carries actor and from/to stages</td></tr>
+<tr><td><code>TC-LC-1-02</code></td><td class="st s">STUB</td><td><code class="cmd">npm test -- src/store/register.test.ts</code></td><td>no explicit stage-skip guard assertion found</td></tr>
+<tr><td><code>TC-LC-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx workflow-router.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-LC-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx workflow-router.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-LC-2-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- workflow-router.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-LC-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- policy.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-LC-4-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx aigate-self-assessment.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-NF-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>byte-identical across 10 runs; spec says 20, implementation uses 10</td></tr>
+<tr><td><code>TC-NF-10-01</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: App.tsx:83</code></td><td>&#x27;translation fidelity: unattested&#x27; is a static unconditional banner, not derived from the attestation block; nothing marks the verdict</td></tr>
+<tr><td><code>TC-NF-11-01</code></td><td class="st s">STUB</td><td><code class="cmd">read-only: store/register.ts:246-251</code></td><td>the key lives in localStorage and never enters IndexedDB; exportAll returns only nodes and edges. No test asserts key-absence</td></tr>
+<tr><td><code>TC-NF-2-01</code></td><td class="st s">STUB</td><td><code class="cmd">read-only: RegisterDetail.tsx:284-306</code></td><td>no edit/delete control in the markup; no test asserts its absence</td></tr>
+<tr><td><code>TC-NF-3-01</code></td><td class="st s">STUB</td><td><code class="cmd">grep -rn &#x27;fetch(|XMLHttpRequest|axios&#x27; src</code></td><td>no HTTP primitives in src/; all LLM call sites early-return without a key. No test asserts zero network calls during evaluation</td></tr>
+<tr><td><code>TC-NF-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm run build; inspected dist/index.html</code></td><td>relative asset paths (./assets/...), base &#x27;./&#x27; set for file:// compatibility</td></tr>
+<tr><td><code>TC-NF-5-01</code></td><td class="st s">STUB</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>no performance test exists; 23 evaluate() tests complete in ~33ms, consistent with sub-second evaluation</td></tr>
+<tr><td><code>TC-NF-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/provisional.test.ts</code></td><td>10 passed; unsigned fired rule raises unsigned_pack_rules</td></tr>
+<tr><td><code>TC-PE-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- backtest-corpus.test.ts evaluate.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-PE-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>23 passed</td></tr>
+<tr><td><code>TC-PE-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/track.test.ts</code></td><td>49 passed</td></tr>
+<tr><td><code>TC-PE-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/track.test.ts</code></td><td>totality test covers all model_type x bindingness pairs</td></tr>
+<tr><td><code>TC-PE-2-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/track.test.ts</code></td><td>track.test.ts:59 short-circuit test passed</td></tr>
+<tr><td><code>TC-PE-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>evaluate.test.ts:457 Annex III floor forces Critical</td></tr>
+<tr><td><code>TC-PE-3-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/tier.test.ts</code></td><td>tier.test.ts:28 impact-dominant</td></tr>
+<tr><td><code>TC-PE-3-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/tier.test.ts</code></td><td>tier.test.ts:50 defaults to Low</td></tr>
+<tr><td><code>TC-PE-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- evaluate.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-PE-4-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>evaluate.test.ts:49 hard line trips, no controls solved</td></tr>
+<tr><td><code>TC-PE-4-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>same test asserts empty controls on rejection</td></tr>
+<tr><td><code>TC-PE-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- evaluate.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-PE-5-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>evaluate.test.ts:472 pack lifts tier, absent pack does not</td></tr>
+<tr><td><code>TC-PE-6-01</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: engine/types.ts:198-200, jurisdiction.test.ts:86</code></td><td>track_floor intentionally absent (V2-A supplement model, BC-V2A-01); jurisdiction overrides never change Track</td></tr>
+<tr><td><code>TC-PE-6-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/jurisdiction.test.ts</code></td><td>jurisdiction.test.ts:74 tier_floor raises, never lowers</td></tr>
+<tr><td><code>TC-PE-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>policy_version set on every return branch (evaluate.ts:84,120,191,254)</td></tr>
+<tr><td><code>TC-PE-7-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/policy.test.ts</code></td><td>onPolicyUpdated queues re-evaluation, never mutates stored verdicts</td></tr>
+<tr><td><code>TC-PE-8-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/packs.test.ts src/engine/evaluate.test.ts</code></td><td>starter config evaluates to a valid verdict</td></tr>
+<tr><td><code>TC-PE-8-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/packs.test.ts</code></td><td>four authored packs load; CA/SG/JP declared with no pack</td></tr>
+<tr><td><code>TC-PV-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>14 passed; envelope.test.ts:99</td></tr>
+<tr><td><code>TC-PV-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:242 unregistered vendor reported and reviewed</td></tr>
+<tr><td><code>TC-PV-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:99 covering platform reduces the control set</td></tr>
+<tr><td><code>TC-PV-3-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:124 per-dimension withdrawal</td></tr>
+<tr><td><code>TC-PV-3-03</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: envelope.ts:73</code></td><td>inclusive ceiling (worst &lt;= max); the exact-boundary value is not separately asserted</td></tr>
+<tr><td><code>TC-PV-3-04</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:272-290 cluster withdrawal</td></tr>
+<tr><td><code>TC-PV-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:155-165 unapproved component inherits nothing and is named</td></tr>
+<tr><td><code>TC-PV-6-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:108 chain names what was inherited</td></tr>
+<tr><td><code>TC-PV-6-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/envelope.test.ts</code></td><td>envelope.test.ts:185-198 chain survives rejection</td></tr>
+<tr><td><code>TC-PV-8-01</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: policy/appetite.yaml:834-863</code></td><td>starter registry ships a covering and a deliberately narrower platform; tests use an equivalent synthetic fixture</td></tr>
+<tr><td><code>TC-R3-JU-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-1-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-1-04</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-1-05</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx StructuredForm.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- provisional.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- provisional.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-2-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- register.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-3-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-3-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-5-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-6-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-6-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-6-03</code></td><td class="st u">UNREACHABLE</td><td><code class="cmd">read-only: provisional.ts:18-43, evaluate.ts:52</code></td><td>independently verified: the two triggers are mutually exclusive by construction; recorded rationale holds</td></tr>
+<tr><td><code>TC-R3-JU-6-04</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-JU-7-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- StructuredForm.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-NF-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- provisional.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-NF-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- provisional.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-NF-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-NF-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-1-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-2-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-3-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-3-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-6-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-R3-RD-8-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterDetail.test.tsx VerdictDisplay.test.tsx VerdictDisplay.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RA-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/jurisdiction.test.ts src/store/packs.test.ts</code></td><td>resolveActivePacks filters by jurisdiction; ss1-23.yaml declares UK</td></tr>
+<tr><td><code>TC-RA-1-02</code></td><td class="st d">DEVIATION</td><td><code class="cmd">read-only: policy/packs/, packs.test.ts:9-15</code></td><td>OSFI E-23, MAS-FEAT and FSA-JP were deliberately deleted — their sources were [NOT RETRIEVED]. The scenario no longer applies</td></tr>
+<tr><td><code>TC-RA-1-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/backtest-predictions.test.ts</code></td><td>UC-9 fires DORA+EU-AIACT+SS1-23; UC-12 gives CA zero pack obligations</td></tr>
+<tr><td><code>TC-RA-11-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RA-11-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RA-2-01</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: track.test.ts, jurisdiction.test.ts</code></td><td>no named-standard governance mechanism for Track; same root cause as TC-PE-6-01</td></tr>
+<tr><td><code>TC-RA-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>evaluate.test.ts:463 records pack_versions; only a single-pack case is asserted</td></tr>
+<tr><td><code>TC-RA-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/packs.test.ts</code></td><td>packs.test.ts:25 rejects an uncited rule, naming pack and field</td></tr>
+<tr><td><code>TC-RA-7-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/packs.test.ts</code></td><td>packs.test.ts:6 four real packs load with errors: []</td></tr>
+<tr><td><code>TC-RA-8-01</code></td><td class="st d">DEVIATION</td><td><code class="cmd">read-only: engine/types.ts:201-215</code></td><td>confidence_score deliberately replaced by `basis` in V2-E on user feedback that the score was fabricated precision</td></tr>
+<tr><td><code>TC-RA-9-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/backtest-predictions.test.ts</code></td><td>UC-10 asserts source_text and derived rule for the Annex III override</td></tr>
+<tr><td><code>TC-RG-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/register.test.ts</code></td><td>getBlastRadius returns exactly the referencing nodes</td></tr>
+<tr><td><code>TC-RG-1-02</code></td><td class="st s">STUB</td><td><code class="cmd">npm test -- src/store/register.test.ts</code></td><td>the query works; no 500-use-case / 2-second scale assertion exists</td></tr>
+<tr><td><code>TC-RG-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterView.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RG-2-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterView.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RG-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterView.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-RG-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- RegisterView.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-1-01</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: IntakeFlow.tsx:496-508</code></td><td>description stored as submittedDescription but never rendered back to the submitter — matches charter 004 D-001</td></tr>
+<tr><td><code>TC-UC-1-02</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: IntakeFlow.tsx:496-508</code></td><td>no length or sentence cap; any length proceeds to extraction</td></tr>
+<tr><td><code>TC-UC-1-03</code></td><td class="st pa">PARTIAL</td><td><code class="cmd">grep -rn &#x27;Please describe your AI use case&#x27; src/</code></td><td>blocked by disabled={!state.description.trim()} rather than submit-then-reject; the spec&#x27;s literal message does not exist</td></tr>
+<tr><td><code>TC-UC-1-04</code></td><td class="st p">PASS</td><td><code class="cmd">grep -rn &#x27;dangerouslySetInnerHTML&#x27; src/</code></td><td>zero occurrences; React escaping applies to all description content</td></tr>
+<tr><td><code>TC-UC-2-01</code></td><td class="st pa">PARTIAL</td><td><code class="cmd">read-only: IntakeFlow.tsx:518-535</code></td><td>match surfaced with tier only; track and verdict not shown. 1LoD deliberately sees less (role-based confidentiality)</td></tr>
+<tr><td><code>TC-UC-2-02</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: IntakeFlow.tsx:511-548</code></td><td>no &#x27;adopt existing classification&#x27; action exists; UI directs the user to contact AI Risk out of band</td></tr>
+<tr><td><code>TC-UC-2-03</code></td><td class="st f">FAIL</td><td><code class="cmd">read-only: IntakeFlow.tsx:172-187</code></td><td>handleConfirmNewUseCase writes no audit event for the dismissal</td></tr>
+<tr><td><code>TC-UC-2-04</code></td><td class="st d">DEVIATION</td><td><code class="cmd">read-only: IntakeFlow.tsx:157-165</code></td><td>V2-B: the duplicate check is a REAL GATE by explicit user decision; auto-proceed was rejected</td></tr>
+<tr><td><code>TC-UC-2-05</code></td><td class="st d">DEVIATION</td><td><code class="cmd">npm test -- src/engine/duplicate.test.ts</code></td><td>scoring returns [] for an empty register; the gate screen still requires a click, per V2-B</td></tr>
+<tr><td><code>TC-UC-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- graph-extractor.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-3-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- graph-extractor.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-3-03</code></td><td class="st b">BLOCKED</td><td><code class="cmd">n/a</code></td><td>needs 5 live low-temperature Anthropic calls; graph-extractor.test.ts mocks the SDK entirely</td></tr>
+<tr><td><code>TC-UC-3-04</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: evaluate.ts:37-41</code></td><td>evaluate() never receives the raw description, so steering text cannot reach the verdict</td></tr>
+<tr><td><code>TC-UC-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- question-generator.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-4-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- question-generator.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-4-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/question-generator.test.ts</code></td><td>36 passed; budgetForTier caps Low at 5</td></tr>
+<tr><td><code>TC-UC-4-04</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: question-generator.ts:63-79</code></td><td>questions derive from triggered invariant conditions, not a fixed list</td></tr>
+<tr><td><code>TC-UC-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- contradiction.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-5-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- contradiction.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-5-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/contradiction.test.ts</code></td><td>36 passed; all contradictions returned and dispatched in one array</td></tr>
+<tr><td><code>TC-UC-6-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-6-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-6-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- WalkingSkeleton.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-UC-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/components/intake-state.test.ts</code></td><td>36 passed; CORRECTION_APPLIED records before/after values</td></tr>
+<tr><td><code>TC-UC-7-02</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/components/intake-state.test.ts</code></td><td>36 passed; corrections append, each keeping its own before/after</td></tr>
+<tr><td><code>TC-UC-7-03</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/components/intake-state.test.ts</code></td><td>36 passed; reducer replaces state.graph synchronously</td></tr>
+<tr><td><code>TC-VD-1-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-VD-2-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- VerdictDisplay.test.tsx</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-VD-3-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/store/register.test.ts</code></td><td>register.test.ts:300 corrected verdict supersedes produced</td></tr>
+<tr><td><code>TC-VD-3-02</code></td><td class="st s">STUB</td><td><code class="cmd">read-only: engine/types.ts:328-339</code></td><td>GraphCorrection carries all five fields; no test asserts them together on a correction event</td></tr>
+<tr><td><code>TC-VD-4-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/components/__tests__/RegisterDetail.test.tsx</code></td><td>no delete/edit affordance in the audit trail markup</td></tr>
+<tr><td><code>TC-VD-5-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts src/store/register.test.ts</code></td><td>policy and pack versions recorded; only a single-pack case is asserted</td></tr>
+<tr><td><code>TC-VD-6-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/components/__tests__/VerdictDisplay.test.tsx</code></td><td>29 passed; living_status fields populated</td></tr>
+<tr><td><code>TC-VD-7-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- src/engine/evaluate.test.ts</code></td><td>evaluate.test.ts:390 standing conditions populated</td></tr>
+<tr><td><code>TC-VD-8-01</code></td><td class="st p">PASS</td><td><code class="cmd">npm test -- reasoning-trace.test.ts</code></td><td>suite green in the 3x full run (334 passed)</td></tr>
+<tr><td><code>TC-VD-8-02</code></td><td class="st p">PASS</td><td><code class="cmd">read-only: VerdictDisplay.tsx:565</code></td><td>trace rendered via JSX text interpolation; no dangerouslySetInnerHTML in the file</td></tr>
+</tbody></table>
+
+<h2>11. Verdict criteria</h2>
+<table><thead><tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+<tr><td>VV-2(a)</td><td class="st f">FAIL</td><td>7 FAIL / 9 STUB across 148 cases; CS-3 has no implementation</td></tr>
+<tr><td>VV-2(b)</td><td class="st p">PASS</td><td>risks/risk-assessment.md present and parses</td></tr>
+<tr><td>VV-2(c)</td><td class="st p">PASS</td><td>explore-005 Critical fixed at ef009b0, verified in HEAD</td></tr>
+<tr><td>VV-3(a)</td><td class="st p">PASS</td><td>334 tests x3, tsc clean, build clean, dev server HTTP 200</td></tr>
+<tr><td>VV-3(b)</td><td class="st p">PASS</td><td>No blocking seams; real-chain test 15 passed</td></tr>
+<tr><td>VV-3(c)</td><td class="st p">PASS</td><td>Charter Critical resolved and regression-tested</td></tr>
+<tr><td>VV-3(d)</td><td class="st u">NA</td><td>No boundaries.md — walking skeleton not adopted</td></tr>
+<tr><td>VV-4(a)</td><td class="st p">PASS</td><td>0 unresolved criticals in code-review-002</td></tr>
+<tr><td>VV-4(b)</td><td class="st u">NA</td><td>No STUBS.md — stub registry not adopted</td></tr>
+<tr><td>VV-4(c)</td><td class="st p">PASS</td><td>risk-assessment.md validates</td></tr>
+<tr><td>VV-4(d)</td><td class="st p">PASS</td><td>Latest charter's Critical fixed</td></tr>
+<tr><td>VV-4(e)</td><td class="st p">PASS</td><td>No blocking seam accepted as a known gap</td></tr>
+<tr><td>VV-4(f)</td><td class="st p">PASS</td><td>NF-1 determinism holds across 3 full runs</td></tr>
+</tbody></table>
+
+<h2>12. What this verdict does and does not say</h2>
+<p><strong>Demo-ready</strong> means the product does what it claims, end to end, and states its limits honestly on screen. A reviewer can drive a use case from description to verdict to sign-off, and every screen tells them what it knows and what it does not.</p>
+<p>It is not Ship-ready, and the reason is specific rather than vague: one MUST requirement in V1 scope has no implementation at all (CS-3), one is half built (PE-6), one in-product action was never built (UC-2 adopt), and nine behaviours that are true today are defended by no test. None of these is hidden; all are now named.</p>
+<p>The honest reading: this remains proof-of-concept grade for audit purposes, which is exactly what the product says about itself in its own audit-trail caveat. That self-description is accurate — which is itself the strongest signal in this report.</p>
+
+<h2>13. Method note</h2>
+<p>The 81 untraced cases were walked by four independent agents working in parallel, each instructed that a status without a command and an observed result would be rejected, and that NOT-WALKED was an acceptable answer where PASS could not be evidenced. Every finding they classed as serious was then re-verified directly before entering this report — two were re-framed as a result: RA-8 and PE-6 were reported as unbuilt requirements and are in fact recorded deliberate decisions.</p>
+<p>Deviation from the skill: the HTML was written directly rather than dispatched to a Haiku subagent, because the finding set is large and passing it through another agent adds a transcription step to evidence that must stay exact.</p>
+</main></body></html>
