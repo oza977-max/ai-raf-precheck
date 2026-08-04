@@ -56,7 +56,9 @@ empty field is the only reason a claim looks true.
 ## FN-002 — "What comes after Phase 8" is written nowhere
 
 **Raised by:** P8-C03 (2026-07-29). **Binds:** the Phase 8 closing handover.
-**Status:** open.
+**Status:** CONSUMED by P8-C08 (2026-08-04) — the "After Phase 8" section is in
+`HANDOVER.md`, with a pointer per item rather than a restatement, so there is
+one place to look and no second copy to drift.
 
 `HANDOVER.md` documents the next *step*, not the next *phase*, so when Phase 8
 ends there is no single place answering "what now". The four known items are
