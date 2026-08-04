@@ -128,7 +128,13 @@ export default function App() {
 
         <main className="app-main">
           {view === 'intake' && <IntakeFlow />}
-          {view === 'register' && <RegisterView role={role} currentPolicyVersion={currentPolicyVersion} />}
+          {view === 'register' && (
+            <RegisterView
+              role={role}
+              currentPolicyVersion={currentPolicyVersion}
+              policy={policyResult.valid ? policyResult.policy : undefined}
+            />
+          )}
           {view === 'policyEditor' && <PolicyEditor onSaved={() => setPolicyRevision((r) => r + 1)} />}
         </main>
       </div>

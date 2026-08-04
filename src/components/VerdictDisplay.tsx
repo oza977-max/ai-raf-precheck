@@ -448,6 +448,17 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               Smallest set that holds the appetite margin. V1: statuses are attested in the policy file;
               machine-checked evidence binding is V1.5.
             </p>
+            {/* §15.1a (C-2). The verdict above is a historical record — what was
+                decided and attested. These statuses are CURRENT: whether the
+                evidence exists today. The two are deliberately different
+                sources, and a reader who cannot tell which is which could sign
+                off believing an old VERIFIED still holds. Saying so is the
+                whole point of the split. */}
+            <p className="verdict__controlset-asof">
+              Evidence status is read from today&rsquo;s policy, not from the evaluation. The verdict
+              above is the record of what was decided on{' '}
+              {new Date(verdict.attested_at).toLocaleDateString()}.
+            </p>
             <ul>
               {verdict.controls.map((id) => {
                 const control = policy.controls.find((c) => c.id === id);
@@ -482,9 +493,28 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             </ul>
           </div>
         ) : (
-          // BC-V13-03: legacy render paths without a policy prop degrade to
-          // the plain id list — no fabricated chips.
-          <p className="verdict__controls">Controls required: {verdict.controls.join(', ')}</p>
+          // BC-V13-03: no policy, so no fabricated chips. §15.1a is explicit
+          // that the status renders as UNKNOWN rather than UNVERIFIED —
+          // absence of a policy is not evidence of absent evidence. Saying
+          // nothing at all would be the same defect in the other direction:
+          // a reader cannot distinguish "not checked" from "nothing to show".
+          <div className="verdict__controlset">
+            <h3>Minimal control set (CS-1)</h3>
+            <ul>
+              {verdict.controls.map((id) => (
+                <li key={id}>
+                  <div className="verdict__control-head">
+                    <code>{id}</code>
+                    <span className="verdict__vchip verdict__vchip--unknown">EVIDENCE UNKNOWN</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="verdict__controlset-asof">
+              No policy is loaded, so whether evidence exists for these controls could not be
+              checked. That is not the same as having no evidence.
+            </p>
+          </div>
         ))}
 
       {verdict.downstream_reviews.length > 0 && (

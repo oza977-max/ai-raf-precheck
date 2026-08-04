@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { getUseCase, updateLifecycleStage } from '../store/register';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getUseCase, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
 import { getAll as getAuditEvents, append as appendAuditEvent } from '../store/audit';
+import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
+import type { PolicyFile } from '../engine/types';
 
 // V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
 // presentation-only — renders the REAL audit store via getAll()
@@ -10,6 +12,10 @@ import type { AuditEvent, UseCaseSummary } from '../store/types';
 interface RegisterDetailProps {
   useCaseId: string;
   role: string;
+  // P8-C07 (§15.1a). Threaded App -> RegisterView -> RegisterDetail. Optional
+  // because control evidence status degrades to "unknown" without it —
+  // absence of a policy is not evidence of absent evidence.
+  policy?: PolicyFile;
   onBack: () => void;
 }
 
@@ -49,7 +55,7 @@ function eventDetail(event: AuditEvent): string {
   }
 }
 
-export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDetailProps) {
+export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
   const [summary, setSummary] = useState<UseCaseSummary | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [notes, setNotes] = useState('');
@@ -62,6 +68,17 @@ export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDeta
   // design (VD-4/NF-2). A ref is synchronous where state is not (same
   // lesson as P7-C01's in-flight seed guard).
   const inFlight = useRef(false);
+
+  // ADR-RL-R3-1: READ the verdict from the audit trail the page already
+  // loads. Never recompute — the verdict a reviewer signs must be the one
+  // that was produced and attested, not a fresh one against today's policy,
+  // which would silently show something different after any policy change.
+  // The scan is the exported helper (P8-C06), not a third copy of it.
+  const latestVerdict = useMemo(() => {
+    const payload = findLatestVerdictEvent(events);
+    if (!payload) return null;
+    return payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict;
+  }, [events]);
 
   const load = useCallback(async () => {
     const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);
@@ -167,6 +184,37 @@ export default function RegisterDetail({ useCaseId, role, onBack }: RegisterDeta
         {summary.provisional && <span className="graph-node__chip">Provisional</span>}
         <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
       </div>
+
+      {/* ADR-RL-R3-1 / §15.1. The verdict a reviewer is being asked to attest
+          to, rendered from the persisted record rather than recomputed.
+          `graph` is deliberately not passed: it is not persisted on the
+          register entry, so the provenance panel would render empty here
+          (ADR-RL-R3-1 consequences). `onCorrect` is not passed either —
+          correction is a submitter action (§15.1b, P8-C06). */}
+      {latestVerdict ? (
+        <>
+          {!latestVerdict.explanation && (
+            <p className="register-detail__legacy-note" role="status">
+              This verdict predates explanation capture, so the binding reason and the triggered
+              invariants were not recorded for it. What was recorded is shown below. An empty list
+              here would say &ldquo;nothing was triggered&rdquo;, which is a stronger claim than the
+              record supports.
+            </p>
+          )}
+          <VerdictDisplay
+            verdict={latestVerdict}
+            auditEvents={events}
+            policy={policy}
+            registerStage={summary.lifecycle_stage}
+          />
+        </>
+      ) : (
+        <p className="register-detail__no-verdict" role="status">
+          No verdict is recorded for this use case. Nothing has been evaluated against the appetite
+          rules, so there is no decision, no control set and no citation to review. Sign-off remains
+          available, but it attests to the record as it stands — which is empty.
+        </p>
+      )}
 
       {showActionBar && (
         <div className="register-detail__actionbar">

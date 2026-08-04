@@ -3,12 +3,17 @@ import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/registe
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
+import type { PolicyFile } from '../engine/types';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
 // no direct IndexedDB/audit access. register-lifecycle.md §10.
 interface RegisterViewProps {
   role: string;
   currentPolicyVersion: string;
+  // P8-C07 (§15.1a): passed through to RegisterDetail, which reads control
+  // evidence status from TODAY's policy while the verdict itself stays
+  // historical. RegisterView does not use it.
+  policy?: PolicyFile;
 }
 
 const STATUS_LABEL: Record<NonNullable<UseCaseSummary['current_verdict_status']>, string> = {
@@ -17,7 +22,7 @@ const STATUS_LABEL: Record<NonNullable<UseCaseSummary['current_verdict_status']>
   rejected: 'Rejected',
 };
 
-export default function RegisterView({ role, currentPolicyVersion }: RegisterViewProps) {
+export default function RegisterView({ role, currentPolicyVersion, policy }: RegisterViewProps) {
   const [rows, setRows] = useState<UseCaseSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [policyUpdatePending, setPolicyUpdatePending] = useState(false);
@@ -98,6 +103,7 @@ export default function RegisterView({ role, currentPolicyVersion }: RegisterVie
       <RegisterDetail
         useCaseId={selectedId}
         role={role}
+        policy={policy}
         onBack={() => {
           setSelectedId(null);
           setRefreshKey((k) => k + 1);

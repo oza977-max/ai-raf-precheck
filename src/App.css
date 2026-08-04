@@ -1149,6 +1149,20 @@ details input {
   font-weight: 600;
 }
 
+/* ── Evidence "as of" note + unknown chip (P8-C07, §15.1a) ── */
+.verdict__vchip--unknown {
+  background: var(--paper);
+  color: var(--ink-faint);
+  border: 1px solid var(--card-border);
+}
+
+.verdict__controlset-asof {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
 /* ── Provisional qualifier (P8-C04, §13.3) ──
    Sits alongside the outcome rather than replacing it. Muted, because the
    outcome is the headline and this qualifies it. */
