@@ -11,6 +11,14 @@ export type IntakeState =
   | { step: 'graph_extraction'; description: string; method: 'llm' | 'form' }
   | {
       step: 'graph_review';
+      // Round 4 (charter 004 D-001, charter 005 O-001). The description was
+      // dropped from graph_review onward, which cost two things: the submitter
+      // never saw their own words again after typing them, and
+      // detectContradictions ran against a separate useState that a restored
+      // draft never repopulated — so a resumed session checked answers against
+      // an empty string and quietly found nothing. Carrying it on the state
+      // fixes both, because the draft envelope persists the state.
+      description: string;
       graph: DataFlowGraph;
       graphVersion: number;
       corrections: GraphCorrection[];
@@ -21,6 +29,7 @@ export type IntakeState =
     }
   | {
       step: 'questionnaire';
+      description: string;
       graph: DataFlowGraph;
       questions: IntakeQuestion[];
       answers: QuestionAnswer[];
@@ -31,6 +40,7 @@ export type IntakeState =
     }
   | {
       step: 'contradiction_review';
+      description: string;
       graph: DataFlowGraph;
       questions: IntakeQuestion[];
       answers: QuestionAnswer[];
@@ -42,6 +52,7 @@ export type IntakeState =
     }
   | {
       step: 'confirmation';
+      description: string;
       graph: DataFlowGraph;
       graphVersion: number;
       corrections: GraphCorrection[];
@@ -86,6 +97,14 @@ export type IntakeAction =
   // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
   | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string };
 
+/** The submitted description, carried forward wherever the current step still
+ *  has it. `evaluation_pending` and `verdict` do not, so a correction pass
+ *  re-enters graph_review without it — pre-existing, out of scope for the
+ *  D-001/O-001 fix, and recorded here rather than hidden behind a cast. */
+function carriedDescription(state: IntakeState): string {
+  return 'description' in state && typeof state.description === 'string' ? state.description : '';
+}
+
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
   switch (action.type) {
     case 'DESCRIPTION_CHANGED':
@@ -110,6 +129,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'graph_extraction') return state;
       return {
         step: 'graph_review',
+        description: carriedDescription(state),
         graph: action.graph,
         graphVersion: action.graph.version,
         corrections: [],
@@ -129,6 +149,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'graph_review') return state;
       return {
         step: 'questionnaire',
+        description: carriedDescription(state),
         graph: state.graph,
         questions: action.questions,
         answers: [],
@@ -146,6 +167,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'questionnaire') return state;
       return {
         step: 'contradiction_review',
+        description: carriedDescription(state),
         graph: state.graph,
         questions: state.questions,
         answers: state.answers,
@@ -163,6 +185,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'contradiction_review' || !action.explanation.trim()) return state;
       return {
         step: 'questionnaire',
+        description: carriedDescription(state),
         graph: state.graph,
         questions: state.questions,
         answers: state.answers,
@@ -176,6 +199,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'questionnaire') return state;
       return {
         step: 'confirmation',
+        description: carriedDescription(state),
         graph: state.graph,
         graphVersion: state.graph.version,
         corrections: state.corrections,
@@ -204,6 +228,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'evaluation_pending') return state;
       return {
         step: 'graph_review',
+        description: carriedDescription(state),
         graph: state.graph,
         graphVersion: state.graph.version,
         corrections: [],
@@ -215,6 +240,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       if (state.step !== 'verdict') return state;
       return {
         step: 'graph_review',
+        description: carriedDescription(state),
         graph: action.graph,
         graphVersion: action.graph.version,
         corrections: [],

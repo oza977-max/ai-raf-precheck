@@ -594,3 +594,43 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     sessionStorage.clear();
   });
 });
+
+// Round 4 — charter 004 D-006. The vendor field is optional and, left
+// untouched, silently becomes 'internal' in the graph
+// (build-graph-from-form.ts:64). The review screen then renders
+// "vendor: internal" and the NEXT screen asks the user to attest the graph is
+// accurate to the best of their knowledge. A value nobody chose was being
+// folded into an attestation.
+//
+// The root cause is the option label, not the sentinel: the unchosen state was
+// presented as a positive declaration ("Built in-house (internal)"). The
+// engine's sentinel is unchanged — what changes is that the user is told
+// plainly what will be assumed, before they attest to it.
+describe('StructuredForm — an untouched vendor field does not read as a declaration (D-006)', () => {
+  it('presents the default as "not stated", naming what will be assumed', () => {
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+
+    const vendor = screen.getByLabelText(/whose model or service is it/i) as HTMLSelectElement;
+    const selected = vendor.options[vendor.selectedIndex]!;
+
+    // The user sees this text without opening the dropdown, so it is the
+    // claim the form is making on their behalf.
+    expect(selected.textContent).toMatch(/not stated/i);
+    expect(selected.textContent).toMatch(/in-house/i);
+    // And it must not read as something they chose.
+    expect(selected.textContent).not.toMatch(/^Built in-house/);
+  });
+
+  it('still submits the in-house sentinel, so the engine contract is unchanged', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
+    await fillEverythingExceptJurisdiction(user);
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]?.[0].processing_nodes[0].vendor).toBe('internal');
+    sessionStorage.clear();
+  });
+});

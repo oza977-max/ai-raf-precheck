@@ -7,6 +7,7 @@ import { getRole, setRole } from './store/role';
 import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
 import { getCurrentPolicyYaml } from './store/policy-source';
+import { translationAttestationStatus } from './engine/attestation';
 import { loadPacks } from './store/packs';
 import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
@@ -31,6 +32,19 @@ export default function App() {
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), [policyRevision]);
   const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
+
+  // NF-10. Recomputed when the policy changes; the date is taken once per
+  // render of the shell, which is the only place a clock belongs.
+  const attestation = useMemo(
+    () =>
+      policyResult.valid
+        ? translationAttestationStatus(
+            policyResult.policy.translation_attestation,
+            new Date().toISOString().slice(0, 10),
+          )
+        : { status: 'unattested' as const, reason: 'No valid policy is loaded, so nothing can be attested.' },
+    [policyResult],
+  );
 
   function handleRoleChange(next: string) {
     setRole(next);
@@ -80,7 +94,16 @@ export default function App() {
           <span className="app-header__dot" aria-hidden="true" />
           <span>policy v{currentPolicyVersion}</span>
           <span className="app-header__sep">·</span>
-          <span className="app-header__warn">translation fidelity: unattested</span>
+          {/* NF-10: computed, not asserted. This was a hardcoded string — true
+              of the shipped starter policy, and it would have kept saying so
+              after somebody attested. The engine is pure, so today's date is
+              supplied here rather than read inside it. */}
+          <span
+            className={attestation.status === 'attested' ? 'app-header__ok' : 'app-header__warn'}
+            title={attestation.reason}
+          >
+            translation fidelity: {attestation.status}
+          </span>
           <span className="app-header__sep">·</span>
           <label htmlFor="role-switcher" className="app-header__role-label">
             Role

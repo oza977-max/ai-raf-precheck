@@ -455,15 +455,21 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
 
       <label htmlFor="sf-vendor">Whose model or service is it? (optional)</label>
       <p className="field-help">
-        Leave as internal if the firm built it. A vendor not on the approved list is treated as a new
-        vendor and triggers a full vendor risk assessment.
+        If you leave this unanswered it is assessed as built in-house. A vendor not on the approved
+        list is treated as a new vendor and triggers a full vendor risk assessment.
       </p>
       <select
         id="sf-vendor"
         value={values.vendor ?? ''}
         onChange={(e) => update('vendor', e.target.value || undefined)}
       >
-        <option value="">Built in-house (internal)</option>
+        {/* D-006: this read "Built in-house (internal)" — the unchosen state
+            presented as something the user had declared. The graph then showed
+            "vendor: internal" and the next screen asked them to attest it was
+            accurate. The sentinel is unchanged; what changed is that the form
+            now says what it will assume, before the attestation rather than
+            after it. */}
+        <option value="">Not stated — will be assessed as built in-house</option>
         {vendors.map((v) => (
           <option key={v.id} value={v.id}>
             {v.name} ({v.id})

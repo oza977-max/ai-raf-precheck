@@ -47,12 +47,15 @@ describe('intakeReducer', () => {
     const state: IntakeState = { step: 'graph_extraction', description: 'x', method: 'llm' };
     const g = graph({ version: 1 });
     const next = intakeReducer(state, { type: 'GRAPH_EXTRACTED', graph: g, useCaseId: 'uc-1' });
-    expect(next).toEqual({ step: 'graph_review', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1' });
+    // Round 4: the description is carried forward from the source step
+    // (charter 004 D-001 / charter 005 O-001) — asserted as the carry, not as
+    // a literal, so a reducer that hardcoded a value would fail.
+    expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1' });
   });
 
   it('graph_review → graph_review on CORRECTION_APPLIED, appending the correction and bumping graphVersion', () => {
     const g0 = graph({ version: 1 });
-    const state: IntakeState = { step: 'graph_review', graph: g0, graphVersion: 1, corrections: [], useCaseId: 'uc-1' };
+    const state: IntakeState = { step: 'graph_review', description: 'A tool that drafts client emails.', graph: g0, graphVersion: 1, corrections: [], useCaseId: 'uc-1' };
     const g1 = graph({ version: 2 });
     const correction: GraphCorrection = {
       correction_id: 'c1',
@@ -66,7 +69,7 @@ describe('intakeReducer', () => {
       corrected_at: '2026-01-01T00:00:00.000Z',
     };
     const next = intakeReducer(state, { type: 'CORRECTION_APPLIED', correction, updatedGraph: g1 });
-    expect(next).toEqual({ step: 'graph_review', graph: g1, graphVersion: 2, corrections: [correction], useCaseId: 'uc-1' });
+    expect(next).toEqual({ step: 'graph_review', description: 'A tool that drafts client emails.', graph: g1, graphVersion: 2, corrections: [correction], useCaseId: 'uc-1' });
   });
 
   it('graph_review → questionnaire on QUESTIONS_GENERATED, carrying corrections/useCaseId forward (no longer generates useCaseId itself, P5-C01)', () => {
@@ -84,6 +87,7 @@ describe('intakeReducer', () => {
     };
     const state: IntakeState = {
       step: 'graph_review',
+      description: 'A tool that drafts client emails.',
       graph: g,
       graphVersion: 1,
       corrections: [correction],
@@ -95,6 +99,7 @@ describe('intakeReducer', () => {
     const next = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions });
     expect(next).toEqual({
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions,
       answers: [],
@@ -109,6 +114,7 @@ describe('intakeReducer', () => {
     const g = graph();
     const state: IntakeState = {
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers: [],
@@ -126,6 +132,7 @@ describe('intakeReducer', () => {
     const answers = [{ questionId: 'Q1', value: 'yes' }];
     const state: IntakeState = {
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers,
@@ -143,6 +150,7 @@ describe('intakeReducer', () => {
     const answers = [{ questionId: 'Q1', value: 'yes' }];
     const state: IntakeState = {
       step: 'contradiction_review',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers,
@@ -154,6 +162,7 @@ describe('intakeReducer', () => {
     const next = intakeReducer(state, { type: 'CONTRADICTION_RESOLVED', explanation: 'Confirmed both are correct.' });
     expect(next).toEqual({
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers,
@@ -167,6 +176,7 @@ describe('intakeReducer', () => {
     const g = graph();
     const state: IntakeState = {
       step: 'contradiction_review',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers: [],
@@ -195,6 +205,7 @@ describe('intakeReducer', () => {
     };
     const state: IntakeState = {
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers,
@@ -205,6 +216,7 @@ describe('intakeReducer', () => {
     const next = intakeReducer(state, { type: 'PROCEED_TO_CONFIRMATION' });
     expect(next).toEqual({
       step: 'confirmation',
+      description: 'A tool that drafts client emails.',
       graph: g,
       graphVersion: 1,
       corrections: [correction],
@@ -217,6 +229,7 @@ describe('intakeReducer', () => {
     const g = graph({ version: 1 });
     const state: IntakeState = {
       step: 'confirmation',
+      description: 'A tool that drafts client emails.',
       graph: g,
       graphVersion: 1,
       corrections: [],
@@ -231,6 +244,7 @@ describe('intakeReducer', () => {
     const g = graph({ version: 1 });
     const state: IntakeState = {
       step: 'questionnaire',
+      description: 'A tool that drafts client emails.',
       graph: g,
       questions: [],
       answers: [],
@@ -261,6 +275,7 @@ describe('intakeReducer', () => {
     });
     expect(next).toEqual({
       step: 'graph_review',
+      description: '',
       graph: g,
       graphVersion: 1,
       corrections: [],
@@ -277,7 +292,10 @@ describe('intakeReducer', () => {
     );
     const afterQuestions = intakeReducer(afterCorrect, { type: 'QUESTIONS_GENERATED', questions: [] });
     const afterConfirmation = intakeReducer(afterQuestions, { type: 'PROCEED_TO_CONFIRMATION' });
-    expect(afterConfirmation).toMatchObject({ step: 'confirmation', originalVerdictId: 'verdict-abc', useCaseId: 'uc-1' });
+    // The chain starts at `verdict`, which carries no description, so '' is
+    // carried through — the correction-pass gap recorded in
+    // carriedDescription(). Asserted rather than left implicit.
+    expect(afterConfirmation).toMatchObject({ step: 'confirmation', description: '', originalVerdictId: 'verdict-abc', useCaseId: 'uc-1' });
   });
 
   it('evaluation_pending → graph_review on EVALUATION_FAILED, not stuck forever (fix for the P5-C01-flagged uncaught-error gap)', () => {
@@ -286,6 +304,7 @@ describe('intakeReducer', () => {
     const next = intakeReducer(state, { type: 'EVALUATION_FAILED' });
     expect(next).toEqual({
       step: 'graph_review',
+      description: '',
       graph: g,
       graphVersion: 1,
       corrections: [],
@@ -300,7 +319,7 @@ describe('intakeReducer', () => {
       { step: 'description_entry', description: 'x' },
       { step: 'duplicate_check', description: 'x' },
       { step: 'graph_extraction', description: 'x', method: 'form' },
-      { step: 'graph_review', graph: g, graphVersion: 3, corrections: [], useCaseId: 'uc-1' },
+      { step: 'graph_review', description: 'A tool that drafts client emails.', graph: g, graphVersion: 3, corrections: [], useCaseId: 'uc-1' },
       { step: 'evaluation_pending', graph: g, useCaseId: 'uc-1' },
       { step: 'verdict', verdictId: 'uc-1' },
     ];
@@ -317,5 +336,29 @@ describe('intakeReducer', () => {
     const state: IntakeState = { step: 'description_entry', description: 'x' };
     const next = intakeReducer(state, { type: 'NO_DUPLICATE_FOUND', method: 'llm' });
     expect(next).toBe(state);
+  });
+});
+
+// Round 4 — charter 005 O-001. The description is now carried on the state
+// rather than held in a component useState, because the draft envelope
+// persists the state and did not persist the useState. A resumed questionnaire
+// was running detectContradictions against an empty string, finding nothing,
+// and saying so — degrading quietly instead of failing.
+describe('intakeReducer — the description survives to the steps that need it (O-001)', () => {
+  it('carries the description from extraction through to confirmation', () => {
+    const g = graph({ version: 1 });
+    const typed = 'A tool that drafts client emails from CRM notes';
+
+    let state: IntakeState = { step: 'graph_extraction', description: typed, method: 'form' };
+    state = intakeReducer(state, { type: 'GRAPH_EXTRACTED', graph: g, useCaseId: 'uc-1' });
+    expect('description' in state && state.description).toBe(typed);
+
+    state = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions: [] });
+    // The questionnaire is the step that reads it — this is the one that was
+    // silently checking answers against ''.
+    expect('description' in state && state.description).toBe(typed);
+
+    state = intakeReducer(state, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect('description' in state && state.description).toBe(typed);
   });
 });
