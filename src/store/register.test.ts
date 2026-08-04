@@ -421,3 +421,119 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
     expect(findLatestVerdictEvent([])).toBeUndefined();
   });
 });
+
+// Round 4, step 5. Build verification 003 found these correct by inspection
+// with no test naming their scenario — true by construction, undefended.
+describe('Register and audit guarantees that were untested (round 4)', () => {
+  it('TC-VD-3-02: a correction record carries who, when, which field, and both values', async () => {
+    const nodeId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: nodeId, label: 'Correction record probe' }));
+
+    const correction = {
+      correction_id: crypto.randomUUID(),
+      node_id: 'p1',
+      graph_version_before: 1,
+      graph_version_after: 2,
+      field: 'processing_data_zone',
+      original_value: 'Zone C',
+      corrected_value: 'Zone B',
+      corrected_by: '1LoD',
+      corrected_at: '2026-08-05T10:00:00.000Z',
+    };
+
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: nodeId,
+      event_type: 'graph_corrected',
+      occurred_at: '2026-08-05T10:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_corrected', correction },
+    });
+
+    const events = await getAll(nodeId);
+    const recorded = events.find((e) => e.payload.type === 'graph_corrected');
+    expect(recorded).toBeDefined();
+    if (!recorded || recorded.payload.type !== 'graph_corrected') return;
+
+    // All five, together. A correction missing any one of them cannot be
+    // audited: you would know something changed but not what, or not who.
+    const c = recorded.payload.correction;
+    expect(c.field).toBe('processing_data_zone');
+    expect(c.original_value).toBe('Zone C');
+    expect(c.corrected_value).toBe('Zone B');
+    expect(c.corrected_by).toBe('1LoD');
+    expect(c.corrected_at).toBe('2026-08-05T10:00:00.000Z');
+  });
+
+  it('TC-LC-1-02: a lifecycle change records both ends of the transition, so a skip is visible', async () => {
+    const nodeId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: nodeId, label: 'Stage transition probe' }));
+
+    await updateLifecycleStage(nodeId, 'pre_checked', '1LoD');
+    await updateLifecycleStage(nodeId, 'approved', '2LoD');
+
+    const stageEvents = (await getAll(nodeId)).filter((e) => e.payload.type === 'lifecycle_stage_changed');
+    expect(stageEvents).toHaveLength(2);
+
+    // The trail records from AND to, so a stage that was skipped is visible in
+    // the record rather than inferable only from its absence. The product does
+    // not block skips — LC-1 asks that transitions be recorded, and a bank
+    // that legitimately fast-tracks a case must be able to see it happened.
+    const payloads = stageEvents.map((e) => (e.payload.type === 'lifecycle_stage_changed' ? e.payload : null));
+    expect(payloads[0]).toMatchObject({ to_stage: 'pre_checked' });
+    expect(payloads[1]).toMatchObject({ from_stage: 'pre_checked', to_stage: 'approved' });
+  });
+
+  it('TC-NF-2-01: the audit trail exposes no update or delete path', async () => {
+    // The store is the whole surface. If it offers no way to change or remove
+    // an event, no UI can offer one either — which is a stronger guarantee
+    // than checking that today's screens happen not to render a button.
+    const auditModule = await import('./audit');
+    const names = Object.keys(auditModule);
+
+    expect(names).toContain('append');
+    for (const forbidden of ['update', 'delete', 'remove', 'edit', 'clear', 'put']) {
+      expect(
+        names.some((n) => n.toLowerCase().includes(forbidden)),
+        `store/audit.ts exports "${names.find((n) => n.toLowerCase().includes(forbidden))}" — the trail is append-only`,
+      ).toBe(false);
+    }
+  });
+
+  it('TC-RG-1-02: a blast-radius query returns exactly the referencing use cases at scale', async () => {
+    // RG-1's scale half. 200 unrelated entries alongside two that share a
+    // component: the query must return the two and nothing else, and do it
+    // without walking into quadratic behaviour.
+    // The component id needs no node of its own — getBlastRadius resolves
+    // edges by to_node_id (register.ts:236), exactly as the existing
+    // blast-radius test does.
+    const componentId = crypto.randomUUID();
+
+    const referencing: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const id = crypto.randomUUID();
+      await addNode(makeUseCaseNode({ node_id: id, label: `Sharer ${i}` }));
+      await addEdge({
+        edge_id: crypto.randomUUID(),
+        from_node_id: id,
+        to_node_id: componentId,
+        edge_type: 'uses_model',
+        created_at: new Date().toISOString(),
+      });
+      referencing.push(id);
+    }
+    for (let i = 0; i < 200; i++) {
+      await addNode(makeUseCaseNode({ node_id: crypto.randomUUID(), label: `Unrelated ${i}` }));
+    }
+
+    const started = performance.now();
+    const radius = await getBlastRadius(componentId);
+    const elapsed = performance.now() - started;
+
+    const ids = radius.map((n) => n.node_id).sort();
+    expect(ids).toEqual([...referencing].sort());
+    // RG-1-02 allows 2 seconds. A generous ceiling that still catches a
+    // quadratic scan, rather than a micro-benchmark that flakes under load.
+    expect(elapsed).toBeLessThan(2000);
+  });
+});

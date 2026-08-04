@@ -291,3 +291,78 @@ describe('The unlisted-component sentinel never reaches the reader', () => {
     expect(all).toMatch(/not on the approved list/i);
   });
 });
+
+// TC-CS-3-02. Build verification 003 found the code path plausible
+// (evaluate.ts unapprovedComponentReviews) and exercised by no test at all —
+// "implemented but unverified". This is the case where a bank declares a
+// vendor the firm has never approved, which is precisely when a vendor risk
+// assessment matters.
+describe('TC-CS-3-02: an unapproved vendor triggers a vendor risk assessment', () => {
+  it('names the unregistered vendor and requires the assessment', () => {
+    const withUnknownVendor = graph({
+      input_nodes: [{ id: 'i1', label: 'notes', data_class: 'Internal', data_zone: 'Zone C' }],
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'summariser',
+          model_type: 'ml',
+          autonomy_level: 1,
+          data_zone: 'Zone C',
+          vendor: 'NeverHeardOfCo',
+          replaces_prior_model: false,
+        },
+      ],
+      output_nodes: [
+        {
+          id: 'o1',
+          label: 'summary',
+          action_type: 'recommend',
+          exposure: 'internal-only',
+          decision_bindingness: 'advisory',
+          output_reversibility: 'reversible',
+          scale: 'limited',
+        },
+      ],
+      edges: [
+        { from: 'i1', to: 'p1' },
+        { from: 'p1', to: 'o1' },
+      ],
+    });
+
+    const result = evaluate(withUnknownVendor, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const reviews = result.value.downstream_reviews.join(' | ');
+    // Named, so a reviewer knows which component to chase — not just told
+    // that "a" vendor is unapproved.
+    expect(reviews).toContain('NeverHeardOfCo');
+    expect(reviews).toMatch(/not on the approved list/i);
+    // And the firm's own vendor rule fires too, since this is external.
+    expect(reviews).toMatch(/vendor risk assessment/i);
+  });
+
+  it('an approved-registry vendor triggers no such assessment', () => {
+    const registryVendor = policy.vendors?.[0]?.id;
+    expect(registryVendor, 'starter policy has no vendor registry to test against').toBeTruthy();
+
+    const known = graph({
+      input_nodes: [{ id: 'i1', label: 'notes', data_class: 'Internal', data_zone: 'Zone C' }],
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'summariser',
+          model_type: 'ml',
+          autonomy_level: 1,
+          data_zone: 'Zone C',
+          vendor: registryVendor!,
+          replaces_prior_model: false,
+        },
+      ],
+    });
+
+    const result = evaluate(known, policy);
+    if (!result.ok) return;
+    expect(result.value.downstream_reviews.join(' | ')).not.toMatch(/not on the approved list/i);
+  });
+});
