@@ -423,7 +423,15 @@
 
             <!-- Expert Panel -->
             <section id="expert-panel">
-                <h2>Expert Panel</h2>
+                <div class="fit-criterion" style="border-left:3px solid #c0392b;padding-left:1rem;margin:1.5rem 0">
+<strong>This HTML twin is incomplete — read <code>requirements.md</code> as the source of truth.</strong>
+Build verification 003 (2026-08-04) found it carries 55 of the 79 requirements in the markdown.
+Whole families are absent: RA-7 through RA-12, NF-7 through NF-10, every PV-* platform and vendor
+requirement, LC-5, LC-6 and every OB-*. This is not drift in wording; it is a stale document.
+<code>scripts/spec-parity-check.py</code> reads only the markdown and cannot see it. Regenerating this
+file from the markdown — as <code>requirements-003.html</code> already is — is the durable fix.
+</div>
+<h2>Expert Panel</h2>
 
                 <table class="expert-table">
                     <thead>
@@ -714,6 +722,7 @@
                         </div>
                         <p class="requirement-text">When a use case spans multiple jurisdictions, the system shall apply the most demanding applicable standard across all jurisdictions. Track and tier assignments shall never be reduced below the jurisdictional minimum.</p>
                         <div class="fit-criterion">A use case that is Track III under SR 26-2 (US) but Track II under SS1/23 (UK) shall be classified as Track II when the use case touches UK entities.</div>
+                        <div class="fit-criterion"><strong>Amended 2026-08-04 (build verification 003).</strong> The Track half of this requirement is withdrawn. <code>track_floor</code> is intentionally absent from the pack schema — the <strong>supplement model</strong> was chosen instead: obligations are only ever ADDED and tier floors only ever RAISE (<code>src/engine/types.ts:198-200</code>, BC-V2A-01). Track remains the firm&rsquo;s own assignment; a jurisdiction changes what you must DO, not which track you are on. The requirement was amended to match the decision rather than the decision reverted to match the requirement.</div>
                     </div>
 
                     <div class="requirement">
@@ -955,6 +964,7 @@
                         </div>
                         <p class="requirement-text">The policy file shall be versioned. Each change to the file produces a new version. The version in force at the time of each verdict is recorded in the verdict's audit trail.</p>
                         <div class="fit-criterion">The policy file includes a <code>version</code> field that is incremented on each change. The versioning is compatible with git version control.</div>
+                        <div class="fit-criterion"><strong>Clarified 2026-08-04.</strong> The increment is a human convention documented in <code>policy/appetite.yaml:74-78</code>, not an automated behaviour. The half the product enforces — recording the version in force on every verdict — is implemented and tested.</div>
                     </div>
 
                     <div class="requirement">
@@ -978,6 +988,7 @@
                         </div>
                         <p class="requirement-text">The system shall correctly identify the applicable regulatory frameworks for a use case based on the jurisdictions specified in the data-flow graph, and apply them during evaluation.</p>
                         <div class="fit-criterion">A use case specifying UK and EU jurisdictions activates SS1/23 and EU AI Act override packs. A use case specifying US only activates SR 26-2. Jurisdiction selection is part of the intake flow.</div>
+                        <div class="fit-criterion"><strong>Scope of the shipped decks, clarified 2026-08-04.</strong> The tool currently considers the regulatory decks included with it — SS1/23 (UK), SR 26-2 (US), the EU AI Act and DORA (EU). <strong>More can be included</strong>: adding a deck is a content task, not a code change. Earlier drafts named OSFI E-23, MAS FEAT and FSA Japan; they are not included because their rule text could not be retrieved from a primary source, and shipping unverified regulatory claims as authoritative is the one thing this product must not do.</div>
                     </div>
 
                     <div class="requirement">
@@ -987,6 +998,7 @@
                         </div>
                         <p class="requirement-text">When multiple jurisdictions apply, the system shall apply the most demanding applicable standard as the governing standard. Track and tier assignments shall never be reduced below any applicable jurisdictional minimum.</p>
                         <div class="fit-criterion">A use case that is Track III under SR 26-2 (US) but Track II under SS1/23 (because it is technology-agnostic MRM) shall be classified as Track II. The governing standard and the rule it imposed are named in the verdict.</div>
+                        <div class="fit-criterion"><strong>Amended 2026-08-04</strong> — same amendment and rationale as PE-6: obligations combine, tier floors raise, Track is not floored by jurisdiction.</div>
                     </div>
 
                     <div class="requirement">

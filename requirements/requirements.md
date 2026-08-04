@@ -165,9 +165,25 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: A use case touching UK entities applies SS1/23 (technology-agnostic MRM) as the ceiling. A use case touching EU entities with Annex III characteristics (e.g., credit scoring) is forced to Critical tier regardless of the internal tiering outcome. Override packs are configurable and versioned independently of the main policy file.
 
-**PE-6 (Must):** When a use case spans multiple jurisdictions, the system shall apply the most demanding applicable standard across all jurisdictions. Track and tier assignments shall never be reduced below the jurisdictional minimum.
+**PE-6 (Must):** When a use case spans multiple jurisdictions, the system shall apply the most demanding applicable standard across all jurisdictions. **Tier** assignments shall never be reduced below the jurisdictional minimum, and jurisdictional obligations (controls, reviews) are only ever added, never removed.
 
-> Fit criterion: A use case that is Track III under SR 26-2 (US) but Track II under SS1/23 (UK) shall be classified as Track II when the use case touches UK entities.
+> Fit criterion: A use case whose jurisdiction pack sets a tier floor of Critical is Critical, even where the firm's own rules would place it lower. Obligations from every active pack are combined; none is dropped because another jurisdiction is less demanding.
+
+**Amended 2026-08-04 (build verification 003).** This requirement previously
+also said Track assignments shall never be reduced below the jurisdictional
+minimum, with a fit criterion about a UK Track II overriding a US Track III.
+The engine cannot produce that, and deliberately so: `track_floor` is
+**intentionally absent** from the pack schema because the **supplement model**
+was chosen instead — obligations are only ever ADDED and tier floors only ever
+RAISE (recorded at `src/engine/types.ts:198-200`, build check BC-V2A-01,
+asserted by `src/engine/jurisdiction.test.ts:86`).
+
+The requirement is amended to match the decision rather than the decision
+reverted to match the requirement, because the supplement model is the
+considered position and nobody has argued against it. Track remains the firm's
+own assignment; a jurisdiction changes what you must DO, not which track you
+are on. If a future round wants jurisdictional track floors, that is a new
+requirement and a schema change, not a bug fix.
 
 **PE-7 (Must):** The bank's Risk Appetite Framework shall be expressed as a human-readable, versioned YAML/JSON policy file. All invariants, tier rules, track rules, hard lines, control library, and KRI thresholds are defined in this file.
 
@@ -369,9 +385,17 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 **CF-3 (Must):** The policy file shall be versioned. Each change to the file produces a new version. The version in force at the time of each verdict is recorded in the verdict's audit trail.
 
-> Fit criterion: The policy file includes a `version` field that is incremented on each change. The versioning is compatible with git version control.
+> Fit criterion: The policy file includes a `version` field, incremented by whoever edits the file, and the version in force is recorded on every verdict. The versioning is compatible with git version control.
 
-**CF-4 (Must):** Regulatory override packs (SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan) shall be stored as separate, versioned files within the policy structure. Packs can be updated independently of the main policy file.
+**Clarified 2026-08-04 (build verification 003).** The increment is a **human
+convention, documented in the policy file itself** (`policy/appetite.yaml:74-78`),
+not an automated behaviour — nothing in the product bumps the version on save.
+That is consistent with the policy file being a human-authored artefact under
+git, and with CF-1's requirement that a risk manager can edit it without
+developer assistance. The half the product does enforce — recording the version
+in force on every verdict — is implemented and tested.
+
+**CF-4 (Must):** Regulatory override packs shall be stored as separate, versioned files within the policy structure. Packs can be updated independently of the main policy file. The decks currently included are SR 26-2, SS1/23, the EU AI Act and DORA; more can be added as separate files without a code change (see RA-1).
 
 > Fit criterion: Updating the EU AI Act pack does not require editing the main policy file. Each pack file has its own version. The verdict audit trail records the version of each pack in force at evaluation time.
 
@@ -389,7 +413,26 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: A use case specifying UK and EU jurisdictions activates SS1/23, EU AI Act, and DORA override packs (selecting "EU" activates both `eu-ai-act.yaml` and `dora.yaml` — DORA is not a separately selectable jurisdiction code). A use case specifying US only activates SR 26-2. Jurisdiction selection is part of the intake flow.
 
-**RA-2 (Must):** When multiple jurisdictions apply, the system shall apply the most demanding applicable standard as the governing standard. Track and tier assignments shall never be reduced below any applicable jurisdictional minimum.
+**Scope of the shipped decks, clarified 2026-08-04 (build verification 003).**
+The tool currently considers the regulatory decks included with it — SS1/23
+(UK), SR 26-2 (US), the EU AI Act and DORA (EU). **More can be included.**
+Adding a deck is a content task, not a code change: author the pack file under
+`policy/packs/`, declare it against a jurisdiction in `policy/appetite.yaml`,
+and it activates on the next evaluation.
+
+Earlier drafts named OSFI E-23 (Canada), MAS FEAT (Singapore) and FSA Japan as
+shipped decks. They are not included, and that was a deliberate call: their rule
+text could not be retrieved from a primary source, so shipping them would have
+meant presenting unverified regulatory claims as authoritative — the one thing
+this product must not do (`src/store/packs.test.ts:9-15`). Canada, Singapore and
+Japan remain selectable jurisdictions with no deck attached, and a verdict for
+them says plainly that no jurisdiction rulebook was applied.
+
+**RA-2 (Must):** When multiple jurisdictions apply, the system shall combine the obligations of every active deck, and shall never drop an obligation because another jurisdiction is less demanding. **Tier** shall never be reduced below any applicable jurisdictional minimum.
+
+**Amended 2026-08-04 (build verification 003)** — same amendment and same
+rationale as PE-6: the supplement model was chosen over track floors. See PE-6
+for the full record.
 
 > Fit criterion: A use case that is Track III under SR 26-2 but Track II under SS1/23 (because it is technology-agnostic MRM) shall be classified as Track II. The governing standard and the rule it imposed are named in the verdict.
 
@@ -413,9 +456,24 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: A rule cannot be added to a pack without a `source` block containing: `document` (e.g. "SS1/23"), `section` (e.g. "§3.4"), and `text` (the verbatim passage). A pack that contains rules without source citations is invalid and rejected on load. Example: `Track II if quantitative output into a regulated decision — derived from SS1/23 §3.4: "models that produce quantitative outputs used in material decisions require independent validation."`
 
-**RA-8 (Must):** Every rule in a regulatory override pack shall carry a confidence score reflecting the clarity of the regulatory text and the degree of interpretive judgment required: High (unambiguous text, multiple reviewers agree), Medium (judgment involved, text is ambiguous), or Low (contested or genuinely unclear territory).
+**RA-8 (Must):** Every rule in a regulatory override pack shall declare, in the rule definition, **what the rule does to its own quoted source text** — one of: `verbatim` (the rule restates the quoted passage), `derived` (the rule infers from it), or `judgement` (the rule rests on a reading the passage does not settle). A pack whose rules omit this is invalid. The value is set by the human reviewer at sign-off, never computed.
 
-> Fit criterion: The confidence score is declared in the rule definition. A pack without confidence scores on all rules is invalid. The score is set by the human reviewer at sign-off, not computed automatically.
+> Fit criterion: Each pack rule carries a `basis` field with one of the three values, and the verdict displays it alongside the rule's quoted source text so a reader can check the claim against the quote without leaving the page.
+
+**Superseded 2026-08-04 (build verification 003).** This requirement previously
+asked for a confidence score of High / Medium / Low. That was implemented as
+`basis` instead, in V2-E, on explicit user feedback — recorded verbatim at
+`src/engine/types.ts:201-215`:
+
+> *"who signed off on that interpretation, and how confident they were — I
+> don't know how this will work, don't think it's practically implementable"*
+
+The reasoning stands and is worth preserving: a confidence grade is subjective
+and uncalibrated. Two reviewers grade the same rule differently and nobody can
+say what "Medium" obliges a reader to do. That is fabricated precision, which
+is the one thing this product must not produce. `basis` asks an objectively
+checkable question in its place — one a reviewer can settle by reading the rule
+against its own quote. **Do not reinstate the confidence score.**
 
 **RA-9 (Must):** The verdict shall display the full reasoning chain for every regulatory override that fired: the primary source text, the rule derived from it, and how the rule applies to the specific use case. The bank shall be able to verify the reasoning against the original regulatory text without asking the product owner.
 
