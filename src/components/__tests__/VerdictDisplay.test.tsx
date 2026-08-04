@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import VerdictDisplay from '../VerdictDisplay';
 import type { Verdict } from '../../types/verdict';
 
@@ -566,5 +567,45 @@ describe('VerdictDisplay — the no-basis statement holds on a hard-line rejecti
     expect(screen.getByText(/MAR Article 8/)).toBeInTheDocument();
     expect(statement).not.toHaveTextContent(/nothing above/i);
     expect(statement).toHaveTextContent(/still applied in full/i);
+  });
+});
+
+// P8-C05 → P8-C06. register-lifecycle.md §15.1b (design review I-1). The
+// sign-off page reuses this component, and correction is a SUBMITTER action
+// (verdict-audit.md §6.1), not a reviewer one. `onCorrect` was required and
+// its button rendered unconditionally (verified: VerdictDisplay.tsx:20 and
+// :418 before this chunk), so "the affordance is not carried over" was
+// unbuildable by reuse alone — reuse would either put the button on the
+// reviewer's page or hang a no-op behind a control that still invites a click.
+describe('VerdictDisplay — reusable on a reviewer page (P8-C06)', () => {
+  it('TC-R3-RD-8-01: omitting onCorrect removes the correction control and the reasoning-trace disclosure', () => {
+    render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} />);
+
+    expect(screen.queryByRole('button', { name: /correct this classification/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/reasoning trace/i)).not.toBeInTheDocument();
+  });
+
+  it('supplying onCorrect keeps both, so the submitter flow is unchanged', async () => {
+    const onCorrect = vi.fn();
+    const user = userEvent.setup();
+    render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={onCorrect} />);
+
+    const button = screen.getByRole('button', { name: /correct this classification/i });
+    expect(screen.getByText(/reasoning trace/i)).toBeInTheDocument();
+
+    // Not merely present — still wired. A gate that rendered the button and
+    // dropped the handler would pass a presence-only assertion.
+    await user.click(button);
+    expect(onCorrect).toHaveBeenCalledTimes(1);
+  });
+
+  it('the verdict itself still renders without onCorrect — only the affordances go', () => {
+    render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} />);
+
+    // The reviewer must still see what they are signing off. Gating the whole
+    // component on the prop would be a far worse defect than the one being
+    // fixed.
+    expect(screen.getByRole('heading', { name: /with controls/i })).toBeInTheDocument();
+    expect(screen.getByText('INV-DATA-01')).toBeInTheDocument();
   });
 });
