@@ -21,7 +21,11 @@ export async function addEdge(edge: RegisterEdge): Promise<void> {
 // verdict_corrected) in an audit trail. Events are returned by audit.getAll()
 // in occurred_at order (monotonic tie-break — see audit.ts), so the last
 // matching entry is the current verdict.
-function findLatestVerdictEvent(
+// Exported since P8-C06 (register-lifecycle.md §15.1b, design review I-4).
+// P8-C07 renders the verdict on the sign-off page and needs the same scan;
+// exporting it is what stops a third copy being written — the duplication
+// ADR-EE-R3-1 exists to close.
+export function findLatestVerdictEvent(
   events: AuditEvent[]
 ): Extract<AuditEvent['payload'], { type: 'verdict_produced' | 'verdict_corrected' }> | undefined {
   for (const event of [...events].reverse()) {

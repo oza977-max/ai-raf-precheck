@@ -8,9 +8,10 @@ import {
   updateLifecycleStage,
   updateUseCaseVerdictSummary,
   exportAll,
+  findLatestVerdictEvent,
 } from './register';
 import { getAll, append } from './audit';
-import type { RegisterNode, RegisterEdge } from './types';
+import type { AuditEvent, RegisterNode, RegisterEdge } from './types';
 import type { Verdict } from '../types/verdict';
 
 function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
@@ -369,5 +370,54 @@ describe('register store', () => {
 
     expect(nodes.some((n) => n.node_id === node.node_id)).toBe(true);
     expect(Array.isArray(edges)).toBe(true);
+  });
+});
+
+// P8-C06. The export is the deliverable, so something must assert it exists
+// and behaves — an unexported helper that P8-C07 then re-implements is exactly
+// the duplication this chunk removes, and it would not fail any test.
+describe('findLatestVerdictEvent (exported for P8-C07)', () => {
+  it('returns the most recent verdict-bearing payload, ignoring other event types', () => {
+    const first = makeVerdict({ id: 'v1', binding_constraint: 'INV-OLD-01' });
+    const second = makeVerdict({ id: 'v2', binding_constraint: 'INV-NEW-01' });
+
+    const events: AuditEvent[] = [
+      {
+        event_id: 'e1',
+        use_case_id: 'uc1',
+        event_type: 'verdict_produced',
+        occurred_at: '2026-01-01T00:00:00.000Z',
+        actor: '1LoD',
+        payload: { type: 'verdict_produced', verdict: first },
+      },
+      {
+        event_id: 'e2',
+        use_case_id: 'uc1',
+        event_type: 'twoloD_reviewed',
+        occurred_at: '2026-01-02T00:00:00.000Z',
+        actor: '2LoD',
+        payload: { type: 'twoloD_reviewed', action: 'approved' },
+      },
+      {
+        event_id: 'e3',
+        use_case_id: 'uc1',
+        event_type: 'verdict_corrected',
+        occurred_at: '2026-01-03T00:00:00.000Z',
+        actor: '1LoD',
+        payload: { type: 'verdict_corrected', original_verdict_id: 'v1', new_verdict: second },
+      },
+    ];
+
+    const latest = findLatestVerdictEvent(events);
+    // The corrected verdict supersedes the produced one — a reviewer must sign
+    // off against what is current, not what was first recorded.
+    expect(latest?.type).toBe('verdict_corrected');
+    expect(latest && 'new_verdict' in latest && latest.new_verdict.binding_constraint).toBe('INV-NEW-01');
+  });
+
+  it('returns undefined when the trail carries no verdict at all', () => {
+    // The seeded AIGate self-assessment is the real case on every install, so
+    // P8-C07's no-verdict branch depends on this being undefined, not a throw.
+    expect(findLatestVerdictEvent([])).toBeUndefined();
   });
 });

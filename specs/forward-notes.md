@@ -5,7 +5,29 @@ marked, never deleted.
 
 ---
 
-## FN-003 — Requirement wording that invites an overclaim
+## FN-004 — Two affordances share one switch, and one day they may not
+
+**Raised by:** P8-C06 (2026-08-04). **Binds:** whoever first needs one without
+the other.
+**Status:** open.
+
+`VerdictDisplay` gates both the correction affordance and the reasoning-trace
+disclosure on `showSubmitterAffordances`, which is derived from `onCorrect`
+being supplied. That is correct today: `register-lifecycle.md` §15.1b excludes
+both from the reviewer's page, so the two exclusions are co-extensive.
+
+They are not the same concern, though. Correction is a submitter action; the
+trace is an optional plain-English retelling. Review of P8-C06 flagged the risk:
+a maintainer reading a trace disclosure gated on a correction handler could
+reasonably conclude the trace is a correction concern, and a future caller
+wanting one without the other would find the shape silently prevents it.
+
+**Deliberately not split now.** A second prop with no consumer is the
+"computed but never consumed" pattern this project treats as a bug in waiting.
+The concept is named instead, so the intent is legible at the call site.
+**Split it the moment a real caller needs them apart** — likely candidates: a
+read-only submitter view, or a reviewer page that wants the trace for context
+without offering correction.
 
 **Raised by:** P8-C05 (2026-08-04). **Binds:** P8-C07, and any future round
 touching R3-JU-3 or the verdict's absence-of-basis messaging.
