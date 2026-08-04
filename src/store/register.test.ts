@@ -396,7 +396,7 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
         event_type: 'twoloD_reviewed',
         occurred_at: '2026-01-02T00:00:00.000Z',
         actor: '2LoD',
-        payload: { type: 'twoloD_reviewed', action: 'approved' },
+        payload: { type: 'twoloD_reviewed', action: 'approved', verdict_id: 'v1' },
       },
       {
         event_id: 'e3',

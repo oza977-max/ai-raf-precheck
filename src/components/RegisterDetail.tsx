@@ -92,19 +92,47 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
 
   // LC-2/LC-3: decision event first, then the stage change it causes
   // (updateLifecycleStage itself appends lifecycle_stage_changed).
+  /** §13.4. Read the trail at write time to DETECT a change, and compare it
+   *  against what was rendered. That is not the same as deriving the id to
+   *  write: a second "latest event" lookup used as the value would record an
+   *  attestation against a verdict the reviewer never saw, which is precisely
+   *  the race this closes. Returns true when it is safe to proceed. */
+  async function verdictStillCurrent(): Promise<boolean> {
+    const fresh = await getAuditEvents(useCaseId);
+    const payload = findLatestVerdictEvent(fresh);
+    const currentId = payload
+      ? payload.type === 'verdict_produced'
+        ? payload.verdict.id
+        : payload.new_verdict.id
+      : null;
+    if (currentId === (latestVerdict?.id ?? null)) return true;
+
+    setActionError(
+      'The verdict changed while you were reading it, so nothing was recorded. Someone corrected and re-evaluated this use case after you opened the page. Reload to see the current verdict, then sign off against that.',
+    );
+    await load();
+    return false;
+  }
+
   async function handleApprove() {
     if (inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setActionError(null);
     try {
+      if (!(await verdictStillCurrent())) return;
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
         use_case_id: useCaseId,
         event_type: 'twoloD_reviewed',
         occurred_at: new Date().toISOString(),
         actor: role,
-        payload: { type: 'twoloD_reviewed', action: 'approved', ...(notes.trim() ? { notes: notes.trim() } : {}) },
+        payload: {
+          type: 'twoloD_reviewed',
+          action: 'approved',
+          verdict_id: latestVerdict?.id ?? '',
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        },
       });
       await updateLifecycleStage(useCaseId, 'approved', role);
       setActionResult('Approved by 2LoD — lifecycle advanced to Approved. Recorded in the audit trail.');
@@ -125,6 +153,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     setBusy(true);
     setActionError(null);
     try {
+      if (!(await verdictStillCurrent())) return;
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
         use_case_id: useCaseId,
@@ -134,6 +163,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         payload: {
           type: 'twoloD_reviewed',
           action: 'correction_requested',
+          verdict_id: latestVerdict?.id ?? '',
           ...(notes.trim() ? { notes: notes.trim() } : {}),
         },
       });
