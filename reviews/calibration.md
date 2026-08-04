@@ -328,3 +328,5 @@ cleared it.
    the four domain specs are still hand-maintained twins and drifted twice
    during this session's edits, caught only by scripted probes. Generating them
    is now overdue.
+
+| 2026-08-04 | /gvm-test 003 (full mode, post-Phase-8) | Demo-ready | 148 cases walked: 123 PASS, 7 FAIL, 9 STUB, 5 deliberate deviations, 1 BLOCKED. VV-2(a) failed; no VV-4 trigger. Systemic finding: five deviations decided in code comments and never written back to requirements.md. |
