@@ -829,3 +829,85 @@ describe('Walking Skeleton', () => {
     expect(screen.getByText(existingLabel)).toBeInTheDocument();
   });
 });
+
+// Round 4 — charter 004 D-004. The register row was titled from
+// `graph.input_nodes[0].label`, which the form builds as
+// "<use case name> — input" (build-graph-from-form.ts:51). Every use case
+// submitted through the intake form therefore appeared in the register — and
+// on the 2LoD sign-off page — under the name of the data feeding it rather
+// than its own. The seeds set the label directly, which is why they looked
+// correct and this went unnoticed for four rounds.
+describe('Register row naming (charter 004 D-004)', () => {
+  it('titles the use case after the system, not after its input node', async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'A tool that drafts client emails');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+
+    await screen.findByText(/guided intake — answer the fields below/i);
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mortgage servicing assistant');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts servicing letters.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+    await screen.findByText(/review extracted graph/i);
+    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await screen.findByRole('heading', { name: /confirm and evaluate/i });
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
+
+    await user.click(screen.getByText('▤ Register'));
+
+    // The register lists AI systems. Its row is the system's name.
+    expect(await screen.findByText('Mortgage servicing assistant')).toBeInTheDocument();
+    expect(screen.queryByText(/Mortgage servicing assistant — input/)).not.toBeInTheDocument();
+  });
+});
+
+// Round 4 — charter 004 D-001. The description was captured, used for
+// extraction, and never shown to the user again — so the screen that asks
+// "is this graph right?" gave them nothing to check it against.
+describe('The submitted description is shown back (charter 004 D-001)', () => {
+  it('renders what the user typed on the graph review screen', async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const typed = 'A tool that drafts client emails from CRM notes';
+    await user.type(screen.getByLabelText(/describe your ai use case/i), typed);
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+
+    await screen.findByText(/guided intake — answer the fields below/i);
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafter');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts emails.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+
+    await screen.findByText(/review extracted graph/i);
+    // The user can check the graph against their own words, on the screen
+    // that asks them to confirm it.
+    expect(screen.getByText(typed)).toBeInTheDocument();
+  });
+});

@@ -417,7 +417,17 @@ export default function IntakeFlow() {
       await addNode({
         node_id: useCaseId,
         node_type: 'use_case',
-        label: graph.input_nodes[0]?.label ?? graph.processing_nodes[0]?.label ?? 'AI use case',
+        // D-004 (charter 004): this took the INPUT node's label, which the
+        // guided form builds as "<use case name> — input"
+        // (build-graph-from-form.ts:51). Every form-submitted use case
+        // therefore sat in the register, and on the 2LoD sign-off page, under
+        // the name of the data feeding it. The register lists AI systems, so
+        // the processing node — the system itself — is the right name; the
+        // form sets that label to the use case name exactly
+        // (build-graph-from-form.ts:59). Input remains the fallback for a
+        // graph with no processing node, which the engine would reject
+        // anyway.
+        label: graph.processing_nodes[0]?.label ?? graph.input_nodes[0]?.label ?? 'AI use case',
         created_at: now,
         metadata: {
           node_type: 'use_case',
@@ -455,7 +465,17 @@ export default function IntakeFlow() {
     const nextAnswers = [...state.answers, answer];
     dispatch({ type: 'ANSWER_SUBMITTED', answer });
 
-    const contradictions = detectContradictions(submittedDescription, nextAnswers, state.graph);
+    // O-001 (charter 005): this read `submittedDescription`, a useState written
+    // only inside handleSubmitDescription. A restored draft never re-ran that,
+    // so a resumed questionnaire checked answers against an EMPTY STRING and
+    // quietly found no contradictions — degrading silently rather than
+    // failing. The description now travels on the reducer state, which the
+    // draft envelope persists.
+    const contradictions = detectContradictions(
+      'description' in state ? state.description : submittedDescription,
+      nextAnswers,
+      state.graph,
+    );
     if (contradictions.length > 0) {
       dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
       return;
@@ -566,6 +586,16 @@ export default function IntakeFlow() {
         {state.step === 'graph_review' && (
           <section>
             <h2>Review extracted graph</h2>
+            {/* D-001 (charter 004): the description was captured, used for
+                extraction, and never shown again — so the user was asked to
+                confirm a graph against a description they could no longer
+                see. Rendered as plain text; it is user input. */}
+            {state.description && (
+              <div className="intake-flow__submitted-description">
+                <p className="intake-flow__submitted-label">What you told us</p>
+                <p>{state.description}</p>
+              </div>
+            )}
             {evaluationError && (
               <p role="alert">Evaluation could not complete: {evaluationError}. Review the graph and try again.</p>
             )}

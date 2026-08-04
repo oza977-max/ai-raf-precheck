@@ -108,6 +108,10 @@ body {
   color: #56513f;
 }
 
+.app-header__ok {
+  color: #7fb08a;
+}
+
 .app-header__warn {
   color: #d99a3f;
 }
@@ -1147,6 +1151,24 @@ details input {
 .required-marker {
   color: var(--danger, #a33);
   font-weight: 600;
+}
+
+/* ── Submitted description, shown back (D-001) ── */
+.intake-flow__submitted-description {
+  background: var(--paper);
+  border-left: 3px solid var(--card-border);
+  padding: 0.7rem 1rem;
+  margin: 0 0 1.2rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+.intake-flow__submitted-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.3rem;
 }
 
 /* ── Evidence "as of" note + unknown chip (P8-C07, §15.1a) ── */
