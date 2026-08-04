@@ -576,6 +576,69 @@ invariants:
 # This note originally contained the banned words themselves and broke the very
 # test it documents (oracle round 002) — hence the hyphens above. The verdict screen is asserted with a single-match
 # query over those two words and policy text reaches that screen.
+# ─────────────────────────────────────────────────────────────────────────────
+# DOWNSTREAM REVIEWS (CS-3)
+#
+# Processes this firm requires ALONGSIDE the AI risk pre-check, triggered by a
+# use case's characteristics. They are not part of the pre-check and do not
+# change the verdict — the pre-check is complete, and these are additional
+# obligations the submitter must still discharge.
+#
+# ⚠ DRAFT — NOT YET ADOPTED. These four rules are a starting point written to
+# make the mechanism usable, not a statement of this firm's processes. Every
+# one of them names a team or process that your firm may not have, may call
+# something else, or may trigger on different criteria. Review each against
+# how your organisation actually works before relying on it, exactly as you
+# would a jurisdiction pack rule (grounding/PACK-AUTHORING.md: rule authoring
+# is human-led).
+#
+# No `regulatory_basis` is set on these. They are bank-configured processes,
+# not regulatory determinations, and inventing a citation for an internal
+# process would be exactly the fabrication this product refuses elsewhere.
+# Add one only where a regulator genuinely mandates the process.
+#
+# The condition vocabulary is the same one the invariants above use.
+# ─────────────────────────────────────────────────────────────────────────────
+downstream_reviews:
+  - id: "DR-INFOSEC-01"
+    review: "Information security review"
+    # CS-3 names this case explicitly. Price-sensitive information handled by
+    # an AI system is the scenario most firms already route to InfoSec.
+    # `data_class` exists only on input nodes, so this cannot misfire on a
+    # different part of the graph.
+    condition:
+      data_class: { in: ["MNPI"] }
+
+  - id: "DR-INFOSEC-02"
+    review: "Information security review"
+    # Client personal data. Same field, same guarantee.
+    condition:
+      data_class: { in: ["Client PII"] }
+
+  - id: "DR-VENDOR-01"
+    review: "Vendor risk assessment"
+    # Any third-party model or service. `vendor` exists only on processing
+    # nodes, so this asks about the system rather than about its inputs. The
+    # unregistered-component path already catches vendors absent from the
+    # approved registry; this catches the declared-but-external case, which is
+    # a different question and a different team.
+    condition:
+      vendor: { not_in: ["internal"] }
+
+  # ⚠ NOT WRITTEN — "Cloud security approval", triggered by processing outside
+  # the firm's estate, is the obvious fourth rule and CS-3 names it. It cannot
+  # be expressed correctly today: `data_zone` exists on BOTH input and
+  # processing nodes, and a condition matches if ANY node satisfies it
+  # (src/engine/condition.ts:6-19). A rule reading
+  # `data_zone: { in: ["Zone B"] }` would fire on a use case whose DATA sits in
+  # Zone B while the model runs safely in Zone C — the wrong question, silently
+  # answered.
+  #
+  # Writing it anyway would put a required review in front of people for a
+  # reason that is not true. The gap is in the condition language, not in the
+  # policy: it needs a way to scope a condition to a node type. Recorded as
+  # FN-005 rather than papered over.
+
 controls:
   - id: "CTRL-ENC-01"
     name: "Encryption in transit (TLS 1.3+)"

@@ -82,7 +82,9 @@
         "CTRL-SAMPLE-01",
         "CTRL-SYNTHMARK-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
@@ -118,7 +120,9 @@
         "CTRL-DRIFT-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-FAIRNESS-01",
@@ -141,7 +145,9 @@
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-DATA-01",
@@ -177,7 +183,9 @@
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -198,7 +206,9 @@
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -309,7 +319,9 @@
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-INDEP-VAL-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
@@ -329,7 +341,9 @@
         "CTRL-DRIFT-01",
         "CTRL-REVERSAL-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
@@ -348,7 +362,9 @@
         "CTRL-BIAS-01",
         "CTRL-INDEP-VAL-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
@@ -370,7 +386,9 @@
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-DATA-01",
         "INV-DRIFT-01",
@@ -421,7 +439,9 @@
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-DRIFT-01",
@@ -444,7 +464,9 @@
         "CTRL-INDEP-VAL-01",
         "CTRL-SAMPLE-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -530,7 +552,9 @@
         "CTRL-SAMPLE-01",
         "CTRL-SYNTHMARK-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
@@ -557,7 +581,8 @@
         "CTRL-SAMPLE-01"
       ],
       "downstream_reviews": [
-        "ICT third-party concentration review (DORA Art. 28/29)"
+        "ICT third-party concentration review (DORA Art. 28/29)",
+        "Information security review"
       ],
       "tripped_invariants": [
         "INV-DATA-01",
@@ -594,7 +619,9 @@
       "controls": [
         "CTRL-FINGERPRINT-01"
       ],
-      "downstream_reviews": [],
+      "downstream_reviews": [
+        "Information security review"
+      ],
       "tripped_invariants": [
         "INV-TRACK2-01"
       ],
@@ -613,7 +640,8 @@
         "CTRL-TPRM-01"
       ],
       "downstream_reviews": [
-        "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved registry"
+        "Full vendor/platform risk assessment required — VENDOR-NOT-LISTED is not on the approved registry",
+        "Vendor risk assessment"
       ],
       "tripped_invariants": [
         "INV-CITE-01",

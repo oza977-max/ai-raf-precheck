@@ -384,6 +384,10 @@ export interface PolicyFile {
   tiers: TierRule[];
   invariants: Invariant[];
   controls: Control[];
+  // CS-3: optional so an existing policy file stays valid — a firm with no
+  // configured processes simply has none, which is different from the
+  // mechanism not existing.
+  downstream_reviews?: DownstreamReviewRule[];
   kri_thresholds: KriThresholds;
   jurisdictions: JurisdictionEntry[];
   roles: Record<string, RoleConfig>;
@@ -436,6 +440,20 @@ export interface Invariant {
   // V1.1-C01: optional — hard lines/tracks always carry a citation, but
   // invariants may not have one; the UI shows nothing rather than a
   // fabricated citation (BC-V11C01-02).
+  regulatory_basis?: string;
+}
+
+/** CS-3 (round 4). A firm-configured downstream process — information
+ *  security review, vendor risk assessment, cloud security approval — required
+ *  by a use case's characteristics and separate from the AI risk pre-check
+ *  itself. The condition vocabulary is the same one hard lines, tiers, tracks
+ *  and invariants already use. */
+export interface DownstreamReviewRule {
+  id: string;
+  review: string;
+  condition: Condition;
+  /** Optional, like an invariant's: shown where it exists, never fabricated
+   *  where it does not (BC-V11C01-02). */
   regulatory_basis?: string;
 }
 

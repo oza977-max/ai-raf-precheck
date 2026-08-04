@@ -5,6 +5,37 @@ marked, never deleted.
 
 ---
 
+## FN-005 — A condition cannot say WHICH node it means
+
+**Raised by:** round 4, CS-3 (2026-08-04). **Binds:** any rule that needs to
+distinguish where data sits from where the model runs.
+**Status:** open.
+
+`matchesCondition` flattens every input, processing and output node into one
+lookup and matches if ANY node carries the field and satisfies the operator
+(`src/engine/condition.ts:6-19`). That is fine for fields unique to one node
+type — `data_class` is input-only, `vendor` and `model_type` are
+processing-only — and wrong for `data_zone`, which exists on both.
+
+The concrete consequence: CS-3's own example of a "cloud security approval"
+triggered by processing outside the firm's estate **cannot be written
+correctly**. A rule reading `data_zone: { in: ["Zone B"] }` fires on a use case
+whose DATA sits in Zone B while the model runs safely in Zone C — the wrong
+question, silently answered, in front of someone who now has a review to
+discharge for no reason.
+
+The rule was **not written**, and the reason is recorded in
+`policy/appetite.yaml` beside where it would have gone. The fix is a way to
+scope a condition to a node type — `processing.data_zone` or an explicit
+`node_type` key — which is a change to the condition language (ADR-002's
+minimal operator set) and touches every consumer of it. Worth doing when a
+second rule needs it; not worth doing on the strength of one.
+
+**Note for whoever does it:** the same ambiguity is latent in the existing
+invariants and hard lines. None of them is currently wrong, because the
+zone-crossing rules genuinely mean "any node", but a future author could
+reasonably read `data_zone` as "the processing zone" and be silently mistaken.
+
 ## FN-004 — Two affordances share one switch, and one day they may not
 
 **Raised by:** P8-C06 (2026-08-04). **Binds:** whoever first needs one without

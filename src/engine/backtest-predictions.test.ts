@@ -88,9 +88,15 @@ describe('backtest pack predictions — jurisdictional (V2-A)', () => {
     expect(r.value.tier).toBe('Critical');
     expect(r.value.track).toBe('II');
     expect(r.value.controls).toContain('CTRL-ENC-01');
+    // Round 4 (CS-3): the firm can now require its own downstream processes,
+    // and this use case handles Client PII, so DR-INFOSEC-02 fires. The
+    // prediction changed because the product gained a capability it was
+    // missing, not because the engine drifted — the backtest catching it is
+    // the corpus doing its job.
     expect(r.value.downstream_reviews).toEqual([
       'ICT third-party concentration review (DORA Art. 28/29)',
       'Independent model validation (2LoD)',
+      'Information security review',
     ]);
     const chain = r.value.explanation.regulatory_chain ?? [];
     expect(chain.map((c) => c.rule_id)).toEqual(['DORA-EU-REV-01', 'EU-AIACT-TIER-01', 'SS1-UK-REV-01']);

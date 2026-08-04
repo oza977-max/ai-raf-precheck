@@ -143,6 +143,19 @@ const PolicyFileSchema = z.object({
   tracks: z.array(TrackRuleSchema),
   tiers: z.array(TierRuleSchema),
   invariants: z.array(InvariantSchema),
+  // CS-3: optional, so every existing policy file stays valid. A firm with no
+  // configured downstream processes has none — which is a different thing
+  // from the mechanism not existing, and that was the defect.
+  downstream_reviews: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        review: z.string().min(1),
+        condition: ConditionRecordSchema,
+        regulatory_basis: z.string().optional(),
+      }),
+    )
+    .optional(),
   controls: z.array(ControlSchema),
   kri_thresholds: z.record(z.string(), z.record(z.string(), z.unknown())),
   jurisdictions: z.array(JurisdictionEntrySchema),
