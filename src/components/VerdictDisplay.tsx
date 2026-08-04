@@ -17,7 +17,11 @@ interface VerdictDisplayProps {
   // older render paths (and tests) without them stay valid.
   graph?: DataFlowGraph;
   registerStage?: LifecycleStage;
-  onCorrect: () => void;
+  // Optional since P8-C06. register-lifecycle.md §15.1b: the sign-off page
+  // reuses this component, and correction is a submitter action
+  // (verdict-audit.md §6.1), not a reviewer one. Required-with-a-no-op would
+  // have left a control on the reviewer's page that still invites the click.
+  onCorrect?: () => void;
 }
 
 // BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
@@ -187,6 +191,15 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // was `lowCaveats.length > 0` — one of two independent derivations of the
   // same rule, the other in store/register.ts. Both are now reads.
   const isProvisional = isVerdictProvisional(verdict);
+
+  // register-lifecycle.md §15.1b excludes BOTH the correction affordance and
+  // the reasoning-trace disclosure from the reviewer's page: they belong to
+  // the submitter's flow (verdict-audit.md §6.1). They are gated together and
+  // named as one concept, because `onCorrect &&` in front of a trace
+  // disclosure reads as though the trace were a correction concern, which it
+  // is not. Review of P8-C06 raised this; the honest fix is the name, not a
+  // second prop with no consumer — see FN-004 for when to split them.
+  const showSubmitterAffordances = onCorrect !== undefined;
 
   const reasoningTrace = findReasoningTrace(verdict, auditEvents);
   const fallbackDescription = findRuleDescription(policy, verdict.binding_constraint);
@@ -415,9 +428,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div>
       )}
 
-      <button type="button" onClick={onCorrect}>
-        Correct this classification?
-      </button>
+      {/* Rendered only where correction is actually available. Absence here
+          is the requirement, not an oversight (TC-R3-RD-8-01). */}
+      {showSubmitterAffordances && onCorrect && (
+        <button type="button" onClick={onCorrect}>
+          Correct this classification?
+        </button>
+      )}
 
       {verdict.controls.length > 0 &&
         (policy ? (
@@ -511,6 +528,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </p>
       )}
 
+      {showSubmitterAffordances && (
       <details className="verdict__trace">
         <summary>Reasoning trace</summary>
         {reasoningTrace ? (
@@ -527,6 +545,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           </p>
         )}
       </details>
+      )}
 
       <p className="verdict__caveat">
         Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes (NF-2).
