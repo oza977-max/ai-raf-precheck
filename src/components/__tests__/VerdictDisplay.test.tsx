@@ -382,3 +382,120 @@ describe('VerdictDisplay — the provisional cause is stated, not just the statu
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+// P8-C05 — verdict-audit.md §13. Two things, two readers. The prose statement
+// tells the submitter what the consequence is; the labelled reason puts the
+// cause on the record for whoever reads it later. An implementation with only
+// one of them has met one requirement, not both.
+describe('VerdictDisplay — no regulatory basis is stated, not just implied (R3-JU-3)', () => {
+  const noBasisVerdict = () =>
+    makeVerdict({
+      confidence_caveats: [],
+      provisional_reasons: ['no_regulatory_basis'],
+      pack_versions: {},
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 4,
+        invariants_checked: 6,
+        tripped_invariants: [],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+        regulatory_chain: [],
+      },
+    });
+
+  it('TC-R3-JU-3-01: the verdict says in words that no regulatory basis was applied', () => {
+    const { container } = render(
+      <VerdictDisplay verdict={noBasisVerdict()} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+
+    const statement = container.querySelector('[data-no-regulatory-basis]');
+    // Leveson: the assertion is on the PRESENCE of the explanation, not on the
+    // absence of the reasoning-chain panel. Before this chunk the panel simply
+    // did not render, and "no regulation applies", "we did not check" and "the
+    // panel broke" were indistinguishable — all three look like nothing.
+    expect(statement, 'no statement rendered where the reasoning chain would be').not.toBeNull();
+    expect(statement).toHaveTextContent(/no regulatory rules were applied/i);
+    expect(statement).toHaveTextContent(/citations/i);
+    // The firm's own policy DID run. Claiming nothing was assessed would be a
+    // false statement, not a cautious one.
+    expect(statement).toHaveTextContent(/firm/i);
+  });
+
+  it('TC-R3-JU-3-02: the prose statement and the labelled reason are separately assertable', () => {
+    const { container } = render(
+      <VerdictDisplay verdict={noBasisVerdict()} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+
+    const statement = container.querySelector('[data-no-regulatory-basis]');
+    const labelled = container.querySelector('[data-provisional-reason="no_regulatory_basis"]');
+
+    expect(statement).not.toBeNull();
+    expect(labelled).not.toBeNull();
+    // Neither satisfies the assertion for the other: they are different
+    // elements, in different regions of the page, and one is not nested in the
+    // other. An implementation that rendered a single string in one place
+    // would pass a sloppy version of this test and fail the requirement.
+    expect(statement).not.toBe(labelled);
+    expect(labelled?.contains(statement!)).toBe(false);
+    expect(statement?.contains(labelled!)).toBe(false);
+    // The labelled reason belongs to the banner; the statement does not.
+    expect(screen.getByRole('alert').contains(labelled!)).toBe(true);
+    expect(screen.getByRole('alert').contains(statement!)).toBe(false);
+  });
+
+  it('TC-R3-JU-3-03: a verdict with an active pack carries no no-basis statement', () => {
+    const withChain = makeVerdict({
+      confidence_caveats: [],
+      provisional_reasons: [],
+      pack_versions: { 'EU-AIACT': '0.1' },
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 4,
+        invariants_checked: 6,
+        tripped_invariants: [],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+        regulatory_chain: [
+          {
+            rule_id: 'EU-AIACT-TIER-02',
+            title: 'Annex III employment',
+            source_document: 'EU AI Act',
+            source_section: 'Annex III §4(a)',
+            source_text: 'recruitment or selection of natural persons…',
+            effect: 'tier floor Critical',
+            basis: 'derived',
+            sign_off: 'pending firm adoption',
+          },
+        ],
+      },
+    });
+
+    const { container } = render(
+      <VerdictDisplay verdict={withChain} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+
+    expect(container.querySelector('[data-no-regulatory-basis]')).toBeNull();
+  });
+
+  // REALISTIC-FIXTURE VARIANT (TDD-3). A verdict persisted before V1.1-C01
+  // carries no `explanation` at all, so the chain is missing for a completely
+  // different reason. Saying "no regulatory rules were applied" about that
+  // record would be a claim about history that nobody checked — the honest
+  // answer is that the record predates the capture.
+  it('a verdict predating explanation capture is not described as having no regulatory basis', () => {
+    const legacy = makeVerdict({ confidence_caveats: [], provisional_reasons: [] }) as Record<
+      string,
+      unknown
+    >;
+    delete legacy.explanation;
+
+    const { container } = render(
+      <VerdictDisplay verdict={legacy as never} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+
+    expect(container.querySelector('[data-no-regulatory-basis]')).toBeNull();
+  });
+});
