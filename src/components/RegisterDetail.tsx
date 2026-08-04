@@ -52,6 +52,12 @@ function eventDetail(event: AuditEvent): string {
       return `${p.action.replace('_', ' ')}${p.notes ? ` — ${p.notes}` : ''}`;
     case 'reasoning_trace_generated':
       return 'Plain-English reasoning trace generated and stored with the verdict (VD-8).';
+    case 'duplicate_dismissed':
+      return `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`;
+    case 'classification_adopted':
+      return `Classification adopted from ${p.adopted_from_label} (${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
+        p.tier ?? '—'
+      }, track ${p.track ?? '—'}. No evaluation was run for this record.`;
   }
 }
 

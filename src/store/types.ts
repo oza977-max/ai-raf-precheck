@@ -4,6 +4,8 @@ import type { Verdict } from '../types/verdict';
 // Full AuditEventType union per verdict-audit.md §4.3.
 export type AuditEventType =
   | 'use_case_created'
+  | 'duplicate_dismissed'
+  | 'classification_adopted'
   | 'graph_confirmed'
   | 'verdict_produced'
   | 'graph_corrected'
@@ -24,6 +26,21 @@ export interface AuditEvent {
 
 export type AuditEventPayload =
   | { type: 'use_case_created'; description: string; intake_method: 'llm' | 'structured_form' }
+  // UC-2 (round 4). The duplicate check surfaces a match and the submitter
+  // decides. Both outcomes are decisions about the inventory and both are
+  // recorded: dismissing a match was previously invisible, so nobody could
+  // afterwards tell a genuine new use case from a duplicate waved through.
+  | { type: 'duplicate_dismissed'; candidate_use_case_id: string; candidate_label: string }
+  // Adoption records where the classification came from. The adopted record
+  // deliberately carries NO verdict of its own — nothing was evaluated, and
+  // the sign-off page says so (register-lifecycle.md §15.2).
+  | {
+      type: 'classification_adopted';
+      adopted_from_use_case_id: string;
+      adopted_from_label: string;
+      tier: string | null;
+      track: string | null;
+    }
   | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number }
   | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
   | { type: 'graph_corrected'; correction: GraphCorrection }
