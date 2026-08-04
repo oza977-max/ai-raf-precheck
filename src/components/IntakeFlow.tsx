@@ -8,6 +8,7 @@ import { loadPolicy } from '../store/policy';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
+import { selfAssessmentSeeded } from '../seeds/aigate-self-assessment';
 import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
@@ -65,9 +66,20 @@ export default function IntakeFlow() {
   // V1.2-C (UC-2/RG-2 leak fix, design-gap C1): the match is stored with
   // both tier and label, but the LABEL is only ever rendered for 2LoD —
   // 1LoD gets the redacted card (tier + "contact AI Risk").
-  const [duplicateMatch, setDuplicateMatch] = useState<{ tier: string | null; label: string } | null>(null);
+  // UC-2 (round 4): carries the id as well as the display fields, because both
+  // decisions — dismiss and adopt — have to name WHICH use case they were
+  // about when they write it to the trail.
+  const [duplicateMatch, setDuplicateMatch] = useState<{
+    id: string;
+    tier: string | null;
+    track: string | null;
+    label: string;
+  } | null>(null);
   const [duplicateCheckDone, setDuplicateCheckDone] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  // Set once the classification has been adopted — the flow ends here rather
+  // than continuing to intake questions (TC-UC-2-02).
+  const [adoptedFrom, setAdoptedFrom] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
   const [savedStage, setSavedStage] = useState<LifecycleStage | null>(null);
@@ -99,6 +111,9 @@ export default function IntakeFlow() {
   const [registerLoaded, setRegisterLoaded] = useState(false);
 
   const refreshRegister = useCallback(async () => {
+    // O-002: wait for the self-assessment seeding before reading, so the
+    // count reported to the user is one the product has actually established.
+    await selfAssessmentSeeded();
     const rows = await getUseCases('all');
     setRegisterRows(rows);
     setRegisterLoaded(true);
@@ -150,7 +165,12 @@ export default function IntakeFlow() {
         if (topCandidate) {
           const confirmed = getApiKey() ? await confirmSemanticDuplicate(description, topCandidate.label) : true;
           if (confirmed) {
-            setDuplicateMatch({ tier: topCandidate.tier, label: topCandidate.label });
+            setDuplicateMatch({
+              id: topCandidate.use_case_id,
+              tier: topCandidate.tier,
+              track: topCandidate.track,
+              label: topCandidate.label,
+            });
           }
         }
       } finally {
@@ -171,6 +191,29 @@ export default function IntakeFlow() {
 
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;
+
+    // UC-2 / TC-UC-2-03. Dismissing a surfaced match is a decision about the
+    // inventory, and it was invisible: nothing recorded that a near-match had
+    // been reviewed and set aside, so nobody could afterwards distinguish a
+    // genuinely new use case from a duplicate waved through. Written against
+    // the CANDIDATE's trail, because that is the record a later reader is
+    // looking at when they ask why there are two of these.
+    if (duplicateMatch) {
+      const candidate = duplicateMatch;
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: candidate.id,
+        event_type: 'duplicate_dismissed',
+        occurred_at: new Date().toISOString(),
+        actor: getRole(),
+        payload: {
+          type: 'duplicate_dismissed',
+          candidate_use_case_id: candidate.id,
+          candidate_label: candidate.label,
+        },
+      });
+    }
+
     const hasApiKey = getApiKey() !== null;
     dispatch({ type: 'NO_DUPLICATE_FOUND', method: hasApiKey ? 'llm' : 'form' });
 
@@ -185,6 +228,72 @@ export default function IntakeFlow() {
       return;
     }
     dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
+  }
+
+  // UC-2 / TC-UC-2-02. The other half of the duplicate decision. Adopting
+  // creates a record whose classification came from somewhere else — so it
+  // carries the source's tier and track, and deliberately NO verdict of its
+  // own, because nothing was evaluated for it. The sign-off page already
+  // states that plainly (register-lifecycle.md §15.2: "no verdict is
+  // recorded"), which is the honest reading: a reviewer must see that this
+  // classification was inherited, not derived.
+  const adoptInFlight = useRef(false);
+
+  async function handleAdoptClassification() {
+    if (state.step !== 'duplicate_check' || !duplicateMatch) return;
+    // The audit trail is append-only; a double-click cannot be cleaned up
+    // afterwards (same guard as the 2LoD actions, RegisterDetail.tsx:118).
+    if (adoptInFlight.current) return;
+    adoptInFlight.current = true;
+
+    try {
+      const source = duplicateMatch;
+      const useCaseId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      await addNode({
+        node_id: useCaseId,
+        node_type: 'use_case',
+        label: state.description.slice(0, 80),
+        created_at: now,
+        metadata: {
+          node_type: 'use_case',
+          submitted_by: getRole(),
+          lifecycle_stage: 'pre_checked',
+          current_verdict_id: null,
+          tier: source.tier,
+          track: source.track,
+        },
+      });
+
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'use_case_created',
+        occurred_at: now,
+        actor: getRole(),
+        payload: { type: 'use_case_created', description: state.description, intake_method: 'structured_form' },
+      });
+
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'classification_adopted',
+        occurred_at: now,
+        actor: getRole(),
+        payload: {
+          type: 'classification_adopted',
+          adopted_from_use_case_id: source.id,
+          adopted_from_label: source.label,
+          tier: source.tier,
+          track: source.track,
+        },
+      });
+
+      setAdoptedFrom(source.label);
+    } finally {
+      adoptInFlight.current = false;
+    }
   }
 
   function handleCorrectNode(nodeId: string, field: string, correctedValue: unknown) {
@@ -528,7 +637,23 @@ export default function IntakeFlow() {
           </div>
         )}
 
-        {state.step === 'duplicate_check' && (
+        {state.step === 'duplicate_check' && adoptedFrom && (
+          <section aria-label="Classification adopted" className="dup-gate">
+            <div className="questionnaire__tag">UC-2 · CLASSIFICATION ADOPTED</div>
+            <p>
+              <strong>Classification adopted from {adoptedFrom}.</strong> This use case is on the
+              register with that tier and track, and no intake questions were asked.
+            </p>
+            <p className="dup-gate__clear">
+              Nothing was evaluated for this record, so it carries no verdict of its own — its
+              sign-off page says so, and the audit trail records where the classification came from.
+              If the two use cases turn out to differ, run a fresh pre-check rather than editing this
+              one.
+            </p>
+          </section>
+        )}
+
+        {state.step === 'duplicate_check' && !adoptedFrom && (
           <section aria-label="Duplicate check" className="dup-gate">
             <div className="questionnaire__tag">UC-2 · DUPLICATE CHECK</div>
             {!duplicateCheckDone ? (
@@ -559,9 +684,20 @@ export default function IntakeFlow() {
                     {registerRows.length === 1 ? 'entry' : 'entries'} for overlapping characteristics.
                   </p>
                 )}
-                <button type="button" onClick={() => void handleConfirmNewUseCase()}>
-                  This is a new use case →
-                </button>
+                <div className="dup-gate__actions">
+                  {/* UC-2: both decisions, side by side. Only "new use case"
+                      existed, so the requirement's other half — adopt — was
+                      unreachable and the fit criterion unmet. Adopt appears
+                      only when there IS a match to adopt from. */}
+                  {duplicateMatch && (
+                    <button type="button" onClick={() => void handleAdoptClassification()}>
+                      Adopt this classification
+                    </button>
+                  )}
+                  <button type="button" onClick={() => void handleConfirmNewUseCase()}>
+                    This is a new use case →
+                  </button>
+                </div>
               </>
             )}
           </section>

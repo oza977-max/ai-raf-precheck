@@ -129,11 +129,14 @@ describe('IntakeFlow — resuming a restored draft', () => {
 // new use case from a duplicate waved through.
 describe('Duplicate gate — both decisions exist and both are recorded (UC-2)', () => {
   it('TC-UC-2-03: dismissing a match records it in the audit trail', async () => {
-    const existing = await seedExistingUseCase('Mortgage servicing assistant');
+    // Distinct label per test: IndexedDB is not cleared between tests in this
+    // file, so a shared name lets the duplicate check match the OTHER test's
+    // row and the assertions then read the wrong record.
+    const existing = await seedExistingUseCase('Dismissal probe assistant');
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Mortgage servicing assistant');
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Dismissal probe assistant');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
@@ -145,11 +148,11 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
   });
 
   it('TC-UC-2-02: adopting the classification creates a linked record and asks no intake questions', async () => {
-    const existing = await seedExistingUseCase('Mortgage servicing assistant');
+    const existing = await seedExistingUseCase('Adoption probe assistant');
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Mortgage servicing assistant');
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Adoption probe assistant');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
 
     const adopt = await screen.findByRole('button', { name: /adopt this classification/i });
@@ -161,13 +164,29 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
 
     // A new record exists, linked to the original, and the link says where the
     // classification came from.
+    // Identify the adopted record by what it IS, not by "the other row" —
+    // once O-002's fix made the register wait for the self-assessment seeding,
+    // "the other row" could be the AIGate seed. An assertion that can match
+    // the wrong record passes for the wrong reason.
+    // Identify the adopted record by WHAT HAPPENED TO IT, not by name and not
+    // by "the other row". Both of those matched the wrong record: "the other
+    // row" picked up the AIGate seed once O-002's fix made the register wait
+    // for seeding, and the label matched a same-named use case created by a
+    // different test file in a full-suite run. The record that was adopted is
+    // the one carrying a classification_adopted event — that is its identity.
     const rows = await getUseCases('all');
-    const adopted = rows.find((r) => r.use_case_id !== existing.node_id);
-    expect(adopted, 'no new register record created').toBeDefined();
+    const withAdoption = await Promise.all(
+      rows.map(async (r) => ({
+        row: r,
+        adoption: (await getAll(r.use_case_id)).find((e) => e.payload.type === 'classification_adopted'),
+      })),
+    );
+    const match = withAdoption.find((x) => x.adoption !== undefined);
+    expect(match, `no adopted record; rows: ${rows.map((r) => r.label).join(' | ')}`).toBeDefined();
+    const adopted = match!.row;
+    const adoption = match!.adoption;
     expect(adopted!.tier).toBe('High');
 
-    const events = await getAll(adopted!.use_case_id);
-    const adoption = events.find((e) => e.payload.type === 'classification_adopted');
     expect(adoption).toBeDefined();
     expect(adoption && 'adopted_from_use_case_id' in adoption.payload && adoption.payload.adopted_from_use_case_id).toBe(
       existing.node_id,
