@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StrictMode } from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RegisterDetail from '../RegisterDetail';
 import { addNode } from '../../store/register';
@@ -276,7 +276,7 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
 });
 
 describe('RegisterDetail — the two states where no verdict can be shown (R3-RD-2)', () => {
-  it('TC-R3-RD-2-01/-02: no verdict recorded is stated plainly, and sign-off stays available', async () => {
+  it('TC-R3-RD-2-01: no verdict recorded is stated plainly', async () => {
     const id = crypto.randomUUID();
     await seed(id, null);
     renderDetail(id);
@@ -284,7 +284,22 @@ describe('RegisterDetail — the two states where no verdict can be shown (R3-RD
     // The seeded AIGate self-assessment is the real case on every install.
     expect(await screen.findByText(/no verdict is recorded/i)).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /verdict/i })).not.toBeInTheDocument();
+  });
+
+  // Split from the test above: the ids were conflated in one name
+  // ("TC-R3-RD-2-01/-02"), which does not resolve as a trace id, so -02
+  // read as uncovered. One id, one test (spec-parity R7).
+  it('TC-R3-RD-2-02: sign-off stays available when no verdict is recorded', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, null);
+    renderDetail(id);
+
+    // The seeded AIGate self-assessment is the real case on every install.
+    // Blocking sign-off would strand it; the honest position is to let the
+    // reviewer act while telling them plainly what the record contains.
+    expect(await screen.findByText(/no verdict is recorded/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^approve$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /request correction/i })).toBeInTheDocument();
   });
 
   // REALISTIC-FIXTURE VARIANT (TDD-3). The engine has not produced this shape
@@ -431,5 +446,103 @@ describe('RegisterDetail — the sign-off names the verdict it attests to (P8-C0
     // And nothing was attested against the verdict they never saw.
     const events = await getAll(id);
     expect(events.filter((e) => e.payload.type === 'twoloD_reviewed')).toHaveLength(0);
+  });
+});
+
+// P8-C08 closes the two remaining R3-RD coverage gaps, found by cross-reading
+// every id in test-cases-003.md against the ids present in src/. Phase 8 does
+// not close with a requirement that only looks covered.
+describe('RegisterDetail — remaining R3-RD-1 coverage', () => {
+  it('TC-R3-RD-1-02: invariant and control ids match the intake verdict as SETS', async () => {
+    const id = crypto.randomUUID();
+    const verdict = makeVerdict({ use_case_id: id });
+    await seed(id, verdict);
+    renderDetail(id);
+
+    const region = await verdictRegion();
+    const rendered = region.textContent ?? '';
+
+    // Set comparison, not rendered text: ordering and surrounding prose may
+    // differ between the intake and sign-off views without failing. What may
+    // NOT differ is which ids the reviewer is shown.
+    const expectedInvariants = new Set(verdict.explanation.tripped_invariants.map((t) => t.id));
+    const expectedControls = new Set(verdict.controls);
+
+    for (const invariantId of expectedInvariants) {
+      expect(rendered, `invariant ${invariantId} missing from the sign-off page`).toContain(invariantId);
+    }
+    for (const controlId of expectedControls) {
+      expect(rendered, `control ${controlId} missing from the sign-off page`).toContain(controlId);
+    }
+    // And nothing was dropped: the counts match the verdict, so a page
+    // rendering only the first of each would fail.
+    expect(expectedInvariants.size).toBe(1);
+    expect(expectedControls.size).toBe(2);
+  });
+
+  it('TC-R3-RD-5-01: policy-authored content is rendered as text, never interpreted as markup [SECURITY]', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id, controls: ['CTRL-XSS-01'] }));
+
+    // Pack and policy content is human-authored and partly external in origin
+    // — eu-ai-act.yaml says in its own header that its text has not been
+    // verified by a lawyer. It is untrusted input to this view (§13.2a).
+    const hostile = {
+      version: '1.3',
+      hard_lines: [],
+      invariants: [],
+      controls: [
+        {
+          id: 'CTRL-XSS-01',
+          name: '<img src=x onerror="alert(1)">',
+          resolves: [],
+          verification_evidence: { status: 'verified', detail: '<script>alert(2)</script>' },
+        },
+      ],
+    } as unknown as PolicyFile;
+
+    const { container } = renderDetail(id, hostile);
+    const region = await verdictRegion();
+
+    // The characters appear as literal text…
+    expect(within(region).getByText(/<img src=x onerror=/)).toBeInTheDocument();
+    // …and nothing was interpreted as markup.
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+  });
+});
+
+// §15.3: "The existing synchronous in-flight guard on the sign-off actions is
+// unchanged and still required (TC-R3-NF-2-02)." It was required and untested.
+// P8-C08 adds the write path's staleness check in front of that guard, which
+// is exactly the kind of change that could quietly break it.
+describe('RegisterDetail — sign-off writes exactly one event under double submission (R3-NF-2)', () => {
+  it('TC-R3-NF-2-02: a double-click appends one approval, not two', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-double', use_case_id: id }));
+
+    renderDetail(id);
+    await verdictRegion();
+    const approve = screen.getByRole('button', { name: /^approve$/i });
+
+    // This asserts the REQUIREMENT — exactly one event appended — not any one
+    // mechanism. Two layers hold it: the synchronous useRef guard
+    // (RegisterDetail.tsx:118) and the button's `disabled={busy}`.
+    //
+    // Mutation-tested, and the result corrected an earlier claim in this
+    // comment. Removing the ref guard alone leaves this green, because in
+    // jsdom each fireEvent flushes React's re-render before the next, so the
+    // disabled state catches the second click. Removing BOTH layers fails it.
+    // The ref still earns its place: in a real browser two clicks can land
+    // inside one tick, where a state update is too late — which is the case
+    // the ref exists for and jsdom cannot reproduce faithfully.
+    fireEvent.click(approve);
+    fireEvent.click(approve);
+    await waitFor(async () => {
+      expect((await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed').length).toBeGreaterThan(0);
+    });
+
+    const signOffs = (await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed');
+    expect(signOffs).toHaveLength(1);
   });
 });

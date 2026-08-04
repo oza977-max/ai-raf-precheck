@@ -30,7 +30,19 @@ export type AuditEventPayload =
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 're_evaluation_queued'; policy_version: string }
-  | { type: 'twoloD_reviewed'; action: 'approved' | 'rejected' | 'correction_requested'; notes?: string }
+    // verdict-audit.md §13.4 (design review C-1). `verdict_id` follows the
+  // pattern the schema already uses (`verdict_corrected.original_verdict_id`,
+  // `reasoning_trace_generated.verdict_id`). It is the id of the verdict the
+  // page RENDERED, threaded from the render — never re-derived at write time,
+  // which would reintroduce the race it closes. Without it, an attestation is
+  // recorded against whatever is current and it could never afterwards be
+  // established which verdict was actually signed.
+  | {
+      type: 'twoloD_reviewed';
+      action: 'approved' | 'rejected' | 'correction_requested';
+      verdict_id: string;
+      notes?: string;
+    }
   | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string };
 
 // Register types per register-lifecycle.md §4.1–4.2.
