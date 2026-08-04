@@ -1,7 +1,7 @@
-# Handover — 2026-07-29
+# Handover — 2026-08-04
 
-Written to end a very long session cleanly. Everything below was verified with a
-command, not remembered. Supersedes the 2026-07-28 handover.
+Written at the close of Phase 8. Everything below was verified with a command,
+not remembered. Supersedes the 2026-07-29 handover.
 
 ---
 
@@ -10,102 +10,97 @@ command, not remembered. Supersedes the 2026-07-28 handover.
 | | |
 |---|---|
 | Branch | `main`, pushed, clean |
-| Last commit | `e38ef98` feat: jurisdiction answered-state complete [P8-C01] |
-| Tests | **283 passing**, 33 files (was 275 at session start) |
+| Last commit | `0a40e85` feat: the sign-off names the verdict it attests to [P8-C08] |
+| Tests | **334 passing**, 36 files (was 283 at the start of Phase 8) |
 | `npx tsc --noEmit` | clean |
 | `npm run build` | clean |
 | `python3 scripts/spec-parity-check.py` | clean (R1–R8) |
-| Live site | **STALE** — last published at `20ab942`, several commits behind |
+| Live site | current — published at `0a40e85` |
 
 ---
 
-## What happened this session
+## Phase 8 is complete — all eight chunks
 
-Two threads ran. Both are complete and committed.
+Round 3 fixed three things, and each one was a case of the product knowing
+something and not telling the user.
 
-### 1. GVM skills synced to the book (separate repo)
+| Chunk | Delivers |
+|---|---|
+| P8-C01 | Jurisdiction must be answered before you can proceed |
+| P8-C02 | Required fields marked, from one list that also drives the gate |
+| P8-C03 | Pre-round-3 drafts cannot slip past the new gate |
+| P8-C04 | The engine emits **why** a verdict is provisional |
+| P8-C05 | The verdict states the consequence and the labelled cause |
+| P8-C06 | `VerdictDisplay` reusable on a reviewer's page |
+| P8-C07 | **The sign-off page shows the verdict** |
+| P8-C08 | The sign-off record names the verdict it attests to |
 
-`~/.claude/skills` is now a **git repo** — it was not before, no version control
-at all. Three commits:
+P8-C07 is the one that mattered most: charter 004 measured the sign-off page at
+779 characters, and a 2LoD reviewer was being asked to attest to a decision the
+page did not show them.
 
-- `6d3debb` baseline of the installed skills
-- `288801a` read-only audit against the book's appendices
-- `fb0369e` the sync itself — 27 files, +685/−160
-
-Highlights: `DR-1` was **absent entirely** from `gvm-build` and is now Hard Gate
-10; the expert-scoring protocol was missing step 6 (the recall check);
-`gvm-test-cases` looked for the impact map at the wrong path, so its trace gate
-could never fire; code review had no concurrency panel; `gvm-status` misstated
-`/gvm-deploy`'s gate. Fifteen ahead-of-book divergences preserved and logged in
-`~/.claude/skills/DIVERGENCES.md`.
-
-**The book extracts are deliberately NOT in any repo.** They are in
-`~/Downloads` only. RAF is public; the skills repo is local-only with no remote.
-Do not commit them anywhere.
-
-### 2. AIGate round 3 — discovery through the first build chunk
-
-| Phase | Commit | Result |
-|---|---|---|
-| explore-test charter 003 | `d96517b` | 8 defects — but see the correction below |
-| explore-test charter 004 | `5febc8d` | Corrects 003. 6 defects, 3 observations |
-| requirements round 3 | `6ec6cc4`, `88ffd40` | 13 requirements — R3-JU / R3-RD / R3-NF |
-| test-cases round 3 | `c18fc34` | 33 cases → 38 after design review |
-| tech-spec round 3 | `871e15e` | 4 spec deltas + Phase 8, six chunks |
-| design-review round 1 | `4caeedf` | **Build with caveats**, 15 findings, 2 Critical |
-| build P8-C01 | `e38ef98` | Complete, review converged `[(1,3),(2,0)]` |
+**Round 3 coverage is complete.** Every `TC-R3-*` id in `test-cases-003.md` has
+a test, except `TC-R3-JU-6-03`, recorded UNREACHABLE with rationale in both
+twins — its two trigger conditions are mutually exclusive by construction,
+which contradicts ADR-EE-R3-1's claim that they can co-occur.
 
 ---
 
 ## The thing worth reading twice
 
-**Four separate times this session, a claim was written down without being
-checked against the code — and each check was one command.**
+**Green is not evidence. Deleting the code the test protects is.**
 
-1. Charter 003's D-002 claimed the guided form had no jurisdiction field. It has
-   six checkboxes. The walk had enumerated only `<select>` elements and read a
-   truncated page dump.
-2. Charter 003's D-005 and D-008 both rested on an uncleared browser carrying a
-   previous session's data into what was assumed to be a first run. Both
-   withdrawn in charter 004.
-3. Phase 8 originally sequenced a query-tightening chunk first, on the premise
-   that existing tests would break. They could not — the assertions fire on the
-   verdict screen before the test ever reaches the register. Chunk dropped;
-   seven became six.
-4. Design review found two Criticals and two Importants of the same shape: the
-   sign-off payload was assumed able to carry a verdict reference (it cannot),
-   control evidence status was assumed to live on the Verdict (it lives on
-   PolicyFile), an affordance was assumed suppressible by omission (its button is
-   ungated), and StrictMode semantics were assumed backwards.
+Four times this round a test was green and could not have failed:
 
-This is now **BC-001**, a permanent build check in `reviews/build-checks.md`:
-*a spec claim about an existing symbol must cite the `file:line` it was verified
-against.* It is active and was applied during P8-C01 — where it caught a wrong
-storage key in a test I had just written.
+1. **P8-C03** — the draft-migration tests, until mutation confirmed they broke
+   when the envelope inferred the answer from array length.
+2. **P8-C05** — a fixture set `binding_regulatory_basis: null`, and that
+   emptiness was the *only* reason a false claim looked true. Two drafts of the
+   same sentence shipped past three review passes because of it.
+3. **P8-C07** — `renderDetail(id, undefined)` silently substituted the default
+   policy, so the "no policy loaded" test exercised the *with*-policy path.
+4. **P8-C08** — the double-submission test, twice. First an awaited click
+   serialised the handler; then jsdom flushed a re-render between synthetic
+   events. Both looked convincing. Neither would have been caught by reading.
+
+The check is one command: delete the guard, run the test, see if it goes red.
+It caught something **every time it was run this round**.
+
+**The second pattern, four chunks running:** data sourced correctly and
+communicated dishonestly. The reasoning chain that simply vanished; the empty
+invariant list that read as "nothing was triggered"; the evidence status that
+said nothing at all when no policy was loaded; the historical/current split
+that was right in the code and invisible on the page. In every case a reader
+could not distinguish "we checked and found nothing" from "we did not check".
+
+Both patterns are already in `reviews/build-checks.md` territory and worth
+promoting to standing checks.
 
 ---
 
-## Where Phase 8 stands
+## After Phase 8
 
-Six chunks. **P8-C01 is done.** Five remain.
+Nothing is scheduled. Five things are known and owed — each with a pointer to
+where it is actually specified, not a restatement.
 
-| Chunk | Delivers | Depends on |
-|---|---|---|
-| ~~P8-C01~~ | ~~Jurisdiction answered-state~~ | **done** — `e38ef98` |
-| P8-C02 | Required-field markers; a single required-field list driving both `isComplete` and the markers (the review budgeted this refactor) | P8-C01 |
-| P8-C03 | Draft migration — **see FN-001, mostly already done** | P8-C01 |
-| P8-C04 | `Verdict.provisional_reasons`; both existing derivations become reads | — |
-| P8-C05 | Verdict renders the prose statement and the labelled causes | P8-C04 |
-| P8-C06 | Register detail: six decision-bearing elements, `verdict_id`, policy prop path, optional `onCorrect`, exported helper | P8-C04 |
+| Item | Where it lives |
+|---|---|
+| Charter 004's unrouted defects — D-001 (intake description discarded), D-004 (register shows the input-node name), D-006 (vendor silently defaulted) | `specs/implementation-guide.md` §11.5 |
+| Charter 005's observations — O-001 (`submittedDescription` not persisted, so a restored questionnaire checks contradictions against an empty string), O-002 (the register load races the self-assessment seeding, so the duplicate check can report a count it has not finished counting) | `test/explore-005.md` §O — **in no spec, no chunk, no requirement** |
+| The exploratory re-walk confirming round 3's defects no longer reproduce | `specs/implementation-guide.md` §11.5 — run `/gvm-explore-test` |
+| RF-2: the `.md`/`.html` spec twins still drift; `spec-parity-check.py` reads only `.md`. `requirements-003` is generated; `test-cases-003` and the four domain specs are still hand-maintained | Standing constraint below; generator at `scripts/render-requirements-003.py` |
+| FN-003 and FN-004, both open | `specs/forward-notes.md` |
 
-**`specs/forward-notes.md` FN-001:** P8-C03's scope is largely discharged by
-P8-C01. The draft envelope means a pre-round-3 draft loads as unanswered by
-construction, and two tests cover it. C03 should add the `TC-R3-JU-7-01/02` trace
-IDs and close — not re-implement. Review pass 2 reached this independently.
+**The stale release verdict.** `test/test-002.html` says **Ship-ready**, and it
+predates both exploratory charters. Treat it as stale. `/gvm-test` was correctly
+blocked during Phase 8 because it would have failed on the very defects Phase 8
+was fixing — **that reason is now gone.** Re-running it is the natural next
+step, and its verdict is the honest answer to "is this shippable".
 
-**P8-C06 is oversized** and the design review said so. It now carries the schema
-change, the prop path, the contract change, the exported helper and the
-rendering. Split it before building.
+Suggested order: `/gvm-test` for a current verdict → `/gvm-explore-test`
+charter 006 to confirm round 3 holds under a real walk → then route charter
+004's and 005's leftovers into a round 4, or decide the product is where it
+needs to be.
 
 ---
 
@@ -117,26 +112,24 @@ rendering. Split it before building.
   commit them.
 - **Run tests with `npm test`, never bare `npx vitest`** — Node 26 shadows
   jsdom's localStorage polyfill.
-- Specs are parallel `.md` + `.html` with no generation link, and
-  `spec-parity-check.py` reads only `.md`. **RF-2 has now recurred four rounds
-  running** and drifted twice during this session's own edits, caught only by
-  scripted probes. `requirements-003` and `test-cases-003` are now generated from
-  their markdown; the four domain specs are still hand-maintained twins.
-  Generating them is overdue.
+- **Agent worktrees under `.claude/` are excluded from the test run**
+  (`vite.config.ts`). Without it the suite silently runs twice, every count
+  doubles, and the two copies starve each other of CPU until interaction-heavy
+  tests time out — which reads as a code failure and is not one.
+- Specs are parallel `.md` + `.html` with no generation link for most files.
+  Edit both, every time.
 - The audit trail is append-only; a path that can fire a write twice is a
-  data-integrity bug. StrictMode double-invokes mount effects **within a single
-  mount** — charter 004's TC-R3-NF-2-01 originally had this backwards.
+  data-integrity bug.
+- **BC-001 is active:** a claim about an existing symbol cites the `file:line`
+  it was verified against.
 
 ---
 
-## The next step
+## One housekeeping note
 
-`/gvm-build` P8-C02 — or split P8-C06 first. The build gates all currently pass:
-DR-1 cleared by `design-review-002.html`, MVP-1 satisfied, wiring matrix has 21
-rows with no empty cells, WS-5 not applicable (no skeleton adopted).
-
-**Do not start with:** another review round, or `/gvm-test` — the latter will
-fail VV-4(d) until charter 004's Criticals are fixed in code, which is what
-Phase 8 is for.
-
-One housekeeping item: `npm run publish-site` is several commits behind.
+The browser's IndexedDB for `localhost:5173` can be wedged by calling
+`indexedDB.deleteDatabase()` while the app holds a connection — `open()` then
+never settles, and every page hangs on its first store read. It looks exactly
+like a product bug. If the register hangs on "Loading…" or the intake hangs on
+"Evaluating…", check that first. A fresh browser session clears it; Vite binds
+to `localhost` only, so a second origin is not available as an escape hatch.
