@@ -29,6 +29,10 @@ The concept is named instead, so the intent is legible at the call site.
 read-only submitter view, or a reviewer page that wants the trace for context
 without offering correction.
 
+---
+
+## FN-003 — Requirement wording that invites an overclaim
+
 **Raised by:** P8-C05 (2026-08-04). **Binds:** P8-C07, and any future round
 touching R3-JU-3 or the verdict's absence-of-basis messaging.
 **Status:** open.

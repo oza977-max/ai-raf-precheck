@@ -302,10 +302,19 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
     expect(screen.getByText(/patches: INV-DATA-01/i)).toBeInTheDocument();
   });
 
-  it('BC-V13-03: without a policy prop, degrades to the plain id list — no fabricated chips', () => {
+  // P8-C07 upstream fix. This asserted the plain id list, which said nothing
+  // at all about evidence — and a reader cannot distinguish "we could not
+  // check" from "there is nothing to show". §15.1a is explicit: where policy
+  // is unavailable the status renders as UNKNOWN, not UNVERIFIED, because
+  // absence of a policy is not evidence of absent evidence. The original
+  // intent (no FABRICATED chips) is preserved and still asserted.
+  it('BC-V13-03: without a policy prop, evidence reads UNKNOWN — never a fabricated verified/unverified chip', () => {
     const verdict = makeVerdict({ controls: ['CTRL-ENC-01'] });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
-    expect(screen.getByText(/controls required: CTRL-ENC-01/i)).toBeInTheDocument();
+    expect(screen.getByText('CTRL-ENC-01')).toBeInTheDocument();
+    expect(screen.getByText('EVIDENCE UNKNOWN')).toBeInTheDocument();
+    expect(screen.getByText(/could not be checked/i)).toBeInTheDocument();
+    expect(screen.getByText(/not the same as having no evidence/i)).toBeInTheDocument();
     expect(screen.queryByText('VERIFIED')).not.toBeInTheDocument();
     expect(screen.queryByText('UNVERIFIED')).not.toBeInTheDocument();
   });
@@ -578,7 +587,11 @@ describe('VerdictDisplay — the no-basis statement holds on a hard-line rejecti
 // unbuildable by reuse alone — reuse would either put the button on the
 // reviewer's page or hang a no-op behind a control that still invites a click.
 describe('VerdictDisplay — reusable on a reviewer page (P8-C06)', () => {
-  it('TC-R3-RD-8-01: omitting onCorrect removes the correction control and the reasoning-trace disclosure', () => {
+  // No trace id: TC-R3-RD-8-01 reads "opened from the register", so it belongs
+  // to RegisterDetail.test.tsx where the sign-off page is actually rendered.
+  // This is the unit-level guard on the same behaviour (spec-parity R7 — one
+  // id, one test).
+  it('omitting onCorrect removes the correction control and the reasoning-trace disclosure', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} />);
 
     expect(screen.queryByRole('button', { name: /correct this classification/i })).not.toBeInTheDocument();

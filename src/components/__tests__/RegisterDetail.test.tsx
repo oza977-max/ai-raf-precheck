@@ -86,11 +86,24 @@ function makeNode(id: string, overrides: Partial<RegisterNode> = {}): RegisterNo
   } as RegisterNode;
 }
 
+// hard_lines/invariants are present-but-empty deliberately: findRuleDescription
+// (src/engine/find-rule-description.ts:10-12) calls .find on both, and the real
+// PolicyFile is Zod-validated at load so they always exist. A fixture omitting
+// them tests a state the loader prevents.
 const POLICY = {
   version: '1.3',
+  hard_lines: [],
+  invariants: [],
   controls: [
-    { id: 'CTRL-ENC-01', name: 'Encryption at rest', verification_evidence: 'Key rotation log, quarterly.' },
-    { id: 'CTRL-LOG-01', name: 'Immutable logging' },
+    {
+      id: 'CTRL-ENC-01',
+      name: 'Encryption at rest',
+      resolves: ['INV-DATA-01'],
+      // Shape verified: ControlVerificationEvidence (src/engine/types.ts:456)
+      // is an object with a status field, not a string.
+      verification_evidence: { status: 'verified', detail: 'Key rotation log, quarterly.' },
+    },
+    { id: 'CTRL-LOG-01', name: 'Immutable logging', resolves: [] },
   ],
 } as unknown as PolicyFile;
 
@@ -116,7 +129,12 @@ async function seed(useCaseId: string, verdict: Verdict | null) {
   }
 }
 
-function renderDetail(useCaseId: string, policy: PolicyFile | undefined = POLICY) {
+// `null` means "explicitly no policy". A plain default of POLICY would silently
+// substitute it when a caller passes `undefined`, so the no-policy test would
+// have exercised the WITH-policy path while claiming otherwise — the same
+// shape as a fixture whose empty field is the only reason a claim looks true.
+function renderDetail(useCaseId: string, policyArg: PolicyFile | null | undefined = POLICY) {
+  const policy = policyArg ?? undefined;
   return render(
     <StrictMode>
       <RegisterDetail useCaseId={useCaseId} role="2LoD" policy={policy} onBack={vi.fn()} />
@@ -144,17 +162,26 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
 
     // 1 — status and tier
     expect(verdict.getByRole('heading', { name: /with controls/i })).toBeInTheDocument();
-    expect(verdict.getByText('High')).toBeInTheDocument();
+    // 'High' appears as the tier stat AND as the invariant's severity chip —
+    // scoped to the tier stat so the assertion means the tier specifically.
+    expect(verdict.getByText('High', { selector: '.verdict__stat-value' })).toBeInTheDocument();
     // 2 — binding constraint id
     expect(verdict.getAllByText('INV-DATA-01').length).toBeGreaterThan(0);
     // 3 — triggered invariant with its citation
     expect(verdict.getByText(/SS1\/23 §3.4/)).toBeInTheDocument();
     // 4 — control ids in the minimal set
-    expect(verdict.getByText(/CTRL-ENC-01/)).toBeInTheDocument();
-    expect(verdict.getByText(/CTRL-LOG-01/)).toBeInTheDocument();
+    // Scoped to the control-set panel: the ids also appear in the invariant's
+    // "Requires:" line, and an assertion satisfied by that line would pass on
+    // a page that never rendered the minimal control set at all.
+    const controlSet = within(verdict.getByRole('heading', { name: /minimal control set/i }).parentElement!);
+    expect(controlSet.getByText('CTRL-ENC-01')).toBeInTheDocument();
+    expect(controlSet.getByText('CTRL-LOG-01')).toBeInTheDocument();
     // 5 — governance margin, and the id flagged as having no headroom
-    expect(verdict.getByText(/MARGIN/i)).toBeInTheDocument();
-    expect(verdict.getByText(/NO HEADROOM/i)).toBeInTheDocument();
+    // The figure itself, not just the panel heading — "Governance margin"
+    // as a title would satisfy a loose /margin/i query on a page that never
+    // rendered the number.
+    expect(verdict.getByText(/→ MARGIN\s+0% achieved against a 10% target/i)).toBeInTheDocument();
+    expect(verdict.getByText(/→ NO HEADROOM\s+INV-DATA-01/i)).toBeInTheDocument();
     // 6 — standing conditions
     expect(verdict.getByText(/500 cases a month/i)).toBeInTheDocument();
   });
@@ -168,8 +195,11 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     // CTRL-ENC-01 has verification_evidence in the policy; CTRL-LOG-01 does
     // not. An UNVERIFIED control rendered without its status would let a
     // reviewer sign off believing evidence exists (§15.1).
-    expect(verdict.getByText(/VERIFIED/)).toBeInTheDocument();
-    expect(verdict.getByText(/UNVERIFIED/)).toBeInTheDocument();
+    // Exact-match the chips: /VERIFIED/ alone also matches "UNVERIFIED",
+    // which would let a page showing two UNVERIFIED controls pass an
+    // assertion claiming one is verified.
+    expect(verdict.getByText('VERIFIED', { selector: '.verdict__vchip--verified' })).toBeInTheDocument();
+    expect(verdict.getByText('UNVERIFIED', { selector: '.verdict__vchip--unverified' })).toBeInTheDocument();
   });
 
   it('TC-R3-RD-7-01: evidence status comes from current policy while the verdict stays historical', async () => {
@@ -178,7 +208,12 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     // Policy edited since evaluation: the evidence for CTRL-ENC-01 has lapsed.
     const lapsed = {
       version: '1.4',
-      controls: [{ id: 'CTRL-ENC-01', name: 'Encryption at rest' }, { id: 'CTRL-LOG-01', name: 'Immutable logging' }],
+      hard_lines: [],
+      invariants: [],
+      controls: [
+        { id: 'CTRL-ENC-01', name: 'Encryption at rest', resolves: ['INV-DATA-01'] },
+        { id: 'CTRL-LOG-01', name: 'Immutable logging', resolves: [] },
+      ],
     } as unknown as PolicyFile;
     renderDetail(id, lapsed);
 
@@ -187,6 +222,15 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     expect(verdict.getAllByText('INV-DATA-01').length).toBeGreaterThan(0);
     // But evidence status reflects TODAY: nothing is VERIFIED any more.
     expect(verdict.queryByText(/[^N]VERIFIED/)).toBeNull();
+
+    // §15.1a: "The two are labelled distinctly on the page so a reader can
+    // tell which is historical record and which is current state." Review
+    // found the split was correctly SOURCED but invisible — it lived only in
+    // code comments, which a reviewer never sees. A reviewer who cannot tell
+    // which half is frozen history could sign off believing an old VERIFIED
+    // still holds.
+    expect(verdict.getByText(/read from today.s policy, not from the evaluation/i)).toBeInTheDocument();
+    expect(verdict.getByText(/the record of what was decided on/i)).toBeInTheDocument();
   });
 
   it('TC-R3-RD-6-01: a Provisional verdict states its cause here too', async () => {
@@ -197,7 +241,12 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     const verdict = within(await verdictRegion());
     // A Provisional badge with no cause is the defect TC-R3-JU-6-01 rejects,
     // and it is worse on the page where someone signs their name.
-    expect(verdict.getByText(/no jurisdiction pack applied/i)).toBeInTheDocument();
+    // Two surfaces by design (P8-C05): the terse labelled cause in the banner
+    // and the prose consequence in the body. Both belong on this page — a
+    // reviewer needs the cause on the record and the explanation in front of
+    // them.
+    expect(verdict.getAllByText(/no jurisdiction pack applied/i).length).toBe(2);
+    expect(verdict.getByText(/still applied in full/i)).toBeInTheDocument();
   });
 
   it('TC-R3-RD-8-01: the reclassification affordance and the reasoning trace do not appear here', async () => {
@@ -274,5 +323,24 @@ describe('RegisterDetail — rendering must not write (R3-NF-2)', () => {
     second.unmount();
 
     expect((await getAll(id)).length).toBe(before);
+  });
+});
+
+// P8-C07, review pass 2. App.tsx passes `policy={policyResult.valid ? ... :
+// undefined}` (verified: src/App.tsx:135), so a reviewer CAN reach this page
+// with no policy loaded — an invalid policy file is all it takes.
+describe('RegisterDetail — evidence status when no policy is loaded (§15.1a)', () => {
+  it('says the evidence could not be checked, rather than showing nothing', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    renderDetail(id, null);
+
+    const verdict = within(await verdictRegion());
+    // Absence of a policy is not evidence of absent evidence, and silence
+    // here would leave a reviewer unable to tell "not checked" from "nothing
+    // to show" — the same defect §13.1 names for the reasoning chain.
+    expect(verdict.getAllByText('EVIDENCE UNKNOWN').length).toBe(2);
+    expect(verdict.getByText(/not the same as having no evidence/i)).toBeInTheDocument();
+    expect(verdict.queryByText('UNVERIFIED')).not.toBeInTheDocument();
   });
 });
