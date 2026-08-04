@@ -349,7 +349,11 @@ describe('VerdictDisplay — CS-1 governance margin (code review 001, I-1)', () 
 // listed low-confidence caveats — which exist solely for the OTHER cause.
 // This is the project's own computed-but-never-consumed defect class.
 describe('VerdictDisplay — the provisional cause is stated, not just the status', () => {
-  it('states the no-regulatory-basis cause when there are no caveats to fall back on', () => {
+  // P8-C05 applies the trace ids. P8-C04 wrote these tests but deliberately
+  // did not borrow the ids: TC-R3-JU-6-* all read "When the verdict is
+  // rendered", and nothing rendered the cause until C04's own review pass 2
+  // forced it. The ids land here, with the rendering chunk that owns them.
+  it('TC-R3-JU-6-01: states the no-regulatory-basis cause when there are no caveats to fall back on', () => {
     const verdict = makeVerdict({
       confidence_caveats: [],
       provisional_reasons: ['no_regulatory_basis'],
@@ -358,12 +362,17 @@ describe('VerdictDisplay — the provisional cause is stated, not just the statu
 
     const banner = screen.getByRole('alert');
     expect(banner).toHaveTextContent(/no jurisdiction pack applied/i);
-    // The honest part: the firm's own policy DID apply, so the text must not
-    // imply nothing was assessed.
-    expect(banner).toHaveTextContent(/own policy only/i);
+    // The honesty clause — that the firm's own policy still applied — lives on
+    // the body panel (TC-R3-JU-3-01 asserts it there). The banner carries the
+    // labelled cause only, deliberately terse: stating the same sentence in
+    // both places read as duplication rather than as two things.
+    expect(banner).toHaveTextContent(/no country rulebook was used/i);
+    // Not the wider claim: the firm's own rules cite regulators, and those
+    // citations render on this same screen.
+    expect(banner).not.toHaveTextContent(/no regulatory rules/i);
   });
 
-  it('states the unsigned-rules cause distinctly — the two do not collapse into one badge', () => {
+  it('TC-R3-JU-6-02: states the unsigned-rules cause distinctly — the two do not collapse into one badge', () => {
     const verdict = makeVerdict({
       confidence_caveats: [],
       provisional_reasons: ['unsigned_pack_rules'],
@@ -375,7 +384,7 @@ describe('VerdictDisplay — the provisional cause is stated, not just the statu
     expect(banner).not.toHaveTextContent(/no jurisdiction pack applied/i);
   });
 
-  it('states no cause when the verdict is not provisional', () => {
+  it('TC-R3-JU-6-04: states no cause when the verdict is not provisional', () => {
     render(
       <VerdictDisplay verdict={makeVerdict({ provisional_reasons: [] })} auditEvents={[]} onCorrect={vi.fn()} />,
     );
@@ -416,11 +425,15 @@ describe('VerdictDisplay — no regulatory basis is stated, not just implied (R3
     // did not render, and "no regulation applies", "we did not check" and "the
     // panel broke" were indistinguishable — all three look like nothing.
     expect(statement, 'no statement rendered where the reasoning chain would be').not.toBeNull();
-    expect(statement).toHaveTextContent(/no regulatory rules were applied/i);
+    expect(statement).toHaveTextContent(/no jurisdiction pack applied/i);
     expect(statement).toHaveTextContent(/citations/i);
-    // The firm's own policy DID run. Claiming nothing was assessed would be a
-    // false statement, not a cautious one.
+    // The firm's own policy DID run, and it carries 31 regulator citations of
+    // its own (verified: policy/appetite.yaml, `regulatory_basis` fields).
+    // Review pass 3: two earlier drafts of this sentence claimed no regulator
+    // rules were involved at all, which was false while a real citation was
+    // rendered a few centimetres above it.
     expect(statement).toHaveTextContent(/firm/i);
+    expect(statement).toHaveTextContent(/still applied in full/i);
   });
 
   it('TC-R3-JU-3-02: the prose statement and the labelled reason are separately assertable', () => {
@@ -461,12 +474,11 @@ describe('VerdictDisplay — no regulatory basis is stated, not just implied (R3
         regulatory_chain: [
           {
             rule_id: 'EU-AIACT-TIER-02',
-            title: 'Annex III employment',
-            source_document: 'EU AI Act',
-            source_section: 'Annex III §4(a)',
+            document: 'EU AI Act',
+            section: 'Annex III §4(a)',
             source_text: 'recruitment or selection of natural persons…',
-            effect: 'tier floor Critical',
-            basis: 'derived',
+            basis: 'derived' as const,
+            derived: 'tier floor Critical',
             sign_off: 'pending firm adoption',
           },
         ],
@@ -486,7 +498,7 @@ describe('VerdictDisplay — no regulatory basis is stated, not just implied (R3
   // record would be a claim about history that nobody checked — the honest
   // answer is that the record predates the capture.
   it('a verdict predating explanation capture is not described as having no regulatory basis', () => {
-    const legacy = makeVerdict({ confidence_caveats: [], provisional_reasons: [] }) as Record<
+    const legacy = makeVerdict({ confidence_caveats: [], provisional_reasons: [] }) as unknown as Record<
       string,
       unknown
     >;
@@ -497,5 +509,62 @@ describe('VerdictDisplay — no regulatory basis is stated, not just implied (R3
     );
 
     expect(container.querySelector('[data-no-regulatory-basis]')).toBeNull();
+  });
+});
+
+// P8-C05, review pass 2. The no-basis panel first read "…the tier, the
+// controls and the constraint above all come from that". On a hard-line
+// rejection that is false: evaluate() skips tier/track assignment entirely and
+// reports Critical/I as CEILING values, not assignments (verified:
+// src/engine/evaluate.ts:69-92, whose own comment says "not assignments").
+// Claiming the tier came from the firm's policy would have been the UI
+// asserting something the engine never determined — on a rejection, which is
+// the verdict people argue with.
+describe('VerdictDisplay — the no-basis statement holds on a hard-line rejection too', () => {
+  it('does not claim the tier was derived when tier assignment was skipped', () => {
+    const rejected = makeVerdict({
+      status: 'rejected',
+      tier: 'Critical',
+      track: 'I',
+      confidence_caveats: [],
+      provisional_reasons: ['no_regulatory_basis'],
+      pack_versions: {},
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 4,
+        invariants_checked: 0,
+        tripped_invariants: [],
+        binding_reason: 'MNPI may not leave Zone A.',
+        // Review pass 3: this was null, which is exactly the field that would
+        // have exposed the sentence's overclaim. A firm hard line normally
+        // DOES carry a regulator citation — 31 of them exist in
+        // policy/appetite.yaml — so the realistic fixture is a populated one.
+        binding_regulatory_basis: 'MAR Article 8; MiFID II',
+        regulatory_chain: [],
+      },
+    });
+
+    const { container } = render(
+      <VerdictDisplay verdict={rejected} auditEvents={[]} onCorrect={vi.fn()} />,
+    );
+
+    const statement = container.querySelector('[data-no-regulatory-basis]');
+    expect(statement).not.toBeNull();
+    // Still says the honest part…
+    expect(statement).toHaveTextContent(/firm/i);
+    // …without attributing the tier to a determination that never happened.
+    expect(statement).not.toHaveTextContent(/the tier/i);
+    // And the page still says elsewhere that these are ceiling values.
+    expect(screen.getByText(/ceiling values/i)).toBeInTheDocument();
+
+    // The decisive assertion: a real regulator citation from the FIRM's own
+    // policy is rendered above the panel, so the panel must not claim no
+    // regulator rules were involved. Two drafts of this sentence did exactly
+    // that, and the first version of this test could not catch it because the
+    // fixture left the citation null.
+    expect(screen.getByText(/MAR Article 8/)).toBeInTheDocument();
+    expect(statement).not.toHaveTextContent(/nothing above/i);
+    expect(statement).toHaveTextContent(/still applied in full/i);
   });
 });

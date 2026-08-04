@@ -270,6 +270,21 @@ Then both causes are stated
 > unreachable in the current policy, the test is marked unreachable with a
 > recorded rationale rather than deleted — the requirement says "where more
 > than one applies, all shall be stated".
+
+**UNREACHABLE — recorded 2026-07-29 by P8-C04, confirmed by P8-C05.** Not a
+property of this policy but of the triggers themselves.
+`no_regulatory_basis` is raised when no jurisdiction pack activated;
+`unsigned_pack_rules` is raised when a fired pack *rule* is unsigned. A rule
+cannot fire from a pack that never activated, so the two are mutually exclusive
+by construction and no verdict can carry both.
+
+This contradicts `evaluation-engine.md` ADR-EE-R3-1, which states the two
+conditions "can co-occur and both are then listed". The ADR is wrong on its own
+terms; the code follows the triggers. `src/engine/provisional.test.ts` asserts
+the exclusivity, and the fixed emission order is asserted directly on
+`PROVISIONAL_REASONS` so the ordering contract still binds if a future trigger
+makes the pair reachable. The collection stays ordered and plural for that
+reason.
 ```
 [Trace: not-yet-traced]
 ```

@@ -5,6 +5,28 @@ marked, never deleted.
 
 ---
 
+## FN-003 — Requirement wording that invites an overclaim
+
+**Raised by:** P8-C05 (2026-08-04). **Binds:** P8-C07, and any future round
+touching R3-JU-3 or the verdict's absence-of-basis messaging.
+**Status:** open.
+
+R3-JU-3 says a verdict with no active packs must state "that no regulatory
+basis was applied". Read literally that is false: the firm's own policy carries
+31 `regulatory_basis` citations and they render on the verdict regardless of
+packs. Two drafts in P8-C05 wrote the literal claim and were caught in review
+passes 3 and 4 — the second only because a test fixture was changed from
+`binding_regulatory_basis: null` to a real citation, which is the field whose
+emptiness had been hiding the falsehood.
+
+A scope clarification is recorded in `requirements/requirements-003.md` under
+R3-JU-3 itself, because that is where a future reader will look. **P8-C07
+renders the same verdict on the sign-off page and must not reintroduce the
+literal wording there.** The pattern to watch for generally: a fixture whose
+empty field is the only reason a claim looks true.
+
+---
+
 ## FN-002 — "What comes after Phase 8" is written nowhere
 
 **Raised by:** P8-C03 (2026-07-29). **Binds:** the Phase 8 closing handover.

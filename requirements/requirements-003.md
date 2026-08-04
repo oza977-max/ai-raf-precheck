@@ -153,6 +153,22 @@ the audit. An implementation that provides only one has met only one.
 > required here is asserted separately from the labelled reason required by
 > R3-JU-6.
 
+**Scope clarification, added by P8-C05 (2026-08-04).** "No regulatory basis was
+applied" is imprecise as written and must be read as *no jurisdiction-pack
+basis*. The firm's own policy carries regulator citations on essentially every
+rule — 31 `regulatory_basis` fields in `policy/appetite.yaml` — and those
+citations render on the verdict whether or not a pack activated. A verdict
+claiming no regulator rules were involved would therefore be false while a real
+citation sat a few centimetres above it on the same screen.
+
+Two drafts during P8-C05 made exactly that claim and were caught by review
+passes 3 and 4. The requirement's wording is what invites it, so it is recorded
+here rather than in a handover: **a future reader auditing code against this
+requirement should not "fix" the code to match the literal text.** The
+implementation states that no jurisdiction pack applied, that there is no
+reasoning chain or quoted source text, and that the firm's own policy applied in
+full including its own citations.
+
 **R3-JU-4 (Should):** The jurisdiction question shall state, at the point of
 asking, that the answer determines which regulatory rules are applied.
 
