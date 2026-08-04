@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StrictMode } from 'react';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RegisterDetail from '../RegisterDetail';
 import { addNode } from '../../store/register';
 import { append, getAll } from '../../store/audit';
@@ -342,5 +343,93 @@ describe('RegisterDetail — evidence status when no policy is loaded (§15.1a)'
     expect(verdict.getAllByText('EVIDENCE UNKNOWN').length).toBe(2);
     expect(verdict.getByText(/not the same as having no evidence/i)).toBeInTheDocument();
     expect(verdict.queryByText('UNVERIFIED')).not.toBeInTheDocument();
+  });
+});
+
+// P8-C08 — verdict-audit.md §13.4 (design review C-1). The twoloD_reviewed
+// payload carried no reference to the verdict being signed off, so R3-RD-3's
+// fit criterion was unimplementable and TC-R3-RD-3-02 could only be written
+// vacuously. This is the closing chunk of Phase 8.
+describe('RegisterDetail — the sign-off names the verdict it attests to (P8-C08)', () => {
+  it('TC-R3-RD-3-01: after a correction, the page shows the latest verdict, not the superseded one', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-original', use_case_id: id, binding_constraint: 'INV-OLD-01' }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-03T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-original',
+        new_verdict: makeVerdict({ id: 'v-corrected', use_case_id: id, binding_constraint: 'INV-NEW-01' }),
+      },
+    });
+
+    renderDetail(id);
+    const verdict = within(await verdictRegion());
+
+    expect(verdict.getAllByText('INV-NEW-01').length).toBeGreaterThan(0);
+    // The superseded constraint must not be presented as current. It remains
+    // in the timeline below, which is the record of what happened — that is a
+    // different claim from "this is the verdict you are signing".
+    expect(verdict.queryByText('INV-OLD-01')).toBeNull();
+  });
+
+  // ACCEPTANCE TEST (TDD-1, outside-in — written first).
+  it('TC-R3-RD-3-02: the sign-off event names the verdict the page rendered', async () => {
+    const user = userEvent.setup();
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-rendered', use_case_id: id }));
+
+    renderDetail(id);
+    await verdictRegion();
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    const events = await getAll(id);
+    const signOff = events.find((e) => e.payload.type === 'twoloD_reviewed');
+    expect(signOff).toBeDefined();
+    // Not merely present — the id of the verdict actually rendered. An empty
+    // string, or an id re-derived at write time, would both satisfy a weaker
+    // assertion while leaving the race open.
+    expect(signOff && 'verdict_id' in signOff.payload && signOff.payload.verdict_id).toBe('v-rendered');
+  });
+
+  // REALISTIC-FIXTURE VARIANT (TDD-3, concurrency). The correction lands
+  // BETWEEN the page load and the click — the shape a happy-path test never
+  // produces. Without this, an attestation is recorded against whatever is
+  // current, and it could never afterwards be established which verdict was
+  // actually attested.
+  it('TC-R3-RD-3-03: a verdict changing under the reviewer refuses the write and says why', async () => {
+    const user = userEvent.setup();
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-seen', use_case_id: id }));
+
+    renderDetail(id);
+    await verdictRegion();
+
+    // A correction lands after the reviewer loaded the page.
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-06-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-seen',
+        new_verdict: makeVerdict({ id: 'v-unseen', use_case_id: id }),
+      },
+    });
+
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    // The reviewer is told what happened, in terms of what to do next.
+    expect(await screen.findByText(/verdict changed while you were reading/i)).toBeInTheDocument();
+
+    // And nothing was attested against the verdict they never saw.
+    const events = await getAll(id);
+    expect(events.filter((e) => e.payload.type === 'twoloD_reviewed')).toHaveLength(0);
   });
 });
