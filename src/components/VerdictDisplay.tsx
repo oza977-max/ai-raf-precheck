@@ -165,8 +165,15 @@ const BASIS_HELP: Record<string, string> = {
 const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
   unsigned_pack_rules:
     'Rules from a jurisdiction pack were applied, but they are proposed readings of the law that your firm has not yet adopted.',
-  no_regulatory_basis:
-    'No jurisdiction pack applied to this use case, so no regulatory rules were used and no citations are available. It was assessed against your firm\u2019s own policy only.',
+  // Terse on purpose. This is the labelled cause for the record; the full
+  // explanation of the consequence is the body panel below (R3-JU-3), and
+  // review pass 1 rightly flagged that near-identical wording in both places
+  // reads as the same sentence printed twice.
+  // "no regulatory rules were used" was the same overclaim as the body panel's
+  // earlier drafts, just terser — the firm's own rules cite SS1/23, MAR, the
+  // EU AI Act and more, and those citations render on this very screen. Seen
+  // by reading the rendered page against its own citation list, not by a test.
+  no_regulatory_basis: 'Cause: no jurisdiction pack applied, so no country rulebook was used.',
 };
 
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
@@ -352,6 +359,35 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               </ul>
             )}
           </div>
+        </div>
+      )}
+
+      {/* R3-JU-3 / verdict-audit.md §13.1. The chain panel below renders only
+          when there is a chain, so a verdict with no active pack used to show
+          nothing here at all — and "no regulation applies", "we did not check"
+          and "the panel failed to render" are indistinguishable when all three
+          look like nothing (Leveson). The explanation must be PRESENT, not the
+          panel merely absent.
+
+          Gated on the engine's own determination rather than on the chain
+          being empty, because those are different facts: a verdict persisted
+          before V1.1-C01 has no `explanation` at all, and describing that
+          record as having no regulatory basis would be a claim about history
+          nobody checked. */}
+      {(verdict.provisional_reasons ?? []).includes('no_regulatory_basis') && (
+        <div className="verdict__chain" data-no-regulatory-basis>
+          <h3>No jurisdiction rulebook was applied</h3>
+          <p className="verdict__chain-sub">
+            No jurisdiction pack applied to this use case, so no country rulebook was used and
+            there is no regulatory reasoning chain — no quoted source text, and none of the
+            citations a pack would supply. Your firm&rsquo;s own policy still applied in full,
+            including the regulatory citations it carries itself, shown above where they bear on
+            this case.
+          </p>
+          <p className="verdict__chain-basis-help">
+            If this use case does touch a country your firm has a rulebook for, say so on the
+            intake form and evaluate it again.
+          </p>
         </div>
       )}
 
