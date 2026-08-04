@@ -235,8 +235,16 @@ As UC-3's form values plus: decision type `credit-decision` · HITL `Yes`
 · scale `at_scale` · jurisdictions **UK + EU**.
 **Verified prediction:** Approved with controls · **Critical** · Track II
 · CTRL-ENC-01 · downstream reviews: ICT third-party concentration (DORA
-Art. 28) + Independent model validation (SS1/23 §3.4) · RA-9 chain shows
+Art. 28) + Independent model validation (SS1/23 §3.4) + Information security
+review (DR-INFOSEC-02, added round 4) · RA-9 chain shows
 3 fired rules with source text · **provisional** (unsigned packs).
+
+> Updated 2026-08-04. The third review is new: until round 4 the firm's own
+> policy had no way to require a downstream process (CS-3 had no
+> implementation), so only jurisdiction packs could add one. This use case
+> handles Client PII and now triggers the firm's information security review.
+> The prediction changed because the product gained a missing capability, not
+> because the engine drifted.
 
 ### UC-10 · EU CV-screening tool (the visible "forced tier" demo)
 Data class `Internal` · zones `Zone B` · model `ml` · autonomy `1` ·

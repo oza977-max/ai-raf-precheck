@@ -7,6 +7,7 @@ import {
 } from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
 import { provisionalReasons } from './provisional';
+import { firmRequiredReviews } from './downstream-reviews';
 import { fitsEnvelope, inheritableControls } from './envelope';
 import { assignTrack } from './track';
 import type { TrackAssignment } from './track';
@@ -243,8 +244,16 @@ export function evaluate(
       // Pack-required controls supplement the solver's minimal set
       // (BC-V2A-01: obligations only ever add).
       controls: [...new Set([...solverResult.controls, ...overrides.addedControls])].sort(),
+      // CS-3: three sources, all additive — the firm's own configured
+      // processes, a jurisdiction pack's required_review, and the
+      // unregistered-component path. Deduped and sorted, like every other
+      // verdict collection (NF-1).
       downstream_reviews: [
-        ...new Set([...overrides.addedReviews, ...unapprovedComponentReviews(inheritance)]),
+        ...new Set([
+          ...firmRequiredReviews(graph, policy).map((r) => r.review),
+          ...overrides.addedReviews,
+          ...unapprovedComponentReviews(inheritance),
+        ]),
       ].sort(),
       ...(inheritance ? { inheritance } : {}),
       // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
