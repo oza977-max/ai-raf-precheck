@@ -99,6 +99,7 @@ export function evaluate(
             ...unapprovedComponentReviews(inheritance),
           ]),
         ].sort(),
+        downstream_review_sources: firmRequiredReviews(graph, policy),
         policy_version: policy.version,
         ...(inheritance ? { inheritance } : {}),
         // Review finding, pass 1: the audit trail must record which pack
@@ -216,6 +217,7 @@ export function evaluate(
             ...unapprovedComponentReviews(inheritance),
           ]),
         ].sort(),
+        downstream_review_sources: firmRequiredReviews(graph, policy),
         policy_version: policy.version,
         pack_versions: packVersions,
         applied_overrides: overrides.appliedOverrides,
@@ -282,6 +284,7 @@ export function evaluate(
           ...unapprovedComponentReviews(inheritance),
         ]),
       ].sort(),
+      downstream_review_sources: firmRequiredReviews(graph, policy),
       ...(inheritance ? { inheritance } : {}),
       // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
       // statically populated from kri_thresholds + graph pins. Rejection

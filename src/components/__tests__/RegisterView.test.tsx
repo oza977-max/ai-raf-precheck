@@ -408,7 +408,7 @@ describe('RegisterDetail — audit trail honesty (explore-002)', () => {
     // The qualifier must PRECEDE the events in document order — that was the
     // whole finding, not the wording alone.
     // P8-C07 upstream fix. The sign-off page now renders VerdictDisplay, which
-    // carries its own NF-2 caveat (VerdictDisplay.tsx:551), so this query
+    // carries its own NF-2 caveat (VerdictDisplay.tsx:601), so this query
     // matched two elements. Scoped to the PAGE's caveat — which is the one
     // whose document position this test is actually about. Same collision
     // class as HR3-08, different string: a single-match query on text that a

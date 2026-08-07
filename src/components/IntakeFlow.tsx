@@ -189,8 +189,20 @@ export default function IntakeFlow() {
     })();
   }, [state, duplicateCheckDone, registerLoaded, registerRows]);
 
+  // Code review round 3, Panel E. This handler gained an audit write in round 4
+  // and did not gain the guard its siblings already had, fourteen lines away.
+  // `state.step` is read from the render closure, so a second click before
+  // re-render passes the same check and writes a second event into a trail
+  // that cannot be corrected. Synchronous ref, because a state update lands
+  // too late — the same lesson as P7-C01's seed guard and the 2LoD actions
+  // (verified: src/components/RegisterDetail.tsx:76).
+  const confirmNewInFlight = useRef(false);
+
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;
+    if (confirmNewInFlight.current) return;
+    confirmNewInFlight.current = true;
+    try {
 
     // UC-2 / TC-UC-2-03. Dismissing a surfaced match is a decision about the
     // inventory, and it was invisible: nothing recorded that a near-match had
@@ -228,6 +240,9 @@ export default function IntakeFlow() {
       return;
     }
     dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
+    } finally {
+      confirmNewInFlight.current = false;
+    }
   }
 
   // UC-2 / TC-UC-2-02. The other half of the duplicate decision. Adopting
@@ -242,7 +257,7 @@ export default function IntakeFlow() {
   async function handleAdoptClassification() {
     if (state.step !== 'duplicate_check' || !duplicateMatch) return;
     // The audit trail is append-only; a double-click cannot be cleaned up
-    // afterwards (same guard as the 2LoD actions, RegisterDetail.tsx:118).
+    // afterwards (same guard as the 2LoD actions, RegisterDetail.tsx:76).
     if (adoptInFlight.current) return;
     adoptInFlight.current = true;
 
@@ -294,6 +309,18 @@ export default function IntakeFlow() {
     } finally {
       adoptInFlight.current = false;
     }
+  }
+
+  // Code review round 3, Panel C. The only exit from a failed extraction.
+  async function handleRetryExtraction() {
+    if (state.step !== 'graph_extraction') return;
+    setExtractionError(null);
+    const extraction = await extractGraph(state.description);
+    if (!extraction.ok) {
+      setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
+      return;
+    }
+    dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
   }
 
   function handleCorrectNode(nodeId: string, field: string, correctedValue: unknown) {
@@ -705,8 +732,29 @@ export default function IntakeFlow() {
 
         {state.step === 'graph_extraction' && state.method === 'llm' && (
           <div>
-            <p>Extracting graph…</p>
-            {extractionError && <p role="alert">{extractionError}</p>}
+            {/* Code review round 3, Panel C. A failed extraction left this
+                screen reading "Extracting graph…" forever: no retry, no way
+                back, and a reload restored the same stuck step. The error was
+                shown under a label still claiming work was in progress. */}
+            {extractionError ? (
+              <>
+                <p role="alert">{extractionError}</p>
+                <p className="field-help">
+                  Nothing was recorded. You can try the extraction again, or describe the use case
+                  again from the start — the guided form is always available without an API key.
+                </p>
+                <div className="dup-gate__actions">
+                  <button type="button" onClick={() => void handleRetryExtraction()}>
+                    Try extraction again
+                  </button>
+                  <button type="button" onClick={handleStartOver}>
+                    Start over
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p>Extracting graph…</p>
+            )}
           </div>
         )}
 

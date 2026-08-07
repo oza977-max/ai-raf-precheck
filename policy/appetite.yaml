@@ -584,7 +584,7 @@ invariants:
 # change the verdict — the pre-check is complete, and these are additional
 # obligations the submitter must still discharge.
 #
-# ⚠ DRAFT — NOT YET ADOPTED. These four rules are a starting point written to
+# ⚠ DRAFT — NOT YET ADOPTED. These three rules are a starting point written to
 # make the mechanism usable, not a statement of this firm's processes. Every
 # one of them names a team or process that your firm may not have, may call
 # something else, or may trigger on different criteria. Review each against

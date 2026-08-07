@@ -16,6 +16,13 @@ export interface EvaluationResult {
   binding_path: string;
   controls: string[];
   downstream_reviews: string[];
+  // CS-3 (code review round 3, Panel B). The reviews above are the prose a
+  // reader sees; this is which rule produced each one and the citation behind
+  // it, where there is one. `firmRequiredReviews` computed both and every call
+  // site discarded them — the same computed-but-never-consumed defect that
+  // lost this product its regulatory citations for the whole of V1. Optional
+  // so verdicts persisted before this change stay readable.
+  downstream_review_sources?: DownstreamReviewSource[];
   conditions: VerdictConditions;
   policy_version: string;
   pack_versions: Record<string, string>;
@@ -448,6 +455,15 @@ export interface Invariant {
  *  by a use case's characteristics and separate from the AI risk pre-check
  *  itself. The condition vocabulary is the same one hard lines, tiers, tracks
  *  and invariants already use. */
+/** Which rule required a given review, carried onto the verdict so a 2LoD
+ *  reviewer can check the obligation against the policy rather than taking it
+ *  on trust. */
+export interface DownstreamReviewSource {
+  review: string;
+  rule_id: string;
+  regulatory_basis?: string;
+}
+
 export interface DownstreamReviewRule {
   id: string;
   review: string;
