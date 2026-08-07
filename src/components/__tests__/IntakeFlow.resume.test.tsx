@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { addNode, getUseCases } from '../../store/register';
@@ -195,5 +195,35 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     // And it carries no verdict of its own, because nothing was evaluated.
     // The sign-off page states that plainly (register-lifecycle.md §15.2).
     expect(adopted!.current_verdict_status).toBeNull();
+  });
+});
+
+// Code review round 3, Panel E. `handleConfirmNewUseCase` gained an audit
+// write in round 4 (the duplicate_dismissed event) and did NOT gain the
+// in-flight guard its two siblings in this same file already have. A
+// double-click writes two events into an append-only trail, which cannot be
+// cleaned up afterwards by design.
+describe('The duplicate gate cannot double-write (round 4 review, Panel E)', () => {
+  it('a double-click on "This is a new use case" appends exactly one dismissal', async () => {
+    const existing = await seedExistingUseCase('Double-click probe assistant');
+    render(<App />);
+
+    const ta = await screen.findByLabelText(/describe your ai use case/i);
+    fireEvent.change(ta, { target: { value: 'Double-click probe assistant' } });
+    fireEvent.click(screen.getByRole('button', { name: /read & extract/i }));
+
+    const confirm = await screen.findByRole('button', { name: /this is a new use case/i });
+
+    // Two clicks inside one tick — a state update disabling the button lands
+    // too late, which is why the guard has to be a synchronous ref.
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    await waitFor(async () => {
+      expect((await getAll(existing.node_id)).some((e) => e.payload.type === 'duplicate_dismissed')).toBe(true);
+    });
+
+    const dismissals = (await getAll(existing.node_id)).filter((e) => e.payload.type === 'duplicate_dismissed');
+    expect(dismissals).toHaveLength(1);
   });
 });

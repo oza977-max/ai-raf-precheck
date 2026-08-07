@@ -683,7 +683,7 @@ The cut is by seam, not by size:
   logical dependency on P8-C04 — but it shares both files with the verdict
   track, so §11.4 sequences it after that track rather than beside it.
   `onCorrect` is required today
-  (`src/components/VerdictDisplay.tsx:18`) and its button renders
+  (`src/components/VerdictDisplay.tsx:18` (as of `e830602`, before P8-C06)) and its button renders
   unconditionally (`src/components/VerdictDisplay.tsx:335`);
   `findLatestVerdictEvent` exists but is not exported
   (`src/store/register.ts:23`).
@@ -694,7 +694,7 @@ The cut is by seam, not by size:
   threaded ahead of its reader is the "computed but never consumed" pattern
   `CLAUDE.md` warns about.
 - **P8-C08 is the attestation change.** It is a store-schema edit
-  (`twoloD_reviewed`, `src/store/types.ts:29`) plus a write-path guard, and it
+  (`twoloD_reviewed`, `src/store/types.ts:29` (as of `e830602`, before P8-C08)) plus a write-path guard, and it
   needs the rendered verdict's id — so it must follow the rendering, not
   precede it. Separating it also keeps the schema edit out of a chunk whose
   review is already reading a large component.

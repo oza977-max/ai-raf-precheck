@@ -100,7 +100,7 @@ const POLICY = {
       id: 'CTRL-ENC-01',
       name: 'Encryption at rest',
       resolves: ['INV-DATA-01'],
-      // Shape verified: ControlVerificationEvidence (src/engine/types.ts:456)
+      // Shape verified: ControlVerificationEvidence (src/engine/types.ts:474)
       // is an object with a status field, not a string.
       verification_evidence: { status: 'verified', detail: 'Key rotation log, quarterly.' },
     },
@@ -343,7 +343,7 @@ describe('RegisterDetail — rendering must not write (R3-NF-2)', () => {
 });
 
 // P8-C07, review pass 2. App.tsx passes `policy={policyResult.valid ? ... :
-// undefined}` (verified: src/App.tsx:135), so a reviewer CAN reach this page
+// undefined}` (verified: src/App.tsx:169), so a reviewer CAN reach this page
 // with no policy loaded — an invalid policy file is all it takes.
 describe('RegisterDetail — evidence status when no policy is loaded (§15.1a)', () => {
   it('says the evidence could not be checked, rather than showing nothing', async () => {
@@ -527,7 +527,7 @@ describe('RegisterDetail — sign-off writes exactly one event under double subm
 
     // This asserts the REQUIREMENT — exactly one event appended — not any one
     // mechanism. Two layers hold it: the synchronous useRef guard
-    // (RegisterDetail.tsx:118) and the button's `disabled={busy}`.
+    // (RegisterDetail.tsx:76) and the button's `disabled={busy}`.
     //
     // Mutation-tested, and the result corrected an earlier claim in this
     // comment. Removing the ref guard alone leaves this green, because in
@@ -544,5 +544,27 @@ describe('RegisterDetail — sign-off writes exactly one event under double subm
 
     const signOffs = (await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed');
     expect(signOffs).toHaveLength(1);
+  });
+});
+
+// Code review round 3, Panel B. `verdict_id: latestVerdict?.id ?? ''` wrote an
+// attestation that satisfies the type and points at no verdict. P8-C08 added
+// the field so an attestation could always be tied to what was signed; the
+// fallback quietly reintroduced the hole it closed.
+describe('RegisterDetail — sign-off refuses when there is no verdict to attest to', () => {
+  it('writes no twoloD_reviewed event for a use case with no verdict recorded', async () => {
+    const user = userEvent.setup();
+    const id = crypto.randomUUID();
+    await seed(id, null);
+    renderDetail(id);
+
+    await screen.findByText(/no verdict is recorded/i);
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    // Nothing is attested, and the reviewer is told why rather than left to
+    // wonder whether the click registered.
+    expect(await screen.findByText(/no verdict to attest to/i)).toBeInTheDocument();
+    const signOffs = (await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed');
+    expect(signOffs).toHaveLength(0);
   });
 });

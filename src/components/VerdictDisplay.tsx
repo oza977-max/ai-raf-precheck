@@ -536,9 +536,25 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             </p>
           </div>
         ) : (
-          <p className="verdict__downstream">
-            Downstream reviews: {verdict.downstream_reviews.join(', ')}
-          </p>
+          <div className="verdict__downstream">
+            <p>Downstream reviews: {verdict.downstream_reviews.join(', ')}</p>
+            {/* CS-3's fit criterion: "with the policy rule that triggered each
+                one named". A required review with no traceable cause is an
+                instruction with no author — a reviewer cannot check it, argue
+                with it, or tell a firm rule from a regulatory one. The engine
+                computed this from the start and every call site threw it away
+                (code review round 3, Panel B). */}
+            {(verdict.downstream_review_sources ?? []).length > 0 && (
+              <ul className="verdict__downstream-sources">
+                {(verdict.downstream_review_sources ?? []).map((s) => (
+                  <li key={s.rule_id}>
+                    {s.review} — required by <code>{s.rule_id}</code>
+                    {s.regulatory_basis ? <Citation text={s.regulatory_basis} /> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
 
       {verdict.conditions.hypotheses.length > 0 && (

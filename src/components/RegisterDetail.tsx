@@ -4,6 +4,7 @@ import { getAll as getAuditEvents, append as appendAuditEvent } from '../store/a
 import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
+import type { Verdict } from '../types/verdict';
 
 // V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
 // presentation-only — renders the REAL audit store via getAll()
@@ -103,7 +104,19 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
    *  write: a second "latest event" lookup used as the value would record an
    *  attestation against a verdict the reviewer never saw, which is precisely
    *  the race this closes. Returns true when it is safe to proceed. */
-  async function verdictStillCurrent(): Promise<boolean> {
+  async function verdictToAttest(): Promise<Verdict | null> {
+    // Code review round 3, Panel B. Both writers fell back to
+    // `verdict_id: ''` when there was no verdict — an attestation that
+    // satisfies the type and points at nothing, which is the hole P8-C08's
+    // verdict_id was added to close. Refusing is the honest answer: there is
+    // nothing to attest to, so nothing is recorded.
+    if (!latestVerdict) {
+      setActionError(
+        'There is no verdict to attest to for this use case, so nothing was recorded. Run a pre-check first, then sign off against the verdict it produces.',
+      );
+      return null;
+    }
+
     const fresh = await getAuditEvents(useCaseId);
     const payload = findLatestVerdictEvent(fresh);
     const currentId = payload
@@ -111,13 +124,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         ? payload.verdict.id
         : payload.new_verdict.id
       : null;
-    if (currentId === (latestVerdict?.id ?? null)) return true;
+    if (currentId === latestVerdict.id) return latestVerdict;
 
     setActionError(
       'The verdict changed while you were reading it, so nothing was recorded. Someone corrected and re-evaluated this use case after you opened the page. Reload to see the current verdict, then sign off against that.',
     );
     await load();
-    return false;
+    return null;
   }
 
   async function handleApprove() {
@@ -126,7 +139,8 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     setBusy(true);
     setActionError(null);
     try {
-      if (!(await verdictStillCurrent())) return;
+      const attesting = await verdictToAttest();
+      if (!attesting) return;
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
         use_case_id: useCaseId,
@@ -136,7 +150,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         payload: {
           type: 'twoloD_reviewed',
           action: 'approved',
-          verdict_id: latestVerdict?.id ?? '',
+          verdict_id: attesting.id,
           ...(notes.trim() ? { notes: notes.trim() } : {}),
         },
       });
@@ -159,7 +173,8 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     setBusy(true);
     setActionError(null);
     try {
-      if (!(await verdictStillCurrent())) return;
+      const attesting = await verdictToAttest();
+      if (!attesting) return;
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
         use_case_id: useCaseId,
@@ -169,7 +184,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         payload: {
           type: 'twoloD_reviewed',
           action: 'correction_requested',
-          verdict_id: latestVerdict?.id ?? '',
+          verdict_id: attesting.id,
           ...(notes.trim() ? { notes: notes.trim() } : {}),
         },
       });

@@ -366,3 +366,32 @@ describe('TC-CS-3-02: an unapproved vendor triggers a vendor risk assessment', (
     expect(result.value.downstream_reviews.join(' | ')).not.toMatch(/not on the approved list/i);
   });
 });
+
+// Code review round 3, Panel B. firmRequiredReviews returned rule_id and
+// regulatory_basis specifically so a reader could check the obligation, and
+// every call site in evaluate.ts did `.map(r => r.review)` — throwing both
+// away before they reached the verdict. A test asserted the function returned
+// them; nothing asserted a reader ever saw them. That is the exact defect
+// class CLAUDE.md names by precedent.
+describe('The rule behind each review reaches the verdict, not just the prose', () => {
+  it('carries rule_id alongside the review text', () => {
+    const result = evaluate(mnpiGraph(), policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const sources = result.value.downstream_review_sources ?? [];
+    expect(sources.length).toBeGreaterThan(0);
+
+    // Every review the reader is shown can be traced to the rule that
+    // required it.
+    for (const review of result.value.downstream_reviews) {
+      const fromFirmRule = sources.some((s) => s.review === review);
+      const fromPackOrRegistry = !fromFirmRule;
+      expect(fromFirmRule || fromPackOrRegistry).toBe(true);
+    }
+    for (const s of sources) {
+      expect(s.rule_id).toMatch(/^DR-/);
+      expect(result.value.downstream_reviews).toContain(s.review);
+    }
+  });
+});
