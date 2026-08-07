@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGate — Code Review 003</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+tbody tr:nth-child(even){background:#faf9f3}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+.verdict.caveats{border-color:#e67e22;background:#fef8f0}.verdict.caveats .verdict-text{color:#e67e22}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+blockquote{border-left:3px solid #ddd;padding-left:1rem;color:#555;margin:1rem 0;max-width:66ch;font-style:italic}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+</style></head><body><main>
+<p class="date">7 August 2026 — Code Review 003</p>
+<h1>AIGate</h1>
+<p class="subtitle">Round 3, strict criterion. Six defect-class panels over Phase 8 and round 4 — 28 commits, 65 files, +6,743 lines. Five calibrated panels plus one blind reviewer given no context, no calibration and no list of known issues.</p>
+
+<div class="verdict caveats">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text">Merge with caveats</div>
+  <p class="verdict-basis">Six findings, all fixed and verified. One finding is held open by the user's decision, not closed: the 2LoD sign-off has no identity behind it. That is a missing capability the product's core claim depends on, not a defect in the code as written — and it is the one thing in this review that would stop a bank relying on the attestation.</p>
+</div>
+
+<h2>1. Summary</h2>
+<div class="tally">
+  <div><b>6</b> panels</div>
+  <div><b>1</b> Critical</div>
+  <div><b>5</b> Important</div>
+  <div><b>2</b> Minor</div>
+  <div><b>6</b> fixed</div>
+  <div><b>1</b> held for the user</div>
+  <div><b>374</b> tests passing</div>
+</div>
+<p><strong>Three of the six findings were introduced during round 4 — the session that was fixing the previous round's findings.</strong> That is the single most useful thing this review says. A fix pass is not a safe pass; it is ordinary work with ordinary defect rates, and it deserves the same review as the work it corrects.</p>
+
+<h2>2. The finding that matters most</h2>
+<p>From the blind reviewer, who was given the codebase and the product's own framing and nothing else:</p>
+<blockquote>The engine and its honesty machinery are trustworthy. The human sign-off step that the whole "legal weight" claim rests on is not.</blockquote>
+
+<div class="issue critical">
+  <div class="issue-title">The 2LoD attestation has no identity behind it — HELD, not fixed</div>
+  <p class="issue-detail">The role is a dropdown. <code>src/store/role.ts</code> reads it from <code>localStorage</code> with no credential check. Anyone can select "2LoD" and approve anything, including a use case they submitted themselves — there is no segregation-of-duties check against <code>submitted_by</code>. And the audit trail writes <code>actor: role</code> (<code>RegisterDetail.tsx:135,168</code>), so the record says <em>"2LoD"</em>, not a person. After the fact the append-only trail cannot say who signed.</p>
+  <p class="issue-detail">The product states its other limits plainly and unprompted — client-side storage, proof-of-concept grade, unsigned pack rules, unattested translation fidelity. It says nothing about this one. Everything downstream of the sign-off is honest; the sign-off itself is the gap between "AIGate reasons correctly" and "AIGate can prove who accepted that reasoning".</p>
+  <div class="issue-location">src/store/role.ts · src/components/RegisterDetail.tsx:135,168,200,210 · blind panel</div>
+</div>
+<p>Held open at the user's direction. It is a scope decision, not a bug fix — though even binding a typed name to the sign-off event would close most of it.</p>
+
+<h2>3. Findings fixed</h2>
+
+<div class="issue critical">
+  <div class="issue-title">A failed LLM extraction was a dead end</div>
+  <p class="issue-detail">With an API key configured, a failed <code>extractGraph</code> call set an error and returned without dispatching. The screen kept rendering "Extracting graph…" with the error beneath it — a label still claiming work was in progress. No retry, no way back, and a reload restored the same stuck step from the draft. <strong>Fixed:</strong> retry and start-over offered, and the progress label no longer shows once the attempt has failed.</p>
+  <div class="issue-location">src/components/IntakeFlow.tsx — Panel C (Logic &amp; Completeness)</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">A missing double-click guard, next to two working examples</div>
+  <p class="issue-detail">Round 4 added an audit write to <code>handleConfirmNewUseCase</code> and did not add the synchronous in-flight guard its two siblings in the same file already have — one of them fourteen lines away. <code>state.step</code> is read from the render closure, so a second click before re-render passes the same check. Two <code>duplicate_dismissed</code> events land in an append-only trail that cannot be corrected. <strong>Fixed,</strong> with a two-clicks-in-one-tick test.</p>
+  <div class="issue-location">src/components/IntakeFlow.tsx:192 — Panel E (Concurrency &amp; Ordering)</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">Traceability computed, then discarded — the V1 citation defect, repeated</div>
+  <p class="issue-detail"><code>firmRequiredReviews</code> returns <code>rule_id</code> and <code>regulatory_basis</code> precisely so a reviewer can check which policy rule required an obligation. All three call sites did <code>.map(r =&gt; r.review)</code> and threw both away before the verdict. A test asserted the function returned them; nothing asserted a reader ever saw them. This is the same defect class that lost this product its regulatory citations for the whole of V1, committed in the chunk that introduced the feature. <strong>Fixed:</strong> the verdict carries <code>downstream_review_sources</code> and the screen renders "Information security review — required by DR-INFOSEC-02" with its citation. Confirmed live.</p>
+  <div class="issue-location">src/engine/evaluate.ts:98,214,280 — Panel B (Contracts &amp; Interfaces)</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">An attestation pointing at nothing</div>
+  <p class="issue-detail">Both sign-off writers used <code>verdict_id: latestVerdict?.id ?? ''</code>. With no verdict recorded, the write produced an attestation that satisfies the type and resolves to no verdict — reopening the hole P8-C08 added the field to close. <strong>Fixed:</strong> the write is refused with a reason the reviewer can act on, and the guard now returns the verdict being attested to so the type carries the guarantee rather than an optional chain.</p>
+  <div class="issue-location">src/components/RegisterDetail.tsx:139,172 — Panel B</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-title">Four BC-001 violations — this project's own active build check</div>
+  <p class="issue-detail">Four comments cited a <code>file:line</code> that had since moved: <code>App.tsx:135</code> (actually 169), <code>RegisterDetail.tsx:118</code> (actually 76), <code>types.ts:456</code> (actually 474), <code>VerdictDisplay.tsx:551</code> (actually 601). BC-001 exists because this project has repeatedly written down claims about code without checking them; a citation that has drifted sends the next reader to the wrong line and quietly withdraws the evidence. Each was verified individually and corrected. Two further citations in the implementation guide narrate deliberately historical state and are now dated rather than renumbered.</p>
+  <div class="issue-location">Panel A (References &amp; Dependencies)</div>
+</div>
+
+<div class="issue minor">
+  <div class="issue-title">"These four rules" above three rules</div>
+  <p class="issue-detail">The draft downstream-review block says four; three ship. The fourth is deliberately not written, with its reason recorded beside it (FN-005) — but a reader told to review four and finding three cannot tell a gap from an omission. Corrected.</p>
+  <div class="issue-location">policy/appetite.yaml:587 — Panel D (Naming &amp; Spec Compliance)</div>
+</div>
+
+<h2>4. What the panels confirmed sound</h2>
+<p>Recorded because a review that only lists faults misrepresents the state of the work.</p>
+<table><thead><tr><th>Area</th><th>Checked</th></tr></thead><tbody>
+<tr><td>Render-body seeding (round 4, O-002)</td><td>Panel E traced StrictMode double-render, ref persistence across fibers, and effect ordering. Safe, and the one theoretical gap is unreachable in the current wiring.</td></tr>
+<tr><td>The stale-verdict race guard</td><td>Real check-then-act across an await, but no interleaving is possible in a single-tab model; the cross-tab risk is already disclosed in the UI.</td></tr>
+<tr><td>The <code>provisional</code> split</td><td>Every producer and consumer updated; no code still matches the string <code>'provisional'</code>.</td></tr>
+<tr><td>Legacy persisted verdicts</td><td><code>provisional_reasons</code> and <code>downstream_review_sources</code> both optional with legacy-safe readers; old records stay readable.</td></tr>
+<tr><td>Honesty of user-facing strings</td><td>Panel D re-read every string changed this round against the four overclaim patterns caught earlier. All four already correctly handled.</td></tr>
+<tr><td>New tests' ability to fail</td><td>Panel C independently confirmed the network-call, API-key-export and attestation-boundary tests are falsifiable, matching this session's own mutation testing.</td></tr>
+</tbody></table>
+
+<h2>5. Method note</h2>
+<p>Round 3, so the strict criterion applied: only findings where a consumer would fail or take a wrong action. Dual review was run in reduced form — five calibrated panels plus one blind reviewer, rather than a full duplicate panel set. The blind reviewer produced the most valuable finding in the review, which is an argument for keeping it rather than for the reduction.</p>
+<p>Every finding above was re-verified directly against the code before being recorded here. Two panel claims were re-framed in the process: Panel A's implementation-guide citations are deliberate historical narration rather than errors, and Panel B's note about <code>findLatestVerdictEvent</code> being "not exported" was itself reading a stale guide line.</p>
+</main></body></html>

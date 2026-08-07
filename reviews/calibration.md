@@ -330,3 +330,4 @@ cleared it.
    is now overdue.
 
 | 2026-08-04 | /gvm-test 003 (full mode, post-Phase-8) | Demo-ready | 148 cases walked: 123 PASS, 7 FAIL, 9 STUB, 5 deliberate deviations, 1 BLOCKED. VV-2(a) failed; no VV-4 trigger. Systemic finding: five deviations decided in code comments and never written back to requirements.md. |
+| 3 | 2026-08-07 | code | A,B,C,D,E,blind | 1 | 5 | 2 | **Merge with caveats** — 3 of 6 findings introduced during the round-4 fix pass; blind panel found the identity gap |
