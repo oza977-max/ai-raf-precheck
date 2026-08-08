@@ -5,6 +5,56 @@ marked, never deleted.
 
 ---
 
+## FN-006 — Intake is forward-only, and the stepper implies otherwise
+
+**Raised by:** user report during post-release use (2026-08-08). **Binds:** the
+next intake chunk. **Status:** OPEN — logged, not fixed. The user was asked
+whether to fix now and cut v0.1.1 or log; no answer was given, so the stopping
+rule's documented default (log) applies. The fix is not foreclosed.
+
+**The report:** "after describing, if I go to the next step it doesn't go back
+— there is no back option."
+
+**Confirmed.** On every intake step past `description_entry` the only controls
+are the forward button and the sidebar's *Clear all data and start over*.
+`IntakeAction` in `src/components/intake-state.ts:66-95` carries forward
+transitions plus `RESTART`, and no back action of any kind. So the only escape
+from a typo in the description is to destroy the entire session.
+
+**The part that makes it worse is a false affordance.** The stepper renders
+completed steps with a ✓, which reads as clickable progress navigation. Those
+items are plain `<li>` elements — no handler, `cursor: auto`. The one control a
+user would instinctively reach for looks interactive and is not.
+
+**Two backward paths do exist**, which is likely why five exploratory charters
+missed this: per-node **Edit** on the graph-review step, and *Correct this
+classification?* on the verdict, which re-enters at `graph_review`. Neither
+returns to the description.
+
+**This was never specified.** No requirement, spec or test case mentions back
+navigation — so no test failed and no review caught it. It is a gap in the
+specification, not an unimplemented requirement, and that is the more useful
+way to record it: the same blind spot would recur in any new flow.
+
+Charter 005 was in adjacent territory and did not catch it either. It fixed
+`RESTART` because *Start over instead* dispatched an action the reducer
+discarded from that step. That added a **reset**. Nobody noticed there was no
+**back**.
+
+**What a fix should and should not do.** `confirmation` is an attestation and a
+deliberate commitment point — it should stay one-way. `duplicate_check`,
+`graph_review` and `questionnaire` have no such justification. A fix therefore
+needs a `STEP_BACK` action bounded so it cannot cross the attestation, a back
+control on those three steps, and the stepper's completed items made genuinely
+clickable so the affordance stops lying.
+
+**The open design question, unanswered:** whether stepping back preserves
+downstream answers (kinder, matches the existing draft persistence) or clears
+them (simpler, avoids stale-answer bugs). Decide this before writing the
+reducer, not after — it determines whether `STEP_BACK` carries a payload.
+
+---
+
 ## FN-005 — A condition cannot say WHICH node it means
 
 **Raised by:** round 4, CS-3 (2026-08-04). **Binds:** any rule that needs to
