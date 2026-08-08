@@ -30,8 +30,24 @@ const ORDER = [
   'verdict',
 ];
 
-export default function StepTracker({ current }: { current: IntakeState['step'] }) {
+// FN-006. The ✓ on a completed step read as clickable progress navigation and
+// was inert — a plain <li> with no handler. That false affordance was the
+// sharper half of the report: the one control a user reaches for to go back
+// looked interactive and was not.
+//
+// Only the step immediately behind the current one becomes a button, because
+// STEP_BACK moves exactly one step. Making every completed step clickable
+// would promise multi-step jumps the reducer cannot honour — trading one lie
+// for a larger one.
+export default function StepTracker({
+  current,
+  onBack,
+}: {
+  current: IntakeState['step'];
+  onBack?: () => void;
+}) {
   const currentIndex = ORDER.indexOf(current);
+  const activeStepIndex = STEPS.findIndex((s) => s.matches(current));
 
   return (
     <ol className="step-tracker">
@@ -39,13 +55,25 @@ export default function StepTracker({ current }: { current: IntakeState['step'] 
         const stepMaxIndex = Math.max(...ORDER.map((s, idx) => (step.matches(s as IntakeState['step']) ? idx : -1)));
         const isDone = currentIndex > stepMaxIndex;
         const isActive = step.matches(current);
+        const isBackTarget = Boolean(onBack) && isDone && i === activeStepIndex - 1;
+
+        const className = `step-tracker__step${isDone ? ' step-tracker__step--done' : ''}${
+          isActive ? ' step-tracker__step--active' : ''
+        }${isBackTarget ? ' step-tracker__step--backable' : ''}`;
+
         return (
-          <li
-            key={step.key}
-            className={`step-tracker__step${isDone ? ' step-tracker__step--done' : ''}${isActive ? ' step-tracker__step--active' : ''}`}
-          >
-            <span className="step-tracker__marker">{isDone ? '✓' : i + 1}</span>
-            <span>{step.label}</span>
+          <li key={step.key} className={className}>
+            {isBackTarget ? (
+              <button type="button" className="step-tracker__back" onClick={onBack}>
+                <span className="step-tracker__marker">←</span>
+                <span>{step.label}</span>
+              </button>
+            ) : (
+              <>
+                <span className="step-tracker__marker">{isDone ? '✓' : i + 1}</span>
+                <span>{step.label}</span>
+              </>
+            )}
           </li>
         );
       })}

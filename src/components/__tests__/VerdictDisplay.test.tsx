@@ -651,3 +651,69 @@ describe('VerdictDisplay — downstream reviews read differently on a rejection 
     expect(screen.queryByText(/^Downstream reviews:/)).not.toBeInTheDocument();
   });
 });
+
+// User-reported after the v0.1.0 tag: the "Why this verdict" panel lists rule
+// IDs — INV-AUTONOMY-01, TIER-CRITICAL — and never says what kind of thing
+// they are or where they came from. "How will someone know what this is?"
+//
+// The panel is the product's core claim made visible: a verdict traceable to
+// a rule. It fails that claim if the reader cannot tell an appetite invariant
+// (the firm's own rule, satisfiable by controls) from a hard line (absolute,
+// no control set can fix it) from a jurisdiction-pack rule (external
+// regulation, shown separately and provisional until adopted).
+describe('VerdictDisplay — Why this verdict says what the rules ARE', () => {
+  const tripped = {
+    id: 'INV-AUTONOMY-01',
+    description: 'A system acting independently on a material decision must have a human decision gate',
+    severity: 'Critical',
+    regulatory_basis: 'RAF §7 — autonomy ceiling',
+    required_controls: ['CTRL-HITL-02'],
+    graph_path: 'input → output',
+  };
+
+  it('names the invariant list as the firm\'s own appetite rules, not just IDs', async () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          explanation: {
+            tier_rationale: { rule_id: 'TIER-CRITICAL', regulatory_basis: 'EU AI Act Annex III §5(b)' },
+            track_rationale: null,
+            hard_lines_checked: 5,
+            invariants_checked: 18,
+            tripped_invariants: [tripped],
+            binding_reason: null,
+            binding_regulatory_basis: null,
+          },
+        })}
+        auditEvents={[]}
+      />,
+    );
+    // The reader must be told these come from the firm's risk appetite.
+    expect(screen.getAllByText(/risk appetite/i).length).toBeGreaterThan(0);
+    // And that an invariant is a rule a control set can satisfy — which is
+    // precisely what distinguishes it from a hard line.
+    expect(screen.getAllByText(/invariant/i).length).toBeGreaterThan(0);
+  });
+
+  it('explains that hard lines are checked first and cannot be fixed by controls', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          explanation: {
+            tier_rationale: { rule_id: 'TIER-CRITICAL' },
+            track_rationale: null,
+            hard_lines_checked: 5,
+            invariants_checked: 18,
+            tripped_invariants: [tripped],
+            binding_reason: null,
+            binding_regulatory_basis: null,
+          },
+        })}
+        auditEvents={[]}
+      />,
+    );
+    expect(screen.getAllByText(/hard line/i).length).toBeGreaterThan(0);
+    // The defining property, stated rather than assumed.
+    expect(screen.getAllByText(/no control/i).length).toBeGreaterThan(0);
+  });
+});

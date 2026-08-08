@@ -70,6 +70,9 @@ export type IntakeAction =
   // DESCRIPTION_CHANGED, which the guard below discards from any step but
   // description_entry — so the escape hatch hid itself and changed nothing.
   | { type: 'RESTART' }
+  // FN-006: one step backwards. Bounded at the confirmation attestation —
+  // see the reducer case for why it stops there rather than everywhere.
+  | { type: 'STEP_BACK' }
   | { type: 'SUBMIT_DESCRIPTION' }
   | { type: 'NO_DUPLICATE_FOUND'; method: 'llm' | 'form' }
   // useCaseId generated once by the caller at graph extraction (P5-C01 —
@@ -116,6 +119,47 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // in-flight intake is a UI reset only; nothing here touches the
       // append-only audit trail, which is never written from the reducer.
       return { step: 'description_entry', description: '' };
+
+    // FN-006. Forward-only intake meant a typo in the description cost the
+    // whole session: the only escape was RESTART, which blanks everything.
+    //
+    // Where it STOPS is the design, not an omission:
+    //  - `confirmation` is an attestation (UC-6). Stepping back across it
+    //    would let a submitter un-attest something they have already signed,
+    //    so the boundary holds there.
+    //  - `evaluation_pending` and `verdict` are past that boundary. A verdict
+    //    is corrected through CORRECT_VERDICT (VD-3), which is an audited
+    //    path — not by walking backwards out of it.
+    //  - `contradiction_review` already has its own exit
+    //    (CONTRADICTION_RESOLVED) and is left alone.
+    //
+    // Answers are preserved wherever the target step's shape can hold them.
+    // Going back from the questionnaire to graph_review drops the answers
+    // because graph_review carries none — and that is the right behaviour
+    // rather than a limitation: if the graph changes, the questions are
+    // regenerated from it, so keeping answers to superseded questions would
+    // be worse than asking again.
+    case 'STEP_BACK':
+      switch (state.step) {
+        case 'duplicate_check':
+          return { step: 'description_entry', description: state.description };
+        case 'graph_review':
+          return { step: 'duplicate_check', description: carriedDescription(state) };
+        case 'questionnaire':
+          return {
+            step: 'graph_review',
+            description: carriedDescription(state),
+            graph: state.graph,
+            graphVersion: state.graph.version,
+            corrections: state.corrections,
+            useCaseId: state.useCaseId,
+            // A correction pass must stay a correction pass — dropping this
+            // would orphan the verdict being corrected.
+            originalVerdictId: state.originalVerdictId,
+          };
+        default:
+          return state;
+      }
 
     case 'SUBMIT_DESCRIPTION':
       if (state.step !== 'description_entry') return state;

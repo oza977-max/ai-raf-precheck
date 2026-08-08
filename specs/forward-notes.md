@@ -7,10 +7,21 @@ marked, never deleted.
 
 ## FN-006 — Intake is forward-only, and the stepper implies otherwise
 
-**Raised by:** user report during post-release use (2026-08-08). **Binds:** the
-next intake chunk. **Status:** OPEN — logged, not fixed. The user was asked
-whether to fix now and cut v0.1.1 or log; no answer was given, so the stopping
-rule's documented default (log) applies. The fix is not foreclosed.
+**Raised by:** user report during post-release use (2026-08-08).
+**Status:** CLOSED in v0.1.1 (2026-08-08). `STEP_BACK` added to the reducer,
+bounded at the confirmation attestation; an explicit `← Back` control on
+duplicate_check / graph_review / questionnaire; the step immediately behind the
+current one made a real button in the tracker. Answers preserved where the
+target step's shape can hold them — the design question below was settled that
+way, and the reasoning is recorded in the reducer case rather than here.
+
+**One trap worth carrying forward.** The first version of the fix reset
+`duplicateCheckDone` and not `dupCheckInFlight`. The latter is a StrictMode
+double-invoke guard, set once and never reset for the life of the mount, so
+re-entering the duplicate check would have sat on "Checking the existing
+inventory…" forever with no way forward — D-001 reintroduced by its own fix,
+which is exactly what the handover means by "a fix pass is not a safe pass".
+Caught before commit by walking the flow in the browser, not by a test.
 
 **The report:** "after describing, if I go to the next step it doesn't go back
 — there is no back option."
