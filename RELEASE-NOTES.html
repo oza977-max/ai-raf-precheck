@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Release Notes v0.1.0</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">8 August 2026</p>
+    <h1>AIGate v0.1.0</h1>
+    <p class="subtitle">The first complete release of AIGate, a pre-check gate that returns a deterministic verdict on whether an AI use case sits inside your firm's risk appetite.</p>
+
+    <h2 id="what-this-is">What this is</h2>
+    <p>AIGate turns a bank's Risk Appetite Framework into executable rules. You describe an AI use case in plain language or through a structured form. The engine maps it to a data-flow graph, evaluates it against your firm's machine-readable appetite and relevant regulatory packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns a verdict: <strong>approved</strong>, <strong>approved with these controls</strong>, or <strong>rejected</strong>.</p>
+    <p>The same inputs produce the same verdict, every time. No AI model sits in the decision path. An optional LLM only reads descriptions in and retells verdicts out; the verdict itself is deterministic and reasoned from your rules, not inferred from data.</p>
+
+    <h2 id="submit-use-case">Submit a use case</h2>
+    <p>Two intake paths:</p>
+    <ul>
+      <li><strong>Guided form.</strong> Business questions — "what kind of information does it use?", "how much can it do without a person?" — that map to the data-flow model your firm uses. No API key needed.</li>
+      <li><strong>Plain-language description.</strong> If you provide an Anthropic API key, you can describe the use case in prose and the system extracts the same graph. No key: the form is your path in.</li>
+    </ul>
+    <p>Either way, the resulting graph is shown back to you for review and correction before evaluation starts. A duplicate check runs against existing use cases in the register — you can adopt the existing classification or record that yours is genuinely new. Your confirmation is timestamped and recorded in the audit trail.</p>
+
+    <h2 id="read-verdict">Read a verdict</h2>
+    <p>A verdict tells you:</p>
+    <ul>
+      <li><strong>The outcome:</strong> approved, approved with controls, or rejected; the tier and track that produced it; the single binding constraint that set it.</li>
+      <li><strong>The regulatory reasoning.</strong> Every rule that fired names the regulation behind it — verbatim source text, the rule derived from it, the basis (whether the rule restates the text, infers from it, or rests on judgment), and the sign-off line for the person accountable for it.
+            In this release those sign-off lines are unfilled placeholders, so the verdict
+            says so and marks itself provisional until your firm adopts the rules.</li>
+      <li><strong>The control set.</strong> If controls are required, the engine solves for the smallest set that brings the use case inside appetite. Each control names the invariants it patches and whether the evidence is verified or unverified.</li>
+      <li><strong>Standing conditions.</strong> The operating bounds the approval assumes. The verdict holds while the system stays inside them; drift outside voids it.</li>
+      <li><strong>Governance margin.</strong> How much headroom the control set leaves, and which invariants rest on a single control (the most at-risk ones if that control fails).</li>
+      <li><strong>A forward path for rejected cases.</strong> Not a list of what you did wrong, but what would need to change for approval.</li>
+    </ul>
+
+    <h2 id="approve-or-correct">Approve or send it back</h2>
+    <p>A reviewer sees the same verdict the submitter saw. For Low-tier use cases, approval is self-service. For Medium, High and Critical, a 2LoD reviewer must sign off.</p>
+    <p>A sign-off records the typed name of the approver, their role, and the timestamp. The system labels it "name not verified" — there is no authentication behind it, and the audit trail says so. The record discloses the reviewer's identity and holds them accountable; it does not prevent a submitter from approving their own case, but the record shows it happened. A reviewer can also request corrections and return the case to the submitter.</p>
+
+    <h2 id="configure-appetite">Configure the firm's appetite</h2>
+    <p>The firm's risk appetite is a YAML file you can read and edit in the application. Validation runs on save. When you change the policy, the engine automatically queues re-evaluation for all affected use cases — so you can track the impact of an appetite change across the entire register.</p>
+    <p>Regulatory packs (SS1/23, SR 26-2, EU AI Act, DORA) update independently of the main policy file. A policy file missing a required field cannot be used. A pack rule without a regulatory citation is rejected on load.</p>
+    <p>Every verdict records the policy version and the version of every pack active at the time it was issued. A verdict from last month is not silently rewritten by a policy change today.</p>
+
+    <h2 id="honest-limits">Known limits at v0.1.0</h2>
+    <p>Each of these is a boundary, not a defect. They are stated in the product as well.</p>
+    <table>
+      <caption>Table 1 — Honest limits at V0.1.0</caption>
+      <thead>
+        <tr><th>Limit</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>No authentication</td><td>The 2LoD role is a dropdown. A sign-off records a typed name and says it is unverified.</td></tr>
+        <tr><td>No segregation of duties</td><td>Nothing stops a submitter approving their own use case. The record discloses it; it does not prevent it.</td></tr>
+        <tr><td>Client-side storage</td><td>The audit trail is append-only by construction but held in your browser — not tamper-evident.</td></tr>
+        <tr><td>Pack rules unadopted</td><td>Every shipped deck carries <code>[FIRM]</code> sign-off placeholders, so verdicts relying on them are provisional until your CRO adopts them.</td></tr>
+        <tr><td>Four decks only</td><td>SS1/23, SR 26-2, EU AI Act, DORA. Canada, Singapore and Japan are declared with no pack.</td></tr>
+        <tr><td>No post-deployment monitoring</td><td>Standing conditions are recorded and checked at re-review, not watched live. That is V2.</td></tr>
+        <tr><td>No shadow-AI discovery</td><td>AIGate cannot see use cases that never come through intake. That is V2.</td></tr>
+        <tr><td>Condition language cannot scope to a node type</td><td>A rule that should apply only to where processing happens cannot yet be written correctly.</td></tr>
+        <tr><td>No property-based tests</td><td>Four acceptance criteria specify generative tests that were never written. The behaviour they describe is covered by example tests.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="what-it-will-not-do">What it will not do</h2>
+    <ul>
+      <li>It does not write your risk appetite for you. It enforces the one you give it.</li>
+      <li>It does not replace InfoSec review, vendor risk assessment, cloud security approval, or FinOps sign-off. It triggers those as mandatory downstream steps when a use case requires them.</li>
+      <li>It does not monitor AI systems after deployment. That is V2.</li>
+      <li>It does not find AI systems that bypass intake. Shadow-AI discovery is V2.</li>
+    </ul>
+
+    <h2 id="next-steps">Next steps</h2>
+    <p>For a task-oriented guide to using the product, see the <a href="docs/user-guide.html">user guide</a>.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
