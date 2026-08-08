@@ -32,13 +32,24 @@ npm run docs:rules   # regenerate docs/rules.md from the policy files
 No backend, no database, no API key required. The whole app is a static
 build (`npm run build` → `dist/`), so it can be hosted anywhere.
 
-**To publish it as a link:** the current build is already pushed to the
-`gh-pages` branch. Enable it in **Settings → Pages → Source: Deploy from a
-branch → `gh-pages` / `(root)`**. To refresh after changes, run
-`npm run build` and re-publish that branch. For automated deploys instead,
-`docs/github-pages-workflow.yml` is a ready-made Actions workflow — copy it
-to `.github/workflows/` (adding it requires a token with `workflow` scope,
-or use GitHub's web UI) and set Pages source to "GitHub Actions".
+**It is already live** at
+<https://oza977-max.github.io/ai-raf-precheck/> — served from the `gh-pages`
+branch, no install needed to try it.
+
+To republish after a change, one command:
+
+```
+npm run publish-site   # builds, then pushes dist/ to gh-pages
+```
+
+For automated deploys instead, `docs/github-pages-workflow.yml` is a
+ready-made Actions workflow — copy it to `.github/workflows/` (adding it
+requires a token with `workflow` scope, or use GitHub's web UI) and set Pages
+source to "GitHub Actions".
+
+The hosted page pulls IBM Plex from Google Fonts. On a network that blocks
+`fonts.googleapis.com` the typography falls back to a system serif; nothing
+else is affected.
 
 Note that the built page loads as a JavaScript module, so it must be
 *served* — opening `dist/index.html` from the filesystem will not work.

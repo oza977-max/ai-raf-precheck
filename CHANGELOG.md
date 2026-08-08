@@ -11,7 +11,11 @@ every verdict.
 
 ---
 
-## [Unreleased] — V1, verified Demo-ready
+## [0.1.0] — 2026-08-08 — V1 scope, verified Demo-ready
+
+Pre-1.0 by intent. "V1" throughout this repository names the *feature scope*,
+not the release maturity: a build with no authentication, browser-held storage
+and a Demo-ready verification verdict is not a 1.0.
 
 The first complete build. Everything below works end to end and was walked
 live before release; the full evidence is in
