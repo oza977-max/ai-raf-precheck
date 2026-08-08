@@ -21,6 +21,9 @@ against.
 | 2 | 2026-07-27 | oracle | fable+opus, blind | — | — | — | 30/31 status, **31/31 binding** |
 | 2 | 2026-07-28 | code | A,B,C,D,E | 3 | 3 | 3 | **Merge with caveats** |
 | 1 | 2026-07-29 | design | A,B,C,D,E,F | 2 | 11 | 2 | **Build with caveats** |
+| 3 | 2026-08-04 | test | full mode | 0 | 7 | 9 | **Demo-ready** |
+| 3 | 2026-08-06 | code | A,B,C,D,E | 0 | 6 | 0 | **Merge with caveats** |
+| 4 | 2026-08-08 | test | full mode | 0 | 2 | 1 | **Demo-ready** |
 
 ## Round 1 measurements
 
