@@ -1,0 +1,257 @@
+# AIGate user guide
+
+*For the person who has to sign the thing.*
+
+This guide is written for a risk reader — 2LoD, model risk, the CRO's office —
+not for a developer. It assumes you know what a Risk Appetite Framework is and
+have never seen this tool.
+
+Each section stands on its own. Skip to the one you need.
+
+---
+
+## What AIGate actually answers
+
+**One question: is this AI use case inside the firm's stated risk appetite,
+and if not, what is the smallest set of controls that would bring it inside?**
+
+It answers that question deterministically. The same answers always produce the
+same verdict — there is no model in the decision path, no sampling, no
+temperature. An optional LLM sits at the edges only: it can read a
+plain-English description into a structured graph, and it can retell a verdict
+in prose. Neither touches the decision. The intake screen says so.
+
+**What it does not answer:** whether the framework itself is right. AIGate
+enforces the appetite you give it. If your rules are wrong, the verdicts are
+consistently wrong, which is at least a solvable problem.
+
+---
+
+## Run your first pre-check
+
+You need nothing installed and no API key.
+
+1. Open the app. The **New pre-check** screen is the default.
+2. Type a description of the use case in plain language. Two or three sentences
+   is enough — what it does, what data it touches, what it decides or actions.
+3. Click **Read & extract**. If no API key is set, you go to a guided form
+   instead of an AI extraction; this is the normal path and the better one for
+   a first run.
+4. Answer the duplicate check. AIGate searches the register for a use case with
+   overlapping characteristics and tells you how many entries it checked.
+5. Fill the guided form. Every field is a business question with plain-English
+   options — *"Personal details of clients"*, not `data_class: Client PII`.
+   Required fields are marked, and **Continue** stays disabled until they are
+   answered.
+6. Review the graph. Your original description is shown back to you under
+   **What you told us**, above the three-node graph the answers produced. Edit
+   any node that is wrong.
+7. Answer any follow-up questions. How many you get depends on the risk signals
+   in what you have already said. Contradictions are flagged here, not later.
+8. Confirm. This is your attestation, it is timestamped, and it is permanent.
+9. Read the verdict.
+
+**Shortcut for a demo:** in the sidebar, **Demo data → Load sample use cases**
+seeds six worked examples spanning Low to Critical, in and out of appetite, all
+scored by the real engine.
+
+---
+
+## How to read a verdict
+
+The verdict screen is dense on purpose. Read it in this order.
+
+### 1. The banner above the verdict, if there is one
+
+A **Provisional** banner means jurisdiction-pack rules were applied that your
+firm has not adopted. It names each one. This is not a warning about quality —
+it is a statement that a rule was used which no qualified person at your firm
+has yet signed. See *[What "provisional" means](#what-provisional-means)*.
+
+### 2. The verdict line
+
+One of three outcomes, plus the tier, the track, and the **binding
+constraint** — the single invariant that is doing the most work. If you only
+read one line, read the binding constraint: it tells you what would have to
+change for the answer to change.
+
+### 3. Why this verdict
+
+The tier and track each name the rule that set them and the regulation behind
+that rule. Below them, every triggered invariant is listed with its severity,
+what it requires, and its regulatory basis.
+
+The footer here matters: *"Evaluated against 5 hard lines and 18 invariants —
+6 triggered."* That is the denominator. It tells you the size of the check that
+was run, not just what came back.
+
+### 4. Governance margin
+
+How much headroom the control set leaves. The important part is the **no
+headroom** list: invariants closed by exactly one control. Remove that one
+control and the use case falls outside appetite. These are the fragile points
+in the approval, and they are the right thing to ask about in a committee.
+
+### 5. Platform and vendor inheritance
+
+If you named an approved platform, this shows what its approval already covered
+and, dimension by dimension, where your use case falls outside that envelope —
+with the cleared value and your value side by side. *"Cleared for
+Confidential; this use case has Client PII"* is a complete argument for why
+nothing was inherited.
+
+### 6. The regulatory reasoning chain
+
+For each jurisdiction rule that fired: the verbatim source text, what was
+derived from it, whether that derivation **states** the quoted text or
+**infers** from it, and the sign-off behind it.
+
+**Read the quoted text against the derivation.** That is the check this section
+exists to make possible. An inference is not a defect — but it is something a
+person should agree with rather than inherit.
+
+### 7. The minimal control set
+
+The smallest set of controls that holds the appetite margin — solved, not
+suggested. Each control names the invariants it patches.
+
+Each also carries an evidence status. **UNVERIFIED means exactly what it
+says:** the policy carries no evidence that this control is in place. It is not
+a failure and not an accusation; it is the absence of a claim.
+
+### 8. Standing conditions
+
+The operating bounds this verdict assumes. Nothing to action today — they are
+recorded as the verdict's expiry conditions. If the system later drifts outside
+any bound, or its deployment changes zone or autonomy, the verdict no longer
+applies and re-assessment is required.
+
+In V1 these are checked at re-review. Watching them live is V2, and the screen
+says so.
+
+---
+
+## What the honesty markers mean
+
+AIGate is built not to claim more than it can prove. These markers are the
+mechanism, and none of them is a bug.
+
+| Marker | Where you see it | What it means |
+|---|---|---|
+| **Provisional** | Verdict banner and header | A pack rule was applied that your firm has not adopted. The verdict is sound; its authority is pending. |
+| **pending firm adoption** | Each rule in the reasoning chain | That specific rule carries a `[FIRM]` sign-off placeholder. Nobody has signed it yet. |
+| **UNVERIFIED** | Each control | The policy carries no evidence for this control. Absence of evidence, shown as absence of evidence. |
+| **translation fidelity: unattested** | App header | Nobody has yet confirmed that the encoded rules match the board-approved framework. Computed from the policy, not hardcoded — it will change when someone attests. |
+| **name not verified** | Sign-off record | The name on a sign-off was typed, not authenticated. There is no login behind it. |
+| **ACTION REQUIRED — Starter config in use** | Appetite framework | You are running the shipped template, not your framework. |
+| **declared — no pack file loaded** | Jurisdiction packs | That jurisdiction is in scope but has no assessed rules, so nothing activates for it. |
+| **self-service final** | Register record | Nobody other than the submitter signed this off. |
+
+---
+
+## What "provisional" means
+
+A verdict is provisional when it relied on a rule your firm has not adopted.
+
+Every shipped jurisdiction pack carries `[FIRM]` sign-off placeholders, because
+AIGate does not interpret regulations on your behalf. A bank that tells its
+supervisor "our AI interpreted SS1/23" does not have a defensible answer. A
+qualified person has to stand behind every regulatory determination.
+
+**To make verdicts final:**
+
+1. Open **Appetite framework** and read the rules for the jurisdictions you
+   operate in.
+2. For each pack, have the accountable function — Legal, Compliance, Model
+   Risk — read each rule against its quoted source text and agree or amend it.
+3. Record the sign-off: name, role, date, in the pack file. Sign-off is per
+   regulation, not per rule. Legal issues a position on SS1/23; they do not
+   countersign each line of a config file.
+4. Replace the `[FIRM]` markers in the policy file with your committees,
+   thresholds and legal entities.
+5. Fill in the translation-fidelity attestation once someone has confirmed that
+   the encoded rules match your board-approved framework.
+
+When a regulation later changes, only the rules citing the changed sections
+need re-reading — not the whole pack.
+
+---
+
+## Approve or send back a use case
+
+Anything above Low tier waits for 2LoD sign-off.
+
+1. Switch the **Role** selector in the header to **2LoD**.
+2. Open **Register** and click the use case.
+3. Read the verdict. It is the same screen the submitter saw, in full — you are
+   not signing a summary of it.
+4. Type your name. **Approve** will not act without one.
+5. Click **Approve** to advance the lifecycle stage, or **Request correction**
+   to send it back with a note.
+
+Both actions append to the audit trail immediately and cannot be undone through
+the application.
+
+**Be aware of two V1 limits before you rely on this.** The role selector is a
+dropdown, not a login — your name is recorded and labelled unverified. And
+nothing stops a submitter approving their own use case; the record discloses it
+as *self-service final*, but it does not prevent it. Real identity and
+segregation of duties need a backend this build does not have.
+
+---
+
+## Change the firm's appetite
+
+The appetite is a YAML file. You can read and edit it in the app.
+
+1. Open **Appetite framework**. The policy is shown in full, with the hard
+   lines and every declared jurisdiction pack.
+2. Edit the YAML. **Validate** checks it before you can save; a file missing a
+   required field cannot be used, and a pack rule without a source citation is
+   rejected on load.
+3. Save. Affected use cases are queued for re-evaluation, and the policy
+   version increments.
+
+Verdicts already issued are **not** rewritten. Each records the policy version
+and the version of every pack active at the time, so a decision made in March
+still reads as the decision that was made in March.
+
+Start by adjusting the materiality tiers to match your actual thresholds. That
+is where most of the difference between the template and your framework lives.
+
+---
+
+## What AIGate will not tell you
+
+Have this list ready before you demo it to anyone. Being able to hand someone
+the boundary is worth more than another feature.
+
+- **Whether your framework is the right framework.** It enforces; it does not
+  advise.
+- **Whether a control is actually in place.** It reads evidence status from the
+  policy. It cannot inspect your systems. Binding a verdict to deployment
+  artefacts instead of trusting a description is V1.5.
+- **Whether a system has drifted since approval.** Standing conditions are
+  recorded and checked at re-review, not monitored. V2.
+- **That an AI system exists at all, if it never came through intake.**
+  Shadow-AI discovery is V2.
+- **How to resolve genuine legal ambiguity.** When regulatory text is
+  contested, AIGate marks the rule as resting on judgement, renders the verdict
+  provisional, and routes it to Legal. It does not pretend to settle what
+  qualified lawyers disagree about.
+- **Anything about InfoSec, vendor risk, cloud security or FinOps.** It
+  triggers those as mandatory downstream reviews when a use case requires them;
+  it does not perform them.
+
+---
+
+## Where to go next
+
+| You want | Read |
+|---|---|
+| The thinking behind the approach, explained for a firm | [`approach.md`](approach.md) |
+| What to try and what to ignore when testing it | [`tester-guide.md`](tester-guide.md) |
+| Every rule in the shipped policy, generated from the policy files | [`rules.md`](rules.md) |
+| Worked cases with engine-verified expected verdicts | [`../backtest/use-cases.md`](../backtest/use-cases.md) |
+| How to author a jurisdiction pack | [`../PACK-AUTHORING.md`](../PACK-AUTHORING.md) |
+| The evidence behind the release verdict | [`../test/test-004.html`](../test/test-004.html) |
