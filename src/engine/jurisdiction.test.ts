@@ -241,3 +241,68 @@ describe('R6 — the policy jurisdiction registry gates which packs may apply', 
     expect(active.map((p) => p.pack_id)).toEqual(['FSA-JP', 'SS1-23']);
   });
 });
+
+// TC-PE-6-01 / TC-RA-2-01 — "the most demanding standard governs".
+//
+// Both cases previously asserted that a UK Track II displaces a US Track III,
+// i.e. a `track_floor` effect. That effect type does not exist and its absence
+// is deliberate (types.ts:205; evaluation-engine.md:172), so the cases failed
+// build verification 003 and 004 against an engine that was behaving as
+// designed. PE-6's wording was corrected in round 4; the cases are corrected
+// here, and this is the test that pins what "most demanding" actually means.
+//
+// The supplement model is the STRICTER reading, which is the point: picking one
+// pack as "governing" would discard the obligations the other one imposed.
+describe('TC-PE-6-01 / TC-RA-2-01 — most demanding governs across jurisdictions', () => {
+  const ukPack = pack(
+    [
+      rule({
+        id: 'SS1-UK-REV-01',
+        effect: { type: 'required_review', review: 'Independent model validation (2LoD)' },
+        source: { document: 'SS1/23', section: 'Principle 1', text: 'a quantitative method…' },
+      }),
+      rule({ id: 'SS1-UK-TIER-01', effect: { type: 'tier_floor', minimum_tier: 'High' } }),
+    ],
+    { pack_id: 'SS1-23', jurisdiction: 'UK', document: 'PRA SS1/23' },
+  );
+
+  const usPack = pack(
+    [rule({ id: 'SR26-US-CTRL-01', effect: { type: 'required_control', control_id: 'CTRL-DOC-01' } })],
+    { pack_id: 'SR-26-2', jurisdiction: 'US', document: 'SR 26-2' },
+  );
+
+  const multi = graph({ jurisdictions: ['UK', 'US'] });
+
+  it('applies BOTH packs — obligations are unioned, not chosen between', () => {
+    const result = applyJurisdictionOverrides(multi, 'Medium', 'III', [ukPack, usPack]);
+    // The US control survives alongside the UK review. Dropping either would
+    // be the failure mode the old "governing standard" wording invited.
+    expect(result.addedControls).toContain('CTRL-DOC-01');
+    expect(result.addedReviews).toContain('Independent model validation (2LoD)');
+    expect(result.chain.map((c) => c.rule_id).sort()).toEqual(['SR26-US-CTRL-01', 'SS1-UK-REV-01', 'SS1-UK-TIER-01']);
+  });
+
+  it('takes the highest tier floor across packs, and never lowers the tier', () => {
+    const raised = applyJurisdictionOverrides(multi, 'Medium', 'III', [ukPack, usPack]);
+    expect(raised.finalTier).toBe('High');
+
+    // Already above every floor — the packs must not pull it back down.
+    const alreadyHigher = applyJurisdictionOverrides(multi, 'Critical', 'III', [ukPack, usPack]);
+    expect(alreadyHigher.finalTier).toBe('Critical');
+  });
+
+  it('leaves the track exactly as the firm’s own rules assigned it', () => {
+    // The heart of the correction: no pack moves the track, in either
+    // direction. "Most demanding" is expressed in obligations, not in track.
+    for (const baseTrack of ['I', 'II', 'III'] as const) {
+      const result = applyJurisdictionOverrides(multi, 'Medium', baseTrack, [ukPack, usPack]);
+      expect(result.finalTrack).toBe(baseTrack);
+    }
+  });
+
+  it('order of the packs does not change the outcome (NF-1 determinism)', () => {
+    const a = applyJurisdictionOverrides(multi, 'Medium', 'III', [ukPack, usPack]);
+    const b = applyJurisdictionOverrides(multi, 'Medium', 'III', [usPack, ukPack]);
+    expect(JSON.stringify(b)).toBe(JSON.stringify(a));
+  });
+});

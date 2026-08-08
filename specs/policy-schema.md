@@ -448,14 +448,14 @@ sign_off_date: "2026-05-01"
 
 rules:
   - id: "SS1-UK-TRACK-01"
-    title: "Technology-agnostic MRM inclusion — Track II ceiling"
+    title: "Technology-agnostic MRM inclusion — independent validation required"
     source:
       document: "SS1/23"
       section: "§3.4"
       text: "[ILLUSTRATIVE — NOT VERBATIM — replace during P2-C03] Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique (statistical, machine learning, or otherwise)."
     effect:
-      type: "track_floor"
-      minimum_track: "II"
+      type: "required_review"
+      review: "Independent model validation (2LoD)"
       condition:
         output_type: { in: ["quantitative", "score", "recommendation"] }
         decision_bindingness: { in: ["material", "binding", "advisory"] }
@@ -517,7 +517,6 @@ any verdict relying on that rule renders provisional.
 
 | Effect type | What it does |
 |---|---|
-| `track_floor` | Sets a minimum track — use case cannot be below this track when this rule fires |
 | `tier_floor` | Sets a minimum tier (e.g., EU AI Act Annex III forces Critical) |
 | `required_control` | Adds a specific control to the required set |
 | `hard_line` | Treats matching use cases as hard-line rejected (pack-level hard lines) |
@@ -549,7 +548,7 @@ These interfaces live in `src/engine/types.ts` and are the canonical type defini
 export type Track = 'I' | 'II' | 'III';
 export type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
 export type Confidence = 'High' | 'Medium' | 'Low';
-export type EffectType = 'track_floor' | 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
+export type EffectType = 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
 export type Scale = 'limited' | 'at_scale';  // Added to OutputNode (intake-flow.md §4.2) and UC-3a form
 // Note: replaces_prior_model: boolean is added to ProcessingNode (intake-flow.md §4.2) and UC-3a form
 
@@ -639,7 +638,6 @@ export interface PackRule {
 export type PackBasis = 'verbatim' | 'derived' | 'judgement';
 
 export type PackRuleEffect =
-  | { type: 'track_floor'; minimum_track: Track; condition: Condition }
   | { type: 'tier_floor'; minimum_tier: Tier; condition: Condition }
   | { type: 'required_control'; control_id: string; condition: Condition }
   | { type: 'hard_line'; condition: Condition; reason: string }

@@ -554,17 +554,29 @@ And the tier is forced to Critical regardless of internal tiering outcome
 
 ---
 
-### TC-PE-6-01: Most demanding standard governs when multiple jurisdictions apply [EXAMPLE]
+### TC-PE-6-01: Most demanding standard governs, by supplementing obligations [EXAMPLE]
 ```
-Input: Graph — use case touching US entities (Track III under SR 26-2) and UK entities (Track II under SS1/23)
+Input: Graph — use case touching both US entities (SR 26-2) and UK entities (SS1/23)
 Given a confirmed graph specifying both US and UK jurisdictions
 When the engine applies jurisdiction overrides
-Then Track II is the final assignment (more demanding than Track III)
-And the output MUST contain: both SR 26-2 and SS1/23 listed as active packs, with SS1/23 named as the governing standard
-And the output MUST NOT contain: Track III as the final classification
+Then the track assigned by the firm's own rules is UNCHANGED by the packs
+And every obligation both packs impose is present — controls and required reviews are unioned, never intersected
+And any tier floor either pack sets is applied if it RAISES the tier, never if it would lower it
+And the output MUST contain: both SR 26-2 and SS1/23 listed as active packs
+And the output MUST NOT contain: a control or review that one pack demanded and the verdict dropped
 [Requirement: PE-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts — "TC-PE-6-01 / TC-RA-2-01 — most demanding governs across jurisdictions"]
 ```
+
+> **Rewritten 2026-08-08.** This case previously asserted that a UK Track II
+> overrides a US Track III — a `track_floor` effect. That effect type does not
+> exist and its absence is deliberate: the supplement model was chosen instead
+> (`src/engine/types.ts:205`, `specs/evaluation-engine.md:172`), and PE-6's own
+> wording was corrected in round 4 to match — it now constrains **tier** floors
+> and obligations, not track. The case was asserting a design that had been
+> reasoned away, so it failed build verification 003 and 004 against an engine
+> that was behaving correctly. "Most demanding governs" is real; it is
+> expressed by adding obligations rather than by moving the track.
 
 ### TC-PE-6-02: Tier never reduced below jurisdictional minimum
 ```
@@ -1149,17 +1161,23 @@ And the output MUST NOT contain: only the first matching jurisdiction's pack app
 
 ---
 
-### TC-RA-2-01: Most demanding standard governs track assignment [EXAMPLE]
+### TC-RA-2-01: Most demanding standard governs, by union of obligations [EXAMPLE]
 ```
-Input: Use case — US + UK jurisdiction. SR 26-2 would assign Track III. SS1/23 requires Track II.
-Given a confirmed graph where US jurisdiction → Track III (SR 26-2) and UK jurisdiction → Track II (SS1/23)
+Input: Use case — US + UK jurisdiction, with both SR 26-2 and SS1/23 rules firing
+Given a confirmed graph where both the US and the UK packs are active
 When the engine applies the "most demanding standard governs" rule
-Then Track II is the final assignment
-And the output MUST contain: "Track II" as final track, and "SS1/23 — governing standard" in the reasoning
-And the output MUST NOT contain: "Track III" as the final assignment
+Then the obligations of BOTH packs are present on the verdict — a union, not a choice between them
+And the reasoning chain names every pack rule that fired, each with its own source text
+And the track assigned by the firm's rules is not altered by either pack
+And the output MUST NOT contain: an obligation from one pack silently dropped in favour of the other
 [Requirement: RA-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts — "TC-PE-6-01 / TC-RA-2-01 — most demanding governs across jurisdictions"]
 ```
+
+> **Rewritten 2026-08-08**, for the same reason as TC-PE-6-01 — see the note
+> there. The engine never lets one jurisdiction's reading displace another's;
+> it applies both. That is the stricter behaviour, not the weaker one: choosing
+> a "governing" pack would mean discarding obligations the other pack imposed.
 
 ---
 

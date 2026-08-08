@@ -165,23 +165,43 @@ interface JurisdictionOverrideResult {
 }
 ```
 
-For each active pack, evaluate each rule's condition against the graph. Collect all `track_floor` and `tier_floor` effects that fire.
+Packs are iterated in `pack_id` order and each pack's rules in `id` order, so
+the result is byte-identical regardless of the order packs were loaded (NF-1).
+For each rule whose condition matches the graph, apply its effect.
 
-**Most demanding standard governs (PE-6, RA-2) — supplement model:**
+**Most demanding standard governs (PE-6, RA-2) — the supplement model:**
 
-Pack rules with `supplement_obligations` effect add required controls and validation obligations to the assigned track; they never reduce the track below the jurisdictional minimum. A Track III use case under SS1/23 retains Track III classification but inherits the SS1/23 MRM obligation set. Track classification is unchanged; obligations are additive.
+There are four pack effect types: `tier_floor`, `required_control`,
+`required_review` and `hard_line`. There is **no `track_floor`**, and its
+absence is a decision rather than a gap.
+
+"Most demanding" is expressed by *adding obligations*, never by moving the
+track:
+
+- **Track is never changed by a pack.** A Track III use case under SS1/23
+  stays Track III and inherits the SS1/23 obligation set on top.
+- **Obligations are unioned across every active pack** — controls and reviews
+  are collected from all of them, deduplicated and sorted. This is the
+  stricter reading: nominating one pack as "governing" would mean discarding
+  the obligations the others imposed.
+- **A tier floor only ever raises the tier**, never lowers it (BC-V2A-01).
 
 ```typescript
-const TRACK_ORDER: Record<Track, number> = { 'I': 3, 'II': 2, 'III': 1 };
 const TIER_ORDER: Record<Tier, number> = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
 
-// Tier override: choose the HIGHER tier
-finalTier = maxBy(allTiers, t => TIER_ORDER[t]);
+// Tier: a floor applies only when it RAISES the tier.
+if (TIER_ORDER[floor] > TIER_ORDER[finalTier]) finalTier = floor;
 
-// Track: supplement_obligations rules ADD to the obligation set; track classification is unchanged
-// (track_floor effect type is removed — use supplement_obligations in pack rules)
-appliedObligations = collectSupplementObligations(activePacks, graph);
+// Track: unchanged by packs, in either direction.
+finalTrack = baseTrack;
+
+// Obligations: union across all active packs, deduped and sorted.
+addedControls = dedupeSorted(controlsFromEveryFiredRule);
+addedReviews  = dedupeSorted(reviewsFromEveryFiredRule);
 ```
+
+Verified against `src/engine/jurisdiction.ts:167-230` and pinned by
+`TC-PE-6-01` / `TC-RA-2-01` in `src/engine/jurisdiction.test.ts`.
 
 Applied overrides are recorded in the verdict for full traceability (VD-2, RA-9).
 

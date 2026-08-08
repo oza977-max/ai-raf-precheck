@@ -139,10 +139,23 @@ export interface PackHardLineHit {
   graphPath: string;
 }
 
+// Rules inside a pack were already sorted before iteration; PACKS were not, so
+// both of the functions below inherited their order from whatever the caller
+// passed. `resolveActivePacks` sorts by pack_id (line 73), so the production
+// path was always deterministic and no verdict was ever affected — but these
+// are exported, the guarantee lived in the caller, and in
+// `evaluatePackHardLines` the order decides WHICH hard line is reported as the
+// reason for a rejection. Sorting here makes NF-1 hold by construction for
+// every caller, per CLAUDE.md's sort-before-iterate rule.
+// Found by TC-PE-6-01's determinism case, which calls these directly.
+function sortedByPackId(packs: JurisdictionPack[]): JurisdictionPack[] {
+  return [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id));
+}
+
 // Pack-level hard lines: graph-only conditions, evaluated right after the
 // base hard lines (before tier/track exist). First hit in sorted order.
 export function evaluatePackHardLines(graph: DataFlowGraph, activePacks: JurisdictionPack[]): PackHardLineHit | null {
-  for (const pack of activePacks) {
+  for (const pack of sortedByPackId(activePacks)) {
     const rules = [...pack.rules].sort((a, b) => a.id.localeCompare(b.id));
     for (const rule of rules) {
       if (rule.effect.type !== 'hard_line') continue;
@@ -177,7 +190,7 @@ export function applyJurisdictionOverrides(
   const chain: RegulatoryChainEntry[] = [];
   const caveats: ConfidenceCaveat[] = [];
 
-  for (const pack of activePacks) {
+  for (const pack of sortedByPackId(activePacks)) {
     const rules = [...pack.rules].sort((a, b) => a.id.localeCompare(b.id));
     for (const rule of rules) {
       if (rule.effect.type === 'hard_line') continue; // handled pre-tier
