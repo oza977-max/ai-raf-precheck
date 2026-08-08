@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — User Guide</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+
+    /* ── Test Case Components (/gvm-test-cases) ── */
+    .test-case {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .tc-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .tc-bdd p {
+      margin-bottom: 0.2rem;
+      padding-left: 1rem;
+    }
+
+    .tc-trace {
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 0.4rem;
+      font-style: italic;
+    }
+
+    .tc-detail {
+      font-size: 0.9rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .tc-detail h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .health-issue {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .health-issue.acknowledged {
+      opacity: 0.6;
+      border-left-color: #ccc;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution (per shared rule 24) ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+    <!-- Auto-generated by script at bottom -->
+  </nav>
+
+  <main>
+    <p class="date">August 2026 — Living Document</p>
+    <h1>AIGate</h1>
+    <p class="subtitle">How to run a pre-check, read a verdict, and know what the tool will not tell you. Written for a risk reader.</p>
+
+    <h2 id="what-aigate-actually-answers">What AIGate actually answers</h2>
+    <p><strong>One question: is this AI use case inside the firm's stated risk appetite, and if not, what is the smallest set of controls that would bring it inside?</strong></p>
+    <p>It answers that question deterministically. The same answers always produce the same verdict — there is no model in the decision path, no sampling, no temperature. An optional LLM sits at the edges only: it can read a plain-English description into a structured graph, and it can retell a verdict in prose. Neither touches the decision. The intake screen says so.</p>
+    <p><strong>What it does not answer:</strong> whether the framework itself is right. AIGate enforces the appetite you give it. If your rules are wrong, the verdicts are consistently wrong, which is at least a solvable problem.</p>
+
+    <h2 id="run-your-first-pre-check">Run your first pre-check</h2>
+    <p>You need nothing installed and no API key.</p>
+    <ol>
+      <li>Open the app. The <strong>New pre-check</strong> screen is the default.</li>
+      <li>Type a description of the use case in plain language. Two or three sentences is enough — what it does, what data it touches, what it decides or actions.</li>
+      <li>Click <strong>Read &amp; extract</strong>. If no API key is set, you go to a guided form instead of an AI extraction; this is the normal path and the better one for a first run.</li>
+      <li>Answer the duplicate check. AIGate searches the register for a use case with overlapping characteristics and tells you how many entries it checked.</li>
+      <li>Fill the guided form. Every field is a business question with plain-English options — <em>"Personal details of clients"</em>, not <code>data_class: Client PII</code>. Required fields are marked, and <strong>Continue</strong> stays disabled until they are answered.</li>
+      <li>Review the graph. Your original description is shown back to you under <strong>What you told us</strong>, above the three-node graph the answers produced. Edit any node that is wrong.</li>
+      <li>Answer any follow-up questions. How many you get depends on the risk signals in what you have already said. Contradictions are flagged here, not later.</li>
+      <li>Confirm. This is your attestation, it is timestamped, and it is permanent.</li>
+      <li>Read the verdict.</li>
+    </ol>
+    <p><strong>Shortcut for a demo:</strong> in the sidebar, <strong>Demo data → Load sample use cases</strong> seeds six worked examples spanning Low to Critical, in and out of appetite, all scored by the real engine.</p>
+
+    <h2 id="how-to-read-a-verdict">How to read a verdict</h2>
+    <p>The verdict screen is dense on purpose. Read it in this order.</p>
+
+    <h3 id="the-banner-above-the-verdict">1. The banner above the verdict, if there is one</h3>
+    <p>A <strong>Provisional</strong> banner means jurisdiction-pack rules were applied that your firm has not adopted. It names each one. This is not a warning about quality — it is a statement that a rule was used which no qualified person at your firm has yet signed. See <a href="#what-provisional-means">What "provisional" means</a>.</p>
+
+    <h3 id="the-verdict-line">2. The verdict line</h3>
+    <p>One of three outcomes, plus the tier, the track, and the <strong>binding constraint</strong> — the single invariant that is doing the most work. If you only read one line, read the binding constraint: it tells you what would have to change for the answer to change.</p>
+
+    <h3 id="why-this-verdict">3. Why this verdict</h3>
+    <p>The tier and track each name the rule that set them and the regulation behind that rule. Below them, every triggered invariant is listed with its severity, what it requires, and its regulatory basis.</p>
+    <p>The footer here matters: <em>"Evaluated against 5 hard lines and 18 invariants — 6 triggered."</em> That is the denominator. It tells you the size of the check that was run, not just what came back.</p>
+
+    <h3 id="governance-margin">4. Governance margin</h3>
+    <p>How much headroom the control set leaves. The important part is the <strong>no headroom</strong> list: invariants closed by exactly one control. Remove that one control and the use case falls outside appetite. These are the fragile points in the approval, and they are the right thing to ask about in a committee.</p>
+
+    <h3 id="platform-and-vendor-inheritance">5. Platform and vendor inheritance</h3>
+    <p>If you named an approved platform, this shows what its approval already covered and, dimension by dimension, where your use case falls outside that envelope — with the cleared value and your value side by side. <em>"Cleared for Confidential; this use case has Client PII"</em> is a complete argument for why nothing was inherited.</p>
+
+    <h3 id="the-regulatory-reasoning-chain">6. The regulatory reasoning chain</h3>
+    <p>For each jurisdiction rule that fired: the verbatim source text, what was derived from it, whether that derivation <strong>states</strong> the quoted text or <strong>infers</strong> from it, and the sign-off behind it.</p>
+    <p><strong>Read the quoted text against the derivation.</strong> That is the check this section exists to make possible. An inference is not a defect — but it is something a person should agree with rather than inherit.</p>
+
+    <h3 id="the-minimal-control-set">7. The minimal control set</h3>
+    <p>The smallest set of controls that holds the appetite margin — solved, not suggested. Each control names the invariants it patches.</p>
+    <p>Each also carries an evidence status. <strong>UNVERIFIED means exactly what it says:</strong> the policy carries no evidence that this control is in place. It is not a failure and not an accusation; it is the absence of a claim.</p>
+
+    <h3 id="standing-conditions">8. Standing conditions</h3>
+    <p>The operating bounds this verdict assumes. Nothing to action today — they are recorded as the verdict's expiry conditions. If the system later drifts outside any bound, or its deployment changes zone or autonomy, the verdict no longer applies and re-assessment is required.</p>
+    <p>In V1 these are checked at re-review. Watching them live is V2, and the screen says so.</p>
+
+    <h2 id="what-the-honesty-markers-mean">What the honesty markers mean</h2>
+    <p>AIGate is built not to claim more than it can prove. These markers are the mechanism, and none of them is a bug.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Marker</th>
+          <th>Where you see it</th>
+          <th>What it means</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Provisional</strong></td>
+          <td>Verdict banner and header</td>
+          <td>A pack rule was applied that your firm has not adopted. The verdict is sound; its authority is pending.</td>
+        </tr>
+        <tr>
+          <td><strong>pending firm adoption</strong></td>
+          <td>Each rule in the reasoning chain</td>
+          <td>That specific rule carries a <code>[FIRM]</code> sign-off placeholder. Nobody has signed it yet.</td>
+        </tr>
+        <tr>
+          <td><strong>UNVERIFIED</strong></td>
+          <td>Each control</td>
+          <td>The policy carries no evidence for this control. Absence of evidence, shown as absence of evidence.</td>
+        </tr>
+        <tr>
+          <td><strong>translation fidelity: unattested</strong></td>
+          <td>App header</td>
+          <td>Nobody has yet confirmed that the encoded rules match the board-approved framework. Computed from the policy, not hardcoded — it will change when someone attests.</td>
+        </tr>
+        <tr>
+          <td><strong>name not verified</strong></td>
+          <td>Sign-off record</td>
+          <td>The name on a sign-off was typed, not authenticated. There is no login behind it.</td>
+        </tr>
+        <tr>
+          <td><strong>ACTION REQUIRED — Starter config in use</strong></td>
+          <td>Appetite framework</td>
+          <td>You are running the shipped template, not your framework.</td>
+        </tr>
+        <tr>
+          <td><strong>declared — no pack file loaded</strong></td>
+          <td>Jurisdiction packs</td>
+          <td>That jurisdiction is in scope but has no assessed rules, so nothing activates for it.</td>
+        </tr>
+        <tr>
+          <td><strong>self-service final</strong></td>
+          <td>Register record</td>
+          <td>Nobody other than the submitter signed this off.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="what-provisional-means">What "provisional" means</h2>
+    <p>A verdict is provisional when it relied on a rule your firm has not adopted.</p>
+    <p>Every shipped jurisdiction pack carries <code>[FIRM]</code> sign-off placeholders, because AIGate does not interpret regulations on your behalf. A bank that tells its supervisor "our AI interpreted SS1/23" does not have a defensible answer. A qualified person has to stand behind every regulatory determination.</p>
+    <p><strong>To make verdicts final:</strong></p>
+    <ol>
+      <li>Open <strong>Appetite framework</strong> and read the rules for the jurisdictions you operate in.</li>
+      <li>For each pack, have the accountable function — Legal, Compliance, Model Risk — read each rule against its quoted source text and agree or amend it.</li>
+      <li>Record the sign-off: name, role, date, in the pack file. Sign-off is per regulation, not per rule. Legal issues a position on SS1/23; they do not countersign each line of a config file.</li>
+      <li>Replace the <code>[FIRM]</code> markers in the policy file with your committees, thresholds and legal entities.</li>
+      <li>Fill in the translation-fidelity attestation once someone has confirmed that the encoded rules match your board-approved framework.</li>
+    </ol>
+    <p>When a regulation later changes, only the rules citing the changed sections need re-reading — not the whole pack.</p>
+
+    <h2 id="approve-or-send-back-a-use-case">Approve or send back a use case</h2>
+    <p>Anything above Low tier waits for 2LoD sign-off.</p>
+    <ol>
+      <li>Switch the <strong>Role</strong> selector in the header to <strong>2LoD</strong>.</li>
+      <li>Open <strong>Register</strong> and click the use case.</li>
+      <li>Read the verdict. It is the same screen the submitter saw, in full — you are not signing a summary of it.</li>
+      <li>Type your name. <strong>Approve</strong> will not act without one.</li>
+      <li>Click <strong>Approve</strong> to advance the lifecycle stage, or <strong>Request correction</strong> to send it back with a note.</li>
+    </ol>
+    <p>Both actions append to the audit trail immediately and cannot be undone through the application.</p>
+    <p><strong>Be aware of two V1 limits before you rely on this.</strong> The role selector is a dropdown, not a login — your name is recorded and labelled unverified. And nothing stops a submitter approving their own use case; the record discloses it as <em>self-service final</em>, but it does not prevent it. Real identity and segregation of duties need a backend this build does not have.</p>
+
+    <h2 id="change-the-firms-appetite">Change the firm's appetite</h2>
+    <p>The appetite is a YAML file. You can read and edit it in the app.</p>
+    <ol>
+      <li>Open <strong>Appetite framework</strong>. The policy is shown in full, with the hard lines and every declared jurisdiction pack.</li>
+      <li>Edit the YAML. <strong>Validate</strong> checks it before you can save; a file missing a required field cannot be used, and a pack rule without a source citation is rejected on load.</li>
+      <li>Save. Affected use cases are queued for re-evaluation, and the policy version increments.</li>
+    </ol>
+    <p>Verdicts already issued are <strong>not</strong> rewritten. Each records the policy version and the version of every pack active at the time, so a decision made in March still reads as the decision that was made in March.</p>
+    <p>Start by adjusting the materiality tiers to match your actual thresholds. That is where most of the difference between the template and your framework lives.</p>
+
+    <h2 id="what-aigate-will-not-tell-you">What AIGate will not tell you</h2>
+    <p>Have this list ready before you demo it to anyone. Being able to hand someone the boundary is worth more than another feature.</p>
+    <ul>
+      <li><strong>Whether your framework is the right framework.</strong> It enforces; it does not advise.</li>
+      <li><strong>Whether a control is actually in place.</strong> It reads evidence status from the policy. It cannot inspect your systems. Binding a verdict to deployment artefacts instead of trusting a description is V1.5.</li>
+      <li><strong>Whether a system has drifted since approval.</strong> Standing conditions are recorded and checked at re-review, not monitored. V2.</li>
+      <li><strong>That an AI system exists at all, if it never came through intake.</strong> Shadow-AI discovery is V2.</li>
+      <li><strong>How to resolve genuine legal ambiguity.</strong> When regulatory text is contested, AIGate marks the rule as resting on judgement, renders the verdict provisional, and routes it to Legal. It does not pretend to settle what qualified lawyers disagree about.</li>
+      <li><strong>Anything about InfoSec, vendor risk, cloud security or FinOps.</strong> It triggers those as mandatory downstream reviews when a use case requires them; it does not perform them.</li>
+    </ul>
+
+    <h2 id="where-to-go-next">Where to go next</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>You want</th>
+          <th>Read</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>The thinking behind the approach, explained for a firm</td>
+          <td><a href="approach.md"><code>approach.md</code></a></td>
+        </tr>
+        <tr>
+          <td>What to try and what to ignore when testing it</td>
+          <td><a href="tester-guide.md"><code>tester-guide.md</code></a></td>
+        </tr>
+        <tr>
+          <td>Every rule in the shipped policy, generated from the policy files</td>
+          <td><a href="rules.md"><code>rules.md</code></a></td>
+        </tr>
+        <tr>
+          <td>Worked cases with engine-verified expected verdicts</td>
+          <td><a href="../backtest/use-cases.md"><code>../backtest/use-cases.md</code></a></td>
+        </tr>
+        <tr>
+          <td>How to author a jurisdiction pack</td>
+          <td><a href="../PACK-AUTHORING.md"><code>../PACK-AUTHORING.md</code></a></td>
+        </tr>
+        <tr>
+          <td>The evidence behind the release verdict</td>
+          <td><a href="../test/test-004.html"><code>../test/test-004.html</code></a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

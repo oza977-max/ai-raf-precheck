@@ -25,7 +25,7 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 227 tests
+npm test         # 376 tests
 npm run docs:rules   # regenerate docs/rules.md from the policy files
 ```
 
@@ -133,7 +133,14 @@ This means:
 4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
 5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts, or load the six in-app samples from **Demo data**
 
-Full documentation: `requirements/requirements.html`
+**Using it for real?** [`docs/user-guide.md`](docs/user-guide.md) is the
+task-oriented guide for a risk reader — how to read a verdict, what each
+honesty marker means, how to run a sign-off, and what the tool will not tell
+you.
+
+The full requirement set is [`requirements/requirements.md`](requirements/requirements.md)
+(81 requirements). Read the markdown, not the HTML twin — the HTML carries
+only 55 of them and has drifted; it says so at the top.
 
 ---
 
@@ -147,6 +154,21 @@ explains how to open it up later if that becomes the right call.
 
 ## Project status
 
-**V1 build complete** — engine, intake, register, lifecycle, jurisdiction packs, audit trail, 215 tests. Currently in internal validation: back-testing verdicts against historically decided use cases. V1 is an engine-validation proof-of-concept; artifact binding and the system-of-record audit store arrive in V1.5; live KRI monitoring against standing conditions is V2. Built with the [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
+**V1 build complete, verified Demo-ready.** Engine, intake, register,
+lifecycle, jurisdiction packs, audit trail — 376 tests, and the full
+acceptance suite of 158 cases walked with evidence in
+[`test/test-004.html`](test/test-004.html).
+
+*Demo-ready* rather than *ship-ready* is the honest verdict, and the reason is
+worth stating plainly: 76 of those 158 acceptance criteria do not carry a
+trace ID, so a reader cannot get from a criterion to the test that proves it
+without knowing the codebase. Coverage exists; the audit path does not. For a
+product that sells auditability, that is the right thing to be held to, and it
+is the first thing V1.5 closes.
+
+V1 is an engine-validation proof-of-concept. Artifact binding and the
+system-of-record audit store arrive in V1.5; live KRI monitoring against
+standing conditions is V2. Built with the
+[Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
 
 *Developed using the Grounded Vibe Methodology*
