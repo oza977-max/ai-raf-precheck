@@ -447,20 +447,26 @@ interface JurisdictionOverrideResult {
   finalTier: Tier;
   appliedOverrides: AppliedOverride[];   // Which pack rules fired and what they changed
 }</code></pre>
-    <p>For each active pack, evaluate each rule's condition against the graph. Collect all <code>track_floor</code> and <code>tier_floor</code> effects that fire.</p>
-    <p><strong>Most demanding standard governs (PE-6, RA-2):</strong></p>
+    <p>Packs are iterated in <code>pack_id</code> order and each pack's rules in <code>id</code> order, so the result is byte-identical regardless of the order packs were loaded (NF-1). For each rule whose condition matches the graph, apply its effect.</p>
+    <p><strong>Most demanding standard governs (PE-6, RA-2) — the supplement model:</strong></p>
+    <p>There are four pack effect types: <code>tier_floor</code>, <code>required_control</code>, <code>required_review</code> and <code>hard_line</code>. There is <strong>no <code>track_floor</code></strong>, and its absence is a decision rather than a gap. "Most demanding" is expressed by adding obligations, never by moving the track:</p>
     <ul>
-      <li><code>finalTrack</code> = maximum(baseTrack, all track_floor values) where I &lt; II &lt; III in restrictiveness (Track I is most demanding)</li>
-      <li><code>finalTier</code> = maximum(baseTier, all tier_floor values) where Low &lt; Medium &lt; High &lt; Critical</li>
+      <li><strong>Track is never changed by a pack.</strong> A Track III use case under SS1/23 stays Track III and inherits the SS1/23 obligation set on top.</li>
+      <li><strong>Obligations are unioned across every active pack</strong> — controls and reviews collected from all of them, deduplicated and sorted. This is the stricter reading: nominating one pack as "governing" would mean discarding the obligations the others imposed.</li>
+      <li><strong>A tier floor only ever raises the tier</strong>, never lowers it (BC-V2A-01).</li>
     </ul>
-    <pre><code>const TRACK_ORDER: Record&lt;Track, number&gt; = { 'I': 3, 'II': 2, 'III': 1 };
-const TIER_ORDER: Record&lt;Tier, number&gt; = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
+    <p>Verified against <code>src/engine/jurisdiction.ts:167-230</code> and pinned by <code>TC-PE-6-01</code> / <code>TC-RA-2-01</code> in <code>src/engine/jurisdiction.test.ts</code>.</p>
+    <pre><code>const TIER_ORDER: Record&lt;Tier, number&gt; = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
 
-// Track override: choose the HIGHER governance burden (higher TRACK_ORDER value)
-finalTrack = maxBy(allTracks, t =&gt; TRACK_ORDER[t]);
+// Tier: a floor applies only when it RAISES the tier.
+if (TIER_ORDER[floor] &gt; TIER_ORDER[finalTier]) finalTier = floor;
 
-// Tier override: choose the HIGHER tier
-finalTier = maxBy(allTiers, t =&gt; TIER_ORDER[t]);</code></pre>
+// Track: unchanged by packs, in either direction.
+finalTrack = baseTrack;
+
+// Obligations: union across all active packs, deduped and sorted.
+addedControls = dedupeSorted(controlsFromEveryFiredRule);
+addedReviews  = dedupeSorted(reviewsFromEveryFiredRule);</code></pre>
     <p>Applied overrides are recorded in the verdict for full traceability (VD-2, RA-9).</p>
 
     <h3 id="step-6-invariants">Step 6 — Invariant Evaluation</h3>

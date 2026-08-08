@@ -599,14 +599,14 @@ sign_off_date: "2026-05-01"
 
 rules:
   - id: "SS1-UK-TRACK-01"
-    title: "Technology-agnostic MRM inclusion — Track II ceiling"
+    title: "Technology-agnostic MRM inclusion — independent validation required"
     source:
       document: "SS1/23"
       section: "§3.4"
       text: "Models that produce quantitative outputs used in material decisions require independent validation, regardless of the underlying technique (statistical, machine learning, or otherwise)."
     effect:
-      type: "track_floor"
-      minimum_track: "II"
+      type: "required_review"
+      review: "Independent model validation (2LoD)"
       condition:
         output_type: { in: ["quantitative", "score", "recommendation"] }
         decision_bindingness: { in: ["material", "binding", "advisory"] }
@@ -638,7 +638,6 @@ rules:
         <tr><th>Effect type</th><th>What it does</th></tr>
       </thead>
       <tbody>
-        <tr><td><code>track_floor</code></td><td>Sets a minimum track — use case cannot be below this track when this rule fires</td></tr>
         <tr><td><code>tier_floor</code></td><td>Sets a minimum tier (e.g., EU AI Act Annex III forces Critical)</td></tr>
         <tr><td><code>required_control</code></td><td>Adds a specific control to the required set</td></tr>
         <tr><td><code>hard_line</code></td><td>Treats matching use cases as hard-line rejected (pack-level hard lines)</td></tr>
@@ -670,7 +669,7 @@ rules:
 export type Track = 'I' | 'II' | 'III';
 export type Tier = 'Critical' | 'High' | 'Medium' | 'Low';
 export type Confidence = 'High' | 'Medium' | 'Low';
-export type EffectType = 'track_floor' | 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
+export type EffectType = 'tier_floor' | 'required_control' | 'hard_line' | 'required_review';
 
 export interface PolicyFile {
   version: string;
@@ -752,7 +751,6 @@ export interface PackRule {
 }
 
 export type PackRuleEffect =
-  | { type: 'track_floor'; minimum_track: Track; condition: Condition }
   | { type: 'tier_floor'; minimum_tier: Tier; condition: Condition }
   | { type: 'required_control'; control_id: string; condition: Condition }
   | { type: 'hard_line'; condition: Condition; reason: string }
