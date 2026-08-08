@@ -257,6 +257,60 @@ body {
   color: var(--ink-soft);
 }
 
+/* ── Going back (FN-006) ──
+   The step immediately behind the current one is a real button. Everything
+   else that is "done" stays inert AND stays looking inert — the whole point
+   of the finding was a ✓ that implied a click it could not accept. */
+.step-tracker__step--backable {
+  border-color: var(--navy);
+  color: var(--ink);
+  padding: 0;
+}
+
+.step-tracker__back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.step-tracker__back:hover,
+.step-tracker__back:focus-visible {
+  background: var(--paper);
+}
+
+.step-tracker__step--backable .step-tracker__marker {
+  background: var(--navy);
+  color: #fff;
+}
+
+.step-back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.9rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.step-back:hover,
+.step-back:focus-visible {
+  color: var(--ink);
+  border-color: var(--navy);
+}
+
 /* ── Cards ── */
 .card {
   background: var(--card-bg);
@@ -1654,6 +1708,26 @@ details input {
   color: var(--critical);
 }
 
+/* The primer that tells a reader what kind of rule each line is. Set quieter
+   than the rules themselves — it is orientation, read once, not the content. */
+.verdict__why-primer {
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+
+.verdict__tripped-label {
+  margin: 0.9rem 0 0.2rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+
 .verdict__citation {
   display: inline-block;
   margin-left: 0.5rem;
@@ -1664,7 +1738,11 @@ details input {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 999px;
-  white-space: nowrap;
+  /* Was `nowrap`. A citation like "EU AI Act Annex III §5(b) and §4(a);
+     ECOA/Reg B; FCA Consumer Duty PRIN 2A" is ~300px that cannot break, and
+     inside a nowrap flex row it pushed the whole verdict card past its
+     container — text visibly leaving the box. User-reported. */
+  white-space: normal;
 }
 
 .verdict__tripped {
@@ -1672,8 +1750,20 @@ details input {
   padding-left: 1.1rem;
 }
 
+/* The global `li { display:flex; align-items:center; gap:.5rem }` (App.css
+   :473) applies here and was never overridden, so these rows could not wrap.
+   An invariant is a sentence, not a row of chips — it wraps. */
 .verdict__tripped li {
-  margin: 0.4rem 0;
+  display: block;
+  margin: 0.55rem 0;
+  padding: 0;
+  border-bottom: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.verdict__tripped code {
+  overflow-wrap: anywhere;
 }
 
 .verdict__severity {

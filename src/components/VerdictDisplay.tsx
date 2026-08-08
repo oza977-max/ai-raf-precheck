@@ -80,6 +80,22 @@ function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanatio
     <div className="verdict__why">
       <h3>Why this verdict</h3>
 
+      {/* User-reported: the panel listed rule IDs and never said what kind of
+          rule they were or where they came from. The product's whole claim is
+          that a verdict traces to a rule — which is worth nothing if the
+          reader cannot tell the three kinds apart. Plain language, per the
+          house rule; no jargon that is not immediately unpacked. */}
+      <p className="verdict__why-primer">
+        Every line below is a rule this use case was measured against. There are three kinds, and they behave
+        differently:{' '}
+        <strong>hard lines</strong> are checked first and are absolute — no control set can bring a use case back
+        inside appetite once one is crossed. <strong>Invariants</strong> are your firm's risk appetite rules; each
+        one names the controls that satisfy it, which is why a use case can come back inside appetite once those
+        controls are in place.{' '}
+        <strong>Jurisdiction-pack rules</strong> come from regulation rather than from your firm, and are set out
+        separately in the regulatory reasoning chain below.
+      </p>
+
       {isHardLineRejection && (
         <p className="verdict__why-reason">
           {explanation.binding_reason}
@@ -95,7 +111,12 @@ function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanatio
       {explanation.track_rationale && rationaleLine('Track', verdict.track, explanation.track_rationale)}
 
       {explanation.tripped_invariants.length > 0 && (
-        <ul className="verdict__tripped">
+        <>
+          <p className="verdict__tripped-label">
+            Appetite invariants triggered — rules from your firm's risk appetite that this use case does not yet
+            satisfy. Each names the controls that would close it.
+          </p>
+          <ul className="verdict__tripped">
           {explanation.tripped_invariants.map((t) => (
             <li key={t.id}>
               <code>{t.id}</code>{' '}
@@ -106,8 +127,9 @@ function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanatio
                 <span className="verdict__tripped-controls"> Requires: {t.required_controls.join(', ')}</span>
               )}
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        </>
       )}
 
       <p className="verdict__checked">

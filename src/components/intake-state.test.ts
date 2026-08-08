@@ -362,3 +362,114 @@ describe('intakeReducer — the description survives to the steps that need it (
     expect('description' in state && state.description).toBe(typed);
   });
 });
+
+// FN-006 — user-reported after the v0.1.0 tag: "after describing, if I go to
+// the next step it doesn't go back, there is no back option." The action union
+// carried forward transitions plus RESTART and nothing else, so the only
+// escape from a typo in the description was to destroy the whole session.
+//
+// The boundary that matters: confirmation is an attestation (UC-6), and
+// stepping back across it would let a submitter un-attest. STEP_BACK stops
+// there by design, and the tests below pin that.
+describe('intakeReducer — STEP_BACK (FN-006)', () => {
+  const typed = 'A model that scores retail credit applications';
+
+  it('duplicate_check → description_entry, keeping what was typed', () => {
+    const state: IntakeState = { step: 'duplicate_check', description: typed };
+    const next = intakeReducer(state, { type: 'STEP_BACK' });
+    // Keeping the description IS the fix. Returning to a blank box would be
+    // RESTART, which already exists and is not what was asked for.
+    expect(next).toEqual({ step: 'description_entry', description: typed });
+  });
+
+  it('graph_review → duplicate_check, keeping what was typed', () => {
+    const state: IntakeState = {
+      step: 'graph_review',
+      description: typed,
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    const next = intakeReducer(state, { type: 'STEP_BACK' });
+    expect(next).toEqual({ step: 'duplicate_check', description: typed });
+  });
+
+  it('questionnaire → graph_review, keeping the graph, its version and its corrections', () => {
+    const correction: GraphCorrection = {
+      correction_id: 'c1',
+      graph_version_before: 1,
+      graph_version_after: 2,
+      node_id: 'n1',
+      field: 'data_class',
+      original_value: 'Internal',
+      corrected_value: 'Client PII',
+      corrected_by: '1LoD',
+      corrected_at: '2026-01-01T00:00:00.000Z',
+    };
+    const g = graph({ version: 2 });
+    const state: IntakeState = {
+      step: 'questionnaire',
+      description: typed,
+      graph: g,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [correction],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-1',
+    };
+    const next = intakeReducer(state, { type: 'STEP_BACK' });
+    expect(next).toEqual({
+      step: 'graph_review',
+      description: typed,
+      graph: g,
+      graphVersion: 2,
+      corrections: [correction],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-1',
+    });
+  });
+
+  it('does not step back out of confirmation — the attestation boundary holds', () => {
+    const state: IntakeState = {
+      step: 'confirmation',
+      description: typed,
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      useCaseId: 'uc-1',
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toBe(state);
+  });
+
+  it('does not step back from description_entry, evaluation_pending or verdict', () => {
+    const entry: IntakeState = { step: 'description_entry', description: typed };
+    expect(intakeReducer(entry, { type: 'STEP_BACK' })).toBe(entry);
+
+    const pending: IntakeState = { step: 'evaluation_pending', graph: graph(), useCaseId: 'uc-1' };
+    expect(intakeReducer(pending, { type: 'STEP_BACK' })).toBe(pending);
+
+    const done: IntakeState = { step: 'verdict', verdictId: 'uc-1' };
+    expect(intakeReducer(done, { type: 'STEP_BACK' })).toBe(done);
+  });
+
+  it('a correction pass keeps its originalVerdictId when it steps back (VD-3)', () => {
+    // Stepping back must not silently turn a correction into a new submission —
+    // that would orphan the verdict being corrected.
+    const state: IntakeState = {
+      step: 'questionnaire',
+      description: typed,
+      graph: graph(),
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-original',
+    };
+    const back = intakeReducer(state, { type: 'STEP_BACK' });
+    expect('originalVerdictId' in back && back.originalVerdictId).toBe('v-original');
+  });
+});

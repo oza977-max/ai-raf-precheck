@@ -60,6 +60,30 @@ export default function IntakeFlow() {
     // itself and the screen never moved.
     dispatch({ type: 'RESTART' });
   }
+
+  // FN-006. The steps a submitter can walk back out of. Everything after
+  // `questionnaire` is past the confirmation attestation, which is one-way by
+  // design — see the STEP_BACK case in intake-state.ts.
+  const canStepBack =
+    state.step === 'duplicate_check' || state.step === 'graph_review' || state.step === 'questionnaire';
+
+  function handleStepBack() {
+    // Stepping back to the description means the duplicate check has to run
+    // again on the way forward — the description it checked may change.
+    //
+    // BOTH of these must be cleared, and the ref is the one that bites.
+    // `dupCheckInFlight` is a StrictMode double-invoke guard that is set once
+    // and never reset for the life of the mount. Clearing only the
+    // `duplicateCheckDone` flag would leave the effect's early return armed,
+    // so re-entering the step would sit on "Checking the existing inventory…"
+    // forever with no way forward: explore-005's D-001, reintroduced by its
+    // own fix. Verified against src/components/IntakeFlow.tsx:161-205.
+    setDuplicateCheckDone(false);
+    dupCheckInFlight.current = false;
+    setDuplicateMatch(null);
+    dispatch({ type: 'STEP_BACK' });
+  }
+
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
   const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
@@ -646,9 +670,19 @@ export default function IntakeFlow() {
         </div>
       )}
 
-      <StepTracker current={state.step} />
+      <StepTracker current={state.step} onBack={canStepBack ? handleStepBack : undefined} />
 
       <div className="card">
+        {/* FN-006. Rendered once, above the step content, rather than per
+            screen — a back control that moves around is a back control people
+            stop looking for. Absent past `questionnaire` because confirmation
+            is an attestation and one-way by design. */}
+        {canStepBack && (
+          <button type="button" className="step-back" onClick={handleStepBack}>
+            ← Back
+          </button>
+        )}
+
         {state.step === 'description_entry' && (
           <div>
             <label htmlFor="description-input">Describe your AI use case</label>

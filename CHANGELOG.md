@@ -11,6 +11,54 @@ every verdict.
 
 ---
 
+## [0.1.1] — 2026-08-08
+
+Two things a real user hit within minutes of the first release. Both were
+reported from using the product, not found by a review.
+
+### Fixed
+
+- **You can go back.** Intake was forward-only: once you left the description
+  step, the only way to correct a typo was *Clear all data and start over*,
+  which destroys the whole session. There is now a **← Back** control on the
+  duplicate check, the graph review and the questions, and the step
+  immediately behind you in the tracker is a real button.
+
+  Confirm stays one-way on purpose — it is an attestation, and stepping back
+  across it would let you un-sign something you have signed.
+
+  What you have typed is kept. Going back from the questions to the graph does
+  clear your answers, because changing the graph regenerates the questions —
+  keeping answers to superseded questions would be worse than asking again.
+
+- **The step tracker stops lying.** Completed steps were marked with a ✓ that
+  looked clickable and did nothing. That was the sharper half of the report:
+  the one control you would reach for to go back was inert.
+
+- **Text no longer spills out of the verdict box.** A long citation — such as
+  *"EU AI Act Annex III §5(b) and §4(a); ECOA/Reg B; FCA Consumer Duty PRIN
+  2A"* — could not wrap, and pushed the whole "Why this verdict" panel past
+  the edge of its card.
+
+### Changed
+
+- **"Why this verdict" now says what the rules are.** It listed identifiers
+  like `INV-AUTONOMY-01` and `TIER-CRITICAL` with nothing to tell you what
+  kind of rule they were or where they came from. It now opens by
+  distinguishing the three: **hard lines**, checked first and absolute — no
+  control set can fix one; **invariants**, your firm's own appetite rules,
+  each naming the controls that satisfy it; and **jurisdiction-pack rules**,
+  which come from regulation rather than from your firm and are set out
+  separately in the reasoning chain. The list of triggered invariants is
+  labelled as such rather than left as bare IDs.
+
+### Known, unchanged
+
+- The app is not responsive below roughly 700px. The layout overflows on a
+  phone. Pre-existing, out of scope for this patch, and not introduced here.
+
+---
+
 ## [0.1.0] — 2026-08-08 — V1 scope, verified Demo-ready
 
 Pre-1.0 by intent. "V1" throughout this repository names the *feature scope*,
