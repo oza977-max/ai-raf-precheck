@@ -289,6 +289,9 @@ describe('RegisterDetail (V1.2-A)', () => {
     await user.click(await screen.findByText('Approval probe case'));
 
     expect(await screen.findByText(/awaiting 2LoD action/i)).toBeInTheDocument();
+    // Round 4 close-out: the attestation now records who signed, so these
+    // pre-existing journeys must name someone — as a real reviewer must.
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
     expect(await screen.findByText(/lifecycle advanced to/i)).toBeInTheDocument();
@@ -324,6 +327,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await user.click(await screen.findByText('Correction request probe'));
 
     await user.type(await screen.findByLabelText(/notes/i), 'Zone looks wrong');
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /request correction/i }));
 
     expect(await screen.findByText(/correction requested — recorded in the audit trail/i)).toBeInTheDocument();
@@ -356,6 +360,8 @@ describe('RegisterDetail (V1.2-A)', () => {
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Double click probe'));
 
+    // Round 4 close-out: an attestation now names who signed.
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     const approve = await screen.findByRole('button', { name: /^approve$/i });
     await user.dblClick(approve);
 

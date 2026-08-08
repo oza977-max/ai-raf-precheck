@@ -50,7 +50,13 @@ function eventDetail(event: AuditEvent): string {
     case 're_evaluation_queued':
       return `Policy updated to v${p.policy_version} — re-evaluation queued. Stage unchanged.`;
     case 'twoloD_reviewed':
-      return `${p.action.replace('_', ' ')}${p.notes ? ` — ${p.notes}` : ''}`;
+      // The name is what makes this attributable rather than anonymous, so it
+      // leads. "(name not verified)" is not a hedge — this build has no
+      // sign-in, and a trail that implied otherwise would claim more than it
+      // can support.
+      return `${p.action.replace('_', ' ')}${
+        p.attested_by_name ? ` by ${p.attested_by_name} (name not verified)` : ' — no name recorded'
+      }${p.notes ? ` — ${p.notes}` : ''}`;
     case 'reasoning_trace_generated':
       return 'Plain-English reasoning trace generated and stored with the verdict (VD-8).';
     case 'duplicate_dismissed':
@@ -66,6 +72,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   const [summary, setSummary] = useState<UseCaseSummary | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [notes, setNotes] = useState('');
+  const [attestedByName, setAttestedByName] = useState('');
   const [actionResult, setActionResult] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,6 +112,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
    *  attestation against a verdict the reviewer never saw, which is precisely
    *  the race this closes. Returns true when it is safe to proceed. */
   async function verdictToAttest(): Promise<Verdict | null> {
+
     // Code review round 3, Panel B. Both writers fell back to
     // `verdict_id: ''` when there was no verdict — an attestation that
     // satisfies the type and points at nothing, which is the hole P8-C08's
@@ -114,6 +122,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       setActionError(
         'There is no verdict to attest to for this use case, so nothing was recorded. Run a pre-check first, then sign off against the verdict it produces.',
       );
+      return null;
+    }
+
+    // An attestation nobody is named on is the defect this closes. Refusing is
+    // the honest answer; recording an anonymous one is not.
+    if (!attestedByName.trim()) {
+      setActionError('Enter your name before signing off. The attestation records who accepted this verdict.');
       return null;
     }
 
@@ -151,12 +166,14 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           type: 'twoloD_reviewed',
           action: 'approved',
           verdict_id: attesting.id,
+          attested_by_name: attestedByName.trim(),
           ...(notes.trim() ? { notes: notes.trim() } : {}),
         },
       });
       await updateLifecycleStage(useCaseId, 'approved', role);
       setActionResult('Approved by 2LoD — lifecycle advanced to Approved. Recorded in the audit trail.');
       setNotes('');
+      setAttestedByName('');
       await load();
     } catch (err) {
       setActionError(`Action failed: ${err instanceof Error ? err.message : String(err)}. Check the timeline below for what was recorded.`);
@@ -185,11 +202,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           type: 'twoloD_reviewed',
           action: 'correction_requested',
           verdict_id: attesting.id,
+          attested_by_name: attestedByName.trim(),
           ...(notes.trim() ? { notes: notes.trim() } : {}),
         },
       });
       setActionResult('Correction requested — recorded in the audit trail. The submitter re-runs intake to correct and re-evaluate.');
       setNotes('');
+      setAttestedByName('');
       await load();
     } catch (err) {
       setActionError(`Action failed: ${err instanceof Error ? err.message : String(err)}. Check the timeline below for what was recorded.`);
@@ -272,6 +291,21 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           <p className="register-detail__actionbar-title">
             {summary.tier ?? 'This'} tier — awaiting 2LoD action (LC-2). This use case cannot advance to Approved
             until you sign off.
+          </p>
+          <label htmlFor="twolod-name">Your name</label>
+          <input
+            id="twolod-name"
+            type="text"
+            value={attestedByName}
+            onChange={(e) => setAttestedByName(e.target.value)}
+          />
+          {/* The product has no backend to authenticate against. Saying so is
+              the same choice it makes about the audit trail being client-side
+              and about pack rules being unadopted — state the limit, do not
+              let the record imply more than it can support. */}
+          <p className="field-help">
+            Recorded on the attestation so the trail says who accepted this verdict. It is
+            self-asserted — this build has no sign-in, so the name is not verified.
           </p>
           <label htmlFor="twolod-notes">Notes (optional)</label>
           <input

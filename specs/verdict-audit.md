@@ -156,7 +156,20 @@ export type AuditEventPayload =
   | { type: 'graph_corrected'; correction: GraphCorrection }
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
-  | { type: 'twoloD_reviewed'; action: 'approved' | 'rejected' | 'correction_requested'; notes?: string }
+  | {
+      type: 'twoloD_reviewed';
+      action: 'approved' | 'rejected' | 'correction_requested';
+      verdict_id: string;
+      // Round 4 close-out. The trail previously recorded `actor: role` — the
+      // string "2LoD", not a person — so it could not afterwards say who
+      // signed. This is NOT authentication: the build has no sign-in, and the
+      // page says the name is self-asserted. It records who claimed to be
+      // signing, which is the difference between an anonymous approval and an
+      // attributable one. Optional on the type so earlier attestations stay
+      // readable; the UI refuses to write one without it.
+      attested_by_name?: string;
+      notes?: string;
+    }
   | { type: 'duplicate_dismissed'; candidate_use_case_id: string; candidate_label: string }
   | {
       type: 'classification_adopted';

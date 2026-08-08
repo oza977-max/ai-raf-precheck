@@ -400,6 +400,7 @@ describe('RegisterDetail — the sign-off names the verdict it attests to (P8-C0
 
     renderDetail(id);
     await verdictRegion();
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
     const events = await getAll(id);
@@ -438,6 +439,7 @@ describe('RegisterDetail — the sign-off names the verdict it attests to (P8-C0
       },
     });
 
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
     // The reviewer is told what happened, in terms of what to do next.
@@ -523,6 +525,7 @@ describe('RegisterDetail — sign-off writes exactly one event under double subm
 
     renderDetail(id);
     await verdictRegion();
+    fireEvent.change(screen.getByLabelText(/your name/i), { target: { value: 'Priya Nair' } });
     const approve = screen.getByRole('button', { name: /^approve$/i });
 
     // This asserts the REQUIREMENT — exactly one event appended — not any one
@@ -566,5 +569,53 @@ describe('RegisterDetail — sign-off refuses when there is no verdict to attest
     expect(await screen.findByText(/no verdict to attest to/i)).toBeInTheDocument();
     const signOffs = (await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed');
     expect(signOffs).toHaveLength(0);
+  });
+});
+
+// Round 4 close-out. Code review 003's blind panel: the 2LoD sign-off had no
+// identity behind it. The role is a dropdown, and the audit trail recorded
+// `actor: role` — the string "2LoD", not a person. After the fact the
+// append-only trail could not say who signed.
+//
+// This does not add authentication; the product has no backend to authenticate
+// against, and pretending otherwise would be the exact overclaim this product
+// refuses. It records WHO CLAIMED to be signing, and says on the page that the
+// name is self-asserted. That is the difference between "someone using the
+// 2LoD dropdown approved this" and "Priya Nair, acting as 2LoD, approved this
+// — name not verified".
+describe('RegisterDetail — the sign-off records who signed (round 4 close-out)', () => {
+  it('refuses to attest without a name, rather than recording an anonymous approval', async () => {
+    const user = userEvent.setup();
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-named', use_case_id: id }));
+    renderDetail(id);
+    await verdictRegion();
+
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    expect(await screen.findByText(/enter your name/i)).toBeInTheDocument();
+    expect((await getAll(id)).filter((e) => e.payload.type === 'twoloD_reviewed')).toHaveLength(0);
+  });
+
+  it('records the name on the attestation, and says on the page that it is not verified', async () => {
+    const user = userEvent.setup();
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-named', use_case_id: id }));
+    renderDetail(id);
+    await verdictRegion();
+
+    // The page must not imply the name is authenticated — it is typed by
+    // whoever is at the keyboard.
+    expect(screen.getByText(/not verified|self-asserted/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+
+    const signOff = (await getAll(id)).find((e) => e.payload.type === 'twoloD_reviewed');
+    expect(signOff).toBeDefined();
+    expect(signOff && 'attested_by_name' in signOff.payload && signOff.payload.attested_by_name).toBe('Priya Nair');
+    // The role is still recorded — this adds identity, it does not replace the
+    // role dimension the register's visibility rules depend on.
+    expect(signOff?.actor).toBe('2LoD');
   });
 });
