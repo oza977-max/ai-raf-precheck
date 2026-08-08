@@ -1,7 +1,11 @@
-# Handover — 2026-08-04
+# Handover — 2026-08-07
 
-Written at the close of Phase 8. Everything below was verified with a command,
-not remembered. Supersedes the 2026-07-29 handover.
+Written to close out a very long session and set up the finish. Everything
+below was verified with a command, not remembered. Supersedes 2026-08-04.
+
+**The goal now is to END this build with something pitchable, internally or
+externally.** Not to make it perfect. Read the stopping rule before doing
+anything else.
 
 ---
 
@@ -10,126 +14,152 @@ not remembered. Supersedes the 2026-07-29 handover.
 | | |
 |---|---|
 | Branch | `main`, pushed, clean |
-| Last commit | `0a40e85` feat: the sign-off names the verdict it attests to [P8-C08] |
-| Tests | **334 passing**, 36 files (was 283 at the start of Phase 8) |
+| Last commit | `05a1e8c` feat: the sign-off records who signed |
+| Tests | **376 passing**, 39 files |
 | `npx tsc --noEmit` | clean |
 | `npm run build` | clean |
 | `python3 scripts/spec-parity-check.py` | clean (R1–R8) |
-| Live site | current — published at `0a40e85` |
+| Live site | published at `0a40e85` — a few commits behind, `npm run publish-site` |
 
 ---
 
-## Phase 8 is complete — all eight chunks
+## THE STOPPING RULE — read this before running anything
 
-Round 3 fixed three things, and each one was a case of the product knowing
-something and not telling the user.
+This build has been circling: every review finds findings, every fix earns
+another review. That loop does not terminate on its own.
 
-| Chunk | Delivers |
+**From here, anything a step surfaces goes into exactly two buckets:**
+
+1. **Blocks release** — the product lies to a user, or a core flow is broken.
+2. **Logged for V1.5** — everything else.
+
+**The default is logged.** Do not open a new fix-and-review round inside this
+build. Do not run `/gvm-code-review` again. If you find yourself writing a
+fifth review report, stop and ship.
+
+---
+
+## What is left: three steps
+
+| Step | Command | Ends with |
+|---|---|---|
+| 1 | `/gvm-test` (Full mode) | A current release verdict |
+| 2 | `/gvm-doc-write` then `/gvm-doc-review` | README, changelog, a usable guide |
+| 3 | `/gvm-deploy` | Tagged release, notes, site published |
+
+**Step 2 is the one that matters most for a pitch.** Nobody reads a test
+report; they read the README and they watch a demo. Budget accordingly.
+
+### Expect Demo-ready, and say so plainly
+
+`/gvm-test`'s verdict comes from a decision table whose inputs include the
+acceptance-test walk. **69 of 148 test cases have covering tests that do not
+carry their trace ID.** That is bookkeeping, not missing coverage — build
+verification 003 walked them by running the tests that cover them — but the
+evaluator cannot tell the difference, so VV-2(a) will fail and the verdict will
+be **Demo-ready**.
+
+That is the honest verdict for this product and a perfectly good one to pitch:
+it does what it claims, end to end, and states its limits on screen. Do not
+inflate it, and do not spend a session closing 69 trace IDs to buy a word.
+
+---
+
+## What this product is, for the pitch
+
+A pre-check gate for banks. An AI use case is a data-flow graph; the firm's
+risk appetite is a set of invariants over that graph; the engine returns a
+**deterministic** verdict — in or out of appetite, what is violated, the
+minimal control set that fixes it, and the regulatory citation behind every
+step.
+
+**The three things that make it different, and that the docs should lead with:**
+
+1. **Deterministic, not generative.** The same answers always produce the same
+   verdict. No LLM is involved in the decision — one is optional, only for
+   reading a plain-English description into a graph, and the product says so on
+   the intake screen. This is the whole pitch to a model-risk audience.
+2. **It refuses to fabricate.** Unsigned rules make a verdict provisional and
+   say why. Absent evidence renders UNVERIFIED, never a blank. Three regulatory
+   decks were deliberately deleted because their source text could not be
+   retrieved. A confidence score was removed as "fabricated precision". These
+   are not caveats to apologise for — they are the product.
+3. **Every obligation is traceable.** A required control names the invariant
+   that demanded it; a downstream review names the policy rule that triggered
+   it; a verdict names the regulation behind each step.
+
+**Deliberately not:** a chatbot, and not a Big-4 deliverable generator.
+
+---
+
+## Honest limits — the V1.5 list
+
+Have this ready. Being able to hand someone the list of what it does *not* do
+is worth more in a bank than any feature.
+
+| Limit | Detail |
 |---|---|
-| P8-C01 | Jurisdiction must be answered before you can proceed |
-| P8-C02 | Required fields marked, from one list that also drives the gate |
-| P8-C03 | Pre-round-3 drafts cannot slip past the new gate |
-| P8-C04 | The engine emits **why** a verdict is provisional |
-| P8-C05 | The verdict states the consequence and the labelled cause |
-| P8-C06 | `VerdictDisplay` reusable on a reviewer's page |
-| P8-C07 | **The sign-off page shows the verdict** |
-| P8-C08 | The sign-off record names the verdict it attests to |
-
-P8-C07 is the one that mattered most: charter 004 measured the sign-off page at
-779 characters, and a 2LoD reviewer was being asked to attest to a decision the
-page did not show them.
-
-**Round 3 coverage is complete.** Every `TC-R3-*` id in `test-cases-003.md` has
-a test, except `TC-R3-JU-6-03`, recorded UNREACHABLE with rationale in both
-twins — its two trigger conditions are mutually exclusive by construction,
-which contradicts ADR-EE-R3-1's claim that they can co-occur.
+| **No authentication** | The 2LoD role is a dropdown. The sign-off now records a typed name and says on the page that it is self-asserted and unverified. Real identity needs a backend this build does not have. |
+| **No segregation of duties** | Nothing stops a submitter approving their own use case. |
+| **Client-side storage** | Audit trail is append-only but held in the browser — proof-of-concept grade, not tamper-evident. Stated in the app. |
+| **Pack rules unadopted** | Every shipped deck carries `[FIRM]` sign-off placeholders, so verdicts relying on them are provisional until a CRO adopts them. Stated on the verdict. |
+| **Translation fidelity unattested** | The starter policy's attestation block is a placeholder, so the header says "unattested". Computed, not hardcoded. |
+| **Four decks only** | SS1/23, SR 26-2, EU AI Act, DORA. More can be added as content, no code change. |
+| **Condition language cannot scope to a node type** | `data_zone` exists on input and processing nodes, so a "cloud security approval" rule cannot be written correctly yet (FN-005). |
 
 ---
 
-## The thing worth reading twice
+## Open forward notes
 
-**Green is not evidence. Deleting the code the test protects is.**
-
-Four times this round a test was green and could not have failed:
-
-1. **P8-C03** — the draft-migration tests, until mutation confirmed they broke
-   when the envelope inferred the answer from array length.
-2. **P8-C05** — a fixture set `binding_regulatory_basis: null`, and that
-   emptiness was the *only* reason a false claim looked true. Two drafts of the
-   same sentence shipped past three review passes because of it.
-3. **P8-C07** — `renderDetail(id, undefined)` silently substituted the default
-   policy, so the "no policy loaded" test exercised the *with*-policy path.
-4. **P8-C08** — the double-submission test, twice. First an awaited click
-   serialised the handler; then jsdom flushed a re-render between synthetic
-   events. Both looked convincing. Neither would have been caught by reading.
-
-The check is one command: delete the guard, run the test, see if it goes red.
-It caught something **every time it was run this round**.
-
-**The second pattern, four chunks running:** data sourced correctly and
-communicated dishonestly. The reasoning chain that simply vanished; the empty
-invariant list that read as "nothing was triggered"; the evidence status that
-said nothing at all when no policy was loaded; the historical/current split
-that was right in the code and invisible on the page. In every case a reader
-could not distinguish "we checked and found nothing" from "we did not check".
-
-Both patterns are already in `reviews/build-checks.md` territory and worth
-promoting to standing checks.
+`specs/forward-notes.md` — FN-003 (requirement wording that invites an
+overclaim), FN-004 (two affordances share one switch), FN-005 (condition
+scoping). All are V1.5 material. None blocks release.
 
 ---
 
-## After Phase 8
+## Traps that have actually cost time
 
-Nothing is scheduled. Five things are known and owed — each with a pointer to
-where it is actually specified, not a restatement.
+- **Run tests with `npm test`, never bare `npx vitest`** — Node 26 shadows
+  jsdom's localStorage polyfill.
+- **Agent worktrees under `.claude/` are excluded in `vite.config.ts`.** Without
+  it the suite silently runs twice, counts double, and interaction-heavy tests
+  time out — which reads as a code failure and is not one.
+- **Specs are `.md` + `.html` twins with no generation link** for most files,
+  and `spec-parity-check.py` reads only `.md`. Edit both.
+  `requirements/requirements.html` is worse than drifted — it carries 55 of 79
+  requirements. There is a warning at the top of it.
+- **Do not call `indexedDB.deleteDatabase()` from the page while the app holds a
+  connection.** It wedges storage for that origin: `open()` never settles and
+  every screen hangs on its first read. It looks exactly like a product bug. A
+  fresh browser session clears it.
+- **Green is not evidence.** Four times this round a test was green and could
+  not have failed. Delete the code the test protects and watch it go red. It
+  caught something every single time it was run.
+- **A fix pass is not a safe pass.** Three of code review 003's six findings
+  were introduced during the round-4 fix session — including one where an audit
+  write was added without the double-click guard that sat fourteen lines away.
 
-| Item | Where it lives |
+---
+
+## Where the deeper context lives
+
+| Need | Read |
 |---|---|
-| Charter 004's unrouted defects — D-001 (intake description discarded), D-004 (register shows the input-node name), D-006 (vendor silently defaulted) | `specs/implementation-guide.md` §11.5 |
-| Charter 005's observations — O-001 (`submittedDescription` not persisted, so a restored questionnaire checks contradictions against an empty string), O-002 (the register load races the self-assessment seeding, so the duplicate check can report a count it has not finished counting) | `test/explore-005.md` §O — **in no spec, no chunk, no requirement** |
-| The exploratory re-walk confirming round 3's defects no longer reproduce | `specs/implementation-guide.md` §11.5 — run `/gvm-explore-test` |
-| RF-2: the `.md`/`.html` spec twins still drift; `spec-parity-check.py` reads only `.md`. `requirements-003` is generated; `test-cases-003` and the four domain specs are still hand-maintained | Standing constraint below; generator at `scripts/render-requirements-003.py` |
-| FN-003 and FN-004, both open | `specs/forward-notes.md` |
-
-**The stale release verdict.** `test/test-002.html` says **Ship-ready**, and it
-predates both exploratory charters. Treat it as stale. `/gvm-test` was correctly
-blocked during Phase 8 because it would have failed on the very defects Phase 8
-was fixing — **that reason is now gone.** Re-running it is the natural next
-step, and its verdict is the honest answer to "is this shippable".
-
-Suggested order: `/gvm-test` for a current verdict → `/gvm-explore-test`
-charter 006 to confirm round 3 holds under a real walk → then route charter
-004's and 005's leftovers into a round 4, or decide the product is where it
-needs to be.
+| What each chunk built and why | `build/handovers/*.md` (newest `P8-C08.md`) |
+| The last full verification, all 148 cases walked | `test/test-003.html` |
+| The last code review, six findings | `code-review/code-review-003.html` |
+| Owed decisions | `specs/forward-notes.md` |
+| The approach, explained for firms | `docs/approach.md` |
+| Standing user rules and project history | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
 
 ---
 
-## Standing constraints (unchanged)
+## Standing constraints
 
 - **Confidentiality is absolute.** RAF is PUBLIC. No internal figures, no
   employer name, no internal team names, anywhere in the repo or its history.
-- `design-vision.md` and `backtest/outcomes-local.md` are gitignored — never
-  commit them.
-- **Run tests with `npm test`, never bare `npx vitest`** — Node 26 shadows
-  jsdom's localStorage polyfill.
-- **Agent worktrees under `.claude/` are excluded from the test run**
-  (`vite.config.ts`). Without it the suite silently runs twice, every count
-  doubles, and the two copies starve each other of CPU until interaction-heavy
-  tests time out — which reads as a code failure and is not one.
-- Specs are parallel `.md` + `.html` with no generation link for most files.
-  Edit both, every time.
-- The audit trail is append-only; a path that can fire a write twice is a
+- `design-vision.md` and `backtest/outcomes-local.md` are gitignored.
+- The audit trail is append-only; a path that can write twice is a
   data-integrity bug.
 - **BC-001 is active:** a claim about an existing symbol cites the `file:line`
-  it was verified against.
-
----
-
-## One housekeeping note
-
-The browser's IndexedDB for `localhost:5173` can be wedged by calling
-`indexedDB.deleteDatabase()` while the app holds a connection — `open()` then
-never settles, and every page hangs on its first store read. It looks exactly
-like a product bug. If the register hangs on "Loading…" or the intake hangs on
-"Evaluating…", check that first. A fresh browser session clears it; Vite binds
-to `localhost` only, so a second origin is not available as an escape hatch.
+  it was verified against — and citations go stale, so check before trusting.
