@@ -58,6 +58,16 @@ export type AuditEventPayload =
       type: 'twoloD_reviewed';
       action: 'approved' | 'rejected' | 'correction_requested';
       verdict_id: string;
+      // Round 4 close-out (code review 003, blind panel). The trail recorded
+      // `actor: role` — the string "2LoD", not a person — so it could not
+      // afterwards say who signed. This is NOT authentication: the product has
+      // no backend to authenticate against, and the UI says the name is
+      // self-asserted. It records who claimed to be signing, which is the
+      // difference between an anonymous approval and an attributable one.
+      //
+      // Optional on the type so attestations written before this change stay
+      // readable; the UI refuses to write one without it.
+      attested_by_name?: string;
       notes?: string;
     }
   | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string };
