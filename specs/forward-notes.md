@@ -5,6 +5,26 @@ marked, never deleted.
 
 ---
 
+## FN-007 — Four spec files documented an effect type that does not exist
+
+**Raised by:** build verification 004 (2026-08-08). **Status:** CLOSED in
+v0.1.2 (2026-08-09).
+
+`track_floor` was removed from the engine when the supplement model was chosen
+(V2-A), but it survived in `specs/policy-schema.md`, `policy-schema.html`,
+`evaluation-engine.html` — and `evaluation-engine.md` contradicted *itself*,
+collecting `track_floor` at line 168 and declaring it removed at line 182. Two
+acceptance criteria (TC-PE-6-01, TC-RA-2-01) still asserted the behaviour it
+would have produced, so they failed verification against a correct engine.
+
+`spec-parity-check.py` reads only `.md`, so it could not see the twin drift,
+and it does not read the engine, so it could not see the contradiction either.
+**That gap is still open**: the checker compares `.md` files to each other, not
+to the code. A spec that confidently describes a symbol which no longer exists
+remains undetectable by any automated check in this repo.
+
+---
+
 ## FN-006 — Intake is forward-only, and the stepper implies otherwise
 
 **Raised by:** user report during post-release use (2026-08-08).

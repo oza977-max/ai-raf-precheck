@@ -4,12 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AIGate</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts are self-hosted (src/fonts.css). This page used to fetch IBM
+         Plex from fonts.googleapis.com, which some corporate networks block
+         outright — a bank demo would silently fall back to a system serif,
+         and the app would make a third-party request on every load. There is
+         now nothing external to block, and nothing external to leak to. -->
   </head>
   <body>
     <div id="root"></div>
