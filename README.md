@@ -47,9 +47,9 @@ ready-made Actions workflow — copy it to `.github/workflows/` (adding it
 requires a token with `workflow` scope, or use GitHub's web UI) and set Pages
 source to "GitHub Actions".
 
-The hosted page pulls IBM Plex from Google Fonts. On a network that blocks
-`fonts.googleapis.com` the typography falls back to a system serif; nothing
-else is affected.
+The page makes **no external requests at all** — fonts are served from the app
+itself, so nothing is fetched from a third party and there is nothing for a
+corporate network to block.
 
 Note that the built page loads as a JavaScript module, so it must be
 *served* — opening `dist/index.html` from the filesystem will not work.

@@ -11,6 +11,61 @@ every verdict.
 
 ---
 
+## [0.1.2] — 2026-08-09
+
+Closes the four items that were still open at v0.1.1 — the two carried from
+build verification 004, and the two limits recorded in the v0.1.1 notes.
+
+### Fixed
+
+- **The app works on a narrow screen.** It had no responsive rules at all, so
+  below about 700px the fixed sidebar and the main column together overflowed
+  the viewport and the whole page scrolled sideways. The layout now stacks
+  into one column, and the two things that genuinely cannot reflow — the
+  register table and the data-flow graph — scroll inside their own boxes
+  instead of dragging the page with them.
+
+  This is not a mobile redesign. A nine-column register and a data-flow graph
+  are desktop artefacts; the change makes them survive a narrow viewport, not
+  pretend to be designed for one.
+
+- **Fonts are served from the app itself.** The hosted page fetched IBM Plex
+  from Google. Some corporate networks block that outright, so a demo inside
+  a bank could silently fall back to a system serif — and every visitor's
+  browser made a third-party request. There is now nothing external to block,
+  and nothing external to leak to. Adds about 70 KB.
+
+- **The specs no longer contradict the engine.** Four spec files documented a
+  `track_floor` rule effect that does not exist, and one contradicted itself
+  about it within a single page. Two acceptance criteria still asserted the
+  behaviour it would have produced, so they failed verification against an
+  engine that was working correctly.
+
+  The engine's actual rule — unchanged since V2-A — is that a jurisdiction
+  pack never moves the track. "Most demanding standard governs" is expressed
+  by *adding* obligations: controls and reviews from every applicable pack are
+  combined, and a tier floor only ever raises the tier. That is the stricter
+  reading, which is the point — nominating one pack as "governing" would mean
+  discarding the obligations the others imposed.
+
+### Changed
+
+- **Jurisdiction rules are now applied in a fixed order regardless of how the
+  packs were loaded.** No verdict was ever affected — the loader already
+  sorted them — but the guarantee lived in the caller rather than in the
+  functions themselves. It now holds by construction.
+
+### Internal
+
+- Four acceptance criteria specified generative property tests that had never
+  been written. They exist now, covering: adding a jurisdiction never lowers a
+  tier or moves a track; reordering the policy file never changes a verdict; a
+  use case that crosses a hard line stays rejected no matter what controls are
+  available; and every control the solver returns does real work, with none
+  redundant. 399 tests in total.
+
+---
+
 ## [0.1.1] — 2026-08-08
 
 Two things a real user hit within minutes of the first release. Both were
@@ -51,11 +106,6 @@ reported from using the product, not found by a review.
   which come from regulation rather than from your firm and are set out
   separately in the reasoning chain. The list of triggered invariants is
   labelled as such rather than left as bare IDs.
-
-### Known, unchanged
-
-- The app is not responsive below roughly 700px. The layout overflows on a
-  phone. Pre-existing, out of scope for this patch, and not introduced here.
 
 ---
 
@@ -164,6 +214,9 @@ footnote:
 ### Known limits at V1
 
 Stated here as well as in the product. None is a defect; each is a boundary.
+
+*As of 0.1.2 the last row has been closed — the property tests now exist. The
+others still hold.*
 
 | Limit | What it means |
 |---|---|

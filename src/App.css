@@ -1826,3 +1826,90 @@ details input {
   font-size: .82rem;
   padding: .2rem .6rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Responsive — the app was built desktop-only and had ZERO media queries.
+   Below ~700px the fixed 220px sidebar plus the main column overflowed the
+   viewport, so the whole page scrolled sideways and the header controls ran
+   off the edge. Reported after v0.1.1 and recorded in the changelog as a
+   known limit; closed here.
+
+   Scope is deliberately narrow: make the existing layout survive a narrow
+   viewport. This is not a mobile redesign — a data-flow graph and a
+   nine-column register are desktop artefacts, and pretending otherwise
+   would be a bigger lie than the overflow was.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 720px) {
+  /* The two-column shell becomes one column. */
+  .app-body {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--card-border);
+    padding: 1rem;
+  }
+
+  .app-main {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem 1rem 4rem;
+  }
+
+  /* Header: the role selector was being pushed off the right edge. */
+  .app-header {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .app-header__role-select {
+    max-width: 100%;
+  }
+
+  /* The register is a nine-column table. Narrowing columns would make it
+     unreadable, so it scrolls inside its own box — the page does not. */
+  .register-view table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Two-up summary grids stack. */
+  .confirmation__grid {
+    grid-template-columns: 1fr;
+    padding: 0.9rem 1rem;
+  }
+
+  /* Long ids and citations break rather than push the card wide. */
+  .card {
+    padding: 1rem;
+    overflow-wrap: anywhere;
+  }
+
+  /* The step tracker already wraps; tighten it so it wraps to two rows
+     rather than five. */
+  .step-tracker {
+    gap: 0.25rem;
+  }
+
+  .step-tracker__step,
+  .step-tracker__back {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Very narrow (small phones). The graph is the one thing that genuinely
+   cannot reflow — it is a left-to-right flow of three node columns — so it
+   scrolls horizontally inside its own container rather than being squashed
+   into illegibility. */
+@media (max-width: 480px) {
+  .graph-view,
+  .graph-view__flow {
+    overflow-x: auto;
+  }
+}

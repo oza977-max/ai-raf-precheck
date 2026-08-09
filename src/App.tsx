@@ -11,6 +11,7 @@ import { translationAttestationStatus } from './engine/attestation';
 import { loadPacks } from './store/packs';
 import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
+import './fonts.css';
 import './App.css';
 
 // App shell visual language taken from a Claude Design export
