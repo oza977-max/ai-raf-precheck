@@ -151,7 +151,7 @@ not only here.
   in 0.1.2.** `fast-check` added; all four exist, each with an anti-vacuity
   guard — the first two attempts passed while exercising nothing, and the
   guards make that failure mode impossible to repeat silently.
-- **Acceptance-criterion traceability is 84/158.** The remaining 74 are
+- **Acceptance-criterion traceability is 88/158.** The remaining 70 are
   covered but do not carry a trace ID. Still the single reason the release
   verdict is Demo-ready rather than Ship-ready.
 - **Condition language cannot scope to a node type** (`FN-005`), so a rule
@@ -187,5 +187,5 @@ verdict remains 004's Demo-ready.
 
 **Release verdict inputs (004).** No VV-4 trigger fired. Every VV-3 criterion
 passed. `VV-2(a)` failed on traceability and the four unwritten property
-tests. The property tests are now written; traceability is 84/158, so
+tests. The property tests are now written; traceability is 88/158, so
 `VV-2(a)` would still fail and the verdict would still be Demo-ready.
