@@ -24,6 +24,7 @@ against.
 | 3 | 2026-08-04 | test | full mode | 0 | 7 | 9 | **Demo-ready** |
 | 3 | 2026-08-06 | code | A,B,C,D,E | 0 | 6 | 0 | **Merge with caveats** |
 | 4 | 2026-08-08 | test | full mode | 0 | 2 | 1 | **Demo-ready** |
+| 5 | 2026-08-09 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
 
 ## Round 1 measurements
 
