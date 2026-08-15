@@ -14,6 +14,27 @@ Describe the AI use case (plain language or a short structured form). AIGate map
 
 Same inputs, same verdict, every time — no LLM in the decision path. The LLM only helps at the edges (reading descriptions in, explaining verdicts out).
 
+## Why this exists
+
+Every bank now has an AI governance process, and almost every one of them is
+the same thing: a long questionnaire, a committee, and a wait measured in
+months. The bottleneck isn't diligence — it's that the firm's risk appetite
+lives as prose, so every use case has to be *interpreted* against it by
+scarce second-line people, one meeting at a time. Interpretation doesn't
+scale. Rules do.
+
+AIGate is a working test of one idea: **if the appetite were code, the first
+pass of that process would take minutes, not months** — and the answer would
+be the same for everyone, for stated reasons, on the record. It was built by
+a risk practitioner, on personal time with public sources, to find out
+whether the idea survives contact with realistic use cases.
+
+It is deliberately the *opposite* of adding AI to governance. The verdict is
+computed by deterministic rules; the honest boundary of what a tool may
+claim is enforced on every screen; and where a human must stand behind a
+judgement — every regulatory interpretation, every sign-off — the tool
+records the human, or says plainly that one is missing.
+
 ## What happens to a use case
 
 ```mermaid
@@ -220,6 +241,33 @@ The full requirement set is [`requirements/requirements.md`](requirements/requir
 only 55 of them and has drifted; it says so at the top.
 
 ---
+
+## What's next
+
+**V1 judges what you attest. What comes next checks it, then watches it.**
+
+Look closely at any verdict and you'll see the next two versions already
+wired into it:
+
+- Every verdict carries **standing conditions** with green/amber/red
+  thresholds — drift, override rates, incident counts. Today they're checked
+  at re-review. **V2 watches them live**: a verdict stops being a document
+  and becomes a standing hypothesis that expires itself the moment the
+  system drifts outside what was approved. The `amber` and `breached` states
+  already exist in every verdict record, waiting.
+- Every control renders **evidence: outstanding** until someone attests it.
+  **V1.5 reads the evidence itself** — deployment configs, access policies,
+  model registries — so "the control exists" becomes something checked, not
+  claimed. The same machinery turns attestation around: instead of trusting
+  your description of the system, it reads the infrastructure and shows you
+  the difference.
+- Sign-off is a typed name today. **V1.5 makes it an identity**, with
+  segregation of duties — the record that currently *discloses* a
+  self-approved case will *prevent* one.
+
+The order is deliberate: first judge honestly (V1), then verify what you
+were told (V1.5), then monitor what you approved (V2). Each stage keeps the
+rule this whole product is built on — never claim more than you can prove.
 
 ## Licence
 

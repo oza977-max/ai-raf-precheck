@@ -168,3 +168,28 @@ testing impossible.
 Sidebar → **Demo data** → **Clear all data and start over**. It deletes
 everything in this browser permanently — there's no server copy. Export
 first if you want to keep anything.
+
+
+---
+
+## New since this guide was written (August 2026)
+
+Worth deliberately exercising, newest first:
+
+- **← Back** now exists on intake steps before attestation — try going back
+  and forward; the duplicate check should re-run, never hang.
+- **"What kind of decision does it feed?"** has *Something else — let me
+  describe it*. Type one; the verdict should name your words and say the
+  policy has no rule for them.
+- **The verdict screen was rewritten for a business reader** — "What you
+  need to do" at the top, controls by name, "How fragile is this approval?",
+  "What would make this verdict expire". Judge whether someone outside risk
+  could act on it.
+- **"Anything the reviewer should know?"** at the confirmation step — write
+  a note, then find it as 2LoD on the sign-off page.
+- **About** in the sidebar, and eleven worked cases with pinned expected
+  outcomes in [`try-these.md`](try-these.md) — case 5 (two hard lines) and
+  cases 6+7 (inheritance pair) are the most instructive.
+
+The most valuable feedback is unchanged: a verdict you'd *argue with* beats
+any bug.
