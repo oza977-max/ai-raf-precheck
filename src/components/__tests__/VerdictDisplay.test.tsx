@@ -962,3 +962,31 @@ describe('VerdictDisplay — living status and trace safety', () => {
     expect(screen.getByText(/onerror=/)).toBeInTheDocument();
   });
 });
+
+// Adversarial review against arXiv:2501.18837 and the llama3 assistant-priming
+// jailbreak (2026-08-15). The LLM surfaces are schema-forced and
+// human-confirmed, so injection cannot reach the decision — but the reasoning
+// trace rendered with NO provenance label, so a reader could take AI prose as
+// the verdict's official reasoning. If a jailbroken trace ever says something
+// the rules did not, the screen must already have disclaimed it.
+it('the reasoning trace names its own provenance and non-authority [TC-VD-8-02]', () => {
+  const verdict = makeVerdict();
+  render(
+    <VerdictDisplay
+      verdict={verdict}
+      auditEvents={[
+        {
+          event_id: 'e1',
+          use_case_id: verdict.use_case_id,
+          occurred_at: '2026-01-01T00:00:00.000Z',
+          actor: 'system',
+          payload: { type: 'verdict_produced', verdict, reasoning_trace: 'Because reasons, the tier is High.' },
+        } as unknown as Parameters<typeof VerdictDisplay>[0]['auditEvents'][number],
+      ]}
+      onCorrect={vi.fn()}
+    />,
+  );
+  const trace = document.querySelector('.verdict__trace');
+  expect(trace?.textContent).toMatch(/not part of the verdict/i);
+  expect(trace?.textContent).toMatch(/panels win/i);
+});

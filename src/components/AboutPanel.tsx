@@ -29,7 +29,9 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         The verdict is computed by deterministic rules: the same answers produce the same verdict, every
         time. An optional AI model helps only at the edges — reading a plain-language description into a
         structured form, which you then check and correct yourself. Nothing it writes is used until a
-        person confirms it.
+        person confirms it. This is also the security posture: with no model in the decision path,
+        there is no model to jailbreak into a verdict — adversarial text can at most mis-propose,
+        never decide.
       </p>
       <p>
         Full transparency: that optional AI path is built and tested against a simulated API, but it

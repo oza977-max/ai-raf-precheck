@@ -2094,3 +2094,10 @@ details input {
   background: var(--paper);
   cursor: pointer;
 }
+
+.verdict__trace-provenance {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  max-width: 66ch;
+}

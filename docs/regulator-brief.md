@@ -76,6 +76,22 @@ translation fidelity of the whole rules file reads "unattested" until a
 person attests it; and a reviewer sign-off records that the typed name was
 not authenticated.
 
+**Can a malicious description manipulate the outcome?**
+The relevant attack class is prompt injection and jailbreaking — adversarial
+text that hijacks a language model's output (demonstrated publicly against
+open models via assistant-priming, and the subject of substantial defensive
+research, e.g. constitutional classifiers, arXiv:2501.18837). The
+architecture bounds this by construction: no language model sits in the
+decision path, so there is no model to jailbreak into a verdict. On the
+optional edge paths, model output is forced through a fixed schema, values
+outside the canonical vocabulary are rejected, the human confirms the
+extracted structure before it is used, and the AI-written prose retelling
+labels itself as commentary that the deterministic reasoning overrides. The
+worst a successful injection achieves is a wrong *proposal*, which the
+submitter then attests — and attestation, not extraction, is what carries
+accountability. Hostile text in any free field renders as text, never as
+markup, asserted by test.
+
 ## What it deliberately does not do
 
 - It does not author or advise on risk appetite. It enforces what the firm

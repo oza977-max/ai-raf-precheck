@@ -875,7 +875,18 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       <details className="verdict__trace">
         <summary>Reasoning trace</summary>
         {reasoningTrace ? (
-          <p>{reasoningTrace}</p>
+          <>
+            {/* Jailbreak-review gap (2026-08-15): the LLM's retelling rendered
+                with no provenance label, so a reader could take AI prose as
+                the verdict's official reasoning. The verdict's authority is
+                the deterministic panels above; this is commentary. */}
+            <p className="verdict__trace-provenance">
+              Written by the optional AI model as a plain-English retelling. It is not part of the
+              verdict: the authoritative reasoning is the rule-by-rule panels above, and if this
+              prose ever disagrees with them, the panels win.
+            </p>
+            <p>{reasoningTrace}</p>
+          </>
         ) : fallbackDescription ? (
           <p>
             <code>{verdict.binding_constraint}</code> — {fallbackDescription}
