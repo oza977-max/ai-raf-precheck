@@ -41,7 +41,9 @@ export type AuditEventPayload =
       tier: string | null;
       track: string | null;
     }
-  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number }
+  // submitter_note (2026-08-15): optional context for the 2LoD reviewer,
+  // recorded with the attestation. Human-read at sign-off; never engine input.
+  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string }
   | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
   | { type: 'graph_corrected'; correction: GraphCorrection }
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }

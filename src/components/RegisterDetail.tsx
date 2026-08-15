@@ -271,6 +271,27 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               record supports.
             </p>
           )}
+          {/* The submitter's optional attestation note (2026-08-15). Placed
+              ABOVE the verdict, because the reviewer should read the human
+              context before the machine's answer — and framed so it cannot be
+              mistaken for something the engine weighed. Most recent
+              graph_confirmed wins: a re-attestation supersedes. */}
+          {(() => {
+            const note = [...events]
+              .reverse()
+              .map((ev) => (ev.payload.type === 'graph_confirmed' ? ev.payload.submitter_note : undefined))
+              .find((n) => Boolean(n));
+            return note ? (
+              <div className="register-detail__submitter-note">
+                <h3>Note from the submitter</h3>
+                <p className="register-detail__submitter-note-body">{note}</p>
+                <p className="register-detail__submitter-note-caveat">
+                  Written at attestation, for you. The rules did not read it — the verdict below is
+                  computed only from the structured answers.
+                </p>
+              </div>
+            ) : null;
+          })()}
           <VerdictDisplay
             verdict={latestVerdict}
             auditEvents={events}

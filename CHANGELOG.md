@@ -11,6 +11,34 @@ every verdict.
 
 ---
 
+## [0.2.3] — 2026-08-15
+
+### Added
+
+- **"Anything the reviewer should know?"** — one optional free-text note at
+  the attestation step. It is recorded permanently with your attestation and
+  shown to the 2LoD reviewer above the verdict at sign-off, framed with the
+  sentence that makes it safe: *the rules did not read it — the verdict is
+  computed only from the structured answers.*
+
+  This is the deliberate answer to "should every dropdown have a write-in?"
+  — no. The closed dropdowns are the axes the rules are written in; a
+  write-in on the data-sensitivity question would let a hurried submitter
+  type "deal-related context" instead of facing the MNPI option, and walk
+  past a hard line. Free text belongs where a human reads it. For saying the
+  whole thing in your own words, the plain-language description path already
+  exists and is read into the same structured graph you confirm.
+
+### Not changed, on purpose
+
+- No dropdown gained a free-text escape. Data class, zones, autonomy,
+  exposure, weight and reversibility are complete classifications, not lists
+  with gaps — being forced to choose IS the control. Platform, vendor and
+  decision type, the three genuinely open sets, already have their escape
+  hatches with the gap stated on the verdict.
+
+---
+
 ## [0.2.2] — 2026-08-15
 
 ### Changed

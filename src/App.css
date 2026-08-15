@@ -2023,3 +2023,36 @@ details input {
   color: var(--ink-soft);
   max-width: 66ch;
 }
+
+/* ── Note from the submitter (2026-08-15) ── */
+.register-detail__submitter-note {
+  margin: 1rem 0;
+  padding: 0.9rem 1.1rem;
+  background: var(--card-bg);
+  border-left: 3px solid var(--navy);
+  border-radius: 4px;
+}
+
+.register-detail__submitter-note h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.register-detail__submitter-note-body {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.register-detail__submitter-note-caveat {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.confirmation__note-label {
+  display: block;
+  font-weight: 600;
+  margin-top: 1rem;
+}
