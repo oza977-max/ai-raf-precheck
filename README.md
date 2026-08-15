@@ -90,6 +90,8 @@ by `npm run docs:rules`.
 
 The full gate, end to end: intake (LLM or form) → duplicate check against the register → graph review with corrections → targeted questions with contradiction detection → attestation → deterministic verdict → register with lifecycle governance (Low self-serves; Medium/High/Critical await 2LoD sign-off) → policy editing with automatic re-evaluation queuing → JSON export. AIGate submits itself through its own gate on first launch.
 
+Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who believes a *rule* is wrong (not the case in front of them) files a **rule challenge** from the sign-off page — permanent, attributable, and advisory by construction: the verdict stands, and the challenge lands in a per-rule **rule-improvement queue** for the humans who author the rulebook. Dissent never overrides; it accumulates as evidence.
+
 **Honest limits, stated in the UI itself**: verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules; the audit trail is client-side (proof-of-concept grade — the system-of-record store is V1.5); artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
 
 ## Run it

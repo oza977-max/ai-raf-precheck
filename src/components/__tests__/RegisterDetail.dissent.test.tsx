@@ -118,7 +118,7 @@ async function openAndFill(opts: { rule?: string; text?: string; name?: string }
 const dissents = async (id: string) => (await getAll(id)).filter((e) => e.payload.type === 'rule_dissent_filed');
 
 describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
-  it('records the rule, the reasoning, the name and the rendered verdict id', async () => {
+  it('TC-R4-RC-1-01: records the rule, the reasoning, the name and the rendered verdict id', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ id: 'v-seen', use_case_id: id }));
     renderDetail(id);
@@ -143,7 +143,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     expect(filed.actor).toBe('2LoD');
   });
 
-  it('ADVISORY BY CONSTRUCTION: filing writes the dissent event and nothing else', async () => {
+  it('TC-R4-RC-2-01: ADVISORY BY CONSTRUCTION — filing writes the dissent event and nothing else', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     const before = (await getAll(id)).length;
@@ -164,7 +164,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     expect(screen.getByText(/never overrides/i)).toBeInTheDocument();
   });
 
-  it('offers the rules THIS verdict relied on, from its own explanation', async () => {
+  it('TC-R4-RC-3-01: offers the rules THIS verdict relied on, from its own explanation', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     renderDetail(id);
@@ -178,7 +178,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     expect(values).toContain('__other__');
   });
 
-  it('a free-typed rule reference is recorded without a resolved label', async () => {
+  it('TC-R4-RC-3-02: a free-typed rule reference is recorded without a resolved label', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     renderDetail(id);
@@ -199,7 +199,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     ['no rule picked', { text: 'Reasoning.', name: 'Priya Nair' }, /name the rule/i],
     ['no reasoning', { rule: 'INV-DATA-01', name: 'Priya Nair' }, /nothing to act on/i],
     ['no name', { rule: 'INV-DATA-01', text: 'Reasoning.' }, /enter your name/i],
-  ])('refuses to file with %s, and records nothing', async (_label, fill, message) => {
+  ])('TC-R4-RC-4-01: refuses to file with %s, and records nothing', async (_label, fill, message) => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     renderDetail(id);
@@ -213,7 +213,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     expect(await dissents(id)).toHaveLength(0);
   });
 
-  it('a double-click files one dissent, not two (append-only, R3-NF-2 discipline)', async () => {
+  it('TC-R4-NF-2-02: a double-click files one dissent, not two (append-only discipline)', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     renderDetail(id);
@@ -229,7 +229,7 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
 });
 
 describe('RegisterDetail — where the dissent affordance appears', () => {
-  it('is offered to 2LoD even after the case advanced past sign-off', async () => {
+  it('TC-R4-RC-6-01: is offered to 2LoD even after the case advanced past sign-off', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }), 'approved');
     renderDetail(id);
@@ -238,7 +238,7 @@ describe('RegisterDetail — where the dissent affordance appears', () => {
     expect(await toggle()).toBeInTheDocument();
   });
 
-  it('is not offered to 1LoD', async () => {
+  it('TC-R4-RC-6-02: is not offered to 1LoD', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));
     renderDetail(id, '1LoD');
@@ -246,7 +246,7 @@ describe('RegisterDetail — where the dissent affordance appears', () => {
     expect(screen.queryByRole('button', { name: /challenge a rule/i })).toBeNull();
   });
 
-  it('is not offered when no verdict exists — no rule was applied, nothing to challenge', async () => {
+  it('TC-R4-RC-6-03: is not offered when no verdict exists — no rule was applied, nothing to challenge', async () => {
     const id = crypto.randomUUID();
     await seed(id, null);
     renderDetail(id);

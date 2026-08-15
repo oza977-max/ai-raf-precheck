@@ -227,6 +227,34 @@ segregation of duties need a backend this build does not have.
 
 ---
 
+## Challenge a rule (without touching the verdict)
+
+Sometimes the case in front of you is decided correctly *by the rules as
+written* — and the rule itself is what's wrong: too broad, too strict, or
+missing a distinction the real world has. That opinion used to have nowhere
+to go. Now it does.
+
+1. As **2LoD**, open any use case that has a verdict and click
+   **Challenge a rule…** (below the verdict).
+2. Pick the rule from the list — it offers the rules *this verdict actually
+   relied on* — or type a reference for one that isn't listed.
+3. Say why the rule is wrong here, and sign your name.
+
+Three things to understand before you file:
+
+- **The verdict does not change.** A challenge is a formal objection about
+  the rulebook, permanently on the record — it is not an appeal and not an
+  override. The case's decision, stage and sign-off are all untouched.
+- **It is permanent.** The challenge is an audit-trail event, so it cannot
+  be edited or withdrawn afterwards. That is what makes it worth something.
+- **It goes somewhere.** Every challenge lands in **Rule challenges**
+  (sidebar), grouped by rule, so the people who author the rulebook can see
+  that, say, one citation rule has been challenged three times by different
+  reviewers on different cases. Rules still change only the way they always
+  have — a human edits the framework or a pack and signs it off.
+
+---
+
 ## Change the firm's appetite
 
 The appetite is a YAML file. You can read and edit it in the app.

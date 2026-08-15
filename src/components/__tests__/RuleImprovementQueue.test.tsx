@@ -58,13 +58,13 @@ const renderQueue = () =>
   );
 
 describe('RuleImprovementQueue', () => {
-  it('with no dissents, says so and points at where one is filed from', async () => {
+  it('TC-R4-RC-5-01: with no dissents, says so and points at where one is filed from', async () => {
     renderQueue();
     expect(await screen.findByRole('status')).toHaveTextContent(/no rule challenges have been filed/i);
     expect(screen.getByRole('status')).toHaveTextContent(/sign-off page/i);
   });
 
-  it('groups dissents by rule, newest first within a rule, and names the challenger and use case', async () => {
+  it('TC-R4-RC-5-02: groups dissents by rule, newest first within a rule, and names the challenger and use case', async () => {
     const ucA = crypto.randomUUID();
     const ucB = crypto.randomUUID();
     await seedUseCase(ucA, 'Client email drafter');
@@ -91,7 +91,7 @@ describe('RuleImprovementQueue', () => {
     expect(within(invGroup).getAllByText(/Priya Nair \(name not verified\)/).length).toBe(2);
   });
 
-  it('states its advisory posture: a dissent never changes a verdict', async () => {
+  it('TC-R4-RC-5-03: states its advisory posture — a dissent never changes a verdict', async () => {
     renderQueue();
     // The posture statements are static copy — present regardless of what the
     // shared per-file DB holds by the time this test runs.
@@ -99,7 +99,7 @@ describe('RuleImprovementQueue', () => {
     expect(screen.getByText(/nothing in this queue feeds back into the engine/i)).toBeInTheDocument();
   });
 
-  it('never renders /approved|rejected/i — the reserved-words trap (lesson 2)', async () => {
+  it('TC-R4-RC-5-04: never renders /approved|rejected/i — the reserved-words trap', async () => {
     const uc = crypto.randomUUID();
     await seedUseCase(uc, 'Client email drafter');
     await fileDissent(uc, 'INV-DATA-01', 'A perfectly ordinary objection.', '2026-02-01T00:00:00.000Z');
@@ -110,7 +110,7 @@ describe('RuleImprovementQueue', () => {
     expect(container.textContent).not.toMatch(/approved|rejected/i);
   });
 
-  it('renders a hostile dissent as text, never as markup [SECURITY]', async () => {
+  it('TC-R4-RC-5-05: renders a hostile dissent as text, never as markup [SECURITY]', async () => {
     const uc = crypto.randomUUID();
     await seedUseCase(uc, 'Client email drafter');
     await fileDissent(uc, 'INV-DATA-01', 'Fine because <img src=x onerror="alert(1)"> handles it.', '2026-02-01T00:00:00.000Z');
@@ -121,7 +121,7 @@ describe('RuleImprovementQueue', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it('rendering must not write (R3-NF-2): opening twice leaves the trail unchanged', async () => {
+  it('TC-R4-NF-2-01: rendering must not write — opening twice leaves the trail unchanged', async () => {
     const uc = crypto.randomUUID();
     await seedUseCase(uc, 'Client email drafter');
     await fileDissent(uc, 'INV-DATA-01', 'An objection.', '2026-02-01T00:00:00.000Z');
