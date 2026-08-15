@@ -148,6 +148,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         case 'duplicate_check':
           return { step: 'description_entry', description: state.description };
         case 'graph_review':
+          // A CORRECTION pass re-enters here as its first step (VD-3) with no
+          // description — "back" would land in a duplicate check for an empty
+          // string, and proceeding from there drops originalVerdictId,
+          // silently turning a correction of a recorded verdict into a fresh
+          // blank draft. Found live (2026-08-15). A correction's only exits
+          // are completing it or RESTART.
+          if (state.originalVerdictId) return state;
           return { step: 'duplicate_check', description: carriedDescription(state) };
         case 'questionnaire':
           return {

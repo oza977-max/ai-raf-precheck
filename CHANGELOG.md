@@ -11,6 +11,41 @@ every verdict.
 
 ---
 
+## [0.3.2] — 2026-08-15
+
+Second hostile walkthrough, remaining paths.
+
+### Fixed
+
+- **The duplicate check now matches what you described, not just the short
+  name.** Re-typing a word-for-word identical description of an existing
+  case found nothing, because matching ran against register labels — three-
+  word names. Descriptions are now stored on the register entry and matched
+  alongside the name. (Entries saved before this version carry no stored
+  description and still match on name only.)
+
+- **← Back can no longer walk you out of a correction.** On a correction
+  pass it stepped "back" to a duplicate check for an empty description — a
+  step the correction never came through — and proceeding from there
+  silently turned the correction into a fresh blank draft. A correction's
+  only exits are completing it or starting over.
+
+### Known, recorded
+
+- After completing a pre-check, the "+ New pre-check" sidebar item does not
+  reset the finished flow — navigate to Register and back to start a new
+  one. Recorded, not yet fixed.
+
+### Verified working
+
+- The full correction chain: rejected verdict → correct one field → still
+  correctly rejected (the other zone still breached) → correct the second →
+  in appetite with controls. All six audit events in order, both
+  corrections with before/after values, the original rejection preserved.
+- 1LoD sees no sign-off actions on the review page — role-gating holds.
+
+---
+
 ## [0.3.1] — 2026-08-15
 
 Found by testing the product as a user, again. Two of the three would never

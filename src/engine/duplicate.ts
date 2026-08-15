@@ -30,6 +30,14 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 // unrelated use cases that merely share common words.
 const DUPLICATE_THRESHOLD = 0.4;
 
+/** The text a register entry is matched against. Found live (2026-08-15): a
+ *  word-for-word identical description passed the check because matching ran
+ *  against three-word LABELS. Label + stored description; label alone for
+ *  legacy entries saved before descriptions were stored. */
+export function matchCorpus(entry: { label: string; description?: string }): string {
+  return entry.description ? `${entry.label} ${entry.description}` : entry.label;
+}
+
 export function findPossibleDuplicates(
   description: string,
   existing: Array<{ id: string; label: string }>,
