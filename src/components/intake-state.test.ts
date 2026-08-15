@@ -498,3 +498,39 @@ describe('intakeReducer — STEP_BACK (FN-006)', () => {
     expect('originalVerdictId' in back && back.originalVerdictId).toBe('v-original');
   });
 });
+
+// Found by hostile-walking the correction path (2026-08-15): ← Back on a
+// correction pass's graph_review stepped "back" to a duplicate check for an
+// EMPTY description — a step the correction never came through. Proceeding
+// from there drops originalVerdictId, silently converting a correction of a
+// recorded verdict into a fresh draft with a blank description. A correction
+// is an audited path (VD-3); its only exits are completing it or RESTART.
+describe('intakeReducer — a correction pass cannot step backwards out of itself', () => {
+  it('STEP_BACK is a no-op on graph_review when correcting a verdict', () => {
+    const state: IntakeState = {
+      step: 'graph_review',
+      description: '',
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-original',
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toBe(state);
+  });
+
+  it('a fresh submission still steps back from graph_review as before', () => {
+    const state: IntakeState = {
+      step: 'graph_review',
+      description: 'a described thing',
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toEqual({
+      step: 'duplicate_check',
+      description: 'a described thing',
+    });
+  });
+});

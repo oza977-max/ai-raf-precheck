@@ -72,6 +72,7 @@ function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyV
   return {
     use_case_id: node.node_id,
     label: node.label,
+    description: metadata.description,
     submitted_by: metadata.submitted_by,
     submitted_at: node.created_at,
     lifecycle_stage: metadata.lifecycle_stage,

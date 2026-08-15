@@ -3,7 +3,7 @@ import { extractGraph } from '../llm/graph-extractor';
 import { confirmSemanticDuplicate } from '../llm/duplicate-check';
 import { getApiKey } from '../llm/client';
 import { evaluate } from '../engine/evaluate';
-import { findPossibleDuplicates } from '../engine/duplicate';
+import { findPossibleDuplicates, matchCorpus } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
@@ -65,7 +65,15 @@ export default function IntakeFlow() {
   // `questionnaire` is past the confirmation attestation, which is one-way by
   // design — see the STEP_BACK case in intake-state.ts.
   const canStepBack =
-    state.step === 'duplicate_check' || state.step === 'graph_review' || state.step === 'questionnaire';
+    (state.step === 'duplicate_check' ||
+      state.step === 'graph_review' ||
+      state.step === 'questionnaire') &&
+    // No Back on a correction pass's ENTRY step — the reducer refuses it
+    // (see STEP_BACK), and a control that does nothing is the false-affordance
+    // defect FN-006 existed to kill. Deeper correction steps (questionnaire →
+    // graph_review) still step back normally: that stays inside the audited
+    // correction, originalVerdictId intact.
+    !(state.step === 'graph_review' && state.originalVerdictId);
 
   function handleStepBack() {
     // Stepping back to the description means the duplicate check has to run
@@ -183,7 +191,10 @@ export default function IntakeFlow() {
       try {
         const candidates = findPossibleDuplicates(
           description,
-          registerRows.map((r) => ({ id: r.use_case_id, label: r.label })),
+          // matchCorpus, not bare label — the register's names are three
+          // words long and an identical re-typed description scored zero
+          // against them (2026-08-15).
+          registerRows.map((r) => ({ id: r.use_case_id, label: matchCorpus(r) })),
         );
         const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
         if (topCandidate) {
@@ -297,6 +308,7 @@ export default function IntakeFlow() {
         created_at: now,
         metadata: {
           node_type: 'use_case',
+          description: state.description,
           submitted_by: getRole(),
           lifecycle_stage: 'pre_checked',
           current_verdict_id: null,
@@ -450,7 +462,15 @@ export default function IntakeFlow() {
     setEvaluationError(null);
 
     try {
-      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId, reviewerNote, resolutions);
+      await runConfirmAndEvaluate(
+        graph,
+        corrections,
+        useCaseId,
+        originalVerdictId,
+        reviewerNote,
+        resolutions,
+        'description' in state ? state.description : undefined,
+      );
     } catch (err) {
       // A legitimate engine/policy failure (e.g. no-track-match) must not
       // leave the UI stuck on "Evaluating..." forever with no message
@@ -471,6 +491,7 @@ export default function IntakeFlow() {
     originalVerdictId: string | undefined,
     reviewerNote?: string,
     contradictionResolutions: string[] = [],
+    typedDescription?: string,
   ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
@@ -624,6 +645,7 @@ export default function IntakeFlow() {
         created_at: now,
         metadata: {
           node_type: 'use_case',
+          description: typedDescription,
           submitted_by: getRole(),
           lifecycle_stage: routedWorkflow?.lifecycle_stage ?? 'idea',
           current_verdict_id: fullVerdict.id,

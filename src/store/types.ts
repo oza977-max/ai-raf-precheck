@@ -96,6 +96,9 @@ export interface RegisterNode {
 export type RegisterNodeMetadata =
   | {
       node_type: 'use_case';
+      // Stored so the duplicate check can match against what was DESCRIBED,
+      // not only the short name (2026-08-15). Optional: legacy nodes lack it.
+      description?: string;
       submitted_by: string;
       lifecycle_stage: LifecycleStage;
       current_verdict_id: string | null;
@@ -135,6 +138,7 @@ export type LifecycleStage =
 export interface UseCaseSummary {
   use_case_id: string;
   label: string;
+  description?: string;
   submitted_by: string;
   submitted_at: string;
   lifecycle_stage: LifecycleStage;
