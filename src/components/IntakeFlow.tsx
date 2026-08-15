@@ -415,7 +415,7 @@ export default function IntakeFlow() {
     else saveDraft(state);
   }, [state]);
 
-  async function handleConfirmAndEvaluate() {
+  async function handleConfirmAndEvaluate(reviewerNote?: string) {
     if (state.step !== 'confirmation') return;
     if (confirmInFlight.current) return;
     confirmInFlight.current = true;
@@ -425,7 +425,7 @@ export default function IntakeFlow() {
     setEvaluationError(null);
 
     try {
-      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId);
+      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId, reviewerNote);
     } catch (err) {
       // A legitimate engine/policy failure (e.g. no-track-match) must not
       // leave the UI stuck on "Evaluating..." forever with no message
@@ -444,6 +444,7 @@ export default function IntakeFlow() {
     corrections: GraphCorrection[],
     useCaseId: string,
     originalVerdictId: string | undefined,
+    reviewerNote?: string,
   ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
@@ -479,6 +480,11 @@ export default function IntakeFlow() {
           graph_id: graph.id,
           graph_version: graph.version,
           corrections_count: corrections.length,
+          // Spread-if-present, not `submitter_note: reviewerNote` — the audit
+          // trail is append-only and permanent, and a record carrying
+          // `submitter_note: undefined` serialises as a field somebody could
+          // later mistake for a deliberately blank note.
+          ...(reviewerNote ? { submitter_note: reviewerNote } : {}),
         },
       });
     }
@@ -844,7 +850,7 @@ export default function IntakeFlow() {
           <ConfirmationStep
             graph={state.graph}
             corrections={state.corrections}
-            onConfirm={() => void handleConfirmAndEvaluate()}
+            onConfirm={(note) => void handleConfirmAndEvaluate(note)}
           />
         )}
 

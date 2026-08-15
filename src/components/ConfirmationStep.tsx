@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import { graphSummaryRows } from './graph-summary';
 
@@ -11,11 +12,18 @@ import { graphSummaryRows } from './graph-summary';
 interface ConfirmationStepProps {
   graph: DataFlowGraph;
   corrections: GraphCorrection[];
-  onConfirm: () => void;
+  /** Called with the submitter's optional note for the 2LoD reviewer —
+   *  `undefined` when nothing was written, never an empty string. The note is
+   *  recorded on the attestation and read by a human at sign-off. It is NOT
+   *  input to the engine: a deterministic engine cannot read prose, and the
+   *  screen says so, because the alternative is a submitter believing the
+   *  rules weighed their words (dropdown review, 2026-08-15). */
+  onConfirm: (reviewerNote?: string) => void;
 }
 
 export default function ConfirmationStep({ graph, corrections, onConfirm }: ConfirmationStepProps) {
   const summary = graphSummaryRows(graph);
+  const [note, setNote] = useState('');
 
   return (
     <section aria-label="Confirm and evaluate">
@@ -41,11 +49,27 @@ export default function ConfirmationStep({ graph, corrections, onConfirm }: Conf
         </p>
       )}
 
+      <label htmlFor="confirm-reviewer-note" className="confirmation__note-label">
+        Anything the reviewer should know? (optional)
+      </label>
+      <p className="field-help">
+        Context the questions could not capture — &ldquo;the personal data is pseudonymised before the
+        model sees it&rdquo;, &ldquo;this replaces a manual process&rdquo;. This is read by the reviewer
+        who signs off, not by the rules: the verdict is computed only from the answers above.
+      </p>
+      <textarea
+        id="confirm-reviewer-note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+        placeholder="Optional — recorded with your attestation"
+      />
+
       <p className="confirmation__attest-line">
         By confirming, you attest the data-flow graph above is accurate to the best of your knowledge.
       </p>
 
-      <button type="button" onClick={onConfirm}>
+      <button type="button" onClick={() => onConfirm(note.trim() || undefined)}>
         Confirm and evaluate
       </button>
     </section>

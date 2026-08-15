@@ -629,3 +629,68 @@ describe('RegisterDetail — the sign-off records who signed (round 4 close-out)
     expect(signOff?.actor).toBe('2LoD');
   });
 });
+
+// The reviewer note (2026-08-15). The submitter's optional context, recorded
+// with the attestation, must reach the person it exists for — the reviewer at
+// sign-off. A note captured and never surfaced would be the
+// computed-but-never-consumed defect with a human inside it.
+describe('RegisterDetail — the submitter note reaches the reviewer', () => {
+  it('renders the note from the graph_confirmed attestation', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T12:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0,
+        submitter_note: 'The personal data is pseudonymised before the model sees it.',
+      },
+    });
+    renderDetail(id);
+    await verdictRegion();
+    expect(await screen.findByText(/pseudonymised before the model sees it/)).toBeInTheDocument();
+    // Framed for the reviewer, with its non-engine status stated — the note
+    // must not read as something the verdict already accounted for.
+    expect(screen.getByText(/note from the submitter/i)).toBeInTheDocument();
+    expect(screen.getByText(/not.*(read|seen) by the rules|rules did not read/i)).toBeInTheDocument();
+  });
+
+  it('renders no note block at all when the attestation carries none', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T12:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+    });
+    renderDetail(id);
+    await verdictRegion();
+    expect(screen.queryByText(/note from the submitter/i)).toBeNull();
+  });
+
+  it('renders a hostile note as text, never as markup [SECURITY]', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T12:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0,
+        submitter_note: 'Fine because <img src=x onerror="alert(1)"> handles it.',
+      },
+    });
+    const { container } = renderDetail(id);
+    await verdictRegion();
+    await screen.findByText(/note from the submitter/i);
+    expect(container.querySelector('img')).toBeNull();
+  });
+});
