@@ -202,7 +202,11 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
     expect(screen.getByText(/without encryption in transit/i)).toBeInTheDocument();
     expect(screen.getByText('High', { selector: '.verdict__severity' })).toBeInTheDocument();
     expect(screen.getAllByText('GDPR Art. 32(1)(a)').length).toBeGreaterThan(0);
-    expect(screen.getByText(/requires: CTRL-ENC-01/i)).toBeInTheDocument();
+    // Copy changed 2026-08-15: "Requires: CTRL-ENC-01" became "Closed by:
+    // <name>" with the id kept quiet beside it. The guarantee is unchanged —
+    // the control that satisfies this invariant is shown against it.
+    expect(screen.getByText(/closed by/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/CTRL-ENC-01/).length).toBeGreaterThan(0);
     expect(screen.getByText(/1 triggered/i)).toBeInTheDocument();
   });
 
@@ -215,14 +219,19 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
 });
 
 describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
-  it('renders standing conditions (VD-7) when the verdict carries hypotheses, with the monitors-live subtitle', () => {
+  it('renders the expiry conditions when the verdict carries hypotheses, saying nothing monitors them', () => {
     const verdict = makeVerdict({
       conditions: { hypotheses: ['Model drift since validation: green ≤3% · amber ≤7% · red >7%', 'Data zone pinned: Zone B'] },
     });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
 
-    expect(screen.getByText(/standing conditions \(VD-7\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/V2 monitors these live/i)).toBeInTheDocument();
+    // Heading and subtitle rewritten for a business reader (user report
+    // 2026-08-15). The guarantee is the honesty one and it is unchanged: the
+    // panel must say that NOTHING watches these automatically, so nobody reads
+    // a threshold list as an alarm that will go off.
+    expect(screen.getByText(/what would make this verdict expire/i)).toBeInTheDocument();
+    expect(screen.getByText(/nobody automatically/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/later release/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Data zone pinned: Zone B')).toBeInTheDocument();
   });
 
@@ -251,7 +260,9 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
       <VerdictDisplay verdict={makeVerdict()} auditEvents={[]} graph={graph} registerStage="pre_checked" onCorrect={vi.fn()} />,
     );
 
-    expect(screen.getByText(/record & provenance/i)).toBeInTheDocument();
+    // Heading renamed "Record & provenance" -> "What you told us". The panel
+    // and its rows are the guarantee, not the title.
+    expect(screen.getByText(/what you told us/i)).toBeInTheDocument();
     expect(screen.getByText('Client notes · Client PII')).toBeInTheDocument();
     expect(screen.getByText('Drafting model · llm')).toBeInTheDocument();
     expect(screen.getByText(/in appetite — 1 control required, 0 downstream reviews triggered/i)).toBeInTheDocument();
@@ -311,7 +322,11 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
   it('BC-V13-03: without a policy prop, evidence reads UNKNOWN — never a fabricated verified/unverified chip', () => {
     const verdict = makeVerdict({ controls: ['CTRL-ENC-01'] });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
-    expect(screen.getByText('CTRL-ENC-01')).toBeInTheDocument();
+    // The control now appears twice on the page — once in "What you need to
+    // do" and once here — so this is scoped to the control-set panel rather
+    // than made a loose single match. The guarantee is unchanged: no chip may
+    // claim verified or unverified when no policy was loaded to read it from.
+    expect(screen.getAllByText('CTRL-ENC-01').length).toBeGreaterThan(0);
     expect(screen.getByText('EVIDENCE UNKNOWN')).toBeInTheDocument();
     expect(screen.getByText(/could not be checked/i)).toBeInTheDocument();
     expect(screen.getByText(/not the same as having no evidence/i)).toBeInTheDocument();
@@ -345,8 +360,14 @@ describe('VerdictDisplay — CS-1 governance margin (code review 001, I-1)', () 
     });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
 
-    expect(screen.getByText(/0% achieved against a 10% target/i)).toBeInTheDocument();
-    expect(screen.getByText(/INV-DATA-01, INV-TRACK2-01/)).toBeInTheDocument();
+    // Copy changed 2026-08-15: "MARGIN 0% achieved against a 10% target" said
+    // nothing to a business reader, and the fragile invariants were a bare
+    // comma-separated list of ids. Both now read in words, and the ids are
+    // kept quiet beside their descriptions.
+    expect(screen.getByText(/0% of the triggered rules have more than one control/i)).toBeInTheDocument();
+    expect(screen.getByText(/resting on a single control/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/INV-DATA-01/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/INV-TRACK2-01/).length).toBeGreaterThan(0);
     // Honesty (NF-2): zero margin is a limit of the rulebook, and the UI
     // must say so rather than implying the use case was at fault.
     expect(screen.getByText(/limit of the rulebook, not of this use case/i)).toBeInTheDocument();
@@ -767,5 +788,79 @@ describe('VerdictDisplay — an unrecognised decision type is NAMED, not just co
     );
     const banner = document.querySelector('[data-provisional-reason="unclassified_decision_type"]');
     expect(banner?.textContent).not.toContain('Entered:');
+  });
+});
+
+// The "What you need to do" panel (user report 2026-08-15: "the verdict should
+// be something a business user understands — how it's derived and what they
+// need to do"). Its first draft had two evidence states and asserted "no
+// evidence recorded yet" whenever a policy was absent — a claim about a control
+// nobody had looked at, which is exactly what BC-V13-03 pins for the chip. The
+// third state exists because of that, and these tests hold it there.
+describe('VerdictDisplay — What you need to do', () => {
+  it('lists each required control by NAME, with the id kept but quiet', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ controls: ['CTRL-ENC-01'] })}
+        auditEvents={[]}
+        policy={
+          {
+            controls: [{ id: 'CTRL-ENC-01', name: 'Encryption at rest', resolves: [], verification_evidence: { status: 'verified' } }],
+            hard_lines: [],
+            invariants: [],
+          } as unknown as Parameters<typeof VerdictDisplay>[0]['policy']
+        }
+      />,
+    );
+    const todo = document.querySelector('.verdict__todo');
+    expect(todo?.textContent).toContain('Encryption at rest');
+    // The id must survive — it is what makes the item quotable in a committee
+    // paper and greppable in the policy file.
+    expect(todo?.textContent).toContain('CTRL-ENC-01');
+  });
+
+  it('says the evidence status is UNKNOWN when no policy is loaded — never "outstanding"', () => {
+    render(<VerdictDisplay verdict={makeVerdict({ controls: ['CTRL-ENC-01'] })} auditEvents={[]} />);
+    // Scoped to the LIST, not the panel: the panel's closing footnote explains
+    // what "no evidence recorded yet" means, so asserting against the whole
+    // panel would match the explanation rather than the item's status.
+    const item = document.querySelector('.verdict__todo-list li');
+    expect(item?.textContent).toMatch(/unknown/i);
+    // Asserting it is outstanding would be inventing a finding about a control
+    // nobody inspected.
+    expect(item?.textContent).not.toMatch(/no evidence recorded yet/i);
+  });
+
+  it('tells a rejected use case there is nothing to implement', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-002' })}
+        auditEvents={[]}
+      />,
+    );
+    const todo = document.querySelector('.verdict__todo');
+    expect(todo?.textContent).toMatch(/nothing to implement/i);
+    expect(todo?.textContent).toMatch(/hard line/i);
+  });
+
+  it('says plainly when there is nothing to do at all', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ status: 'approved', controls: [], downstream_reviews: [] })}
+        auditEvents={[]}
+      />,
+    );
+    expect(document.querySelector('.verdict__todo')?.textContent).toMatch(/^What you need to do\s*Nothing\./);
+  });
+
+  it('names the 2LoD sign-off as an outstanding item when the case is awaiting one', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ controls: ['CTRL-ENC-01'] })}
+        auditEvents={[]}
+        registerStage="pre_checked"
+      />,
+    );
+    expect(document.querySelector('.verdict__todo')?.textContent).toMatch(/second-line sign-off/i);
   });
 });

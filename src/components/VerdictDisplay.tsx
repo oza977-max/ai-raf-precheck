@@ -1,5 +1,5 @@
 import type { DataFlowGraph, PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
-import { findRuleDescription } from '../engine/find-rule-description';
+import { findControlName, findRuleDescription } from '../engine/find-rule-description';
 import { graphSummaryRows } from './graph-summary';
 import { isVerdictProvisional } from '../engine/provisional';
 import type { ProvisionalReason } from '../engine/provisional';
@@ -73,7 +73,15 @@ function rationaleLine(kind: 'Tier' | 'Track', value: string, rationale: RuleRat
   );
 }
 
-function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanation: VerdictExplanation }) {
+function WhyThisVerdict({
+  verdict,
+  explanation,
+  policy,
+}: {
+  verdict: Verdict;
+  explanation: VerdictExplanation;
+  policy?: PolicyFile;
+}) {
   const isHardLineRejection = verdict.status === 'rejected' && explanation.binding_reason !== null;
 
   return (
@@ -124,7 +132,20 @@ function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanatio
               — {t.description}
               <Citation text={t.regulatory_basis} />
               {t.required_controls.length > 0 && (
-                <span className="verdict__tripped-controls"> Requires: {t.required_controls.join(', ')}</span>
+                <span className="verdict__tripped-controls">
+                  {' '}
+                  Closed by:{' '}
+                  {t.required_controls.map((cid, i) => {
+                    const name = findControlName(policy, cid);
+                    return (
+                      <span key={cid}>
+                        {i > 0 && '; '}
+                        {name ?? cid}
+                        {name && <code className="verdict__id-quiet">{cid}</code>}
+                      </span>
+                    );
+                  })}
+                </span>
               )}
             </li>
             ))}
@@ -148,6 +169,110 @@ function WhyThisVerdict({ verdict, explanation }: { verdict: Verdict; explanatio
           </>
         )}
       </p>
+    </div>
+  );
+}
+
+/** The plain-language answer to "so what do I actually have to do?".
+ *
+ *  Deliberately NOT a new computation — every item here is read from the
+ *  verdict the engine already produced. A second derivation of what is
+ *  required would be a second source of truth about an appetite decision,
+ *  which is the defect ADR-EE-R3-1 exists to prevent. */
+function WhatToDo({
+  verdict,
+  policy,
+  registerStage,
+}: {
+  verdict: Verdict;
+  policy?: PolicyFile;
+  registerStage?: LifecycleStage;
+}) {
+  const rejected = verdict.status === 'rejected';
+  const controls = verdict.controls ?? [];
+  const reviews = verdict.downstream_reviews ?? [];
+  const needsSignOff = registerStage === 'pre_checked';
+
+  return (
+    <div className="verdict__todo">
+      <h3>What you need to do</h3>
+
+      {rejected ? (
+        <>
+          <p className="verdict__todo-lead">
+            This use case is outside appetite as described, and no set of controls changes that — it crosses a
+            hard line. There is nothing to implement.
+          </p>
+          <p className="verdict__todo-lead">
+            Your options are to change the use case so it no longer crosses that line, or to take it to the
+            accountable committee as a deliberate exception. The rule it crossed, and the regulation behind it,
+            are set out below.
+          </p>
+        </>
+      ) : controls.length === 0 && reviews.length === 0 ? (
+        <p className="verdict__todo-lead">
+          Nothing. This use case sits inside appetite as described, with no controls required and no further
+          reviews triggered.
+          {needsSignOff && ' It still needs a second-line sign-off before it is final.'}
+        </p>
+      ) : (
+        <>
+          <p className="verdict__todo-lead">
+            To bring this use case inside appetite, the following must be in place. Each item is required by a
+            rule — the rule is named against it below.
+          </p>
+          <ol className="verdict__todo-list">
+            {controls.map((id) => {
+              const control = policy?.controls.find((c) => c.id === id);
+              // Three states, not two. Without a policy loaded we cannot know
+              // whether evidence exists, and saying "no evidence recorded yet"
+              // would be a fabricated claim about a control nobody looked at —
+              // the exact defect BC-V13-03 pins for the chip below. The first
+              // draft of this panel had two states and got it wrong.
+              // A short chip rather than a sentence per row. The first cut
+              // repeated "no evidence recorded yet, so treat this as
+              // outstanding" eight times down the list, which buried the
+              // control names it was meant to support. The full meaning lives
+              // once, in the footnote below.
+              const status = !policy
+                ? 'evidence unknown'
+                : control?.verification_evidence?.status === 'verified'
+                  ? 'in place'
+                  : 'outstanding';
+              return (
+                <li key={id}>
+                  <strong>{control?.name ?? id}</strong>
+                  {control?.name && <code className="verdict__id-quiet">{id}</code>}
+                  <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
+                    {status}
+                  </span>
+                </li>
+              );
+            })}
+            {reviews.map((r) => (
+              <li key={r}>
+                <strong>{r}</strong>
+                <span className="verdict__todo-chip verdict__todo-chip--review">separate review</span>
+                <span className="verdict__todo-status"> — another team owns this; the verdict does not replace it</span>
+              </li>
+            ))}
+            {needsSignOff && (
+              <li>
+                <strong>Second-line sign-off</strong>
+                <span className="verdict__todo-status">
+                  {' '}
+                  — this use case is above the self-service threshold, so it is not final until 2LoD approves it
+                </span>
+              </li>
+            )}
+          </ol>
+          <p className="verdict__todo-foot">
+            <strong>Outstanding</strong> means the policy file carries no attestation that this control exists —{' '}
+            <em>not</em> that someone checked and found it missing. In this version those statuses are attested by
+            hand; machine-checked evidence is a later release.
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -336,29 +461,55 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         {verdict.binding_path && <p className="verdict__binding-path">{verdict.binding_path}</p>}
       </div>
 
-      {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} />}
+      {/* User report (2026-08-15): "the engine might be working but the verdict
+          should be something a business user understands — how it's derived and
+          WHAT THEY NEED TO DO". Everything needed for that list was already on
+          this screen, scattered across three panels and written in identifiers.
+          This assembles it. Nothing below is removed: the reviewer still signs
+          off against the full basis, and the audit trail still records that
+          they saw it. */}
+      <WhatToDo verdict={verdict} policy={policy} registerStage={registerStage} />
+
+      {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} policy={policy} />}
 
       {explanation && explanation.tripped_invariants.length > 0 && (
         <div className="verdict__chain">
-          <h3>Governance margin (CS-1)</h3>
+          <h3>How fragile is this approval?</h3>
           <p className="verdict__chain-sub">
-            How much headroom this control set leaves. An invariant closed by exactly one control
-            sits on the appetite boundary — remove that control and the use case falls outside.
+            Some of the rules below are satisfied by exactly one control. If that control fails or is
+            removed, the use case falls outside appetite immediately — there is no second control
+            holding it. Those are the ones to watch.
           </p>
           <p className="verdict__chain-derived">
-            → MARGIN&ensp;{Math.round(verdict.margin_achieved * 100)}% achieved against a{' '}
-            {Math.round(verdict.margin_target * 100)}% target
+            → HEADROOM&ensp;
+            {Math.round(verdict.margin_achieved * 100)}% of the triggered rules have more than one control
+            available; your firm&rsquo;s target is {Math.round(verdict.margin_target * 100)}%
             {verdict.boundary_proximity && ' — below target'}
           </p>
           {verdict.single_covered_invariants.length > 0 && (
             <>
               <p className="verdict__chain-derived">
-                → NO HEADROOM&ensp;{verdict.single_covered_invariants.join(', ')}
+                → RESTING ON A SINGLE CONTROL&ensp;({verdict.single_covered_invariants.length})
               </p>
+              {/* Was a bare comma-separated list of ids — "INV-CITE-01,
+                  INV-CONDUCT-01, INV-SEC-01, INV-SYNTHMARK-01" — which the
+                  reader had to scroll up and cross-reference one at a time.
+                  The descriptions were already in the policy. */}
+              <ul className="verdict__fragile">
+                {verdict.single_covered_invariants.map((id) => {
+                  const desc = findRuleDescription(policy, id);
+                  return (
+                    <li key={id}>
+                      {desc ?? id}
+                      {desc && <code className="verdict__id-quiet">{id}</code>}
+                    </li>
+                  );
+                })}
+              </ul>
               <p className="verdict__chain-basis-help">
                 {verdict.margin_achieved === 0
-                  ? 'No invariant here has an alternative control in the library, so no control set can create headroom. This is a limit of the rulebook, not of this use case.'
-                  : 'These invariants rest on a single control each.'}
+                  ? 'No rule here has an alternative control in the library, so no control set can create headroom. That is a limit of the rulebook, not of this use case.'
+                  : 'Each of these is held by one control and nothing else.'}
               </p>
             </>
           )}
@@ -607,13 +758,26 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {verdict.conditions.hypotheses.length > 0 && (
         <div className="verdict__conditions">
-          <h3>Standing conditions (VD-7)</h3>
+          <h3>What would make this verdict expire</h3>
           <p className="verdict__conditions-sub">
-            The operating bounds this verdict assumes — it holds only while the system stays inside them.
-            Nothing to action now: they are recorded with the verdict as its expiry conditions. If the system
-            later drifts outside any bound (or the deployment changes zone/autonomy), this verdict no longer
-            applies and re-assessment is required. V2 monitors these live; in V1 they are checked at re-review.
+            <strong>Nothing to do today.</strong> This verdict was reached on the assumption that the system
+            stays inside the bounds below. If it drifts outside any of them — or the deployment moves to a
+            different data zone, or is given more autonomy — <strong>the approval no longer holds and the use
+            case has to come back through this gate.</strong>
           </p>
+          <p className="verdict__conditions-sub">
+            <strong>Who checks, and when:</strong> nobody automatically. In this version these are read at the
+            next scheduled re-review — whoever owns the model is responsible for noticing sooner. Continuous
+            monitoring against these thresholds is a later release, and until it exists this list is a
+            statement of assumptions rather than an alarm.
+          </p>
+          {/* The last two entries restate the data zone and autonomy already
+              shown in Record & provenance below. Reported as duplication, and
+              it read that way because nothing said the two were making
+              different claims: provenance records what was DECLARED, these
+              record the bound the verdict DEPENDS ON. Same value, different
+              force. Labelled rather than deleted — dropping them would remove
+              the expiry condition, which is the part that matters. */}
           <ul>
             {verdict.conditions.hypotheses.map((h) => (
               <li key={h}>{h}</li>
@@ -624,7 +788,17 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {graph && (
         <div className="verdict__provenance">
-          <h3>Record &amp; provenance</h3>
+          <h3>What you told us</h3>
+          {/* Reported as duplicating the standing conditions. It does repeat
+              the data zone and autonomy level — deliberately, because the two
+              panels make different claims about the same value: this is what
+              was DECLARED and attested to, that is the bound the verdict
+              DEPENDS ON. Saying so is cheaper than removing either. */}
+          <p className="verdict__conditions-sub">
+            The answers this verdict was computed from, as attested at submission. The data zone and autonomy
+            level also appear above as expiry conditions — same values, different purpose: here they are what
+            you declared, there they are the bounds the approval depends on.
+          </p>
           <div className="confirmation__grid">
             {graphSummaryRows(graph).map((row) => (
               <div key={row.label} className="confirmation__grid-cell">

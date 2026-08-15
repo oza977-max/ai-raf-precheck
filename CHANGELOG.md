@@ -11,6 +11,48 @@ every verdict.
 
 ---
 
+## [0.2.1] — 2026-08-15
+
+### Changed — the verdict now tells you what to do, in your own language
+
+Reported after using it: *"a business user won't understand most of it… the
+engine might be working but the verdict should be something a business user
+understands — how it's derived and what they need to do."* Every point was
+right. Nothing was removed — the full basis a reviewer signs against is still
+there, underneath.
+
+- **A "What you need to do" panel, at the top.** Every required control, every
+  downstream review, and the sign-off, as one numbered list in plain language.
+  This information was all on the screen before, spread across three panels
+  and written in identifiers; nobody should have to assemble their own to-do
+  list from a verdict.
+
+- **Controls are named wherever they appear.** `CTRL-FINGERPRINT-01` is now
+  **Output fingerprinting + version pinning**, with the identifier kept small
+  beside it. The names were always in the policy — the screen just showed them
+  in one panel and the raw code everywhere else. The identifier stays visible
+  because it is what makes an item quotable in a committee paper and findable
+  in the policy file.
+
+- **"Governance margin" is now "How fragile is this approval?"** It used to
+  read `→ NO HEADROOM INV-CITE-01, INV-CONDUCT-01, INV-SEC-01,
+  INV-SYNTHMARK-01` — four codes you had to scroll up and look up one at a
+  time. It now lists what each rule actually says, and explains the percentage
+  in words instead of leaving you to guess what it was a percentage of.
+
+- **"Standing conditions" is now "What would make this verdict expire"**, and
+  it answers the two questions it used to leave open: *who checks these* —
+  nobody automatically, they are read at the next re-review — and *what
+  happens if one is breached* — the approval stops holding and the use case
+  comes back through the gate.
+
+- **The duplication is explained rather than hidden.** Data zone and autonomy
+  appear both as expiry conditions and in what you told us. That is deliberate
+  — one is the bound the verdict *depends on*, the other is what you
+  *declared* — and the screen now says so instead of looking like a bug.
+
+---
+
 ## [0.2.0] — 2026-08-14
 
 ### Added

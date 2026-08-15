@@ -1913,3 +1913,101 @@ details input {
     overflow-x: auto;
   }
 }
+
+/* ── "What you need to do" (user report 2026-08-15) ──
+   The verdict explained itself thoroughly and never assembled an action list.
+   Sits directly under the headline, before the reasoning, because that is the
+   order a submitter reads in: what do I do, then why. */
+.verdict__todo {
+  margin: 1.2rem 0;
+  padding: 1rem 1.2rem;
+  background: var(--card-bg);
+  border: 1px solid var(--navy);
+  border-radius: 6px;
+}
+
+.verdict__todo h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.verdict__todo-lead {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 66ch;
+}
+
+.verdict__todo-list {
+  margin: 0 0 0.7rem;
+  padding-left: 1.3rem;
+  max-width: 66ch;
+}
+
+.verdict__todo-list li {
+  display: list-item;
+  margin: 0.45rem 0;
+  padding: 0;
+  border-bottom: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.verdict__todo-status {
+  color: var(--ink-soft);
+}
+
+.verdict__todo-foot {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  max-width: 66ch;
+}
+
+/* The id, kept visible but quiet — it is what makes a verdict quotable in a
+   committee paper and greppable in the policy file, so it must not vanish;
+   it just should not be the first thing anyone has to decode. */
+.verdict__id-quiet {
+  margin-left: 0.4rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+}
+
+.verdict__fragile {
+  margin: 0.3rem 0 0.5rem;
+  padding-left: 1.2rem;
+  max-width: 66ch;
+}
+
+.verdict__fragile li {
+  display: list-item;
+  margin: 0.3rem 0;
+  padding: 0;
+  border-bottom: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.verdict__todo-chip {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.02rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.verdict__todo-chip--outstanding { color: var(--warn-text); }
+.verdict__todo-chip--in { color: var(--green); }
+.verdict__todo-chip--evidence { color: var(--ink-faint); }
+.verdict__todo-chip--review { color: var(--navy); }

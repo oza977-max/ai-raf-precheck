@@ -181,8 +181,11 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     // The figure itself, not just the panel heading — "Governance margin"
     // as a title would satisfy a loose /margin/i query on a page that never
     // rendered the number.
-    expect(verdict.getByText(/→ MARGIN\s+0% achieved against a 10% target/i)).toBeInTheDocument();
-    expect(verdict.getByText(/→ NO HEADROOM\s+INV-DATA-01/i)).toBeInTheDocument();
+    // Copy changed 2026-08-15 — the margin now reads in words rather than as
+    // "MARGIN 0% achieved against a 10% target", which said nothing to a
+    // business reader. Still one of the six decision-bearing elements.
+    expect(verdict.getByText(/0% of the triggered rules have more than one control/i)).toBeInTheDocument();
+    expect(verdict.getByText(/resting on a single control/i)).toBeInTheDocument();
     // 6 — standing conditions
     expect(verdict.getByText(/500 cases a month/i)).toBeInTheDocument();
   });
@@ -317,7 +320,8 @@ describe('RegisterDetail — the two states where no verdict can be shown (R3-RD
     const verdict = within(await verdictRegion());
     // The elements it DOES have are still shown.
     expect(verdict.getByRole('heading', { name: /with controls/i })).toBeInTheDocument();
-    expect(verdict.getByText(/CTRL-ENC-01/)).toBeInTheDocument();
+    // Now rendered in both "What you need to do" and the control set.
+    expect(verdict.getAllByText(/CTRL-ENC-01/).length).toBeGreaterThan(0);
   });
 });
 
@@ -506,8 +510,14 @@ describe('RegisterDetail — remaining R3-RD-1 coverage', () => {
     const { container } = renderDetail(id, hostile);
     const region = await verdictRegion();
 
-    // The characters appear as literal text…
-    expect(within(region).getByText(/<img src=x onerror=/)).toBeInTheDocument();
+    // The characters appear as literal text, in EVERY place the control name
+    // is rendered. Since 2026-08-15 that is two places — the "What you need to
+    // do" list and the control set — and both must escape it. `getAllByText`
+    // rather than `getByText` because a single match is now ambiguous; note
+    // that markup interpretation would yield ZERO matches, not several, so
+    // this assertion still fails closed.
+    const escaped = within(region).getAllByText(/<img src=x onerror=/);
+    expect(escaped.length).toBeGreaterThanOrEqual(2);
     // …and nothing was interpreted as markup.
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelector('script')).toBeNull();
