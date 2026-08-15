@@ -195,6 +195,15 @@ This means:
 4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
 5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts, or load the six in-app samples from **Demo data**
 
+**Explaining it to a regulator or a general audience?**
+[`docs/regulator-brief.md`](docs/regulator-brief.md) answers the five
+questions a supervisory reader asks — is an AI deciding, who is accountable,
+can a decision be evidenced, how does the encoding stay honest, what happens
+when the tool doesn't know. [`docs/glossary.md`](docs/glossary.md) is every
+term in plain words. The app itself now has an **About** screen answering the
+first-timer's three questions, and points at the fastest explainer it has:
+AIGate's own self-assessment, sitting in the register.
+
 **Want to poke at it?** [`docs/try-these.md`](docs/try-these.md) — eleven cases
 that each make the engine do something different: a clean approval, four
 hard-line rejections, platform inheritance working and failing, a jurisdiction

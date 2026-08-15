@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Regulator Brief</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+
+    /* ── Test Case Components (/gvm-test-cases) ── */
+    .test-case {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .tc-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .tc-bdd p {
+      margin-bottom: 0.2rem;
+      padding-left: 1rem;
+    }
+
+    .tc-trace {
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 0.4rem;
+      font-style: italic;
+    }
+
+    .tc-detail {
+      font-size: 0.9rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .tc-detail h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .health-issue {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .health-issue.acknowledged {
+      opacity: 0.6;
+      border-left-color: #ccc;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution (per shared rule 24) ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026</p>
+    <h1>AIGate</h1>
+    <p class="subtitle">One page on what this tool is, where a human is accountable at every step, and what it deliberately does not do.</p>
+
+    <p>Every claim here is implemented and testable in the public repository; nothing is aspirational. Terms are in the <a href="glossary.html">glossary</a>.</p>
+
+    <h2 id="what-it-is">What it is</h2>
+
+    <p>A pre-check gate. A firm's AI risk appetite — normally prose in a board-approved framework — is encoded as executable rules. A proposed AI use case is described as a data-flow graph (what data goes in, what model processes it, what comes out and who acts on it) and evaluated against those rules. The output is a verdict: inside appetite, inside appetite subject to a named set of controls, or outside appetite — with the rule, the regulatory citation and the responsible sign-off behind each step of the reasoning.</p>
+
+    <h2 id="five-questions-answered-directly">Five questions, answered directly</h2>
+
+    <p><strong>Is an AI system making the risk decision?</strong><br>
+    No. The evaluation is a deterministic rules engine: identical inputs produce byte-identical verdicts, asserted by automated test on every change. A large language model is used optionally and only at the boundary — to read a plain-language description into the structured form. Its output is displayed to the submitter for correction and is not used until a person confirms it. With no API key configured, no model is involved anywhere.</p>
+
+    <p><strong>Who is accountable for each determination?</strong><br>
+    A named human at every layer, and the tool records where accountability is still missing rather than papering over it:</p>
+
+    <table>
+      <thead>
+        <tr><th>Determination</th><th>Accountable party</th><th>Recorded as</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>The facts of the use case</td><td>The submitter</td><td>A timestamped attestation</td></tr>
+        <tr><td>The firm's appetite rules</td><td>The firm (CRO or equivalent adopts the rules file)</td><td>Version-pinned policy; <code>[FIRM]</code> markers until adopted</td></tr>
+        <tr><td>Each regulatory interpretation</td><td>A named function per pack — e.g. Legal/Compliance, Model Risk, Technology Risk</td><td>Per-pack sign-off: name, role, date</td></tr>
+        <tr><td>The final decision above self-service tier</td><td>A second-line reviewer</td><td>A named sign-off event in the audit trail</td></tr>
+      </tbody>
+    </table>
+
+    <p>Where a sign-off has not yet happened, every verdict that relies on the unsigned rule is marked <strong>provisional</strong> and names the pending function on its face. The tool does not interpret regulation autonomously, and a verdict never claims an adoption that has not occurred.</p>
+
+    <p><strong>Can a decision be evidenced after the fact?</strong><br>
+    Each verdict records the exact policy version and the version of every regulatory pack active at evaluation time. A later policy change does not rewrite an earlier verdict. The event trail is append-only by construction — the application exposes no update or delete path, which is itself asserted by test. (Limitation, stated plainly: in this proof-of-concept the trail is held client-side and is therefore not tamper-evident against an actor with access to the machine. A server-side system of record is future scope.)</p>
+
+    <p><strong>How does the encoding of regulation stay honest?</strong><br>
+    Each pack rule quotes the verbatim regulatory text it derives from and declares its <strong>basis</strong> — whether the rule restates the quoted text, is derived from it, or rests on legal judgement. A reviewer checks a rule by reading it against its own citation. An earlier design used numeric confidence scores; these were removed as unverifiable precision. When regulation changes, only rules citing the changed sections need re-review. Three starter packs were deleted from the product because their source text had not been verifiably retrieved — a rule citing a source nobody read was judged worse than no rule.</p>
+
+    <p><strong>What happens when the tool doesn't know?</strong><br>
+    It says so, on the decision itself, in six distinct ways: unsigned pack rules mark a verdict provisional; a control with no recorded evidence renders as outstanding, never as satisfied; a decision type outside the policy's vocabulary is named as a gap in the framework; genuine legal ambiguity is labelled judgement and routed to the firm's legal function; translation fidelity of the whole rules file reads "unattested" until a person attests it; and a reviewer sign-off records that the typed name was not authenticated.</p>
+
+    <h2 id="what-it-deliberately-does-not-do">What it deliberately does not do</h2>
+
+    <ul>
+      <li>It does not author or advise on risk appetite. It enforces what the firm adopts.</li>
+      <li>It does not replace information-security, vendor, or legal review — it triggers those as named downstream obligations.</li>
+      <li>It does not monitor deployed systems. Each verdict records the operating bounds it assumed; those are checked at re-review, not watched live.</li>
+      <li>It does not detect AI systems that bypass intake.</li>
+      <li>It has no user authentication or segregation of duties in this version; the record disclosing a self-approved case is the control, and it is a disclosure, not a prevention.</li>
+    </ul>
+
+    <h2 id="correspondence-to-supervisory-expectations">Correspondence to supervisory expectations</h2>
+
+    <p>Stated as design intent, not as a compliance claim: determinism and version-pinning address the reproducibility expectations of model risk management regimes (SS1/23, SR 26-2); per-rule citation with human sign-off addresses the expectation that firms — not tools — hold regulatory interpretations; the append-only trail addresses evidencing. The firm using the tool remains solely responsible for its own compliance.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

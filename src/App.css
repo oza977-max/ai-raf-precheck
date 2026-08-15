@@ -2056,3 +2056,38 @@ details input {
   font-weight: 600;
   margin-top: 1rem;
 }
+
+/* ── About + first-visit (2026-08-15) ── */
+.about-panel { max-width: 68ch; }
+.about-panel h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.5rem; }
+.about-panel h2 { font-size: 1.05rem; font-weight: 600; margin: 1.4rem 0 0.4rem; }
+.about-panel p, .about-panel li { font-size: 0.95rem; line-height: 1.6; color: var(--ink-soft); }
+.about-panel ul { padding-left: 1.2rem; }
+.about-panel li { display: list-item; margin: 0.4rem 0; padding: 0; border-bottom: 0; }
+
+.about-panel__link {
+  background: none; border: none; padding: 0; font: inherit;
+  color: var(--navy); cursor: pointer; text-decoration: underline;
+}
+.about-panel__cta { font-weight: 600; font-size: 1rem; }
+
+.app-welcome {
+  background: var(--card-bg);
+  border: 1px solid var(--navy);
+  border-radius: 8px;
+  padding: 0.8rem 1.1rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+.app-welcome__dismiss {
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+}

@@ -3,6 +3,7 @@ import IntakeFlow from './components/IntakeFlow';
 import RegisterView from './components/RegisterView';
 import PolicyEditor from './components/PolicyEditor';
 import SettingsPanel from './components/SettingsPanel';
+import AboutPanel from './components/AboutPanel';
 import { getRole, setRole } from './store/role';
 import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
@@ -21,7 +22,13 @@ import './App.css';
 // PolicyEditor.tsx (P7-C03) — a real Save flow, no longer a disabled
 // placeholder.
 export default function App() {
-  const [view, setView] = useState<'intake' | 'register' | 'policyEditor'>('intake');
+  const [view, setView] = useState<'intake' | 'register' | 'policyEditor' | 'about'>('intake');
+  // First-visit pointer (2026-08-15). A card, not a takeover: replacing the
+  // intake screen on first visit would surprise users and break every test
+  // that renders App expecting intake — the card adds, never redirects.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(
+    () => localStorage.getItem('aigate:welcome-dismissed') === '1',
+  );
   const [role, setRoleState] = useState(getRole());
   // Bumped by PolicyEditor's onSaved callback so a saved policy change is
   // immediately reflected in the header badge and RegisterView's
@@ -156,13 +163,40 @@ export default function App() {
           >
             § Appetite framework
           </div>
+          <div
+            className={view === 'about' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            onClick={() => setView('about')}
+          >
+            ? About
+          </div>
           <div className="app-sidebar__settings">
             <SettingsPanel />
           </div>
         </nav>
 
         <main className="app-main">
+          {view === 'intake' && !welcomeDismissed && (
+            <div className="app-welcome" role="note">
+              <strong>First time here?</strong> This is a pre-check gate: describe an AI use case and a
+              deterministic rule engine — no AI in the decision — tells you whether it sits inside your
+              firm&rsquo;s risk appetite, and what would bring it inside.{' '}
+              <button type="button" className="about-panel__link" onClick={() => setView('about')}>
+                Two-minute overview →
+              </button>{' '}
+              <button
+                type="button"
+                className="app-welcome__dismiss"
+                onClick={() => {
+                  localStorage.setItem('aigate:welcome-dismissed', '1');
+                  setWelcomeDismissed(true);
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          )}
           {view === 'intake' && <IntakeFlow />}
+          {view === 'about' && <AboutPanel onNavigate={setView} />}
           {view === 'register' && (
             <RegisterView
               role={role}
