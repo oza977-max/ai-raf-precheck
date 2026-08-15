@@ -17,8 +17,9 @@ page wrong.
 **Why the form matters more than the description.** With no API key the
 description is used for the duplicate check and shown back to you, but it does
 **not** drive the verdict — your form answers do. So paste the text, then set
-the fields. (With an API key the description is read into the graph instead,
-and you can skip the field list.)
+the fields. (With an API key the description is read into the graph instead —
+but know that this path has never been exercised live; every test mocks the
+API. These eleven cases assume the verified form path.)
 
 Fields not listed can be left at whatever you like; they don't change the
 outcome for that case.

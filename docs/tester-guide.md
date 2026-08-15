@@ -158,7 +158,9 @@ testing impossible.
   haven't been signed off by Legal or Compliance, so verdicts that depend on
   them are marked provisional. That labelling is intentional.
 - **The plain-English intake path may be unavailable.** It needs an
-  Anthropic API key. Without one you get the guided questions, which is the
+  Anthropic API key — and be aware that path has never been run against the
+  live API by anyone; if you use it, you are its first real test.
+  Without one you get the guided questions, which is the
   deterministic path and exercises everything that matters.
 
 ---
