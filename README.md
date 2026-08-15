@@ -25,7 +25,7 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 376 tests
+npm test         # 417 tests
 npm run docs:rules   # regenerate docs/rules.md from the policy files
 ```
 
@@ -143,6 +143,12 @@ This means:
 3. Replace `[FIRM]` placeholders with your organisation's details
 4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
 5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts, or load the six in-app samples from **Demo data**
+
+**Want to poke at it?** [`docs/try-these.md`](docs/try-these.md) — eleven cases
+that each make the engine do something different: a clean approval, four
+hard-line rejections, platform inheritance working and failing, a jurisdiction
+changing the answer, and both ways a verdict can be provisional. Every printed
+outcome is pinned by a test, so the page cannot drift from the product.
 
 **Using it for real?** [`docs/user-guide.md`](docs/user-guide.md) is the
 task-oriented guide for a risk reader — how to read a verdict, what each
