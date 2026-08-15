@@ -106,7 +106,7 @@ describe('TC-CS-1-02: safety margin reports library depth without inflating the 
 });
 
 describe('CS-1 against the real control library — the honest result', () => {
-  it('reports zero margin when no invariant has an alternative control', () => {
+  it('reports zero margin when no invariant has an alternative control [TC-CS-1-02b]', () => {
     const oneEach = [ctrl('C-1', ['INV-1'], 1), ctrl('C-2', ['INV-2'], 1)];
     const r = solvControls(['INV-1', 'INV-2'], oneEach, []);
     expect(r.ok).toBe(true);

@@ -77,3 +77,49 @@ describe('IntakeFlow — going back (FN-006)', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /back/i })).toBeEnabled());
   });
 });
+
+// Traceability close-out (2026-08-15) — the UC-1 boundary cases had no UI
+// tests carrying their ids; the reducer accepts any non-empty string, so the
+// blocking behaviour lives in the disabled button and must be asserted there.
+describe('IntakeFlow — description boundaries (UC-1)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('an empty description leaves Read & extract disabled [TC-UC-1-03]', async () => {
+    render(<App />);
+    const btn = await screen.findByRole('button', { name: /read & extract/i });
+    expect(btn).toBeDisabled();
+  });
+
+  it('a five-sentence description is accepted and advances [TC-UC-1-02]', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    await user.type(
+      box,
+      'We want an assistant that reads CRM notes. It summarises client activity. It recommends an action. It runs internally. The RM approves everything.',
+    );
+    const btn = screen.getByRole('button', { name: /read & extract/i });
+    expect(btn).toBeEnabled();
+    await user.click(btn);
+    // Advanced to the duplicate check — the description was accepted.
+    await screen.findAllByText(/duplicate check/i);
+  });
+
+  it('HTML in a description is literal text, never markup [TC-UC-1-04]', async () => {
+    const user = userEvent.setup();
+    const hostile = 'Ein Tool für Kundendaten — parses <img src=x onerror="alert(1)"> fields.';
+    render(<App />);
+    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    await user.click(box);
+    await user.paste(hostile);
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await screen.findAllByText(/duplicate check/i);
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    // The guided form's own description field is prefilled from what was
+    // typed; whatever renders it must render TEXT. No <img> may exist.
+    expect(document.querySelector('img')).toBeNull();
+  });
+});

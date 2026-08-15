@@ -47,7 +47,7 @@ function run(v: StructuredFormValues) {
 }
 
 describe('docs/try-these.md — every printed outcome', () => {
-  it('case 1: a clean internal dashboard is approved at Low with nothing attached', () => {
+  it('case 1: a clean internal dashboard is approved at Low with nothing attached [TC-PE-8-01]', () => {
     const v = run({ ...base, inputDataClass: 'Internal', inputDataZone: 'Zone C', modelType: 'statistical',
       autonomyLevel: 0, processingDataZone: 'Zone C', outputActionType: 'read', outputExposure: 'internal-only',
       decisionBindingness: 'non-binding', outputReversibility: 'reversible', outputScale: 'limited', jurisdictions: ['UK'] });
@@ -100,7 +100,7 @@ describe('docs/try-these.md — every printed outcome', () => {
     expect(run({ ...irreversible, outputReversibility: 'reversible' }).binding_constraint).toBe('HL-004');
   });
 
-  it('case 6: a use case inside the platform envelope inherits its three controls', () => {
+  it('case 6: a use case inside the platform envelope inherits its three controls [TC-PV-1-01] [TC-PV-8-01] [TC-PV-3-03]', () => {
     const v = run({ ...base, inputDataClass: 'Confidential', inputDataZone: 'Zone C', modelType: 'ml',
       autonomyLevel: 2, processingDataZone: 'Zone C', outputActionType: 'recommend', outputExposure: 'internal-shared',
       decisionBindingness: 'advisory', outputReversibility: 'reversible', outputScale: 'limited',
@@ -110,7 +110,7 @@ describe('docs/try-these.md — every printed outcome', () => {
     expect(v.controls).toHaveLength(0);
   });
 
-  it('case 7: the same idea outside the envelope inherits nothing and costs 8 controls', () => {
+  it('case 7: the same idea outside the envelope inherits nothing and costs 8 controls [TC-PV-8-01]', () => {
     const v = run({ ...base, inputDataClass: 'Client PII', inputDataZone: 'Zone B', modelType: 'llm',
       autonomyLevel: 1, processingDataZone: 'Zone B', outputActionType: 'draft', outputExposure: 'client-facing',
       decisionBindingness: 'advisory', outputReversibility: 'reversible', outputScale: 'at_scale',
@@ -145,7 +145,7 @@ describe('docs/try-these.md — every printed outcome', () => {
     expect(v.unclassified_decision_types).toEqual(['collections prioritisation']);
   });
 
-  it('case 10: the demo case — Critical, 6 controls, 2 reviews, bound by autonomy', () => {
+  it('case 10: the demo case — Critical, 6 controls, 2 reviews, bound by autonomy [TC-PE-3-01]', () => {
     const v = run({ ...base, inputDataClass: 'Client PII', inputDataZone: 'Zone C', modelType: 'traditional-ml',
       autonomyLevel: 3, processingDataZone: 'Zone C', outputActionType: 'approve', outputExposure: 'client-facing',
       decisionBindingness: 'binding', outputReversibility: 'reversible', outputScale: 'at_scale',

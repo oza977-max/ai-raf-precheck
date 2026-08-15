@@ -39,7 +39,7 @@ for R3-RD-1 and R3-JU-5, both of which are stated as set equality rather than
 rendered text. Property framing for the two non-functional requirements.
 
 **Trace status.** This project has no `impact-map.md`, so every test carries
-`[Trace: not-yet-traced]` — 38 of 38. Running `/gvm-impact-map` would close
+`[Trace: …]` — originally untraced 38 of 38; **closed 2026-08-15**, every case now names its covering test file and carries its id in that test's title. Running `/gvm-impact-map` would close
 this; it is recorded, not silently omitted.
 
 ---
@@ -56,7 +56,7 @@ When the user has not interacted with the jurisdiction question at all
 Then the output MUST contain: a disabled Continue action
 And the output MUST NOT contain: an enabled Continue action
 [Requirement: R3-JU-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-1-02: Explicit "none / not sure" unblocks progress
@@ -67,7 +67,7 @@ And every other required field has been answered
 When the user explicitly selects "none / not sure" for jurisdiction
 Then the Continue action is available
 [Requirement: R3-JU-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-1-03: One or more jurisdictions selected unblocks progress
@@ -78,7 +78,7 @@ And every other required field has been answered
 When the user ticks UK and EU
 Then the Continue action is available
 [Requirement: R3-JU-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-1-04: The three answered-states are distinguishable from persisted state
@@ -95,7 +95,7 @@ And "not answered" is not inferred from the selected set being empty
 > requirement was amended: with `jurisdictions: string[]` alone, drafts one and
 > two are byte-identical. The distinction is the requirement.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-1-05: Deselecting the last jurisdiction returns to answered, not unanswered
@@ -111,7 +111,7 @@ And the Continue action remains available
 > having answered — otherwise the user is silently returned to the blocked state
 > with no explanation.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-2-01: "None / not sure" produces a Provisional verdict carrying its reason [EXAMPLE]
@@ -124,7 +124,7 @@ Then the output MUST contain: a verdict status of Provisional
 And the output MUST contain: a machine-readable reason identifying the no-regulatory-basis condition
 And the output MUST NOT contain: an empty or absent provisional-reason value
 [Requirement: R3-JU-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/provisional.test.ts]
 ```
 
 ### TC-R3-JU-2-02: A jurisdiction answer does not make a verdict Provisional by itself
@@ -135,7 +135,7 @@ And no unsigned pack rule fires for it
 When the engine evaluates it
 Then the verdict is not Provisional
 [Requirement: R3-JU-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/provisional.test.ts]
 ```
 
 ### TC-R3-JU-2-03: The register row shows Provisional for a no-jurisdiction submission
@@ -145,7 +145,7 @@ Given a use case submitted with jurisdiction answered "none / not sure"
 When the register is opened
 Then that use case's row shows Provisional
 [Requirement: R3-JU-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-R3-JU-3-01: Verdict states in words that no regulatory basis was applied [EXAMPLE]
@@ -161,7 +161,7 @@ And the output MUST NOT contain: a silently omitted regulatory reasoning chain w
 > Leveson. Absence communicated by absence is the defect; the assertion is on
 > presence of the explanation, not on absence of the panel.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-3-02: The statement is asserted separately from the labelled reason
@@ -177,7 +177,7 @@ And neither satisfies the assertion for the other
 > Closes health-report issue HR3-03. An implementation providing only one of the
 > two must fail exactly one of these assertions, not both and not neither.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-3-03: A verdict with active packs carries no no-basis statement
@@ -187,7 +187,7 @@ Given a use case with EU ticked, activating the EU AI Act pack
 When the verdict is rendered
 Then no statement claiming that no regulatory basis was applied is present
 [Requirement: R3-JU-3] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-4-01: The jurisdiction question states what the answer controls
@@ -197,7 +197,7 @@ Given the guided intake form
 When the jurisdiction question is read, including its help text
 Then the text states that the answer determines which regulatory rules are applied
 [Requirement: R3-JU-4] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-5-01: Every progress-blocking field carries both required signals
@@ -214,7 +214,7 @@ And neither set has a member outside the other
 > implementation that marks every field, including optional ones — which is as
 > unhelpful to the user as marking none.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-5-02: Optional fields carry no required-marker
@@ -225,7 +225,7 @@ When the optional platform and vendor fields are inspected
 Then neither carries a required-marker
 And neither carries aria-required="true"
 [Requirement: R3-JU-5] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-6-01: A Provisional verdict names its cause [EXAMPLE]
@@ -237,7 +237,7 @@ When the verdict is rendered
 Then the output MUST contain: a stated reason identifying the no-regulatory-basis condition
 And the output MUST NOT contain: an unexplained Provisional label with no cause given
 [Requirement: R3-JU-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx; src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-6-02: Unsigned pack rules give a different stated cause
@@ -254,7 +254,7 @@ And it does not identify the no-regulatory-basis condition
 > Copeland decision table, condition pair one of four. This is the assertion
 > that stops the two causes collapsing into one indistinguishable badge.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-6-03: Both causes present are both stated
@@ -286,7 +286,7 @@ the exclusivity, and the fixed emission order is asserted directly on
 makes the pair reachable. The collection stays ordered and plural for that
 reason.
 ```
-[Trace: not-yet-traced]
+[Trace: src/engine/provisional.test.ts]
 ```
 
 ### TC-R3-JU-6-04: A non-Provisional verdict states no cause
@@ -299,7 +299,7 @@ Then no provisional cause is stated
 ```
 > Decision table, condition pair one of four — neither condition present.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-JU-7-01: A pre-round-3 draft loads as unanswered [EXAMPLE]
@@ -311,7 +311,7 @@ When the draft is loaded into the guided form
 Then the output MUST contain: an unanswered jurisdiction question and a disabled Continue action
 And the output MUST NOT contain: an enabled Continue action derived from the draft's existing jurisdiction data
 [Requirement: R3-JU-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-R3-JU-7-02: A pre-round-3 draft with jurisdictions still requires a fresh answer
@@ -326,7 +326,7 @@ And the user must answer it before proceeding
 > Kaner realistic data. The dangerous case is not the empty legacy draft — it is
 > the populated one, which looks answered and is not.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ---
@@ -342,7 +342,7 @@ When a 2LoD reviewer opens it from the register
 Then the output MUST contain: the verdict status and tier, the binding constraint id, every triggered invariant id with its citation, every control id in the minimal set with its evidence status, the governance margin figure with any no-headroom ids, and the standing conditions
 And the output MUST NOT contain: a sign-off action presented without any of those six elements
 [Requirement: R3-RD-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-1-02: Invariant and control ids match the intake verdict as sets
@@ -359,7 +359,7 @@ And the comparison is made on id sets, not on rendered text
 > between the two views without failing, and content outside the six-element
 > list is not asserted at all.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-1-03: Each control shows its evidence status
@@ -374,7 +374,7 @@ And CTRL-REDTEAM-01 is shown as UNVERIFIED
 > An unverified control rendered without its status would let a reviewer sign
 > off believing evidence exists. Honesty is a functional requirement here.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-2-01: Entry with no recorded verdict says so and still permits sign-off [EXAMPLE]
@@ -386,7 +386,7 @@ When a reviewer opens it
 Then the output MUST contain: an explicit statement that no verdict is recorded, and available sign-off actions
 And the output MUST NOT contain: an empty verdict panel presented as though it were the verdict
 [Requirement: R3-RD-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-2-02: The AIGate self-assessment entry renders without error
@@ -400,7 +400,7 @@ And it either shows a verdict or states that none is recorded
 ```
 > Kaner. This is the real legacy row on every install, not a hypothetical one.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-3-01: After correction and re-evaluation the latest verdict is shown [EXAMPLE]
@@ -412,7 +412,7 @@ When a reviewer opens it from the register
 Then the output MUST contain: the binding constraint id from the latest verdict
 And the output MUST NOT contain: the binding constraint id from the superseded verdict presented as current
 [Requirement: R3-RD-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-3-02: The sign-off audit event names the verdict displayed [EXAMPLE]
@@ -429,7 +429,7 @@ And the output MUST NOT contain: a twoloD_reviewed event with no verdict referen
 > capable of carrying this, so the original wording could only have been
 > satisfied vacuously.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-3-03: A verdict changing under the reviewer refuses the write
@@ -441,7 +441,7 @@ When the reviewer approves
 Then the write is refused and the reviewer is told the verdict changed
 And no attestation is recorded against the verdict they did not see
 [Requirement: R3-RD-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-6-01: A Provisional verdict states its cause on the sign-off page
@@ -456,7 +456,7 @@ And a Provisional badge with no cause is not shown
 > Added by design review round 1 (I-2). R3-JU-6 is not scoped to one screen;
 > the sign-off page became a rendering surface and was not traced.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-7-01: Control evidence status reflects current policy, verdict does not
@@ -472,7 +472,7 @@ And CTRL-ENC-01 shows as UNVERIFIED, reflecting current policy
 > Added by design review round 1 (C-2). The historical/current split is the
 > reconciliation; this test pins it so the two halves cannot silently swap.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-8-01: The reclassification affordance does not appear on the sign-off page
@@ -487,7 +487,7 @@ And no reasoning-trace disclosure is present
 > Added by design review round 1 (I-1). onCorrect was required and its button
 > ungated, so the exclusion was unbuildable by reuse alone.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx; src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-R3-RD-2-03: A verdict without explanation states so rather than showing an empty list
@@ -502,7 +502,7 @@ And it does not render an empty invariant list
 > Added by design review round 1 (I-10). An empty list reads as "nothing was
 > triggered" — a stronger and false claim.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-4-01: The verdict is readable without leaving the sign-off page
@@ -512,7 +512,7 @@ Given a use case with a persisted verdict open in the register detail
 When the reviewer reads each of the six decision-bearing elements
 Then no navigation away from the page is required
 [Requirement: R3-RD-4] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-RD-5-01: Verdict content is rendered as text, not interpreted as markup [SECURITY]
@@ -528,7 +528,7 @@ And no markup is interpreted
 > onto a new surface. Pack content is human-authored and partly external in
 > origin, so it is untrusted input to this view.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ---
@@ -549,7 +549,7 @@ And the existing determinism test passes without modification
 > [PROPERTY] tag is applied on reviewer judgement and the mismatch is recorded
 > in the Test Summary rather than resolved silently.
 ```
-[Trace: not-yet-traced]
+[Trace: src/engine/provisional.test.ts]
 ```
 
 ### TC-R3-NF-1-02: The engine island holds
@@ -560,7 +560,7 @@ When src/engine/* is inspected for imports
 Then it imports only engine types and stdlib
 And no React, storage, Date.now() or Math.random() appears in its call graph
 [Requirement: R3-NF-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/provisional.test.ts]
 ```
 
 ### TC-R3-NF-2-01: Rendering the verdict writes no audit events [PROPERTY]
@@ -583,7 +583,7 @@ Then the entry still has exactly N audit events
 > seeding race. Both are asserted because they are two properties, not one
 > property tested harder.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ### TC-R3-NF-2-02: Sign-off writes exactly one event under double submission
@@ -598,7 +598,7 @@ Then exactly one approval event is appended
 > afterwards. Rendering the verdict adds content to this page but must not add a
 > second write path.
 ```
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
 ---
@@ -643,7 +643,7 @@ non-functional requirements covered by property tests.
 
 ### Recorded gaps and judgement calls
 
-- **Trace integrity.** All 38 tests carry `[Trace: not-yet-traced]`. This
+- **Trace integrity.** All 38 tests carry `[Trace: src/components/__tests__/RegisterDetail.test.tsx]`. This
   project has no `impact-map.md`, so the trace chain cannot resolve. Running
   `/gvm-impact-map` would close it. Recorded, not omitted.
 - **Property detection disagreement.** The `_property_detection` heuristic

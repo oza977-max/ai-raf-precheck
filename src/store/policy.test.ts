@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { loadPolicy, onPolicyUpdated } from './policy';
 import { addNode } from './register';
 import { getAll } from './audit';
@@ -66,7 +68,7 @@ function withYamlPatch(base: string, patch: (yaml: string) => string): string {
 }
 
 describe('loadPolicy', () => {
-  it('returns valid: true with the parsed policy for a well-formed YAML file', () => {
+  it('returns valid: true with the parsed policy for a well-formed YAML file [TC-CF-5-03]', () => {
     const result = loadPolicy(VALID_YAML);
     expect(result.valid).toBe(true);
     if (result.valid) {
@@ -245,5 +247,23 @@ describe('ControlSchema — verification_evidence (V1.3)', () => {
     );
     const result = loadPolicy(badStatus);
     expect(result.valid).toBe(false);
+  });
+});
+
+// Traceability close-out (2026-08-15): criteria that had no covering test.
+describe('the shipped policy file is the CF-1/CF-3 evidence', () => {
+  it('is commented plain text a risk reader can open in any editor [TC-CF-1-01]', () => {
+    const raw = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    // Human-readable comments explaining sections — CF-1's fit criterion.
+    expect((raw.match(/^\s*#/gm) ?? []).length).toBeGreaterThan(20);
+    // No minified content: real line structure, no absurdly long lines.
+    expect(raw.split('\n').every((l) => l.length < 400)).toBe(true);
+  });
+
+  it('a policy with a blank version cannot be used at all [TC-CF-3-01]', () => {
+    const raw = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(raw.replace(/^version:.*$/m, 'version: ""'));
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.errors.some((e) => e.field === 'version')).toBe(true);
   });
 });

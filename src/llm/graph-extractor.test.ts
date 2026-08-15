@@ -50,7 +50,7 @@ describe('extractGraph', () => {
     localStorage.clear();
   });
 
-  it('TC-UC-3-01: calls the Anthropic API with a forced tool_use and returns a correctly structured DataFlowGraph', async () => {
+  it('TC-UC-3-01: calls the Anthropic API with a forced tool_use and returns a correctly structured DataFlowGraph [TC-UC-3-03]', async () => {
     localStorage.setItem('aigate:api-key', 'test-key');
 
     const result = await extractGraph('drafts client emails using relationship notes');
@@ -90,7 +90,7 @@ describe('extractGraph — response validation (P4-C01 review finding: real Zod 
     localStorage.setItem('aigate:api-key', 'test-key');
   });
 
-  it('rejects a response whose node uses a near-miss value outside the canonical vocabulary', async () => {
+  it('rejects a response whose node uses a near-miss value outside the canonical vocabulary [TC-UC-3-04]', async () => {
     mockCreate.mockResolvedValueOnce({
       content: [
         {

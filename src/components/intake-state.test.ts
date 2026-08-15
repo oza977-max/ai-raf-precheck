@@ -53,7 +53,7 @@ describe('intakeReducer', () => {
     expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1' });
   });
 
-  it('graph_review → graph_review on CORRECTION_APPLIED, appending the correction and bumping graphVersion', () => {
+  it('graph_review → graph_review on CORRECTION_APPLIED, appending the correction and bumping graphVersion [TC-UC-7-02] [TC-UC-7-03]', () => {
     const g0 = graph({ version: 1 });
     const state: IntakeState = { step: 'graph_review', description: 'A tool that drafts client emails.', graph: g0, graphVersion: 1, corrections: [], useCaseId: 'uc-1' };
     const g1 = graph({ version: 2 });

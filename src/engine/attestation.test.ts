@@ -22,7 +22,7 @@ describe('translationAttestationStatus (NF-10)', () => {
     expect(translationAttestationStatus(attested(), '2026-08-04').status).toBe('attested');
   });
 
-  it('treats a placeholder as unattested, exactly as an unsigned pack rule is', () => {
+  it('treats a placeholder as unattested, exactly as an unsigned pack rule is [TC-NF-10-01]', () => {
     // This is the shipped starter policy's own shape
     // (policy/appetite.yaml:82-86): every field is an authoring placeholder.
     // An un-dated sign-off is not a sign-off — the same rule NF-7 already

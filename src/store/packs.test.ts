@@ -3,7 +3,7 @@ import { loadPacks } from './packs';
 import { getPackSources } from './pack-source';
 
 describe('loadPacks (V2-A)', () => {
-  it('loads the four AUTHORED packs from the real files, sorted by pack_id', () => {
+  it('loads the four AUTHORED packs from the real files, sorted by pack_id [TC-PE-8-02] [TC-RA-7-02]', () => {
     const { packs, errors } = loadPacks(getPackSources());
     expect(errors).toEqual([]);
     // Four, not seven. v1.3 deleted OSFI-E23, MAS-FEAT and FSA-JP: their rule
@@ -22,7 +22,7 @@ describe('loadPacks (V2-A)', () => {
     expect(packs.every((p) => p.rules.length >= 1)).toBe(true);
   });
 
-  it('rejects a WHOLE pack when a rule is missing a required field, naming pack and field (CF-5/RA-7)', () => {
+  it('rejects a WHOLE pack when a rule is missing a required field, naming pack and field (CF-5/RA-7) [TC-CF-5-02] [TC-RA-7-01]', () => {
     const bad = `
 pack_id: "BAD-PACK"
 version: "1.0"
@@ -81,5 +81,56 @@ rules:
     const { packs, errors } = loadPacks({ 'bad-cond.yaml': badCondition });
     expect(packs).toEqual([]);
     expect(errors[0]?.reason).toMatch(/BC-1.*includes/);
+  });
+});
+
+// Traceability close-out (2026-08-15).
+describe('pack independence and the basis requirement', () => {
+  const RULE = `
+  - id: "R-1"
+    title: "T"
+    source:
+      document: "Doc"
+      section: "S1"
+      text: "verbatim regulatory text"
+    effect:
+      type: "required_review"
+      review: "R"
+    condition: {}
+    reviewer_name: "X"
+    reviewer_role: "Y"
+    sign_off_date: "2026-01-01"`;
+  const packYaml = (id: string, version: string, basis = '\n    basis: "verbatim"') => `
+pack_id: "${id}"
+version: "${version}"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+rules:${RULE}${basis}
+`;
+
+  it('each pack carries its own version — updating one changes nothing else [TC-CF-4-01]', () => {
+    const before = loadPacks({ a: packYaml('PACK-A', '1.1'), b: packYaml('PACK-B', '2.0') });
+    const after = loadPacks({ a: packYaml('PACK-A', '1.2'), b: packYaml('PACK-B', '2.0') });
+    expect(after.packs.find((p) => p.pack_id === 'PACK-A')?.version).toBe('1.2');
+    // The other pack is untouched by its neighbour's update — CF-4's claim.
+    expect(after.packs.find((p) => p.pack_id === 'PACK-B')).toEqual(
+      before.packs.find((p) => p.pack_id === 'PACK-B'),
+    );
+  });
+
+  it('a rule with no basis is rejected on load [TC-RA-8-01]', () => {
+    // TC-RA-8-01 originally demanded rejection for a missing CONFIDENCE SCORE.
+    // Confidence was removed in V2-E as fabricated precision and replaced by
+    // `basis` — an objective claim a reviewer can check against the quoted
+    // text. The criterion was rewritten to match (2026-08-15); this pins the
+    // current rule: no basis, no load.
+    const { packs, errors } = loadPacks({ nb: packYaml('NO-BASIS', '1.0', '') });
+    expect(packs).toEqual([]);
+    expect(errors[0]?.reason).toMatch(/basis/);
   });
 });
