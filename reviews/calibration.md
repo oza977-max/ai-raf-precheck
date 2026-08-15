@@ -25,6 +25,7 @@ against.
 | 3 | 2026-08-06 | code | A,B,C,D,E | 0 | 6 | 0 | **Merge with caveats** |
 | 4 | 2026-08-08 | test | full mode | 0 | 2 | 1 | **Demo-ready** |
 | 5 | 2026-08-09 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
+| 6 | 2026-08-15 | test | full mode | 0 | 0 | 0 | **Ship-ready** (OQ-5: user chose ship; no CI, manual evidence) |
 
 ## Round 1 measurements
 

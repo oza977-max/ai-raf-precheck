@@ -11,6 +11,36 @@ every verdict.
 
 ---
 
+## [0.2.2] — 2026-08-15
+
+### Changed
+
+- **The Provisional banner stopped presuming who reviews.** It said "legal
+  review required" for every cause. Your packs disagree: DORA is signed by
+  Technology Risk, SS1/23 by Model Risk — and a decision type your policy
+  doesn't list is a question for whoever owns the risk appetite, not a
+  lawyer. The heading is now "review required before this is final", and
+  where the verdict knows who is actually pending — from its own reasoning
+  chain — it names them: *"Waiting on: Legal/Compliance, Technology Risk"*.
+
+- **The verdict now shows its living status** ("in good standing", as of a
+  date) — the field the engine has recorded on every verdict since V1 and
+  the screen never displayed.
+
+### Internal
+
+- Every one of the 158 acceptance criteria now names, in its own text, the
+  test file that proves it — and each criterion's id appears in that test's
+  title. This is what moved the release verdict to **Ship-ready** for the
+  first time (verification 006), with one caveat on the record: there is no
+  CI, so all evidence is manual, reproducible by `npm test`.
+- Two criteria asserted behaviour that was never built (an automatic version
+  bump on save; confidence scores that V2-E deliberately removed). Rewritten
+  to what the product actually does, with dated notes, rather than tagged
+  dishonestly.
+
+---
+
 ## [0.2.1] — 2026-08-15
 
 ### Changed — the verdict now tells you what to do, in your own language
