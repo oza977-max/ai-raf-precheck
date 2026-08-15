@@ -123,3 +123,98 @@ describe('IntakeFlow — description boundaries (UC-1)', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 });
+
+// Found by walking the product as a user (2026-08-15): describe "no client
+// data at all, no autonomy", then declare Client PII and L3 in the guided
+// form — and reach attestation with no contradiction shown. The engine's
+// detector works (contradiction.test.ts); the UI only invoked it per
+// questionnaire ANSWER, and the guided form marks nothing uncertain, so zero
+// questions are generated and the check was skipped with the questionnaire.
+// The honesty feature was unreachable on the primary, verified path.
+describe('IntakeFlow — contradictions are caught on the zero-questions path (UC-5)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('a description denying what the form declares blocks the skip to confirmation', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    await user.click(box);
+    await user.paste('This tool processes no client data at all. A human approves every action, no autonomy.');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+
+    // Declare the opposite of the description.
+    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Contradictor');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/how much can it do without a person/i), '3');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-shared');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByLabelText(/united kingdom/i));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+
+    // The old behaviour sailed to "Confirm and evaluate". The fix surfaces
+    // the contradiction review instead — both statements, resolution required.
+    expect((await screen.findAllByText(/contradiction/i)).length).toBeGreaterThan(0);
+    // Both halves of the contradiction are stated, per UC-5.
+    expect(screen.getAllByText(/no client\/personal data/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /confirm and evaluate/i })).toBeNull();
+  });
+});
+
+// The second half of the same walk (2026-08-15): resolve the contradiction
+// and the flow returned to a zero-question questionnaire reading "All
+// questions answered." with NO forward control — a dead end. Pre-existing on
+// the normal path too: any contradiction raised on the FINAL answer landed in
+// the same trap once resolved.
+describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('after resolution with no questions left, the flow reaches confirmation', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    await user.click(box);
+    await user.paste('This tool processes no client data at all.');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+
+    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Resolver');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
+    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
+    await user.selectOptions(screen.getByLabelText(/how much can it do without a person/i), '1');
+    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
+    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
+    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-shared');
+    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
+    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
+    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.click(screen.getByLabelText(/united kingdom/i));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+
+    // Contradiction review appears; resolve it.
+    const explain = await screen.findByRole('textbox', { name: /explain|resolution|why/i });
+    await user.type(explain, 'The description was wrong; the form is right.');
+    await user.click(screen.getByRole('button', { name: /resolve and continue/i }));
+
+    // The old behaviour stranded the user at "All questions answered." with
+    // no control. The flow must reach the attestation.
+    expect(await screen.findByRole('button', { name: /confirm and evaluate/i })).toBeInTheDocument();
+  });
+});

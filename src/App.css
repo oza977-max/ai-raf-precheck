@@ -2086,8 +2086,11 @@ details input {
   margin-left: 0.6rem;
   padding: 0.15rem 0.6rem;
   font-size: 0.8rem;
-  border: 1px solid var(--card-border);
+  /* Was border card-border on transparent — near-invisible against the card
+     (found walking the product as a user, 2026-08-15). */
+  color: var(--ink);
+  border: 1px solid var(--ink-soft);
   border-radius: 999px;
-  background: none;
+  background: var(--paper);
   cursor: pointer;
 }

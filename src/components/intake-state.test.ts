@@ -189,6 +189,27 @@ describe('intakeReducer', () => {
     expect(next).toBe(state);
   });
 
+  it('PROCEED_TO_CONFIRMATION carries resolutionNotes — an attestation must be able to persist them (UC-5, 2026-08-15)', () => {
+    // Found live: the explanation a submitter is REQUIRED to give when their
+    // description contradicts their answers was dropped by this transition,
+    // so the audit write downstream silently had nothing to record.
+    const g = graph();
+    const state: IntakeState = {
+      step: 'questionnaire',
+      description: 'x',
+      graph: g,
+      questions: [],
+      answers: [],
+      resolutionNotes: ['The description was aspirational; the form is right.'],
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    const next = intakeReducer(state, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect('resolutionNotes' in next && next.resolutionNotes).toEqual([
+      'The description was aspirational; the form is right.',
+    ]);
+  });
+
   it('questionnaire → confirmation on PROCEED_TO_CONFIRMATION (P4-C04: real state, no longer a pass-through)', () => {
     const g = graph({ version: 1 });
     const answers = [{ questionId: 'Q1', value: 'yes' }];
@@ -221,6 +242,8 @@ describe('intakeReducer', () => {
       graphVersion: 1,
       corrections: [correction],
       answers,
+      resolutionNotes: [],
+      originalVerdictId: undefined,
       useCaseId: 'uc-1',
     });
   });
@@ -234,6 +257,7 @@ describe('intakeReducer', () => {
       graphVersion: 1,
       corrections: [],
       answers: [],
+      resolutionNotes: [],
       useCaseId: 'uc-1',
     };
     const next = intakeReducer(state, { type: 'CONFIRMED' });
@@ -439,6 +463,7 @@ describe('intakeReducer — STEP_BACK (FN-006)', () => {
       graphVersion: 1,
       corrections: [],
       answers: [],
+      resolutionNotes: [],
       useCaseId: 'uc-1',
     };
     expect(intakeReducer(state, { type: 'STEP_BACK' })).toBe(state);
