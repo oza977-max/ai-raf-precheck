@@ -69,6 +69,9 @@ function eventDetail(event: AuditEvent): string {
       return `Classification adopted from ${p.adopted_from_label} (${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
         p.tier ?? '—'
       }, track ${p.track ?? '—'}. No evaluation was run for this record.`;
+    case 'rule_dissent_filed':
+      // "name not verified" for the same reason as twoloD_reviewed: no sign-in.
+      return `Rule ${p.rule_id} challenged by ${p.filed_by_name} (name not verified): “${p.dissent}” Advisory — the verdict stands unchanged; the challenge goes to the rule-improvement queue.`;
   }
 }
 
@@ -87,6 +90,21 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   // lesson as P7-C01's in-flight seed guard).
   const inFlight = useRef(false);
 
+  // Rule dissent (FN-009). Separate state and a separate in-flight ref from
+  // the sign-off actions: a dissent is not a sign-off, and sharing the guard
+  // would let a slow dissent write block an Approve (or vice versa) for no
+  // data-integrity reason. The same double-click hazard applies, though —
+  // a duplicate dissent in an append-only trail cannot be cleaned up.
+  const [dissentOpen, setDissentOpen] = useState(false);
+  const [dissentRuleId, setDissentRuleId] = useState('');
+  const [dissentOtherRef, setDissentOtherRef] = useState('');
+  const [dissentText, setDissentText] = useState('');
+  const [dissentByName, setDissentByName] = useState('');
+  const [dissentResult, setDissentResult] = useState<string | null>(null);
+  const [dissentError, setDissentError] = useState<string | null>(null);
+  const [dissentBusy, setDissentBusy] = useState(false);
+  const dissentInFlight = useRef(false);
+
   // ADR-RL-R3-1: READ the verdict from the audit trail the page already
   // loads. Never recompute — the verdict a reviewer signs must be the one
   // that was produced and attested, not a fresh one against today's policy,
@@ -97,6 +115,28 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     if (!payload) return null;
     return payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict;
   }, [events]);
+
+  // The rules a challenge can point at: the ones THIS verdict relied on,
+  // read from its own explanation — never recomputed against today's policy
+  // (same reasoning as ADR-RL-R3-1 for the verdict itself). A challenger who
+  // wants a rule outside this list types its reference explicitly, so a
+  // free-typed id is a visible choice rather than a silent fallback.
+  const challengeableRules = useMemo(() => {
+    if (!latestVerdict) return [];
+    const seen = new Map<string, string>();
+    const add = (id?: string | null, label?: string) => {
+      if (id && !seen.has(id)) seen.set(id, label ?? id);
+    };
+    const ex = latestVerdict.explanation;
+    if (ex) {
+      add(ex.tier_rationale?.rule_id, ex.tier_rationale?.rule_name);
+      add(ex.track_rationale?.rule_id, ex.track_rationale?.rule_name);
+      for (const t of ex.tripped_invariants) add(t.id, t.description);
+      for (const r of ex.regulatory_chain ?? []) add(r.rule_id);
+    }
+    add(latestVerdict.binding_constraint || null);
+    return [...seen.entries()].map(([id, label]) => ({ id, label }));
+  }, [latestVerdict]);
 
   const load = useCallback(async () => {
     const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);
@@ -220,6 +260,69 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     } finally {
       inFlight.current = false;
       setBusy(false);
+    }
+  }
+
+  async function handleFileDissent() {
+    if (dissentInFlight.current) return;
+    dissentInFlight.current = true;
+    setDissentBusy(true);
+    setDissentError(null);
+    try {
+      // Same refuse-rather-than-record posture as the sign-off actions: a
+      // dissent that names nobody, no rule, or no reason is noise on an
+      // append-only record that cannot be cleaned up.
+      if (!latestVerdict) {
+        setDissentError('There is no verdict here, so there is no rule application to challenge. Run a pre-check first.');
+        return;
+      }
+      const fromList = dissentRuleId && dissentRuleId !== '__other__';
+      const ruleRef = fromList ? dissentRuleId : dissentOtherRef.trim();
+      if (!ruleRef) {
+        setDissentError('Name the rule you are challenging — pick one the verdict relied on, or type its reference.');
+        return;
+      }
+      if (!dissentText.trim()) {
+        setDissentError('Say why the rule is wrong, too broad, or missing a distinction. A challenge with no reasoning gives the rule authors nothing to act on.');
+        return;
+      }
+      if (!dissentByName.trim()) {
+        setDissentError('Enter your name. The challenge is recorded permanently, so the record says who filed it.');
+        return;
+      }
+      const label = fromList ? challengeableRules.find((r) => r.id === dissentRuleId)?.label : undefined;
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'rule_dissent_filed',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'rule_dissent_filed',
+          // The verdict the challenger was shown — threaded from the render,
+          // like the attestation's verdict_id (§13.4).
+          verdict_id: latestVerdict.id,
+          rule_id: ruleRef,
+          ...(label && label !== ruleRef ? { rule_label: label } : {}),
+          dissent: dissentText.trim(),
+          filed_by_name: dissentByName.trim(),
+        },
+      });
+      setDissentResult(
+        'Challenge recorded in the audit trail and queued for the rule authors. The verdict on this page is unchanged — a dissent never overrides it.',
+      );
+      setDissentRuleId('');
+      setDissentOtherRef('');
+      setDissentText('');
+      setDissentByName('');
+      setDissentOpen(false);
+      await load();
+    } catch (err) {
+      setDissentError(`Filing failed: ${err instanceof Error ? err.message : String(err)}. Check the timeline below for what was recorded.`);
+      await load();
+    } finally {
+      dissentInFlight.current = false;
+      setDissentBusy(false);
     }
   }
 
@@ -360,6 +463,101 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         <p role="alert" className="register-detail__error">
           {actionError}
         </p>
+      )}
+
+      {/* Rule dissent (FN-009). Deliberately NOT gated on lifecycle stage:
+          a rule can be wrong on a case that already advanced, and the point
+          of the queue is to catch that. Gated on role + a verdict existing —
+          without a verdict no rule was applied, so there is nothing to
+          challenge. */}
+      {role === '2LoD' && latestVerdict && (
+        <div className="register-detail__dissent">
+          {!dissentOpen && !dissentResult && (
+            <button type="button" className="register-detail__dissent-toggle" onClick={() => setDissentOpen(true)}>
+              Challenge a rule…
+            </button>
+          )}
+          {dissentOpen && (
+            <div className="register-detail__dissent-form">
+              <h3>Challenge a rule</h3>
+              <p className="field-help">
+                This disputes a <strong>rule</strong>, not this use case. The verdict stands unchanged
+                — the challenge is recorded permanently and goes to the rule-improvement queue for the
+                people who author the rulebook.
+              </p>
+              <label htmlFor="dissent-rule">Rule being challenged</label>
+              <select id="dissent-rule" value={dissentRuleId} onChange={(e) => setDissentRuleId(e.target.value)}>
+                <option value="">— pick a rule this verdict relied on —</option>
+                {challengeableRules.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id === r.label ? r.id : `${r.id} — ${r.label}`}
+                  </option>
+                ))}
+                <option value="__other__">A rule not listed here…</option>
+              </select>
+              {dissentRuleId === '__other__' && (
+                <>
+                  <label htmlFor="dissent-rule-ref">Rule reference</label>
+                  <input
+                    id="dissent-rule-ref"
+                    type="text"
+                    value={dissentOtherRef}
+                    onChange={(e) => setDissentOtherRef(e.target.value)}
+                  />
+                  <p className="field-help">
+                    Typed by you, so it is recorded as a reference — the queue will not resolve it
+                    against the rulebook.
+                  </p>
+                </>
+              )}
+              <label htmlFor="dissent-text">Why the rule is wrong here</label>
+              <textarea
+                id="dissent-text"
+                rows={3}
+                value={dissentText}
+                onChange={(e) => setDissentText(e.target.value)}
+              />
+              {/* "Filed by", not "Your name": the sign-off bar above already
+                  has a "Your name" input, and two identical labels on one
+                  page are ambiguous for screen readers and label queries. */}
+              <label htmlFor="dissent-name">Filed by</label>
+              <input
+                id="dissent-name"
+                type="text"
+                value={dissentByName}
+                onChange={(e) => setDissentByName(e.target.value)}
+              />
+              <p className="field-help">
+                Self-asserted — this build has no sign-in, so the name is not verified.
+              </p>
+              <div className="register-detail__actions">
+                <button type="button" disabled={dissentBusy} onClick={() => void handleFileDissent()}>
+                  File the challenge
+                </button>
+                <button
+                  type="button"
+                  disabled={dissentBusy}
+                  onClick={() => {
+                    setDissentOpen(false);
+                    setDissentError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {dissentResult && (
+            <p className="register-detail__result" role="status">
+              {dissentResult}
+            </p>
+          )}
+          {dissentError && (
+            <p role="alert" className="register-detail__error">
+              {dissentError}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="register-detail__timeline">

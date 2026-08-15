@@ -11,6 +11,32 @@ every verdict.
 
 ---
 
+## [0.4.0] — 2026-08-15
+
+The rule-improvement queue: rules can now be challenged, and the challenges
+have somewhere to go.
+
+### Added
+
+- **"Challenge a rule" on the sign-off page.** A 2LoD reviewer who thinks a
+  rule the verdict relied on is wrong, too broad, or missing a distinction
+  can now say so, on the record. The challenge names the rule (picked from
+  the verdict's own reasoning, or typed as a reference), the reasoning, and
+  who filed it. It is advisory by construction: the verdict stands
+  unchanged, nothing moves in the lifecycle, and the challenge cannot be
+  edited or withdrawn afterwards — it is part of the audit trail.
+- **A "Rule challenges" screen** (sidebar), grouping every filed challenge
+  by rule for the people who author the rulebook. Nothing in the queue
+  feeds back into the engine — rule changes still happen the only way they
+  ever have: a human edits the framework or a pack, and signs it off.
+- The design behind this — an advisory dissent panel where machine
+  reviewers could one day file through the same channel, with the same
+  authority over the verdict (none) — is recorded in
+  `specs/forward-notes.md` FN-009 rather than built, because this build
+  has never run an LLM call live and won't pretend otherwise.
+
+---
+
 ## [0.3.2] — 2026-08-15
 
 Second hostile walkthrough, remaining paths.

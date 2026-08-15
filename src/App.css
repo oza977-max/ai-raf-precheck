@@ -2101,3 +2101,103 @@ details input {
   font-style: italic;
   max-width: 66ch;
 }
+
+/* Rule dissent (FN-009) — the challenge block on the sign-off page. Visually
+   quieter than the actionbar: a dissent is an aside about the rulebook, not
+   the decision this page exists for. */
+.register-detail__dissent {
+  margin-bottom: 1rem;
+}
+
+.register-detail__dissent-toggle {
+  background: none;
+  border: 1px dashed var(--rule);
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.register-detail__dissent-form {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+}
+
+.register-detail__dissent-form h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.register-detail__dissent-form select,
+.register-detail__dissent-form input[type='text'],
+.register-detail__dissent-form textarea {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 0.6rem;
+}
+
+/* Rule-improvement queue screen (FN-009). */
+.rule-queue__intro {
+  font-size: 0.92rem;
+}
+
+.rule-queue__caveat {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  border-left: 3px solid var(--rule);
+  padding-left: 0.8rem;
+}
+
+.rule-queue__empty {
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+
+.rule-queue__groups,
+.rule-queue__entries {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rule-queue__group {
+  border-top: 1px solid var(--rule);
+  padding: 0.8rem 0;
+}
+
+.rule-queue__group h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+}
+
+.rule-queue__rule-label {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.rule-queue__count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.5rem;
+}
+
+.rule-queue__entry {
+  margin-bottom: 0.6rem;
+}
+
+.rule-queue__dissent {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.rule-queue__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}

@@ -264,6 +264,12 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
 </code></pre>
 
     <h3 id="auditevent">4.3 AuditEvent</h3>
+    <p><em>Drift notice (2026-08-15): this block predates the built schema and
+    has drifted from <code>verdict-audit.md</code> §4.3, which is authoritative
+    — snake_case fields, discriminated payload union, and the
+    <code>rule_dissent_filed</code> event (FN-009: a reviewer challenges a rule;
+    advisory, never changes the verdict). The built type is
+    <code>src/store/types.ts</code>.</em></p>
     <pre><code>interface AuditEvent {
   eventId: string;                     // UUID
   eventType: 'verdict-issued' | 'verdict-corrected' | 'audit-query' | 'audit-export';

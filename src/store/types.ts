@@ -13,7 +13,8 @@ export type AuditEventType =
   | 'lifecycle_stage_changed'
   | 're_evaluation_queued'
   | 'twoloD_reviewed'
-  | 'reasoning_trace_generated';
+  | 'reasoning_trace_generated'
+  | 'rule_dissent_filed';
 
 export interface AuditEvent {
   event_id: string;
@@ -77,7 +78,27 @@ export type AuditEventPayload =
       attested_by_name?: string;
       notes?: string;
     }
-  | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string };
+  | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string }
+  // Rule dissent (2026-08-15, FN-009). A 2LoD reviewer challenges a RULE the
+  // verdict relied on — not the verdict itself. Advisory by construction: the
+  // verdict stands unchanged, the lifecycle stage does not move, and the
+  // dissent lands in the rule-improvement queue for the humans who author the
+  // rulebook (grounding/PACK-AUTHORING.md). This is the human half of the
+  // dissent-panel design; a machine judge would file through the same event,
+  // marked by actor, never through a different door.
+  // `verdict_id` is the id of the verdict the challenger was shown, threaded
+  // from the render like twoloD_reviewed's (§13.4) — never re-derived at
+  // write time. `rule_label` is carried only when the rule was picked from
+  // the verdict's own rationale, so a free-typed reference stays visibly a
+  // reference, not a resolved rule.
+  | {
+      type: 'rule_dissent_filed';
+      verdict_id: string;
+      rule_id: string;
+      rule_label?: string;
+      dissent: string;
+      filed_by_name: string;
+    };
 
 // Register types per register-lifecycle.md §4.1–4.2.
 export type RegisterNodeType = 'use_case' | 'ai_model' | 'platform' | 'vendor' | 'data_source' | 'control';

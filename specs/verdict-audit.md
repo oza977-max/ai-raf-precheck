@@ -138,7 +138,8 @@ export type AuditEventType =
   | 'twoloD_reviewed'          // LC-3 2LoD action
   | 'duplicate_dismissed'      // UC-2 — a surfaced match was reviewed and set aside
   | 'classification_adopted'   // UC-2 — this record's classification came from another use case
-  | 'reasoning_trace_generated'; // VD-8 LLM call completed
+  | 'reasoning_trace_generated' // VD-8 LLM call completed
+  | 'rule_dissent_filed';      // FN-009 — a reviewer challenges a rule; advisory, never changes the verdict
 
 export interface AuditEvent {
   event_id: string;             // UUID v4
@@ -178,7 +179,22 @@ export type AuditEventPayload =
       tier: string | null;
       track: string | null;
     }
-  | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string };
+  | { type: 'reasoning_trace_generated'; verdict_id: string; trace: string }
+  // FN-009 (2026-08-15). A challenge to a RULE the verdict relied on, filed
+  // by a 2LoD reviewer from the sign-off page. Advisory by construction: the
+  // verdict stands, the lifecycle stage does not move, and the dissent feeds
+  // the rule-improvement queue (a derived read view over these events — never
+  // a second store). verdict_id is threaded from the render, like
+  // twoloD_reviewed's (§13.4). rule_label present only when the rule was
+  // picked from the verdict's own rationale.
+  | {
+      type: 'rule_dissent_filed';
+      verdict_id: string;
+      rule_id: string;
+      rule_label?: string;
+      dissent: string;
+      filed_by_name: string;
+    };
 
 **Both added by round 4 (UC-2).** The duplicate check surfaces a match and the
 submitter decides; both outcomes are decisions about the inventory and both are
