@@ -31,6 +31,11 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         structured form, which you then check and correct yourself. Nothing it writes is used until a
         person confirms it.
       </p>
+      <p>
+        Full transparency: that optional AI path is built and tested against a simulated API, but it
+        has never yet been run against the live service — the guided form is the verified path. If you
+        add a key and use it, you are its first real test.
+      </p>
 
       <h2>Who wrote the rules</h2>
       <p>Every rule traces to one of two sources, and the verdict shows which:</p>

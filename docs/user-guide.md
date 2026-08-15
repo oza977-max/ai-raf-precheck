@@ -36,7 +36,9 @@ You need nothing installed and no API key.
    is enough — what it does, what data it touches, what it decides or actions.
 3. Click **Read & extract**. If no API key is set, you go to a guided form
    instead of an AI extraction; this is the normal path and the better one for
-   a first run.
+   a first run. (Full transparency: the AI-extraction route is built and
+   unit-tested against a simulated API, but has never been run against the
+   real one. The form is the verified path.)
 4. Answer the duplicate check. AIGate searches the register for a use case with
    overlapping characteristics and tells you how many entries it checked.
 5. Fill the guided form. Every field is a business question with plain-English

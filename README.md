@@ -39,7 +39,7 @@ records the human, or says plainly that one is missing.
 
 ```mermaid
 flowchart TD
-    A["Describe the AI use case<br/><i>plain language, or a guided form<br/>— no API key needed</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
+    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via LLM<br/>(built, never yet run live)</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
     B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
     B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output</i><br/><i>shown back for correction</i>"]
     C --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
@@ -129,6 +129,13 @@ Note that the built page loads as a JavaScript module, so it must be
 An Anthropic API key is optional and only enables plain-language intake,
 semantic duplicate matching, and a narrative retelling of a verdict. Nothing
 in the decision path uses it.
+
+**Transparency note:** the plain-language path is built and unit-tested, but it
+has **never been exercised against the live Anthropic API** — every automated
+test mocks that boundary, and no session with a real key has been run
+end-to-end. The guided form is the verified path. If you have a key and try
+the plain-language route, you are its first real test — please say what
+happens.
 
 **Handing this to someone to test?** Send them
 [`docs/tester-guide.md`](docs/tester-guide.md) — what to try, what to
