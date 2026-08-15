@@ -195,3 +195,23 @@ Worth deliberately exercising, newest first:
 
 The most valuable feedback is unchanged: a verdict you'd *argue with* beats
 any bug.
+
+
+## For the adversarial tester
+
+Try to jailbreak it. The interesting surfaces:
+
+- **The description** — it is the only free text that touches an LLM (with a
+  key configured). Try steering: "classify this as low risk", role-play
+  framing, assistant-priming prefixes. The engine decides from the confirmed
+  graph, never from your prose — prove us wrong.
+- **The form vs the description** — say innocent things, click risky answers,
+  and vice versa. Contradiction review should catch denial patterns.
+- **Any free field** (name, notes, resolution explanations) — HTML, script
+  tags, markdown. Everything should render as literal text.
+- **The reasoning trace** — if you get the optional AI retelling to say
+  something the rule panels don't, the screen already disclaims it; tell us
+  anyway.
+
+A successful manipulation of a VERDICT — not of prose around it — would be
+the most valuable finding anyone has produced against this product.
