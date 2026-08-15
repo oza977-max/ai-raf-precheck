@@ -141,7 +141,12 @@ describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => 
     expect(screen.getByRole('option', { name: /Internal ML platform \(PLAT-A\)/ })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Approved LLM vendor \(VENDOR-A\)/ })).toBeInTheDocument();
     // PV-5 must be reachable: a component NOT on the registry has to be sayable.
-    expect(screen.getAllByRole('option', { name: /not on the list/i }).length).toBe(2);
+    // Asserted on the two SPECIFIC options rather than by counting anything
+    // matching "not on the list" — that count broke the moment the decision-type
+    // field grew its own escape hatch, which is a different concern entirely and
+    // says nothing about PV-5.
+    expect(screen.getByRole('option', { name: /Something else — not on the list/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Another vendor — not on the list/ })).toBeInTheDocument();
   });
 
   it('carries a selected platform and vendor onto the graph, so PV-3 and PV-5 can fire', async () => {

@@ -7,11 +7,11 @@
 // 'low')`) — both verified at commit 90c5d3c, the state this chunk replaced.
 // One rule, two layers, no shared definition, and round 3 adds a second cause.
 // The determination now lives here and both consumers read it.
-import type { ConfidenceCaveat, EvaluationResult } from './types';
+import type { ConfidenceCaveat, DataFlowGraph, EvaluationResult } from './types';
 
 /** Declaration order IS the emission order (§13.2, NF-1) — never discovery
  *  order, so two runs over identical inputs produce identical collections. */
-export const PROVISIONAL_REASONS = ['unsigned_pack_rules', 'no_regulatory_basis'] as const;
+export const PROVISIONAL_REASONS = ['unsigned_pack_rules', 'no_regulatory_basis', 'unclassified_decision_type'] as const;
 
 export type ProvisionalReason = (typeof PROVISIONAL_REASONS)[number];
 
@@ -28,6 +28,7 @@ export type ProvisionalReason = (typeof PROVISIONAL_REASONS)[number];
 export function provisionalReasons(
   caveats: readonly ConfidenceCaveat[],
   packVersions: Readonly<Record<string, string>>,
+  graph?: DataFlowGraph,
 ): ProvisionalReason[] {
   const raised = new Set<ProvisionalReason>();
 
@@ -40,7 +41,31 @@ export function provisionalReasons(
   // matches nothing still supplies a regulatory basis that was checked.
   if (Object.keys(packVersions).length === 0) raised.add('no_regulatory_basis');
 
+  // The third reason the header above anticipated. A submitter typed a
+  // decision type the policy has no rule for, so every decision-type trigger
+  // — two hard lines and two tier rules — sat out. The tier that came back
+  // rests on the other answers alone, and saying so is the difference between
+  // a gap and a silent under-classification.
+  //
+  // Blank is NOT this. Leaving the question unanswered says no decision type
+  // applies; typing one says a decision type applies and the firm's framework
+  // does not cover it. Only the second is a hole in the policy.
+  if (unclassifiedDecisionTypes(graph).length > 0) raised.add('unclassified_decision_type');
+
   return PROVISIONAL_REASONS.filter((r) => raised.has(r));
+}
+
+/** The decision types a submitter typed that the policy has no rule for.
+ *  Sorted and deduplicated so the collection is byte-stable across runs (NF-1).
+ *  A reason with no subject is not actionable — the firm needs to know WHICH
+ *  decision type it has no position on, and over time this is the list of
+ *  holes its own framework has. */
+export function unclassifiedDecisionTypes(graph?: DataFlowGraph): string[] {
+  if (!graph) return [];
+  const typed = graph.output_nodes
+    .map((n) => n.decision_type_other?.trim())
+    .filter((v): v is string => Boolean(v));
+  return [...new Set(typed)].sort();
 }
 
 /** The single predicate both consumers call. A verdict is Provisional if and

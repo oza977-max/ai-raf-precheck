@@ -717,3 +717,55 @@ describe('VerdictDisplay — Why this verdict says what the rules ARE', () => {
     expect(screen.getAllByText(/no control/i).length).toBeGreaterThan(0);
   });
 });
+
+// The engine computes `unclassified_decision_types` and the first cut of the
+// banner never rendered it — computed, stored, and invisible. That is the
+// defect class CLAUDE.md names ("a field that is computed but never consumed
+// is a bug in waiting"), and it was caught by reading the rendered page, not
+// by a test. This is the test that would have caught it.
+describe('VerdictDisplay — an unrecognised decision type is NAMED, not just counted', () => {
+  it('renders the decision type the submitter typed', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          provisional_reasons: ['unclassified_decision_type'],
+          unclassified_decision_types: ['collections prioritisation'],
+        })}
+        auditEvents={[]}
+      />,
+    );
+    const banner = document.querySelector('[data-provisional-reason="unclassified_decision_type"]');
+    expect(banner).not.toBeNull();
+    // A cause with no subject is not actionable — the firm needs to know WHICH
+    // decision type its policy has no position on.
+    expect(banner?.textContent).toContain('collections prioritisation');
+  });
+
+  it('names every one of them when a graph carries more than one', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          provisional_reasons: ['unclassified_decision_type'],
+          unclassified_decision_types: ['AML alert triage', 'collections prioritisation'],
+        })}
+        auditEvents={[]}
+      />,
+    );
+    const banner = document.querySelector('[data-provisional-reason="unclassified_decision_type"]');
+    expect(banner?.textContent).toContain('AML alert triage');
+    expect(banner?.textContent).toContain('collections prioritisation');
+  });
+
+  it('does not render an empty "Entered:" when there is nothing to name', () => {
+    // A legacy verdict has no such field at all. The banner must degrade to
+    // the plain cause rather than trailing a dangling label.
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ provisional_reasons: ['unclassified_decision_type'] })}
+        auditEvents={[]}
+      />,
+    );
+    const banner = document.querySelector('[data-provisional-reason="unclassified_decision_type"]');
+    expect(banner?.textContent).not.toContain('Entered:');
+  });
+});

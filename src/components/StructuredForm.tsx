@@ -480,15 +480,27 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
 
       <label htmlFor="sf-decision-type">What kind of decision does it feed? (optional)</label>
       <p className="field-help">
-        Some areas carry extra legal duties — lending and hiring especially. Leave blank if none of these
-        fit.
+        Some areas carry extra legal duties — lending and hiring especially. If none of these fit,
+        choose <em>Something else — let me describe it</em> and say what it is; the verdict will show that your policy has no
+        rule for it. Leave blank only if it feeds no decision at all.
       </p>
       <select
         id="sf-decision-type"
-        value={values.decisionType ?? ''}
-        onChange={(e) =>
-          update('decisionType', (e.target.value || undefined) as StructuredFormValues['decisionType'])
-        }
+        value={values.decisionTypeOther !== undefined ? '__other__' : (values.decisionType ?? '')}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__other__') {
+            // Clearing decisionType is the whole point: the two are mutually
+            // exclusive, and leaving a stale known type behind would let a
+            // policy rule fire for a decision the submitter just told us was
+            // something else.
+            update('decisionType', undefined);
+            update('decisionTypeOther', '');
+          } else {
+            update('decisionTypeOther', undefined);
+            update('decisionType', (v || undefined) as StructuredFormValues['decisionType']);
+          }
+        }}
       >
         <option value="">None / not applicable</option>
         {DECISION_TYPES.map((v) => (
@@ -496,7 +508,26 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
             {DECISION_TYPE_LABELS[v]}
           </option>
         ))}
+        <option value="__other__">Something else — let me describe it</option>
       </select>
+
+      {values.decisionTypeOther !== undefined && (
+        <>
+          <label htmlFor="sf-decision-type-other">What kind of decision is it?</label>
+          <p className="field-help">
+            In your own words — for example &ldquo;collections prioritisation&rdquo; or &ldquo;AML alert
+            triage&rdquo;. This is recorded with the verdict, and because your policy has no rule for it,
+            the tier will rest on your other answers alone. That is stated on the verdict, not hidden.
+          </p>
+          <input
+            id="sf-decision-type-other"
+            type="text"
+            value={values.decisionTypeOther}
+            onChange={(e) => update('decisionTypeOther', e.target.value)}
+            placeholder="e.g. collections prioritisation"
+          />
+        </>
+      )}
 
       <label htmlFor="sf-hitl">Does a person check it before anything happens? (optional)</label>
       <select

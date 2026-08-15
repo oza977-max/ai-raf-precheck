@@ -33,6 +33,10 @@ export interface StructuredFormValues {
   platform?: string;
   vendor?: string;
   decisionType?: DecisionType;
+  /** Free text, set only when the submitter chose "Something else". Kept
+   *  SEPARATE from `decisionType` on purpose: nothing in the policy can match
+   *  it, and pretending otherwise would silently under-classify. */
+  decisionTypeOther?: string;
   hitl?: boolean;
   jurisdictions: string[];
 }
@@ -76,6 +80,13 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
         output_reversibility: values.outputReversibility,
         scale: values.outputScale,
         ...(values.decisionType !== undefined ? { decision_type: values.decisionType } : {}),
+        // `decision_type` stays undefined here — that is the honest encoding.
+        // No policy rule matches free text, so the graph must not claim one
+        // does; the engine raises `unclassified_decision_type` from this field
+        // instead, and the verdict states the gap.
+        ...(values.decisionTypeOther?.trim()
+          ? { decision_type_other: values.decisionTypeOther.trim() }
+          : {}),
         ...(values.hitl !== undefined ? { hitl: values.hitl } : {}),
       },
     ],
