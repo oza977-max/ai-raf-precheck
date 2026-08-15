@@ -96,7 +96,7 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByRole('button', { name: 'pre_checked' })).toBeInTheDocument();
   });
 
-  it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call', async () => {
+  it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call [TC-NF-4-01]', async () => {
     localStorage.clear(); // no API key configured
 
     const user = userEvent.setup();
@@ -880,7 +880,7 @@ describe('Register row naming (charter 004 D-004)', () => {
 // extraction, and never shown to the user again — so the screen that asks
 // "is this graph right?" gave them nothing to check it against.
 describe('The submitted description is shown back (charter 004 D-001)', () => {
-  it('renders what the user typed on the graph review screen', async () => {
+  it('renders what the user typed on the graph review screen [TC-UC-1-01]', async () => {
     localStorage.clear();
     const user = userEvent.setup();
     render(<App />);

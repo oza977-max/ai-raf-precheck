@@ -25,7 +25,7 @@ const TIERS: TierRule[] = [
 ];
 
 describe('assignTier', () => {
-  it('is impact-dominant — Critical wins even if Low also matches', () => {
+  it('is impact-dominant — Critical wins even if Low also matches [TC-PE-3-02]', () => {
     const g = graph({
       output_nodes: [
         { id: 'o1', label: 'y', action_type: 'execute', exposure: 'market-facing', decision_bindingness: 'binding', output_reversibility: 'irreversible', scale: 'at_scale' },
@@ -47,7 +47,7 @@ describe('assignTier', () => {
     expect(forward).toBe('Medium');
   });
 
-  it('defaults to Low when no trigger fires', () => {
+  it('defaults to Low when no trigger fires [TC-PE-3-03]', () => {
     const g = graph();
     expect(assignTier(g, TIERS).tier).toBe('Low');
   });

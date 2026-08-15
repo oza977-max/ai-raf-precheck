@@ -73,7 +73,7 @@ Then the system accepts the description and advances to the graph extraction ste
 And the description is displayed back to the submitter for reference
 And the system does NOT require any form fields to be completed
 [Requirement: UC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx]
 ```
 
 ### TC-UC-1-02: Five-sentence description accepted at upper boundary [EXAMPLE]
@@ -83,7 +83,7 @@ Given a submitter is on the intake screen
 When they enter a five-sentence description and submit
 Then the system accepts the description and proceeds to graph extraction
 [Requirement: UC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/IntakeFlow.back.test.tsx]
 ```
 
 ### TC-UC-1-03: Empty submission blocked
@@ -93,7 +93,7 @@ When they submit with an empty description field
 Then the system prevents submission and displays: "Please describe your AI use case before submitting."
 And the system does NOT advance to graph extraction
 [Requirement: UC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/IntakeFlow.back.test.tsx]
 ```
 
 ### TC-UC-1-04: Description containing special characters and non-ASCII accepted [SECURITY]
@@ -106,7 +106,7 @@ Then the system accepts the description without error
 And any HTML tags in the description are treated as literal text, not rendered as markup
 And the system does NOT execute any embedded script content
 [Requirement: UC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/IntakeFlow.back.test.tsx]
 ```
 
 ---
@@ -121,7 +121,7 @@ And displays UC-001's tier (High), track (Track III), and verdict (Approved with
 And the output MUST contain: "Similar use case found"
 And the output MUST NOT contain the intake question flow
 [Requirement: UC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/duplicate.test.ts]
 ```
 
 ### TC-UC-2-02: Submitter adopts existing classification from duplicate match
@@ -132,7 +132,7 @@ Then the system creates a new use case record linked to UC-001's classification
 And the new record is added to the register with status "Classification adopted from UC-001"
 And the submitter is not asked intake questions
 [Requirement: UC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/IntakeFlow.resume.test.tsx]
 ```
 
 ### TC-UC-2-03: Submitter confirms use case is new, intake proceeds
@@ -142,7 +142,7 @@ When the submitter selects "This is a different use case"
 Then the system proceeds to graph extraction for the new submission
 And the near-match is recorded as "similar use case reviewed and dismissed" in the audit trail
 [Requirement: UC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/IntakeFlow.resume.test.tsx]
 ```
 
 ### TC-UC-2-04: No duplicate found, intake proceeds without interruption
@@ -151,7 +151,7 @@ Given the register contains no use cases similar to the submitted description
 When the submitter submits a description (similarity score below 0.80 against all existing records)
 Then the system proceeds directly to graph extraction without surfacing any duplicate prompt
 [Requirement: UC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/duplicate.test.ts]
 ```
 
 ### TC-UC-2-05: Empty register — duplicate check skipped gracefully
@@ -161,7 +161,7 @@ When a submitter submits the first use case description
 Then the system proceeds directly to graph extraction
 And does NOT display an error or duplicate prompt
 [Requirement: UC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/duplicate.test.ts]
 ```
 
 ---
@@ -176,7 +176,7 @@ And the graph shows: input node (transaction history, data class labelled), proc
 And the output MUST contain: a visual or structured representation of at least one input node, one processing node, and one output node
 And the output MUST NOT contain: intake questions before the submitter has reviewed the graph
 [Requirement: UC-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/llm/graph-extractor.test.ts]
 ```
 
 ### TC-UC-3-02: Graph extraction with ambiguous description produces labelled nodes
@@ -187,7 +187,7 @@ When the LLM extracts the graph
 Then the system labels uncertain nodes as "unclassified — please confirm" rather than guessing
 And these nodes are highlighted for submitter review
 [Requirement: UC-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/llm/graph-extractor.test.ts]
 ```
 
 ### TC-UC-3-03: Graph extraction is structurally consistent — same description, same graph structure [PROPERTY]
@@ -195,7 +195,7 @@ And these nodes are highlighted for submitter review
 Property: For any given description, the extracted graph must contain the same set of node types (input, processing, output) regardless of when extraction is run or how many times it is re-run.
 Counterexample strategy: run extraction on the same description five times with a low-temperature model; verify node types and edge directions are consistent across runs.
 [Requirement: UC-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/llm/graph-extractor.test.ts]
 ```
 
 ---
@@ -210,7 +210,7 @@ And the form displays fields for: data class, autonomy level, data zone, output 
 And the output MUST contain: "Structured intake mode — LLM graph extraction is not configured"
 And the output MUST NOT contain: a request to enter an API key as a blocking gate
 [Requirement: UC-3a] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx; src/engine/build-graph-from-form.test.ts]
 ```
 
 ### TC-UC-3a-02: Structured form produces a valid data-flow graph for evaluation
@@ -222,7 +222,7 @@ Then the system produces a data-flow graph equivalent in structure to LLM extrac
 And the graph is labelled "structured form intake" in the audit trail
 And the graph proceeds to evaluation against the policy engine
 [Requirement: UC-3a] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/build-graph-from-form.test.ts]
 ```
 
 ### TC-UC-3a-03: Mandatory field missing in structured form — blocked
@@ -232,7 +232,7 @@ When they attempt to confirm with the "data class" field empty
 Then the system prevents confirmation and highlights the missing field
 And displays: "Data class is required to evaluate this use case."
 [Requirement: UC-3a] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ### TC-UC-3a-04: Structured form field values constrained to policy-defined permitted values
@@ -242,7 +242,7 @@ When the submitter views the "data class" field
 Then the field presents only values defined in the policy file (e.g. Public, Internal, Confidential, MNPI, Client PII)
 And free-text entry is not permitted for enumerated fields
 [Requirement: UC-3a] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/StructuredForm.test.tsx]
 ```
 
 ---
@@ -256,7 +256,7 @@ Then no more than 5 questions are presented to the submitter
 And the output MUST contain: at most 5 question prompts
 And the output MUST NOT contain: 6 or more distinct question prompts in the intake sequence
 [Requirement: UC-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/question-generator.test.ts]
 ```
 
 ### TC-UC-4-02: Critical-tier use case receives no more than 15 questions [EXAMPLE]
@@ -268,7 +268,7 @@ Then no more than 15 questions are presented
 And the output MUST contain: at least 3 and at most 15 question prompts
 And the output MUST NOT contain: 16 or more distinct question prompts
 [Requirement: UC-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/question-generator.test.ts]
 ```
 
 ### TC-UC-4-03: Question count boundary — exactly 5 questions for Low-tier borderline case
@@ -278,7 +278,7 @@ When the system generates questions
 Then exactly 5 or fewer questions are presented
 And the system does not add a 6th question for "just in case" completeness
 [Requirement: UC-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/question-generator.test.ts]
 ```
 
 ### TC-UC-4-04: Questions are specific to the detected risk signals — not a fixed universal list
@@ -289,7 +289,7 @@ Then the questions presented for A and B are different
 And B's questions include at least one question about client data handling or market-sensitive output
 And A's questions do NOT include market-sensitive output questions if no such signal was detected
 [Requirement: UC-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/question-generator.test.ts]
 ```
 
 ---
@@ -303,7 +303,7 @@ Then the system flags: "Contradiction detected — your description stated no cl
 And the output MUST contain: the two specific conflicting statements
 And the output MUST NOT contain: a continuation to the next question before the contradiction is resolved
 [Requirement: UC-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/contradiction.test.ts]
 ```
 
 ### TC-UC-5-02: No false contradiction flagged when answers are consistent
@@ -313,7 +313,7 @@ When they answer "yes" to "does the tool process internal transaction records?"
 Then the system does NOT flag a contradiction
 And proceeds to the next question normally
 [Requirement: UC-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/contradiction.test.ts]
 ```
 
 ### TC-UC-5-03: Multiple contradictions in one session — all flagged before proceeding
@@ -323,7 +323,7 @@ When both contradictions have been detected
 Then the system presents both contradictions together (not one at a time with the second hidden)
 And requires resolution of all contradictions before graph confirmation
 [Requirement: UC-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/contradiction.test.ts]
 ```
 
 ---
@@ -337,7 +337,7 @@ Then the system records the confirmation with: submitter identity, timestamp, gr
 And the output MUST contain: a confirmation record in the audit trail with all three fields
 And the output MUST NOT contain: a verdict produced before the confirmation action
 [Requirement: UC-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx]
 ```
 
 ### TC-UC-6-02: Evaluation cannot be triggered without explicit confirmation
@@ -347,7 +347,7 @@ When the system state is "awaiting confirmation"
 Then the system does not produce a verdict automatically
 And the evaluation button or mechanism is disabled or absent
 [Requirement: UC-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx]
 ```
 
 ### TC-UC-6-03: Confirmation records the graph version, not just a timestamp
@@ -356,7 +356,7 @@ Given a submitter confirms graph version 2 (after making one correction to versi
 When the confirmation is recorded
 Then the audit trail shows "graph version 2 confirmed" not "graph version 1 confirmed"
 [Requirement: UC-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx]
 ```
 
 ---
@@ -370,7 +370,7 @@ Then the correction is saved with: field changed ("data class"), original value 
 And the output MUST contain: both the original extracted value and the corrected value in the audit trail
 And the output MUST NOT contain: only the corrected value with the original discarded
 [Requirement: UC-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-UC-7-02: Multiple corrections in one session all recorded
@@ -379,7 +379,7 @@ Given a submitter makes corrections to three graph nodes (data class, autonomy l
 When all three corrections are saved and the graph is confirmed
 Then the audit trail shows all three corrections, each with before/after values, identity, and timestamp
 [Requirement: UC-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/intake-state.test.ts]
 ```
 
 ### TC-UC-7-03: Correcting a node updates the displayed graph immediately
@@ -389,7 +389,7 @@ When the correction is saved
 Then the displayed graph updates to show L3 immediately
 And the submitter can see the corrected value before confirming
 [Requirement: UC-7] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/intake-state.test.ts]
 ```
 
 ---
@@ -405,7 +405,7 @@ And the submitter can see the corrected value before confirming
 Property: For any confirmed data-flow graph G and policy version V, evaluate(G, V) returns the same verdict on every invocation — same status, same tier, same track, same binding constraint.
 Counterexample strategy: run the same graph against the same policy version 10 times; verify the verdict is byte-identical on each run. Include graphs that are borderline cases (close to a tier boundary).
 [Requirement: PE-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/backtest-corpus.test.ts; src/engine/evaluate.test.ts; src/engine/properties.test.ts]
 ```
 
 ### TC-PE-1-02: Verdict produced for valid confirmed graph [EXAMPLE]
@@ -417,7 +417,7 @@ Then the system returns a verdict with status (Approved / Approved with controls
 And the output MUST contain: status, tier, and track fields all populated
 And the output MUST NOT contain: a verdict with any field left empty or "undefined"
 [Requirement: PE-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -431,7 +431,7 @@ Then the verdict shows Track I
 And the output MUST contain: "Track I" and the rule ID that matched
 And the output MUST NOT contain: "Track II" or "Track III" as the primary track assignment
 [Requirement: PE-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/track.test.ts]
 ```
 
 ### TC-PE-2-02: Track III assigned to GenAI copilot with no quantitative output [EXAMPLE]
@@ -443,7 +443,7 @@ Then the verdict shows Track III
 And the output MUST contain: "Track III" and the SR 26-2 exclusion rule referenced
 And the output MUST NOT contain: "Track I" or "Track II"
 [Requirement: PE-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/track.test.ts]
 ```
 
 ### TC-PE-2-03: Track assignment short-circuits at first matching rule
@@ -454,7 +454,7 @@ When the engine assigns track
 Then Track I is assigned (Rule A, first match)
 And Rule C is not evaluated
 [Requirement: PE-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/track.test.ts]
 ```
 
 ---
@@ -468,7 +468,7 @@ Then the tier is Critical
 And the output MUST contain: "Critical" tier and the EU AI Act Annex III §5(b) rule as the trigger
 And the output MUST NOT contain: "High" or lower tier as the final assignment
 [Requirement: PE-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/try-these.test.ts]
 ```
 
 ### TC-PE-3-02: High-impact trigger always produces Critical or High regardless of other scores
@@ -478,7 +478,7 @@ When the engine assigns tier using impact-dominant rules
 Then the tier is Critical or High
 And no combination of low complexity or low reliance scores can produce Medium or Low
 [Requirement: PE-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/tier.test.ts]
 ```
 
 ### TC-PE-3-03: Low-impact use case correctly assigned Low tier
@@ -489,7 +489,7 @@ When the engine assigns tier
 Then the tier is Low or Medium
 And the tier-triggering rule is named in the verdict output
 [Requirement: PE-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/tier.test.ts]
 ```
 
 ---
@@ -503,7 +503,7 @@ Then the verdict is immediately Rejected
 And the output MUST contain: "Rejected" status and the specific hard line rule ID that fired
 And the output MUST NOT contain: any control set offering a path to approval
 [Requirement: PE-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ### TC-PE-4-02: MNPI flowing to external Zone A model produces immediate Rejected [EXAMPLE]
@@ -515,7 +515,7 @@ Then the verdict is Rejected with the data-zone hard line cited
 And the output MUST contain: the path "MNPI → external Zone A model" and the rule that prohibits it
 And the output MUST NOT contain: a control set that would resolve this
 [Requirement: PE-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ### TC-PE-4-03: Hard lines evaluated before control solving — controls not proposed for hard-line violations
@@ -525,7 +525,7 @@ When the engine runs the full evaluation sequence
 Then hard line evaluation occurs BEFORE control solving
 And no controls are proposed — the evaluation stops at Rejected
 [Requirement: PE-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -539,7 +539,7 @@ Then the SS1/23 pack is activated
 And the output MUST contain: "SS1/23" in the active packs list and its version
 And the output MUST NOT contain: only SR 26-2 applied when the use case is UK-entity
 [Requirement: PE-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ### TC-PE-5-02: EU entity with credit scoring triggers EU AI Act Annex III critical override
@@ -549,7 +549,7 @@ When jurisdiction packs are applied
 Then the EU AI Act pack fires its Annex III §5(b) override
 And the tier is forced to Critical regardless of internal tiering outcome
 [Requirement: PE-5, PE-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -584,7 +584,7 @@ Given a use case that is tiered Medium by internal rules but High by SS1/23 mini
 When jurisdiction overrides are applied
 Then the final tier is High, not Medium
 [Requirement: PE-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts]
 ```
 
 ---
@@ -598,7 +598,7 @@ Then the verdict record contains policy_version: "1.3"
 And the output MUST contain: the policy version field populated with "1.3"
 And the output MUST NOT contain: a verdict record with a missing or null policy_version field
 [Requirement: PE-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-PE-7-02: Updated policy file version does not change previously issued verdicts
@@ -608,7 +608,7 @@ When the policy file is updated to version 1.4
 Then the existing verdict still shows policy_version: "1.3"
 And the verdict record is not modified or re-evaluated automatically
 [Requirement: PE-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -622,7 +622,7 @@ Then the system produces a verdict (Approved / Approved with controls / Rejected
 And the output MUST contain: a complete verdict with status, tier, track, and binding constraint
 And the output MUST NOT contain: an error about missing policy fields or [FIRM] placeholders blocking evaluation
 [Requirement: PE-8] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/try-these.test.ts]
 ```
 
 ### TC-PE-8-02: Starter config covers all seven jurisdiction packs
@@ -632,7 +632,7 @@ When the system is inspected for available jurisdiction packs
 Then all four AUTHORED packs are present and loadable: SR 26-2, SS1/23, EU AI Act, DORA
 And CA, SG and JP are declared jurisdictions with no pack file, so no pack activates for them
 [Requirement: PE-8] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
 
 ---
@@ -652,7 +652,7 @@ Then the verdict proposes [C-ENC-1, C-ZONE-2] — not [C-ENC-2, C-ZONE-2]
 And the output MUST contain: exactly the controls needed to satisfy all tripped invariants
 And the output MUST NOT contain: additional controls not required to satisfy the invariants
 [Requirement: CS-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/greedy-solver.test.ts]
 ```
 
 ### TC-CS-1-02: Safety margin honoured during control selection [EXAMPLE]
@@ -664,7 +664,7 @@ Then the minimal cover [C-A1, C-B1] is extended by the lowest-burden redundant c
 And the output MUST contain: C-A2, raising INV-A to coverage depth 2, with margin achieved 0.5
 And the output MUST NOT contain: controls beyond what the target requires
 [Requirement: CS-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/safety-margin.test.ts]
 ```
 
 > **The metric is a recorded design decision, not derived from CS-1.** CS-1's
@@ -692,7 +692,7 @@ Then no redundant control can be added and the solver stops rather than looping
 And the output MUST contain: margin achieved 0, and every tripped invariant listed as single-covered
 And the output MUST NOT contain: a result presented as though the margin target had been met
 [Requirement: CS-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/safety-margin.test.ts]
 ```
 
 > This is the shipped policy's real state: all 13 resolvable invariants have
@@ -710,7 +710,7 @@ Then the lower-burden control is chosen
 And the output MUST contain: C-LOW-BURDEN
 And the output MUST NOT contain: C-HIGH-BURDEN
 [Requirement: CS-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/greedy-solver.test.ts]
 ```
 
 > Allocated 2026-07-26 (HR-13). This behaviour was previously asserted in
@@ -726,7 +726,7 @@ Then the verdict is Rejected
 And the output MUST contain: the specific unsatisfiable invariant named ("Level 4 autonomy on irreversible client-facing action — hard line, no control resolves")
 And the output MUST NOT contain: a partial control set or a suggestion that controls could help
 [Requirement: CS-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/greedy-solver.test.ts]
 ```
 
 ---
@@ -740,7 +740,7 @@ Then the verdict includes "InfoSec review required" as a mandatory next step
 And the output MUST contain: "InfoSec review" in the downstream_reviews list and the policy rule that triggered it
 And the output MUST NOT contain: InfoSec review listed as optional or advisory
 [Requirement: CS-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/downstream-reviews.test.ts]
 ```
 
 ### TC-CS-3-02: Vendor risk review triggered for third-party model use case
@@ -750,7 +750,7 @@ When the verdict is produced
 Then "vendor risk assessment required" is listed as a mandatory downstream step
 And the vendor name is identified in the triggered review
 [Requirement: CS-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/downstream-reviews.test.ts]
 ```
 
 ---
@@ -770,7 +770,7 @@ Then "Approved with controls", "High", and "Track II" are all visible without sc
 And the output MUST contain: all three fields rendered prominently in the first visible screen area
 And the output MUST NOT contain: the status, tier, or track hidden below a fold or inside a collapsed section
 [Requirement: VD-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ---
@@ -784,7 +784,7 @@ Then the verdict shows: rule ID "PE-DATA-3", the violated graph path "client_ema
 And the output MUST contain: the specific rule ID and the specific graph path that triggered it
 And the output MUST NOT contain: only a generic "policy violation" message without identifying the rule and path
 [Requirement: VD-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ---
@@ -798,7 +798,7 @@ Then the system re-evaluates and produces a new verdict
 And the output MUST contain: both the original verdict (Rejected) and the new verdict (Approved with controls) in the audit trail
 And the output MUST NOT contain: the original verdict deleted or overwritten
 [Requirement: VD-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-VD-3-02: Correction record includes corrector identity and timestamp
@@ -807,7 +807,7 @@ Given a submitter makes a graph correction
 When the correction is saved
 Then the audit trail record for the correction includes: the corrector's identity, the timestamp, the field corrected, the old value, and the new value
 [Requirement: VD-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -821,7 +821,7 @@ Then there is no "Delete", "Edit", or "Modify" button or link on any audit recor
 And the output MUST contain: read-only audit records with timestamps, identities, and content
 And the output MUST NOT contain: any mechanism to delete, modify, or hide an audit record
 [Requirement: VD-4] [Priority: MUST] [Note: application-layer immutability only — V1 provisional, per HR-08]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -835,7 +835,7 @@ Then the verdict record contains: policy_version: "1.3", pack_versions: {ss1-23:
 And the output MUST contain: policy_version and all active pack versions in the record
 And the output MUST NOT contain: only the policy version with pack versions omitted
 [Requirement: VD-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -849,7 +849,7 @@ Then the verdict record includes a conditions block with: model_drift_threshold,
 And the output MUST contain: a conditions block in the verdict JSON/record with at least the above fields
 And the output MUST NOT contain: a verdict record with conditions block absent or empty
 [Requirement: VD-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ---
@@ -863,7 +863,7 @@ Then the trace reads as complete prose sentences naming: the track classificatio
 And the output MUST contain: at least one verbatim regulatory citation (e.g. "SS1/23 §3.4") in the trace
 And the output MUST NOT contain: only internal rule IDs (e.g. "PE-TRACK-2 fired") without the human-readable explanation
 [Requirement: VD-8] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/llm/reasoning-trace.test.ts]
 ```
 
 ---
@@ -883,7 +883,7 @@ Then the lifecycle stage advances to "Pre-checked"
 And the output MUST contain: the stage transition recorded with timestamp and actor identity
 And the output MUST NOT contain: the use case jumping directly from "Idea" to "Approved" without a "Pre-checked" stage
 [Requirement: LC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-LC-1-02: Stage transitions are recorded with timestamp and actor
@@ -892,7 +892,7 @@ Given a use case advances from Pre-checked to Approved (2LoD action)
 When the transition is recorded
 Then the record shows: previous stage, new stage, actor identity, and timestamp
 [Requirement: LC-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -906,7 +906,7 @@ Then the use case advances to "Approved" immediately with no 2LoD notification r
 And the output MUST contain: status "Approved" and the governance path "self-service — Low tier"
 And the output MUST NOT contain: a pending 2LoD approval gate for a Low-tier use case
 [Requirement: LC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx; src/engine/workflow-router.test.ts]
 ```
 
 ### TC-LC-2-02: High-tier use case requires active 2LoD approval before advancing [EXAMPLE]
@@ -918,7 +918,7 @@ Then the status is "Pending 2LoD approval" — NOT "Approved"
 And the output MUST contain: "Pending 2LoD approval" status and the 2LoD review requirement
 And the output MUST NOT contain: "Approved" status before 2LoD has acted
 [Requirement: LC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx; src/engine/workflow-router.test.ts]
 ```
 
 ### TC-LC-2-03: Critical-tier governance path requires 2LoD approval — verified in policy mapping
@@ -927,7 +927,7 @@ Given the policy file maps Critical tier to "2LoD must actively approve"
 When a Critical-tier verdict is issued
 Then the governance path applied matches the policy file's tier-to-workflow mapping for Critical
 [Requirement: LC-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/workflow-router.test.ts]
 ```
 
 ---
@@ -941,7 +941,7 @@ Then the system identifies all active use cases and queues them for re-evaluatio
 And the output MUST contain: a re-evaluation queue entry for each active use case
 And the output MUST NOT contain: active use cases silently carrying their old verdict without being queued
 [Requirement: LC-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/policy.test.ts]
 ```
 
 ### TC-LC-4-02: AIGate self-assessment use case is present in register [EXAMPLE]
@@ -953,7 +953,7 @@ Then the AIGate system itself appears as a use case entry with its own verdict
 And the output MUST contain: an entry for AIGate with tier, track, and verdict populated
 And the output MUST NOT contain: AIGate absent from its own register
 [Requirement: LC-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx; src/seeds/aigate-self-assessment.test.ts]
 ```
 
 ---
@@ -973,7 +973,7 @@ Then Azure OpenAI appears as a single shared node connected to all three use cas
 And the output MUST contain: one platform node referenced by three use case nodes (not three separate copies)
 And the output MUST NOT contain: three independent copies of the Azure OpenAI platform entry
 [Requirement: RG-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ### TC-RG-1-02: Graph query — "which use cases share this vendor model?" returns complete results
@@ -983,7 +983,7 @@ When a 2LoD user queries "which use cases share VND-GPT-4?"
 Then exactly three use cases are returned
 And the query completes in under 2 seconds (500-use-case baseline per HR-09)
 [Requirement: RG-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -997,7 +997,7 @@ Then he sees only his own use cases (those submitted under his identity)
 And the output MUST contain: only James's own use case records
 And the output MUST NOT contain: use cases from other teams in James's register view
 [Requirement: RG-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterView.test.tsx]
 ```
 
 ### TC-RG-2-02: 2LoD user sees full register across all teams
@@ -1006,7 +1006,7 @@ Given Priya logs in with a 2LoD role
 When she views the register
 Then she sees all use cases from all teams
 [Requirement: RG-2] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterView.test.tsx]
 ```
 
 ---
@@ -1018,7 +1018,7 @@ When a 2LoD user applies the filter "tier = Critical"
 Then exactly 5 use cases are shown
 And no High, Medium, or Low tier use cases appear in the filtered view
 [Requirement: RG-3] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterView.test.tsx]
 ```
 
 ---
@@ -1030,7 +1030,7 @@ When a 2LoD user triggers a JSON export
 Then the exported file contains all 10 use case records
 And each record includes: use case ID, tier, track, status, verdict, audit trail reference, policy version
 [Requirement: RG-5] [Priority: COULD]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/RegisterView.test.tsx]
 ```
 
 ---
@@ -1050,22 +1050,31 @@ Then every rule, threshold, and tier definition is readable as plain English wit
 And the output MUST contain: human-readable comments explaining each section
 And the output MUST NOT contain: binary encoding, minified content, or developer-only syntax
 [Requirement: CF-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/policy.test.ts]
 ```
 
 ---
 
-### TC-CF-3-01: Policy file version increments on save [EXAMPLE]
+### TC-CF-3-01: A policy without a version cannot be used, and the version in force is recorded [EXAMPLE]
 ```
-Input: policy/appetite.yaml at version 1.3; user edits a tier threshold and saves
-Given the policy file is at version 1.3
-When a change is saved (e.g. a tier threshold is updated)
-Then the version field in the file advances to 1.4
-And the output MUST contain: version: "1.4" in the saved file
-And the output MUST NOT contain: version still at "1.3" after a saved change
+Input: policy/appetite.yaml with the version field blanked
+Given a policy whose version field is missing or empty
+When the policy is loaded
+Then validation rejects it, naming the version field
+And every verdict records the policy version in force when it was produced
+And the output MUST NOT contain: a verdict produced under an unversioned policy
 [Requirement: CF-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/policy.test.ts]
 ```
+
+> **Rewritten 2026-08-15.** The original asserted that saving a change
+> auto-advances the version field. No such mechanism was ever built, and CF-3
+> does not ask for one — it requires the file to BE versioned and the version
+> in force to be recorded on each verdict, both of which hold (version is a
+> required field whose absence blocks loading; PE-7/VD-5 pin the recording).
+> The file's own header documents its 1.0→1.3 history as authored changes.
+> Same class as TC-PE-6-01: a criterion asserting a design the build never
+> chose, failing against a product that is behaving correctly.
 
 ---
 
@@ -1078,7 +1087,7 @@ Then the main policy file version is still v1.3 (unchanged)
 And the output MUST contain: EU AI Act pack version "1.2" in the verdict's pack_versions field for new verdicts
 And the output MUST NOT contain: the main policy file version changed as a side effect of the pack update
 [Requirement: CF-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
 
 ---
@@ -1092,7 +1101,7 @@ Then evaluation is disabled
 And the output MUST contain: an error message identifying "hard_lines" as the missing required field
 And the output MUST NOT contain: the application starting normally and attempting evaluation with no hard_lines defined
 [Requirement: CF-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/PolicyEditor.test.tsx]
 ```
 
 ### TC-CF-5-02: Pack rule missing source citation rejected on load [EXAMPLE]
@@ -1104,7 +1113,7 @@ Then the application displays: "SS1/23 pack invalid — rule [rule-ID]: source c
 And the output MUST contain: the specific invalid rule ID and the nature of the failure
 And the output MUST NOT contain: the application loading the invalid pack and proceeding to evaluation
 [Requirement: CF-5, RA-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
 
 ### TC-CF-5-03: Valid policy file and packs load without error
@@ -1114,7 +1123,7 @@ When the application starts
 Then no error is shown
 And evaluation is available immediately
 [Requirement: CF-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/policy.test.ts]
 ```
 
 ---
@@ -1134,7 +1143,7 @@ Then the SS1/23 pack is activated
 And the output MUST contain: "SS1/23" in the active packs with its version
 And the output MUST NOT contain: SS1/23 absent when UK is in scope
 [Requirement: RA-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts]
 ```
 
 ### TC-RA-1-02: US-only jurisdiction activates SR 26-2 pack only
@@ -1143,7 +1152,7 @@ Given a confirmed graph specifying US jurisdiction only
 When the engine resolves active packs
 Then SR 26-2 is activated and SS1/23, EU AI Act, OSFI E-23 are NOT activated
 [Requirement: RA-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts]
 ```
 
 ### TC-RA-1-03: Multi-jurisdiction use case activates all applicable packs [EXAMPLE]
@@ -1156,7 +1165,7 @@ And no pack activates for Canada, which is declared with no pack file
 And the output MUST contain: every matching jurisdiction's pack in the active packs set
 And the output MUST NOT contain: only the first matching jurisdiction's pack applied
 [Requirement: RA-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts]
 ```
 
 ---
@@ -1190,7 +1199,7 @@ Then the record shows pack_versions: {"ss1-23": "2.0", "eu-ai-act": "1.1"} with 
 And the output MUST contain: each active pack version recorded in the verdict
 And the output MUST NOT contain: only "SS1/23" without a version number
 [Requirement: RA-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -1204,7 +1213,7 @@ Then the system rejects the load with: "Rule [ID] in SS1/23 pack missing require
 And the output MUST contain: the specific rule ID in the error
 And the output MUST NOT contain: the rule loaded and applied silently without citation
 [Requirement: RA-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
 
 ### TC-RA-7-02: Pack rule with complete source block loads successfully
@@ -1213,22 +1222,28 @@ Given a rule has a complete source block (document, section, verbatim text)
 When the pack is loaded
 Then the rule loads without error and is available for evaluation
 [Requirement: RA-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
 
 ---
 
-### TC-RA-8-01: Pack rules without confidence scores rejected [EXAMPLE]
+### TC-RA-8-01: Pack rules without a basis are rejected [EXAMPLE]
 ```
-Input: A regulatory pack rule with no confidence_score field
-Given a rule in the EU AI Act pack has no confidence_score field
+Input: A regulatory pack rule with no basis field
+Given a rule in a pack carries no basis (verbatim / derived / judgement)
 When the pack is loaded
-Then the system rejects the load with an error naming the rule missing its confidence score
-And the output MUST contain: the missing confidence_score field identified in the error
-And the output MUST NOT contain: the rule applied without a confidence score
+Then the load is rejected with an error naming the missing basis
+And the output MUST NOT contain: the rule applied without a stated basis
 [Requirement: RA-8] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/store/packs.test.ts]
 ```
+
+> **Rewritten 2026-08-15.** The original demanded a `confidence_score`.
+> Confidence was removed in V2-E as fabricated precision — two reviewers would
+> grade the same rule differently and nobody could say what "Medium" obliged
+> anyone to do — and replaced by `basis`, an objective claim checkable against
+> the rule's own quoted text. The criterion now asserts the mechanism the
+> product actually has, and its Zod schema makes basis required.
 
 ---
 
@@ -1241,7 +1256,7 @@ Then the displayed chain shows: "EU AI Act Annex III §5(b) states: 'AI systems 
 And the output MUST contain: the verbatim regulatory text, the derived rule, and the specific graph attribute that triggered it
 And the output MUST NOT contain: only "EU AI Act pack fired" without the regulatory text and reasoning
 [Requirement: RA-9] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -1255,7 +1270,7 @@ Then a caveat is displayed: "This verdict relies on [rule ID], which involves in
 And the output MUST contain: the rule ID and the word "Medium" in the caveat text
 And the output MUST NOT contain: a Medium-confidence verdict displayed without any caveat
 [Requirement: RA-11] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ### TC-RA-11-02: Verdict with Low-confidence rule routes to legal team [EXAMPLE]
@@ -1268,7 +1283,7 @@ And a notice reads: "[Rule ID] covers contested regulatory territory. Your legal
 And the output MUST contain: "Provisional" status indicator and the legal team routing instruction
 And the output MUST NOT contain: the verdict marked as final when a Low-confidence rule was the basis
 [Requirement: RA-11] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/VerdictDisplay.test.tsx]
 ```
 
 ---
@@ -1293,7 +1308,7 @@ Then the registry is available to evaluation
 And the output MUST contain: the platform id, its envelope dimensions, and its satisfied control ids
 And the output MUST NOT contain: a validation error for a policy that declares no registry at all
 [Requirement: PV-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/try-these.test.ts]
 ```
 
 ### TC-PV-2-01: A vendor absent from the registry is treated as a new vendor [EXAMPLE]
@@ -1305,7 +1320,7 @@ Then no controls are inherited from that vendor
 And the output MUST contain: the unapproved vendor named explicitly in a downstream review
 And the output MUST NOT contain: any inherited control attributed to that vendor
 [Requirement: PV-2, PV-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 ### TC-PV-3-01: Inherited platform controls reduce the required control set [EXAMPLE]
@@ -1317,7 +1332,7 @@ Then that control is not re-imposed on the use case
 And the output MUST contain: a smaller required-control set than the same use case with no platform declared
 And the output MUST NOT contain: CTRL-FINGERPRINT-01 in the newly-required controls
 [Requirement: PV-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 > Supersedes the reference at `specs/implementation-guide.md` line 286, which
@@ -1333,7 +1348,7 @@ Then the data-class dimension reports as outside the envelope
 And the output MUST contain: CTRL-ENC-01 in the required controls, evaluated directly rather than inherited
 And the output MUST NOT contain: a claim that the platform covered the exceeded dimension
 [Requirement: PV-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 ### TC-PV-3-03: Ordinal envelope ceilings are inclusive at the boundary [EXAMPLE]
@@ -1345,7 +1360,7 @@ Then autonomy 1 fits, autonomy 2 fits (the ceiling is inclusive), autonomy 3 doe
 And the output MUST contain: fits=true at the ceiling value itself
 And the output MUST NOT contain: fits=true one level above the ceiling
 [Requirement: PV-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts; src/engine/try-these.test.ts]
 ```
 
 > Boundary value analysis (Copeland Ch. 5). `max_` semantics are inclusive;
@@ -1361,7 +1376,7 @@ Then every control in that cluster is withdrawn, not only the exceeded dimension
 And the output MUST contain: zero inherited controls from the broken cluster
 And the output MUST NOT contain: partial inheritance from a cluster whose basis was exceeded
 [Requirement: PV-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 ### TC-PV-5-01: An unapproved platform inherits nothing and is named in the verdict [EXAMPLE]
@@ -1373,7 +1388,7 @@ Then no controls are inherited
 And the output MUST contain: "PLAT-NOT-REGISTERED" in the required downstream reviews
 And the output MUST NOT contain: a generic "unapproved component" message that omits the component name
 [Requirement: PV-5] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 ### TC-PV-6-01: The inheritance chain is recorded on every verdict that claims inheritance [EXAMPLE]
@@ -1385,7 +1400,7 @@ Then the chain names what was declared, what was inherited, and every dimension 
 And the output MUST contain: each dimension with a fits/does-not-fit determination and the approved value
 And the output MUST NOT contain: an inherited control with no envelope stated to justify it
 [Requirement: PV-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 ### TC-PV-6-02: The inheritance chain survives a rejection [EXAMPLE]
@@ -1397,7 +1412,7 @@ Then the inheritance chain is still present
 And the output MUST contain: the declared platform and the dimension that fell outside the envelope
 And the output MUST NOT contain: an empty or absent inheritance record merely because the verdict was a rejection
 [Requirement: PV-6] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 > Found by driving an over-envelope case through the engine, not by a unit
@@ -1413,7 +1428,7 @@ Then at least one platform covers a sample use case and at least one case exceed
 And the output MUST contain: a worked example of inheritance reducing controls
 And the output MUST NOT contain: a registry entry presented as a real firm approval rather than a template
 [Requirement: PV-8] [Priority: SHOULD]
-[Trace: not-yet-traced]
+[Trace: src/engine/try-these.test.ts]
 ```
 
 ### TC-PV-A-01: Declaring no platform changes nothing [EXAMPLE]
@@ -1425,7 +1440,7 @@ Then the verdict is byte-identical to the pre-PV behaviour
 And the output MUST contain: no inheritance block at all
 And the output MUST NOT contain: a fabricated inheritance record asserting that nothing was inherited
 [Requirement: PV-3, NF-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/envelope.test.ts]
 ```
 
 > The safety rail. Regression risk for PV is not that inheritance fails — it
@@ -1442,7 +1457,7 @@ And the output MUST NOT contain: a fabricated inheritance record asserting that 
 Property: For all (graph, policy_version) pairs, evaluate(graph, policy_version) is a pure function — no randomness, no timestamp-dependence in the verdict logic, no external state affecting the core result.
 Counterexample strategy: run 20 evaluations of the same (graph, policy_version) pair at different times; verify verdict is identical on every run. Include borderline-tier cases.
 [Requirement: NF-1] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/evaluate.test.ts]
 ```
 
 ---
@@ -1456,7 +1471,7 @@ Then no "Delete", "Edit", or "Modify" control is present on any audit record
 And the output MUST contain: read-only audit records accessible to 2LoD
 And the output MUST NOT contain: any UI element that enables modification of an audit record
 [Requirement: NF-2] [Priority: MUST] [Note: V1 application-layer immutability — see NF-2 provisional caveat]
-[Trace: not-yet-traced]
+[Trace: src/store/register.test.ts]
 ```
 
 ---
@@ -1470,7 +1485,7 @@ Then zero outbound network requests are made during the evaluation
 And the output MUST contain: a complete verdict produced without any network activity
 And the output MUST NOT contain: any network call to an external service during the evaluation phase
 [Requirement: NF-3] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/non-functional.test.ts]
 ```
 
 ---
@@ -1484,7 +1499,7 @@ Then the application loads and functions without any npm install, Docker, or con
 And the output MUST contain: a complete verdict displayed in the browser
 And the output MUST NOT contain: any "install required" prompt or console error preventing use
 [Requirement: NF-4] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/components/__tests__/WalkingSkeleton.test.tsx]
 ```
 
 ---
@@ -1498,7 +1513,7 @@ Then the verdict is displayed within 30 seconds of the confirmation action
 And the output MUST contain: verdict displayed within the 30-second window
 And the output MUST NOT contain: a loading state persisting beyond 30 seconds before the verdict appears
 [Requirement: NF-5] [Priority: SHOULD] [Baseline: M2 MacBook Air 8GB — per HR-02 acknowledgement]
-[Trace: not-yet-traced]
+[Trace: src/engine/non-functional.test.ts]
 ```
 
 ---
@@ -1512,7 +1527,7 @@ Then the verdict is marked "Provisional — [rule ID] has not been signed off by
 And the output MUST contain: the specific unsigned rule ID in the provisional warning
 And the output MUST NOT contain: the verdict marked as final when an unsigned rule determined it
 [Requirement: NF-7] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/jurisdiction.test.ts]
 ```
 
 ---
@@ -1526,7 +1541,7 @@ Then the verdict is labelled: "Translation fidelity unattested — the encoded r
 And the output MUST contain: the "translation fidelity unattested" label on the verdict
 And the output MUST NOT contain: a verdict displaying as fully authoritative when the attestation is missing
 [Requirement: NF-10] [Priority: MUST]
-[Trace: not-yet-traced]
+[Trace: src/engine/attestation.test.ts]
 ```
 
 ---
@@ -1733,7 +1748,7 @@ Counterexample strategy: fast-check — generate a tripped invariant set T and c
 
 ### Known limitations of this suite
 
-- **No impact map exists**, so every case carries `[Trace: not-yet-traced]`.
+- **No impact map exists**, so every case carries `[Trace: src/engine/properties.test.ts]`.
   ADR-505 treats that as a countable gap rather than a failure.
 - **`/gvm-code-review` and `/gvm-test` have never run** on this project across
   24 build chunks. Test cases describe intended behaviour; nothing has yet

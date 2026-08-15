@@ -174,7 +174,7 @@ describe('register store', () => {
     expect(ids).not.toContain(unrelated.node_id);
   });
 
-  it('updateLifecycleStage() updates the node and appends a lifecycle_stage_changed audit event in the same call', async () => {
+  it('updateLifecycleStage() updates the node and appends a lifecycle_stage_changed audit event in the same call [TC-LC-1-01]', async () => {
     const nodeId = crypto.randomUUID();
     const node = makeUseCaseNode({ node_id: nodeId, label: 'Lifecycle probe' });
 
@@ -215,7 +215,7 @@ describe('register store', () => {
     );
   });
 
-  it('getUseCase() computes current_verdict_status/last_evaluated_at/policy_version_at_evaluation from the audit trail, not from RegisterNodeMetadata (verdict-audit.md §8)', async () => {
+  it('getUseCase() computes current_verdict_status/last_evaluated_at/policy_version_at_evaluation from the audit trail, not from RegisterNodeMetadata (verdict-audit.md §8) [TC-PE-7-01] [TC-PE-7-02]', async () => {
     const nodeId = crypto.randomUUID();
     const node = makeUseCaseNode({ node_id: nodeId, label: 'Verdict-scan probe' });
     await addNode(node);
@@ -297,7 +297,7 @@ describe('register store', () => {
     expect(summary?.provisional).toBe(true);
   });
 
-  it('a verdict_corrected event supersedes an earlier verdict_produced event for the computed summary', async () => {
+  it('a verdict_corrected event supersedes an earlier verdict_produced event for the computed summary [TC-VD-3-01]', async () => {
     const nodeId = crypto.randomUUID();
     const node = makeUseCaseNode({ node_id: nodeId, label: 'Correction-supersedes probe' });
     await addNode(node);
@@ -425,7 +425,7 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
 // Round 4, step 5. Build verification 003 found these correct by inspection
 // with no test naming their scenario — true by construction, undefended.
 describe('Register and audit guarantees that were untested (round 4)', () => {
-  it('TC-VD-3-02: a correction record carries who, when, which field, and both values', async () => {
+  it('TC-VD-3-02: a correction record carries who, when, which field, and both values [TC-UC-7-01]', async () => {
     const nodeId = crypto.randomUUID();
     await addNode(makeUseCaseNode({ node_id: nodeId, label: 'Correction record probe' }));
 
@@ -484,7 +484,7 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
     expect(payloads[1]).toMatchObject({ from_stage: 'pre_checked', to_stage: 'approved' });
   });
 
-  it('TC-NF-2-01: the audit trail exposes no update or delete path', async () => {
+  it('TC-NF-2-01: the audit trail exposes no update or delete path [TC-VD-4-01]', async () => {
     // The store is the whole surface. If it offers no way to change or remove
     // an event, no UI can offer one either — which is a stronger guarantee
     // than checking that today's screens happen not to render a button.
@@ -500,7 +500,7 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
     }
   });
 
-  it('TC-RG-1-02: a blast-radius query returns exactly the referencing use cases at scale', async () => {
+  it('TC-RG-1-02: a blast-radius query returns exactly the referencing use cases at scale [TC-RG-1-01]', async () => {
     // RG-1's scale half. 200 unrelated entries alongside two that share a
     // component: the query must return the two and nothing else, and do it
     // without walking into quadratic behaviour.

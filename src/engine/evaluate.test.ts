@@ -30,7 +30,7 @@ function graph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
 }
 
 describe('evaluate — TC-PE-1-01 determinism', () => {
-  it('produces an identical result across 10 runs for the same inputs', () => {
+  it('produces an identical result across 10 runs for the same inputs [TC-NF-1-01]', () => {
     const g = graph({
       processing_nodes: [
         { id: 'p1', label: 'x', model_type: 'ml', autonomy_level: 2, data_zone: 'Zone B', vendor: 'internal', replaces_prior_model: false },
@@ -46,7 +46,7 @@ describe('evaluate — TC-PE-1-01 determinism', () => {
 });
 
 describe('evaluate — TC-PE-4-01 hard line trip', () => {
-  it('returns immediate rejected with no controls solved when a hard line trips', () => {
+  it('returns immediate rejected with no controls solved when a hard line trips [TC-PE-4-02] [TC-PE-4-03]', () => {
     const g = graph({
       processing_nodes: [
         { id: 'p1', label: 'x', model_type: 'agentic', autonomy_level: 4, data_zone: 'Zone A', vendor: 'internal', replaces_prior_model: false },
@@ -123,7 +123,7 @@ describe('evaluate — jurisdiction pass-through (TC-PE-5-01 structure)', () => 
 });
 
 describe('evaluate — approved path', () => {
-  it('returns approved when no invariants trip', () => {
+  it('returns approved when no invariants trip [TC-PE-1-02]', () => {
     const g = graph({
       processing_nodes: [CLEAN_PROCESSING],
       output_nodes: [CLEAN_OUTPUT],
@@ -454,7 +454,7 @@ describe('evaluate — jurisdiction packs (V2-A)', () => {
     jurisdictions: ['EU'],
   });
 
-  it('an EU hiring case is FORCED from Medium to Critical by the Annex III floor, with the chain + provisional caveat (NF-7 unsigned)', () => {
+  it('an EU hiring case is FORCED from Medium to Critical by the Annex III floor, with the chain + provisional caveat (NF-7 unsigned) [TC-PE-5-02] [TC-RA-9-01] [TC-RA-3-01] [TC-VD-5-01]', () => {
     const result = evaluate(hiringGraph(), policy, [euPack]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;

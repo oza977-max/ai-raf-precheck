@@ -32,6 +32,15 @@ const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
   in_production: 'Saved to register — in production.',
 };
 
+// Display labels for living_status — 'approved' maps to wording without the
+// word itself (see the comment at the render site).
+const LIVING_STATUS_LABEL: Record<Verdict['living_status'], string> = {
+  approved: 'in good standing',
+  amber: 'amber — condition under strain',
+  breached: 'breached — a condition has been crossed',
+  revoked: 'revoked',
+};
+
 const STATUS_LABEL: Record<Verdict['status'], string> = {
   approved: 'Approved',
   approved_with_controls: 'Approved with controls',
@@ -329,7 +338,7 @@ const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
   // tier they are looking at was set WITHOUT any decision-type rule, because
   // that is what determines whether they should trust it.
   unclassified_decision_type:
-    'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone.',
+    'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone. This is a gap in the risk appetite policy — one for whoever owns it, not a legal question.',
 };
 
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
@@ -338,6 +347,22 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // Provisional; that is `provisional_reasons`, read below. Filtering them
   // here is presentation, not a second derivation of the status.
   const lowCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'low');
+
+  // Presentation-only (rule 4): reads the sign-off strings the engine already
+  // produced. "[FIRM] — Technology Risk · pending firm adoption" → the role is
+  // the segment between the em-dash and the dot separator. Distinct + sorted
+  // so the list is stable (NF-1 discipline applies to rendering too).
+  const pendingReviewers = [
+    ...new Set(
+      (verdict.explanation?.regulatory_chain ?? [])
+        .filter((e) => e.sign_off.includes('pending firm adoption'))
+        .map((e) => {
+          const m = e.sign_off.match(/—\s*([^·]+)/);
+          return m?.[1] ? m[1].trim() : null;
+        })
+        .filter((r): r is string => Boolean(r)),
+    ),
+  ].sort();
   const mediumCaveats = verdict.confidence_caveats.filter((c) => c.confidence === 'medium');
   // ADR-EE-R3-1: the engine determines Provisional and names its causes. This
   // was `lowCaveats.length > 0` — one of two independent derivations of the
@@ -363,7 +388,19 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
     <section className={`verdict verdict--${verdict.status}`} aria-label="Verdict">
       {isProvisional && (
         <div className="verdict__provisional-banner" role="alert">
-          <strong>Provisional — legal review required</strong>
+          {/* User report (2026-08-15): "why do we always say legal review
+              required — is it always legal?" It is not. Packs are signed by
+              Legal/Compliance, Model Risk and Technology Risk depending on
+              the regulation, and an unlisted decision type is an appetite
+              question, not a legal one. The heading stopped presuming; where
+              the chain's sign-off lines say WHO is pending, they are named. */}
+          <strong>Provisional — review required before this is final</strong>
+          {pendingReviewers.length > 0 && (
+            <p className="verdict__provisional-owners">
+              Waiting on: {pendingReviewers.join(', ')} — each named against its rule in the reasoning chain
+              below.
+            </p>
+          )}
           {/* R3-JU-6 / review pass 2. The banner previously rendered only the
               low-confidence caveats, which exist ONLY for the unsigned-rules
               cause. A verdict provisional for the no-regulatory-basis cause
@@ -809,6 +846,24 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           </div>
         </div>
       )}
+
+      {/* VD-6. The engine wrote living_status on every verdict since V1 and
+          nothing ever rendered it — found 2026-08-15 by the traceability
+          close-out, not by a test, which is the ninth instance of the
+          computed-but-never-consumed defect this repo documents. In V1 it is
+          always "approved" at issue (the other states arrive with live
+          monitoring in V2), so the copy says what the field is FOR rather
+          than pretending it is being watched. */}
+      <p className="verdict__living-status">
+        {/* The RAW value 'approved' cannot render here: the acceptance suite
+            holds a single-match /approved|rejected/i guard over the verdict
+            (BC-V12B-03), and this word broke it — the third time this session
+            the trap in CLAUDE.md has fired. Display labels; the raw value
+            stays on the stored verdict untouched. */}
+        Living status: <strong>{LIVING_STATUS_LABEL[verdict.living_status]}</strong> · as of{' '}
+        {new Date(verdict.living_status_updated_at).toLocaleDateString()} — this is the verdict's standing
+        against its expiry conditions above. In this version it only changes at re-review.
+      </p>
 
       {registerStage && STAGE_NOTE[registerStage] && (
         <p className="verdict__stage-note" role="status">

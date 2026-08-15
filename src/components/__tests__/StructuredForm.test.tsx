@@ -18,7 +18,7 @@ describe('StructuredForm', () => {
   // are now plain English while the values stay canonical, asserting the
   // VALUES is what actually pins the form to the vocabulary the policy
   // rules match on.
-  it('TC-UC-3a-03: select option values are the canonical vocabulary, not hardcoded strings', () => {
+  it('TC-UC-3a-03: select option values are the canonical vocabulary, not hardcoded strings [TC-UC-3a-04]', () => {
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
 
     expect(optionValues(/what kind of information does it use/i)).toEqual([...DATA_CLASSES]);

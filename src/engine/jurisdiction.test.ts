@@ -61,7 +61,7 @@ function pack(rules: PackRule[], overrides: Partial<JurisdictionPack> = {}): Jur
 }
 
 describe('resolveActivePacks (V2-A)', () => {
-  it('activates only packs whose jurisdiction is on the graph, sorted by pack_id', () => {
+  it('activates only packs whose jurisdiction is on the graph, sorted by pack_id [TC-RA-1-01] [TC-RA-1-02]', () => {
     const eu = pack([rule()]);
     const uk = pack([rule({ id: 'UK-1' })], { pack_id: 'SS1-23', jurisdiction: 'UK' });
     expect(resolveActivePacks(['EU'], [], [uk, eu]).map((p) => p.pack_id)).toEqual(['EU-AIACT']);
@@ -71,7 +71,7 @@ describe('resolveActivePacks (V2-A)', () => {
 });
 
 describe('applyJurisdictionOverrides (V2-A)', () => {
-  it('BC-V2A-01: a tier_floor raises the tier and never lowers it', () => {
+  it('BC-V2A-01: a tier_floor raises the tier and never lowers it [TC-PE-6-02]', () => {
     const raised = applyJurisdictionOverrides(graph(), 'Medium', 'II', [pack([rule()])]);
     expect(raised.finalTier).toBe('Critical');
     expect(raised.appliedOverrides).toHaveLength(1);
@@ -104,7 +104,7 @@ describe('applyJurisdictionOverrides (V2-A)', () => {
 });
 
 describe('NF-7 / RA-11 caveats (V2-A)', () => {
-  it('BC-V2A-03: an unsigned fired rule yields a LOW caveat naming pending adoption', () => {
+  it('BC-V2A-03: an unsigned fired rule yields a LOW caveat naming pending adoption [TC-NF-7-01]', () => {
     const caveat = caveatForFiredRule(rule());
     expect(isUnsigned(rule())).toBe(true);
     expect(caveat?.confidence).toBe('low');
@@ -273,7 +273,7 @@ describe('TC-PE-6-01 / TC-RA-2-01 — most demanding governs across jurisdiction
 
   const multi = graph({ jurisdictions: ['UK', 'US'] });
 
-  it('applies BOTH packs — obligations are unioned, not chosen between', () => {
+  it('applies BOTH packs — obligations are unioned, not chosen between [TC-RA-1-03]', () => {
     const result = applyJurisdictionOverrides(multi, 'Medium', 'III', [ukPack, usPack]);
     // The US control survives alongside the UK review. Dropping either would
     // be the failure mode the old "governing standard" wording invited.

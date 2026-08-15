@@ -96,7 +96,7 @@ function controlsOf(g: DataFlowGraph, p: PolicyFile): string[] {
 }
 
 describe('PV-A acceptance — a covering platform reduces the required control set', () => {
-  it('the same use case requires fewer controls when it runs on a covering platform', () => {
+  it('the same use case requires fewer controls when it runs on a covering platform [TC-PV-3-01]', () => {
     const withoutPlatform = controlsOf(graph(), policyWithRegistry);
     const withPlatform = controlsOf(graph({ platform: 'PLAT-INTERNAL-01' }), policyWithRegistry);
 
@@ -105,7 +105,7 @@ describe('PV-A acceptance — a covering platform reduces the required control s
     expect(withPlatform.length).toBeLessThan(withoutPlatform.length);
   });
 
-  it('names what was inherited and from which envelope, never silently (PV-6)', () => {
+  it('names what was inherited and from which envelope, never silently (PV-6) [TC-PV-6-01]', () => {
     const r = evaluate(graph({ platform: 'PLAT-INTERNAL-01' }), policyWithRegistry);
     if (!r.ok) throw new Error('evaluation failed');
 
@@ -121,7 +121,7 @@ describe('PV-A acceptance — a covering platform reduces the required control s
 });
 
 describe('PV-3 — inheritance is per-dimension, not all-or-nothing', () => {
-  it('a use case exceeding one dimension does not inherit that dimension’s clearance', () => {
+  it('a use case exceeding one dimension does not inherit that dimension’s clearance [TC-PV-3-02]', () => {
     // Client PII exceeds the platform's max_data_class of Internal.
     const r = evaluate(graph({ platform: 'PLAT-INTERNAL-01', dataClass: 'Client PII' }), policyWithRegistry);
     if (!r.ok) throw new Error('evaluation failed');
@@ -143,7 +143,7 @@ describe('PV-3 — inheritance is per-dimension, not all-or-nothing', () => {
     expect(fit.every((d) => d.fits)).toBe(true);
   });
 
-  it('an autonomy level above the envelope ceiling does not fit', () => {
+  it('an autonomy level above the envelope ceiling does not fit [TC-PV-3-03]', () => {
     const fit = fitsEnvelope(
       graph({ platform: 'PLAT-INTERNAL-01', autonomy: 3 }),
       PLATFORM.approved_envelope as never,
@@ -153,7 +153,7 @@ describe('PV-3 — inheritance is per-dimension, not all-or-nothing', () => {
 });
 
 describe('PV-5 — an unapproved component inherits nothing and is named', () => {
-  it('a platform absent from the registry inherits no controls and triggers a review', () => {
+  it('a platform absent from the registry inherits no controls and triggers a review [TC-PV-5-01]', () => {
     const r = evaluate(graph({ platform: 'PLAT-NOT-REGISTERED' }), policyWithRegistry);
     if (!r.ok) throw new Error('evaluation failed');
 
@@ -165,7 +165,7 @@ describe('PV-5 — an unapproved component inherits nothing and is named', () =>
 });
 
 describe('PV-A safety rail — nothing changes when no platform is declared', () => {
-  it('a graph with no platform against a policy with no registry is byte-identical to before', () => {
+  it('a graph with no platform against a policy with no registry is byte-identical to before [TC-PV-A-01]', () => {
     const a = evaluate(graph(), basePolicy);
     const b = evaluate(graph(), basePolicy);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
@@ -183,7 +183,7 @@ describe('PV-A safety rail — nothing changes when no platform is declared', ()
 });
 
 describe('PV-6 — the inheritance chain survives a rejection', () => {
-  it('records what was assessed even when the verdict is out of appetite', () => {
+  it('records what was assessed even when the verdict is out of appetite [TC-PV-6-02]', () => {
     // MNPI outside Zone C is unsatisfiable — no control resolves INV-ZONE-01.
     // The chain must still say what the platform covered and where this use
     // case left the envelope. Found live: the rejection path originally
@@ -239,7 +239,7 @@ describe('C-3/C-4 — each declared component is resolved and reported independe
     expect(r.value.downstream_reviews.join(' ')).toMatch(/VENDOR-NOT-REGISTERED/);
   });
 
-  it('a declared vendor absent from a non-empty registry is still reported (C-4)', () => {
+  it('a declared vendor absent from a non-empty registry is still reported (C-4) [TC-PV-2-01]', () => {
     const p = policyWith([], [VENDOR]);
     const g = graph({ vendor: 'VENDOR-NOT-REGISTERED' });
 
@@ -284,5 +284,34 @@ describe('I-2 — a control in no declared cluster still falls away when the env
   it('a cluster whose own dimensions all fit still yields its controls', () => {
     const got = inheritableControls(['C-EXPOSURE-ONLY'], FITS, [['exposure', 'C-EXPOSURE-ONLY']]);
     expect(got).toEqual(['C-EXPOSURE-ONLY']);
+  });
+});
+
+// Traceability close-out (2026-08-15). The I-2 tests above cover the
+// uncatalogued-control edge; this is TC-PV-3-04's own claim — a cluster
+// coupling several dimensions loses EVERY control it carries the moment any
+// one of those dimensions is exceeded, not only the exceeded dimension's.
+describe('a coupled cluster falls away entirely when any dimension is exceeded [TC-PV-3-04]', () => {
+  it('withdraws every control in the broken cluster, keeps an intact cluster whole', () => {
+    const fits = [
+      { dimension: 'data_class', fits: false, ceiling: 'Internal', observed: 'Client PII' },
+      { dimension: 'exposure', fits: true, ceiling: 'internal-shared' },
+      { dimension: 'autonomy_level', fits: true, ceiling: '2' },
+    ];
+    const got = inheritableControls(
+      ['C-DC-1', 'C-DC-2', 'C-AUTONOMY'],
+      fits,
+      [
+        // A two-control cluster coupled to (data_class, exposure): exposure
+        // fits, data_class does not — the WHOLE cluster must fall.
+        ['data_class', 'exposure', 'C-DC-1', 'C-DC-2'],
+        ['autonomy_level', 'C-AUTONOMY'],
+      ],
+    );
+    expect(got).not.toContain('C-DC-1');
+    expect(got).not.toContain('C-DC-2');
+    // The independent, intact cluster is untouched — falling away is per
+    // cluster, not a global collapse.
+    expect(got).toContain('C-AUTONOMY');
   });
 });

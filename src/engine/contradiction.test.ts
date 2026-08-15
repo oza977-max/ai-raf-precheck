@@ -61,3 +61,23 @@ describe('detectContradictions', () => {
     expect(detectContradictions('This tool drafts emails.', [], g)).toEqual([]);
   });
 });
+
+// Traceability close-out (2026-08-15). The existing cases each produce one
+// contradiction; UC-5-03's claim is that BOTH are surfaced together rather
+// than one at a time with the second hidden.
+it('returns every contradiction at once, not just the first [TC-UC-5-03]', () => {
+  // Phrasings reused from the two single-contradiction cases above, so this
+  // fails only if MULTIPLE detection breaks — not if a pattern rewords.
+  const description = 'This tool processes no client data at all. A human approves every action, no autonomy.';
+  const g = graph({
+    input_nodes: [{ id: 'i1', label: 'in', data_class: 'Client PII', data_zone: 'Zone C' }],
+    processing_nodes: [
+      { id: 'p1', label: 'm', model_type: 'ml', autonomy_level: 3, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+    ],
+  });
+  const found = detectContradictions(description, [], g);
+  expect(found.length).toBeGreaterThanOrEqual(2);
+  const fields = found.map((c) => c.field);
+  expect(fields).toContain('data_class');
+  expect(fields).toContain('autonomy_level');
+});

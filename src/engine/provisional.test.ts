@@ -173,7 +173,7 @@ describe('provisional reasons — the four condition pairs (ADR-EE-R3-1)', () =>
   // than quietly satisfied by a test that cannot fail — an earlier draft of
   // this test appended the second reason by hand and asserted length 2, which
   // would have passed against any implementation whatsoever.
-  it('the two conditions are mutually exclusive by construction, so no verdict carries both', () => {
+  it('the two conditions are mutually exclusive by construction, so no verdict carries both [TC-R3-JU-6-03]', () => {
     const noPack = reasonsFor(plainGraph([]));
     const activated = reasonsFor(hiringGraph(['EU']), [euPack]);
 

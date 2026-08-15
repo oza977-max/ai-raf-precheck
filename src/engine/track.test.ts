@@ -56,7 +56,7 @@ function withModelType(modelType: string) {
 }
 
 describe('assignTrack', () => {
-  it('matches the first rule in order (short-circuit)', () => {
+  it('matches the first rule in order (short-circuit) [TC-PE-2-03]', () => {
     const result = assignTrack(withModelType('statistical'), TRACKS);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.value.track).toBe('I');
@@ -89,7 +89,7 @@ describe('track totality (oracle round 001)', () => {
   ] as const;
   const BINDINGNESS = ['non-binding', 'advisory', 'material', 'binding'] as const;
 
-  it('routes every model_type x decision_bindingness pair at autonomy 0-2, replacement or not', () => {
+  it('routes every model_type x decision_bindingness pair at autonomy 0-2, replacement or not [TC-PE-2-01] [TC-PE-2-02]', () => {
     const policyFile = loadPolicy(
       readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8'),
     );

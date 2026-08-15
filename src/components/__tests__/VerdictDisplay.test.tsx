@@ -68,7 +68,7 @@ describe('VerdictDisplay', () => {
     expect(screen.queryByText(/provisional/i)).not.toBeInTheDocument();
   });
 
-  it('TC-RA-11-02: a Low confidence caveat shows "Provisional — legal review required" as a full-page warning', () => {
+  it('TC-RA-11-02: a Low confidence caveat renders the Provisional warning without presuming WHO reviews', () => {
     const verdict = makeVerdict({
       confidence_caveats: [
         { ruleId: 'HL-003', field: 'decision_type', reason: 'Ambiguous regulatory text.', confidence: 'low' },
@@ -76,7 +76,13 @@ describe('VerdictDisplay', () => {
       provisional_reasons: ['unsigned_pack_rules'],
     });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
-    expect(screen.getByText(/provisional — legal review required/i)).toBeInTheDocument();
+    // User report (2026-08-15): "why do we always say legal review required —
+    // is it always legal?" It is not: packs are signed by Legal/Compliance,
+    // Model Risk and Technology Risk, and an unlisted decision type is an
+    // appetite question for the AI governance owner. The heading now says
+    // review is outstanding without naming a function it cannot know.
+    expect(screen.getByText(/provisional — review required before this is final/i)).toBeInTheDocument();
+    expect(screen.queryByText(/legal review required/i)).toBeNull();
     // P8-C04: the heading carries BOTH — what was decided, and that it is
     // provisional. It used to show only the word "Provisional", which hid
     // whether the case was in or out of appetite (§13.3).
@@ -219,7 +225,7 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
 });
 
 describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
-  it('renders the expiry conditions when the verdict carries hypotheses, saying nothing monitors them', () => {
+  it('renders the expiry conditions when the verdict carries hypotheses, saying nothing monitors them [TC-VD-7-01]', () => {
     const verdict = makeVerdict({
       conditions: { hypotheses: ['Model drift since validation: green ≤3% · amber ≤7% · red >7%', 'Data zone pinned: Zone B'] },
     });
@@ -862,5 +868,97 @@ describe('VerdictDisplay — What you need to do', () => {
       />,
     );
     expect(document.querySelector('.verdict__todo')?.textContent).toMatch(/second-line sign-off/i);
+  });
+});
+
+// The banner used to say "legal review required" for every provisional cause.
+// The packs themselves disagree: DORA is signed by Technology Risk, SS1/23 by
+// Model Risk — and an unlisted decision type needs the appetite owner, not a
+// lawyer. Where the verdict KNOWS who is pending (from the reasoning chain's
+// sign-off lines), the banner now names them; where it does not, it stays
+// silent rather than guessing.
+describe('VerdictDisplay — the provisional banner names who, when it knows', () => {
+  it('lists the distinct pending functions from the chain sign-offs', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          provisional_reasons: ['unsigned_pack_rules'],
+          confidence_caveats: [{ ruleId: 'R1', field: 'f', reason: 'r', confidence: 'low' }],
+          explanation: {
+            tier_rationale: null, track_rationale: null, hard_lines_checked: 0, invariants_checked: 0,
+            tripped_invariants: [], binding_reason: null, binding_regulatory_basis: null,
+            regulatory_chain: [
+              { rule_id: 'R1', document: 'DORA', section: 'Art. 28', source_text: 't', basis: 'derived',
+                derived: 'd', sign_off: '[FIRM] — Technology Risk · pending firm adoption' },
+              { rule_id: 'R2', document: 'SS1/23', section: '§3.4', source_text: 't', basis: 'derived',
+                derived: 'd', sign_off: '[FIRM] — Model Risk · pending firm adoption' },
+              { rule_id: 'R3', document: 'X', section: '§1', source_text: 't', basis: 'derived',
+                derived: 'd', sign_off: '[FIRM] — Legal/Compliance · 2026-01-01 (adopted at pack level)' },
+            ],
+          },
+        })}
+        auditEvents={[]}
+      />,
+    );
+    const banner = document.querySelector('.verdict__provisional-banner');
+    // The two PENDING functions are named; the already-adopted one is not.
+    expect(banner?.textContent).toContain('Technology Risk');
+    expect(banner?.textContent).toContain('Model Risk');
+    expect(banner?.textContent).not.toMatch(/adopt.*Legal\/Compliance|Legal\/Compliance.*needs/);
+  });
+
+  it('points an unlisted decision type at the appetite owner, not at legal', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          provisional_reasons: ['unclassified_decision_type'],
+          unclassified_decision_types: ['collections prioritisation'],
+        })}
+        auditEvents={[]}
+      />,
+    );
+    const banner = document.querySelector('.verdict__provisional-banner');
+    expect(banner?.textContent).toMatch(/risk appetite|appetite policy/i);
+    expect(banner?.textContent).not.toMatch(/legal review/i);
+  });
+});
+
+// VD-6 and VD-8 traceability close-out (2026-08-15).
+describe('VerdictDisplay — living status and trace safety', () => {
+  it('renders the living status the engine has always written [TC-VD-6-01]', () => {
+    render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} />);
+    const el = document.querySelector('.verdict__living-status');
+    // The field was computed on every verdict since V1 and rendered nowhere —
+    // found by the traceability close-out. This holds it on screen.
+    expect(el?.textContent).toMatch(/living status/i);
+    // 'in good standing', not the raw 'approved' — the word is reserved by
+    // the suite-wide single-match guard (BC-V12B-03).
+    expect(el?.textContent).toMatch(/in good standing/i);
+  });
+
+  it('renders an LLM reasoning trace as text, never as markup [TC-VD-8-02]', async () => {
+    const verdict = makeVerdict();
+    const hostile = 'Because of <img src=x onerror="alert(1)"> the tier is High.';
+    render(
+      <VerdictDisplay
+        verdict={verdict}
+        auditEvents={[
+          {
+            event_id: 'e1',
+            use_case_id: verdict.use_case_id,
+            occurred_at: '2026-01-01T00:00:00.000Z',
+            actor: 'system',
+            payload: { type: 'verdict_produced', verdict, reasoning_trace: hostile },
+          } as unknown as Parameters<typeof VerdictDisplay>[0]['auditEvents'][number],
+        ]}
+        onCorrect={vi.fn()}
+      />,
+    );
+    // The trace is LLM output — untrusted by definition. Open the disclosure
+    // and prove the payload stayed literal.
+    const user = userEvent.setup();
+    await user.click(screen.getByText(/reasoning trace/i));
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.getByText(/onerror=/)).toBeInTheDocument();
   });
 });

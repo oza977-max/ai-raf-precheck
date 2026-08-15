@@ -27,7 +27,7 @@ function graph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
 }
 
 describe('generateQuestions', () => {
-  it('TC-UC-4-01: an uncertain node whose field is referenced by an invariant generates a targeted question', () => {
+  it('TC-UC-4-01: an uncertain node whose field is referenced by an invariant generates a targeted question [TC-UC-4-04]', () => {
     const g = graph({
       input_nodes: [{ id: 'i1', label: 'notes', data_class: 'Client PII', data_zone: 'Zone A' }],
       processing_nodes: [
@@ -49,7 +49,7 @@ describe('generateQuestions', () => {
     expect(questions.some((q) => q.field === 'data_zone')).toBe(true);
   });
 
-  it('TC-UC-4-02: question count never exceeds the tier-proportionate budget', () => {
+  it('TC-UC-4-02: question count never exceeds the tier-proportionate budget [TC-UC-4-03]', () => {
     // Force a Low provisional tier (no processing/output nodes triggering
     // higher tiers) with several uncertain-node candidate fields.
     const g = graph({
