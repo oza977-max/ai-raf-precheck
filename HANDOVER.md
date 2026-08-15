@@ -1,165 +1,179 @@
-# Handover — 2026-08-07
+# Handover — 2026-08-15
 
-Written to close out a very long session and set up the finish. Everything
-below was verified with a command, not remembered. Supersedes 2026-08-04.
-
-**The goal now is to END this build with something pitchable, internally or
-externally.** Not to make it perfect. Read the stopping rule before doing
-anything else.
+Written at the user's request before a context clear, replacing the 2026-08-07
+handover in full. Everything below was true at the moment of writing and
+verified by command where it's a claim about state. Read this top to bottom
+before doing anything.
 
 ---
 
-## Repo state
+## What this product is
+
+**AIGate — AI risk appetite as code, for banks.** An AI use case is described
+as a data-flow graph; the firm's risk appetite is a set of executable rules
+over that graph; a **deterministic engine** (no LLM in the decision path,
+ever) returns a verdict — inside appetite / inside with a named minimal
+control set / outside — with the rule, the regulatory citation and the human
+sign-off behind every step. Register, 2LoD sign-off, append-only audit trail.
+
+The three differentiators, in the product's own order: **deterministic, not
+generative** (same answers → same verdict, asserted byte-identical by test);
+**it refuses to fabricate** (provisional-until-signed, UNVERIFIED-never-blank,
+packs deleted rather than shipped on unread sources); **every obligation is
+traceable** (158/158 acceptance criteria carry the id of the test that proves
+them).
+
+**The one distinction that unlocks user confusion** (the user themselves hit
+it): *the app is never rule-less; it is authority-less until a human claims
+it.* Complete starter ruleset works out of the box; adoption removes only the
+provisional stamp. And the three sign-offs: pack sign-off (once per
+regulation), translation attestation (once), 2LoD (per case — the only
+recurring one). First two = one afternoon, once.
+
+- Repo: https://github.com/oza977-max/ai-raf-precheck — **PUBLIC**
+- Live: https://oza977-max.github.io/ai-raf-precheck/ (gh-pages;
+  `npm run publish-site` republishes; **the browser caches index.html — always
+  hard-reload after publishing before concluding anything is broken**)
+- Engine island rules, twins discipline, gotchas: `CLAUDE.md` (still accurate)
+
+## State right now
 
 | | |
 |---|---|
-| Branch | `main`, pushed, clean |
-| Last commit | `05a1e8c` feat: the sign-off records who signed |
-| Tests | **376 passing**, 39 files |
-| `npx tsc --noEmit` | clean |
-| `npm run build` | clean |
-| `python3 scripts/spec-parity-check.py` | clean (R1–R8) |
-| Live site | published at `0a40e85` — a few commits behind, `npm run publish-site` |
+| Tags | v0.1.0 → **v0.3.2**, all pushed. A few doc/fix commits after v0.3.2 are on main, untagged (rules-vs-authority docs; adversarial-posture docs + trace-provenance fix) |
+| Tests | **454 passing**, ~44 files; ritual = `npm test` ×3, `npx tsc --noEmit`, `npm run build`, `python3 scripts/spec-parity-check.py`, live browser walk |
+| Release verdict | **Ship-ready** — verification 006 (`test/test-006.html`), first ever. VV-2(a) passed on 158/158 traceability; OQ-5 manual-gate applied (no CI exists) and the **user chose ship**, caveat on the record |
+| Working tree | clean, pushed |
 
----
+## What this session did (v0.1.0 → now), compressed
 
-## THE STOPPING RULE — read this before running anything
+1. **Released v0.1.0** (first tag), docs (README fix, CHANGELOG, user guide),
+   published site. Then the user started *using* it — and almost everything
+   good after that came from their five-minute findings, not from reviews.
+2. **v0.1.1** — user: "no back option." STEP_BACK bounded at the attestation;
+   stepper's fake-clickable ✓ made real. **v0.1.2** — self-hosted fonts (zero
+   external requests), responsive ≥~375px, track_floor spec-drift closed, four
+   property tests written (fast-check; both first drafts passed vacuously —
+   anti-vacuity guards added).
+3. **v0.2.0** — user: "decision type too specific." "Something else — describe
+   it" + third provisional reason `unclassified_decision_type`; free text
+   never silently matches. **v0.2.1** — user: "business user won't understand
+   the verdict." "What you need to do" panel, controls by name, fragile-
+   invariants named, expiry framing. **v0.2.2** — 158/158 traceability
+   close-out (found `living_status` computed-but-never-rendered — 9th instance
+   of that defect class); banner stopped blaming legal ("Waiting on:" derived
+   from the chain's own sign-offs). **v0.2.3** — reviewer note at attestation
+   (free text where a HUMAN reads it; closed vocabularies stay closed, that's
+   the control). **v0.3.0** — About screen, first-visit card, regulator brief
+   (docs/regulator-brief.md), glossary.
+4. **Hostile user walkthroughs** (the most productive thing in the session):
+   **v0.3.1** — contradiction check was unreachable on the form path (zero
+   questions → skip), resolution dead-ended, resolution text evaporated
+   (three layers deep — state shape dropped it). **v0.3.2** — duplicate check
+   matched against 3-word labels so identical descriptions passed unseen (now
+   stores + matches descriptions; legacy entries name-only); Back could walk
+   a correction into a blank-draft identity change (now refused at the
+   correction's entry step).
+5. **Transparency sweep**: the LLM path (description→graph) has **never run
+   against the live API** (user's key limits) — now disclosed in all 7 places
+   incl. the README mermaid diagram. **Adversarial check** (user sent
+   arXiv:2501.18837 constitutional classifiers + haizelabs/llama3-jailbreak):
+   architecture holds (no LLM in decision path = nothing to jailbreak into a
+   verdict; schema-forced edges; human confirms), one gap fixed — the
+   reasoning trace now labels itself non-authoritative ("the panels win").
+6. **Docs for first-timers** (user request): rules-vs-authority + three
+   sign-offs added to About, user guide, glossary, README. Mermaid flow +
+   rules-provenance diagrams in README (render-verified before commit).
 
-This build has been circling: every review finds findings, every fix earns
-another review. That loop does not terminate on its own.
+## OPEN THREAD — cut off mid-flight by this handover
 
-**From here, anything a step surfaces goes into exactly two buckets:**
+User asked: *"anything we can add as a feature or improve from these?"*
+- https://github.com/haizelabs/j1-micro — fetched: tiny (0.6B/1.7B) judge
+  models, rubric-first ("Self-Principled Critique Tuning"), inference-time
+  compute > model scale.
+- https://arxiv.org/abs/2502.18018 — **NOT yet fetched** (likely Haize's
+  "Verdict" judge-time-compute library; verify, don't assume).
 
-1. **Blocks release** — the product lies to a user, or a core flow is broken.
-2. **Logged for V1.5** — everything else.
+The standing idea to evaluate against them (from earlier session discussion):
+an **advisory dissent panel** — LLM judges evaluate a case blind against the
+rulebook; disagreement NEVER overrides, it files a dissent → rule-improvement
+queue. The session already ran this by hand as "oracle rounds"
+(reviews/calibration.md, 31/31 concordance round 2). Honest constraint: user
+has no working API key, so any LLM feature ships "built, never run live" like
+the extraction path — weigh whether to build vs design-note it. Answer the
+user's question first thing.
 
-**The default is logged.** Do not open a new fix-and-review round inside this
-build. Do not run `/gvm-code-review` again. If you find yourself writing a
-fifth review report, stop and ship.
+## People & near-term intents
 
----
+- **Gerard** (GVM methodology author) will test — send tester-guide +
+  try-these; his charter: "a verdict you'd argue with beats any bug."
+- **Conor** (top finance IT/AI expert) — send README + regulator-brief +
+  approach; his charter: (1) is deterministic-first right or about to age
+  badly, (2) where does this die in a real bank IT estate, (3) what's
+  missing. Cover-note drafts were given in-session; user sends them.
+- User's essay ("Words Are a Menu. The World Is Not." — world models; the
+  judge/governance gap; MRM as the missing institution) — local file, NOT in
+  repo. One agreed sharpening: SS1/23's tech-agnostic definition already
+  captures learned simulators (PRA already asks; the field doesn't know) —
+  verified against the engine. Do NOT force-fit AIGate↔essay links; the user
+  called that out once already.
 
-## What is left: three steps
+## Open items (all recorded, none blocking)
 
-| Step | Command | Ends with |
-|---|---|---|
-| 1 | `/gvm-test` (Full mode) | A current release verdict |
-| 2 | `/gvm-doc-write` then `/gvm-doc-review` | README, changelog, a usable guide |
-| 3 | `/gvm-deploy` | Tagged release, notes, site published |
+- "+ New pre-check" doesn't reset a completed flow (changelog v0.3.2, known).
+- No CI — the OQ-5 caveat on Ship-ready; ready-made workflow in docs/.
+- Code review stale (code-review-003 predates ~7 feature rounds; stopping
+  rule suspended reviews). Doc review never run (recorded in RELEASE-NOTES).
+- FN-005 (condition can't scope to node type), FN-007 (spec-parity can't see
+  code — how track_floor drift survived), FN-008 (unreproduced 1-test flake;
+  capture full output on first occurrence next time).
+- LLM edge paths never live-exercised; whoever first gets a key should run
+  the plain-language path and convert "never run live" into a dated first run.
+- Optional: GitHub Support scrub of orphaned commit 6e0de60 (see below).
 
-**Step 2 is the one that matters most for a pitch.** Nobody reads a test
-report; they read the README and they watch a demo. Budget accordingly.
+## Hard rules & lessons paid for in this session
 
-### Expect Demo-ready, and say so plainly
+1. **Confidentiality is absolute** (public repo): no employer name, no
+   internal figures, street-generic teams. **Leak incident 2026-08-15**:
+   stale remote branch `review-fixes` still exposed design-vision.md after
+   the July history purge — branch deleted, sweep clean; lesson in memory
+   (`repo-public-and-rewrites.md`): after any purge, sweep EVERY remote ref.
+   Strategy stays in gitignored `design-vision.md`; public repo = what it
+   does, private = why it wins.
+2. **The reserved-words trap fired FOUR times**: any rendered string matching
+   /approved|rejected/i breaks the suite's single-match guard — including
+   substrings ("board-approved"!). Say "inside/outside appetite", "signed off
+   at board level". About surfaces carry a pinned guard test.
+3. **`npm test`, never bare `npx vitest`** (Node webstorage). Full ritual
+   before commit; run suite ×3.
+4. **Hostile user-walking finds what 450 green tests cannot** — every defect
+   since v0.1.0 lived in gaps BETWEEN correct components (check that runs on
+   a path nobody takes; exit into a room with no door; note written into
+   state that's discarded; matching against labels while tests used
+   sentence-shaped fixtures). Friendly fixtures hide wiring gaps.
+5. **Green is not evidence** — mutation-check new tests (both property tests
+   and the attestation-boundary guard only earned trust red/green).
+6. **Twins & generated docs**: specs/docs .md+.html drift silently
+   (parity-check reads only .md); test-cases twins carry drift notices;
+   regenerate user-guide/glossary twins after edits (haiku subagent pattern).
+7. **Verify mermaid renders before committing** (public/__mcheck.html
+   pattern); verify fonts/artifacts by network tab, not by assumption.
+8. **NARRATE.** The user explicitly said: "just coz you are auto doesn't mean
+   you don't tell me." Tell them what you're doing as you do it. They also
+   want recommendations, not option menus — but genuine forks (like OQ-5) are
+   theirs: ask, one question, recommended option first.
+9. User is non-technical on git — handle all mechanics, commit+push at
+   milestones, publish-site after app-visible changes.
 
-`/gvm-test`'s verdict comes from a decision table whose inputs include the
-acceptance-test walk. **69 of 148 test cases have covering tests that do not
-carry their trace ID.** That is bookkeeping, not missing coverage — build
-verification 003 walked them by running the tests that cover them — but the
-evaluator cannot tell the difference, so VV-2(a) will fail and the verdict will
-be **Demo-ready**.
-
-That is the honest verdict for this product and a perfectly good one to pitch:
-it does what it claims, end to end, and states its limits on screen. Do not
-inflate it, and do not spend a session closing 69 trace IDs to buy a word.
-
----
-
-## What this product is, for the pitch
-
-A pre-check gate for banks. An AI use case is a data-flow graph; the firm's
-risk appetite is a set of invariants over that graph; the engine returns a
-**deterministic** verdict — in or out of appetite, what is violated, the
-minimal control set that fixes it, and the regulatory citation behind every
-step.
-
-**The three things that make it different, and that the docs should lead with:**
-
-1. **Deterministic, not generative.** The same answers always produce the same
-   verdict. No LLM is involved in the decision — one is optional, only for
-   reading a plain-English description into a graph, and the product says so on
-   the intake screen. This is the whole pitch to a model-risk audience.
-2. **It refuses to fabricate.** Unsigned rules make a verdict provisional and
-   say why. Absent evidence renders UNVERIFIED, never a blank. Three regulatory
-   decks were deliberately deleted because their source text could not be
-   retrieved. A confidence score was removed as "fabricated precision". These
-   are not caveats to apologise for — they are the product.
-3. **Every obligation is traceable.** A required control names the invariant
-   that demanded it; a downstream review names the policy rule that triggered
-   it; a verdict names the regulation behind each step.
-
-**Deliberately not:** a chatbot, and not a Big-4 deliverable generator.
-
----
-
-## Honest limits — the V1.5 list
-
-Have this ready. Being able to hand someone the list of what it does *not* do
-is worth more in a bank than any feature.
-
-| Limit | Detail |
-|---|---|
-| **No authentication** | The 2LoD role is a dropdown. The sign-off now records a typed name and says on the page that it is self-asserted and unverified. Real identity needs a backend this build does not have. |
-| **No segregation of duties** | Nothing stops a submitter approving their own use case. |
-| **Client-side storage** | Audit trail is append-only but held in the browser — proof-of-concept grade, not tamper-evident. Stated in the app. |
-| **Pack rules unadopted** | Every shipped deck carries `[FIRM]` sign-off placeholders, so verdicts relying on them are provisional until a CRO adopts them. Stated on the verdict. |
-| **Translation fidelity unattested** | The starter policy's attestation block is a placeholder, so the header says "unattested". Computed, not hardcoded. |
-| **Four decks only** | SS1/23, SR 26-2, EU AI Act, DORA. More can be added as content, no code change. |
-| **Condition language cannot scope to a node type** | `data_zone` exists on input and processing nodes, so a "cloud security approval" rule cannot be written correctly yet (FN-005). |
-
----
-
-## Open forward notes
-
-`specs/forward-notes.md` — FN-003 (requirement wording that invites an
-overclaim), FN-004 (two affordances share one switch), FN-005 (condition
-scoping). All are V1.5 material. None blocks release.
-
----
-
-## Traps that have actually cost time
-
-- **Run tests with `npm test`, never bare `npx vitest`** — Node 26 shadows
-  jsdom's localStorage polyfill.
-- **Agent worktrees under `.claude/` are excluded in `vite.config.ts`.** Without
-  it the suite silently runs twice, counts double, and interaction-heavy tests
-  time out — which reads as a code failure and is not one.
-- **Specs are `.md` + `.html` twins with no generation link** for most files,
-  and `spec-parity-check.py` reads only `.md`. Edit both.
-  `requirements/requirements.html` is worse than drifted — it carries 55 of 79
-  requirements. There is a warning at the top of it.
-- **Do not call `indexedDB.deleteDatabase()` from the page while the app holds a
-  connection.** It wedges storage for that origin: `open()` never settles and
-  every screen hangs on its first read. It looks exactly like a product bug. A
-  fresh browser session clears it.
-- **Green is not evidence.** Four times this round a test was green and could
-  not have failed. Delete the code the test protects and watch it go red. It
-  caught something every single time it was run.
-- **A fix pass is not a safe pass.** Three of code review 003's six findings
-  were introduced during the round-4 fix session — including one where an audit
-  write was added without the double-click guard that sat fourteen lines away.
-
----
-
-## Where the deeper context lives
+## Where deeper context lives
 
 | Need | Read |
 |---|---|
-| What each chunk built and why | `build/handovers/*.md` (newest `P8-C08.md`) |
-| The last full verification, all 148 cases walked | `test/test-003.html` |
-| The last code review, six findings | `code-review/code-review-003.html` |
-| Owed decisions | `specs/forward-notes.md` |
-| The approach, explained for firms | `docs/approach.md` |
-| Standing user rules and project history | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
-
----
-
-## Standing constraints
-
-- **Confidentiality is absolute.** RAF is PUBLIC. No internal figures, no
-  employer name, no internal team names, anywhere in the repo or its history.
-- `design-vision.md` and `backtest/outcomes-local.md` are gitignored.
-- The audit trail is append-only; a path that can write twice is a
-  data-integrity bug.
-- **BC-001 is active:** a claim about an existing symbol cites the `file:line`
-  it was verified against — and citations go stale, so check before trusting.
+| Product gotchas, boundaries, house rules | `CLAUDE.md` |
+| Current release verdict + walk evidence | `test/test-006.html` |
+| Review/verdict history | `reviews/calibration.md` (rounds 1–6) |
+| What each release changed, user-voice | `CHANGELOG.md` |
+| The eleven demo cases, all pinned | `docs/try-these.md` + `src/engine/try-these.test.ts` |
+| First-timer explanations | About screen, `docs/user-guide.md`, `docs/glossary.md`, `docs/regulator-brief.md` |
+| Owed decisions & lessons | `specs/forward-notes.md` (FN-001…FN-008) |
+| Standing user rules, leak record | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
