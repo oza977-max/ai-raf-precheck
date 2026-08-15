@@ -4,6 +4,7 @@ import RegisterView from './components/RegisterView';
 import PolicyEditor from './components/PolicyEditor';
 import SettingsPanel from './components/SettingsPanel';
 import AboutPanel from './components/AboutPanel';
+import RuleImprovementQueue from './components/RuleImprovementQueue';
 import { getRole, setRole } from './store/role';
 import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
@@ -22,7 +23,7 @@ import './App.css';
 // PolicyEditor.tsx (P7-C03) — a real Save flow, no longer a disabled
 // placeholder.
 export default function App() {
-  const [view, setView] = useState<'intake' | 'register' | 'policyEditor' | 'about'>('intake');
+  const [view, setView] = useState<'intake' | 'register' | 'policyEditor' | 'about' | 'ruleQueue'>('intake');
   // First-visit pointer (2026-08-15). A card, not a takeover: replacing the
   // intake screen on first visit would surprise users and break every test
   // that renders App expecting intake — the card adds, never redirects.
@@ -164,6 +165,12 @@ export default function App() {
             § Appetite framework
           </div>
           <div
+            className={view === 'ruleQueue' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            onClick={() => setView('ruleQueue')}
+          >
+            ⚑ Rule challenges
+          </div>
+          <div
             className={view === 'about' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
             onClick={() => setView('about')}
           >
@@ -205,6 +212,7 @@ export default function App() {
             />
           )}
           {view === 'policyEditor' && <PolicyEditor onSaved={() => setPolicyRevision((r) => r + 1)} />}
+          {view === 'ruleQueue' && <RuleImprovementQueue />}
         </main>
       </div>
     </div>

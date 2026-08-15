@@ -5,6 +5,57 @@ marked, never deleted.
 
 ---
 
+## FN-009 — The advisory dissent panel: human half built, machine half deliberately deferred
+
+**Raised by:** Haize Labs references sent by the user (2026-08-15):
+j1-micro (github.com/haizelabs/j1-micro) and "Verdict: A Library for Scaling
+Judge-Time Compute" (arXiv:2502.18018). **Status:** OPEN — human half shipped;
+LLM half is a design, not code.
+
+**The concept.** LLM judges evaluate a case blind against the rulebook.
+Disagreement NEVER overrides the verdict — it files a dissent into a
+rule-improvement queue for the humans who author rules
+(`grounding/PACK-AUTHORING.md`). The session already ran this by hand as the
+oracle rounds (`reviews/calibration.md`, 31/31 concordance in round 2;
+protocol in `backtest/oracle-protocol.md`): the manual process *was* a
+judge panel, which is the evidence the design rests on.
+
+**What shipped (2026-08-15).** The deterministic half: a `rule_dissent_filed`
+audit event (`src/store/types.ts`), a "Challenge a rule" affordance on the
+2LoD sign-off page, and a rule-improvement queue screen derived by scanning
+the audit trail (`src/components/RuleImprovementQueue.tsx`) — grouped by
+rule, advisory-only, and it says so on the page. Filers today are people.
+A machine judge, if ever added, files through the SAME event, marked by
+actor — never a second door, never more authority than a human dissent has:
+none over the verdict.
+
+**Why the LLM half is deferred, not built.** The user has no working API key,
+so judge code would ship "built, never run live" — the extraction path
+already carries that disclosure in seven places, and a second untested LLM
+path starts to look like a pattern rather than an honest exception. Building
+it costs little; *shipping* it unrun costs credibility this product's whole
+posture depends on.
+
+**What the references settle, when someone builds it:**
+- Panel shape per Verdict (Kalra & Tang): modular judge units — verify,
+  debate, aggregate — with the rulebook's own rules as per-rule rubrics.
+  Not one large judge; several small composed ones, disagreement being the
+  signal that files.
+- Deployment per j1-micro: tiny judges (0.6B–1.7B) are competitive when
+  rubric-grounded, and small enough to run inside a bank's estate — no case
+  data leaves. Advisory-only + tiny + local is defensible in front of a bank
+  IT estate; advisory-only + frontier-API is not.
+- Hard invariant, non-negotiable: dissent never overrides. The engine stays
+  the only authority in the decision path; the panel can only make the
+  rulebook better, one filed challenge at a time.
+
+**First step for whoever gets a key:** run the oracle-round protocol through
+a real judge model against the eleven pinned cases (`docs/try-these.md`) and
+compare with the human panel's 31/31 — a dated concordance number, before
+any UI.
+
+---
+
 ## FN-008 — An unreproduced full-suite flake, recorded rather than explained away
 
 **Raised by:** v0.2.0 work (2026-08-14). **Status:** OPEN — not reproduced,
