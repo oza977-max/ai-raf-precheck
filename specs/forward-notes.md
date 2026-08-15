@@ -5,6 +5,39 @@ marked, never deleted.
 
 ---
 
+## FN-008 — An unreproduced full-suite flake, recorded rather than explained away
+
+**Raised by:** v0.2.0 work (2026-08-14). **Status:** OPEN — not reproduced,
+not diagnosed, deliberately not dismissed.
+
+During the verification ritual for the decision-type change, the full suite
+reported `1 failed | 406 passed (407)` on two of three consecutive runs and
+passed cleanly on the third. **The failing test was never named** — the loop
+that observed it grepped only the summary line, so the name scrolled past
+before anything captured it. That is the mistake worth not repeating: when
+hunting an intermittent failure, capture the whole output on the first
+occurrence, because there may not be a second.
+
+**Not reproduced in 17 consecutive full-suite runs afterwards**, plus 8 runs of
+`properties.test.ts` in isolation (the first suspect, since fast-check
+randomises its seed per run and an intermittent property failure would mean a
+real counterexample — it did not).
+
+**The most likely explanation is CPU contention, and it is explicitly a
+hypothesis rather than a finding.** The failures occurred while a mutation-test
+loop and browser automation were running against the same machine as the suite.
+`test/explore-005.md` O-003 records the same shape being misdiagnosed once
+already: `TC-R3-JU-5-01` failed 3 of 6 runs under concurrent-agent load, was
+first written up as an inherently slow test, and turned out to need no change
+at all — the real cause was two vitest copies competing for CPU.
+
+**What to do if it recurs:** capture the full output immediately
+(`npm test 2>&1 | tee /tmp/flake.log`), get the test name, and only then form
+a theory. Do not assume it is environmental because this note says it probably
+was — that is precisely the reasoning O-003 warns against.
+
+---
+
 ## FN-007 — Four spec files documented an effect type that does not exist
 
 **Raised by:** build verification 004 (2026-08-08). **Status:** CLOSED in

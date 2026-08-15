@@ -6,7 +6,7 @@ import {
   resolveActivePacks,
 } from './jurisdiction';
 import { evaluateHardLines } from './hard-lines';
-import { provisionalReasons } from './provisional';
+import { provisionalReasons, unclassifiedDecisionTypes } from './provisional';
 import { firmRequiredReviews } from './downstream-reviews';
 import { fitsEnvelope, inheritableControls } from './envelope';
 import { assignTrack } from './track';
@@ -117,7 +117,7 @@ export function evaluate(
           binding_reason: hardLineResult.reason,
           binding_regulatory_basis: hardLineResult.regulatoryBasis,
         },
-      }),
+      }, graph),
     };
   }
 
@@ -150,7 +150,7 @@ export function evaluate(
           binding_regulatory_basis: `${rule.source.document} ${rule.source.section}`,
           regulatory_chain: [chainEntryFor(rule, `Hard-line rejection: ${reason}`, packHardLine.pack)],
         },
-      }),
+      }, graph),
     };
   }
 
@@ -236,7 +236,7 @@ export function evaluate(
           binding_regulatory_basis: bindingTripped?.regulatoryBasis ?? null,
           regulatory_chain: overrides.chain,
         },
-      }),
+      }, graph),
     };
   }
 
@@ -309,7 +309,7 @@ export function evaluate(
         binding_regulatory_basis: binding?.regulatoryBasis ?? null,
         regulatory_chain: overrides.chain,
       },
-    }),
+    }, graph),
   };
 }
 
@@ -481,7 +481,13 @@ function sortedById<T extends { id: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
+// `graph` is REQUIRED, not optional, and deliberately so. The provisional
+// determination below is derived here precisely because this is the single
+// choke point every return path funnels through — an optional parameter would
+// let a caller omit it and silently produce a verdict that reads as "no
+// unclassified decision type" when nobody ever looked. TypeScript now forces
+// every path, including the two early hard-line rejections, to supply it.
+function emptyResult(overrides: Partial<EvaluationResult>, graph: DataFlowGraph): EvaluationResult {
   const base: EvaluationResult = {
     status: 'approved',
     tier: 'Low',
@@ -507,7 +513,11 @@ function emptyResult(overrides: Partial<EvaluationResult>): EvaluationResult {
   // return path funnels through — so no path, including the early hard-line
   // rejections, can omit it. A verdict silently lacking the field would read
   // as "not provisional" to every consumer.
-  return { ...base, provisional_reasons: provisionalReasons(base.confidence_caveats, base.pack_versions) };
+  return {
+    ...base,
+    provisional_reasons: provisionalReasons(base.confidence_caveats, base.pack_versions, graph),
+    unclassified_decision_types: unclassifiedDecisionTypes(graph),
+  };
 }
 
 function emptyExplanation(): VerdictExplanation {

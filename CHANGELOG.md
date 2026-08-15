@@ -11,6 +11,44 @@ every verdict.
 
 ---
 
+## [0.2.0] — 2026-08-14
+
+### Added
+
+- **You can now describe a decision type your policy doesn't list.** The
+  "What kind of decision does it feed?" dropdown had eight fixed values, and a
+  bank's real decision types have a long tail — collections prioritisation,
+  AML alert triage, suitability assessment. There is now a **Something else —
+  let me describe it** option with a free-text box.
+
+  **What it deliberately does not do is pretend the engine understood you.**
+  That field is a matching key, not a description: it drives two hard lines
+  (autonomous credit/lending, autonomous trading), the Critical and High tier
+  triggers, and EU AI Act Annex III. Free text matches none of them. So the
+  text is recorded, no decision-type rule is applied, and the verdict says so
+  in as many words — naming what you typed:
+
+  > Cause: the decision type entered is not one your policy has a rule for, so
+  > no decision-type rule could be applied. The tier and track above rest on
+  > the other answers alone. Entered: "collections prioritisation".
+
+  The verdict is marked Provisional on that basis. Accepting free text and
+  quietly returning a lower tier would have been the worst outcome available —
+  a silent under-classification, which is the one thing this product exists
+  not to do.
+
+  Leaving the question blank is still different from describing something:
+  blank says no decision type applies; free text says one applies and your
+  framework has no rule for it. Only the second is a hole worth showing you.
+
+### Changed
+
+- Over time, the decision types people type here are a list of the gaps in
+  your own risk appetite framework. They are recorded on each verdict rather
+  than discarded.
+
+---
+
 ## [0.1.2] — 2026-08-09
 
 Closes the four items that were still open at v0.1.1 — the two carried from

@@ -32,6 +32,17 @@ export interface EvaluationResult {
   // provisional; a verdict is Provisional if and only if this is non-empty.
   // Consumers read it and never re-derive from confidence_caveats.
   provisional_reasons: ProvisionalReason[];
+  /** Decision types the submitter typed that the policy has no rule for.
+   *  Empty in the normal case. Named rather than merely counted, because the
+   *  firm needs to know WHICH decision type its framework does not cover.
+   *
+   *  OPTIONAL, and unlike `provisional_reasons` reading absent-as-empty is
+   *  safe here: a verdict persisted before this field existed was produced
+   *  when free-text decision types could not be entered at all, so "absent"
+   *  and "none" are genuinely the same claim about that record. That is the
+   *  test `provisional_reasons` failed — an absent one there could hide a
+   *  Provisional verdict somebody had already signed. */
+  unclassified_decision_types?: string[];
   boundary_proximity: boolean;
   // CS-1 (HR-14): the margin actually achieved, its target, and the
   // invariants left at coverage depth 1. Reporting the number rather than a
@@ -155,6 +166,16 @@ export interface OutputNode {
   output_reversibility: 'reversible' | 'irreversible' | 'unknown';
   scale: 'limited' | 'at_scale';
   decision_type?: DecisionType;
+  // User report (2026-08-09): the decision-type list is a closed vocabulary
+  // and a bank's real decision types have a long tail — "collections
+  // prioritisation", "AML alert triage", "suitability assessment". Free text
+  // alone would be dangerous: `decision_type` gates HL-003, HL-004,
+  // TIER-CRITICAL, TIER-HIGH and EU AI Act Annex III, so an unmatched value
+  // silently under-classifies. So the typed text lands HERE, `decision_type`
+  // stays undefined (nothing matches, which is the truth), and the engine
+  // raises `unclassified_decision_type` so the gap is stated on the verdict
+  // rather than hidden.
+  decision_type_other?: string;
   hitl?: boolean;
 }
 

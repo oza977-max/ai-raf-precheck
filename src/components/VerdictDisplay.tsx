@@ -200,6 +200,11 @@ const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
   // EU AI Act and more, and those citations render on this very screen. Seen
   // by reading the rendered page against its own citation list, not by a test.
   no_regulatory_basis: 'Cause: no jurisdiction pack applied, so no country rulebook was used.',
+  // Names the consequence, not just the fact. A reader needs to know that the
+  // tier they are looking at was set WITHOUT any decision-type rule, because
+  // that is what determines whether they should trust it.
+  unclassified_decision_type:
+    'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone.',
 };
 
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
@@ -249,6 +254,27 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           {(verdict.provisional_reasons ?? []).map((reason) => (
             <p key={reason} data-provisional-reason={reason}>
               {PROVISIONAL_REASON_LABEL[reason]}
+              {/* Name the decision type, don't just say one was unrecognised.
+                  The engine computed `unclassified_decision_types` and the
+                  first cut of this banner never rendered it — the
+                  computed-but-never-consumed defect CLAUDE.md warns about,
+                  walked into again. A cause with no subject cannot be acted
+                  on: the firm needs to know WHICH decision type it has no
+                  position on, because that is the hole in its framework. */}
+              {reason === 'unclassified_decision_type' &&
+                (verdict.unclassified_decision_types ?? []).length > 0 && (
+                  <>
+                    {' '}
+                    Entered:{' '}
+                    {(verdict.unclassified_decision_types ?? []).map((d, i) => (
+                      <span key={d}>
+                        {i > 0 && ', '}
+                        <q>{d}</q>
+                      </span>
+                    ))}
+                    .
+                  </>
+                )}
             </p>
           ))}
           {lowCaveats.map((c, i) => (

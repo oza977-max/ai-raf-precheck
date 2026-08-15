@@ -184,11 +184,17 @@ describe('provisional reasons — the four condition pairs (ADR-EE-R3-1)', () =>
     }
   });
 
-  it('the reason order is fixed by declaration, so a two-reason verdict could never vary (R3-NF-1)', () => {
+  it('the reason order is fixed by declaration, so a multi-reason verdict could never vary (R3-NF-1)', () => {
     // The ordering contract is asserted directly on the constant rather than
-    // on a verdict, because no verdict can currently carry both. If a future
-    // trigger makes the pair reachable, this is the order it must emit in.
-    expect([...PROVISIONAL_REASONS]).toEqual(['unsigned_pack_rules', 'no_regulatory_basis']);
+    // on a verdict, because the first two cannot co-occur. The THIRD can
+    // co-occur with either — an unclassified decision type is independent of
+    // whether a pack activated — so a genuinely multi-reason verdict is now
+    // reachable and this order is the one it must emit in.
+    expect([...PROVISIONAL_REASONS]).toEqual([
+      'unsigned_pack_rules',
+      'no_regulatory_basis',
+      'unclassified_decision_type',
+    ]);
   });
 });
 
@@ -279,5 +285,100 @@ describe('provisional reasons — the engine island (TC-R3-NF-1-02)', () => {
     }
     expect(source).not.toContain('Date.now');
     expect(source).not.toContain('Math.random');
+  });
+});
+
+// User report while using the product: "what kind of decisions does it feed
+// into — that question should have a dropdown where the user can type as well,
+// right? it's too specific."
+//
+// The instinct is right and the naive fix is dangerous. `decision_type` is not
+// a description field, it is a MATCHING KEY: it gates HL-003 and HL-004 (both
+// hard lines), TIER-CRITICAL, TIER-HIGH, and EU AI Act Annex III §5(b)/§4(a).
+// A free-text value matches none of them, so a use case with an unlisted
+// decision type would come back at a lower tier than it deserves with nothing
+// on screen saying why. Silent under-classification is the worst failure this
+// product has.
+//
+// So the free text is captured, and the fact that it matched no rule is stated
+// — a third provisional reason, which is precisely the extension this module's
+// header anticipated ("the collection stays ordered and plural so a future
+// third reason needs no consumer change").
+describe('unclassified decision type is stated, never silently ignored', () => {
+  const out = {
+    id: 'o1',
+    label: 'out',
+    action_type: 'recommend' as const,
+    exposure: 'internal-shared' as const,
+    decision_bindingness: 'advisory' as const,
+    output_reversibility: 'reversible' as const,
+    scale: 'limited' as const,
+  };
+
+  it('raises unclassified_decision_type when the submitter typed their own', () => {
+    const g = graph({
+      processing_nodes: [
+        { id: 'p1', label: 'm', model_type: 'ml', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [{ ...out, decision_type_other: 'collections prioritisation' }],
+    });
+    const r = evaluate(g, policy, []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.provisional_reasons).toContain('unclassified_decision_type');
+    expect(isVerdictProvisional(r.value)).toBe(true);
+  });
+
+  it('does NOT raise it when a known decision type was chosen', () => {
+    const g = graph({
+      processing_nodes: [
+        { id: 'p1', label: 'm', model_type: 'ml', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [{ ...out, decision_type: 'credit-decision' as const }],
+    });
+    const r = evaluate(g, policy, []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.provisional_reasons).not.toContain('unclassified_decision_type');
+  });
+
+  it('does NOT raise it when the question was simply left unanswered', () => {
+    // Leaving it blank and typing something the policy does not know are
+    // different claims. Blank says "no decision type applies"; free text says
+    // "one applies and your policy has no rule for it". Only the second is a
+    // gap in the firm's framework, and only the second is worth flagging.
+    const g = graph({
+      processing_nodes: [
+        { id: 'p1', label: 'm', model_type: 'ml', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [{ ...out }],
+    });
+    const r = evaluate(g, policy, []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.value.provisional_reasons).not.toContain('unclassified_decision_type');
+  });
+
+  it('the free text is carried on the verdict so the gap is nameable', () => {
+    const g = graph({
+      processing_nodes: [
+        { id: 'p1', label: 'm', model_type: 'ml', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [{ ...out, decision_type_other: 'AML alert triage' }],
+    });
+    const r = evaluate(g, policy, []);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // A reason with no subject is not actionable — the firm needs to know
+    // WHICH decision type its policy does not cover.
+    expect(r.value.unclassified_decision_types).toEqual(['AML alert triage']);
+  });
+
+  it('declaration order is stable — NF-1 holds with a third reason', () => {
+    expect([...PROVISIONAL_REASONS]).toEqual([
+      'unsigned_pack_rules',
+      'no_regulatory_basis',
+      'unclassified_decision_type',
+    ]);
   });
 });
