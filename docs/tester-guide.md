@@ -178,6 +178,12 @@ first if you want to keep anything.
 
 Worth deliberately exercising, newest first:
 
+- **Challenge a rule (v0.4.0).** As 2LoD, on any case with a verdict, file a
+  challenge against a rule you think is wrong — then check the **Rule
+  challenges** screen and the case's audit trail. The property to try to
+  break: filing must change *nothing* about the verdict, the stage or the
+  sign-off. If you can make a challenge move a decision, that's the bug we
+  most want to hear about.
 - **← Back** now exists on intake steps before attestation — try going back
   and forward; the duplicate check should re-run, never hang.
 - **"What kind of decision does it feed?"** has *Something else — let me

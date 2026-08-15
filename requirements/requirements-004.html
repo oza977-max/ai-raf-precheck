@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 4 &middot; AIGate &mdash; Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#round-4-the-rule-improvement-queue">Round 4 — The Rule-Improvement Queue</a></li>
+                <li><a href="#relationship-to-previous-rounds">Relationship to Previous Rounds</a></li>
+                <li><a href="#1-purpose">1. Purpose</a></li>
+                <li><a href="#2-target-user">2. Target User</a></li>
+                <li><a href="#3-functional-requirements">3. Functional Requirements</a></li>
+                <li><a href="#4-non-functional-requirements">4. Non-Functional Requirements</a></li>
+                <li><a href="#5-constraints">5. Constraints (carried forward)</a></li>
+                <li><a href="#6-out-of-scope">6. Out of Scope</a></li>
+                <li><a href="#7-requirements-index">7. Requirements Index</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+            </ul>
+        </nav>
+        <main>
+            <header>
+                <h1>AIGate &mdash; Requirements, Round 4</h1>
+                <p class="subtitle">The Rule-Improvement Queue</p>
+                <p class="meta">Round 4 &middot; 15 August 2026 &middot; Generated from requirements-004.md &mdash; do not hand-edit</p>
+            </header>
+            <section id="round-4-the-rule-improvement-queue">
+                <h2>Round 4 — The Rule-Improvement Queue</h2>
+                <p><strong>Status: BUILT.</strong> Unlike rounds 1–3, this round was specified and built in the same working session (2026-08-15), so this document records the requirements the build was held to rather than requirements awaiting a build. Every fit criterion below names the test that proves it (<code>test-cases-004.md</code>), keeping the traceability discipline at 100%.</p>
+            </section>
+            <section id="relationship-to-previous-rounds">
+                <h2>Relationship to Previous Rounds</h2>
+                <p>Rounds 1–3 built the decision path: intake → deterministic verdict → 2LoD sign-off → append-only audit trail. Round 4 adds the first <strong>feedback path</strong>: a channel for a reviewer to dispute a <em>rule</em> rather than a verdict, and a place for those disputes to accumulate. It changes nothing about how decisions are made — that is its central requirement, not a side constraint.</p>
+                <h3 id="provenance">Provenance</h3>
+                <table>
+                    <thead><tr><th>Domain</th><th>Source</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr><td>R4-RC</td><td>FN-009 (<code>specs/forward-notes.md</code>) — the advisory dissent panel, grounded in Haize Labs j1-micro and "Verdict: A Library for Scaling Judge-Time Compute" (arXiv:2502.18018), and in the manual oracle rounds (<code>reviews/calibration.md</code>, <code>backtest/oracle-protocol.md</code>)</td><td>Critical</td></tr>
+                    </tbody>
+                </table>
+                <p>The wider design this round is the first half of: reviewers — human today, optionally small advisory judge models later — evaluate cases against the rulebook, and <em>disagreement files a dissent instead of changing anything</em>. The LLM half is deliberately deferred (no working API key; a judge would ship "built, never run live"), recorded in FN-009 with the first step for whoever gets a key.</p>
+            </section>
+            <section id="1-purpose">
+                <h2>1. Purpose</h2>
+                <p>A firm's rules are wrong in places, and the people best placed to notice are the reviewers applying them to real cases. Before this round that knowledge had no carrier: a reviewer who believed a rule was too broad could only file the case and say so in a hallway. Round 4 gives the objection a permanent, attributable, <em>non-binding</em> record and a queue where objections accumulate per rule — the raw material for the human rule-authoring process (<code>grounding/PACK-AUTHORING.md</code>). Nothing in the round gives anyone a new way to change a decision.</p>
+            </section>
+            <section id="2-target-user">
+                <h2>2. Target User</h2>
+                <p><strong>Priya — Head of AI Governance (2LoD).</strong> She reads verdicts all day and is the first to know when a rule misfires. <strong>The rulebook authors</strong> (risk framework owners) are the consumers of the queue: they need to see which rule, challenged how often, by whom, on which cases.</p>
+            </section>
+            <section id="3-functional-requirements">
+                <h2>3. Functional Requirements</h2>
+                <h3 id="r4-rc-rule-challenges">R4-RC — Rule Challenges</h3>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">From the sign-off page, a 2LoD reviewer shall be able to file a challenge against a rule, recording: the rule's id, the reasoning, the filer's (self-asserted) name, and the id of the verdict the reviewer was shown — threaded from the render, never re-derived at write time (the same discipline as the attestation's <code>verdict_id</code>, verdict-audit.md §13.4).</p>
+                    <div class="fit-criterion">filing writes one <code>rule_dissent_filed</code> audit event carrying all four fields, with <code>verdict_id</code> equal to the id of the verdict the page rendered. <strong>Test: TC-R4-RC-1-01.</strong></div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">A challenge shall be advisory by construction. Filing writes exactly one audit event and changes nothing else: no lifecycle stage transition, no sign-off, no verdict mutation, and no engine input anywhere.</p>
+                    <p>The moment a dissent can move a decision it is an override channel, not a dissent. This is the round's load-bearing requirement.</p>
+                    <div class="fit-criterion">after filing, the trail contains exactly one new event; no <code>lifecycle_stage_changed</code> and no <code>twoloD_reviewed</code> was written; the page states the verdict is unchanged. <strong>Test: TC-R4-RC-2-01.</strong></div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The rule picker shall offer the rules <em>this verdict relied on</em>, read from the verdict's own persisted explanation (tier/track rationale, tripped invariants, regulatory chain, binding constraint) — never recomputed against today's policy. A rule outside that list may be named by typing its reference, and a typed reference shall be recorded without a resolved label, because no match against the rulebook was made.</p>
+                    <div class="fit-criterion">the picker's options come from the rendered verdict's explanation (<strong>TC-R4-RC-3-01</strong>); a free-typed reference is stored trimmed, with no <code>rule_label</code> (<strong>TC-R4-RC-3-02</strong>).</div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-4</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">An incomplete challenge shall be refused, not recorded. No rule named, no reasoning, or no filer name each produce a plain-English refusal and zero audit events — the refuse-rather-than-record posture of the sign-off actions, applied to a record that can never be cleaned up.</p>
+                    <div class="fit-criterion">each of the three omissions is refused with its own message and writes nothing. <strong>Test: TC-R4-RC-4-01 (three variants).</strong></div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-5</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">A rule-improvement queue screen shall list every filed challenge, grouped by rule id (sorted; entries newest-first), naming for each entry the challenger, the use case, the date, and the challenged verdict. It shall be a derived read view computed by scanning the audit trail — never a second persisted store — and shall state its own posture on the page: a dissent never changes a verdict, and nothing in the queue feeds back into the engine.</p>
+                    <div class="fit-criterion">empty state points at where a challenge is filed from (<strong>TC-R4-RC-5-01</strong>); grouping, ordering and attribution (<strong>TC-R4-RC-5-02</strong>); the posture statements are rendered (<strong>TC-R4-RC-5-03</strong>).</div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-RC-6</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">The challenge affordance shall be available to the 2LoD role whenever a verdict exists — including on cases that have advanced past sign-off, because a rule can be wrong on a decided case. It shall not be offered to 1LoD, and not where no verdict exists (no rule was applied, so there is nothing to challenge).</p>
+                    <div class="fit-criterion">available at <code>pre_checked</code> stage (<strong>TC-R4-RC-6-01</strong>); absent for 1LoD (<strong>TC-R4-RC-6-02</strong>); absent with no verdict (<strong>TC-R4-RC-6-03</strong>).</div>
+                </div>
+            </section>
+            <section id="4-non-functional-requirements">
+                <h2>4. Non-Functional Requirements</h2>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-NF-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">No change to engine output. <code>evaluate()</code> remains byte-identical for identical inputs (NF-1); the round touches store types and presentation only.</p>
+                    <div class="fit-criterion">the existing determinism test (TC-PE-1-01) passes unchanged.</div>
+                </div>
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R4-NF-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The queue renders without writing, and a double-click files one challenge, not two — the append-only trail admits no cleanup.</p>
+                    <div class="fit-criterion">opening the queue twice leaves the trail unchanged (<strong>TC-R4-NF-2-01</strong>); double-click writes one event (<strong>TC-R4-NF-2-02</strong>).</div>
+                </div>
+            </section>
+            <section id="5-constraints">
+                <h2>5. Constraints (carried forward)</h2>
+                <ul>
+                    <li>No rendered string may match <code>/verified|unverified/i</code> (the verdict screen's single-match guard). Asserted for the queue by <strong>TC-R4-RC-5-04</strong>.</li>
+                    <li>Challenge text is user-authored and untrusted: rendered as text, never markup. Asserted by <strong>TC-R4-RC-5-05</strong>.</li>
+                    <li><code>src/engine/*</code> stays a pure island; the event type lives in <code>src/store/types.ts</code>, writes go through <code>audit.append()</code>, the queue derives in the component layer (cross-cutting.md §7).</li>
+                </ul>
+            </section>
+            <section id="6-out-of-scope">
+                <h2>6. Out of Scope (deliberate, recorded)</h2>
+                <ul>
+                    <li><strong>LLM judges filing dissents.</strong> Designed, not built — FN-009 records why (no working API key; a second "built, never run live" path) and what the first step is when a key exists.</li>
+                    <li><strong>Resolving or closing a challenge.</strong> The queue accumulates; a "challenge addressed" record is future work, deferred until the rule authors' actual workflow is observed. Filing is permanent either way.</li>
+                    <li><strong>Editing rules from the queue.</strong> Rule changes remain exclusively the existing human path: edit the framework or pack, sign off.</li>
+                </ul>
+            </section>
+            <section id="7-requirements-index">
+                <h2>7. Requirements Index</h2>
+                <table>
+                    <thead><tr><th>ID</th><th>Domain</th><th>Summary</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr><td>R4-RC-1</td><td>Rule challenges</td><td>Challenge filed from sign-off page with rule, reasoning, name, rendered verdict id</td><td>Must</td></tr>
+                        <tr><td>R4-RC-2</td><td>Rule challenges</td><td>Advisory by construction — one event, nothing else moves</td><td>Must</td></tr>
+                        <tr><td>R4-RC-3</td><td>Rule challenges</td><td>Picker offers the verdict's own rules; typed references stay unresolved</td><td>Must</td></tr>
+                        <tr><td>R4-RC-4</td><td>Rule challenges</td><td>Incomplete challenges refused, not recorded</td><td>Must</td></tr>
+                        <tr><td>R4-RC-5</td><td>Rule challenges</td><td>Queue groups challenges by rule; derived view; states advisory posture</td><td>Must</td></tr>
+                        <tr><td>R4-RC-6</td><td>Rule challenges</td><td>Offered to 2LoD whenever a verdict exists; never to 1LoD; never without a verdict</td><td>Should</td></tr>
+                        <tr><td>R4-NF-1</td><td>Non-functional</td><td>No change to engine output or determinism</td><td>Must</td></tr>
+                        <tr><td>R4-NF-2</td><td>Non-functional</td><td>Rendering writes nothing; double-click files once</td><td>Must</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-15</td><td>Round 4 created and built in the same session (v0.4.0). Requirements recorded with the test ids that prove them; LLM half deferred to FN-009.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

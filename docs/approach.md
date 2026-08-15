@@ -203,6 +203,27 @@ against twenty decided cases, let pack rules fall out of the disagreements,
 then take those rules to one owner as a memo. The expensive expert-dependent
 work happens *after* you know whether the core idea holds.
 
+### The corpus keeps improving after launch: rule challenges
+
+Back-testing calibrates the rules once. The **rule-improvement queue** keeps
+them calibrated. When a 2LoD reviewer applying a rule to a live case believes
+the rule — not the case — is wrong, they file a challenge from the sign-off
+page: the rule, the reasoning, their name, permanently on the audit trail.
+Challenges accumulate per rule on the **Rule challenges** screen, so the rule
+owner sees "this rule has drawn four objections from three reviewers" as
+evidence, not anecdote.
+
+Two design decisions carry the weight. A challenge is **advisory by
+construction** — it cannot change a verdict, move a case, or feed the engine;
+rules change only through the same edit-and-sign-off path as ever, so the
+authority model is untouched. And the channel is **role-agnostic by design**:
+today the challengers are people, but an advisory machine reviewer (small,
+rubric-grounded judge models of the kind Haize Labs' work demonstrates) would
+file through the same event with the same authority over decisions — none.
+That second half is deliberately a design note, not shipped code
+(`specs/forward-notes.md` FN-009), because this build has never run an LLM
+call live and does not pretend otherwise.
+
 ---
 
 ## 6. What is honestly not solved

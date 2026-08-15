@@ -105,6 +105,17 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         refuse.
       </p>
 
+      {/* v0.4.0. Copy rule holds here too: no "appr*ved"/"rej*cted". */}
+      <h2>When a rule is wrong, say so — on the record</h2>
+      <p>
+        Reviewers applying rules to real cases are the first to notice when a rule is too broad or
+        misses a real-world distinction. A second-line reviewer can <strong>challenge a rule</strong>{' '}
+        from any sign-off page: name the rule, say why, sign it. The challenge is permanent, and it
+        changes <em>nothing</em> about the verdict — dissent here is evidence for the people who
+        author the rulebook (collected under <strong>Rule challenges</strong> in the sidebar), never
+        an override. Rules change the way they always have: a human edits them, and signs off.
+      </p>
+
       <h2>The fastest way to understand it</h2>
       <p>
         On first launch, AIGate submitted itself through its own gate — the tool judged the tool. Its

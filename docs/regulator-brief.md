@@ -92,6 +92,14 @@ submitter then attests — and attestation, not extraction, is what carries
 accountability. Hostile text in any free field renders as text, never as
 markup, asserted by test.
 
+**How the rulebook improves without weakening the decision path.** A
+second-line reviewer who believes a rule (not a case) is wrong files a rule
+challenge: permanent, attributed, on the audit trail. Challenges accumulate
+per rule in a review queue for the framework's owners. The channel is
+advisory by construction — a challenge cannot alter any verdict, stage or
+sign-off, and rules change only through the existing human edit-and-sign-off
+path. Dissent is captured as evidence, never as override.
+
 ## What it deliberately does not do
 
 - It does not author or advise on risk appetite. It enforces what the firm

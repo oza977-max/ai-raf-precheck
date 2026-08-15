@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 4 &middot; AIGate &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .priority {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority.must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority.should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Test case styles */
+        .test-case {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .tc-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .tc-name {
+            font-weight: 600;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .tc-bdd {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-family: "Courier New", monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .tc-bdd p {
+            text-align: left;
+            margin: 0.5rem 0;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#test-suite-overview">Test Suite Overview</a></li>
+                <li><a href="#r4-rc-rule-challenges">R4-RC — Rule Challenges</a></li>
+                <li><a href="#r4-nf-non-functional">R4-NF — Non-Functional</a></li>
+</ul></nav>
+<main>
+<header>
+<h1>AIGate &mdash; Test Cases, Round 4</h1>
+<p class="subtitle">15 test cases across 8 requirements</p>
+<p class="meta">15 August 2026 &middot; Generated from test-cases-004.md &mdash; do not hand-edit</p>
+</header>
+                <p><em>Written 2026-08-15 alongside the build itself (v0.4.0) from <code>requirements/requirements-004.md</code>.</em></p>
+                <p>Round 4 covers 8 requirements: R4-RC (6), R4-NF (2). Unlike rounds 1–3, the tests were written with the feature in the same session, so every case below already exists in the suite and carries its id in the test title — traceability was 100% at the moment of writing.</p>
+                <p>Test files: <code>src/components/__tests__/RegisterDetail.dissent.test.tsx</code> (the filing flow) and <code>src/components/__tests__/RuleImprovementQueue.test.tsx</code> (the queue). 17 executable tests cover the 15 cases (TC-R4-RC-4-01 runs as three variants).</p>
+            <section id="test-suite-overview">
+                <h2>Test Suite Overview</h2>
+                <table>
+                    <thead><tr><th></th><th>Count</th></tr></thead>
+                    <tbody>
+                        <tr><td>Total test cases</td><td>15</td></tr>
+                        <tr><td>Must</td><td>12</td></tr>
+                        <tr><td>Should</td><td>3</td></tr>
+                        <tr><td><code>[SECURITY]</code>-tagged</td><td>1</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>Techniques applied.</strong> Use-case testing for the filing journey. Negative-space testing for R4-RC-4 (each omission refused independently) and R4-RC-6 (each gate absent independently) — Leveson's rule that a silent default is an unenforced constraint drives both. Set-derivation assertion for R4-RC-3-01 (picker options equal the verdict's own rule set). Event-count assertions for the advisory-by-construction property, which is a claim about what did NOT happen and must be asserted as such.</p>
+            </section>
+            <section id="r4-rc-rule-challenges">
+                <h2>R4-RC — Rule Challenges</h2>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-1-01 <span class="priority must">Must</span> <span class="priority-chip">EXAMPLE</span></div>
+                    <div class="tc-name">A complete challenge is recorded with all four fields</div>
+                    <div class="tc-bdd"><p>Input: 2LoD on a sign-off page whose rendered verdict has id v-seen; rule INV-DATA-01 picked; reasoning and name typed</p><p>Given a 2LoD reviewer reading a use case with a recorded verdict</p><p>When they file a challenge naming a rule, their reasoning and their name</p><p>Then the trail MUST contain one rule_dissent_filed event</p><p>And its payload MUST carry rule_id, dissent, filed_by_name</p><p>And its verdict_id MUST equal the id of the verdict the page rendered — threaded, not re-derived</p><p>[Requirement: R4-RC-1] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-2-01 <span class="priority must">Must</span></div>
+                    <div class="tc-name">Filing is advisory by construction — one event, nothing else moves</div>
+                    <div class="tc-bdd"><p>Input: a complete challenge filed on a pre_checked use case</p><p>Given the audit trail held N events before filing</p><p>When the challenge is filed</p><p>Then the trail MUST hold exactly N+1 events</p><p>And MUST NOT contain a new lifecycle_stage_changed or twoloD_reviewed event</p><p>And the page MUST state that the verdict is unchanged</p><p>[Requirement: R4-RC-2] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-3-01 <span class="priority must">Must</span></div>
+                    <div class="tc-name">The picker offers the rules this verdict relied on</div>
+                    <div class="tc-bdd"><p>Input: a verdict whose explanation names a tier rule and a tripped invariant</p><p>Given the challenge form is open</p><p>Then the rule picker MUST offer the explanation's rule ids</p><p>And MUST offer an explicit "not listed" option</p><p>[Requirement: R4-RC-3] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-3-02 <span class="priority must">Must</span></div>
+                    <div class="tc-name">A free-typed rule reference stays a reference</div>
+                    <div class="tc-bdd"><p>Input: "A rule not listed here" chosen; "  INV-MISSING-9  " typed</p><p>When the challenge is filed</p><p>Then the payload's rule_id MUST be the trimmed typed value</p><p>And MUST NOT carry a rule_label — no match against the rulebook was made</p><p>[Requirement: R4-RC-3] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-4-01 <span class="priority must">Must</span></div>
+                    <div class="tc-name">An incomplete challenge is refused, not recorded (three variants)</div>
+                    <div class="tc-bdd"><p>Input: a challenge missing (a) the rule, (b) the reasoning, (c) the name — one per variant</p><p>When the reviewer attempts to file</p><p>Then each variant MUST show its own plain-English refusal</p><p>And the trail MUST contain zero rule_dissent_filed events</p><p>[Requirement: R4-RC-4] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-5-01 <span class="priority must">Must</span></div>
+                    <div class="tc-name">The empty queue says so, and where a challenge is filed from</div>
+                    <div class="tc-bdd"><p>Given no challenges exist</p><p>Then the queue MUST state that none have been filed</p><p>And MUST name the sign-off page as where one is filed from</p><p>[Requirement: R4-RC-5] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-5-02 <span class="priority must">Must</span></div>
+                    <div class="tc-name">Challenges group by rule, newest first, with attribution</div>
+                    <div class="tc-bdd"><p>Input: three challenges — two against INV-DATA-01 (different cases, different dates), one against TIER-PII-01</p><p>Then the queue MUST show two groups sorted by rule id</p><p>And within a group entries MUST be newest-first</p><p>And each entry MUST name the challenger (marked name-not-verified) and the use case by label</p><p>[Requirement: R4-RC-5] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-5-03 <span class="priority must">Must</span></div>
+                    <div class="tc-name">The queue states its advisory posture on the page</div>
+                    <div class="tc-bdd"><p>Then the queue MUST state that a dissent never changes a verdict</p><p>And that nothing in the queue feeds back into the engine</p><p>[Requirement: R4-RC-5] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-5-04 <span class="priority must">Must</span></div>
+                    <div class="tc-name">No static queue copy matches /verified|unverified/i</div>
+                    <div class="tc-bdd"><p>Input: a seeded challenge with ordinary text</p><p>Then the rendered screen's own copy MUST NOT match /verified|unverified/i</p><p>(the verdict screen's single-match guard; challenge TEXT is user-authored and out of scope)</p><p>[Requirement: R4-RC-5 constraint] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-5-05 <span class="priority must">Must</span> <span class="priority-chip">SECURITY</span></div>
+                    <div class="tc-name">Hostile challenge text renders as text, never markup</div>
+                    <div class="tc-bdd"><p>Input: a challenge whose text contains &lt;img src=x onerror="alert(1)"&gt;</p><p>Then the characters MUST appear as literal text</p><p>And the document MUST contain no img element</p><p>[Requirement: R4-RC-5 constraint] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-6-01 <span class="priority should">Should</span></div>
+                    <div class="tc-name">Offered to 2LoD after the case advanced past sign-off</div>
+                    <div class="tc-bdd"><p>Input: a use case at lifecycle stage pre_checked, with a verdict</p><p>Then the 2LoD view MUST still offer "Challenge a rule"</p><p>[Requirement: R4-RC-6] [Priority: SHOULD]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-6-02 <span class="priority should">Should</span></div>
+                    <div class="tc-name">Not offered to 1LoD</div>
+                    <div class="tc-bdd"><p>Given the same page rendered for the 1LoD role</p><p>Then the challenge affordance MUST NOT be present</p><p>[Requirement: R4-RC-6] [Priority: SHOULD]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-RC-6-03 <span class="priority should">Should</span></div>
+                    <div class="tc-name">Not offered where no verdict exists</div>
+                    <div class="tc-bdd"><p>Given a use case with no verdict_produced event</p><p>Then the challenge affordance MUST NOT be present — no rule was applied, so there is nothing to challenge</p><p>[Requirement: R4-RC-6] [Priority: SHOULD]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+            </section>
+            <section id="r4-nf-non-functional">
+                <h2>R4-NF — Non-Functional</h2>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-NF-2-01 <span class="priority must">Must</span></div>
+                    <div class="tc-name">Rendering the queue writes nothing</div>
+                    <div class="tc-bdd"><p>Given a queue with one challenge</p><p>When the screen is opened twice (StrictMode double-mount included)</p><p>Then the audit trail MUST be unchanged</p><p>[Requirement: R4-NF-2] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RuleImprovementQueue.test.tsx]</p></div>
+                </div>
+                <div class="test-case">
+                    <div class="tc-id">TC-R4-NF-2-02 <span class="priority must">Must</span></div>
+                    <div class="tc-name">A double-click files one challenge, not two</div>
+                    <div class="tc-bdd"><p>Input: two clicks on "File the challenge" within one tick</p><p>Then the trail MUST contain exactly one rule_dissent_filed event</p><p>[Requirement: R4-NF-2] [Priority: MUST]</p><p>[Trace: src/components/__tests__/RegisterDetail.dissent.test.tsx]</p></div>
+                </div>
+                <p><em>R4-NF-1 (determinism unchanged) is proven by the pre-existing TC-PE-1-01, which asserts byte-identical <code>evaluate()</code> output over 10 runs and covers any new field automatically — no round-4 test is needed or written for it.</em></p>
+            </section>
+</main>
+</div>
+</body>
+</html>
