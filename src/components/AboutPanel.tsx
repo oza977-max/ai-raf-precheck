@@ -37,6 +37,21 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         add a key and use it, you are its first real test.
       </p>
 
+      <h2>It comes with rules — you bring the authority</h2>
+      <p>
+        A common first question: &ldquo;if my firm has no appetite document, does this app have no
+        rules?&rdquo; The opposite. Out of the box it carries a complete working ruleset — 5 hard lines,
+        18 appetite rules, the full tiering and control machinery — derived from a regulator-grounded
+        template, and it produces real verdicts with zero configuration.
+      </p>
+      <p>
+        What it does <em>not</em> come with is <strong>authority</strong>. Rules and authority are
+        deliberately separate: the rules enforce from the first click, but every verdict is stamped
+        provisional until someone at your firm says &ldquo;these rules are ours.&rdquo; Same rules,
+        same verdicts — the stamp is the only thing adoption removes. A bank must own its appetite, so
+        the app ships a complete one and makes owning it a deliberate act instead of a default.
+      </p>
+
       <h2>Who wrote the rules</h2>
       <p>Every rule traces to one of two sources, and the verdict shows which:</p>
       <ul>
@@ -55,6 +70,37 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         <button type="button" className="about-panel__link" onClick={() => onNavigate('policyEditor')}>
           Read the rules in force →
         </button>
+      </p>
+
+      <h2>The sign-offs, in one minute</h2>
+      <p>
+        Everything provisional in this app traces to one principle: when a supervisor asks &ldquo;why
+        did you decide that?&rdquo;, a <em>person</em> must answer — a tool cannot. So every judgement
+        has a named owner, and there are only three kinds:
+      </p>
+      <ul>
+        <li>
+          <strong>Pack sign-off</strong> — a named function (Legal, Model Risk, Technology Risk) reads
+          a regulation pack against its quoted source text and signs the firm&rsquo;s reading of that
+          law. <em>Once per regulation</em> — not per rule, not per use case — and revisited only when
+          the cited text changes.
+        </li>
+        <li>
+          <strong>Translation attestation</strong> — one person confirms the rules file matches what the
+          board signed off. <em>Once</em>, with a periodic refresh. This is what the header&rsquo;s
+          &ldquo;translation fidelity&rdquo; badge is waiting for.
+        </li>
+        <li>
+          <strong>Second-line sign-off</strong> — a reviewer clears an individual use case above the
+          self-service tier. The only <em>recurring</em> one, and it is the reviewer&rsquo;s existing
+          day job — the app just hands them the evidence pre-assembled.
+        </li>
+      </ul>
+      <p>
+        The first two are a single afternoon, once. After it, every &ldquo;pending adoption&rdquo;
+        label in this app goes quiet permanently. The demo deliberately ships in the un-signed state,
+        because faking those signatures would be exactly the kind of claim this product exists to
+        refuse.
       </p>
 
       <h2>The fastest way to understand it</h2>

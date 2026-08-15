@@ -155,7 +155,10 @@ approach honestly cannot do.
 
 AIGate works by checking AI use cases against a **Risk Appetite Framework (RAF)** — a set of rules that defines what AI risk the bank will and won't accept. Every verdict, every control requirement, every jurisdiction override traces back to a rule in that framework.
 
-**This means AIGate is only as good as the rules you give it.**
+**This means AIGate is only as good as the rules you give it** — though it is
+never rule-less: a complete starter ruleset works out of the box, and what
+adoption adds is *authority*, not function. Same rules, same verdicts; the
+provisional stamp is the only thing a CRO's signature removes.
 
 ### If your bank has a formal AI Risk Appetite Framework
 
