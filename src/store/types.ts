@@ -43,7 +43,12 @@ export type AuditEventPayload =
     }
   // submitter_note (2026-08-15): optional context for the 2LoD reviewer,
   // recorded with the attestation. Human-read at sign-off; never engine input.
-  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string }
+  // contradiction_resolutions (2026-08-15): the explanations a submitter
+  // gives when their description contradicted their structured answers.
+  // Found evaporating during a user walkthrough — typed, required to
+  // proceed, and never persisted. On an audit product that is a defect,
+  // not a nice-to-have.
+  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[] }
   | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
   | { type: 'graph_corrected'; correction: GraphCorrection }
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }

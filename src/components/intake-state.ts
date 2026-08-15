@@ -57,6 +57,10 @@ export type IntakeState =
       graphVersion: number;
       corrections: GraphCorrection[];
       answers: QuestionAnswer[];
+      // UC-5 (2026-08-15): carried so the attestation can persist them.
+      // This shape used to drop the notes, so the explanations a submitter
+      // was REQUIRED to type before proceeding evaporated before the write.
+      resolutionNotes: string[];
       useCaseId: string;
       originalVerdictId?: string;
     }
@@ -248,6 +252,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graphVersion: state.graph.version,
         corrections: state.corrections,
         answers: state.answers,
+        resolutionNotes: state.resolutionNotes,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
       };

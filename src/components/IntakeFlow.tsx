@@ -392,6 +392,24 @@ export default function IntakeFlow() {
     // UC-6 requires an explicit human confirmation click even with zero
     // questions (P4-C04) — no more silent auto-evaluation.
     if (questions.length === 0) {
+      // UC-5, found by user-walking the product (2026-08-15): detection ran
+      // only inside handleAnswerSubmitted, so the guided form — which marks
+      // nothing uncertain and therefore generates zero questions — skipped
+      // the questionnaire AND the contradiction check with it. "No client
+      // data at all" in the description plus Client PII in the form reached
+      // attestation unchallenged. The check must gate the SKIP, not just the
+      // answers. Both dispatches below are processed in order: the state is
+      // `questionnaire` by the time CONTRADICTIONS_DETECTED lands, which is
+      // the step the reducer requires.
+      const contradictions = detectContradictions(
+        'description' in state ? state.description : submittedDescription,
+        [],
+        state.graph,
+      );
+      if (contradictions.length > 0) {
+        dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
+        return;
+      }
       dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
     }
   }
@@ -421,11 +439,18 @@ export default function IntakeFlow() {
     confirmInFlight.current = true;
 
     const { graph, corrections, useCaseId, originalVerdictId } = state;
+    // The confirmation step's state shape does not carry resolutionNotes —
+    // they live on questionnaire/contradiction_review. By CONFIRMED time the
+    // reducer has already folded them forward? It has NOT: confirmation's
+    // shape drops them. Read from the questionnaire leg via the narrowing the
+    // union allows; [] when the shape lacks them.
+    const resolutions: string[] =
+      'resolutionNotes' in state && Array.isArray(state.resolutionNotes) ? state.resolutionNotes : [];
     dispatch({ type: 'CONFIRMED' });
     setEvaluationError(null);
 
     try {
-      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId, reviewerNote);
+      await runConfirmAndEvaluate(graph, corrections, useCaseId, originalVerdictId, reviewerNote, resolutions);
     } catch (err) {
       // A legitimate engine/policy failure (e.g. no-track-match) must not
       // leave the UI stuck on "Evaluating..." forever with no message
@@ -445,6 +470,7 @@ export default function IntakeFlow() {
     useCaseId: string,
     originalVerdictId: string | undefined,
     reviewerNote?: string,
+    contradictionResolutions: string[] = [],
   ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
@@ -485,6 +511,7 @@ export default function IntakeFlow() {
           // `submitter_note: undefined` serialises as a field somebody could
           // later mistake for a deliberately blank note.
           ...(reviewerNote ? { submitter_note: reviewerNote } : {}),
+          ...(contradictionResolutions.length > 0 ? { contradiction_resolutions: contradictionResolutions } : {}),
         },
       });
     }
@@ -654,6 +681,16 @@ export default function IntakeFlow() {
 
   function handleContradictionResolved(explanation: string) {
     dispatch({ type: 'CONTRADICTION_RESOLVED', explanation });
+    // Found by walking the product (2026-08-15): resolution returns to the
+    // questionnaire, but when every question is already answered — always
+    // true on the zero-questions path, and true whenever the contradiction
+    // fired on the FINAL answer — nothing ever dispatched the next step. The
+    // screen read "All questions answered." over no forward control: a dead
+    // end. Both dispatches process in order, so the reducer is back on
+    // `questionnaire` before PROCEED_TO_CONFIRMATION lands.
+    if (state.step === 'contradiction_review' && state.answers.length >= state.questions.length) {
+      dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
+    }
   }
 
   return (

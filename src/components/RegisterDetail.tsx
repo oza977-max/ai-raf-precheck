@@ -34,7 +34,11 @@ function eventDetail(event: AuditEvent): string {
     case 'use_case_created':
       return `${p.description} (intake: ${p.intake_method})`;
     case 'graph_confirmed':
-      return `Attested. Graph v${p.graph_version}, ${p.corrections_count} correction${p.corrections_count === 1 ? '' : 's'}.`;
+      return `Attested. Graph v${p.graph_version}, ${p.corrections_count} correction${p.corrections_count === 1 ? '' : 's'}.${
+        p.contradiction_resolutions && p.contradiction_resolutions.length > 0
+          ? ` ${p.contradiction_resolutions.length} contradiction${p.contradiction_resolutions.length === 1 ? '' : 's'} resolved: ${p.contradiction_resolutions.map((n) => `“${n}”`).join(' · ')}`
+          : ''
+      }`;
     case 'graph_corrected':
       return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}`;
     case 'verdict_produced':

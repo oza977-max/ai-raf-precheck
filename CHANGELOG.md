@@ -11,6 +11,44 @@ every verdict.
 
 ---
 
+## [0.3.1] — 2026-08-15
+
+Found by testing the product as a user, again. Two of the three would never
+have been caught by the suite, because they lived in the gaps between
+correct components.
+
+### Fixed
+
+- **Lying to the form no longer sails through.** Describe the use case as
+  "no client data at all", then declare Client PII in the guided form, and
+  nothing happened — the contradiction detector ran only on questionnaire
+  answers, and the guided form (which marks nothing uncertain) generates no
+  questions, so the check was skipped along with the questionnaire. The
+  contradiction review now gates the skip itself: both statements shown,
+  a written resolution required before attestation.
+
+- **Resolving a contradiction no longer dead-ends.** After resolution the
+  flow returned to a zero-question questionnaire reading "All questions
+  answered." — over no forward control. Pre-existing on the normal path too,
+  whenever a contradiction fired on the final answer. Resolution now
+  proceeds to the attestation.
+
+- **Your resolution explanation is now on the record.** The justification
+  you are required to type was carried in memory and never written anywhere
+  — it evaporated at attestation. It now lands on the attestation event and
+  reads back on the sign-off page: *"1 contradiction resolved: '…'"*. On an
+  audit product, an explanation that vanishes is a defect, not a detail.
+
+- The welcome card's "Got it" button was nearly invisible.
+
+### Verified along the way
+
+- "Clear all data" correctly refuses when AIGate is open in another tab, and
+  says so — the error message diagnosed this tester's environment exactly.
+- "Start over instead" genuinely starts over.
+
+---
+
 ## [0.3.0] — 2026-08-15
 
 ### Added — the product explains itself
