@@ -491,6 +491,20 @@
     <p>Both actions append to the audit trail immediately and cannot be undone through the application.</p>
     <p><strong>Be aware of two V1 limits before you rely on this.</strong> The role selector is a dropdown, not a login — your name is recorded and labelled unverified. And nothing stops a submitter approving their own use case; the record discloses it as <em>self-service final</em>, but it does not prevent it. Real identity and segregation of duties need a backend this build does not have.</p>
 
+    <h2 id="challenge-a-rule-without-touching-the-verdict">Challenge a rule (without touching the verdict)</h2>
+    <p>Sometimes the case in front of you is decided correctly <em>by the rules as written</em> — and the rule itself is what's wrong: too broad, too strict, or missing a distinction the real world has. That opinion used to have nowhere to go. Now it does.</p>
+    <ol>
+      <li>As <strong>2LoD</strong>, open any use case that has a verdict and click <strong>Challenge a rule…</strong> (below the verdict).</li>
+      <li>Pick the rule from the list — it offers the rules <em>this verdict actually relied on</em> — or type a reference for one that isn't listed.</li>
+      <li>Say why the rule is wrong here, and sign your name.</li>
+    </ol>
+    <p>Three things to understand before you file:</p>
+    <ul>
+      <li><strong>The verdict does not change.</strong> A challenge is a formal objection about the rulebook, permanently on the record — it is not an appeal and not an override. The case's decision, stage and sign-off are all untouched.</li>
+      <li><strong>It is permanent.</strong> The challenge is an audit-trail event, so it cannot be edited or withdrawn afterwards. That is what makes it worth something.</li>
+      <li><strong>It goes somewhere.</strong> Every challenge lands in <strong>Rule challenges</strong> (sidebar), grouped by rule, so the people who author the rulebook can see that, say, one citation rule has been challenged three times by different reviewers on different cases. Rules still change only the way they always have — a human edits the framework or a pack and signs it off.</li>
+    </ul>
+
     <h2 id="change-the-firms-appetite">Change the firm's appetite</h2>
     <p>The appetite is a YAML file. You can read and edit it in the app.</p>
     <ol>
