@@ -14,6 +14,57 @@ Describe the AI use case (plain language or a short structured form). AIGate map
 
 Same inputs, same verdict, every time — no LLM in the decision path. The LLM only helps at the edges (reading descriptions in, explaining verdicts out).
 
+## What happens to a use case
+
+```mermaid
+flowchart TD
+    A["Describe the AI use case<br/><i>plain language, or a guided form<br/>— no API key needed</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
+    B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
+    B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output</i><br/><i>shown back for correction</i>"]
+    C --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
+    D --> E["Attestation<br/><i>timestamped, permanent,<br/>+ optional note for the reviewer</i>"]
+    E --> F["⚙ Deterministic engine<br/><i>same answers → same verdict,<br/>every time. No LLM in here.</i>"]
+
+    F --> G{"Hard lines first<br/><i>5 absolute rules</i>"}
+    G -->|"one crossed"| H["✗ REJECTED<br/><i>no control set can fix it —<br/>change the case, or go to<br/>committee as an exception</i>"]
+    G -->|"none crossed"| I["18 appetite invariants<br/><i>+ tier, track, jurisdiction floors</i>"]
+    I --> J["Minimal control set<br/><i>solved, not suggested —<br/>smallest set that brings it<br/>inside appetite</i>"]
+    J --> K["✓ Verdict<br/><i>with the rule, the regulation and<br/>the sign-off behind every step</i>"]
+    K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
+
+    style F fill:#1c1b18,color:#f3f0e8
+    style H fill:#fdf0ef,stroke:#a8322a
+    style K fill:#f0faf4,stroke:#3a6b4a
+```
+
+## Where the rules come from
+
+Every rule the engine applies traces to one of two sources — and the verdict
+shows which, with the verbatim text and the human sign-off behind it:
+
+```mermaid
+flowchart LR
+    subgraph firm["THE FIRM'S OWN APPETITE"]
+        RAF["Board-approved<br/>Risk Appetite Framework<br/><i>(prose)</i>"] --> EX["Translated to rules<br/><i>grounding/raf-extraction.md</i>"]
+        EX --> POL["policy/appetite.yaml<br/><i>5 hard lines · 18 invariants<br/>tiers · tracks · 19 controls</i>"]
+    end
+
+    subgraph reg["REGULATION"]
+        LAW["SS1/23 · SR 26-2<br/>EU AI Act · DORA"] --> PACK["Jurisdiction packs<br/><i>each rule quotes its verbatim<br/>source text + states its basis:<br/>verbatim / derived / judgement</i>"]
+        PACK --> SIGN["Human sign-off per pack<br/><i>Legal · Model Risk · Tech Risk<br/>— unsigned rules make the<br/>verdict PROVISIONAL, and say so</i>"]
+    end
+
+    POL --> ENGINE["⚙ Engine"]
+    SIGN --> ENGINE
+    ENGINE --> V["Verdict, with citations"]
+
+    style ENGINE fill:#1c1b18,color:#f3f0e8
+```
+
+Both files are plain, commented YAML a risk manager can read and edit —
+[see every rule rendered](docs/rules.md), regenerated from the policy files
+by `npm run docs:rules`.
+
 ## What works today (V1 proof-of-concept)
 
 The full gate, end to end: intake (LLM or form) → duplicate check against the register → graph review with corrections → targeted questions with contradiction detection → attestation → deterministic verdict → register with lifecycle governance (Low self-serves; Medium/High/Critical await 2LoD sign-off) → policy editing with automatic re-evaluation queuing → JSON export. AIGate submits itself through its own gate on first launch.
