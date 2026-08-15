@@ -153,12 +153,37 @@ mechanism, and none of them is a bug.
 
 ## What "provisional" means
 
+Start with the distinction that unlocks it: **the app is never rule-less; it
+is authority-less until a human claims it.** Out of the box it carries a
+complete working ruleset — 5 hard lines, 18 invariants, full tiering — and
+produces real verdicts with zero configuration. What no tool can ship is
+*authority*: nobody at your firm has yet said "these rules are ours." Until
+someone does, verdicts are stamped provisional. Same rules, same verdicts —
+adoption removes only the stamp.
+
 A verdict is provisional when it relied on a rule your firm has not adopted.
 
 Every shipped jurisdiction pack carries `[FIRM]` sign-off placeholders, because
 AIGate does not interpret regulations on your behalf. A bank that tells its
 supervisor "our AI interpreted SS1/23" does not have a defensible answer. A
 qualified person has to stand behind every regulatory determination.
+
+### The three sign-offs — and why they are one afternoon
+
+Every judgement in the app has a named human owner, because "our software
+interpreted the regulation" is not an answer a firm can give a supervisor.
+There are only three kinds, and they differ in how often they recur:
+
+| Sign-off | Who | How often |
+|---|---|---|
+| **Pack sign-off** — the firm's reading of one regulation, checked against its quoted source text | The accountable function per pack: Legal/Compliance, Model Risk, Technology Risk | **Once per regulation.** Not per rule, not per use case. Revisited only when the cited text changes. |
+| **Translation attestation** — "the rules file matches what the board signed off" | One accountable person | **Once**, plus a periodic refresh |
+| **Second-line sign-off** — clearing an individual use case | The 2LoD reviewer | Per use case above the self-service tier — the only recurring one, and it is the reviewer's existing job |
+
+The first two are a single afternoon, once. After it, every "pending
+adoption" label goes quiet permanently. The demo ships un-signed on
+purpose: faking the signatures would be the exact fabrication the product
+refuses everywhere else.
 
 **To make verdicts final:**
 

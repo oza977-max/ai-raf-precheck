@@ -435,8 +435,40 @@
     </table>
 
     <h2 id="what-provisional-means">What "provisional" means</h2>
+    <p>Start with the distinction that unlocks it: <strong>the app is never rule-less; it is authority-less until a human claims it.</strong> Out of the box it carries a complete working ruleset — 5 hard lines, 18 invariants, full tiering — and produces real verdicts with zero configuration. What no tool can ship is <em>authority</em>: nobody at your firm has yet said "these rules are ours." Until someone does, verdicts are stamped provisional. Same rules, same verdicts — adoption removes only the stamp.</p>
     <p>A verdict is provisional when it relied on a rule your firm has not adopted.</p>
     <p>Every shipped jurisdiction pack carries <code>[FIRM]</code> sign-off placeholders, because AIGate does not interpret regulations on your behalf. A bank that tells its supervisor "our AI interpreted SS1/23" does not have a defensible answer. A qualified person has to stand behind every regulatory determination.</p>
+
+    <h3 id="the-three-sign-offs-and-why-they-are-one-afternoon">The three sign-offs — and why they are one afternoon</h3>
+    <p>Every judgement in the app has a named human owner, because "our software interpreted the regulation" is not an answer a firm can give a supervisor. There are only three kinds, and they differ in how often they recur:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Sign-off</th>
+          <th>Who</th>
+          <th>How often</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pack sign-off</strong> — the firm's reading of one regulation, checked against its quoted source text</td>
+          <td>The accountable function per pack: Legal/Compliance, Model Risk, Technology Risk</td>
+          <td><strong>Once per regulation.</strong> Not per rule, not per use case. Revisited only when the cited text changes.</td>
+        </tr>
+        <tr>
+          <td><strong>Translation attestation</strong> — "the rules file matches what the board signed off"</td>
+          <td>One accountable person</td>
+          <td><strong>Once</strong>, plus a periodic refresh</td>
+        </tr>
+        <tr>
+          <td><strong>Second-line sign-off</strong> — clearing an individual use case</td>
+          <td>The 2LoD reviewer</td>
+          <td>Per use case above the self-service tier — the only recurring one, and it is the reviewer's existing job</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The first two are a single afternoon, once. After it, every "pending adoption" label goes quiet permanently. The demo ships un-signed on purpose: faking the signatures would be the exact fabrication the product refuses everywhere else.</p>
+
     <p><strong>To make verdicts final:</strong></p>
     <ol>
       <li>Open <strong>Appetite framework</strong> and read the rules for the jurisdictions you operate in.</li>
