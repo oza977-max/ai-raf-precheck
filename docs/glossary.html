@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Glossary</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+
+    /* ── Test Case Components (/gvm-test-cases) ── */
+    .test-case {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .tc-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .tc-bdd p {
+      margin-bottom: 0.2rem;
+      padding-left: 1rem;
+    }
+
+    .tc-trace {
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 0.4rem;
+      font-style: italic;
+    }
+
+    .tc-detail {
+      font-size: 0.9rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .tc-detail h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .health-issue {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .health-issue.acknowledged {
+      opacity: 0.6;
+      border-left-color: #ccc;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution (per shared rule 24) ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026</p>
+    <h1>AIGate</h1>
+    <p class="subtitle">Every term the product uses, in plain words.</p>
+
+    <p>The product speaks the language of bank risk management. Terms link to where you meet them.</p>
+
+    <table>
+      <thead>
+        <tr><th>Term</th><th>Plain meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Risk appetite</strong></td><td>A written statement of what risk a firm will and will not accept, agreed at board level. AIGate's whole job is turning this from prose into enforceable rules.</td></tr>
+        <tr><td><strong>RAF</strong></td><td>Risk Appetite Framework — the document above, plus the governance around it.</td></tr>
+        <tr><td><strong>1LoD / 2LoD</strong></td><td>"First and second line of defence." 1LoD is the business building or using the AI — they own the risk. 2LoD is the independent risk function that checks them. In AIGate, 1LoD submits use cases; 2LoD signs them off.</td></tr>
+        <tr><td><strong>Use case</strong></td><td>One proposed or existing application of AI — "a model that scores credit card applications". The unit everything else attaches to.</td></tr>
+        <tr><td><strong>Data-flow graph</strong></td><td>The structured description of a use case: what data goes in, what model processes it, what comes out, who sees it. This — not your prose — is what the rules are evaluated against.</td></tr>
+        <tr><td><strong>Hard line</strong></td><td>A rule that no set of controls can fix. Cross one and the verdict is outside appetite, full stop — e.g. price-sensitive information processed outside the firm's own systems. Checked before anything else.</td></tr>
+        <tr><td><strong>Invariant</strong></td><td>One of the firm's appetite rules that a use case must satisfy. Unlike a hard line, an invariant names the controls that satisfy it — which is how a use case can come back inside appetite.</td></tr>
+        <tr><td><strong>Control</strong></td><td>A named measure that satisfies one or more invariants — drift monitoring, bias testing, a human escalation route. The engine returns the <em>smallest</em> set that works, not a checklist of everything.</td></tr>
+        <tr><td><strong>Tier</strong></td><td>How much could go wrong: Critical / High / Medium / Low. Set by the most demanding rule that matches — a credit decision about a person is Critical no matter how simple the model. Decides who must sign off.</td></tr>
+        <tr><td><strong>Track</strong></td><td>Which oversight regime applies — Track I is traditional model risk management, Track III catches generative and agentic AI that newer regulation carves out of the classic model definition.</td></tr>
+        <tr><td><strong>Jurisdiction pack</strong></td><td>A file of rules derived from one regulator's text — SS1/23 (UK), SR 26-2 (US), EU AI Act, DORA. Each rule quotes the verbatim passage it comes from. Packs only activate for jurisdictions the use case actually touches.</td></tr>
+        <tr><td><strong>Basis</strong></td><td>What a pack rule claims about its own quote: <strong>verbatim</strong> (restates it), <strong>derived</strong> (infers from it), or <strong>judgement</strong> (a legal position). Replaced a numeric confidence score, which nobody could verify.</td></tr>
+        <tr><td><strong>Sign-off</strong></td><td>A named person, role and date standing behind something — a pack interpretation, or a 2LoD approval. AIGate never interprets regulation on its own authority.</td></tr>
+        <tr><td><strong>Provisional</strong></td><td>The verdict's way of saying "correct, but not yet fully authorised" — a rule was applied that the firm hasn't adopted, or a decision type wasn't in the policy's vocabulary. The banner names who needs to act.</td></tr>
+        <tr><td><strong>Attestation</strong></td><td>The submitter's on-the-record confirmation that the described facts are accurate — timestamped, permanent, and the point after which there is no going back in the flow.</td></tr>
+        <tr><td><strong>Audit trail</strong></td><td>The append-only record of everything that happened — submissions, verdicts, corrections, sign-offs. Nothing in the application can edit or delete an entry.</td></tr>
+        <tr><td><strong>Register</strong></td><td>The firm's inventory of AI use cases, held as a graph so a shared platform or vendor appears once, connected to everything that uses it.</td></tr>
+        <tr><td><strong>Standing conditions</strong></td><td>The operating bounds a verdict assumes — drift limits, incident counts, the attested autonomy level. The verdict holds only while the system stays inside them.</td></tr>
+        <tr><td><strong>Governance margin</strong></td><td>How much slack the control set has. A rule satisfied by exactly one control has no headroom — if that control fails, the use case is outside appetite immediately.</td></tr>
+        <tr><td><strong>Autonomy level (L0–L4)</strong></td><td>How much the system does without a person: from "only provides information" (L0) to "acts with no human checkpoint" (L4).</td></tr>
+        <tr><td><strong>Data zone (A/B/C)</strong></td><td>Where data or processing sits: the open internet (A), an outside supplier under contract (B), inside the firm (C).</td></tr>
+        <tr><td><strong>MNPI</strong></td><td>Material non-public information — price-sensitive knowledge like live deals or unpublished results. Processing it outside Zone C is a hard line.</td></tr>
+        <tr><td><strong>Client PII</strong></td><td>Personal details of clients — names, accounts, anything identifying a person.</td></tr>
+        <tr><td><strong>HITL</strong></td><td>Human in the loop — whether a person checks the output before anything happens.</td></tr>
+        <tr><td><strong>Determinism</strong></td><td>Same answers in, same verdict out, every time. The property that makes a verdict auditable, and the reason no AI model sits in the decision path.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

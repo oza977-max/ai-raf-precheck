@@ -11,6 +11,35 @@ every verdict.
 
 ---
 
+## [0.3.0] — 2026-08-15
+
+### Added — the product explains itself
+
+- **An About screen, in the app.** The live link used to drop first-time
+  visitors straight into "New pre-check" with no context — the README and
+  its diagrams live on GitHub, where most visitors of the hosted app never
+  go. About answers the first three questions (what is this, who wrote the
+  rules, is an AI judging me), states what the tool deliberately is not, and
+  points at the fastest explainer the product has: AIGate's own
+  self-assessment in the register — the tool judged the tool.
+
+- **A first-visit pointer** on the intake screen — one dismissible card, a
+  two-minute-overview link, dismissed for good once you say so.
+
+- **A regulator brief** ([docs/regulator-brief.md](docs/regulator-brief.md))
+  — one page for a supervisory reader, answering the five questions they
+  ask: is an AI making the decision (no, and how that is asserted by test),
+  who is accountable for each determination (a named human per layer, with
+  the gaps marked provisional rather than hidden), can a decision be
+  evidenced later, how the encoding of regulation stays honest, and what
+  happens when the tool doesn't know. No marketing adjectives; every claim
+  already true in the repo.
+
+- **A glossary** ([docs/glossary.md](docs/glossary.md)) — all 25 terms the
+  product uses, in plain words, from risk appetite to HITL.
+
+---
+
 ## [0.2.3] — 2026-08-15
 
 ### Added
