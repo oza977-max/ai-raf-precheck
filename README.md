@@ -52,8 +52,10 @@ flowchart TD
     I --> J["Minimal control set<br/><i>solved, not suggested —<br/>smallest set that brings it<br/>inside appetite</i>"]
     J --> K["✓ Verdict<br/><i>with the rule, the regulation and<br/>the sign-off behind every step</i>"]
     K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
+    L -.->|"reviewer disputes a RULE,<br/>not the case"| M["⚑ Rule challenge<br/><i>advisory by construction —<br/>the verdict stands; filed to the<br/>rule-improvement queue</i>"]
 
     style F fill:#1c1b18,color:#f3f0e8
+    style M stroke-dasharray: 5 5
     style H fill:#fdf0ef,stroke:#a8322a
     style K fill:#f0faf4,stroke:#3a6b4a
 ```
@@ -79,7 +81,12 @@ flowchart LR
     SIGN --> ENGINE
     ENGINE --> V["Verdict, with citations"]
 
+    V -.->|"2LoD challenges a rule"| Q["⚑ Rule-improvement queue<br/><i>dissent on the record —<br/>never changes a verdict</i>"]
+    Q -.->|"evidence for the next<br/>human edit + sign-off"| EX
+    Q -.->|"evidence for the next<br/>human edit + sign-off"| PACK
+
     style ENGINE fill:#1c1b18,color:#f3f0e8
+    style Q stroke-dasharray: 5 5
 ```
 
 Both files are plain, commented YAML a risk manager can read and edit —
