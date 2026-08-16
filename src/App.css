@@ -2297,3 +2297,9 @@ details input {
   font-size: 0.88rem;
   font-weight: 600;
 }
+
+.register-detail__chip-legend {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  margin: 0.2rem 0 1rem;
+}
