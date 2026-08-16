@@ -528,8 +528,81 @@ draft, invisibly — they would never see the question they had not answered.
 R3-JU-2, R3-JU-3 and R3-JU-6 are specified in `evaluation-engine.md` §12 and
 `verdict-audit.md` §10 — they concern the verdict, not the form.
 
+## 15. Round 5 — Explainable Graph Review (R5-GR / R5-GX)
+
+Spec for `requirements/requirements-005.md`. Presentation and orchestration
+only: the engine's input contract, `evaluate()`, and the audit schema are
+unchanged (R5-NF-1).
+
+### 15.1 Field meanings and consequences (R5-GR-1)
+
+The single source of plain-English value meanings is
+`src/components/field-copy.ts` — the same table the guided form already
+renders, so the two surfaces cannot drift apart. GraphView renders, for each
+decision-bearing field: the meaning of the current value, plus a static
+per-FIELD consequence line (new `FIELD_CONSEQUENCES` map in field-copy.ts,
+e.g. data_zone → "Hard lines and zone rules read this field; Zone A is the
+strictest case"). Consequences are per field, not per value — a per-value
+consequence would be re-deriving rule behaviour in copy, which drifts.
+Missing label maps (reversibility, scale, HITL, decision type) are added to
+field-copy.ts.
+
+### 15.2 Per-node confirmation gate (R5-GR-2, R5-GR-3) — ADR-IF-R5-1
+
+**Decision: confirmation is per NODE, recorded in the reducer, LLM path
+only.** Requirements allowed per-node or per-field; per-node is chosen
+because a node is the unit the reviewer reads (a card), the unit uncertainty
+is flagged at (`uncertain` is node-level), and per-field would put 12+
+clicks between the user and every graph — fatigue that produces blind
+clicking, the failure R5 exists to reduce.
+
+Mechanics: `graph_review` state carries `confirmed_node_ids: string[]`
+(absent on the form path — `intake_method` gates the whole feature, matching
+R5-GR-2's exemption). New reducer action `NODE_CONFIRMED { nodeId }`. A
+correction via the existing CORRECTION_APPLIED path ALSO marks the node
+confirmed — editing is stronger evidence of review than a Confirm click.
+`handleProceedFromGraphReview` refuses (plain-English message, no state
+change) while any node id is unconfirmed. Uncertain nodes use the same
+mechanism with louder chrome and their own copy; since confirmation is
+per-node, "no en-bloc confirm" (R5-GR-3) holds by construction. The
+confirmations are ephemeral review state — NOT persisted to the audit
+trail; the existing `graph_confirmed` attestation remains the recorded
+act, and now attests a graph every node of which was individually
+confirmed.
+
+### 15.3 Plausibility warnings (R5-GR-4)
+
+`src/engine/plausibility.ts` — pure function
+`plausibilityWarnings(description, graph): PlausibilityWarning[]`
+(`{ node_id, field, message }`). Same fixed-signal-table idiom as
+`contradiction.ts`, but ADVISORY: rendered as flags on the affected node in
+GraphView, never blocking, never mutating. Signal pairs are added ONLY from
+observed misreads (each carries a comment naming the run that motivated
+it); this table is evidence-driven by policy, like the rule-improvement
+queue. Initial pairs: internal/on-prem wording vs Zone A/B; train/fine-tune
+wording vs any action_type; "reviews every"/"human approves" vs hitl:false
+or autonomy ≥3; "no human"/"fully automated" vs autonomy ≤1.
+
+### 15.4 Jurisdiction hygiene (R5-GX-1) — ADR-IF-R5-2
+
+**Decision: filtered in the intake orchestration layer (IntakeFlow), not in
+src/llm/.** The recognised-jurisdiction set comes from the loaded policy's
+`jurisdictions:` list; `src/llm/*` has no policy access and giving it any
+would couple the extraction edge to policy loading. After a successful
+extraction, IntakeFlow partitions `graph.jurisdictions` against the policy
+set; unrecognised values are removed from the graph and carried as
+`ignored_jurisdictions` in review state, rendered by GraphView as
+"ignored — not a recognised jurisdiction". The filter runs before the human
+sees the graph, so the attested graph never contains junk jurisdictions.
+
+### 15.5 Hygiene hint (R5-GR-5)
+
+Static conditional in GraphView: two or more processing nodes → one
+informational line. No heuristics beyond the count.
+
 ## 14. Changelog
 
 | Date | Change |
 |---|---|
 | 2026-07-29 | §13 added — round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine's input contract unchanged. |
+| 2026-08-16 | §15 added — round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm). |

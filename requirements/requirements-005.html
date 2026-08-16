@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 5 &middot; AIGate &mdash; Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#round-5-the-graph-review">Round 5 — The Graph Review That Explains Itself</a></li>
+                <li><a href="#provenance">Provenance</a></li>
+                <li><a href="#1-purpose">1. Purpose</a></li>
+                <li><a href="#2-target-user">2. Target User</a></li>
+                <li><a href="#3-functional-requirements">3. Functional Requirements</a></li>
+                <li><a href="#4-non-functional">4. Non-Functional (carried invariants)</a></li>
+                <li><a href="#5-out-of-scope">5. Out of Scope (deliberate)</a></li>
+                <li><a href="#6-requirements-index">6. Requirements Index</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+            </ul>
+        </nav>
+        <main class="main-content">
+            <header>
+                <h1>AIGate &mdash; Requirements, Round 5</h1>
+                <p class="metadata">Round 5 &middot; 16 August 2026 &middot; Generated from requirements-005.md &mdash; do not hand-edit</p>
+            </header>
+            <section id="round-5-the-graph-review">
+                <h2>Round 5 &mdash; The Graph Review That Explains Itself</h2>
+                <p><strong>Status: APPROVED by the user (2026-08-16) &mdash; full scope, Musts + Shoulds + Could.</strong> Tech spec: <code>specs/intake-flow.md</code> &sect;15 (ADR-IF-R5-1, ADR-IF-R5-2).</p>
+            </section>
+
+            <section id="provenance">
+                <h2>Provenance</h2>
+                <p>Raised by the user during the first live-model session (2026-08-16), after running a real description through the local open model: <em>&quot;the graph can actually show you whether it&rsquo;s right or wrong. It can explain better. I think it&rsquo;s a bit more naive right now.&quot;</em> Grounded in two observed live failures: a systematic Zone A default (closed at the prompt, v0.5.x) and a silently-forced wrong enum (<code>training</code> &rarr; <code>trade</code>) that carried no uncertainty flag. The prompt now defends against both; this round makes the <strong>review screen</strong> carry its share, because prompt fixes only lower the error rate &mdash; the screen is where remaining errors must become visible.</p>
+            </section>
+
+            <section id="1-purpose">
+                <h2>1. Purpose</h2>
+                <p>The graph review screen is where a machine&rsquo;s guess becomes a human&rsquo;s claim. Today it renders values (<code>Zone A</code>, <code>L2</code>, <code>non-binding</code>) without saying what they mean, which rules read them, or which ones the model was unsure about. A submitter cannot catch a wrong value they don&rsquo;t understand, and the attestation that follows is only as honest as this screen makes catchable. Round 5 turns the screen from a display into an explanation.</p>
+            </section>
+
+            <section id="2-target-user">
+                <h2>2. Target User</h2>
+                <p><strong>James (1LoD submitter)</strong> &mdash; a business or technology user, not a risk expert. He must be able to see that &quot;Zone A&quot; means the open internet, notice it is wrong for an internal platform, and fix it &mdash; without knowing the rulebook.</p>
+            </section>
+
+            <section id="3-functional-requirements">
+                <h2>3. Functional Requirements</h2>
+
+                <h3 id="r5-gr-explainable-graph-review">R5-GR &mdash; Explainable Graph Review</h3>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GR-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Every decision-bearing field explains its value in plain English, and names its consequence. For each classified field on a node (data class, data zone, model type, autonomy level, action type, exposure, bindingness, reversibility, scale, decision type, HITL, vendor), the review screen shows: the value&rsquo;s plain-language meaning (e.g. &quot;Zone A &mdash; the open internet or consumer tools&quot;), and a one-line consequence (&quot;the strictest zone rules apply; several hard lines read this field&quot;). Meanings come from a single static field-copy table &mdash; deterministic, no LLM.</p>
+                    <div class="fit-criterion">Fit criterion: for a rendered graph, every decision-bearing field displays a meaning string distinct from its raw enum value; a field whose value changes shows the changed meaning.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GR-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Model-proposed values are visibly unconfirmed until a human touches them. On the LLM intake path, every decision-bearing field starts in a &quot;proposed by the model&quot; state, visually distinct. Proceeding past graph review requires every decision-bearing field to be explicitly confirmed (per node or per field &mdash; design decision for the tech spec) or corrected. The guided-form path is exempt: a human typed those values.</p>
+                    <div class="fit-criterion">Fit criterion: with an LLM-extracted graph, Proceed is unavailable until all decision-bearing fields are confirmed/corrected; the confirmation is recorded on the graph (so the attestation covers it); the form path shows no proposed-state chrome.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GR-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Uncertainty is loud and must be resolved. Nodes the model flagged <code>uncertain: true</code> are visually prominent (not a subtle chip), say plainly &quot;the model was not confident here &mdash; check every value on this node&quot;, and cannot be confirmed en bloc: each uncertain node requires its own confirm/correct action.</p>
+                    <div class="fit-criterion">Fit criterion: an uncertain node renders the warning; Proceed is unavailable while any uncertain node is unresolved.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GR-4</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">Deterministic plausibility warnings. The existing description-vs-graph signal table (2 patterns today) is extended to the misreads live runs have actually produced: internal/on-prem wording vs a Zone A/B value; training/fine-tuning wording vs any action type; &quot;reviews every&quot;/&quot;human approves&quot; wording vs <code>hitl: false</code> or autonomy &ge;3; &quot;no human&quot; wording vs autonomy &le;1. Warnings are advisory flags on the affected field &mdash; they never block and never change a value.</p>
+                    <div class="fit-criterion">Fit criterion: each new signal pair fires on a fixture built from the live transcript that motivated it, and does not fire on a neutral description.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GR-5</span>
+                        <span class="priority-chip priority-could">Could</span>
+                    </div>
+                    <p class="requirement-text">One-use-case hygiene hint. When the graph contains two or more processing nodes, the review screen shows a static hint: &quot;If these are really two separate tools, submit them separately &mdash; one use case per pre-check gets sharper verdicts.&quot; Purely informational.</p>
+                </div>
+
+                <h3 id="r5-gx-extraction-output-hygiene">R5-GX &mdash; Extraction Output Hygiene</h3>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R5-GX-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Unrecognised jurisdictions are surfaced, not silently carried. Jurisdiction strings outside the known set (those the packs and intake vocabulary recognise) are removed from the graph at the parse gate and reported on the review screen as &quot;ignored: not a recognised jurisdiction&quot; &mdash; so <code>&quot;Internal&quot;</code> can neither silently match nothing nor look adopted.</p>
+                    <div class="fit-criterion">Fit criterion: an extraction returning <code>jurisdictions: [&quot;Internal&quot;,&quot;UK&quot;]</code> yields a graph with <code>[&quot;UK&quot;]</code> and a rendered notice naming what was dropped.</div>
+                </div>
+            </section>
+
+            <section id="4-non-functional">
+                <h2>4. Non-Functional (carried invariants)</h2>
+                <ul>
+                    <li><strong>R5-NF-1 (Must):</strong> No engine change; <code>evaluate()</code> byte-identical (TC-PE-1-01 unchanged). All explanation copy is presentation-layer.</li>
+                    <li><strong>R5-NF-2 (Must):</strong> Review renders write nothing to the audit trail.</li>
+                    <li><strong>R5-NF-3 (Must):</strong> No rendered string matches <code>/approved|rejected/i</code>; all model-derived text renders as text, never markup.</li>
+                </ul>
+            </section>
+
+            <section id="5-out-of-scope">
+                <h2>5. Out of Scope (deliberate)</h2>
+                <ul>
+                    <li>LLM-judged validation of the graph (&quot;is this graph right?&quot; asked of a model) &mdash; that puts a model&rsquo;s opinion in the judgment path; the dissent panel design (FN-009) is the governed home for machine opinions.</li>
+                    <li>Re-prompting/multi-turn extraction repair.</li>
+                    <li>Changing the closed vocabularies (training as a new action type is a policy-schema question for a future round, decided by a human).</li>
+                </ul>
+            </section>
+
+            <section id="6-requirements-index">
+                <h2>6. Requirements Index</h2>
+                <table class="index-table">
+                    <thead><tr><th>ID</th><th>Summary</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr class="must"><td>R5-GR-1</td><td>Every decision-bearing field explains value + consequence in plain English</td><td>Must</td></tr>
+                        <tr class="must"><td>R5-GR-2</td><td>Model-proposed fields visibly unconfirmed; confirm-all gate before Proceed (LLM path)</td><td>Must</td></tr>
+                        <tr class="must"><td>R5-GR-3</td><td>Uncertain nodes loud; individually resolved before Proceed</td><td>Must</td></tr>
+                        <tr class="should"><td>R5-GR-4</td><td>Plausibility warning table extended to live-observed misreads</td><td>Should</td></tr>
+                        <tr class="could"><td>R5-GR-5</td><td>Two-processing-node hygiene hint</td><td>Could</td></tr>
+                        <tr class="must"><td>R5-GX-1</td><td>Unknown jurisdictions dropped at parse and surfaced</td><td>Must</td></tr>
+                        <tr class="must"><td>R5-NF-1..3</td><td>Determinism, no-write render, reserved words</td><td>Must</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-16</td><td>Round 5 drafted from live-model session findings; awaiting approval.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

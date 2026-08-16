@@ -101,3 +101,22 @@ export const AUTONOMY_LABELS: Record<0 | 1 | 2 | 3 | 4, string> = {
   3: 'It acts on its own within limits someone set in advance (level 3)',
   4: 'It acts on its own with no human checkpoint (level 4)',
 };
+
+// R5-GR-1 (intake-flow.md §15.1). One consequence line per FIELD, not per
+// value: a per-value consequence would re-derive rule behaviour in copy,
+// which drifts the first time a rule changes. These say WHY the field
+// matters, in words that stay true across policy edits.
+export const FIELD_CONSEQUENCES: Record<string, string> = {
+  data_class: 'How sensitive the data is. The strictest rules key off personal client data and price-sensitive information.',
+  data_zone: 'Where the data lives or the processing runs. Hard lines and zone rules read this field — the open internet is the harshest case.',
+  model_type: 'What kind of AI this is. Generative and agentic models attract extra oversight rules.',
+  autonomy_level: 'How much happens without a person. Levels 3–4 trigger the strictest oversight.',
+  vendor: 'Ties the case to vendor approval status — an unapproved vendor changes the outcome.',
+  action_type: 'What the output does in the world. Acting or signing off alone is treated far more strictly than drafting or suggesting.',
+  exposure: 'Who sees the output. Client- and market-facing exposure raises the stakes.',
+  decision_bindingness: 'How much the output drives the decision. Binding output is treated as the decision itself.',
+  output_reversibility: 'Whether a wrong output can be caught and corrected. Irreversible raises severity.',
+  scale: 'A pilot mistake and an everywhere-at-once mistake are different risks.',
+  decision_type: 'Names the decision the rulebook must cover. Credit and lending decisions carry the highest floors.',
+  hitl: 'Whether a person checks the output before anything happens as a result of it.',
+};

@@ -7,6 +7,18 @@ import { setCurrentPolicyYaml } from '../../store/policy-source';
 
 // TDD-2 mock budget = 1: the only mock is the external boundary (Anthropic SDK).
 // Everything else — IndexedDB via fake-indexeddb, React rendering — is real.
+
+// R5-GR-2: on the LLM path every extracted card must be confirmed before
+// Proceed. The skeleton simulates the user, so it does what a user now must.
+// No-ops on the form path (no confirm buttons render there).
+async function confirmAllNodes(user: { click: (el: Element) => Promise<void> }) {
+  for (;;) {
+    const buttons = screen.queryAllByRole('button', { name: /confirm$/i });
+    if (buttons.length === 0) return;
+    await user.click(buttons[0]!);
+  }
+}
+
 const MOCK_GRAPH_INPUT = {
   input_nodes: [],
   processing_nodes: [
@@ -71,6 +83,7 @@ describe('Walking Skeleton', () => {
     // Step 3: proceed — zero uncertain fields means no questions, so the
     // flow lands directly on the real confirmation/attestation screen
     // (P4-C04, no more silent pass-through).
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
     expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
@@ -130,6 +143,7 @@ describe('Walking Skeleton', () => {
 
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
     expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
@@ -196,6 +210,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     expect(await screen.findByText(/risk scoring model/i)).toBeInTheDocument();
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
     // A real targeted question renders — not a skipped/fake step. V1.2-B:
@@ -278,6 +293,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -359,6 +375,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 
     const confirm = await screen.findByRole('button', { name: /confirm and evaluate/i });
@@ -436,6 +453,7 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(zoneSelect, 'Zone B');
     expect(zoneSelect).toHaveValue('Zone B');
 
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -496,6 +514,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -518,6 +537,7 @@ describe('Walking Skeleton', () => {
     // Make a real field correction, then walk back through to a new verdict.
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
     await user.selectOptions(await screen.findByLabelText(`${uniqueLabel} — data zone`), 'Zone B');
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -598,6 +618,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
@@ -637,6 +658,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
@@ -669,6 +691,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
@@ -863,6 +886,7 @@ describe('Register row naming (charter 004 D-004)', () => {
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await screen.findByText(/review extracted graph/i);
+    await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await screen.findByRole('heading', { name: /confirm and evaluate/i });
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
