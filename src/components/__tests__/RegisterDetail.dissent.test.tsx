@@ -254,3 +254,16 @@ describe('RegisterDetail — where the dissent affordance appears', () => {
     expect(screen.queryByRole('button', { name: /challenge a rule/i })).toBeNull();
   });
 });
+
+// R5 follow-up (user: "how would a user know what is Zone A? what is ML?").
+// Tier and track were the last untranslated values on this page.
+describe('RegisterDetail — tier and track explained in plain words', () => {
+  it('renders the meanings for the tier and track on the record', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    renderDetail(id);
+    await screen.findByRole('region', { name: /verdict/i });
+    expect(screen.getByText(/a lot could go wrong/i)).toBeInTheDocument();
+    expect(screen.getByText(/replaces a prior model or acts with high autonomy/i)).toBeInTheDocument();
+  });
+});

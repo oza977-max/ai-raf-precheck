@@ -5,6 +5,7 @@ import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
+import { TIER_MEANINGS, TRACK_MEANINGS } from './field-copy';
 
 // V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
 // presentation-only — renders the REAL audit store via getAll()
@@ -361,6 +362,23 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         {summary.provisional && <span className="graph-node__chip">Provisional</span>}
         <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
       </div>
+      {/* R5 follow-up: tier and track in plain words, from the same shared
+          copy file as the form and the graph review. Rendered only when the
+          value has a meaning — an unknown value gets no invented sentence. */}
+      {(summary.tier && TIER_MEANINGS[summary.tier]) || (summary.track && TRACK_MEANINGS[summary.track]) ? (
+        <p className="register-detail__chip-legend">
+          {summary.tier && TIER_MEANINGS[summary.tier] && (
+            <>
+              <strong>{summary.tier} tier</strong> means {TIER_MEANINGS[summary.tier]}{' '}
+            </>
+          )}
+          {summary.track && TRACK_MEANINGS[summary.track] && (
+            <>
+              <strong>Track {summary.track}</strong> means it is {TRACK_MEANINGS[summary.track]}
+            </>
+          )}
+        </p>
+      ) : null}
 
       {/* ADR-RL-R3-1 / §15.1. The verdict a reviewer is being asked to attest
           to, rendered from the persisted record rather than recomputed.

@@ -120,3 +120,21 @@ export const FIELD_CONSEQUENCES: Record<string, string> = {
   decision_type: 'Names the decision the rulebook must cover. Credit and lending decisions carry the highest floors.',
   hitl: 'Whether a person checks the output before anything happens as a result of it.',
 };
+
+// Round-5 follow-up (user: "how would a user know what is Zone A? what is
+// ML?"): tier and track were the last classified values a business reader
+// meets with no translation. Meanings mirror policy/appetite.yaml's track
+// definitions and the glossary — wording stays claim-safe: it says which
+// oversight regime applies, never re-states rule outcomes.
+export const TIER_MEANINGS: Record<string, string> = {
+  Critical: 'the most serious category — decisions about people or major exposures. Waits for second-line sign-off.',
+  High: 'a lot could go wrong if this misbehaves. Waits for second-line sign-off.',
+  Medium: 'moderate stakes. Waits for second-line sign-off.',
+  Low: 'low stakes — can proceed self-service, and stays on the record.',
+};
+
+export const TRACK_MEANINGS: Record<string, string> = {
+  I: 'overseen as a traditional model, under classic model risk management.',
+  II: 'overseen as a model with extra scrutiny — it replaces a prior model or acts with high autonomy.',
+  III: 'overseen by AI governance — generative or agentic AI that newer regulation carves out of the classic model definition.',
+};
