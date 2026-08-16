@@ -729,12 +729,70 @@ await audit.append({
 
     <p>Static conditional in GraphView: two or more processing nodes &rarr; one informational line. No heuristics beyond the count.</p>
 
+    <h2 id="r6">16. Round 6 &mdash; Provenance, Field-Level Questions, Context (R6)</h2>
+
+    <p>Spec for <code>requirements/requirements-006.md</code>. Engine&rsquo;s <code>evaluate()</code> untouched (R6-NF-1); everything below is extraction-edge, orchestration and presentation.</p>
+
+    <h3>16.1 Quotes in the extraction contract (R6-PV-1) &mdash; ADR-IF-R6-1</h3>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R6-1</span>
+        <span class="adr-title">Provenance travels BESIDE the graph, not inside it</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>Each node in the extraction schema gains a required <code>basis_quotes</code> object: one entry per decision-bearing field, value = the VERBATIM phrase from the description the value was based on, empty string when the description does not state it. Both providers get this automatically — the local provider sends the same schema as the decoder constraint, the Claude path as the forced tool schema. The prompt instructs exact copying, never paraphrase.</p>
+        <p><code>extractGraph</code> now returns <code>{ graph, provenance, guessed }</code> (<code>GraphExtraction</code>): <code>provenance[nodeId][field] = quote</code> (verified quotes only), <code>guessed[nodeId] = field[]</code>. The engine&rsquo;s <code>DataFlowGraph</code> is unchanged — quotes are intake artifacts, and putting them on the graph would push presentation metadata through the engine island and every persisted verdict. Consequence: provenance is ephemeral review state (rides the reducer draft), not audit evidence; the audit record of its effect is the corrections and answers it provokes.</p>
+      </div>
+    </details>
+
+    <h3>16.2 Deterministic quote verification (R6-PV-2)</h3>
+
+    <p>At parse time, per field: normalise quote and description (lowercase, collapse whitespace) and require the quote to be a SUBSTRING of the description. Empty or non-substring quote → the field joins <code>guessed</code> and the quote is discarded (a fabricated quote must never render as provenance). No fuzzy matching, no semantic judgment — semantic support is the human&rsquo;s call; the machine only checks &quot;did the user actually write these words&quot;.</p>
+
+    <h3>16.3 Guessed fields and the confirm gate (R6-PV-3/-4) &mdash; ADR-IF-R6-2</h3>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R6-2</span>
+        <span class="adr-title">A guessed card&rsquo;s resolution path is questions, not a click</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>Review screen, per field row: verified quote → <code>based on: &quot;&lt;quote&gt;&quot;</code>; guessed → a visually distinct &quot;the description does not say — the model guessed&quot;. A node carrying NO <code>basis_quotes</code> object at all (schema-impossible from a live provider; occurs only in legacy drafts and fixtures) makes no provenance claims and follows the standard R5 confirm flow. The R5-GR-3 card warning names the guessed fields (R6-QN-2).</p>
+        <p>Nodes with any guessed field are EXCLUDED from <code>unconfirmedNodeIds</code> at GRAPH_EXTRACTED and render no plain confirm action: &quot;Looks right — confirm&quot; on a value nobody stated would be exactly the blind click R5 exists to prevent. Their card explains that guessed fields will be asked as questions (or can be corrected right here — a correction removes the field from <code>guessed</code>, and correcting is stronger evidence than confirming). Proceed therefore gates on: every non-guessed-node confirmed; guessed fields ride into the questionnaire as mandatory questions.</p>
+      </div>
+    </details>
+
+    <h3>16.4 Guessed-field questions, and answers that finally write (R6-QN-1) &mdash; ADR-IF-R6-3</h3>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R6-3</span>
+        <span class="adr-title">An answer that differs from the graph IS a correction</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p><code>question-generator.ts</code> exports <code>questionsForGuessedFields(guessed, graph)</code> — pure, reusing the existing per-field question text and canonical options. The proceed handler merges these (deduplicated by id) with <code>generateQuestions()</code>&rsquo;s output; the questionnaire&rsquo;s existing all-answers-required behaviour makes them mandatory.</p>
+        <p>Found while spec&rsquo;ing this round: questionnaire answers were recorded and contradiction-checked but NEVER applied — <code>evaluate()</code> ran on the model&rsquo;s original best-guess values regardless of what the user answered (<code>detectContradictions</code> even ignores its <code>answers</code> parameter). The 10th instance of the computed-but-never-consumed class. Fix: on answer submission, when the question targets <code>node_id</code>+<code>field</code> and the value differs from the graph&rsquo;s current value, the orchestration builds a real <code>GraphCorrection</code> and the reducer applies it on the questionnaire state (graph replaced, correction appended) — so the answer reaches the engine through the SAME audited path as a graph-screen edit, versioned and recorded as <code>graph_corrected</code> on attestation.</p>
+      </div>
+    </details>
+
+    <h3>16.5 Context for the reviewer (R6-CX-1)</h3>
+
+    <p><code>QuestionAnswer</code> gains optional <code>context?: string</code> (engine ignores it — same posture as the submitter note: human-read, never engine input). The questionnaire renders an optional &quot;anything the reviewer should know about this answer?&quot; input per question. At attestation the non-empty contexts are persisted on <code>graph_confirmed</code> as <code>answer_contexts?: string[]</code> (verdict-audit.md &sect;4.3 updated), and the sign-off page renders them with the submitter note, labelled as the submitter&rsquo;s context — the rules did not read it.</p>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine&rsquo;s input contract unchanged.</td></tr>
         <tr><td>2026-08-16</td><td>&sect;15 added &mdash; round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm).</td></tr>
+        <tr><td>2026-08-16</td><td>&sect;16 added &mdash; round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect).</td></tr>
       </tbody>
     </table>
 
