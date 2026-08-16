@@ -57,11 +57,11 @@ describe('extractGraph', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.input_nodes).toHaveLength(1);
-      expect(result.value.processing_nodes).toHaveLength(1);
-      expect(result.value.output_nodes).toHaveLength(1);
-      expect(result.value.edges).toHaveLength(2);
-      expect(result.value.intake_method).toBe('llm');
+      expect(result.value.graph.input_nodes).toHaveLength(1);
+      expect(result.value.graph.processing_nodes).toHaveLength(1);
+      expect(result.value.graph.output_nodes).toHaveLength(1);
+      expect(result.value.graph.edges).toHaveLength(2);
+      expect(result.value.graph.intake_method).toBe('llm');
     }
   });
 
@@ -72,7 +72,7 @@ describe('extractGraph', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.processing_nodes[0]?.uncertain).toBe(true);
+      expect(result.value.graph.processing_nodes[0]?.uncertain).toBe(true);
     }
   });
 
@@ -160,8 +160,8 @@ describe('extractGraph — local open-model provider dispatch', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.intake_method).toBe('llm');
-      expect(result.value.input_nodes[0]?.data_class).toBe('Client PII');
+      expect(result.value.graph.intake_method).toBe('llm');
+      expect(result.value.graph.input_nodes[0]?.data_class).toBe('Client PII');
     }
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(mockCreate).not.toHaveBeenCalled();

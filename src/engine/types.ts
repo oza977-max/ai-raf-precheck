@@ -214,6 +214,10 @@ export interface IntakeQuestion {
 export interface QuestionAnswer {
   questionId: string;
   value: unknown;
+  // R6-CX-1: optional context for the 2LoD reviewer. Human-read ONLY —
+  // never engine input (the reviewer-note rule: closed vocabularies stay
+  // closed). evaluate() must not read this field.
+  context?: string;
 }
 
 export interface Contradiction {

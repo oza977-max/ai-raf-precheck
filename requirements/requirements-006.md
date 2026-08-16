@@ -2,7 +2,8 @@
 
 ## Round 6 — Show Your Working: Provenance, Field-Level Questions, Context
 
-**Status: DRAFT — awaiting user approval before tech spec and build.**
+**Status: APPROVED by the user (2026-08-16). Tech spec:
+`specs/intake-flow.md` §16.**
 
 ## Provenance
 

@@ -600,9 +600,96 @@ sees the graph, so the attested graph never contains junk jurisdictions.
 Static conditional in GraphView: two or more processing nodes → one
 informational line. No heuristics beyond the count.
 
+## 16. Round 6 — Provenance, Field-Level Questions, Context (R6)
+
+Spec for `requirements/requirements-006.md`. Engine's `evaluate()` untouched
+(R6-NF-1); everything below is extraction-edge, orchestration and
+presentation.
+
+### 16.1 Quotes in the extraction contract (R6-PV-1) — ADR-IF-R6-1
+
+Each node in the extraction schema gains a required `basis_quotes` object:
+one entry per decision-bearing field, value = the VERBATIM phrase from the
+description the value was based on, empty string when the description does
+not state it. Both providers get this automatically — the local provider
+sends the same schema as the decoder constraint, the Claude path as the
+forced tool schema. The prompt instructs exact copying, never paraphrase.
+
+**ADR-IF-R6-1 — provenance travels BESIDE the graph, not inside it.**
+`extractGraph` now returns `{ graph, provenance, guessed }`
+(`GraphExtraction`): `provenance[nodeId][field] = quote` (verified quotes
+only), `guessed[nodeId] = field[]`. The engine's `DataFlowGraph` is
+unchanged — quotes are intake artifacts, and putting them on the graph
+would push presentation metadata through the engine island and every
+persisted verdict. Consequence: provenance is ephemeral review state (rides
+the reducer draft), not audit evidence; the audit record of its effect is
+the corrections and answers it provokes.
+
+### 16.2 Deterministic quote verification (R6-PV-2)
+
+At parse time, per field: normalise quote and description (lowercase,
+collapse whitespace) and require the quote to be a SUBSTRING of the
+description. Empty or non-substring quote → the field joins `guessed` and
+the quote is discarded (a fabricated quote must never render as
+provenance). No fuzzy matching, no semantic judgment — semantic support is
+the human's call; the machine only checks "did the user actually write
+these words".
+
+### 16.3 Guessed fields and the confirm gate (R6-PV-3/-4) — ADR-IF-R6-2
+
+Review screen, per field row: verified quote → `based on: "<quote>"`;
+guessed → a visually distinct "the description does not say — the model
+guessed". A node carrying NO basis_quotes object at all (schema-impossible
+from a live provider; occurs only in legacy drafts and fixtures) makes no
+provenance claims and follows the standard R5 confirm flow. The R5-GR-3 card warning names the guessed fields (R6-QN-2).
+
+**ADR-IF-R6-2 — a guessed card's resolution path is questions, not a
+click.** Nodes with any guessed field are EXCLUDED from
+`unconfirmedNodeIds` at GRAPH_EXTRACTED and render no plain confirm
+action: "Looks right — confirm" on a value nobody stated would be exactly
+the blind click R5 exists to prevent. Their card explains that guessed
+fields will be asked as questions (or can be corrected right here — a
+correction removes the field from `guessed`, and correcting is stronger
+evidence than confirming). Proceed therefore gates on: every
+non-guessed-node confirmed; guessed fields ride into the questionnaire as
+mandatory questions.
+
+### 16.4 Guessed-field questions, and answers that finally write (R6-QN-1) — ADR-IF-R6-3
+
+`question-generator.ts` exports `questionsForGuessedFields(guessed, graph)`
+— pure, reusing the existing per-field question text and canonical options.
+The proceed handler merges these (deduplicated by id) with
+`generateQuestions()`'s output; the questionnaire's existing
+all-answers-required behaviour makes them mandatory.
+
+**ADR-IF-R6-3 — an answer that differs from the graph IS a correction.**
+Found while spec'ing this round: questionnaire answers were recorded and
+contradiction-checked but NEVER applied — `evaluate()` ran on the model's
+original best-guess values regardless of what the user answered
+(`detectContradictions` even ignores its `answers` parameter). The 10th
+instance of the computed-but-never-consumed class. Fix: on answer
+submission, when the question targets `node_id`+`field` and the value
+differs from the graph's current value, the orchestration builds a real
+`GraphCorrection` and the reducer applies it on the questionnaire state
+(graph replaced, correction appended) — so the answer reaches the engine
+through the SAME audited path as a graph-screen edit, versioned and
+recorded as `graph_corrected` on attestation.
+
+### 16.5 Context for the reviewer (R6-CX-1)
+
+`QuestionAnswer` gains optional `context?: string` (engine ignores it —
+same posture as the submitter note: human-read, never engine input). The
+questionnaire renders an optional "anything the reviewer should know about
+this answer?" input per question. At attestation the non-empty contexts are
+persisted on `graph_confirmed` as `answer_contexts?: string[]`
+(verdict-audit.md §4.3 updated), and the sign-off page renders them with
+the submitter note, labelled as the submitter's context — the rules did
+not read it.
+
 ## 14. Changelog
 
 | Date | Change |
 |---|---|
 | 2026-07-29 | §13 added — round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine's input contract unchanged. |
 | 2026-08-16 | §15 added — round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm). |
+| 2026-08-16 | §16 added — round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect). |
