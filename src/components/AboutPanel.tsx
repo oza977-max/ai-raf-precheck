@@ -34,9 +34,13 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         never decide.
       </p>
       <p>
-        Full transparency: that optional AI path is built and tested against a simulated API, but it
-        has never yet been run against the live service — the guided form is the verified path. If you
-        add a key and use it, you are its first real test.
+        Full transparency: the plain-language path has two providers with different track records.
+        With a <strong>local open model</strong> (a small model running on your own machine — free,
+        and your description never leaves it), the path had its first live run on 16&nbsp;August
+        2026: it produced a usable draft graph, with one field misread — which the review screen
+        exists to catch. The <strong>Anthropic API</strong> variant is built and tested against a
+        simulated service but has never yet been run against the real one; if you add a key and use
+        it, you are its first real test. The guided form remains the most-verified path.
       </p>
 
       <h2>It comes with rules — you bring the authority</h2>

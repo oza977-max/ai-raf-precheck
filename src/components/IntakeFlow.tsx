@@ -2,6 +2,7 @@ import { useEffect, useCallback, useMemo, useReducer, useState, useRef } from 'r
 import { extractGraph } from '../llm/graph-extractor';
 import { confirmSemanticDuplicate } from '../llm/duplicate-check';
 import { getApiKey } from '../llm/client';
+import { localLlmEnabled } from '../llm/local-provider';
 import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates, matchCorpus } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
@@ -261,10 +262,13 @@ export default function IntakeFlow() {
       });
     }
 
-    const hasApiKey = getApiKey() !== null;
-    dispatch({ type: 'NO_DUPLICATE_FOUND', method: hasApiKey ? 'llm' : 'form' });
+    // The LLM intake path exists if EITHER extractor is configured — the
+    // Anthropic key or a local open model. Which one runs is decided inside
+    // extractGraph (key wins); this flag only picks the intake route.
+    const hasLlm = getApiKey() !== null || localLlmEnabled();
+    dispatch({ type: 'NO_DUPLICATE_FOUND', method: hasLlm ? 'llm' : 'form' });
 
-    if (!hasApiKey) {
+    if (!hasLlm) {
       // P4-C02: structured-form fallback (UC-3a) rendered in graph_extraction.
       return;
     }

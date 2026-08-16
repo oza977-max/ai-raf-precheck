@@ -127,3 +127,69 @@ describe('extractGraph — response validation (P4-C01 review finding: real Zod 
     if (!result.ok) expect(result.error.kind).toBe('parse-error');
   });
 });
+
+// Local-provider dispatch (2026-08-16). extractGraph's provider ranking:
+// Anthropic key wins; with no key but a configured local model, the local
+// path runs — and its output passes through the SAME Zod gate, so a local
+// model emitting off-vocabulary values fails to parse-error exactly as the
+// Claude path would (the gate is the door, whoever knocks).
+describe('extractGraph — local open-model provider dispatch', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllGlobals();
+    // The Anthropic mock is shared across this file; clear its history so
+    // "the SDK was not called" means THIS test, not the file so far.
+    mockCreate.mockClear();
+  });
+
+  function stubLocal(content: string) {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: { content } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.setItem('aigate:local-llm-url', 'http://localhost:11434');
+    localStorage.setItem('aigate:local-llm-model', 'qwen3:4b');
+    return fetchMock;
+  }
+
+  it('with no key and a local model configured, extracts through the local provider', async () => {
+    const fetchMock = stubLocal(JSON.stringify(MOCK_GRAPH_INPUT));
+
+    const result = await extractGraph('drafts client emails using relationship notes');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.intake_method).toBe('llm');
+      expect(result.value.input_nodes[0]?.data_class).toBe('Client PII');
+    }
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('a saved Anthropic key outranks the local model', async () => {
+    const fetchMock = stubLocal(JSON.stringify(MOCK_GRAPH_INPUT));
+    localStorage.setItem('aigate:api-key', 'test-key');
+
+    const result = await extractGraph('drafts client emails');
+
+    expect(result.ok).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('off-vocabulary local output fails the Zod gate as parse-error, never reaching the engine', async () => {
+    const bad = { ...MOCK_GRAPH_INPUT, input_nodes: [{ id: 'i1', label: 'x', data_class: 'PII', data_zone: 'Zone B' }] };
+    stubLocal(JSON.stringify(bad));
+
+    const result = await extractGraph('drafts client emails');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('parse-error');
+  });
+
+  it('with neither key nor local model, still returns no-api-key', async () => {
+    const result = await extractGraph('drafts client emails');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('no-api-key');
+  });
+});

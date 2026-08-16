@@ -1,5 +1,15 @@
 import { useMemo, useState } from 'react';
 import { getApiKey } from '../llm/client';
+import {
+  DEFAULT_LOCAL_LLM_MODEL,
+  DEFAULT_LOCAL_LLM_URL,
+  disableLocalLlm,
+  enableLocalLlm,
+  getLocalLlmModel,
+  getLocalLlmUrl,
+  localLlmEnabled,
+  probeLocalLlm,
+} from '../llm/local-provider';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
 import { loadPolicy } from '../store/policy';
@@ -20,6 +30,12 @@ export default function SettingsPanel() {
   const [key, setKey] = useState('');
   const [saved, setSaved] = useState(getApiKey() !== null);
   const [busy, setBusy] = useState<Busy>('none');
+  // Local open-model provider (2026-08-16). URL presence IS the enabled flag.
+  const [localUrl, setLocalUrl] = useState(getLocalLlmUrl() ?? DEFAULT_LOCAL_LLM_URL);
+  const [localModel, setLocalModel] = useState(getLocalLlmModel());
+  const [localSaved, setLocalSaved] = useState(localLlmEnabled());
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
 
@@ -147,6 +163,66 @@ export default function SettingsPanel() {
               Clear saved key
             </button>
           )}
+
+          <label htmlFor="local-llm-url">Local model (free, no API key)</label>
+          <p>
+            Alternative to the key above: a small open model running on this machine via Ollama.
+            Enables the same plain-language intake — your description goes to a local process, never
+            to the internet. It proposes; you confirm every field before anything is scored. Expect
+            rougher first drafts than a frontier model, and a 10–20 second wait on the first request
+            while the model loads. If both this and a key are saved, the key is used.
+          </p>
+          <input
+            id="local-llm-url"
+            type="text"
+            value={localUrl}
+            onChange={(e) => setLocalUrl(e.target.value)}
+            placeholder={DEFAULT_LOCAL_LLM_URL}
+          />
+          <label htmlFor="local-llm-model">Model name</label>
+          <input
+            id="local-llm-model"
+            type="text"
+            value={localModel}
+            onChange={(e) => setLocalModel(e.target.value)}
+            placeholder={DEFAULT_LOCAL_LLM_MODEL}
+          />
+          <button
+            type="button"
+            disabled={probing || !localUrl.trim() || !localModel.trim()}
+            onClick={() => {
+              void (async () => {
+                setProbing(true);
+                setLocalStatus(null);
+                const probe = await probeLocalLlm(localUrl, localModel);
+                if (probe.ok) {
+                  enableLocalLlm(localUrl, localModel);
+                  setLocalSaved(true);
+                  setLocalStatus(`Saved. ${probe.detail}`);
+                } else {
+                  // Refuse-rather-than-record: a URL that does not answer is
+                  // not saved, so the intake path never silently degrades.
+                  setLocalStatus(probe.detail);
+                }
+                setProbing(false);
+              })();
+            }}
+          >
+            {probing ? 'Testing…' : 'Test & save'}
+          </button>
+          {localSaved && (
+            <button
+              type="button"
+              onClick={() => {
+                disableLocalLlm();
+                setLocalSaved(false);
+                setLocalStatus('Local model disabled — the guided form is the intake path again.');
+              }}
+            >
+              Disable local model
+            </button>
+          )}
+          {localStatus && <p role="status">{localStatus}</p>}
         </div>
       </details>
     </>

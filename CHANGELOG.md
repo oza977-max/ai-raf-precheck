@@ -11,6 +11,34 @@ every verdict.
 
 ---
 
+## [0.5.0] — 2026-08-16
+
+Plain-language intake without an API bill — and its first-ever live run.
+
+### Added
+
+- **Local open-model support.** Under Settings, point AIGate at a small open
+  model running on your own machine via Ollama (free, no account, no key).
+  It enables the same plain-language intake as the API key: describe the
+  use case, the model proposes a data-flow graph, you review and correct
+  every field before anything is scored. Your description goes to a local
+  process on your computer — never to the internet. A saved Anthropic key,
+  if you have one, still takes precedence.
+- **"Test & save"** checks the connection and that the model is actually
+  downloaded before saving — and tells you the exact command to run if not.
+
+### Changed
+
+- **The "never run live" disclosure is now dated history for one provider.**
+  On 16 August 2026 the plain-language path ran live for the first time,
+  against qwen3:4b on the author's own machine: a real description became a
+  usable draft graph in ~15 seconds, with one field misread (data zone) —
+  caught on the review screen, which is what it is for. The Anthropic-API
+  variant remains never-run-live and still says so. All seven disclosure
+  surfaces updated to the two-provider truth.
+
+---
+
 ## [0.4.0] — 2026-08-15
 
 The rule-improvement queue: rules can now be challenged, and the challenges

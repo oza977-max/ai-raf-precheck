@@ -25,10 +25,13 @@ byte-identical verdicts, asserted by automated test on every change. A large
 language model is used optionally and only at the boundary — to read a
 plain-language description into the structured form. Its output is displayed
 to the submitter for correction and is not used until a person confirms it.
-With no API key configured, no model is involved anywhere. (Disclosed for
-completeness: that optional path is implemented and tested only against a
-mocked API; it has not been exercised against the live service. All verified
-behaviour in this brief refers to the deterministic form path.)
+With no model configured, none is involved anywhere. (Disclosed for
+completeness: the optional path can run against a small open model on the
+user's own machine — no data leaves the device; first exercised live
+2026-08-16 — or against a cloud API, a variant that has not been exercised
+live. All verified behaviour in this brief refers to the deterministic form
+path; model output is a draft the submitter corrects, never an input the
+engine trusts.)
 
 **Who is accountable for each determination?**
 A named human at every layer, and the tool records where accountability is
