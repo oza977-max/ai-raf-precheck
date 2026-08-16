@@ -1,7 +1,9 @@
-# Handover — 2026-08-15
+# Handover — 2026-08-15 (updated 2026-08-16, post-v0.4.0)
 
 Written at the user's request before a context clear, replacing the 2026-08-07
-handover in full. Everything below was true at the moment of writing and
+handover in full; **updated in place after the v0.4.0 session resolved the
+open thread** (see "RESOLVED" below — read that section first, it supersedes
+the old OPEN THREAD). Everything below was true at the moment of writing and
 verified by command where it's a claim about state. Read this top to bottom
 before doing anything.
 
@@ -40,8 +42,8 @@ recurring one). First two = one afternoon, once.
 
 | | |
 |---|---|
-| Tags | v0.1.0 → **v0.3.2**, all pushed. A few doc/fix commits after v0.3.2 are on main, untagged (rules-vs-authority docs; adversarial-posture docs + trace-provenance fix) |
-| Tests | **454 passing**, ~44 files; ritual = `npm test` ×3, `npx tsc --noEmit`, `npm run build`, `python3 scripts/spec-parity-check.py`, live browser walk |
+| Tags | v0.1.0 → **v0.4.0**, all pushed. Doc commits after the v0.4.0 tag are on main, untagged (round-4 requirements/test-cases + doc sweep; README diagram update) |
+| Tests | **471 passing**, 46 files; ritual = `npm test` ×3, `npx tsc --noEmit`, `npm run build`, `python3 scripts/spec-parity-check.py`, live browser walk |
 | Release verdict | **Ship-ready** — verification 006 (`test/test-006.html`), first ever. VV-2(a) passed on 158/158 traceability; OQ-5 manual-gate applied (no CI exists) and the **user chose ship**, caveat on the record |
 | Working tree | clean, pushed |
 
@@ -85,7 +87,65 @@ recurring one). First two = one afternoon, once.
    sign-offs added to About, user guide, glossary, README. Mermaid flow +
    rules-provenance diagrams in README (render-verified before commit).
 
-## OPEN THREAD — cut off mid-flight by this handover
+## RESOLVED (2026-08-16): the open thread became v0.4.0
+
+The question below was answered and built in the next session. What happened:
+
+1. **arXiv:2502.18018 fetched and verified**: it is Haize's "Verdict: A
+   Library for Scaling Judge-Time Compute" (Kalra & Tang) — modular judge
+   units (verify/debate/aggregate), small composed judges matching much
+   larger ones. Together with j1-micro it *validates* the dissent-panel
+   idea: rubric-per-rule panels, tiny judges that can run inside a bank's
+   estate.
+2. **Decision: build the deterministic half, design-note the LLM half.**
+   No working API key → judge code would ship "built, never run live" a
+   second time. The design lives in `specs/forward-notes.md` **FN-009**,
+   including the first step for whoever gets a key (re-run the oracle
+   rounds through a real judge against the eleven pinned cases, get a
+   dated concordance number, before any UI).
+3. **v0.4.0 shipped — the rule-improvement queue** (tagged, pushed, live):
+   - `rule_dissent_filed` audit event (`src/store/types.ts`); "Challenge a
+     rule…" on the 2LoD sign-off page (`RegisterDetail.tsx`) — picker
+     offers the rules THIS verdict relied on, from its persisted
+     explanation; free-typed references stored unresolved (no label);
+     verdict_id threaded from the render (§13.4 discipline).
+   - "⚑ Rule challenges" screen (`RuleImprovementQueue.tsx`) — derived by
+     scanning the audit trail (never a second store), grouped by rule,
+     states its advisory posture on the page.
+   - **The load-bearing property, asserted by test (TC-R4-RC-2-01): filing
+     writes exactly one event and changes NOTHING else.** No lifecycle
+     move, no sign-off, no verdict mutation. The moment a dissent can move
+     a decision it is an override channel — that is the one thing this
+     must never become.
+   - 17 new tests (471 total), all carrying TC-R4-* ids.
+4. **Doc sweep — the feature reaches every document**: round-4 requirements
+   (`requirements/requirements-004.md`+.html, R4-RC-1..6 / R4-NF-1..2) and
+   test cases (`test-cases/test-cases-004.md`+.html, 15 cases, 100%
+   traceability at birth); user guide, glossary (2 entries), regulator
+   brief, approach.md (§5 subsection: the queue keeps the corpus
+   calibrated after launch), tester guide (adversarial charter: try to
+   make a challenge move a decision), About screen (reserved-word guard
+   respected), README prose + **both mermaid diagrams** (dashed advisory
+   exit on the flow; feedback loop into both rule sources on the
+   provenance diagram — render-verified via `public/__mcheck.html`
+   pattern before commit, file removed after).
+   The verdict-audit.html twin's §4.3 was already a stale generation
+   (camelCase/hash-chain era) — it got a **drift notice** pointing at the
+   .md as authoritative rather than a fake sync.
+5. **Traps dodged, worth knowing**: the dissent form's name field is
+   labelled "Filed by", not "Your name" — the sign-off bar already has a
+   "Your name" input and duplicate labels broke label queries (and are a
+   screen-reader problem). The dissent block has its own `useRef` in-flight
+   guard, separate from the sign-off's, so neither blocks the other.
+   `findByRole('alert')` is ambiguous on the sign-off page (VerdictDisplay
+   renders one) — match refusal messages by text.
+
+**Still deliberately open** (recorded in requirements-004 §6): resolving/
+closing a challenge (deferred until the rule authors' real workflow is
+observed); LLM judges (FN-009); "+ New pre-check" reset; CI; stale code
+review.
+
+## The original OPEN THREAD (superseded — kept for context)
 
 User asked: *"anything we can add as a feature or improve from these?"*
 - https://github.com/haizelabs/j1-micro — fetched: tiny (0.6B/1.7B) judge
@@ -175,5 +235,6 @@ user's question first thing.
 | What each release changed, user-voice | `CHANGELOG.md` |
 | The eleven demo cases, all pinned | `docs/try-these.md` + `src/engine/try-these.test.ts` |
 | First-timer explanations | About screen, `docs/user-guide.md`, `docs/glossary.md`, `docs/regulator-brief.md` |
-| Owed decisions & lessons | `specs/forward-notes.md` (FN-001…FN-008) |
+| Owed decisions & lessons | `specs/forward-notes.md` (FN-001…FN-009; FN-009 = the dissent-panel design + first step when an API key exists) |
+| The rule-challenge feature's contract | `requirements/requirements-004.md` + `test-cases/test-cases-004.md` (written against the build, 100% traced) |
 | Standing user rules, leak record | `~/.claude/projects/-Users-kshitijoza-RAF/memory/` |
