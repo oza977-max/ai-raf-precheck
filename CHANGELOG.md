@@ -11,6 +11,41 @@ every verdict.
 
 ---
 
+## [0.6.0] — 2026-08-16
+
+The graph review now explains itself. Requirements round 5, raised by the
+user after real local-model runs: "the graph can actually show you whether
+it's right or wrong — it's a bit naive right now."
+
+### Added
+
+- **Every value on the review screen now says what it means and why it
+  matters.** "Zone A" reads "On the open internet — outside the firm's
+  control", with "Hard lines and zone rules read this field" underneath. The
+  same plain-English wording as the guided form, so the two screens cannot
+  disagree. Decision type and human-in-the-loop, previously invisible here,
+  now render too — "not stated" when the model didn't say, never a default.
+- **On the AI path, nothing is scored until you confirm each card.** Every
+  card starts "proposed by the model"; Proceed refuses (and says why) until
+  each is confirmed or corrected. Editing a value counts as confirming that
+  card — you clearly read it. The guided form is unchanged: you typed those
+  answers yourself.
+- **Uncertainty is loud.** A card the model flagged as low-confidence says
+  "the model was not confident here" and asks for its own explicit check.
+- **Plausibility warnings.** When your description sounds internal but a
+  value says open internet, or mentions training (which the rulebook has no
+  action type for), or says a person reviews while the graph says otherwise
+  — the field gets a ⚠ note. Advisory only: warnings never change a value
+  and never block. Each pattern in the table exists because a real run
+  produced that misread.
+- **Junk jurisdictions are surfaced, not carried.** The model once returned
+  "Internal" as a jurisdiction; unrecognised values are now removed before
+  you see the graph, and the screen names what was ignored.
+- A hint when a graph has two or more processing steps: consider one use
+  case per pre-check.
+
+---
+
 ## [0.5.0] — 2026-08-16
 
 Plain-language intake without an API bill — and its first-ever live run.

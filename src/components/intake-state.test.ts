@@ -50,7 +50,10 @@ describe('intakeReducer', () => {
     // Round 4: the description is carried forward from the source step
     // (charter 004 D-001 / charter 005 O-001) — asserted as the carry, not as
     // a literal, so a reducer that hardcoded a value would fail.
-    expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1' });
+    // R5-GR-2: the LLM path arrives with every node unconfirmed (empty here
+    // because the fixture graph has no nodes — the KEY's presence is what
+    // marks the gated path).
+    expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1', unconfirmedNodeIds: [] });
   });
 
   it('graph_review → graph_review on CORRECTION_APPLIED, appending the correction and bumping graphVersion [TC-UC-7-02] [TC-UC-7-03]', () => {

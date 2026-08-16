@@ -84,6 +84,8 @@
     <a href="#api-boundary">API Boundary</a>
     <a href="#traceability">Requirement Traceability</a>
     <a href="#test-cases">Test Case References</a>
+    <a href="#r5-gr">Round 5 — Explainable Graph Review</a>
+    <a href="#changelog">Changelog</a>
   </nav>
 
   <main>
@@ -680,11 +682,58 @@ await audit.append({
     </table>
     <p>R3-JU-2, R3-JU-3 and R3-JU-6 are specified in <code>evaluation-engine.md</code> &sect;12 and <code>verdict-audit.md</code> &sect;10 &mdash; they concern the verdict, not the form.</p>
 
+    <h2 id="r5-gr">15. Round 5 &mdash; Explainable Graph Review (R5-GR / R5-GX)</h2>
+
+    <p>Spec for <code>requirements/requirements-005.md</code>. Presentation and orchestration only: the engine&rsquo;s input contract, <code>evaluate()</code>, and the audit schema are unchanged (R5-NF-1).</p>
+
+    <h3>15.1 Field meanings and consequences (R5-GR-1)</h3>
+
+    <p>The single source of plain-English value meanings is <code>src/components/field-copy.ts</code> &mdash; the same table the guided form already renders, so the two surfaces cannot drift apart. GraphView renders, for each decision-bearing field: the meaning of the current value, plus a static per-FIELD consequence line (new <code>FIELD_CONSEQUENCES</code> map in field-copy.ts, e.g. data_zone &rarr; &ldquo;Hard lines and zone rules read this field; Zone A is the strictest case&rdquo;). Consequences are per field, not per value &mdash; a per-value consequence would be re-deriving rule behaviour in copy, which drifts. Missing label maps (reversibility, scale, HITL, decision type) are added to field-copy.ts.</p>
+
+    <h3>15.2 Per-node confirmation gate (R5-GR-2, R5-GR-3) &mdash; ADR-IF-R5-1</h3>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R5-1</span>
+        <span class="adr-title">Confirmation is per NODE, recorded in the reducer, LLM path only</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>Requirements allowed per-node or per-field; per-node is chosen because a node is the unit the reviewer reads (a card), the unit uncertainty is flagged at (<code>uncertain</code> is node-level), and per-field would put 12+ clicks between the user and every graph &mdash; fatigue that produces blind clicking, the failure R5 exists to reduce.</p>
+        <h4>Mechanics</h4>
+        <p><code>graph_review</code> state carries <code>confirmed_node_ids: string[]</code> (absent on the form path &mdash; <code>intake_method</code> gates the whole feature, matching R5-GR-2&rsquo;s exemption). New reducer action <code>NODE_CONFIRMED { nodeId }</code>. A correction via the existing CORRECTION_APPLIED path ALSO marks the node confirmed &mdash; editing is stronger evidence of review than a Confirm click. <code>handleProceedFromGraphReview</code> refuses (plain-English message, no state change) while any node id is unconfirmed. Uncertain nodes use the same mechanism with louder chrome and their own copy; since confirmation is per-node, &ldquo;no en-bloc confirm&rdquo; (R5-GR-3) holds by construction. The confirmations are ephemeral review state &mdash; NOT persisted to the audit trail; the existing <code>graph_confirmed</code> attestation remains the recorded act, and now attests a graph every node of which was individually confirmed.</p>
+      </div>
+    </details>
+
+    <h3>15.3 Plausibility warnings (R5-GR-4)</h3>
+
+    <p><code>src/engine/plausibility.ts</code> &mdash; pure function <code>plausibilityWarnings(description, graph): PlausibilityWarning[]</code> (<code>{ node_id, field, message }</code>). Same fixed-signal-table idiom as <code>contradiction.ts</code>, but ADVISORY: rendered as flags on the affected node in GraphView, never blocking, never mutating. Signal pairs are added ONLY from observed misreads (each carries a comment naming the run that motivated it); this table is evidence-driven by policy, like the rule-improvement queue. Initial pairs: internal/on-prem wording vs Zone A/B; train/fine-tune wording vs any action_type; &ldquo;reviews every&rdquo;/&ldquo;human approves&rdquo; vs hitl:false or autonomy &ge;3; &ldquo;no human&rdquo;/&ldquo;fully automated&rdquo; vs autonomy &le;1.</p>
+
+    <h3>15.4 Jurisdiction hygiene (R5-GX-1) &mdash; ADR-IF-R5-2</h3>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R5-2</span>
+        <span class="adr-title">Filtered in the intake orchestration layer, not in src/llm/</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>The recognised-jurisdiction set comes from the loaded policy&rsquo;s <code>jurisdictions:</code> list; <code>src/llm/*</code> has no policy access and giving it any would couple the extraction edge to policy loading. After a successful extraction, IntakeFlow partitions <code>graph.jurisdictions</code> against the policy set; unrecognised values are removed from the graph and carried as <code>ignored_jurisdictions</code> in review state, rendered by GraphView as &ldquo;ignored &mdash; not a recognised jurisdiction&rdquo;. The filter runs before the human sees the graph, so the attested graph never contains junk jurisdictions.</p>
+      </div>
+    </details>
+
+    <h3>15.5 Hygiene hint (R5-GR-5)</h3>
+
+    <p>Static conditional in GraphView: two or more processing nodes &rarr; one informational line. No heuristics beyond the count.</p>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine&rsquo;s input contract unchanged.</td></tr>
+        <tr><td>2026-08-16</td><td>&sect;15 added &mdash; round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm).</td></tr>
       </tbody>
     </table>
 

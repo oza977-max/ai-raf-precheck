@@ -18,6 +18,7 @@ import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types';
 import { generateQuestions, getQuestionBudget } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
+import { plausibilityWarnings } from '../engine/plausibility';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
@@ -117,6 +118,9 @@ export default function IntakeFlow() {
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
   const [savedStage, setSavedStage] = useState<LifecycleStage | null>(null);
   const [submittedDescription, setSubmittedDescription] = useState('');
+  // R5-GR-2: the proceed-gate refusal message. State, not derived, so it
+  // appears only after an attempted Proceed rather than scolding upfront.
+  const [reviewGateError, setReviewGateError] = useState<string | null>(null);
   // P7-C03: reads getCurrentPolicyYaml() (a saved-policy override, or the
   // bundled starter YAML) instead of a static import. App.tsx unmounts and
   // remounts IntakeFlow every time the user navigates away and back
@@ -278,7 +282,10 @@ export default function IntakeFlow() {
       setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
       return;
     }
-    dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
+    {
+      const parted = partitionJurisdictions(extraction.value);
+      dispatch({ type: 'GRAPH_EXTRACTED', graph: parted.graph, useCaseId: crypto.randomUUID(), ignoredJurisdictions: parted.ignored });
+    }
     } finally {
       confirmNewInFlight.current = false;
     }
@@ -351,6 +358,20 @@ export default function IntakeFlow() {
     }
   }
 
+  // R5-GX-1 (ADR-IF-R5-2). The extractor is schema-bound for every
+  // classified field EXCEPT jurisdictions (free strings by design — the
+  // known set is policy-scoped, not canonical). The live model returned
+  // "Internal" as a jurisdiction on its second real run; unrecognised
+  // values are removed here, before the human sees the graph, and surfaced
+  // on the review screen so the removal is never a silent edit.
+  function partitionJurisdictions(graph: DataFlowGraph): { graph: DataFlowGraph; ignored: string[] } {
+    if (!policyResult.valid) return { graph, ignored: [] };
+    const known = new Set(policyResult.policy.jurisdictions.map((j) => j.code));
+    const ignored = graph.jurisdictions.filter((j) => !known.has(j));
+    if (ignored.length === 0) return { graph, ignored };
+    return { graph: { ...graph, jurisdictions: graph.jurisdictions.filter((j) => known.has(j)) }, ignored };
+  }
+
   // Code review round 3, Panel C. The only exit from a failed extraction.
   async function handleRetryExtraction() {
     if (state.step !== 'graph_extraction') return;
@@ -360,7 +381,10 @@ export default function IntakeFlow() {
       setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
       return;
     }
-    dispatch({ type: 'GRAPH_EXTRACTED', graph: extraction.value, useCaseId: crypto.randomUUID() });
+    {
+      const parted = partitionJurisdictions(extraction.value);
+      dispatch({ type: 'GRAPH_EXTRACTED', graph: parted.graph, useCaseId: crypto.randomUUID(), ignoredJurisdictions: parted.ignored });
+    }
   }
 
   function handleCorrectNode(nodeId: string, field: string, correctedValue: unknown) {
@@ -398,6 +422,18 @@ export default function IntakeFlow() {
 
   function handleProceedFromGraphReview() {
     if (state.step !== 'graph_review') return;
+    // R5-GR-2. Refuse with a message, not a silently disabled button — the
+    // reducer refuses too (QUESTIONS_GENERATED guard), this is the layer
+    // that explains. Counts, not names: the unconfirmed cards are already
+    // visually marked.
+    if (state.unconfirmedNodeIds && state.unconfirmedNodeIds.length > 0) {
+      const n = state.unconfirmedNodeIds.length;
+      setReviewGateError(
+        `${n} card${n === 1 ? '' : 's'} still need${n === 1 ? 's' : ''} your confirmation. The model proposed these values from your description — nothing is scored until a person has confirmed or corrected each card.`,
+      );
+      return;
+    }
+    setReviewGateError(null);
     if (!policyResult.valid) {
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
@@ -889,7 +925,23 @@ export default function IntakeFlow() {
             {/* V1.1-C01: a real visual data-flow with a real per-field
                 correction editor — replaces the flat list whose Edit
                 button was a stub that appended " (corrected)" to labels. */}
-            <GraphView graph={state.graph} editable onCorrect={handleCorrectNode} />
+            <GraphView
+              graph={state.graph}
+              editable
+              onCorrect={handleCorrectNode}
+              unconfirmedNodeIds={state.unconfirmedNodeIds}
+              onConfirmNode={(nodeId) => {
+                setReviewGateError(null);
+                dispatch({ type: 'NODE_CONFIRMED', nodeId });
+              }}
+              warnings={plausibilityWarnings(state.description, state.graph)}
+              ignoredJurisdictions={state.ignoredJurisdictions}
+            />
+            {reviewGateError && (
+              <p role="alert" className="intake-flow__gate-error">
+                {reviewGateError}
+              </p>
+            )}
             <button type="button" onClick={handleProceedFromGraphReview}>
               Proceed
             </button>

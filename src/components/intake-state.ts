@@ -26,6 +26,17 @@ export type IntakeState =
       // Present only on a correction pass (P5-C01, verdict-audit.md §6) —
       // undefined on a fresh submission.
       originalVerdictId?: string;
+      // R5-GR-2 (ADR-IF-R5-1). Node ids the human has not yet confirmed or
+      // corrected. Populated ONLY when the graph came from the LLM path —
+      // form-path values were typed by a human, and a correction pass or
+      // evaluation-failure re-entry attests nothing new. Ephemeral review
+      // state: never written to the audit trail; the graph_confirmed
+      // attestation stays the recorded act.
+      unconfirmedNodeIds?: string[];
+      // R5-GX-1 (ADR-IF-R5-2). Jurisdiction strings the extractor returned
+      // that the loaded policy does not recognise — removed from the graph
+      // before the human sees it, surfaced so the removal is visible.
+      ignoredJurisdictions?: string[];
     }
   | {
       step: 'questionnaire';
@@ -83,8 +94,10 @@ export type IntakeAction =
   // moved earlier than P4-C04's questionnaire-entry generation so a
   // correction pass, which re-enters at graph_review, can reuse it
   // instead of generating a new one; BC-P5C01-01).
-  | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph; useCaseId: string }
+  | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph; useCaseId: string; ignoredJurisdictions?: string[] }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
+  // R5-GR-2: the human states a model-proposed node is right as shown.
+  | { type: 'NODE_CONFIRMED'; nodeId: string }
   | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[] }
   | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
@@ -189,6 +202,21 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graphVersion: action.graph.version,
         corrections: [],
         useCaseId: action.useCaseId,
+        // R5-GR-2: only machine-proposed values need human confirmation.
+        // The form path's values were typed by a person — an extra confirm
+        // pass there would be ceremony, and ceremony trains blind clicking.
+        ...(state.method === 'llm'
+          ? {
+              unconfirmedNodeIds: [
+                ...action.graph.input_nodes,
+                ...action.graph.processing_nodes,
+                ...action.graph.output_nodes,
+              ].map((n) => n.id),
+            }
+          : {}),
+        ...(action.ignoredJurisdictions && action.ignoredJurisdictions.length > 0
+          ? { ignoredJurisdictions: action.ignoredJurisdictions }
+          : {}),
       };
 
     case 'CORRECTION_APPLIED':
@@ -198,10 +226,27 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
+        // R5-GR-2: a correction is stronger evidence of review than a
+        // Confirm click — the human read the value closely enough to
+        // change it. The corrected node needs no second confirmation.
+        ...(state.unconfirmedNodeIds
+          ? { unconfirmedNodeIds: state.unconfirmedNodeIds.filter((id) => id !== action.correction.node_id) }
+          : {}),
+      };
+
+    case 'NODE_CONFIRMED':
+      if (state.step !== 'graph_review' || !state.unconfirmedNodeIds) return state;
+      return {
+        ...state,
+        unconfirmedNodeIds: state.unconfirmedNodeIds.filter((id) => id !== action.nodeId),
       };
 
     case 'QUESTIONS_GENERATED':
       if (state.step !== 'graph_review') return state;
+      // R5-GR-2 defense in depth (same layering as CONTRADICTION_RESOLVED's
+      // empty-explanation guard): the UI refuses with a message, and the
+      // reducer refuses regardless of what the UI did.
+      if (state.unconfirmedNodeIds && state.unconfirmedNodeIds.length > 0) return state;
       return {
         step: 'questionnaire',
         description: carriedDescription(state),
