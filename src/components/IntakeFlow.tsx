@@ -374,9 +374,13 @@ export default function IntakeFlow() {
   function partitionJurisdictions(graph: DataFlowGraph): { graph: DataFlowGraph; ignored: string[] } {
     if (!policyResult.valid) return { graph, ignored: [] };
     const known = new Set(policyResult.policy.jurisdictions.map((j) => j.code));
-    const ignored = graph.jurisdictions.filter((j) => !known.has(j));
-    if (ignored.length === 0) return { graph, ignored };
-    return { graph: { ...graph, jurisdictions: graph.jurisdictions.filter((j) => known.has(j)) }, ignored };
+    // Sweep-001: models sometimes emit empty-string jurisdictions. Nothing
+    // was claimed, so nothing is reported — dropped silently, unlike real
+    // unrecognised values which stay visible.
+    const claimed = graph.jurisdictions.filter((j) => j.trim() !== '');
+    const ignored = claimed.filter((j) => !known.has(j));
+    if (ignored.length === 0 && claimed.length === graph.jurisdictions.length) return { graph, ignored };
+    return { graph: { ...graph, jurisdictions: claimed.filter((j) => known.has(j)) }, ignored };
   }
 
   // Code review round 3, Panel C. The only exit from a failed extraction.
