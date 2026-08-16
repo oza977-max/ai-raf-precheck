@@ -2303,3 +2303,25 @@ details input {
   color: var(--ink-faint);
   margin: 0.2rem 0 1rem;
 }
+
+/* R6 — provenance on the review cards. */
+.graph-node__basis {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--low);
+  font-style: italic;
+}
+
+.graph-node__guessed {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--warn-text);
+  background: var(--warn-bg);
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.questionnaire__context {
+  max-width: 480px;
+}

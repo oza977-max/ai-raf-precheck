@@ -16,7 +16,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types';
-import { generateQuestions, getQuestionBudget } from '../engine/question-generator';
+import { generateQuestions, getQuestionBudget, questionsForGuessedFields } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
 import { plausibilityWarnings } from '../engine/plausibility';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
@@ -283,8 +283,15 @@ export default function IntakeFlow() {
       return;
     }
     {
-      const parted = partitionJurisdictions(extraction.value);
-      dispatch({ type: 'GRAPH_EXTRACTED', graph: parted.graph, useCaseId: crypto.randomUUID(), ignoredJurisdictions: parted.ignored });
+      const parted = partitionJurisdictions(extraction.value.graph);
+      dispatch({
+        type: 'GRAPH_EXTRACTED',
+        graph: parted.graph,
+        useCaseId: crypto.randomUUID(),
+        ignoredJurisdictions: parted.ignored,
+        provenance: extraction.value.provenance,
+        guessedFields: extraction.value.guessed,
+      });
     }
     } finally {
       confirmNewInFlight.current = false;
@@ -382,8 +389,15 @@ export default function IntakeFlow() {
       return;
     }
     {
-      const parted = partitionJurisdictions(extraction.value);
-      dispatch({ type: 'GRAPH_EXTRACTED', graph: parted.graph, useCaseId: crypto.randomUUID(), ignoredJurisdictions: parted.ignored });
+      const parted = partitionJurisdictions(extraction.value.graph);
+      dispatch({
+        type: 'GRAPH_EXTRACTED',
+        graph: parted.graph,
+        useCaseId: crypto.randomUUID(),
+        ignoredJurisdictions: parted.ignored,
+        provenance: extraction.value.provenance,
+        guessedFields: extraction.value.guessed,
+      });
     }
   }
 
@@ -439,7 +453,13 @@ export default function IntakeFlow() {
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
     }
-    const questions = generateQuestions(state.graph, policyResult.policy, []);
+    // R6-QN-1: guessed-field questions ride with the budget-driven ones,
+    // deduplicated by id (a field can be both uncertain-budgeted and
+    // guessed; one question is enough).
+    const budgeted = generateQuestions(state.graph, policyResult.policy, []);
+    const forGuessed = questionsForGuessedFields(state.guessedFields ?? {}, state.graph);
+    const seenIds = new Set(budgeted.map((q) => q.id));
+    const questions = [...budgeted, ...forGuessed.filter((q) => !seenIds.has(q.id))];
     dispatch({ type: 'QUESTIONS_GENERATED', questions });
     // UC-6 requires an explicit human confirmation click even with zero
     // questions (P4-C04) — no more silent auto-evaluation.
@@ -498,6 +518,11 @@ export default function IntakeFlow() {
     // union allows; [] when the shape lacks them.
     const resolutions: string[] =
       'resolutionNotes' in state && Array.isArray(state.resolutionNotes) ? state.resolutionNotes : [];
+    // R6-CX-1: the contexts typed on question answers, persisted with the
+    // attestation. Same evaporation risk the resolutionNotes fix closed —
+    // read them out BEFORE the CONFIRMED dispatch drops the shape.
+    const answerContexts: string[] =
+      'answers' in state ? state.answers.map((a) => a.context).filter((c): c is string => Boolean(c)) : [];
     dispatch({ type: 'CONFIRMED' });
     setEvaluationError(null);
 
@@ -510,6 +535,7 @@ export default function IntakeFlow() {
         reviewerNote,
         resolutions,
         'description' in state ? state.description : undefined,
+        answerContexts,
       );
     } catch (err) {
       // A legitimate engine/policy failure (e.g. no-track-match) must not
@@ -532,6 +558,7 @@ export default function IntakeFlow() {
     reviewerNote?: string,
     contradictionResolutions: string[] = [],
     typedDescription?: string,
+    answerContexts: string[] = [],
   ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
@@ -573,6 +600,7 @@ export default function IntakeFlow() {
           // later mistake for a deliberately blank note.
           ...(reviewerNote ? { submitter_note: reviewerNote } : {}),
           ...(contradictionResolutions.length > 0 ? { contradiction_resolutions: contradictionResolutions } : {}),
+          ...(answerContexts.length > 0 ? { answer_contexts: answerContexts } : {}),
         },
       });
     }
@@ -714,11 +742,51 @@ export default function IntakeFlow() {
     });
   }
 
-  function handleAnswerSubmitted(questionId: string, value: unknown) {
+  function handleAnswerSubmitted(questionId: string, value: unknown, context?: string) {
     if (state.step !== 'questionnaire') return;
-    const answer = { questionId, value };
+    const answer = { questionId, value, ...(context ? { context } : {}) };
     const nextAnswers = [...state.answers, answer];
-    dispatch({ type: 'ANSWER_SUBMITTED', answer });
+
+    // ADR-IF-R6-3. An answer that differs from the graph IS a correction:
+    // before this, answers were recorded and contradiction-checked but the
+    // engine evaluated the model's original best-guess values regardless —
+    // the 10th computed-but-never-consumed instance. The correction goes
+    // through the same shape as a graph-screen edit, so it is versioned and
+    // written as graph_corrected at attestation.
+    const question = state.questions.find((q) => q.id === questionId);
+    let correction: GraphCorrection | undefined;
+    let updatedGraph: DataFlowGraph | undefined;
+    if (question?.node_id && question.field) {
+      const applyTo = (nodes: { id: string }[]) =>
+        nodes.map((n) =>
+          n.id === question.node_id ? { ...n, [question.field]: value } : n,
+        );
+      const node = [...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].find(
+        (n) => n.id === question.node_id,
+      ) as Record<string, unknown> | undefined;
+      const originalValue = node?.[question.field];
+      if (node && originalValue !== value) {
+        updatedGraph = {
+          ...state.graph,
+          version: state.graph.version + 1,
+          input_nodes: applyTo(state.graph.input_nodes) as typeof state.graph.input_nodes,
+          processing_nodes: applyTo(state.graph.processing_nodes) as typeof state.graph.processing_nodes,
+          output_nodes: applyTo(state.graph.output_nodes) as typeof state.graph.output_nodes,
+        };
+        correction = {
+          correction_id: crypto.randomUUID(),
+          graph_version_before: state.graph.version,
+          graph_version_after: updatedGraph.version,
+          node_id: question.node_id,
+          field: question.field,
+          original_value: originalValue,
+          corrected_value: value,
+          corrected_at: new Date().toISOString(),
+          corrected_by: getRole(),
+        };
+      }
+    }
+    dispatch({ type: 'ANSWER_SUBMITTED', answer, correction, updatedGraph });
 
     // O-001 (charter 005): this read `submittedDescription`, a useState written
     // only inside handleSubmitDescription. A restored draft never re-ran that,
@@ -729,7 +797,9 @@ export default function IntakeFlow() {
     const contradictions = detectContradictions(
       'description' in state ? state.description : submittedDescription,
       nextAnswers,
-      state.graph,
+      // R6: check against the graph as answered, not as extracted — an
+      // answer that just fixed the contradiction must not re-flag it.
+      updatedGraph ?? state.graph,
     );
     if (contradictions.length > 0) {
       dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
@@ -935,6 +1005,8 @@ export default function IntakeFlow() {
                 dispatch({ type: 'NODE_CONFIRMED', nodeId });
               }}
               warnings={plausibilityWarnings(state.description, state.graph)}
+              provenance={state.provenance}
+              guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
             />
             {reviewGateError && (

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 6 &middot; AIGate &mdash; Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Expert Panel Table */
+        .expert-table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Persona box */
+        .persona {
+            background-color: #fafaf8;
+            border-left: 3px solid #4a90e2;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .persona h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* Journey box */
+        .journey {
+            background-color: #fafaf8;
+            border-left: 3px solid #d9a23c;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .journey h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .journey ol {
+            margin-left: 1.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#round-6-provenance">Round 6 — Show Your Working</a></li>
+                <li><a href="#provenance">Provenance</a></li>
+                <li><a href="#1-purpose">1. Purpose</a></li>
+                <li><a href="#2-functional-requirements">2. Functional Requirements</a></li>
+                <li><a href="#3-non-functional">3. Non-Functional (carried invariants)</a></li>
+                <li><a href="#4-out-of-scope">4. Out of Scope (deliberate)</a></li>
+                <li><a href="#5-requirements-index">5. Requirements Index</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+            </ul>
+        </nav>
+        <main class="main-content">
+            <header>
+                <h1>AIGate &mdash; Requirements, Round 6</h1>
+                <p class="metadata">Round 6 &middot; 16 August 2026 &middot; Generated from requirements-006.md &mdash; do not hand-edit</p>
+            </header>
+            <section id="round-6-provenance">
+                <h2>Round 6 &mdash; Show Your Working: Provenance, Field-Level Questions, Context</h2>
+                <p><strong>Status: APPROVED by the user (2026-08-16). Tech spec: `specs/intake-flow.md` &sect;16 (ADR-IF-R6-1, ADR-IF-R6-2, ADR-IF-R6-3).</strong></p>
+            </section>
+
+            <section id="provenance">
+                <h2>Provenance</h2>
+                <p>Raised by the user (2026-08-16, same live-model session as round 5): <em>&quot;make the user interact more and ask questions if the LLM can&rsquo;t answer … or give a confidence score on each interpretation.&quot;</em> The confidence-score half is deliberately reshaped: this product already replaced a numeric confidence with a verifiable basis once (pack rules, <code>basis: verbatim/derived/judgement</code>) because nobody could check the number. The same reasoning applies here — a model&rsquo;s self-reported percentage is unverifiable theatre; <strong>the phrase it read is checkable in one second</strong>. Quotes are the honest form of the user&rsquo;s idea, and that decision is recorded as this round&rsquo;s ADR-to-be.</p>
+            </section>
+
+            <section id="1-purpose">
+                <h2>1. Purpose</h2>
+                <p>Round 5 made the review screen explain what values <em>mean</em>. Round 6 makes the model show <em>where each value came from</em> — and turns &quot;the model wasn&rsquo;t sure&quot; from a card-level warning into specific questions a person answers. The target state: no value reaches attestation whose origin the submitter has not seen, and no uncertainty leaves the flow unresolved or unexplained.</p>
+            </section>
+
+            <section id="2-functional-requirements">
+                <h2>2. Functional Requirements</h2>
+
+                <h3 id="r6-pv-per-field-provenance">R6-PV &mdash; Per-Field Provenance</h3>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-PV-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The extraction schema shall require, for every decision-bearing field, the verbatim phrase from the submitter&rsquo;s description the value was based on (<code>basis_quote</code>), or an empty string when the description does not state it.</p>
+                    <div class="fit-criterion">Fit criterion: the extraction request&rsquo;s schema requires basis quotes; a response carrying them survives the parse gate with quotes attached to the graph&rsquo;s nodes.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-PV-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">A field whose basis quote is empty, or whose quote does not appear in the description (case- and whitespace-insensitive substring check — deterministic, no fuzzy matching), shall be treated as <strong>guessed</strong>: the field is marked unsure regardless of what the model claimed, and the quote is not rendered as provenance. The substring check is the whole point: it makes provenance <em>checkable by machine</em> against the submitter&rsquo;s own words, where a confidence number is checkable against nothing.</p>
+                    <div class="fit-criterion">Fit criteria: a fabricated quote (not present in the description) demotes the field to guessed; an empty quote likewise; a genuine quote passes.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-PV-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The review screen shall render, under each field&rsquo;s meaning (R5-GR-1), its provenance: &quot;based on: &lsquo;<quote>&rsquo;&quot; for quoted fields, and a visually distinct &quot;the description does not say — the model guessed&quot; for guessed fields.</p>
+                    <div class="fit-criterion">Fit criterion: both renderings appear for a mixed fixture; the guessed marker never appears on a quoted field or vice versa.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-PV-4</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Guessed fields feed the R5 confirm gate: a card with guessed fields cannot be confirmed until each guessed field is either corrected or explicitly answered via a question (R6-QN). &quot;Looks right — confirm&quot; alone is not enough for a value nobody stated.</p>
+                    <div class="fit-criterion">Fit criterion: a card with a guessed field shows no plain confirm action; correcting the field (or answering its question) restores it.</div>
+                </div>
+
+                <h3 id="r6-qn-field-level-questions">R6-QN &mdash; Field-Level Questions</h3>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-QN-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Every guessed or uncertain decision-bearing field shall generate a targeted question in the Questions step, phrased from the existing field copy (&quot;Where does the data actually live?&quot; with the same plain-English options as the form), whose answer writes the field through the existing correction path (recorded as a graph correction, versioned).</p>
+                    <div class="fit-criterion">Fit criterion: a guessed data_zone produces a data_zone question; the answer updates the graph and is recorded as a correction; no question is produced for quoted fields.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-QN-2</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">The blunt card-level &quot;not confident&quot; warning (R5-GR-3) remains, but names the specific fields in question rather than &quot;check every value&quot;.</p>
+                    <div class="fit-criterion">Fit criterion: an uncertain node with one guessed field names that field.</div>
+                </div>
+
+                <h3 id="r6-cx-context-for-reviewer">R6-CX &mdash; Context for the Reviewer</h3>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R6-CX-1</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">Each targeted question shall carry an optional free-text &quot;anything the reviewer should know about this answer?&quot; box. The text is human-read only — never engine input (the reviewer-note rule, v0.2.3: closed vocabularies stay closed) — persisted with the attestation and rendered to 2LoD on the sign-off page alongside the submitter note.</p>
+                    <div class="fit-criterion">Fit criterion: context typed on a question reaches the sign-off page labelled as submitter context; the engine result is byte-identical with and without it.</div>
+                </div>
+            </section>
+
+            <section id="3-non-functional">
+                <h2>3. Non-Functional (carried invariants)</h2>
+                <ul>
+                    <li><strong>R6-NF-1 (Must):</strong> No engine change; <code>evaluate()</code> byte-identical. Quotes and context are intake/presentation artifacts.</li>
+                    <li><strong>R6-NF-2 (Must):</strong> Quotes and context render as text, never markup; no rendered string matches <code>/approved|rejected/i</code>.</li>
+                    <li><strong>R6-NF-3 (Must):</strong> Works identically for both LLM providers (local model and Anthropic); the form path is untouched (a human types those values — provenance is the typing).</li>
+                </ul>
+            </section>
+
+            <section id="4-out-of-scope">
+                <h2>4. Out of Scope (deliberate)</h2>
+                <ul>
+                    <li>Numeric per-field confidence scores — reshaped into quotes (see Provenance). Recorded, not forgotten: if a future model exposes <em>calibrated</em> logprob-based confidence, revisit with evidence.</li>
+                    <li>Multi-turn conversational repair with the model.</li>
+                    <li>Any LLM judgment of whether a quote &quot;really supports&quot; a value — the substring check is deterministic; semantic support is the human&rsquo;s call.</li>
+                </ul>
+            </section>
+
+            <section id="5-requirements-index">
+                <h2>5. Requirements Index</h2>
+                <table class="index-table">
+                    <thead><tr><th>ID</th><th>Summary</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr class="must"><td>R6-PV-1</td><td>Schema requires a basis quote per decision-bearing field</td><td>Must</td></tr>
+                        <tr class="must"><td>R6-PV-2</td><td>Empty or fabricated quotes demote the field to guessed (deterministic check)</td><td>Must</td></tr>
+                        <tr class="must"><td>R6-PV-3</td><td>Review screen renders provenance, or says the model guessed</td><td>Must</td></tr>
+                        <tr class="must"><td>R6-PV-4</td><td>Guessed fields block plain confirmation until corrected or answered</td><td>Must</td></tr>
+                        <tr class="must"><td>R6-QN-1</td><td>Guessed/uncertain fields become targeted questions writing through corrections</td><td>Must</td></tr>
+                        <tr class="should"><td>R6-QN-2</td><td>Card warning names the fields in question</td><td>Should</td></tr>
+                        <tr class="should"><td>R6-CX-1</td><td>Optional human-read context box per question, surfaced at sign-off</td><td>Should</td></tr>
+                        <tr class="must"><td>R6-NF-1..3</td><td>Determinism, text-not-markup/reserved words, provider parity</td><td>Must</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-16</td><td>Round 6 drafted from user ideas (interaction, confidence); numeric scores reshaped into verifiable provenance quotes.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

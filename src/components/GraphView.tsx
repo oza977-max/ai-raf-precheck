@@ -41,6 +41,9 @@ interface GraphViewProps {
   onConfirmNode?: (nodeId: string) => void;
   // R5-GR-4. Advisory — rendered on the affected field, never blocking.
   warnings?: PlausibilityWarning[];
+  // R6-PV-3 (ADR-IF-R6-1): verified quotes and guessed fields, per node.
+  provenance?: Record<string, Record<string, string>>;
+  guessedFields?: Record<string, string[]>;
   // R5-GX-1. Extractor jurisdictions the policy did not recognise.
   ignoredJurisdictions?: string[];
 }
@@ -133,6 +136,8 @@ function NodeCard({
   editing,
   unconfirmed,
   warnings,
+  quotes,
+  guessed,
   onToggleEdit,
   onCorrect,
   onConfirm,
@@ -143,6 +148,8 @@ function NodeCard({
   editing: boolean;
   unconfirmed: boolean;
   warnings: PlausibilityWarning[];
+  quotes: Record<string, string>;
+  guessed: string[];
   onToggleEdit: () => void;
   onCorrect?: (nodeId: string, field: string, value: unknown) => void;
   onConfirm?: (nodeId: string) => void;
@@ -167,8 +174,10 @@ function NodeCard({
           per-node action. The model's own confidence flag, not a heuristic. */}
       {uncertain && (
         <p className="graph-node__uncertain" role="alert">
-          The model was <strong>not confident</strong> about this part — check every value on this
-          card before confirming it.
+          The model was <strong>not confident</strong> about this part —{' '}
+          {guessed.length > 0
+            ? <>especially: {guessed.map((fld) => fld.replace(/_/g, ' ')).join(', ')}.</>
+            : 'check every value on this card.'}
         </p>
       )}
 
@@ -184,6 +193,17 @@ function NodeCard({
                 <dt>{spec.label}</dt>
                 <dd>
                   <span className="graph-node__meaning">{meaning}</span>
+                  {/* R6-PV-3: provenance or its honest absence. A fabricated
+                      quote never reaches here — the substring check already
+                      demoted it to guessed. */}
+                  {quotes[spec.field] ? (
+                    <span className="graph-node__basis">based on: &ldquo;{quotes[spec.field]}&rdquo;</span>
+                  ) : guessed.includes(spec.field) ? (
+                    <span className="graph-node__guessed">
+                      the description does not say — the model guessed. Correct it here, or it will
+                      be asked as a question.
+                    </span>
+                  ) : null}
                   <span className="graph-node__consequence">{FIELD_CONSEQUENCES[spec.field]}</span>
                   {fieldWarnings.map((w) => (
                     <span key={w.message} className="graph-node__warning" role="alert">
@@ -256,7 +276,10 @@ function NodeCard({
 
       {/* R5-GR-2: the human states the machine's proposal is right. A
           correction (Edit → change) confirms implicitly via the reducer. */}
-      {unconfirmed && !editing && onConfirm && (
+      {/* ADR-IF-R6-2: a guessed card renders NO plain confirm — cards with
+          guessed fields are excluded from the unconfirmed set and resolve
+          via correction or the questionnaire. */}
+      {unconfirmed && !editing && onConfirm && guessed.length === 0 && (
         <button type="button" className="graph-node__confirm" onClick={() => onConfirm(node.id)}>
           {uncertain ? 'I have checked this — confirm' : 'Looks right — confirm'}
         </button>
@@ -275,6 +298,8 @@ export default function GraphView({
   unconfirmedNodeIds,
   onConfirmNode,
   warnings = [],
+  provenance = {},
+  guessedFields = {},
   ignoredJurisdictions = [],
 }: GraphViewProps) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -293,6 +318,8 @@ export default function GraphView({
           editing={editingNodeId === node.id}
           unconfirmed={gated && (unconfirmedNodeIds?.includes(node.id) ?? false)}
           warnings={warnings.filter((w) => w.node_id === node.id)}
+          quotes={provenance[node.id] ?? {}}
+          guessed={guessedFields[node.id] ?? []}
           onToggleEdit={() => setEditingNodeId(editingNodeId === node.id ? null : node.id)}
           onCorrect={onCorrect}
           onConfirm={gated ? onConfirmNode : undefined}

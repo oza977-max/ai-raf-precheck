@@ -38,8 +38,13 @@ const EXTRACT_GRAPH_SCHEMA = {
           label: { type: 'string' },
           data_class: { type: 'string', enum: DATA_CLASSES },
           data_zone: { type: 'string', enum: DATA_ZONES },
+          basis_quotes: {
+          type: 'object',
+          properties: { data_class: { type: 'string' },data_zone: { type: 'string' } },
+          required: ['data_class', 'data_zone'],
         },
-        required: ['id', 'label', 'data_class', 'data_zone'],
+        },
+        required: ['id', 'label', 'data_class', 'data_zone', 'basis_quotes'],
       },
     },
     processing_nodes: {
@@ -55,8 +60,13 @@ const EXTRACT_GRAPH_SCHEMA = {
           vendor: { type: 'string' },
           replaces_prior_model: { type: 'boolean' },
           uncertain: { type: 'boolean' },
+          basis_quotes: {
+          type: 'object',
+          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' } },
+          required: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
         },
-        required: ['id', 'label', 'model_type', 'autonomy_level', 'data_zone', 'vendor', 'replaces_prior_model'],
+        },
+        required: ['id', 'label', 'model_type', 'autonomy_level', 'data_zone', 'vendor', 'replaces_prior_model', 'basis_quotes'],
       },
     },
     output_nodes: {
@@ -73,8 +83,13 @@ const EXTRACT_GRAPH_SCHEMA = {
           scale: { type: 'string', enum: ['limited', 'at_scale'] },
           decision_type: { type: 'string', enum: DECISION_TYPES },
           hitl: { type: 'boolean' },
+          basis_quotes: {
+          type: 'object',
+          properties: { action_type: { type: 'string' },exposure: { type: 'string' },decision_bindingness: { type: 'string' },output_reversibility: { type: 'string' },scale: { type: 'string' } },
+          required: ['action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale'],
         },
-        required: ['id', 'label', 'action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale'],
+        },
+        required: ['id', 'label', 'action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale', 'basis_quotes'],
       },
     },
     edges: {
@@ -110,6 +125,12 @@ function buildExtractionPrompt(description: string): string {
     'external suppliers under contract are Zone B. The open internet and',
     'consumer tools are Zone A. Do not default to Zone A without a signal.',
     '',
+    'For every entry in each node\'s basis_quotes, COPY THE EXACT PHRASE from',
+    'the description (a verbatim substring — never a paraphrase) that you',
+    'based that field\'s value on. If the description does not state it, use',
+    'an empty string. Quotes are mechanically checked against the description;',
+    'a paraphrased or invented quote is treated as no quote at all.',
+    '',
     'Never map an activity onto a similar-sounding enum value: if the',
     'description describes something with no matching value (for example,',
     'model training is not an action type), pick the least-wrong value and',
@@ -132,6 +153,7 @@ const InputNodeSchema = z.object({
   label: z.string(),
   data_class: z.enum(DATA_CLASSES as [string, ...string[]]),
   data_zone: z.enum(DATA_ZONES as [string, ...string[]]),
+  basis_quotes: z.record(z.string()).optional(),
 });
 
 const ProcessingNodeSchema = z.object({
@@ -143,6 +165,7 @@ const ProcessingNodeSchema = z.object({
   vendor: z.string(),
   replaces_prior_model: z.boolean(),
   uncertain: z.boolean().optional(),
+  basis_quotes: z.record(z.string()).optional(),
 });
 
 const OutputNodeSchema = z.object({
@@ -155,6 +178,7 @@ const OutputNodeSchema = z.object({
   scale: z.enum(['limited', 'at_scale']),
   decision_type: z.enum(DECISION_TYPES as [string, ...string[]]).optional(),
   hitl: z.boolean().optional(),
+  basis_quotes: z.record(z.string()).optional(),
 });
 
 const GraphEdgeSchema = z.object({ from: z.string(), to: z.string() });
@@ -167,25 +191,106 @@ const ExtractedGraphSchema = z.object({
   jurisdictions: z.array(z.string()),
 });
 
-function parseDataFlowGraph(input: unknown): DataFlowGraph | null {
-  const result = ExtractedGraphSchema.safeParse(input);
-  if (!result.success) return null;
-  // Zod's z.enum(...) infers each enum field as the widened `string` type
-  // (the runtime arrays aren't `as const` tuples), so result.data's static
-  // type is looser than DataFlowGraph's literal unions even though every
-  // value has already been checked at runtime against the exact same
-  // canonical-vocabulary arrays. The cast below is a typing formality, not
-  // a validation bypass — real runtime enum checking already happened above.
-  return {
-    id: crypto.randomUUID(),
-    version: 1,
-    ...(result.data as unknown as Omit<DataFlowGraph, 'id' | 'version' | 'intake_method' | 'extracted_at'>),
-    intake_method: 'llm',
-    extracted_at: new Date().toISOString(),
-  };
+// R6 (intake-flow.md §16, ADR-IF-R6-1): what extraction now returns. The
+// graph is unchanged engine input; provenance and guessed-ness travel
+// BESIDE it as intake artifacts — putting them on the graph would push
+// presentation metadata through the engine island and every persisted
+// verdict.
+export interface GraphExtraction {
+  graph: DataFlowGraph;
+  /** provenance[nodeId][field] = the VERIFIED verbatim quote. */
+  provenance: Record<string, Record<string, string>>;
+  /** guessed[nodeId] = decision-bearing fields with no verified basis. */
+  guessed: Record<string, string[]>;
 }
 
-export async function extractGraph(description: string): Promise<LlmResult<DataFlowGraph>> {
+const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
+  input: ['data_class', 'data_zone'],
+  processing: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
+  output: ['action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale', 'decision_type', 'hitl'],
+};
+
+/** R6-PV-2. Case- and whitespace-insensitive; no fuzzy matching, no
+ *  semantics. The machine only answers "did the user actually write these
+ *  words" — whether the words SUPPORT the value stays the human's call. */
+function normalise(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function verifyQuotes(
+  description: string,
+  kind: 'input' | 'processing' | 'output',
+  node: Record<string, unknown>,
+): { verified: Record<string, string>; guessed: string[] } {
+  // A node with NO basis_quotes object at all is schema-impossible from a
+  // live provider (both enforce the schema) — it is a legacy shape (pre-R6
+  // draft, old fixture). Treated as pre-R6: no provenance claims either
+  // way, standard confirm flow. Only a PRESENT object makes claims that
+  // can be verified or demoted.
+  if (node.basis_quotes === undefined) return { verified: {}, guessed: [] };
+  const desc = normalise(description);
+  const quotes = node.basis_quotes as Record<string, string>;
+  const verified: Record<string, string> = {};
+  const guessed: string[] = [];
+  for (const field of QUOTE_FIELDS[kind]) {
+    // An absent optional VALUE (decision_type, hitl) claims nothing, so it
+    // needs no basis and is not a guess.
+    if (node[field] === undefined || node[field] === null) continue;
+    const quote = (quotes[field] ?? '').trim();
+    if (quote && desc.includes(normalise(quote))) {
+      verified[field] = quote;
+    } else {
+      // Empty OR fabricated: either way there is no basis, and a fabricated
+      // quote must never render as provenance (R6-PV-2).
+      guessed.push(field);
+    }
+  }
+  return { verified, guessed };
+}
+
+function parseExtraction(input: unknown, description: string): GraphExtraction | null {
+  const result = ExtractedGraphSchema.safeParse(input);
+  if (!result.success) return null;
+
+  // R6: verify quotes per node, then STRIP basis_quotes so the graph the
+  // engine sees is unchanged (ADR-IF-R6-1).
+  const provenance: Record<string, Record<string, string>> = {};
+  const guessed: Record<string, string[]> = {};
+  const strip = <T extends { id: string; basis_quotes?: Record<string, string> }>(
+    kind: 'input' | 'processing' | 'output',
+    nodes: T[],
+  ): Omit<T, 'basis_quotes'>[] =>
+    nodes.map((node) => {
+      const { basis_quotes: _basis, ...rest } = node;
+      const check = verifyQuotes(description, kind, node as Record<string, unknown>);
+      if (Object.keys(check.verified).length > 0) provenance[node.id] = check.verified;
+      if (check.guessed.length > 0) guessed[node.id] = check.guessed;
+      return rest;
+    });
+
+  const data = result.data;
+  // Zod's z.enum(...) infers each enum field as the widened `string` type
+  // (the runtime arrays aren't `as const` tuples), so the static type here
+  // is looser than DataFlowGraph's literal unions even though every value
+  // has already been checked at runtime against the exact same
+  // canonical-vocabulary arrays. The cast below is a typing formality, not
+  // a validation bypass — real runtime enum checking already happened above.
+  const graph = {
+    id: crypto.randomUUID(),
+    version: 1,
+    input_nodes: strip('input', data.input_nodes),
+    processing_nodes: strip('processing', data.processing_nodes),
+    output_nodes: strip('output', data.output_nodes),
+    edges: data.edges,
+    jurisdictions: data.jurisdictions,
+    intake_method: 'llm',
+    extracted_at: new Date().toISOString(),
+  } as unknown as DataFlowGraph;
+
+  return { graph, provenance, guessed };
+}
+
+export async function extractGraph(description: string): Promise<LlmResult<GraphExtraction>> {
   const apiKey = getApiKey();
   if (!apiKey) {
     // Provider order is a deliberate ranking, not a race: a saved Anthropic
@@ -198,9 +303,9 @@ export async function extractGraph(description: string): Promise<LlmResult<DataF
     if (localLlmEnabled()) {
       const raw = await localChatJson(buildExtractionPrompt(description), EXTRACT_GRAPH_SCHEMA);
       if (!raw.ok) return raw;
-      const graph = parseDataFlowGraph(raw.value);
-      if (!graph) return { ok: false, error: { kind: 'parse-error', raw: raw.value } };
-      return { ok: true, value: graph };
+      const extraction = parseExtraction(raw.value, description);
+      if (!extraction) return { ok: false, error: { kind: 'parse-error', raw: raw.value } };
+      return { ok: true, value: extraction };
     }
     return { ok: false, error: { kind: 'no-api-key' } };
   }
@@ -229,12 +334,12 @@ export async function extractGraph(description: string): Promise<LlmResult<DataF
       return { ok: false, error: { kind: 'parse-error', raw: response } };
     }
 
-    const graph = parseDataFlowGraph(toolUseBlock.input);
-    if (!graph) {
+    const extraction = parseExtraction(toolUseBlock.input, description);
+    if (!extraction) {
       return { ok: false, error: { kind: 'parse-error', raw: response } };
     }
 
-    return { ok: true, value: graph };
+    return { ok: true, value: extraction };
   } catch (err) {
     return { ok: false, error: { kind: 'network-error', message: err instanceof Error ? err.message : String(err) } };
   }

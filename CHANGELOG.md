@@ -11,6 +11,42 @@ every verdict.
 
 ---
 
+## [0.7.0] — 2026-08-16
+
+The model must show its working. Requirements round 6, from the user's
+"give a confidence score on each interpretation" — reshaped into something
+checkable.
+
+### Added
+
+- **Every extracted value now shows the words it came from.** Under each
+  field: *based on: "firms internal data"* — the exact phrase from your
+  description the model read. The quote is mechanically verified to exist
+  in your description; a model that paraphrases or invents a quote gets
+  that field treated as a guess. No confidence percentages — you can check
+  a quote in a second; nobody can check "82%".
+- **Guessed fields are asked, not nodded through.** A field the
+  description doesn't support shows *"the description does not say — the
+  model guessed"*, its card cannot be one-click confirmed, and the flow
+  asks it as a specific question with the same plain-English options as
+  the form. Vague descriptions now cost questions instead of hiding
+  guesses.
+- **A context box on every question** — "anything the reviewer should
+  know about this answer?" Optional, read by the person who signs off,
+  never by the rules; recorded with the attestation and shown on the
+  sign-off page.
+
+### Fixed
+
+- **Question answers now actually change the evaluated graph.** Answers
+  were recorded and checked for contradictions, but the engine evaluated
+  the model's original best-guess values regardless of what you answered —
+  found while specifying this round. An answer that differs from the graph
+  is now applied as a recorded, versioned correction, so the verdict is
+  computed from what you said.
+
+---
+
 ## [0.6.0] — 2026-08-16
 
 The graph review now explains itself. Requirements round 5, raised by the

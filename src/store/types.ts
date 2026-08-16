@@ -49,7 +49,9 @@ export type AuditEventPayload =
   // Found evaporating during a user walkthrough — typed, required to
   // proceed, and never persisted. On an audit product that is a defect,
   // not a nice-to-have.
-  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[] }
+  // answer_contexts (R6-CX-1, 2026-08-16): optional context the submitter
+  // typed on question answers. Human-read at sign-off; never engine input.
+  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[] }
   | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
   | { type: 'graph_corrected'; correction: GraphCorrection }
   | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }

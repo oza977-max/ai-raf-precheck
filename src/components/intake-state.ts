@@ -33,6 +33,12 @@ export type IntakeState =
       // state: never written to the audit trail; the graph_confirmed
       // attestation stays the recorded act.
       unconfirmedNodeIds?: string[];
+      // R6 (ADR-IF-R6-1): intake artifacts travelling BESIDE the graph.
+      // provenance[nodeId][field] = VERIFIED verbatim quote from the
+      // description; guessedFields[nodeId] = decision-bearing fields with
+      // no verified basis. Ephemeral review state, like unconfirmedNodeIds.
+      provenance?: Record<string, Record<string, string>>;
+      guessedFields?: Record<string, string[]>;
       // R5-GX-1 (ADR-IF-R5-2). Jurisdiction strings the extractor returned
       // that the loaded policy does not recognise — removed from the graph
       // before the human sees it, surfaced so the removal is visible.
@@ -94,12 +100,22 @@ export type IntakeAction =
   // moved earlier than P4-C04's questionnaire-entry generation so a
   // correction pass, which re-enters at graph_review, can reuse it
   // instead of generating a new one; BC-P5C01-01).
-  | { type: 'GRAPH_EXTRACTED'; graph: DataFlowGraph; useCaseId: string; ignoredJurisdictions?: string[] }
+  | {
+      type: 'GRAPH_EXTRACTED';
+      graph: DataFlowGraph;
+      useCaseId: string;
+      ignoredJurisdictions?: string[];
+      provenance?: Record<string, Record<string, string>>;
+      guessedFields?: Record<string, string[]>;
+    }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
   // R5-GR-2: the human states a model-proposed node is right as shown.
   | { type: 'NODE_CONFIRMED'; nodeId: string }
   | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[] }
-  | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer }
+  // R6-QN-1 (ADR-IF-R6-3): an answer that differs from the graph IS a
+  // correction — carried with the answer so the reducer applies both
+  // atomically, and the engine finally sees what the user answered.
+  | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer; correction?: GraphCorrection; updatedGraph?: DataFlowGraph }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
   | { type: 'CONTRADICTION_RESOLVED'; explanation: string }
   // UC-6 (intake-flow.md §9): always an explicit human action, even with
@@ -207,11 +223,18 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // pass there would be ceremony, and ceremony trains blind clicking.
         ...(state.method === 'llm'
           ? {
+              // ADR-IF-R6-2: nodes with guessed fields are EXCLUDED — their
+              // resolution path is a correction or the questionnaire, never
+              // a one-click confirm of a value nobody stated.
               unconfirmedNodeIds: [
                 ...action.graph.input_nodes,
                 ...action.graph.processing_nodes,
                 ...action.graph.output_nodes,
-              ].map((n) => n.id),
+              ]
+                .map((n) => n.id)
+                .filter((id) => !(action.guessedFields && (action.guessedFields[id]?.length ?? 0) > 0)),
+              ...(action.provenance ? { provenance: action.provenance } : {}),
+              ...(action.guessedFields ? { guessedFields: action.guessedFields } : {}),
             }
           : {}),
         ...(action.ignoredJurisdictions && action.ignoredJurisdictions.length > 0
@@ -231,6 +254,32 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // change it. The corrected node needs no second confirmation.
         ...(state.unconfirmedNodeIds
           ? { unconfirmedNodeIds: state.unconfirmedNodeIds.filter((id) => id !== action.correction.node_id) }
+          : {}),
+        // R6: a corrected field is no longer guessed, and the model's quote
+        // for it no longer describes the value on screen — both drop.
+        ...(state.guessedFields
+          ? {
+              guessedFields: Object.fromEntries(
+                Object.entries(state.guessedFields)
+                  .map(([id, fields]) => [
+                    id,
+                    id === action.correction.node_id ? fields.filter((fld) => fld !== action.correction.field) : fields,
+                  ])
+                  .filter(([, fields]) => (fields as string[]).length > 0),
+              ),
+            }
+          : {}),
+        ...(state.provenance && state.provenance[action.correction.node_id]?.[action.correction.field]
+          ? {
+              provenance: {
+                ...state.provenance,
+                [action.correction.node_id]: Object.fromEntries(
+                  Object.entries(state.provenance[action.correction.node_id]!).filter(
+                    ([fld]) => fld !== action.correction.field,
+                  ),
+                ),
+              },
+            }
           : {}),
       };
 
@@ -261,7 +310,15 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'ANSWER_SUBMITTED':
       if (state.step !== 'questionnaire') return state;
-      return { ...state, answers: [...state.answers, action.answer] };
+      // ADR-IF-R6-3: when the answer differs from the graph, the caller
+      // sends the correction and the updated graph with it — applied here
+      // so the attested, evaluated graph is the one the user answered.
+      return {
+        ...state,
+        answers: [...state.answers, action.answer],
+        ...(action.updatedGraph ? { graph: action.updatedGraph } : {}),
+        ...(action.correction ? { corrections: [...state.corrections, action.correction] } : {}),
+      };
 
     case 'CONTRADICTIONS_DETECTED':
       if (state.step !== 'questionnaire') return state;

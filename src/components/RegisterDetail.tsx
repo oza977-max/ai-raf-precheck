@@ -401,6 +401,28 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               context before the machine's answer — and framed so it cannot be
               mistaken for something the engine weighed. Most recent
               graph_confirmed wins: a re-attestation supersedes. */}
+          {/* R6-CX-1: contexts the submitter typed on question answers —
+              rendered with the note, same rules: human-read, never engine
+              input, most recent attestation wins. */}
+          {(() => {
+            const contexts = [...events]
+              .reverse()
+              .map((ev) => (ev.payload.type === 'graph_confirmed' ? ev.payload.answer_contexts : undefined))
+              .find((c) => c && c.length > 0);
+            return contexts ? (
+              <div className="register-detail__submitter-note">
+                <h3>Context from the submitter&rsquo;s answers</h3>
+                <ul className="register-detail__submitter-note-body">
+                  {contexts.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                <p className="register-detail__submitter-note-caveat">
+                  Typed alongside individual answers, for you. The rules did not read it.
+                </p>
+              </div>
+            ) : null;
+          })()}
           {(() => {
             const note = [...events]
               .reverse()
