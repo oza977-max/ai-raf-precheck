@@ -2325,3 +2325,34 @@ details input {
 .questionnaire__context {
   max-width: 480px;
 }
+
+/* v0.7.1 — questionnaire clarity. */
+.questionnaire__count-note {
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  margin: -0.3rem 0 0.6rem;
+}
+
+.questionnaire__recorded {
+  font-size: 0.85rem;
+  border: 1px solid var(--low);
+  background: #eef4ef;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+}
+
+.questionnaire__undo {
+  font-size: 0.8rem;
+  padding: 0.1rem 0.5rem;
+}
+
+.questionnaire__options--labelled {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.questionnaire__options--labelled button {
+  text-align: left;
+}

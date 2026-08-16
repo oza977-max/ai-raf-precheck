@@ -215,7 +215,7 @@ describe('Walking Skeleton', () => {
 
     // A real targeted question renders — not a skipped/fake step. V1.2-B:
     // the progress line now carries the budget + provisional tier.
-    expect(await screen.findByText(/0 \/ \d+ · budget ≤\d+ \(provisional /i)).toBeInTheDocument();
+    expect(await screen.findByText(/question 1 of \d+/i)).toBeInTheDocument();
 
     // Answer every generated question until the flow reaches confirmation.
     // V2-C: a realistic policy generates questions across many fields, so

@@ -262,7 +262,8 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
       screen.getByLabelText(/anything the reviewer should know/i),
       'Confirmed with the platform team.',
     );
-    await user.click(screen.getByRole('button', { name: /^traditional-ml$/ }));
+    // v0.7.1: option buttons now carry the shared plain-English labels.
+    await user.click(screen.getByRole('button', { name: /trained on historical data to predict or score/i }));
 
     // vendor question (text answer).
     await screen.findByText(/confirm the value for "vendor"/i);

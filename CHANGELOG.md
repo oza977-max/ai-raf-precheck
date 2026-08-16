@@ -11,6 +11,32 @@ every verdict.
 
 ---
 
+## [0.7.1] — 2026-08-16
+
+The follow-up questions stop being confusing. Every item here reproduces a
+finding from the user's own run.
+
+### Fixed
+
+- **Some questions wrongly asked for typed text.** "What level of human
+  oversight…?" showed an empty text box, and whatever you typed was written
+  into a numeric field — corrupting the record and jamming the flow. Those
+  questions (autonomy, reversibility, scale) are now proper buttons, and a
+  validation gate refuses any answer outside a field's legal values, from
+  any path.
+- **Answer buttons now speak plain English** — "Inside the firm only — our
+  own systems (Zone C)" instead of a bare "Zone A/B/C" row; same wording as
+  the form and the graph review, one shared source.
+- **Each answer is acknowledged**: "Recorded: … " with an **Undo**, instead
+  of the next question silently replacing the screen.
+- **The question count explains itself** — "Question 1 of 10 · all 10 asked
+  because your description did not state them" replaces the contradictory
+  "0 / 10 · budget ≤5".
+- **A double-click can no longer record an answer twice** and skip the next
+  question (guarded in the UI and refused in the state machine).
+
+---
+
 ## [0.7.0] — 2026-08-16
 
 The model must show its working. Requirements round 6, from the user's

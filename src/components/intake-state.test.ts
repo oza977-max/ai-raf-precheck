@@ -127,7 +127,9 @@ describe('intakeReducer', () => {
     };
     const answer = { questionId: 'Q1', value: 'yes' };
     const next = intakeReducer(state, { type: 'ANSWER_SUBMITTED', answer });
-    expect(next).toEqual({ ...state, answers: [answer] });
+    // v0.7.1: the answer also snapshots the pre-answer graph for one-level
+    // undo.
+    expect(next).toEqual({ ...state, answers: [answer], undo: { graph: g, correctionsLen: 0 } });
   });
 
   it('questionnaire → contradiction_review on CONTRADICTIONS_DETECTED, carrying corrections/useCaseId forward', () => {
@@ -535,5 +537,46 @@ describe('intakeReducer — a correction pass cannot step backwards out of itsel
       step: 'duplicate_check',
       description: 'a described thing',
     });
+  });
+});
+
+// v0.7.1 — the questionnaire's two new reducer guarantees.
+describe('intakeReducer — v0.7.1 questionnaire guards', () => {
+  const base = (): Extract<IntakeState, { step: 'questionnaire' }> => ({
+    step: 'questionnaire',
+    description: 'd',
+    graph: graph(),
+    questions: [],
+    answers: [],
+    resolutionNotes: [],
+    corrections: [],
+    useCaseId: 'uc-1',
+  });
+
+  it('TC-R71-05: a duplicate questionId is refused — a double-click cannot record twice', () => {
+    const answered = intakeReducer(base(), { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'a' } });
+    const again = intakeReducer(answered, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'b' } });
+    expect(again).toBe(answered);
+  });
+
+  it('TC-R71-06: ANSWER_UNDONE restores the pre-answer graph and corrections, once', () => {
+    const g2 = graph({ version: 2 });
+    const answered = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'Zone C' },
+      updatedGraph: g2,
+      correction: {
+        correction_id: 'c1', graph_version_before: 1, graph_version_after: 2,
+        node_id: 'n1', field: 'data_zone', original_value: 'Zone A', corrected_value: 'Zone C',
+        corrected_at: '2026-01-01T00:00:00.000Z', corrected_by: '1LoD',
+      },
+    });
+    expect(answered.step === 'questionnaire' && answered.graph.version).toBe(2);
+    const undone = intakeReducer(answered, { type: 'ANSWER_UNDONE' });
+    expect(undone.step === 'questionnaire' && undone.graph.version).toBe(1);
+    expect(undone.step === 'questionnaire' && undone.answers).toHaveLength(0);
+    expect(undone.step === 'questionnaire' && undone.corrections).toHaveLength(0);
+    // Once: a second undo with no snapshot changes nothing.
+    expect(intakeReducer(undone, { type: 'ANSWER_UNDONE' })).toBe(undone);
   });
 });
