@@ -91,12 +91,30 @@ const EXTRACT_GRAPH_SCHEMA = {
 } as const;
 
 function buildExtractionPrompt(description: string): string {
+  // The two added guidance blocks each close a misread observed in live
+  // runs against the local model (2026-08-16, first-live-run session):
+  // "internal platform" was placed in Zone A twice in two runs (systematic
+  // Zone A bias), and "train a model" — no matching action_type enum —
+  // was silently forced to the string-similar "trade" with no uncertainty
+  // flag. Schema-forced decoding guarantees a LEGAL value, so wrong-but-
+  // valid is the failure mode prompts must defend against.
   return [
     'Extract a structured data-flow graph from this AI use case description.',
     'Use ONLY the permitted enum values in the tool schema for classified fields.',
     'If you cannot determine a field with confidence from the description, set',
     'uncertain: true on that node and make a reasonable best-guess value anyway',
     '(the value is still required, but flag your confidence).',
+    '',
+    'Data zone guidance: systems described as internal, on-premise, in-house,',
+    "or on the firm's own or approved internal platform are Zone C. Approved",
+    'external suppliers under contract are Zone B. The open internet and',
+    'consumer tools are Zone A. Do not default to Zone A without a signal.',
+    '',
+    'Never map an activity onto a similar-sounding enum value: if the',
+    'description describes something with no matching value (for example,',
+    'model training is not an action type), pick the least-wrong value and',
+    'set uncertain: true on that node where the schema allows it. A wrong',
+    'value stated confidently is worse than a flagged guess.',
     '',
     `Description: ${description}`,
   ].join('\n');
