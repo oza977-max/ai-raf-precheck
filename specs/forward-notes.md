@@ -54,6 +54,17 @@ a real judge model against the eleven pinned cases (`docs/try-these.md`) and
 compare with the human panel's 31/31 — a dated concordance number, before
 any UI.
 
+**Status update (2026-08-16, v0.5.0):** the key is no longer the blocker. A
+local open model now runs on the user's machine (qwen3:4b via Ollama,
+`src/llm/local-provider.ts`) and had its first live run on the extraction
+edge. The judge experiment above can therefore run today, locally and free —
+j1-micro-style tiny judges were the design's deployment claim anyway. Still
+undone, deliberately: run the concordance experiment before building any
+panel UI. One operational lesson for that experiment: reasoning models under
+schema-forced decoding can deliberate for tens of thousands of tokens —
+cap tokens and disable thinking (verified live, 16k-token loop on a 15-word
+prompt).
+
 ---
 
 ## FN-008 — An unreproduced full-suite flake, recorded rather than explained away

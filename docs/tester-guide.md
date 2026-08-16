@@ -157,11 +157,13 @@ testing impossible.
 - **Jurisdiction packs are unadopted.** The EU AI Act and SS1/23 rules
   haven't been signed off by Legal or Compliance, so verdicts that depend on
   them are marked provisional. That labelling is intentional.
-- **The plain-English intake path may be unavailable.** It needs an
-  Anthropic API key — and be aware that path has never been run against the
-  live API by anyone; if you use it, you are its first real test.
-  Without one you get the guided questions, which is the
-  deterministic path and exercises everything that matters.
+- **The plain-English intake path needs setup.** It runs either on a local
+  open model via Ollama (free, on-device; first live run 2026-08-16 — it
+  drafts a usable graph but expect to correct a field or two) or on an
+  Anthropic API key (never yet run against the live API by anyone; if you
+  use it, you are its first real test). Without either you get the guided
+  questions, which is the deterministic path and exercises everything that
+  matters.
 
 ---
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getApiKey, createClient } from './client';
+import { localChatJson, localLlmEnabled } from './local-provider';
 import type { LlmResult } from './types';
 import type { DataFlowGraph } from '../engine/types';
 import {
@@ -169,6 +170,20 @@ function parseDataFlowGraph(input: unknown): DataFlowGraph | null {
 export async function extractGraph(description: string): Promise<LlmResult<DataFlowGraph>> {
   const apiKey = getApiKey();
   if (!apiKey) {
+    // Provider order is a deliberate ranking, not a race: a saved Anthropic
+    // key wins (stronger extractor), then a configured local open model
+    // (free, on-device), then the guided form (no LLM at all). Both LLM
+    // paths exit through the SAME Zod gate below — the local provider's
+    // decoder-level schema guarantees shape, but only parseDataFlowGraph
+    // guarantees the canonical vocabulary, and nothing reaches evaluate()
+    // without it.
+    if (localLlmEnabled()) {
+      const raw = await localChatJson(buildExtractionPrompt(description), EXTRACT_GRAPH_SCHEMA);
+      if (!raw.ok) return raw;
+      const graph = parseDataFlowGraph(raw.value);
+      if (!graph) return { ok: false, error: { kind: 'parse-error', raw: raw.value } };
+      return { ok: true, value: graph };
+    }
     return { ok: false, error: { kind: 'no-api-key' } };
   }
 
