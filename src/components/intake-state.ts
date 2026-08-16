@@ -54,6 +54,11 @@ export type IntakeState =
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
+      // v0.7.1: single-level undo — the graph and corrections length as
+      // they stood BEFORE the most recent answer. Cleared by the next
+      // answer. Ephemeral review state; the trail records only what is
+      // attested.
+      undo?: { graph: DataFlowGraph; correctionsLen: number };
     }
   | {
       step: 'contradiction_review';
@@ -116,6 +121,8 @@ export type IntakeAction =
   // correction — carried with the answer so the reducer applies both
   // atomically, and the engine finally sees what the user answered.
   | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer; correction?: GraphCorrection; updatedGraph?: DataFlowGraph }
+  // v0.7.1: take back the most recent answer (and its write-back), once.
+  | { type: 'ANSWER_UNDONE' }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
   | { type: 'CONTRADICTION_RESOLVED'; explanation: string }
   // UC-6 (intake-flow.md §9): always an explicit human action, even with
@@ -310,15 +317,31 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'ANSWER_SUBMITTED':
       if (state.step !== 'questionnaire') return state;
+      // v0.7.1 double-submit guard: a question already answered is refused
+      // at the reducer, so a double-click cannot record twice and skip the
+      // next question (same layering as the R5/R6 gates).
+      if (state.answers.some((a) => a.questionId === action.answer.questionId)) return state;
       // ADR-IF-R6-3: when the answer differs from the graph, the caller
       // sends the correction and the updated graph with it — applied here
       // so the attested, evaluated graph is the one the user answered.
       return {
         ...state,
         answers: [...state.answers, action.answer],
+        undo: { graph: state.graph, correctionsLen: state.corrections.length },
         ...(action.updatedGraph ? { graph: action.updatedGraph } : {}),
         ...(action.correction ? { corrections: [...state.corrections, action.correction] } : {}),
       };
+
+    case 'ANSWER_UNDONE': {
+      if (state.step !== 'questionnaire' || !state.undo || state.answers.length === 0) return state;
+      const { undo, ...rest } = state;
+      return {
+        ...rest,
+        answers: state.answers.slice(0, -1),
+        graph: undo.graph,
+        corrections: state.corrections.slice(0, undo.correctionsLen),
+      };
+    }
 
     case 'CONTRADICTIONS_DETECTED':
       if (state.step !== 'questionnaire') return state;

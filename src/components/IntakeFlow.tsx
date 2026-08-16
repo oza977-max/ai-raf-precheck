@@ -16,7 +16,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types';
-import { generateQuestions, getQuestionBudget, questionsForGuessedFields } from '../engine/question-generator';
+import { coerceAnswerValue, generateQuestions, getQuestionBudget, questionsForGuessedFields } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
 import { plausibilityWarnings } from '../engine/plausibility';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
@@ -744,9 +744,6 @@ export default function IntakeFlow() {
 
   function handleAnswerSubmitted(questionId: string, value: unknown, context?: string) {
     if (state.step !== 'questionnaire') return;
-    const answer = { questionId, value, ...(context ? { context } : {}) };
-    const nextAnswers = [...state.answers, answer];
-
     // ADR-IF-R6-3. An answer that differs from the graph IS a correction:
     // before this, answers were recorded and contradiction-checked but the
     // engine evaluated the model's original best-guess values regardless —
@@ -765,6 +762,17 @@ export default function IntakeFlow() {
         (n) => n.id === question.node_id,
       ) as Record<string, unknown> | undefined;
       const originalValue = node?.[question.field];
+      // v0.7.1 validation gate: a value outside the field's legal set must
+      // never reach the graph. Buttons produce legal values by
+      // construction; this closes the free-text and future-regression
+      // paths (the bug that let "internal team" land in autonomy_level).
+      const coerced = coerceAnswerValue(question.field, value);
+      if (!coerced.ok) {
+        setReviewGateError(`That answer was not recorded: ${coerced.reason}.`);
+        return;
+      }
+      setReviewGateError(null);
+      value = coerced.value;
       if (node && originalValue !== value) {
         updatedGraph = {
           ...state.graph,
@@ -786,6 +794,8 @@ export default function IntakeFlow() {
         };
       }
     }
+    const answer = { questionId, value, ...(context ? { context } : {}) };
+    const nextAnswers = [...state.answers, answer];
     dispatch({ type: 'ANSWER_SUBMITTED', answer, correction, updatedGraph });
 
     // O-001 (charter 005): this read `submittedDescription`, a useState written
@@ -1021,12 +1031,21 @@ export default function IntakeFlow() {
         )}
 
         {state.step === 'questionnaire' && (
+          <>
+          {reviewGateError && (
+            <p role="alert" className="intake-flow__gate-error">
+              {reviewGateError}
+            </p>
+          )}
           <QuestionnaireStep
             questions={state.questions}
             answeredCount={state.answers.length}
+            lastAnswer={state.answers[state.answers.length - 1]}
+            onUndo={() => dispatch({ type: 'ANSWER_UNDONE' })}
             {...(policyResult.valid ? getQuestionBudget(state.graph, policyResult.policy) : {})}
             onAnswer={handleAnswerSubmitted}
           />
+          </>
         )}
 
         {state.step === 'contradiction_review' && (

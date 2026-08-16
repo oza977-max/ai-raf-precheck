@@ -38,12 +38,23 @@ const QUESTION_TEXT: Record<string, string> = {
   replaces_prior_model: 'Does this system replace an existing model or process?',
 };
 
+// v0.7.1 (user bug report, live-reproduced): fields OUTSIDE the canonical
+// vocabulary but with a closed value set fell through to answer_type
+// 'text' — "What level of human oversight...?" rendered an empty textarea,
+// and whatever the user typed was written back into a numeric field,
+// corrupting the graph. A closed-set field must NEVER ask for free text.
+const EXTRA_QUESTION_OPTIONS: Record<string, readonly string[]> = {
+  autonomy_level: ['0', '1', '2', '3', '4'],
+  output_reversibility: ['reversible', 'irreversible', 'unknown'],
+  scale: ['limited', 'at_scale'],
+};
+
 function questionForField(
   field: string,
   nodeId: string | undefined,
   triggeredBy: string[],
 ): IntakeQuestion {
-  const canonicalOptions = CANONICAL_VOCABULARY[field];
+  const canonicalOptions = CANONICAL_VOCABULARY[field] ?? EXTRA_QUESTION_OPTIONS[field];
   return {
     id: `Q-${field}-${nodeId ?? 'graph'}`,
     text: QUESTION_TEXT[field] ?? `Please confirm the value for "${field}".`,
@@ -53,6 +64,35 @@ function questionForField(
     answer_type: canonicalOptions ? 'select' : field === 'hitl' || field === 'replaces_prior_model' ? 'boolean' : 'text',
     options: canonicalOptions ? [...canonicalOptions] : undefined,
   };
+}
+
+/** v0.7.1 write-back validation gate. Coerces an answered value into the
+ *  graph's typed form and refuses anything outside the field's legal set —
+ *  a free-typed or malformed answer must never corrupt the graph. Pure. */
+export function coerceAnswerValue(
+  field: string,
+  value: unknown,
+): { ok: true; value: unknown } | { ok: false; reason: string } {
+  if (field === 'autonomy_level') {
+    const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+    return Number.isInteger(n) && n >= 0 && n <= 4
+      ? { ok: true, value: n }
+      : { ok: false, reason: 'autonomy level must be 0–4' };
+  }
+  if (field === 'hitl' || field === 'replaces_prior_model') {
+    if (typeof value === 'boolean') return { ok: true, value };
+    if (value === 'true' || value === 'false') return { ok: true, value: value === 'true' };
+    return { ok: false, reason: `${field} must be yes or no` };
+  }
+  const closed = CANONICAL_VOCABULARY[field] ?? EXTRA_QUESTION_OPTIONS[field];
+  if (closed) {
+    return closed.includes(String(value))
+      ? { ok: true, value: String(value) }
+      : { ok: false, reason: `"${String(value)}" is not a permitted ${field.replace(/_/g, ' ')}` };
+  }
+  // Open-text fields (vendor, label): any non-empty string.
+  const text = String(value).trim();
+  return text ? { ok: true, value: text } : { ok: false, reason: `${field.replace(/_/g, ' ')} cannot be empty` };
 }
 
 // R6-QN-1 (intake-flow.md §16.4). Questions for fields the extractor
