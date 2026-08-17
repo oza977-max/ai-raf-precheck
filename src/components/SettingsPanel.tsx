@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { getApiKey } from '../llm/client';
 import {
   DEFAULT_LOCAL_LLM_MODEL,
   DEFAULT_LOCAL_LLM_URL,
@@ -19,16 +18,13 @@ import { sampleCount, seedSampleRegister } from '../seeds/sample-register';
 
 type Busy = 'none' | 'seeding' | 'clearing';
 
-// Local-testing-only convenience. NOT the production design — cross-cutting.md
-// §9 / NF-3 explicitly scopes AIGate as backend-less, browser-stored-key for
-// V1. Storing an API key in localStorage is visible to anyone with access to
-// this browser (devtools, extensions) and is not appropriate for a shared
-// multi-user deployment. A real rollout needs a backend that holds the key
-// server-side and proxies Anthropic calls, so the key never reaches the
-// browser at all — flagged as a known productionization gap, not solved here.
+// Demo-space model configuration (user decision 2026-08-17): ONE generic
+// model slot, no vendor-specific key field. The cloud-SDK code path still
+// exists behind getApiKey() but has no UI — it never ran live, the local
+// open model has, and a demo should show the thing that works. A firm
+// deployment points the same slot at a stronger model inside its own
+// boundary (design-vision: models are swappable, the corpus is the moat).
 export default function SettingsPanel() {
-  const [key, setKey] = useState('');
-  const [saved, setSaved] = useState(getApiKey() !== null);
   const [busy, setBusy] = useState<Busy>('none');
   // Local open-model provider (2026-08-16). URL presence IS the enabled flag.
   const [localUrl, setLocalUrl] = useState(getLocalLlmUrl() ?? DEFAULT_LOCAL_LLM_URL);
@@ -41,18 +37,6 @@ export default function SettingsPanel() {
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), []);
   const packs = useMemo(() => loadPacks(getPackSources()).packs, []);
-
-  function handleSave() {
-    if (!key.trim()) return;
-    localStorage.setItem('aigate:api-key', key.trim());
-    setKey('');
-    setSaved(true);
-  }
-
-  function handleClearKey() {
-    localStorage.removeItem('aigate:api-key');
-    setSaved(false);
-  }
 
   async function handleSeed() {
     if (!policyResult.valid) {
@@ -124,7 +108,7 @@ export default function SettingsPanel() {
               <p>
                 This permanently deletes every use case, verdict and audit event in this browser.
                 AIGate has no server, so there is no copy to restore from. Export anything you want
-                to keep first. Your saved API key is not affected.
+                to keep first. Your model settings are not affected.
               </p>
               <button type="button" onClick={handleClearAll} disabled={busy !== 'none'}>
                 {busy === 'clearing' ? 'Clearing…' : 'Yes, delete everything'}
@@ -140,37 +124,22 @@ export default function SettingsPanel() {
       </details>
 
       <details>
-        <summary>Settings (local testing only — not production-safe key storage)</summary>
+        <summary>Settings — plain-language model (demo)</summary>
         <div>
-          <label htmlFor="api-key-input">Anthropic API key</label>
+          <label htmlFor="local-llm-url">Model for plain-language intake (demo)</label>
           <p>
-            Optional. AIGate scores use cases without it — the key only enables plain-language
-            intake, smarter duplicate matching, and the narrative summary of a verdict. With no key
-            you use the guided-questions route, which is the deterministic path either way.
+            One model slot, optional. AIGate scores use cases without it — the model only enables
+            plain-language intake; the guided questions are the deterministic path either way.
+            Point it at a model server on this machine (Ollama): your description goes to a local
+            process, never to the internet, the model proposes, and you confirm every field before
+            anything is scored. Expect a 10&ndash;20 second wait on the first request while the
+            model loads.
           </p>
-          <input
-            id="api-key-input"
-            type="password"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder={saved ? 'A key is currently saved in this browser' : 'sk-ant-...'}
-          />
-          <button type="button" onClick={handleSave} disabled={!key.trim()}>
-            Save
-          </button>
-          {saved && (
-            <button type="button" onClick={handleClearKey}>
-              Clear saved key
-            </button>
-          )}
-
-          <label htmlFor="local-llm-url">Local model (free, no API key)</label>
-          <p>
-            Alternative to the key above: a small open model running on this machine via Ollama.
-            Enables the same plain-language intake — your description goes to a local process, never
-            to the internet. It proposes; you confirm every field before anything is scored. Expect
-            rougher first drafts than a frontier model, and a 10–20 second wait on the first request
-            while the model loads. If both this and a key are saved, the key is used.
+          <p className="field-help">
+            Tested with the open-source Qwen&nbsp;3&nbsp;4B. Frontier models produce noticeably
+            better first drafts than a small open model — this demo ships the free local option so
+            nothing leaves this machine; a firm deployment would point the same slot at a stronger
+            model inside its own boundary.
           </p>
           <input
             id="local-llm-url"

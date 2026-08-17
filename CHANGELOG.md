@@ -11,6 +11,22 @@ every verdict.
 
 ---
 
+## [0.8.1] — 2026-08-17
+
+One model slot, honestly framed.
+
+### Changed
+
+- **The vendor API key field is gone.** Settings now has a single generic
+  model slot for plain-language intake — the demo runs on the free local
+  open model that has actually been exercised live (Qwen 3 4B), with a
+  footnote stating plainly that frontier models draft noticeably better
+  and that a firm deployment would point the same slot at a stronger model
+  inside its own boundary. Every screen and document that referenced the
+  vendor key now tells the single-model story.
+
+---
+
 ## [0.8.0] — 2026-08-17
 
 Jurisdictions are confirmed, never assumed. Round 7, from sweep-001's

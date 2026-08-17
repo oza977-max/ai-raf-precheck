@@ -39,7 +39,7 @@ records the human, or says plainly that one is missing.
 
 ```mermaid
 flowchart TD
-    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model (first live run 2026-08-16)<br/>or Claude API (never yet run live)</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
+    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model — one generic model slot<br/>(live since 2026-08-16; frontier<br/>models draft better)</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
     B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
     B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output</i><br/><i>shown back for correction</i>"]
     C --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
@@ -135,20 +135,18 @@ corporate network to block.
 Note that the built page loads as a JavaScript module, so it must be
 *served* — opening `dist/index.html` from the filesystem will not work.
 
-An Anthropic API key is optional and only enables plain-language intake,
-semantic duplicate matching, and a narrative retelling of a verdict. Nothing
+A model is optional and only enables plain-language intake. Nothing
 in the decision path uses it.
 
-**Transparency note:** the plain-language path has two providers, with
-different track records. Against a **local open model** (Ollama; no key, no
-cloud — the description never leaves the machine) it had its **first live run
-on 2026-08-16**: qwen3:4b produced a usable draft graph from a real
-description in ~15 seconds, misreading one field (data zone) — which the
-per-field review screen exists to catch. Against the **live Anthropic API**
-it has still **never been exercised** — every automated test mocks that
-boundary. The guided form remains the most-verified path. If you have a key
-and try the Claude route, you are its first real test — please say what
-happens.
+**Transparency note:** the plain-language path runs on a **local open
+model** (one generic model slot; Ollama, no key, no cloud — the description
+never leaves the machine). First live run **2026-08-16** (qwen3:4b), since
+exercised across a 15-domain sweep (`test/sweep-001.md`): it drafts usable
+graphs and misreads some fields — which the provenance quotes,
+guessed-field questions and per-field review exist to catch. **Frontier
+models draft noticeably better**; a firm deployment points the same slot at
+a stronger model inside its own boundary (e.g. its own cloud). The guided
+form remains the most-verified path.
 
 **Handing this to someone to test?** Send them
 [`docs/tester-guide.md`](docs/tester-guide.md) — what to try, what to

@@ -972,7 +972,7 @@ export default function IntakeFlow() {
                 <p role="alert">{extractionError}</p>
                 <p className="field-help">
                   Nothing was recorded. You can try the extraction again, or describe the use case
-                  again from the start — the guided form is always available without an API key.
+                  again from the start — the guided form is always available without a model configured.
                 </p>
                 <div className="dup-gate__actions">
                   <button type="button" onClick={() => void handleRetryExtraction()}>
