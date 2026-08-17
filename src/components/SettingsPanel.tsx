@@ -15,8 +15,9 @@ import { loadPolicy } from '../store/policy';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { clearAllLocalData } from '../store/reset';
 import { sampleCount, seedSampleRegister } from '../seeds/sample-register';
+import { ibCaseCount, seedIbPortfolio } from '../seeds/ib-portfolio';
 
-type Busy = 'none' | 'seeding' | 'clearing';
+type Busy = 'none' | 'seeding' | 'seeding-ib' | 'clearing';
 
 // Demo-space model configuration (user decision 2026-08-17): ONE generic
 // model slot, no vendor-specific key field. The cloud-SDK code path still
@@ -59,6 +60,27 @@ export default function SettingsPanel() {
     }
   }
 
+  async function handleSeedIb() {
+    if (!policyResult.valid) {
+      setMessage('Cannot load the portfolio — the current policy is invalid.');
+      return;
+    }
+    setBusy('seeding-ib');
+    setMessage(null);
+    try {
+      const seeded = await seedIbPortfolio(policyResult.policy, packs);
+      setMessage(
+        seeded === 0
+          ? 'The investment-bank portfolio is already loaded — nothing added.'
+          : `Added ${seeded} investment-bank use cases across departments, including the 2LoD reviews. Open the register to see them.`
+      );
+    } catch {
+      setMessage('Loading the portfolio failed. See the browser console for details.');
+    } finally {
+      setBusy('none');
+    }
+  }
+
   async function handleClearAll() {
     setBusy('clearing');
     try {
@@ -96,6 +118,17 @@ export default function SettingsPanel() {
           </p>
           <button type="button" onClick={handleSeed} disabled={busy !== 'none'}>
             {busy === 'seeding' ? 'Loading…' : 'Load sample use cases'}
+          </button>
+
+          <p>
+            Or a fuller picture: {ibCaseCount()} investment-bank use cases across Markets,
+            Advisory, Operations, Finance, HR, Technology, Risk, Compliance and Legal — each
+            scored by the real engine, most carrying a full 1LoD→2LoD chain on the audit trail
+            (several are left awaiting sign-off so the reviewer queue has real work, and one
+            carries a rule challenge). Reviewer names are seeded samples, marked as such.
+          </p>
+          <button type="button" onClick={handleSeedIb} disabled={busy !== 'none'}>
+            {busy === 'seeding-ib' ? 'Loading…' : 'Load investment-bank portfolio'}
           </button>
 
           {!confirmingClear && (
