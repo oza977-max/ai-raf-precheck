@@ -146,20 +146,23 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.queryByText(/action required/i)).not.toBeInTheDocument();
   });
 
-  it('D2 (V2-A): lists the jurisdiction packs with the REAL loader state — loaded rule counts, honestly marked pending adoption, never "fired"', () => {
+  it('D2 (V2-A): lists the jurisdiction packs with the REAL loader state — loaded rule counts, honestly marked not signed off, never "fired"', () => {
     render(<PolicyEditor />);
     expect(screen.getByText('Jurisdiction packs', { selector: 'h3' })).toBeInTheDocument();
     expect(screen.getByText('UK')).toBeInTheDocument();
     expect(screen.getByText('EU')).toBeInTheDocument();
-    // V2-A: packs genuinely load now; every chip carries the pending-
-    // adoption qualifier because all sign-offs are [FIRM] placeholders.
-    // V2-F: version suffixes are now -draft (real text retrieved, awaiting
-    // human review) or -unauthored (no primary source retrieved yet), so the
-    // match is on the version shape rather than the old "-proposed" literal.
-    const chips = screen.getAllByText(/loaded — .+\(\d+ rules?, v[\d.]+-\w+\).*· pending adoption/);
-    expect(chips.length).toBeGreaterThanOrEqual(3);
-    // Review fix, pass 1: EU declares TWO packs — both must be visible.
-    expect(screen.getByText(/EU-AIACT \(4 rules, v0\.2-draft\) \+ DORA \(1 rule, v0\.2-draft\)|DORA \(1 rule, v0\.2-draft\) \+ EU-AIACT \(4 rules, v0\.2-draft\)/)).toBeInTheDocument();
+    // User report (2026-08-17): the prior copy packed jargon (loaded/
+    // declared, pack ids, version suffixes) into one unglossed chip per
+    // row. Now a plain-English sentence carries the state; the real
+    // pack id/version detail survives as a secondary, quieter line —
+    // still real data, not hidden, just no longer the primary sentence.
+    const plainLines = screen.getAllByText(/\d+ rules? applying — not yet signed off/);
+    expect(plainLines.length).toBeGreaterThanOrEqual(3);
+    // Review fix, pass 1: EU declares TWO packs — both must be visible in
+    // the secondary detail line.
+    expect(
+      screen.getByText(/EU-AIACT v0\.2-draft \+ DORA v0\.2-draft|DORA v0\.2-draft \+ EU-AIACT v0\.2-draft/),
+    ).toBeInTheDocument();
     // "fired" remains a per-verdict concept (the RA-9 chain), never a
     // static pack state.
     expect(screen.queryByText(/fired/i)).not.toBeInTheDocument();

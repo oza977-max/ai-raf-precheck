@@ -172,6 +172,17 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
       {livePolicy && (
         <div className="policy-view__panel">
           <h3>Jurisdiction packs</h3>
+          {/* User report (2026-08-17): "loaded — SS1-23 (1 rule, v0.2-draft) ·
+              pending adoption" and "declared — no pack file loaded" are
+              engineering states with no gloss — a non-expert can't tell what
+              either means for a verdict. One plain-English sentence up front,
+              once, instead of decoding jargon per row. */}
+          <p className="policy-view__panel-sub">
+            A region either has extra regulatory rules the engine actually applies, or it doesn&apos;t yet — either
+            way, your firm&apos;s own appetite rules always apply. Regulatory rules apply from the moment they load,
+            but every verdict that relies on one is marked provisional until a named person at your firm signs off
+            that it&apos;s a fair reading of the law.
+          </p>
           <ul className="policy-view__packs">
             {livePolicy.jurisdictions.map((j) => {
               // Review fixes (pass 1): a jurisdiction can declare MULTIPLE
@@ -181,20 +192,33 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
               const jurisdictionPacks = packLoad.packs.filter((p) => p.jurisdiction === j.code);
               const fileNames = j.pack_files.map((pf) => pf.split('/').pop() ?? pf);
               const packError = packLoad.errors.find((e) => fileNames.some((fn) => e.file.endsWith(fn)));
+              const totalRules = jurisdictionPacks.reduce((n, p) => n + p.rules.length, 0);
               return (
                 <li key={j.code}>
                   <code className="policy-view__pack-code">{j.code}</code>
                   <span className="policy-view__pack-name">{j.name}</span>
                   {jurisdictionPacks.length > 0 ? (
                     <span className="policy-view__pack-state policy-view__pack-state--loaded">
-                      loaded — {jurisdictionPacks.map((p) => `${p.pack_id} (${p.rules.length} rule${p.rules.length === 1 ? '' : 's'}, v${p.version})`).join(' + ')} · pending adoption
+                      <span className="policy-view__pack-state-plain">
+                        {totalRules} rule{totalRules === 1 ? '' : 's'} applying — not yet signed off
+                      </span>
+                      <span className="policy-view__pack-state-detail">
+                        {jurisdictionPacks.map((p) => `${p.pack_id} v${p.version}`).join(' + ')}
+                      </span>
                     </span>
                   ) : packError ? (
                     <span className="policy-view__pack-state policy-view__pack-state--invalid">
-                      invalid: {packError.reason.slice(0, 60)}
+                      <span className="policy-view__pack-state-plain">
+                        Rulebook file has an error and could not be loaded
+                      </span>
+                      <span className="policy-view__pack-state-detail">{packError.reason.slice(0, 60)}</span>
                     </span>
                   ) : (
-                    <span className="policy-view__pack-state">declared — no pack file loaded</span>
+                    <span className="policy-view__pack-state">
+                      <span className="policy-view__pack-state-plain">
+                        No regulatory rulebook yet — only your firm&apos;s own appetite rules apply here
+                      </span>
+                    </span>
                   )}
                 </li>
               );
