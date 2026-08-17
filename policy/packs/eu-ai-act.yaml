@@ -17,12 +17,22 @@
 # and challenges each condition. Rules carrying a "Reviewer:" note below are
 # the ones drafted with least confidence — start there.
 #
-# TIMING — THIS CHANGED RECENTLY
-# ------------------------------
+# TIMING — REVIEWED 2026-08-17 (tripwire fired: enforcement began)
+# ----------------------------------------------------------------
 # The Digital Omnibus on AI postponed Annex III high-risk obligations from
 # 2 August 2026 to 2 December 2027. The Article 50 transparency obligations
-# were NOT postponed and apply from 2 August 2026. The two TIER rules below
-# are therefore forward-looking; the two TRANS rules bite imminently.
+# were NOT postponed: they are IN FORCE since 2 August 2026, and Commission/
+# national-authority enforcement began the same day (EC press IP/26/1714).
+# The two TIER rules below are forward-looking (Dec 2027); the two TRANS
+# rules are LIVE OBLIGATIONS — a use case tripping them today is tripping
+# current law, not a future deadline.
+#
+# Review log:
+#   2026-08-17 — all four quotes re-verified VERBATIM against source_url
+#   (zero drift); Art 50 in-force status confirmed at source and via the
+#   EC enforcement announcement. Conditions and effects unchanged, so no
+#   re-sign-off is triggered (RA-10: only changed-section rules re-review;
+#   nothing changed except enforcement status, recorded here).
 #
 # WHAT IS DELIBERATELY NOT HERE
 # -----------------------------
@@ -50,7 +60,7 @@ rules:
       section: "Annex III §5(b)"
       text: "AI systems intended to be used to evaluate the creditworthiness of natural persons or establish their credit score, with the exception of AI systems used for the purpose of detecting financial fraud"
       source_url: "https://artificialintelligenceact.eu/annex/3/"
-      retrieved_date: "2026-07-26"
+      retrieved_date: "2026-08-17"
     effect:
       type: "tier_floor"
       minimum_tier: "Critical"
@@ -70,7 +80,7 @@ rules:
       section: "Annex III §4(a)"
       text: "AI systems intended to be used for the recruitment or selection of natural persons, in particular to place targeted job advertisements, to analyse and filter job applications, and to evaluate candidates"
       source_url: "https://artificialintelligenceact.eu/annex/3/"
-      retrieved_date: "2026-07-26"
+      retrieved_date: "2026-08-17"
     effect:
       type: "tier_floor"
       minimum_tier: "Critical"
@@ -85,7 +95,7 @@ rules:
       section: "Article 50(1)"
       text: "Providers shall ensure that AI systems intended to interact directly with natural persons are designed and developed in such a way that the natural persons concerned are informed that they are interacting with an AI system, unless this is obvious from the point of view of a natural person who is reasonably well-informed, observant and circumspect, taking into account the circumstances and the context of use."
       source_url: "https://artificialintelligenceact.eu/article/50/"
-      retrieved_date: "2026-07-26"
+      retrieved_date: "2026-08-17"
     effect:
       type: "required_control"
       control_id: "CTRL-DISCLOSE-01"
@@ -104,7 +114,7 @@ rules:
       section: "Article 50(2)"
       text: "Providers of AI systems, including general-purpose AI systems, generating synthetic audio, image, video or text content, shall ensure that the outputs of the AI system are marked in a machine-readable format and detectable as artificially generated or manipulated."
       source_url: "https://artificialintelligenceact.eu/article/50/"
-      retrieved_date: "2026-07-26"
+      retrieved_date: "2026-08-17"
     effect:
       type: "required_control"
       control_id: "CTRL-SYNTHMARK-01"
