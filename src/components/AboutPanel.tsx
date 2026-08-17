@@ -34,13 +34,13 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         never decide.
       </p>
       <p>
-        Full transparency: the plain-language path has two providers with different track records.
-        With a <strong>local open model</strong> (a small model running on your own machine — free,
-        and your description never leaves it), the path had its first live run on 16&nbsp;August
-        2026: it produced a usable draft graph, with one field misread — which the review screen
-        exists to catch. The <strong>Anthropic API</strong> variant is built and tested against a
-        simulated service but has never yet been run against the real one; if you add a key and use
-        it, you are its first real test. The guided form remains the most-verified path.
+        Full transparency: the plain-language path runs on a <strong>local open model</strong> — a
+        small model on your own machine (tested: Qwen&nbsp;3&nbsp;4B), free, and your description
+        never leaves it. It had its first live run on 16&nbsp;August 2026 and has since been
+        exercised across a 15-domain sweep; it drafts usable graphs and misreads some fields —
+        which the provenance quotes, guessed-field questions and review screen exist to catch.
+        Frontier models draft better; a firm deployment would point the same model slot at a
+        stronger model inside its own boundary. The guided form remains the most-verified path.
       </p>
 
       <h2>It comes with rules — you bring the authority</h2>

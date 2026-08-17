@@ -114,7 +114,7 @@ describe('VerdictDisplay', () => {
   it('shows the exact §7 fallback message when no LLM trace and no policy-based structured summary is available', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={vi.fn()} />);
     expect(
-      screen.getByText(/narrative summary not generated — this optional plain-english retelling needs an anthropic api key/i),
+      screen.getByText(/narrative summary not generated — this optional plain-english retelling needs a configured model/i),
     ).toBeInTheDocument();
   });
 

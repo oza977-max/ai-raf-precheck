@@ -34,14 +34,14 @@ You need nothing installed and no API key.
 1. Open the app. The **New pre-check** screen is the default.
 2. Type a description of the use case in plain language. Two or three sentences
    is enough — what it does, what data it touches, what it decides or actions.
-3. Click **Read & extract**. With no AI configured you go to a guided form
-   instead of an AI extraction; this is the normal path and the better one for
-   a first run. Two AI options exist, set up under **Settings**: a **local
+3. Click **Read & extract**. With no model configured you go to a guided
+   form instead of an AI extraction; this is the normal path and the better
+   one for a first run. One model slot exists under **Settings**: a **local
    open model** running on your own machine (free, no key, the description
-   never leaves your computer — first run live on 16 August 2026, and expect
-   to correct a field or two on the review screen), or an **Anthropic API
-   key** (that variant has never been run against the real service — if you
-   use it, you are its first test). The form remains the most-verified path.
+   never leaves your computer — live since 16 August 2026; expect to correct
+   a field or two on the review screen). Frontier models draft better; the
+   demo ships the free local option. The form remains the most-verified
+   path.
 4. Answer the duplicate check. AIGate searches the register for a use case with
    overlapping characteristics and tells you how many entries it checked.
 5. Fill the guided form. Every field is a business question with plain-English

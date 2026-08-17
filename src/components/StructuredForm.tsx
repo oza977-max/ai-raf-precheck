@@ -229,7 +229,7 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
       <p role="status">
         Guided intake — answer the fields below to describe your use case. No AI is involved in
         reading your answers or in the decision that follows, so the same answers always produce the
-        same outcome. (Adding an API key in Settings unlocks an optional plain-English alternative
+        same outcome. (Configuring a model in Settings unlocks an optional plain-English alternative
         to this form; it changes how the description is read in, not how it is scored.)
       </p>
 

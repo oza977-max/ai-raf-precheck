@@ -893,8 +893,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           </p>
         ) : (
           <p>
-            Narrative summary not generated — this optional plain-English retelling needs an
-            Anthropic API key (Settings). It adds nothing to the outcome above: the rules, citations
+            Narrative summary not generated — this optional plain-English retelling needs a
+            configured model (Settings). It adds nothing to the outcome above: the rules, citations
             and required controls shown on this page are the complete basis for the decision.
           </p>
         )}
