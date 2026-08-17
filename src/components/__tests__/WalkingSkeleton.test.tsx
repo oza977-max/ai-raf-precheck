@@ -78,7 +78,9 @@ describe('Walking Skeleton', () => {
 
     // Step 2: graph extraction happened (real Anthropic tool_use call, mocked at the SDK boundary)
     // and the graph review step renders the extracted node.
-    expect(await screen.findByText(/email drafting model/i)).toBeInTheDocument();
+    // R9: the checklist header also names the card, so the label appears
+    // twice by design — assert at least one, not exactly one.
+    expect((await screen.findAllByText(/email drafting model/i)).length).toBeGreaterThan(0);
 
     // Step 3: proceed — zero uncertain fields means no questions, so the
     // flow lands directly on the real confirmation/attestation screen
@@ -209,7 +211,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
-    expect(await screen.findByText(/risk scoring model/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/risk scoring model/i)).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
 

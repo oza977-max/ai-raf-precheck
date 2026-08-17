@@ -723,6 +723,29 @@ words) with the posture line "precedent informs, the rules decide" on every
 render. Presentation-only; nothing feeds the engine; graph-field similarity
 is recorded out of scope until graphs are persisted (ADR-RL-R3-1).
 
+## 19. Round 9 — The Review Screen Recomposed (R9-SC)
+
+Spec for `requirements/requirements-009.md`; provenance is
+design-review-001's composition verdict ("honest everywhere, legible
+nowhere"). **ADR-IF-R9-1:** legibility is restored by AGGREGATION and
+PRIORITY, never deletion — every R5–R8 disclosure survives; three become
+one-interaction-away or collapsed-with-count. Mechanics: a checklist
+header derived purely from existing review state (`unconfirmedNodeIds` →
+"Confirm <label>", `guessedFields` → "Fix N guessed values on <label>",
+`jurisdictionsConfirmed === false` → "Confirm jurisdictions"), each item
+scroll-focusing its card via DOM ids (`card-<nodeId>`,
+`jurisdictions-panel`); consequence lines render behind a per-card "why
+these matter" toggle (R5-GR-1's fit criterion amended to "displays, or
+reveals in one click" — approved with the round); the card-level
+uncertainty banner is the ONLY warn-styled element on a card (guessed
+markers become quiet badges, plausibility warnings get a distinct advisory
+identity); guessed cards render a "Fix guessed values" affordance opening
+their editor (ADR-IF-R6-2's no-plain-confirm unchanged); the jurisdictions
+panel precedes the similar-cases panel, which collapses to a
+native-details summary carrying its count. Description box is
+CSS-capped with internal scroll (SC-6). No reducer, gate, or audit-path
+change anywhere in the round.
+
 ## 14. Changelog
 
 | Date | Change |
@@ -732,3 +755,4 @@ is recorded out of scope until graphs are persisted (ADR-RL-R3-1).
 | 2026-08-16 | §16 added — round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect). |
 | 2026-08-17 | §17 added — round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`). |
 | 2026-08-17 | §18 added — round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render). |
+| 2026-08-17 | §19 added — round 9 review-screen recomposition (ADR-IF-R9-1: aggregation and priority, never deletion; R5-GR-1 criterion amended with approval). |

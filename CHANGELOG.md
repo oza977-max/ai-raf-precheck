@@ -11,6 +11,48 @@ every verdict.
 
 ---
 
+## [0.10.0] — 2026-08-17
+
+Honest everywhere AND legible: the review screen recomposed. Round 9, from
+the product's first design review ("honest everywhere and legible
+nowhere"). Nothing honest was removed — content became aggregated,
+prioritised, or one click away.
+
+### Added
+
+- **A checklist at the top of the review screen**: "3 steps before you can
+  proceed", each item naming its card and scrolling to it, each vanishing
+  as you complete it. Your to-do list no longer lives inside the error you
+  get for clicking Proceed too early.
+- **"Fix guessed values"** on cards the model guessed at — the card that
+  most needs action no longer looks like the one with no button.
+
+### Changed
+
+- **"Why these values matter" is now one click away** per card, so the
+  two fields needing judgment stop drowning in twelve lines of
+  always-the-same explanation. (The round formally amends the earlier
+  requirement's wording from "displays" to "displays, or reveals in one
+  click" — recorded in requirements-009.)
+- **One alarm per card**: the uncertainty banner is the only loud element;
+  guessed markers became quiet badges; plausibility warnings got their own
+  advisory look so advisory ≠ blocking at a glance.
+- **Required actions come before reading material**: jurisdictions moved
+  above similar decided cases, and similar cases collapse to a one-line
+  count you can expand.
+- Long descriptions scroll inside a capped box instead of pushing the
+  cards below the fold.
+
+### Fixed (delta code review 005)
+
+- The precedent list now refreshes when you correct the graph in place.
+- The sign-off page no longer re-reads the whole register after every
+  action just to redraw an unchanged precedent list.
+- The "never leaves this machine" check now also runs at the exact moment
+  a description is sent, not only when settings are saved.
+
+---
+
 ## [0.9.0] — 2026-08-17
 
 The register starts paying rent: similar decided cases, plus a housekeeping

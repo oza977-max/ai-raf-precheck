@@ -111,6 +111,12 @@ export async function localChatJson(
 ): Promise<LlmResult<unknown>> {
   const url = getLocalLlmUrl();
   if (!url) return { ok: false, error: { kind: 'no-api-key' } };
+  // Delta review 005 finding 3: the probe gates the UI path, but THIS is
+  // where the description is sent — belt and suspenders on the
+  // never-leaves-this-machine promise, whatever wrote the storage key.
+  if (!isLoopbackUrl(url)) {
+    return { ok: false, error: { kind: 'network-error', message: 'refused: configured model address is not on this machine' } };
+  }
   try {
     const res = await fetch(`${url}/api/chat`, {
       method: 'POST',

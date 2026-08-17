@@ -181,7 +181,12 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     return () => {
       cancelled = true;
     };
-  }, [summary]);
+    // Delta review 005 finding 2: keyed on the fields the search READS, not
+    // object identity — load() rebuilds `summary` after every 2LoD action,
+    // and re-reading the whole register to redraw an unchanged list is
+    // waste. eslint disabled deliberately for the same reason.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary?.use_case_id, summary?.label, summary?.description]);
 
   const load = useCallback(async () => {
     const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);

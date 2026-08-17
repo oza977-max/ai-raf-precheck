@@ -51,14 +51,15 @@ function makeGraph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
 }
 
 describe('R5-GR-1 — every decision-bearing field explains itself', () => {
-  it('TC-R5-GR-1-01: meanings are rendered distinct from the raw enum, with a consequence line', () => {
+  it('TC-R5-GR-1-01: meanings render by default; consequences reveal in one click (criterion amended by R9-SC-2)', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
     const { container } = render(<GraphView graph={makeGraph()} />);
     // The meaning, not (only) the enum: Zone C's plain-English reading.
     expect(screen.getAllByText(/inside the firm only/i).length).toBeGreaterThan(0);
-    // Its consequence names why the field matters.
+    // R9-SC-2: consequences are one interaction away, per card.
+    expect(screen.queryByText(/hard lines and zone rules read this field/i)).toBeNull();
+    for (const b of screen.getAllByRole('button', { name: /why these values matter/i })) await user.click(b);
     expect(screen.getAllByText(/hard lines and zone rules read this field/i).length).toBeGreaterThan(0);
-    // Every decision-bearing field on every card carries a consequence line.
-    // 2 input fields + 3 processing + vendor + 7 output = one per rendered row.
     expect(container.querySelectorAll('.graph-node__consequence').length).toBeGreaterThanOrEqual(12);
   });
 
