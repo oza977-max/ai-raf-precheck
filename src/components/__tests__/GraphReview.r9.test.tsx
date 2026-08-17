@@ -157,3 +157,58 @@ describe('R9-SC-4/-5 — actions before information; similar cases collapsed', (
     }
   });
 });
+
+// App-run vs seeded trail comparison (2026-08-17): the form path was
+// missing use_case_created — found by actually driving the app, not by
+// any review. Pinned so it cannot regress.
+describe('form path — the trail records the birth event', () => {
+  it('writes use_case_created with the typed description and structured_form method', async () => {
+    localStorage.clear();
+    sessionStorage.clear(); // no model configured → form path
+    const user = userEvent.setup();
+    render(<IntakeFlow />);
+    await user.type(screen.getByLabelText(/describe your ai use case/i), 'A tool that sorts internal mail queues.');
+    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.click(await screen.findByRole('button', { name: /new use case/i }));
+    // On the guided form now; fill the minimum and submit.
+    await screen.findByText(/guided intake/i);
+    const { getAllForExport } = await import('../../store/audit');
+    // Fill via the form's own controls.
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mail queue sorter');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Sorts internal mail queues.');
+    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
+    const selects = [
+      [/where does that information live/i, 'Zone C'],
+      [/what kind of ai is it/i, 'ml'],
+      [/where does the processing happen/i, 'Zone C'],
+      [/what does its output do/i, 'recommend'],
+      [/who sees what it produces/i, 'internal-only'],
+      [/how much does the output drive/i, 'advisory'],
+      [/can what it does be undone/i, 'reversible'],
+      [/how widely will it run/i, 'at_scale'],
+    ] as const;
+    for (const [label, value] of selects) {
+      const el = screen.queryByLabelText(label);
+      if (el) await user.selectOptions(el, value);
+    }
+    // Fallback: set any remaining required selects generically by id.
+    for (const [id, value] of [
+      ['sf-input-data-zone', 'Zone C'], ['sf-model-type', 'ml'], ['sf-processing-zone', 'Zone C'],
+      ['sf-action-type', 'recommend'], ['sf-exposure', 'internal-only'], ['sf-bindingness', 'advisory'],
+      ['sf-reversibility', 'reversible'], ['sf-scale', 'at_scale'],
+    ] as const) {
+      const el = document.getElementById(id) as HTMLSelectElement | null;
+      if (el && !el.value) await user.selectOptions(el, value);
+    }
+    await user.click(document.getElementById('sf-jurisdiction-none')!);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await screen.findByText(/review extracted graph/i);
+
+    const created = (await getAllForExport()).filter((e) => e.payload.type === 'use_case_created');
+    const mine = created.find(
+      (e) => e.payload.type === 'use_case_created' && e.payload.description.includes('sorts internal mail queues'),
+    );
+    expect(mine).toBeDefined();
+    expect(mine!.payload.type === 'use_case_created' && mine!.payload.intake_method).toBe('structured_form');
+  });
+});

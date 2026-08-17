@@ -1059,7 +1059,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
             platforms={policyResult.valid ? policyResult.policy.platforms ?? [] : []}
             vendors={policyResult.valid ? policyResult.policy.vendors ?? [] : []}
-            onSubmit={(graph) => dispatch({ type: 'GRAPH_EXTRACTED', graph, useCaseId: crypto.randomUUID() })}
+            onSubmit={(graph) => {
+              const useCaseId = crypto.randomUUID();
+              // App-run vs seeded trail comparison (2026-08-17) found the
+              // form path never wrote use_case_created — the submitter's
+              // original description and intake method were missing from
+              // the trail on the MOST-USED path, while the LLM path wrote
+              // them. Same event, same shape, written at the same moment
+              // the use case gains its id.
+              void appendAuditEvent({
+                event_id: crypto.randomUUID(),
+                use_case_id: useCaseId,
+                event_type: 'use_case_created',
+                occurred_at: new Date().toISOString(),
+                actor: getRole(),
+                payload: {
+                  type: 'use_case_created',
+                  description: 'description' in state ? state.description : '',
+                  intake_method: 'structured_form',
+                },
+              });
+              dispatch({ type: 'GRAPH_EXTRACTED', graph, useCaseId });
+            }}
           />
         )}
 
