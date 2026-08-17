@@ -1,4 +1,5 @@
-# Handover — 2026-08-15 (updated 2026-08-16, post-v0.4.0)
+# Handover — 2026-08-15 (updated 2026-08-17, post-v0.9.0 — read the
+# CURRENT STATE block below first; sections beneath it age progressively)
 
 Written at the user's request before a context clear, replacing the 2026-08-07
 handover in full; **updated in place after the v0.4.0 session resolved the
@@ -8,6 +9,42 @@ verified by command where it's a claim about state. Read this top to bottom
 before doing anything.
 
 ---
+
+## CURRENT STATE (2026-08-17) — supersedes the tables below
+
+**v0.9.0+ live, 537 tests, CI green on GitHub (first run 2026-08-17).**
+Since the sections below were written, five releases shipped in two days:
+
+- **v0.5.0** — local open model (qwen3:4b via Ollama, one generic slot;
+  loopback-only ENFORCED). First-ever live LLM run. `src/llm/local-provider.ts`.
+- **v0.6.0** — explainable graph review: per-field plain-English meanings +
+  consequences (field-copy.ts is the single copy source), per-card confirm
+  gate, plausibility warnings (engine/plausibility.ts), jurisdiction junk
+  filter. intake-flow.md §15.
+- **v0.7.0/0.7.1** — provenance quotes mechanically verified as substrings
+  (fabricated → guessed → mandatory questions); ANSWERS NOW WRITE BACK as
+  corrections (10th computed-never-consumed defect, found+fixed);
+  questionnaire rebuilt (plain-English buttons, undo, honest counts,
+  validation gate coerceAnswerValue). §16, ADR-IF-R6-1..3.
+- **v0.8.0/0.8.1** — jurisdictions confirmed never assumed (panel + gate,
+  §17); vendor API key UI REMOVED — one generic model slot (user decision).
+- **v0.9.0** — similar decided cases (engine/precedent.ts, appetite
+  vocabulary, "precedent informs, the rules decide", §18); 'inform' action
+  type; CI enabled; code-review-004 + first doc review, ALL findings fixed;
+  judge-001 ran (1/11 — schema field-order artifact, reason-first rerun is
+  the recorded next step, FN-009); 15-case domain sweep (test/sweep-001.md).
+- **Docs**: README rebuilt for first contact (worked example, moat block,
+  component map); docs/policy-to-yaml.md conversion guide; per-jurisdiction
+  regulatory tripwires (design-vision, private) + FN-010; EU pack reviewed
+  2026-08-17 (quotes verbatim, Art 50 live law); MAS pack deliberately
+  deferred to final Guidelines (consultation stage).
+- **In flight at handover time**: delta code review (post-004 code) + first
+  DESIGN review (is the accumulated review screen still one screen?) — the
+  design findings are expected R9 material alongside FN-010.
+- **Requirements rounds 004–008 all built, 100% traced at birth.**
+- Gotchas added since: reasoning models + schema-forced decoding loop
+  (/no_think + num_predict guards); GitHub workflow-scope needed for CI
+  pushes (granted 2026-08-17); preview-pane profiles lose localStorage.
 
 ## What this product is
 
