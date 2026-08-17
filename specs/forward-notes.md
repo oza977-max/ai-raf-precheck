@@ -5,6 +5,33 @@ marked, never deleted.
 
 ---
 
+## FN-010 — Packs should carry their own tripwires (review_trigger in YAML)
+
+**Raised by:** horizon scan, 2026-08-17 (MAS release prompted it; the EU
+pack was found stale against the Aug-2026 enforcement start and the
+May-2026 deadline-delay agreement). **Status:** OPEN — R9 candidate.
+
+**The idea.** Every pack is a standing claim about a moving target, so each
+should name the specific future EVENT that invalidates or completes it — an
+optional `review_trigger` field per pack (event description + action),
+surfaced in the UI ("this pack is watching for: the RFI outcome on the
+generative-AI exclusion") and on verdicts relying on the pack. Event-shaped,
+not calendar-shaped: "check quarterly" decays into ritual; a named trigger
+fires once, with the action attached.
+
+**Why it fits the product:** the verdict already expires when its
+assumptions move (standing conditions); the rulebook should expire the same
+way, visibly. Regulatory staleness would become something a reviewer SEES on
+the verdict, not something a maintainer remembers privately.
+
+**Until built:** the per-jurisdiction tripwire table lives in the private
+monitoring notes (all seven jurisdictions covered, 2026-08-17). The one
+firing NOW: the EU pack needs a dated review against the 2026-08-02
+enforcement start and the May-2026 deadline changes — its rules were
+drafted 2026-07-26, before both.
+
+---
+
 ## FN-009 — The advisory dissent panel: human half built, machine half deliberately deferred
 
 **Raised by:** Haize Labs references sent by the user (2026-08-15):
