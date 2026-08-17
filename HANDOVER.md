@@ -42,6 +42,13 @@ Since the sections below were written, five releases shipped in two days:
   DESIGN review (is the accumulated review screen still one screen?) — the
   design findings are expected R9 material alongside FN-010.
 - **Requirements rounds 004–008 all built, 100% traced at birth.**
+- **v0.10.0/0.11.x since**: R9 review-screen recomposition (design-review
+  driven); IB portfolio seed (16 cases, 1LoD→2LoD chains, one-click, live);
+  two cases app-driven end-to-end which exposed + fixed the form path's
+  missing use_case_created event. **R10 agreed, not built** (see
+  design-vision competitive note): challenge-memo export, inherent/residual
+  vocabulary, design/operating control effectiveness. User has more ideas
+  incoming — bundle before building.
 - Gotchas added since: reasoning models + schema-forced decoding loop
   (/no_think + num_predict guards); GitHub workflow-scope needed for CI
   pushes (granted 2026-08-17); preview-pane profiles lose localStorage.
