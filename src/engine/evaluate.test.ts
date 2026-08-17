@@ -45,6 +45,231 @@ describe('evaluate — TC-PE-1-01 determinism', () => {
   });
 });
 
+describe('evaluate — TC-R11-MG-1 determinism with declared_model_id present', () => {
+  it('produces an identical result across 10 runs with declared_model_id present [TC-R11-MG-1]', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id: 'qwen3:4b',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const results = Array.from({ length: 10 }, () => evaluate(g, policy));
+    const first = JSON.stringify(results[0]);
+    for (const r of results) expect(JSON.stringify(r)).toBe(first);
+  });
+});
+
+describe('evaluate — TC-R11-MG-2 model governance review', () => {
+  it('an unlisted declared_model_id trips a model governance review [TC-R11-MG-2]', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id: 'totally-unlisted-model-xyz',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.downstream_reviews.some((r) => r.includes('totally-unlisted-model-xyz'))).toBe(true);
+    }
+  });
+
+  it('a declared_model_id present but is_approved: false trips a model governance review [TC-R11-MG-3]', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id: 'qwen3:4b',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    // policy/appetite.yaml ships qwen3:4b with is_approved: false (honest demo posture).
+    if (result.ok) {
+      expect(result.value.downstream_reviews.some((r) => r.includes('qwen3:4b'))).toBe(true);
+    }
+  });
+
+  it('a declared_model_id present and is_approved: true does NOT trip a model governance review [TC-R11-MG-4]', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id: 'VENDOR-LLM-v1',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.downstream_reviews.some((r) => r.includes('VENDOR-LLM-v1'))).toBe(false);
+    }
+  });
+
+  it('no rendered downstream_review string matches the reserved-word regex [TC-R11-MG-5]', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id: 'totally-unlisted-model-xyz',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      for (const r of result.value.downstream_reviews) {
+        expect(r).not.toMatch(/approved|rejected/i);
+      }
+    }
+  });
+});
+
+describe('evaluate — TC-R11-MG-1a model-family fallback', () => {
+  const FAMILY_ONLY_MODELS = [
+    { model_id: 'gpt-4o-family', vendor: 'OpenAI', provenance_class: 'vendor_hosted' as const, is_approved: true, is_family: true, version_pattern: 'gpt-4o-' },
+  ];
+
+  function familyGraph(declared_model_id: string, extra: Partial<DataFlowGraph['processing_nodes'][number]> = {}) {
+    return graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'x',
+          model_type: 'ml',
+          autonomy_level: 2,
+          data_zone: 'Zone B',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          declared_model_id,
+          ...extra,
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-shared', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+  }
+
+  it('a family-only registry approves a differently-versioned declared_model_id with no exact entry [TC-R11-MG-1a-1]', () => {
+    const p: PolicyFile = { ...policy, approved_models: FAMILY_ONLY_MODELS };
+    const g = familyGraph('gpt-4o-2026-08-01');
+    const result = evaluate(g, p);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.downstream_reviews.some((r) => r.includes('gpt-4o-2026-08-01'))).toBe(false);
+    }
+  });
+
+  it('an exact-id entry still wins over an overlapping family entry when both match [TC-R11-MG-1a-2]', () => {
+    const p: PolicyFile = {
+      ...policy,
+      approved_models: [
+        ...FAMILY_ONLY_MODELS,
+        { model_id: 'gpt-4o-2026-08-01', vendor: 'OpenAI', provenance_class: 'vendor_hosted', is_approved: false },
+      ],
+    };
+    const g = familyGraph('gpt-4o-2026-08-01');
+    const result = evaluate(g, p);
+    expect(result.ok).toBe(true);
+    // The exact entry is unapproved (is_approved: false), so even though the
+    // family entry above approves the same prefix, the exact entry must win.
+    if (result.ok) {
+      expect(result.value.downstream_reviews.some((r) => r.includes('gpt-4o-2026-08-01'))).toBe(true);
+    }
+  });
+
+  it('no family match and no exact match still reports unlisted with existing wording [TC-R11-MG-1a-3]', () => {
+    const p: PolicyFile = { ...policy, approved_models: FAMILY_ONLY_MODELS };
+    const g = familyGraph('claude-opus-9000');
+    const result = evaluate(g, p);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        result.value.downstream_reviews.some((r) => r.includes('claude-opus-9000') && r.includes('is not on the firm\'s model registry within appetite')),
+      ).toBe(true);
+    }
+  });
+
+  it("family approval alone does not suppress Track II's version-pinning control (INV-TRACK2-01 / CTRL-FINGERPRINT-01) [TC-R11-MG-1a-4]", () => {
+    const p: PolicyFile = { ...policy, approved_models: FAMILY_ONLY_MODELS };
+    const g = familyGraph('gpt-4o-2026-08-01');
+    const result = evaluate(g, p);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Track II's pinning requirement fires off graph attributes (model_type,
+      // decision_bindingness) alone — family approval of the model itself must
+      // not change that. Confirms it is present here regardless of the model
+      // being family-approved.
+      expect(result.value.controls).toContain('CTRL-FINGERPRINT-01');
+    }
+  });
+
+  it('produces an identical result across 10 runs with family entries present [TC-R11-MG-1a-5]', () => {
+    const p: PolicyFile = {
+      ...policy,
+      approved_models: [
+        ...FAMILY_ONLY_MODELS,
+        { model_id: 'qwen3:4b', vendor: 'local (Ollama)', provenance_class: 'open_weights_self_hosted', is_approved: false },
+      ],
+    };
+    const g = familyGraph('gpt-4o-2026-08-01');
+    const results = Array.from({ length: 10 }, () => evaluate(g, p));
+    const first = JSON.stringify(results[0]);
+    for (const r of results) expect(JSON.stringify(r)).toBe(first);
+  });
+});
+
 describe('evaluate — TC-PE-4-01 hard line trip', () => {
   it('returns immediate rejected with no controls solved when a hard line trips [TC-PE-4-02] [TC-PE-4-03]', () => {
     const g = graph({

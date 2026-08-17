@@ -1,7 +1,8 @@
 import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
-import { addNode, addEdge, getUseCase } from '../store/register';
+import { addNode, addEdge, addUseCaseModelLink, getUseCase } from '../store/register';
 import { append } from '../store/audit';
+import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
@@ -35,6 +36,11 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
       data_zone: 'Zone B',
       vendor: 'Anthropic',
       replaces_prior_model: false,
+      // R11-MG-3 / ADR-RL-R11-2 (register-lifecycle.md §16): "the gate gates
+      // its gatekeeper" — the self-assessment declares its own runtime model
+      // through the same declared_model_id mechanism any other use case
+      // would use, no special-cased write path.
+      declared_model_id: localLlmEnabled() ? DEFAULT_LOCAL_LLM_MODEL : 'none declared',
     },
   ],
   output_nodes: [
@@ -201,4 +207,11 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
     edge_type: 'provided_by_vendor',
     created_at: now,
   });
+
+  // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
+  // case's confirmation uses — no special-cased write.
+  const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
+  if (declaredModelNode) {
+    await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
+  }
 }

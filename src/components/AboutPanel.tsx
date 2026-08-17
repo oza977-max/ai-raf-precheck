@@ -58,18 +58,32 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         the app ships a complete one and makes owning it a deliberate act instead of a default.
       </p>
 
-      <h2>Who wrote the rules</h2>
-      <p>Every rule traces to one of two sources, and the verdict shows which:</p>
+      <h2>The three levers</h2>
+      <p>
+        Every verdict traces to exactly one of three sources — and they do not all have the same power.
+        <strong> Appetite decides. Law decides, where it applies. Knowledge only challenges.</strong>
+      </p>
       <ul>
         <li>
-          <strong>The firm&rsquo;s own appetite</strong> — a framework signed off at board level,
-          translated into a plain, commented rules file a risk manager can read and edit.
+          <strong>The firm&rsquo;s own appetite</strong> — decides. A framework signed off at board
+          level, translated into a plain, commented rules file a risk manager can read and edit.
         </li>
         <li>
-          <strong>Regulation</strong> — SS1/23 (UK), SR 26-2 (US), the EU AI Act and DORA, each rule
-          quoting the verbatim regulatory text it derives from, each pack requiring a named human
-          sign-off. Until your firm adopts a pack, verdicts that rely on it are marked provisional — the
-          tool says so rather than hiding it.
+          <strong>Jurisdiction packs</strong> — decide, where the law applies. SS1/23 (UK), SR 26-2 (US),
+          the EU AI Act and DORA, each rule quoting the verbatim regulatory text it derives from, each
+          pack requiring a named human sign-off. Until your firm adopts a pack, verdicts that rely on it
+          are marked provisional — the tool says so rather than hiding it.
+        </li>
+        <li>
+          <strong>Risk knowledge</strong> — informs, never decides. A curated lens against the{' '}
+          <a href="https://airisk.mit.edu/" target="_blank" rel="noreferrer">
+            MIT AI Risk Repository
+          </a>
+          &rsquo;s public domain taxonomy (CC BY 4.0). Where a use case&rsquo;s shape matches a known risk
+          class the firm&rsquo;s own rules are silent on, it says so beside the verdict — and one tap
+          files that gap into the rule-improvement queue for a human rule-author to consider. Its schema
+          has no field capable of expressing a tier, control, or verdict effect; it cannot decide even by
+          accident.
         </li>
       </ul>
       <p>

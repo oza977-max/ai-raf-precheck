@@ -24,9 +24,13 @@ defensible in front of a supervisor.
 
 ---
 
-## 2. Two rule sets, and the big one is yours
+## 2. Three levers, and only two of them decide
 
-This is the point most people miss on first contact.
+This is the point most people miss on first contact. **Appetite decides.
+Law decides, where it applies. Knowledge only challenges** — and that third
+one is new (round 11), added because the first two answer "who says no?"
+and nothing answered "what does the world already know can go wrong with
+a use case shaped like this?"
 
 **Your appetite — `policy/appetite.yaml`.** Five hard lines, five track
 rules, four tier rules, fourteen invariants, fourteen controls. This does
@@ -68,6 +72,39 @@ how you reason about risk, not a test you can run.
 A count of rules is therefore a terrible measure of coverage. The right
 question is *"has anything ever been decided differently because of this
 regulation, and is that difference encoded?"*
+
+---
+
+## 2a. The third lever — knowledge, and its honest boundary
+
+**Risk knowledge — `grounding/risk-knowledge.yaml`.** Not a pack, not part
+of the appetite file, its own schema. Entries are curated against the [MIT
+AI Risk Repository](https://airisk.mit.edu/)'s public domain taxonomy
+(Slattery et al., MIT FutureTech; CC BY 4.0; 1,700+ risks from 65
+frameworks). Where a use case's shape matches a known risk class, the
+review and sign-off screens show it, named, beside the verdict — never
+inside it.
+
+Its schema has no field that can express a tier, control, hard line, or
+verdict effect. That is not a policy choice a future edit could quietly
+relax — the type itself has no such field, so a rule author cannot smuggle
+a deciding effect in even by accident (`parseKnowledgeLens` rejects any
+unrecognised key). `evaluate()`'s decision output is byte-identical whether
+this file is loaded or not, and a test asserts it.
+
+**The honest boundary, stated plainly:** this file is curated by a person,
+by hand, against a taxonomy someone else maintains. It is a snapshot, not a
+live sync. The MIT repository updates quarterly; this file updates when a
+person re-reads it and decides what changed. That gap is a monitoring-loop
+tripwire (re-review on each MIT update), not something the tool hides —
+where the lens is silent on a use case's actual risk, the tool says
+nothing, and silence is not the same claim as "no risk here."
+
+Where a matched entry's risk class has no covering rule, the panel says so
+and files a coverage-gap into the same rule-improvement queue a reviewer's
+dissent already feeds — knowledge becoming rule-authoring fuel through the
+one channel that already turns disagreement into a human decision, never
+an automatic one.
 
 ---
 

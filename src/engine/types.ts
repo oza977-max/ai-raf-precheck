@@ -155,6 +155,13 @@ export interface ProcessingNode {
   platform?: string;
   replaces_prior_model: boolean;
   uncertain?: boolean;
+  // R11-MG-2: which model this node declares, sourced from the policy's
+  // approved_models registry (or free-text "not listed — name it" on the
+  // form path). Optional so every pre-R11 graph remains valid. The engine
+  // resolves this against policy.approved_models the same way vendor/
+  // platform declarations resolve against their registries — an absent or
+  // unapproved entry is reported, never silently accepted.
+  declared_model_id?: string;
 }
 
 export interface OutputNode {
@@ -429,7 +436,33 @@ export interface PolicyFile {
   // PV-1/PV-2: optional so every existing policy still loads unchanged.
   platforms?: RegistryEntry[];
   vendors?: RegistryEntry[];
+  // R11-MG-1 (ADR-PS-R11-1, policy-schema.md §10a): the approved-model
+  // registry. Optional so every pre-R11 policy still loads unchanged.
+  approved_models?: ApprovedModel[];
 
+}
+
+// R11-MG-1 (policy-schema.md §10a). `is_approved: false` entries are valid
+// and expected — provenance class is an attribute the firm's rules judge,
+// never itself a hardcoded penalty (requirements-011.md R11-MG-2).
+export interface ApprovedModel {
+  model_id: string;
+  vendor: string;
+  provenance_class: 'vendor_hosted' | 'open_weights_self_hosted' | 'fine_tuned_in_house';
+  is_approved: boolean;
+  license_note?: string;
+  benchmark_evidence?: {
+    suite: string;
+    date: string;
+    finance_domain: boolean;
+    detail?: string;
+  };
+  // R11-MG-1a (mid-build amendment): mutually exclusive with an entry
+  // keyed purely by model_id — a FAMILY entry approves a version pattern
+  // rather than one pinned string. model_id on a family entry is the
+  // family's own label (e.g. "gpt-4o-*"), not a real model string.
+  is_family?: boolean;
+  version_pattern?: string; // prefix match, e.g. "gpt-4o-" — no regex, no dynamic code (ADR-002 discipline)
 }
 
 export interface TranslationAttestation {

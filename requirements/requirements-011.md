@@ -78,6 +78,31 @@ is an ATTRIBUTE the firm's rules judge, never a hardcoded penalty.
 **R11-MG-3 (Must):** AIGate's own self-assessment shall declare its own
 runtime model through this mechanism (dogfood: the gate gates its gatekeeper).
 
+**R11-MG-1a (Must, added mid-round 2026-08-17 — deliberate renegotiation,
+approved with this round, recorded here per the R9-SC-2 precedent for
+amending a requirement already in flight):** A registry entry may approve
+a **model family** (vendor + a version-matching rule — e.g. a prefix or
+pattern, not a single pinned string) instead of, or in addition to, an
+exact `model_id`. **Why:** an approved-model list keyed only to exact
+version strings goes stale the moment a vendor ships a point release —
+every new string reads as "unlisted" even though it is the same
+commitment the firm actually approved. Matching is exact-id-first,
+family-fallback: a graph's `declared_model_id` that matches an exact entry
+uses that entry's approval; otherwise it is checked against family
+patterns; otherwise it is unlisted. **This does not weaken the Track II
+version-pinning requirement already in the RAF (§9, "zero tolerance for
+unmonitored model change on Track II")** — family-level approval governs
+whether a model may be used AT ALL; Track II's existing silent-substitution
+control still requires a specific pinned version as evidence, independent
+of family approval. Family matching is itself deterministic (same pattern
+language as the existing condition operators — no regex, no dynamic code).
+
+> Fit criterion (R11-MG-1a): a registry with only a family entry approves
+> a matching but differently-versioned `declared_model_id`; an exact-id
+> entry still takes precedence over an overlapping family entry when both
+> are present; Track II's pinning requirement is unaffected by family
+> approval (still requires its own evidence).
+
 > Fit criteria: registry loads/validates; both intake paths capture the
 > model; an unapproved model produces the invariant + control in the
 > verdict; the self-assessment names the demo model; register `ai_model`
@@ -165,6 +190,7 @@ curation is versioned, and the lens is only as current as its last sync
 |---|---|---|
 | R11-RAF-1 | Model-approval + risk-knowledge positions added to RAF prose + extraction first | Must |
 | R11-MG-1 | Approved-model registry in policy with provenance class + benchmark evidence | Must |
+| R11-MG-1a | Model-FAMILY approval (vendor + version pattern), exact-id-first fallback; Track II pinning unaffected | Must |
 | R11-MG-2 | Intake asks WHICH model; unapproved/unlisted trips invariant; provenance is an attribute rules judge | Must |
 | R11-MG-3 | Self-assessment declares its own runtime model | Must |
 | R11-KL-1 | Curated knowledge file, own schema, structurally incapable of deciding | Must |
@@ -180,3 +206,5 @@ curation is versioned, and the lens is only as current as its last sync
 | Date | Change |
 |---|---|
 | 2026-08-17 | Round 11 drafted — the third lever, full-pipeline round. Awaiting approval. |
+| 2026-08-17 | R11-MG-1a added mid-build: model FAMILIES (vendor + version pattern), not only exact-version strings — user feedback that a registry pinned to exact model IDs goes stale the moment a vendor ships a point release. Track II's existing version-pinning requirement is unaffected. |
+| 2026-08-17 | Built and shipped in v0.13.0 — full scope except R11-KL-4 (coverage-map document, a Should, deferred). |

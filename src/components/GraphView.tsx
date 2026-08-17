@@ -161,6 +161,8 @@ function NodeCard({
   const record = node as unknown as Record<string, unknown>;
 
   const vendor = 'vendor' in node ? (node as ProcessingNode).vendor : null;
+  const declaredModelId =
+    'declared_model_id' in node ? ((node as ProcessingNode).declared_model_id ?? null) : null;
 
   return (
     <div id={`card-${node.id}`} className="graph-node" data-uncertain={uncertain ? 'true' : 'false'} data-unconfirmed={unconfirmed ? 'true' : 'false'}>
@@ -238,6 +240,24 @@ function NodeCard({
                   </span>
                 ) : null}
                 {showWhy && <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>}
+              </dd>
+            </div>
+          )}
+          {declaredModelId !== null && (
+            <div className="graph-node__meaning-row">
+              <dt>model</dt>
+              <dd>
+                <span className="graph-node__meaning">{declaredModelId}</span>
+                {quotes.declared_model_id ? (
+                  <span className="graph-node__basis">based on: &ldquo;{quotes.declared_model_id}&rdquo;</span>
+                ) : guessed.includes('declared_model_id') ? (
+                  <span className="graph-node__guessed-badge">
+                    guessed — the description does not say. Correct it, or it becomes a question.
+                  </span>
+                ) : null}
+                {showWhy && (
+                  <span className="graph-node__consequence">{FIELD_CONSEQUENCES.declared_model_id}</span>
+                )}
               </dd>
             </div>
           )}

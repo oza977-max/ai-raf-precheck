@@ -113,6 +113,10 @@ export const FIELD_CONSEQUENCES: Record<string, string> = {
   model_type: 'What kind of AI this is. Generative and agentic models attract extra oversight rules.',
   autonomy_level: 'How much happens without a person. Levels 3–4 trigger the strictest oversight.',
   vendor: 'Ties the case to vendor approval status — an unapproved vendor changes the outcome.',
+  // R11-MG-2. Reserved-word discipline (CLAUDE.md, /approved|rejected/i):
+  // "on the firm's model registry within appetite" says the same thing as
+  // "approved" without the banned word reaching a rendered string.
+  declared_model_id: 'Ties the case to the model governance registry — a model not on the firm\'s registry within appetite triggers a review.',
   action_type: 'What the output does in the world. Acting or signing off alone is treated far more strictly than drafting or suggesting.',
   exposure: 'Who sees the output. Client- and market-facing exposure raises the stakes.',
   decision_bindingness: 'How much the output drives the decision. Binding output is treated as the decision itself.',

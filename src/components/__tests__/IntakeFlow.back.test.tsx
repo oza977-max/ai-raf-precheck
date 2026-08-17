@@ -159,6 +159,8 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     await user.click(screen.getByLabelText(/united kingdom/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /proceed/i }));
@@ -204,6 +206,8 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     await user.click(screen.getByLabelText(/united kingdom/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /proceed/i }));

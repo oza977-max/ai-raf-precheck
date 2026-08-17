@@ -1146,9 +1146,18 @@ async function runSelfAssessment(
       </tbody>
     </table>
 
-    <h2 id="changelog-r3">16. Changelog</h2>
+    <h2 id="r11-dormant-schema">16. Round 11 &mdash; The Dormant Schema, Consumed (R11-MG-3)</h2>
+
+    <p>Spec for <code>requirements/requirements-011.md</code>. &sect;4.1&rsquo;s <code>ai_model</code> node type and &sect;4.2&rsquo;s <code>uses_model</code> edge type have existed since the register&rsquo;s first schema and were never once instantiated &mdash; CLAUDE.md&rsquo;s standing gotcha (&ldquo;a field that is computed but never consumed is a bug in waiting&rdquo;), caught before it caused one.</p>
+
+    <p><strong>ADR-RL-R11-1 &mdash; an <code>ai_model</code> node is written once per distinct declared model, keyed by <code>model_id</code>, and reused across use cases.</strong> At graph confirmation (the same write already producing the <code>use_case</code> node), <code>addUseCaseModelLink(processingNode)</code> checks the register for an existing <code>ai_model</code> node with that <code>model_id</code>; if absent, it writes one (<code>vendor</code>, <code>is_approved</code> read from the policy registry at write time &mdash; a snapshot, not a live join, consistent with the append-only discipline elsewhere) before writing the <code>uses_model</code> edge. A regression test (<code>register.model-nodes.test.ts</code>) asserts that submitting two use cases on the same model produces exactly one <code>ai_model</code> node and two edges &mdash; the dormancy-repeat guard named in the fit criteria.</p>
+
+    <p><strong>ADR-RL-R11-2 &mdash; the self-assessment declares its own model through the same path.</strong> AIGate&rsquo;s self-assessment use case (LC-6, &sect;9) names its runtime model (<code>qwen3:4b</code> when the local provider is active, else &ldquo;none declared&rdquo;) on its processing node exactly as any other use case would &mdash; no special-cased write path, per the existing &ldquo;the gate gates its gatekeeper&rdquo; framing.</p>
+
+    <h2 id="changelog-r3">17. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
       <tr><td>2026-07-29</td><td>&sect;15 added &mdash; round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today&rsquo;s policy.</td></tr>
+      <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 11. ADR-RL-R11-1 consumes the dormant <code>ai_model</code>/<code>uses_model</code> schema (deduped by <code>model_id</code>); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path.</td></tr>
     </tbody></table>
   </main>
 

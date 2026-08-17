@@ -142,9 +142,33 @@ const RegistryEntrySchema = z.object({
   coupled_clusters: z.array(z.array(z.string().min(1))).optional(),
 });
 
+// R11-MG-1 (policy-schema.md §10a, ADR-PS-R11-1). Unknown provenance_class
+// values are rejected by the enum — no unlisted class silently passes.
+const ApprovedModelSchema = z.object({
+  model_id: z.string().min(1),
+  vendor: z.string().min(1),
+  provenance_class: z.enum(['vendor_hosted', 'open_weights_self_hosted', 'fine_tuned_in_house']),
+  is_approved: z.boolean(),
+  license_note: z.string().optional(),
+  benchmark_evidence: z
+    .object({
+      suite: z.string().min(1),
+      date: z.string(),
+      finance_domain: z.boolean(),
+      detail: z.string().optional(),
+    })
+    .optional(),
+  // R11-MG-1a (policy-schema.md §10a, ADR-PS-R11-1a): family-fallback
+  // approval fields. Optional so every pre-R11-MG-1a policy stays valid.
+  is_family: z.boolean().optional(),
+  version_pattern: z.string().optional(),
+});
+
 const PolicyFileSchema = z.object({
   platforms: z.array(RegistryEntrySchema).optional(),
   vendors: z.array(RegistryEntrySchema).optional(),
+  // R11-MG-1: optional so every pre-R11 policy still loads unchanged.
+  approved_models: z.array(ApprovedModelSchema).optional(),
   version: z.string(),
   policy_id: z.string(),
   firm_name: z.string(),
@@ -390,6 +414,15 @@ export function loadPolicy(yaml: string): PolicyValidationResult {
 
   if (errors.length > 0) {
     return { valid: false, errors, warnings };
+  }
+
+  // R11-MG-1 (ADR-PS-R11-1): sorted by model_id before validation completes
+  // — same determinism discipline (NF-1) every other policy collection
+  // already follows (evaluate.ts's sortedById()).
+  if (policy.approved_models) {
+    policy.approved_models = [...policy.approved_models].sort((a, b) =>
+      a.model_id.localeCompare(b.model_id),
+    );
   }
 
   return { valid: true, policy, warnings };

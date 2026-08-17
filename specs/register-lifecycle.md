@@ -634,8 +634,36 @@ work.
 | R3-RD-4 | §15.1 | TC-R3-RD-4-01 |
 | R3-NF-2 | §15.3 | TC-R3-NF-2-01, -02 |
 
-## 16. Changelog
+## 16. Round 11 — The Dormant Schema, Consumed (R11-MG-3)
+
+Spec for `requirements/requirements-011.md`. §4.1's `ai_model` node type
+and §4.2's `uses_model` edge type have existed since the register's first
+schema and were never once instantiated — CLAUDE.md's standing gotcha ("a
+field that is computed but never consumed is a bug in waiting"), caught
+before it caused one.
+
+**ADR-RL-R11-1 — an `ai_model` node is written once per distinct declared
+model, keyed by `model_id`, and reused across use cases.** At graph
+confirmation (the same write already producing the `use_case` node),
+`addUseCaseModelLink(processingNode)` checks the register for an existing
+`ai_model` node with that `model_id`; if absent, it writes one (`vendor`,
+`is_approved` read from the policy registry at write time — a snapshot,
+not a live join, consistent with the append-only discipline elsewhere)
+before writing the `uses_model` edge. A regression test
+(`register.model-nodes.test.ts`) asserts that submitting two use cases on
+the same model produces exactly one `ai_model` node and two edges — the
+dormancy-repeat guard named in the fit criteria.
+
+**ADR-RL-R11-2 — the self-assessment declares its own model through the
+same path.** AIGate's self-assessment use case (LC-6, §9) names its
+runtime model (`qwen3:4b` when the local provider is active, else "none
+declared") on its processing node exactly as any other use case would —
+no special-cased write path, per the existing "the gate gates its
+gatekeeper" framing.
+
+## 17. Changelog
 
 | Date | Change |
 |---|---|
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |
+| 2026-08-17 | §17 added — round 11. ADR-RL-R11-1 consumes the dormant `ai_model`/`uses_model` schema (deduped by `model_id`); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path. |

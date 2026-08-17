@@ -52,9 +52,32 @@ export type AuditEventPayload =
   // answer_contexts (R6-CX-1, 2026-08-16): optional context the submitter
   // typed on question answers. Human-read at sign-off; never engine input.
   | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[] }
-  | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
+  | {
+      type: 'verdict_produced';
+      verdict: Verdict;
+      reasoning_trace?: string;
+      // R11-KL-2 (ADR-EE-R11-1): the ids of risk-knowledge-lens entries
+      // whose condition matched the confirmed graph AT THE TIME OF THIS
+      // EVALUATION — never a field on Verdict/EvaluationResult itself, so
+      // evaluate()'s output stays byte-identical whether or not the lens is
+      // loaded. Riding "beside the verdict" is the explicit R11-NF-1
+      // allowance. The full graph is deliberately not persisted on the
+      // register entry (ADR-RL-R3-1 consequences), so this is the id list a
+      // later reader (e.g. RegisterDetail, at 2LoD sign-off) re-resolves
+      // against the currently-loaded lens entries — condition re-matching
+      // against the graph cannot happen later, but the domain identity can
+      // still be shown. Optional so every pre-R11-KL verdict stays valid.
+      knowledge_lens_matched_entry_ids?: string[];
+    }
   | { type: 'graph_corrected'; correction: GraphCorrection }
-  | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string }
+  | {
+      type: 'verdict_corrected';
+      original_verdict_id: string;
+      new_verdict: Verdict;
+      reasoning_trace?: string;
+      // R11-KL-2: same allowance as verdict_produced's field above.
+      knowledge_lens_matched_entry_ids?: string[];
+    }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 're_evaluation_queued'; policy_version: string }
     // verdict-audit.md §13.4 (design review C-1). `verdict_id` follows the

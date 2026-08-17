@@ -89,6 +89,7 @@
     <a href="#r7">Round 7 — Jurisdiction Confirmation on the LLM Path</a>
     <a href="#r8">Round 8 — Similar Decided Cases</a>
     <a href="#r9">Round 9 — The Review Screen Recomposed</a>
+    <a href="#r20">Round 11 — The Third Lever: Model Governance and the Knowledge Advisory</a>
     <a href="#changelog">Changelog</a>
   </nav>
 
@@ -813,6 +814,14 @@ await audit.append({
 
     <p>Spec for <code>requirements/requirements-009.md</code>; provenance is design-review-001&rsquo;s composition verdict (&ldquo;honest everywhere, legible nowhere&rdquo;). <strong>ADR-IF-R9-1:</strong> legibility is restored by AGGREGATION and PRIORITY, never deletion &mdash; every R5&ndash;R8 disclosure survives; three become one-interaction-away or collapsed-with-count. Mechanics: a checklist header derived purely from existing review state (<code>unconfirmedNodeIds</code> &rarr; &ldquo;Confirm &lt;label&gt;&rdquo;, <code>guessedFields</code> &rarr; &ldquo;Fix N guessed values on &lt;label&gt;&rdquo;, <code>jurisdictionsConfirmed === false</code> &rarr; &ldquo;Confirm jurisdictions&rdquo;), each item scroll-focusing its card via DOM ids (<code>card-&lt;nodeId&gt;</code>, <code>jurisdictions-panel</code>); consequence lines render behind a per-card &ldquo;why these matter&rdquo; toggle (R5-GR-1&rsquo;s fit criterion amended to &ldquo;displays, or reveals in one click&rdquo; &mdash; approved with the round); the card-level uncertainty banner is the ONLY warn-styled element on a card (guessed markers become quiet badges, plausibility warnings get a distinct advisory identity); guessed cards render a &ldquo;Fix guessed values&rdquo; affordance opening their editor (ADR-IF-R6-2&rsquo;s no-plain-confirm unchanged); the jurisdictions panel precedes the similar-cases panel, which collapses to a native-details summary carrying its count. Description box is CSS-capped with internal scroll (SC-6). No reducer, gate, or audit-path change anywhere in the round.</p>
 
+    <h2 id="r20">20. Round 11 &mdash; The Third Lever: Model Governance and the Knowledge Advisory (R11-MG / R11-KL)</h2>
+
+    <p>Spec for <code>requirements/requirements-011.md</code>, grounded in the amended <code>grounding/ai-raf-template.html</code> &sect;9 (&ldquo;Model approval and provenance&rdquo;, &ldquo;Risk-knowledge awareness&rdquo;) and <code>grounding/raf-extraction.md</code> &sect;I/&sect;J.</p>
+
+    <p><strong>ADR-IF-R11-MG-1 &mdash; the model question sits beside the jurisdiction panel, same gate idiom, one level deeper than vendor.</strong> Both intake paths (form and LLM) already ask about the processing node&rsquo;s vendor; R11 adds &ldquo;which model&rdquo; as a required field on the processing node, sourced from the policy&rsquo;s approved-model registry (&sect;I) or free-text &ldquo;not listed &mdash; name it&rdquo;. On the LLM path the extractor may propose a value like any other field (subject to R6 quote verification &mdash; unresolvable, it is guessed); on the form path it is a mandatory select. Mechanics mirror ADR-IF-R7-1 exactly: <code>graph_review</code> state carries the declared model on the processing node itself (no new top-level state field needed &mdash; it is graph data, not intake orchestration), and an unlisted/unapproved model is not gated at intake at all &mdash; it is the ENGINE&rsquo;s job (an invariant, &sect;I) to trip on it, consistent with &ldquo;provenance is an attribute the rules judge, never a hardcoded penalty&rdquo; (requirements-011.md R11-MG-2). Intake&rsquo;s only obligation is to capture the value faithfully, same as any other field.</p>
+
+    <p><strong>ADR-IF-R11-KL-1 &mdash; the knowledge panel renders wherever the jurisdiction panel renders, styled as its own lever.</strong> <code>src/engine/knowledge-lens.ts</code> (pure, Rule 1) matches the confirmed graph against the curated knowledge file and returns <code>KnowledgeMatch[]</code> &mdash; never touching <code>evaluate()</code>&rsquo;s inputs or outputs (R11-NF-1: byte-identical decision with or without the lens). <code>GraphView</code>/<code>IntakeFlow</code> render matches in a panel visually distinct from both the appetite invariants and the jurisdiction packs (R11-UI-1: three levers, three visual identities), posture line &ldquo;informs &mdash; the rules decide&rdquo;, and &mdash; where a match&rsquo;s risk class has no covering rule &mdash; a one-tap &ldquo;file as coverage gap&rdquo; action that appends a <code>rule_dissent_filed</code>-family audit event naming the risk class (reusing the existing dissent-filing write path from <code>RegisterDetail.tsx</code>, not a new one &mdash; ADR consistency with R4&rsquo;s &ldquo;advisory by construction&rdquo; guarantee: the action writes exactly one event and nothing else).</p>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
@@ -823,6 +832,7 @@ await audit.append({
         <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`).</td></tr>
         <tr><td>2026-08-17</td><td>&sect;18 added &mdash; round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render).</td></tr>
         <tr><td>2026-08-17</td><td>&sect;19 added &mdash; round 9 review-screen recomposition (ADR-IF-R9-1: aggregation and priority, never deletion; R5-GR-1 criterion amended with approval).</td></tr>
+        <tr><td>2026-08-17</td><td>&sect;20 added &mdash; round 11 model governance + knowledge advisory (ADR-IF-R11-MG-1: model is graph data, the engine gates it, not intake; ADR-IF-R11-KL-1: knowledge panel reuses the existing dissent-filing write path).</td></tr>
       </tbody>
     </table>
 
