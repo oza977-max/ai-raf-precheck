@@ -86,6 +86,7 @@
     <a href="#test-cases">Test Case References</a>
     <a href="#r5-gr">Round 5 — Explainable Graph Review</a>
     <a href="#r6">Round 6 — Provenance, Field-Level Questions, Context</a>
+    <a href="#r7">Round 7 — Jurisdiction Confirmation on the LLM Path</a>
     <a href="#changelog">Changelog</a>
   </nav>
 
@@ -786,6 +787,22 @@ await audit.append({
 
     <p><code>QuestionAnswer</code> gains optional <code>context?: string</code> (engine ignores it — same posture as the submitter note: human-read, never engine input). The questionnaire renders an optional &quot;anything the reviewer should know about this answer?&quot; input per question. At attestation the non-empty contexts are persisted on <code>graph_confirmed</code> as <code>answer_contexts?: string[]</code> (verdict-audit.md &sect;4.3 updated), and the sign-off page renders them with the submitter note, labelled as the submitter&rsquo;s context — the rules did not read it.</p>
 
+    <h2 id="r7">17. Round 7 &mdash; Jurisdiction Confirmation on the LLM Path (R7-JC)</h2>
+
+    <p>Spec for <code>requirements/requirements-007.md</code>. Presentation and orchestration only.</p>
+
+    <details class="adr">
+      <summary>
+        <span class="adr-id">ADR-IF-R7-1</span>
+        <span class="adr-title">Jurisdictions gate at graph review, not as a questionnaire question</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>The questionnaire asks single-select questions; jurisdictions are a multi-select over a policy-scoped set, and they gate which PACKS evaluate — they belong beside the graph they modify, under the same confirm-gate the R5 cards use. Mechanics: <code>graph_review</code> state gains <code>jurisdictionsConfirmed?: boolean</code> — set <code>false</code> at GRAPH_EXTRACTED on the LLM path only (like <code>unconfirmedNodeIds</code>), absent on the form path and all re-entry paths. New actions: <code>JURISDICTIONS_CONFIRMED</code> (accepts as shown) and <code>JURISDICTIONS_SET { jurisdictions, correction, updatedGraph }</code> (edit = replace the graph&rsquo;s list from the policy&rsquo;s declared codes, recorded as a GraphCorrection with node reference <code>graph</code> / field <code>jurisdictions</code>, and confirmation implied — an edit is stronger evidence than a click, the ADR-IF-R5-1 rule). <code>handleProceedFromGraphReview</code> refuses while <code>jurisdictionsConfirmed === false</code>, with its own message. The panel renders in the graph_review section (IntakeFlow), showing each claimed code with its policy name, &ldquo;model-proposed&rdquo; framing, checkbox editing limited to the policy&rsquo;s declared jurisdictions, and the none-stated wording for an empty list.</p>
+      </div>
+    </details>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
@@ -793,6 +810,7 @@ await audit.append({
         <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine&rsquo;s input contract unchanged.</td></tr>
         <tr><td>2026-08-16</td><td>&sect;15 added &mdash; round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm).</td></tr>
         <tr><td>2026-08-16</td><td>&sect;16 added &mdash; round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect).</td></tr>
+        <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`).</td></tr>
       </tbody>
     </table>
 

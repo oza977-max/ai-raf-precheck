@@ -11,6 +11,26 @@ every verdict.
 
 ---
 
+## [0.8.0] — 2026-08-17
+
+Jurisdictions are confirmed, never assumed. Round 7, from sweep-001's
+sharpest finding: the model once invented "US" as a jurisdiction — a valid
+code, so it would have silently switched on the US regulatory rule pack.
+
+### Added
+
+- **A jurisdictions panel on the graph review screen (AI path).** The
+  model's reading is shown by name ("United States (US)") and framed as
+  proposed; you confirm it, or edit it with checkboxes limited to the
+  jurisdictions your policy declares. An empty reading says plainly that
+  only the firm's own appetite will apply, and asks you to confirm that
+  too. **Proceed refuses until you have** — the field that decides which
+  regulations judge your use case is never left to a model. Edits are
+  recorded as versioned corrections, like any other change. The guided
+  form is unchanged (its jurisdiction answer was always explicit).
+
+---
+
 ## [0.7.1] — 2026-08-16
 
 The follow-up questions stop being confusing. Every item here reproduces a
