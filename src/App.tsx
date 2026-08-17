@@ -38,6 +38,11 @@ export default function App() {
   // V1.2-B (design-gap E2): register count badge — refreshed on
   // navigation, an accepted staleness window.
   const [registerCount, setRegisterCount] = useState<number | null>(null);
+  // Known-issue close (recorded since v0.3.2): "+ New pre-check" on a
+  // COMPLETED flow should start a new one. The nonce tells IntakeFlow the
+  // item was clicked; IntakeFlow decides whether that means reset (only a
+  // finished flow resets — an in-progress draft keeps its own Start-over).
+  const [newPrecheckNonce, setNewPrecheckNonce] = useState(0);
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), [policyRevision]);
   const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
@@ -145,7 +150,10 @@ export default function App() {
           <div className="app-sidebar__label">Workspace</div>
           <div
             className={view === 'intake' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-            onClick={() => setView('intake')}
+            onClick={() => {
+              setView('intake');
+              setNewPrecheckNonce((n) => n + 1);
+            }}
           >
             + New pre-check
           </div>
@@ -202,7 +210,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {view === 'intake' && <IntakeFlow />}
+          {view === 'intake' && <IntakeFlow newPrecheckNonce={newPrecheckNonce} />}
           {view === 'about' && <AboutPanel onNavigate={setView} />}
           {view === 'register' && (
             <RegisterView

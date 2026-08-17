@@ -63,6 +63,7 @@ export const BINDINGNESS_LABELS: Record<DecisionBindingness, string> = {
 
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   read: 'Finds or summarises information for someone to read (read)',
+  inform: 'Answers questions or presents information directly — nothing is actioned (inform)',
   draft: 'Writes a first draft for a person to check and edit (draft)',
   recommend: 'Suggests what should be done, a person decides (recommend)',
   execute: 'Carries out the action itself (execute)',

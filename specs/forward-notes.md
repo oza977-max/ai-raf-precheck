@@ -54,6 +54,19 @@ a real judge model against the eleven pinned cases (`docs/try-these.md`) and
 compare with the human panel's 31/31 — a dated concordance number, before
 any UI.
 
+**Status update (2026-08-17): the experiment RAN — judge-001.** qwen3:4b
+vs the engine on the eleven pinned cases: **1/11 concordance**
+(`reviews/judge-001.md`). The instructive part is WHY: in ten of eleven
+cases the judge's written REASON correctly named the firing hard line or
+missing control — but the schema put `prediction` before `reason`, so
+forced decoding committed to an answer before reasoning ("inside", the
+least restrictive, every time). Lesson for the next run, recorded here so
+it is not re-learned: put the reason field FIRST in the judge schema
+(decode-order chain-of-thought), then re-measure before drawing any
+conclusion about small-judge viability. The panel design is unchanged —
+and unbothered: a dissent channel tolerates a weak judge (its dissents are
+advisory noise at worst); the engine never did and never will read one.
+
 **Status update (2026-08-16, v0.5.0):** the key is no longer the blocker. A
 local open model now runs on the user's machine (qwen3:4b via Ollama,
 `src/llm/local-provider.ts`) and had its first live run on the extraction

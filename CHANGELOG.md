@@ -11,6 +11,44 @@ every verdict.
 
 ---
 
+## [0.9.0] — 2026-08-17
+
+The register starts paying rent: similar decided cases, plus a housekeeping
+and review batch.
+
+### Added
+
+- **Similar decided cases.** The graph review screen and the 2LoD sign-off
+  page now show up to three similar cases this register has already
+  decided — outcome (in appetite vocabulary), tier, track, required
+  controls, and the policy version they were decided under. Deterministic
+  word-overlap matching, fully explainable, and advisory on its face:
+  precedent informs, the rules decide.
+- **A new action type: `inform`** — answers or presents information
+  directly. Closes the sweep-001 gap where a website chatbot's answers
+  were schema-forced to "trade".
+- **CI.** Every push now runs the full test/typecheck/build/spec-parity
+  gate on GitHub — the "no CI" caveat carried since release 006 is closed.
+- **First judge experiment ran** (reviews/judge-001.md): the local 4B
+  model as an advisory judge scored 1/11 against the engine — with its
+  written reasoning right in 10 of 11 and the schema's field order to
+  blame. The lesson (reason before prediction) is recorded in FN-009.
+
+### Fixed
+
+- **"+ New pre-check" now starts a new pre-check** after a finished one —
+  the oldest recorded bug (v0.3.2). In-progress drafts are untouched.
+- From the fresh review pass (code-review-004, honesty + correctness
+  panels): "Confirmed by you." can no longer appear on a card nobody
+  confirmed; the "never leaves this machine" promise is now enforced in
+  code (the model slot only accepts a local address); decision-type and
+  human-in-the-loop fields can now carry provenance quotes instead of
+  always reading as guessed; a failed evaluation no longer hides the
+  jurisdictions panel or your description; a hung model server times out
+  instead of loading forever.
+
+---
+
 ## [0.8.1] — 2026-08-17
 
 One model slot, honestly framed.

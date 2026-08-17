@@ -394,7 +394,7 @@ export type ModelType =
   | 'agentic';
 export type Exposure = 'internal-only' | 'internal-shared' | 'client-facing' | 'market-facing';
 export type DecisionBindingness = 'non-binding' | 'advisory' | 'material' | 'binding';
-export type ActionType = 'read' | 'draft' | 'recommend' | 'execute' | 'trade' | 'approve';
+export type ActionType = 'read' | 'inform' | 'draft' | 'recommend' | 'execute' | 'trade' | 'approve';
 export type DecisionType =
   | 'credit-decision'
   | 'lending-decision'

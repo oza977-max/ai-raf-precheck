@@ -87,6 +87,7 @@
     <a href="#r5-gr">Round 5 — Explainable Graph Review</a>
     <a href="#r6">Round 6 — Provenance, Field-Level Questions, Context</a>
     <a href="#r7">Round 7 — Jurisdiction Confirmation on the LLM Path</a>
+    <a href="#r8">Round 8 — Similar Decided Cases</a>
     <a href="#changelog">Changelog</a>
   </nav>
 
@@ -803,6 +804,10 @@ await audit.append({
       </div>
     </details>
 
+    <h2 id="r8">18. Round 8 &mdash; Similar Decided Cases (R8-SC)</h2>
+
+    <p>Spec for <code>requirements/requirements-008.md</code>. <strong>ADR-IF-R8-1:</strong> similarity is <code>src/engine/precedent.ts</code> &mdash; pure token-overlap (the duplicate check&rsquo;s own idiom, threshold 0.15, top 3, ties by id) over caller-supplied summaries of DECIDED register entries; the orchestration (IntakeFlow at graph_review, RegisterDetail per case) supplies candidates and enriches only the ranked top three with controls read from each match&rsquo;s own audit trail. Rendered by <code>SimilarCases.tsx</code> in APPETITE vocabulary (never the status enum &mdash; reserved words) with the posture line &ldquo;precedent informs, the rules decide&rdquo; on every render. Presentation-only; nothing feeds the engine; graph-field similarity is recorded out of scope until graphs are persisted (ADR-RL-R3-1).</p>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
@@ -811,6 +816,7 @@ await audit.append({
         <tr><td>2026-08-16</td><td>&sect;15 added &mdash; round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm).</td></tr>
         <tr><td>2026-08-16</td><td>&sect;16 added &mdash; round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect).</td></tr>
         <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`).</td></tr>
+        <tr><td>2026-08-17</td><td>&sect;18 added &mdash; round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render).</td></tr>
       </tbody>
     </table>
 

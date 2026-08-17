@@ -710,6 +710,19 @@ its policy name, "model-proposed" framing, checkbox editing limited to the
 policy's declared jurisdictions, and the none-stated wording for an empty
 list.
 
+## 18. Round 8 — Similar Decided Cases (R8-SC)
+
+Spec for `requirements/requirements-008.md`. **ADR-IF-R8-1:** similarity is
+`src/engine/precedent.ts` — pure token-overlap (the duplicate check's own
+idiom, threshold 0.15, top 3, ties by id) over caller-supplied summaries of
+DECIDED register entries; the orchestration (IntakeFlow at graph_review,
+RegisterDetail per case) supplies candidates and enriches only the ranked
+top three with controls read from each match's own audit trail. Rendered by
+`SimilarCases.tsx` in APPETITE vocabulary (never the status enum — reserved
+words) with the posture line "precedent informs, the rules decide" on every
+render. Presentation-only; nothing feeds the engine; graph-field similarity
+is recorded out of scope until graphs are persisted (ADR-RL-R3-1).
+
 ## 14. Changelog
 
 | Date | Change |
@@ -718,3 +731,4 @@ list.
 | 2026-08-16 | §15 added — round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm). |
 | 2026-08-16 | §16 added — round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect). |
 | 2026-08-17 | §17 added — round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`). |
+| 2026-08-17 | §18 added — round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render). |

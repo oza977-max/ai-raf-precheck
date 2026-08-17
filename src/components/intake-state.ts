@@ -91,7 +91,15 @@ export type IntakeState =
       useCaseId: string;
       originalVerdictId?: string;
     }
-  | { step: 'evaluation_pending'; graph: DataFlowGraph; useCaseId: string; originalVerdictId?: string }
+  | {
+      step: 'evaluation_pending';
+      graph: DataFlowGraph;
+      useCaseId: string;
+      originalVerdictId?: string;
+      // Review 004 finding 2: carried so a failed evaluation can restore a
+      // WORKING review screen — description visible, jurisdictions editable.
+      description?: string;
+    }
   | { step: 'verdict'; verdictId: string };
 
 export type IntakeAction =
@@ -422,6 +430,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: state.graph,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        description: state.description,
       };
 
     case 'VERDICT_READY':
@@ -441,6 +450,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: [],
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // Review 004 finding 2: the failure most likely to land here is
+        // jurisdiction/track-driven — the panel to FIX it must render.
+        // Confirmed=true (it was confirmed before evaluation; re-entry is
+        // not a fresh attestation, the R5 rule), editable via the panel.
+        jurisdictionsConfirmed: true,
       };
 
     case 'CORRECT_VERDICT':

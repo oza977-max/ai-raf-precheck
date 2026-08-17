@@ -284,7 +284,12 @@ function NodeCard({
           {uncertain ? 'I have checked this — confirm' : 'Looks right — confirm'}
         </button>
       )}
-      {!unconfirmed && editable && onConfirm && (
+      {/* Honesty review 004 finding 1: a guessed card is EXCLUDED from the
+          confirm set (ADR-IF-R6-2), so !unconfirmed alone would claim
+          "Confirmed by you." with zero human acts. The note is earned only
+          when no guessed fields remain — at which point it is true either
+          via a confirm click or via corrections. */}
+      {!unconfirmed && editable && onConfirm && guessed.length === 0 && (
         <p className="graph-node__confirmed-note">Confirmed by you.</p>
       )}
     </div>

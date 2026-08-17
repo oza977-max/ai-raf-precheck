@@ -129,3 +129,13 @@ describe('probeLocalLlm', () => {
     expect(probe.detail).toContain('OLLAMA_ORIGINS');
   });
 });
+
+// Honesty review 004 finding 2: "never to the internet" is enforced.
+describe('probeLocalLlm — loopback-only enforcement', () => {
+  it('refuses a non-local address without touching the network, and says why', async () => {
+    const probe = await probeLocalLlm('https://example.com', 'qwen3:4b');
+    expect(probe.ok).toBe(false);
+    expect(probe.detail).toContain('this machine');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

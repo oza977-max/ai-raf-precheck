@@ -97,6 +97,7 @@ export type DecisionBindingness =
 // Derived from grounding/raf-extraction.md §A and §E
 export type ActionType =
   | 'read'
+  | 'inform'   // added 2026-08-17 (sweep-001): answers/presents directly; matches no strict action list
   | 'draft'
   | 'recommend'
   | 'execute'

@@ -184,6 +184,15 @@ Worth deliberately exercising, newest first:
   break: filing must change *nothing* about the verdict, the stage or the
   sign-off. If you can make a challenge move a decision, that's the bug we
   most want to hear about.
+- **Provenance quotes & the confirm gate (v0.6.0–v0.7.0).** On the AI path,
+  every extracted value shows the words it came from; guessed fields become
+  mandatory questions; nothing is scored until each card is confirmed. Try
+  to sneak a vague description through — it should cost you questions.
+- **Jurisdiction confirmation (v0.8.0).** The AI path never accepts the
+  model's jurisdiction reading — you confirm or edit it before proceeding.
+  Try a description naming no country and one naming "our UK branch".
+- **One model slot (v0.8.1).** Settings has a single generic model slot
+  (demo runs a local open model); there is no vendor key field.
 - **← Back** now exists on intake steps before attestation — try going back
   and forward; the duplicate check should re-run, never hang.
 - **"What kind of decision does it feed?"** has *Something else — let me
