@@ -1502,6 +1502,44 @@ details input {
   padding: 0.9rem 1rem;
 }
 
+/* R11-UI-1: three named levers with one-line power statements. The
+   knowledge lever gets the same dashed-purple advisory identity as
+   .knowledge-lens (App.css §2510) — visually apart from the two levers
+   that actually decide. */
+.policy-view__levers {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.8rem 0 1rem;
+}
+
+.policy-view__lever {
+  flex: 1 1 180px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+}
+
+.policy-view__lever h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.9rem;
+}
+
+.policy-view__lever-power {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.policy-view__lever--advisory {
+  border: 1px dashed #7a5ca8;
+  background: #f6f2fb;
+}
+
+.policy-view__lever--advisory h3 {
+  color: #5a3d82;
+}
+
 .policy-view__panel {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -2505,6 +2543,85 @@ details input {
   border-color: var(--warn-border);
   background: var(--warn-bg);
   color: var(--warn-text);
+}
+
+/* R11-KL — risk-knowledge lens. Deliberately distinct from .similar-cases
+   (dashed purple border, not the solid neutral rule) so the third lever
+   reads as visibly its own thing, never interleaved with deciding rules
+   (R11-UI-1). */
+.knowledge-lens {
+  border: 1px dashed #7a5ca8;
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  margin: 0.8rem 0;
+  background: #f6f2fb;
+}
+
+.knowledge-lens h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  color: #5a3d82;
+}
+
+.knowledge-lens__posture {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  margin: 0 0 0.5rem;
+}
+
+.knowledge-lens__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.knowledge-lens__item {
+  border-top: 1px dashed #7a5ca8;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.knowledge-lens__domain {
+  font-weight: 600;
+}
+
+.knowledge-lens__subdomain {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.knowledge-lens__description {
+  font-size: 0.85rem;
+}
+
+.knowledge-lens__attribution {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.knowledge-lens__covered {
+  font-size: 0.78rem;
+  color: var(--low);
+}
+
+.knowledge-lens__gap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.knowledge-lens__gap-label {
+  font-size: 0.78rem;
+  color: var(--warn-text);
+}
+
+.knowledge-lens__gap-button {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
 }
 
 .similar-cases-collapse summary {

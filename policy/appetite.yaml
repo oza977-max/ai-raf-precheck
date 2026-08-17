@@ -944,3 +944,45 @@ vendors:
       data_zones: ["Zone B"]
     satisfies_controls:
       - "CTRL-ENC-01"
+
+# APPROVED-MODEL REGISTRY (R11-MG-1) — [FIRM] MUST REPLACE
+# A model absent from this registry, or present with is_approved: false,
+# trips the model-governance review at evaluation (evaluate.ts). Provenance
+# class is an attribute the firm's rules judge, never a hardcoded penalty —
+# open-weights self-hosted with strong finance-domain benchmark evidence may
+# sit inside appetite where a vendor-hosted model without evidence does not.
+approved_models:
+  # AIGate's own local runtime model (src/llm/local-provider.ts
+  # DEFAULT_LOCAL_LLM_MODEL) — declared honestly as unadopted-policy
+  # provisional, not benchmarked: is_approved: false is the truthful demo
+  # posture, not a placeholder to fix later (NF-7).
+  - model_id: "qwen3:4b"
+    vendor: "local (Ollama)"
+    provenance_class: "open_weights_self_hosted"
+    is_approved: false
+    license_note: "Apache 2.0 (Qwen3 weights) — no firm benchmark evidence on file yet"
+
+  - model_id: "VENDOR-LLM-v1"
+    vendor: "[FIRM]-approved third-party LLM"
+    provenance_class: "vendor_hosted"
+    is_approved: true
+    license_note: "Commercial API license, standard terms"
+    benchmark_evidence:
+      suite: "[FIRM] Model Risk finance-domain eval suite"
+      date: "2026-06-01"
+      finance_domain: true
+      detail: "Re-run within the last 12 months per Model Risk cadence"
+
+  # R11-MG-1a illustrative FAMILY entry (ADR-PS-R11-1a) — exact-id-first,
+  # family-fallback. This is a demo of the mechanism, not a real firm
+  # decision: a declared_model_id like "gpt-4o-2026-08-01" that has no
+  # exact entry above resolves against this family instead of reading as
+  # unlisted the moment the vendor ships a new point release. An exact
+  # entry for a specific gpt-4o build would still win over this one.
+  - model_id: "gpt-4o-family"
+    vendor: "OpenAI (illustrative)"
+    provenance_class: "vendor_hosted"
+    is_approved: true
+    is_family: true
+    version_pattern: "gpt-4o-"
+    license_note: "Illustrative only — no firm has actually approved this family"

@@ -104,19 +104,22 @@ flowchart TD
     style K fill:#f0faf4,stroke:#3a6b4a
 ```
 
-## Where the rules come from
+## The three levers
 
-Every rule the engine applies traces to one of two sources — and the verdict
-shows which, with the verbatim text and the human sign-off behind it:
+**Appetite decides. Law decides, where it applies. Knowledge only
+challenges.** Every rule the engine applies traces to exactly one of three
+sources, and the verdict shows which — with the verbatim text and the
+human sign-off behind it. Only the first two can move a verdict; the third
+cannot, by construction of its own schema, not by convention:
 
 ```mermaid
 flowchart LR
-    subgraph firm["THE FIRM'S OWN APPETITE"]
+    subgraph firm["THE FIRM'S OWN APPETITE — decides"]
         RAF["Board-approved<br/>Risk Appetite Framework<br/><i>(prose)</i>"] --> EX["Translated to rules<br/><i>grounding/raf-extraction.md</i>"]
-        EX --> POL["policy/appetite.yaml<br/><i>5 hard lines · 18 invariants<br/>tiers · tracks · 19 controls</i>"]
+        EX --> POL["policy/appetite.yaml<br/><i>5 hard lines · 18 invariants<br/>tiers · tracks · 19 controls<br/>+ approved-model registry</i>"]
     end
 
-    subgraph reg["REGULATION"]
+    subgraph reg["REGULATION — decides, where it applies"]
         LAW["SS1/23 · SR 26-2<br/>EU AI Act · DORA"] --> PACK["Jurisdiction packs<br/><i>each rule quotes its verbatim<br/>source text + states its basis:<br/>verbatim / derived / judgement</i>"]
         PACK --> SIGN["Human sign-off per pack<br/><i>Legal · Model Risk · Tech Risk<br/>— unsigned rules make the<br/>verdict PROVISIONAL, and say so</i>"]
     end
@@ -129,13 +132,26 @@ flowchart LR
     Q -.->|"evidence for the next<br/>human edit + sign-off"| EX
     Q -.->|"evidence for the next<br/>human edit + sign-off"| PACK
 
+    subgraph know["RISK KNOWLEDGE — informs, never decides"]
+        MIT["MIT AI Risk Repository<br/><i>public domain taxonomy<br/>CC BY 4.0</i>"] -.-> LENS["grounding/risk-knowledge.yaml<br/><i>curated, own schema — cannot<br/>express a tier, control or<br/>verdict effect, by construction</i>"]
+    end
+    LENS -.->|"informs, beside<br/>the verdict"| V
+    LENS -.->|"uncovered risk class"| Q
+
     style ENGINE fill:#1c1b18,color:#f3f0e8
     style Q stroke-dasharray: 5 5
+    style LENS stroke-dasharray: 5 5
+    style MIT stroke-dasharray: 5 5
 ```
 
-Both files are plain, commented YAML a risk manager can read and edit —
+Both rule files are plain, commented YAML a risk manager can read and edit —
 [see every rule rendered](docs/rules.md), regenerated from the policy files
-by `npm run docs:rules`.
+by `npm run docs:rules`. The knowledge file is a separate, human-curated
+snapshot against the [MIT AI Risk Repository](https://airisk.mit.edu/)'s
+public domain taxonomy (Slattery et al., MIT FutureTech; CC BY 4.0;
+1,700+ risks from 65 frameworks) — see
+[docs/approach.md §2a](docs/approach.md#2a-the-third-lever--knowledge-and-its-honest-boundary)
+for the honest boundary on what "curated, not synced" actually means.
 
 ## What works today (V1 proof-of-concept)
 

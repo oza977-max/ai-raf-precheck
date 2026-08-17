@@ -10,7 +10,7 @@ import { getCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
 import { selfAssessmentSeeded } from '../seeds/aigate-self-assessment';
-import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
+import { addNode, addUseCaseModelLink, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
@@ -23,6 +23,10 @@ import { findPrecedents } from '../engine/precedent';
 import type { PrecedentCandidate } from '../engine/precedent';
 import SimilarCases from './SimilarCases';
 import type { EnrichedPrecedent } from './SimilarCases';
+import { matchKnowledgeLens } from '../engine/knowledge-lens';
+import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
+import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
+import KnowledgeLensPanel from './KnowledgeLensPanel';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
@@ -159,6 +163,33 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // are dropped by the loader (whole-pack rejection, CF-5/RA-7) and shown
   // on the Appetite screen; evaluation proceeds with the valid ones.
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
+  // R11-KL-1: parsed once, entirely separate from policy/packs — this is
+  // advisory-only and never touched by evaluate().
+  const knowledgeLensEntries = useMemo(() => {
+    const result = loadKnowledgeLens(getCurrentKnowledgeLensYaml());
+    return result.valid ? result.entries : [];
+  }, []);
+  // R11-KL-2: the rule ids THIS verdict actually relied on, read from its
+  // own explanation — same derivation RegisterDetail.tsx's
+  // `challengeableRules` uses, so "covered" means the same thing in both
+  // places.
+  const verdictRuleIds = useMemo(() => {
+    if (!verdict) return [];
+    const ids = new Set<string>();
+    const ex = verdict.explanation;
+    if (ex) {
+      if (ex.tier_rationale?.rule_id) ids.add(ex.tier_rationale.rule_id);
+      if (ex.track_rationale?.rule_id) ids.add(ex.track_rationale.rule_id);
+      for (const t of ex.tripped_invariants) ids.add(t.id);
+      for (const r of ex.regulatory_chain ?? []) ids.add(r.rule_id);
+    }
+    if (verdict.binding_constraint) ids.add(verdict.binding_constraint);
+    return [...ids];
+  }, [verdict]);
+  const knowledgeLensMatches = useMemo(() => {
+    if (!verdict || !lastGraph) return [];
+    return matchKnowledgeLens(lastGraph, knowledgeLensEntries, verdictRuleIds);
+  }, [verdict, lastGraph, knowledgeLensEntries, verdictRuleIds]);
 
   // explore-005 D-001: the effect below cannot run until the register has
   // actually loaded, or a restored session would resolve the check against
@@ -719,6 +750,26 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     const traceResult = await generateReasoningTraceForVerdict(fullVerdict, controlLibrary, bindingDescription);
     const reasoningTrace = traceResult.ok ? traceResult.value : undefined;
 
+    // R11-KL-2/ADR-EE-R11-1: a SECOND, independent call, computed AFTER
+    // evaluate() has already returned — never fed into it, never read by
+    // it. Riding beside the verdict on the audit event (never inside
+    // Verdict/EvaluationResult) is what keeps R11-NF-1 true.
+    const verdictRuleIdsForLens = (() => {
+      const ids = new Set<string>();
+      const ex = fullVerdict.explanation;
+      if (ex) {
+        if (ex.tier_rationale?.rule_id) ids.add(ex.tier_rationale.rule_id);
+        if (ex.track_rationale?.rule_id) ids.add(ex.track_rationale.rule_id);
+        for (const t of ex.tripped_invariants) ids.add(t.id);
+        for (const r of ex.regulatory_chain ?? []) ids.add(r.rule_id);
+      }
+      if (fullVerdict.binding_constraint) ids.add(fullVerdict.binding_constraint);
+      return [...ids];
+    })();
+    const knowledgeLensMatchedEntryIds = matchKnowledgeLens(graph, knowledgeLensEntries, verdictRuleIdsForLens).map(
+      (m) => m.entry.id,
+    );
+
     if (isCorrection) {
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
@@ -731,6 +782,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           original_verdict_id: originalVerdictId!,
           new_verdict: fullVerdict,
           reasoning_trace: reasoningTrace,
+          knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIds,
         },
       });
     } else {
@@ -740,7 +792,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         event_type: 'verdict_produced',
         occurred_at: now,
         actor: 'system',
-        payload: { type: 'verdict_produced', verdict: fullVerdict, reasoning_trace: reasoningTrace },
+        payload: {
+          type: 'verdict_produced',
+          verdict: fullVerdict,
+          reasoning_trace: reasoningTrace,
+          knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIds,
+        },
       });
     }
 
@@ -798,6 +855,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           track: result.track,
         },
       });
+      // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md §16): the dormant
+      // ai_model/uses_model schema, consumed at the same write that already
+      // produces the use_case node. Only on first confirmation, not on a
+      // correction re-evaluation — a correction reuses useCaseId and would
+      // otherwise write a second uses_model edge for the same use case.
+      const declaredModelNode = graph.processing_nodes.find((n) => n.declared_model_id);
+      if (declaredModelNode && policyResult.valid) {
+        await addUseCaseModelLink(useCaseId, declaredModelNode, policyResult.policy);
+      }
     }
     await refreshRegister();
     setVerdictAuditEvents(await getAuditEvents(useCaseId));
@@ -1058,6 +1124,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           <StructuredForm
             jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
             platforms={policyResult.valid ? policyResult.policy.platforms ?? [] : []}
+            approvedModels={policyResult.valid ? policyResult.policy.approved_models ?? [] : []}
             vendors={policyResult.valid ? policyResult.policy.vendors ?? [] : []}
             onSubmit={(graph) => {
               const useCaseId = crypto.randomUUID();
@@ -1293,6 +1360,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             registerStage={savedStage ?? undefined}
             onCorrect={handleCorrectVerdict}
           />
+        )}
+        {state.step === 'verdict' && verdict && knowledgeLensMatches.length > 0 && (
+          <KnowledgeLensPanel matches={knowledgeLensMatches} />
         )}
       </div>
     </div>

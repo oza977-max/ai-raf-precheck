@@ -58,11 +58,16 @@ const EXTRACT_GRAPH_SCHEMA = {
           autonomy_level: { type: 'integer', minimum: 0, maximum: 4 },
           data_zone: { type: 'string', enum: DATA_ZONES },
           vendor: { type: 'string' },
+          // R11-MG-2 (ADR-IF-R11-MG-1): optional proposed field, subject to
+          // the same quote-verification mechanism as vendor. Not in the
+          // node's `required` list — unresolvable is guessed, same as any
+          // other field (R6 machinery), never a hard extraction failure.
+          declared_model_id: { type: 'string' },
           replaces_prior_model: { type: 'boolean' },
           uncertain: { type: 'boolean' },
           basis_quotes: {
           type: 'object',
-          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' } },
+          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' },declared_model_id: { type: 'string' } },
           required: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
         },
         },
@@ -172,6 +177,10 @@ const ProcessingNodeSchema = z.object({
   autonomy_level: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   data_zone: z.enum(DATA_ZONES as [string, ...string[]]),
   vendor: z.string(),
+  // R11-MG-2: optional proposed value — an unresolvable quote demotes it to
+  // guessed via the same verifyQuotes() mechanism as vendor (QUOTE_FIELDS
+  // below), it never blocks extraction.
+  declared_model_id: z.string().optional(),
   replaces_prior_model: z.boolean(),
   uncertain: z.boolean().optional(),
   basis_quotes: z.record(z.string()).optional(),
@@ -215,7 +224,7 @@ export interface GraphExtraction {
 
 const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
   input: ['data_class', 'data_zone'],
-  processing: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
+  processing: ['model_type', 'autonomy_level', 'data_zone', 'vendor', 'declared_model_id'],
   output: ['action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale', 'decision_type', 'hitl'],
 };
 

@@ -23,7 +23,7 @@ import {
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import { saveFormDraft, loadFormDraft, clearFormDraft } from './intake-draft';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
-import type { DataFlowGraph, JurisdictionEntry, RegistryEntry } from '../engine/types';
+import type { ApprovedModel, DataFlowGraph, JurisdictionEntry, RegistryEntry } from '../engine/types';
 
 // UC-3a (intake-flow.md §5). Rule 4 (cross-cutting.md §7): presentation-only
 // — calls buildGraphFromForm(), no business logic inline.
@@ -40,6 +40,9 @@ interface StructuredFormProps {
   jurisdictions: JurisdictionEntry[];
   platforms?: RegistryEntry[];
   vendors?: RegistryEntry[];
+  // R11-MG-2 (ADR-IF-R11-MG-1): sourced from the policy's approved-model
+  // registry. Optional so every existing caller stays valid.
+  approvedModels?: ApprovedModel[];
   onSubmit: (graph: DataFlowGraph) => void;
 }
 
@@ -84,6 +87,15 @@ export const REQUIRED_FIELDS: RequiredField[] = [
   { controlId: 'sf-bindingness', isAnswered: (v) => Boolean(v.decisionBindingness) },
   { controlId: 'sf-reversibility', isAnswered: (v) => Boolean(v.outputReversibility) },
   { controlId: 'sf-scale', isAnswered: (v) => Boolean(v.outputScale) },
+  // R11-MG-2: required — "which model" is a mandatory select on the form
+  // path (an unlisted/unapproved choice is not gated here; the ENGINE trips
+  // the review, per ADR-IF-R11-MG-1). A non-empty free-text value satisfies
+  // this the same way a registry id does.
+  {
+    controlId: 'sf-model',
+    isAnswered: (v) =>
+      Boolean(v.declaredModelIdOther?.trim() || (v.declaredModelId && v.declaredModelId.trim())),
+  },
   // R3-JU-1: presence of the array is not an answer. `[]` is truthy, which is
   // exactly how a user could previously proceed having told us nothing about
   // where the system operates.
@@ -127,7 +139,7 @@ function withDefaults(v: Partial<StructuredFormValues>): Partial<StructuredFormV
   };
 }
 
-export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], onSubmit }: StructuredFormProps) {
+export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], approvedModels = [], onSubmit }: StructuredFormProps) {
   // D-002/D-003: restore any half-filled form so a refresh or a trip to the
   // register no longer costs the user eleven answers.
   // R3-JU-1 / ADR-IF-R3-1. The answered-state is persisted ALONGSIDE the
@@ -477,6 +489,48 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         ))}
         <option value="__other__">Another vendor — not on the list</option>
       </select>
+
+      <label htmlFor="sf-model">
+        Which model does it run on?
+        <RequiredMark controlId="sf-model" />
+      </label>
+      <p className="field-help">
+        Choose the model from the firm&apos;s approved-model registry, or say it is not listed and
+        name it. A model that is not on the registry, or is on it without sign-off, is not blocked
+        here — it routes to a model governance review on the verdict.
+      </p>
+      <select
+        id="sf-model"
+        {...requiredProps('sf-model')}
+        value={values.declaredModelIdOther !== undefined ? '__other__' : (values.declaredModelId ?? '')}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__other__') {
+            update('declaredModelId', undefined);
+            update('declaredModelIdOther', '');
+          } else {
+            update('declaredModelIdOther', undefined);
+            update('declaredModelId', v || undefined);
+          }
+        }}
+      >
+        <option value="">Choose a model&hellip;</option>
+        {approvedModels.map((m) => (
+          <option key={m.model_id} value={m.model_id}>
+            {m.model_id} ({m.vendor})
+          </option>
+        ))}
+        <option value="__other__">Not listed — name it</option>
+      </select>
+      {values.declaredModelIdOther !== undefined && (
+        <input
+          type="text"
+          aria-label="Name the model"
+          placeholder="e.g. gpt-4o, llama-3-70b"
+          value={values.declaredModelIdOther}
+          onChange={(e) => update('declaredModelIdOther', e.target.value)}
+        />
+      )}
 
       <label htmlFor="sf-decision-type">What kind of decision does it feed? (optional)</label>
       <p className="field-help">

@@ -792,6 +792,88 @@ The starter config is derived directly from `grounding/raf-extraction.md` (secti
 
 ---
 
+## 10a. Round 11 — Approved-Model Registry (R11-MG-1)
+
+Spec for `requirements/requirements-011.md`, grounded in
+`grounding/ai-raf-template.html` §9 "Model approval and provenance" and
+`grounding/raf-extraction.md` §I.
+
+**ADR-PS-R11-1 — the registry is a top-level array on the policy file,
+schema-validated like every other policy collection.** `PolicyFile` gains
+`approved_models: ApprovedModel[]`, sorted by `model_id` before iteration
+(NF-1 discipline — same determinism rule every other policy collection
+already follows).
+
+```typescript
+export interface ApprovedModel {
+  model_id: string;               // stable key, e.g. "qwen3:4b"
+  vendor: string;
+  provenance_class: 'vendor_hosted' | 'open_weights_self_hosted' | 'fine_tuned_in_house';
+  is_approved: boolean;
+  license_note?: string;
+  benchmark_evidence?: {
+    suite: string;                // named benchmark suite
+    date: string;                 // ISO 8601
+    finance_domain: boolean;      // §I: required for Track I/II or client-facing Track III
+    detail?: string;
+  };
+  // R11-MG-1a (mid-build amendment): mutually exclusive with an entry
+  // keyed purely by model_id — a FAMILY entry approves a version pattern
+  // rather than one pinned string. model_id on a family entry is the
+  // family's own label (e.g. "gpt-4o-*"), not a real model string.
+  is_family?: boolean;
+  version_pattern?: string;       // prefix match, e.g. "gpt-4o-" — no regex, no dynamic code (ADR-002 discipline)
+}
+```
+
+**ADR-PS-R11-1a — matching is exact-id-first, family-fallback; never
+weakens Track II pinning.** `resolveApprovedModel(declaredModelId, registry)`
+checks for an exact `model_id` match first; only if none exists does it
+check family entries (`is_family: true`) by prefix match against
+`version_pattern`, in the same sorted-by-`model_id` order as everything
+else (NF-1). A family match returns the family entry's approval/provenance
+— it never fabricates a specific version. Track II's existing
+version-pinning control (evaluation-engine.md, silent-substitution
+handling) is unaffected: family approval answers "may this model run at
+all", pinning answers "which exact build was validated", and Track II
+still requires the latter as its own piece of evidence regardless of
+family approval status.
+
+`is_approved: false` entries are valid and expected — the starter file
+ships the demo's own local model exactly as approved/unapproved as its
+authority state allows (unadopted policy ⇒ provisional, as everywhere
+else in this schema). An unlisted `model_id` (absent from the array
+entirely) and an `is_approved: false` entry both trip the same invariant
+in the evaluation engine (`evaluation-engine.md` — engine-side, not
+schema-side); the schema's only job is to validate the shape.
+
+## 10b. Round 11 — Risk-Knowledge File Schema (R11-KL-1)
+
+Deliberately **not** part of `PolicyFile` and **not** called a pack — a
+separate file, separate loader, separate TypeScript type, so the
+"knowledge never decides" boundary is structural rather than a naming
+convention someone could quietly erode.
+
+```typescript
+// src/engine/knowledge-lens.ts — own module, own schema
+export interface KnowledgeLensEntry {
+  id: string;
+  condition: Condition;            // src/engine/types.ts — the SAME condition language as §8 ADR-002 (matchesCondition in condition.ts), reused, not reinvented
+  risk_domain: string;            // MIT taxonomy domain
+  risk_subdomain: string;
+  description: string;            // one line, plain English
+  source_attribution: string;     // e.g. "MIT AI Risk Repository, CC BY 4.0"
+}
+```
+
+No field on `KnowledgeLensEntry` can express a tier, control, hard line,
+or verdict effect — the type itself has no such field, so a rule author
+cannot smuggle a deciding effect in even by accident. `parseKnowledgeLens`
+(zod) rejects any unrecognised key, closing the door on an ad-hoc
+`effect:` field being added later without a spec change.
+
+---
+
 ## 11. Integration Points
 
 | Integrated with | What this spec provides |

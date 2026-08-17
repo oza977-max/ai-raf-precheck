@@ -16,8 +16,10 @@
 | F. Control library | the set the solver picks from to bring a use case inside the boundary |
 | G. Drift signals (KRIs) | standing conditions that can flip an approved use case in → out |
 | H. Jurisdiction packs | overrides that raise the bar by where the use case operates |
+| I. Model approval | the approved-model registry; an unlisted/unapproved model trips an invariant, one level deeper than vendor-approval already does |
+| J. Risk-knowledge awareness | advisory only — flags coverage gaps against an external taxonomy; structurally incapable of a verdict effect |
 
-The engine's job per use case: **(1)** build the map (A), **(2)** check the hard lines (B), **(3)** classify track (C) and tier (D) with overrides (H), **(4)** read the boundary position (E), **(5)** solve for the minimal control set from (F) that brings residual risk inside the boundary — or return "reject" if none exists, **(6)** attach the standing drift conditions (G) the use case must stay within after approval.
+The engine's job per use case: **(1)** build the map (A), **(2)** check the hard lines (B), **(3)** classify track (C) and tier (D) with overrides (H), **(4)** read the boundary position (E), **(5)** solve for the minimal control set from (F) that brings residual risk inside the boundary — or return "reject" if none exists, **(6)** attach the standing drift conditions (G) the use case must stay within after approval, **(7)** check the declared model against the registry (I), **(8)** surface any risk-knowledge advisory (J) beside the verdict, never inside it.
 
 ---
 
@@ -175,6 +177,35 @@ Thresholds **illustrative, pending firm calibration**. These are the live condit
 | **MAS FEAT / TRM** | Singapore | Principles-based; covers AI in decisions | Mandatory explainability + human accountability |
 | **DORA** | EU | AI as critical ICT where applicable | Third-party concentration; incident reporting includes AI |
 | **FSA Japan** | Japan | Guidelines tightening through 2026 | Explainability + audit-trail requirements |
+
+---
+
+## I. Model approval and provenance (RAF §9 "Model approval and provenance")
+
+**Approved-model registry.** Every AI use case declares which model runs it. A model absent from the firm's approved list, or present but not yet approved, trips an invariant whose resolution is a named control/required review — the vendor-approval pattern (§H concentration tracking), one level deeper: not just *which vendor*, but *which model*.
+
+**Provenance classes** (firm-visible attribute; never itself a pass/fail gate — rules may condition on it):
+1. **Vendor-hosted** — called via a third party's API; subject to the silent-substitution controls (§F) and vendor concentration tracking (§H's Third-Party dimension).
+2. **Open-weights, self-hosted** — no vendor substitution risk, but the firm carries the full validation burden itself.
+3. **Fine-tuned in-house** — inherits its base model's class plus training-data governance obligations.
+
+**Approval evidence:** named benchmark suite + date. General-capability benchmarks alone are insufficient where the use case is financial — a finance-domain evaluation is required for any Track I/II use, and for any Track III use touching client-facing or regulated content.
+
+**Engine consumption:** the register carries an `ai_model` node type (name/version, provenance class, license note, approval status, benchmark evidence); use cases link to it via a `uses_model` edge. An unlisted or unapproved model is itself an invariant trigger, independent of tier/track.
+
+---
+
+## J. Risk-knowledge awareness (RAF §9 "Risk-knowledge awareness")
+
+**What it is not.** Not a rule source. Not a pack. Has no field capable of expressing a tier, control, hard line, or verdict effect — structurally, not by convention.
+
+**What it is.** A curated mapping from graph-attribute conditions to entries in an external, recognized AI-risk taxonomy (the public option: the MIT AI Risk Repository, 1,700+ risks from 65 frameworks, CC BY 4.0 licensed, updated quarterly). Each entry: the matching condition, the risk domain/subdomain, a one-line plain-English description, and the taxonomy's attribution.
+
+**What it does.** Two effects only, both advisory:
+1. **Advisory flag** — a matched entry renders beside the verdict (review screen, sign-off page), in the established advisory idiom, "informs — the rules decide," never blocking.
+2. **Coverage-gap note** — where a matched entry's risk class is covered by no firm or pack rule, the panel says so, and a one-tap action files it into the rule-improvement queue as a coverage gap — the same governed channel that already turns dissent into rule-authoring work.
+
+**Engine consumption:** the lens rides beside the verdict, never inside it. `evaluate()`'s decision output must be byte-identical with the lens present or absent — this is a determinism invariant, not a preference. Curation is human and versioned; the file is only as current as its last sync against the source taxonomy, which is a monitoring-loop tripwire, not an automated process.
 
 ---
 

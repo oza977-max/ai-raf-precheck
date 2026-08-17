@@ -32,6 +32,15 @@ export interface StructuredFormValues {
   // never asked. Optional so every existing caller stays valid.
   platform?: string;
   vendor?: string;
+  // R11-MG-2 (ADR-IF-R11-MG-1, intake-flow.md §20): which model this use
+  // case declares — required on the form path, sourced from the policy's
+  // approved-model registry or the "not listed — name it" free-text
+  // fallback. Optional on the type so every existing caller stays valid.
+  declaredModelId?: string;
+  /** Free text, set only when the submitter chose "not listed — name it".
+   *  Mirrors decisionTypeOther's pattern — kept separate so a resolved
+   *  registry id and a free-typed name never get confused with each other. */
+  declaredModelIdOther?: string;
   decisionType?: DecisionType;
   /** Free text, set only when the submitter chose "Something else". Kept
    *  SEPARATE from `decisionType` on purpose: nothing in the policy can match
@@ -67,6 +76,11 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
         // 'internal' remains the sentinel for "no third-party vendor".
         vendor: values.vendor && values.vendor.trim() ? values.vendor : 'internal',
         ...(values.platform ? { platform: values.platform } : {}),
+        ...(values.declaredModelIdOther?.trim()
+          ? { declared_model_id: values.declaredModelIdOther.trim() }
+          : values.declaredModelId?.trim()
+            ? { declared_model_id: values.declaredModelId.trim() }
+            : {}),
         replaces_prior_model: values.replacesPriorModel,
       },
     ],

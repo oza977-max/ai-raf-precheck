@@ -2,6 +2,7 @@ import { openRegisterDb } from './db';
 import { append, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
 import { isVerdictProvisional } from '../engine/provisional';
+import type { PolicyFile, ProcessingNode } from '../engine/types';
 
 // Rule 3 (cross-cutting.md §7): persistence-only, no evaluation logic, no LLM, no React.
 // Repository pattern (Fowler) — this is the only module that reaches into
@@ -15,6 +16,52 @@ export async function addNode(node: RegisterNode): Promise<void> {
 export async function addEdge(edge: RegisterEdge): Promise<void> {
   const db = await openRegisterDb();
   await db.add('register_edges', edge);
+}
+
+// R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md §16). Consumes the
+// `ai_model` node type and `uses_model` edge type — defined since the
+// register's first schema and never once instantiated (CLAUDE.md's standing
+// gotcha: "a field that is computed but never consumed is a bug in
+// waiting"). Deterministically keyed by `model_id` so the SAME model
+// declared by two different use cases resolves to ONE `ai_model` node —
+// the dormancy-repeat guard the fit criteria name. `vendor`/`is_approved`
+// are a snapshot of the policy registry AT WRITE TIME, not a live join —
+// consistent with the append-only discipline elsewhere in the register.
+export async function addUseCaseModelLink(
+  useCaseId: string,
+  processingNode: ProcessingNode,
+  policy: PolicyFile,
+): Promise<void> {
+  const modelId = processingNode.declared_model_id;
+  if (!modelId) return;
+
+  const db = await openRegisterDb();
+  const modelNodeId = `ai-model-${modelId}`;
+  const existing = await db.get('register_nodes', modelNodeId);
+
+  if (!existing) {
+    const entry = (policy.approved_models ?? []).find((m) => m.model_id === modelId);
+    await db.add('register_nodes', {
+      node_id: modelNodeId,
+      node_type: 'ai_model',
+      label: modelId,
+      created_at: new Date().toISOString(),
+      metadata: {
+        node_type: 'ai_model',
+        model_id: modelId,
+        vendor: entry?.vendor ?? 'unknown',
+        is_approved: entry?.is_approved ?? false,
+      },
+    });
+  }
+
+  await db.add('register_edges', {
+    edge_id: crypto.randomUUID(),
+    from_node_id: useCaseId,
+    to_node_id: modelNodeId,
+    edge_type: 'uses_model',
+    created_at: new Date().toISOString(),
+  });
 }
 
 // Find the most recent verdict-bearing event (verdict_produced or

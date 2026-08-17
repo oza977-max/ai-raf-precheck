@@ -42,6 +42,9 @@ describe('StructuredForm', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    // R11-MG-2: "which model" is now a required field.
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
 
     // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
     // answer, so this pre-existing test must answer it. It previously relied
@@ -53,6 +56,7 @@ describe('StructuredForm', () => {
     const graph = onSubmit.mock.calls[0]?.[0];
     expect(graph.intake_method).toBe('structured_form');
     expect(graph.input_nodes[0]?.data_class).toBe('Internal');
+    expect(graph.processing_nodes[0]?.declared_model_id).toBe('test-model');
   });
 
   it('disables submit until all required fields are filled', () => {
@@ -134,6 +138,9 @@ describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => 
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    // R11-MG-2: "which model" is now a required field.
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
   }
 
   it('offers the approved platforms and vendors from the policy registries', () => {
@@ -207,6 +214,9 @@ async function fillEverythingExceptJurisdiction(user: ReturnType<typeof userEven
   await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
   await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
   await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+  // R11-MG-2: "which model" is now a required field.
+  await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+  await user.type(screen.getByLabelText(/name the model/i), 'test-model');
 }
 
 describe('StructuredForm — jurisdiction answered-state (P8-C01)', () => {
@@ -495,6 +505,13 @@ const FIELD_PROBES: FieldProbe[] = [
   // whole form, not only the fields expected to block.
   { id: 'sf-platform', answer: () => {} },
   { id: 'sf-vendor', answer: () => {} },
+  {
+    id: 'sf-model',
+    answer: () => {
+      setValue(/which model does it run on/i, '__other__');
+      setValue(/name the model/i, 'test-model');
+    },
+  },
   { id: 'sf-decision-type', answer: () => {} },
   { id: 'sf-hitl', answer: () => {} },
 ];
@@ -589,9 +606,11 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     const user = userEvent.setup();
     render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
 
-    // The jurisdiction answer is genuinely outstanding and IS marked.
+    // The jurisdiction and model answers are genuinely outstanding and ARE marked.
     expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
 
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     await user.click(screen.getByLabelText(/none.*not sure/i));
 
     // Nothing invisible is left holding the gate.

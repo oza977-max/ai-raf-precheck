@@ -3,6 +3,8 @@ import { loadPolicy, onPolicyUpdated } from '../store/policy';
 import { getCurrentPolicyYaml, setCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
+import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
+import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
 import type { PolicyValidationError } from '../engine/types';
 
 interface PolicyEditorProps {
@@ -37,6 +39,12 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   // result. "loaded — pending adoption" is honest: rules apply at eval
   // time but every sign-off is a [FIRM] placeholder until the CRO adopts.
   const packLoad = useMemo(() => loadPacks(getPackSources()), []);
+
+  // R11-UI-1: the third lever, loaded read-only here — this screen shows
+  // it exists and how many entries it carries; it is never editable
+  // alongside the appetite YAML, because editing it is curation, not
+  // rule-authoring (policy-schema.md §10b).
+  const knowledgeLensLoad = useMemo(() => loadKnowledgeLens(getCurrentKnowledgeLensYaml()), []);
 
   const hasFirmMarkers = yaml
     .split('\n')
@@ -84,6 +92,24 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         The bank&apos;s rules, machine-readable and versioned. Every verdict traces back to a rule in here. The
         engine enforces it — it does not invent it.
       </p>
+
+      {/* R11-UI-1: three levers, named and visually distinct, each with its
+          own one-line power statement — appetite decides, law decides,
+          knowledge challenges (never decides). */}
+      <div className="policy-view__levers">
+        <div className="policy-view__lever">
+          <h3>Firm appetite</h3>
+          <p className="policy-view__lever-power">Decides.</p>
+        </div>
+        <div className="policy-view__lever">
+          <h3>Regulation</h3>
+          <p className="policy-view__lever-power">Decides, where the law applies.</p>
+        </div>
+        <div className="policy-view__lever policy-view__lever--advisory">
+          <h3>Risk knowledge</h3>
+          <p className="policy-view__lever-power">Informs — never decides.</p>
+        </div>
+      </div>
 
       {hasFirmMarkers && (
         <div className="policy-view__action-required" role="alert">
@@ -192,6 +218,31 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
           </ul>
         </div>
       )}
+
+      {/* R11-UI-1: the knowledge lever, visually apart from the two
+          deciding levers above — dashed border in CSS matches
+          KnowledgeLensPanel's own advisory idiom. */}
+      <div className="policy-view__panel knowledge-lens knowledge-lens--summary">
+        <h3>Risk knowledge (advisory)</h3>
+        {knowledgeLensLoad.valid ? (
+          <>
+            <p className="policy-view__panel-sub">
+              {knowledgeLensLoad.entries.length} curated entr{knowledgeLensLoad.entries.length === 1 ? 'y' : 'ies'}{' '}
+              from the MIT AI Risk Repository&apos;s public domain taxonomy (CC BY 4.0). Matched entries render
+              beside the verdict on review and sign-off — informs, never decides.
+            </p>
+            <p className="policy-view__panel-sub">
+              This file is curated, not editable here — see{' '}
+              <code>grounding/risk-knowledge.yaml</code>.
+            </p>
+          </>
+        ) : (
+          <p className="policy-view__panel-sub" role="alert">
+            Risk-knowledge file failed to load — the advisory panel is unavailable, but nothing about the
+            appetite and jurisdiction levers above is affected.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

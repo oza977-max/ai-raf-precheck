@@ -806,11 +806,22 @@ interface VerdictTraceData {
       </tbody>
     </table>
 
-    <h2 id="changelog-r3">14. Changelog</h2>
+    <h2 id="r11-knowledge-lens">14. Round 11 &mdash; The Knowledge Lens (R11-KL)</h2>
+
+    <p>Spec for <code>requirements/requirements-011.md</code>, grounded in <code>grounding/ai-raf-template.html</code> &sect;9 &ldquo;Risk-knowledge awareness&rdquo; and <code>grounding/raf-extraction.md</code> &sect;J.</p>
+
+    <p><strong>ADR-EE-R11-1 &mdash; the lens is a pure function outside <code>evaluate()</code>&rsquo;s call graph, reusing <code>matchesCondition</code> unchanged.</strong> <code>src/engine/knowledge-lens.ts</code> exports <code>matchKnowledgeLens(graph: DataFlowGraph, entries: KnowledgeLensEntry[], policyRuleIds: string[]): KnowledgeMatch[]</code> &mdash; pure (Rule 1), calling the existing <code>condition.ts#matchesCondition(entry.condition, graph)</code> per entry (the same evaluator hard lines/invariants already use against the graph &mdash; no second condition language, per policy-schema.md &sect;10b). A match&rsquo;s <code>covered</code> flag is computed by checking whether <code>policyRuleIds</code> (the rule ids that actually fired for THIS verdict &mdash; supplied by the caller, not recomputed) intersects the entry&rsquo;s own curated <code>risk_domain</code> mapping; this is a static, curated mapping declared alongside the entry, honest about being hand-maintained rather than derived.</p>
+
+    <p><strong>Critical boundary: <code>matchKnowledgeLens</code> is never called from inside <code>evaluate()</code>.</strong> It is called by the SAME orchestration layer that already supplies precedent candidates to <code>SimilarCases</code> (IntakeFlow at graph_review, RegisterDetail per case) &mdash; a second, independent call alongside <code>evaluate()</code>, not a step inside it. This is what makes R11-NF-1 (&ldquo;<code>evaluate()</code>&rsquo;s decision output is byte-identical with and without the knowledge lens loaded&rdquo;) true by construction rather than by discipline: the lens literally cannot reach the verdict&rsquo;s inputs, because it never receives them. The determinism test (&sect;7) is extended with a case that runs <code>evaluate()</code> twice &mdash; once with a knowledge lens file loaded in the test harness, once without &mdash; asserting the serialized <code>Verdict</code> is identical either way.</p>
+
+    <p><strong>ADR-EE-R11-2 &mdash; the coverage-gap filing reuses R4&rsquo;s dissent write path exactly.</strong> Per requirements-011.md R11-KL-3, an uncovered match&rsquo;s &ldquo;file as coverage gap&rdquo; action calls the same <code>fileDissent</code>-family function <code>RegisterDetail.tsx</code> already uses for rule challenges (verdict-audit.md &sect;4.3 <code>rule_dissent_filed</code>), naming the risk class in place of a rule id. No new audit event type, no new write path &mdash; R4&rsquo;s &ldquo;advisory by construction&rdquo; guarantee (writes exactly one event and nothing else) is inherited, not re-proven.</p>
+
+    <h2 id="changelog-r3">15. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>
+        <tr><td>2026-08-17</td><td>&sect;14 added &mdash; round 11 knowledge lens (ADR-EE-R11-1: pure function outside evaluate()&rsquo;s call graph, reusing matchesCondition unchanged &mdash; determinism true by construction; ADR-EE-R11-2: coverage-gap filing reuses R4&rsquo;s dissent write path exactly).</td></tr>
       </tbody>
     </table>
 

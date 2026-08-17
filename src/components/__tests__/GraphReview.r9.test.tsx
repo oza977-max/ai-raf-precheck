@@ -200,6 +200,12 @@ describe('form path — the trail records the birth event', () => {
       const el = document.getElementById(id) as HTMLSelectElement | null;
       if (el && !el.value) await user.selectOptions(el, value);
     }
+    // R11-MG-2: "which model" is now a required field.
+    const modelSelect = document.getElementById('sf-model') as HTMLSelectElement | null;
+    if (modelSelect && !modelSelect.value) {
+      await user.selectOptions(modelSelect, '__other__');
+      await user.type(screen.getByLabelText(/name the model/i), 'test-model');
+    }
     await user.click(document.getElementById('sf-jurisdiction-none')!);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await screen.findByText(/review extracted graph/i);

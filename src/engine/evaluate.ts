@@ -18,6 +18,7 @@ import type { TrippedInvariant } from './invariants';
 import { buildStandingConditions } from './conditions';
 import { solvControls } from './greedy-solver';
 import type {
+  ApprovedModel,
   Control,
   DataFlowGraph,
   InheritanceChain,
@@ -97,6 +98,7 @@ export function evaluate(
           ...new Set([
             ...firmRequiredReviews(graph, policy).map((r) => r.review),
             ...unapprovedComponentReviews(inheritance),
+            ...modelGovernanceReviews(graph, policy),
           ]),
         ].sort(),
         downstream_review_sources: firmRequiredReviews(graph, policy),
@@ -215,6 +217,7 @@ export function evaluate(
             ...firmRequiredReviews(graph, policy).map((r) => r.review),
             ...overrides.addedReviews,
             ...unapprovedComponentReviews(inheritance),
+            ...modelGovernanceReviews(graph, policy),
           ]),
         ].sort(),
         downstream_review_sources: firmRequiredReviews(graph, policy),
@@ -282,6 +285,7 @@ export function evaluate(
           ...firmRequiredReviews(graph, policy).map((r) => r.review),
           ...overrides.addedReviews,
           ...unapprovedComponentReviews(inheritance),
+          ...modelGovernanceReviews(graph, policy),
         ]),
       ].sort(),
       downstream_review_sources: firmRequiredReviews(graph, policy),
@@ -390,6 +394,56 @@ function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): 
         ? 'Full vendor/platform risk assessment required — the declared component is not on the approved list'
         : `Full vendor/platform risk assessment required — ${name} is not on the approved list`,
   );
+}
+
+// R11-MG-2 (ADR-IF-R11-MG-1, evaluation-engine.md/policy-schema.md §10a).
+// One level deeper than vendor: same resolve-against-registry, report-
+// unresolved-or-unapproved pattern as `resolveInheritance` /
+// `unapprovedComponentReviews` above, reused rather than reinvented.
+// Deterministic (NF-1): pure function of sorted policy.approved_models and
+// the graph's declared_model_id values, no I/O.
+function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): string[] {
+  const declared = [
+    ...new Set(
+      graph.processing_nodes
+        .map((n) => n.declared_model_id)
+        .filter((id): id is string => id !== undefined && id.length > 0),
+    ),
+  ].sort();
+  if (declared.length === 0) return [];
+
+  // Exact-id-first, family-fallback (R11-MG-1a, ADR-PS-R11-1a). Both maps
+  // are built from the same sorted-by-model_id order (NF-1) so resolution
+  // is a pure function of the policy's own stable order, never runtime-
+  // derived.
+  const sortedModels = sortedByModelId(policy.approved_models ?? []);
+  const registry = new Map<string, ApprovedModel>(
+    sortedModels.filter((m) => !m.is_family).map((m) => [m.model_id, m]),
+  );
+  const families = sortedModels.filter((m) => m.is_family === true);
+
+  function resolveApprovedModel(id: string): ApprovedModel | undefined {
+    const exact = registry.get(id);
+    if (exact) return exact;
+    return families.find((f) => f.version_pattern !== undefined && id.startsWith(f.version_pattern));
+  }
+
+  return declared
+    .filter((id) => {
+      const entry = resolveApprovedModel(id);
+      return entry === undefined || entry.is_approved === false;
+    })
+    .map(
+      (id) =>
+        // Reserved-word discipline (CLAUDE.md gotcha, /approved|rejected/i):
+        // "on the firm's registry within appetite" says the same thing as
+        // "approved" without the banned word reaching a rendered string.
+        `Model governance review required — ${id} is not on the firm's model registry within appetite`,
+    );
+}
+
+function sortedByModelId(items: ApprovedModel[]): ApprovedModel[] {
+  return [...items].sort((a, b) => a.model_id.localeCompare(b.model_id));
 }
 
 function tierRationale(assignment: TierAssignment): RuleRationale {

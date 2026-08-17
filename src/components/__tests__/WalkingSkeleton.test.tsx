@@ -136,6 +136,8 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
 
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
@@ -614,6 +616,8 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
     // where the system operates.
@@ -654,6 +658,8 @@ describe('Walking Skeleton', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'material');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
     // where the system operates.
@@ -884,6 +890,8 @@ describe('Register row naming (charter 004 D-004)', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
@@ -928,6 +936,8 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
     await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
     await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
     await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
+    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
+    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 

@@ -690,6 +690,33 @@ export interface PolicyFile {
   // Comparators applied in order until one separates the candidates. Optional;
   // evaluate() falls back to ["severity", "control_burden", "id"].
   binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
+  // R11-MG-1 (ADR-PS-R11-1) — the approved-model registry. Optional so
+  // every pre-R11 policy still loads unchanged. Sorted by model_id before
+  // iteration, same determinism discipline as every other collection here.
+  approved_models?: ApprovedModel[];
+}
+
+// R11-MG-1 (requirements-011.md, ADR-PS-R11-1). is_approved: false entries
+// are valid and expected — provenance class is an attribute the firm's
+// rules judge, never a hardcoded penalty (requirements-011.md R11-MG-2).
+export interface ApprovedModel {
+  model_id: string;               // stable key, e.g. "qwen3:4b"
+  vendor: string;
+  provenance_class: 'vendor_hosted' | 'open_weights_self_hosted' | 'fine_tuned_in_house';
+  is_approved: boolean;
+  license_note?: string;
+  benchmark_evidence?: {
+    suite: string;                 // named benchmark suite
+    date: string;                  // ISO 8601
+    finance_domain: boolean;       // required for Track I/II or client-facing Track III
+    detail?: string;
+  };
+  // R11-MG-1a (mid-build amendment): mutually exclusive with an entry
+  // keyed purely by model_id — a FAMILY entry approves a version pattern
+  // rather than one pinned string. model_id on a family entry is the
+  // family's own label (e.g. "gpt-4o-*"), not a real model string.
+  is_family?: boolean;
+  version_pattern?: string;      // prefix match, e.g. "gpt-4o-" — no regex, no dynamic code (ADR-002 discipline)
 }
 
 export interface TranslationAttestation {
@@ -900,6 +927,42 @@ platforms:
 
         <h4>Consequences</h4>
         <p>The <code>platforms[]</code> section is present in the schema from V1 but the engine does not process it (it's parsed and stored but the envelope-matching logic ships in V2+). This avoids a schema migration when V2+ ships.</p>
+      </div>
+    </details>
+
+    <details class="adr" id="adr-ps-r11-1">
+      <summary>
+        <span class="adr-id">ADR-PS-R11-1</span>
+        <span class="adr-title">Round 11 — Approved-Model Registry (R11-MG-1)</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p>The registry is a top-level array on the policy file, schema-validated like every other policy collection. <code>PolicyFile</code> gains <code>approved_models: ApprovedModel[]</code>, sorted by <code>model_id</code> before iteration (NF-1 discipline — same determinism rule every other policy collection already follows).</p>
+
+        <h4>Context</h4>
+        <p>Grounded in <code>grounding/ai-raf-template.html</code> §9 "Model approval and provenance" and <code>grounding/raf-extraction.md</code> §I. An unlisted <code>model_id</code> (absent from the array entirely) and an <code>is_approved: false</code> entry both trip the same invariant in the evaluation engine (<code>evaluate.ts</code>, one level deeper than the existing vendor-approval pattern) — the schema's only job here is to validate the shape.</p>
+
+        <h4>Consequences</h4>
+        <p><code>is_approved: false</code> entries are valid and expected — the starter file ships the demo's own local model exactly as approved/unapproved as its authority state allows (unadopted policy ⇒ provisional, as everywhere else in this schema).</p>
+      </div>
+    </details>
+
+    <details class="adr" id="adr-ps-r11-1a">
+      <summary>
+        <span class="adr-id">ADR-PS-R11-1a</span>
+        <span class="adr-title">Matching is exact-id-first, family-fallback; never weakens Track II pinning</span>
+        <span class="adr-status">Accepted</span>
+      </summary>
+      <div class="adr-body">
+        <h4>Decision</h4>
+        <p><code>resolveApprovedModel(declaredModelId, registry)</code> checks for an exact <code>model_id</code> match first; only if none exists does it check family entries (<code>is_family: true</code>) by prefix match against <code>version_pattern</code>, in the same sorted-by-<code>model_id</code> order as everything else (NF-1). A family match returns the family entry's approval/provenance — it never fabricates a specific version.</p>
+
+        <h4>Context</h4>
+        <p>Mid-build amendment (requirements-011.md R11-MG-1a, 2026-08-17): a registry keyed only to exact version strings goes stale the moment a vendor ships a point release — every new string reads as "unlisted" even though it is the same commitment the firm actually approved.</p>
+
+        <h4>Consequences</h4>
+        <p>Track II's existing version-pinning control (<code>evaluation-engine.md</code>, silent-substitution handling) is unaffected: family approval answers "may this model run at all", pinning answers "which exact build was validated", and Track II still requires the latter as its own piece of evidence regardless of family approval status. Family matching is itself deterministic (plain prefix match — no regex, no dynamic code, ADR-002 discipline).</p>
       </div>
     </details>
 

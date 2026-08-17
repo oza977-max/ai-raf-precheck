@@ -11,6 +11,38 @@ every verdict.
 
 ---
 
+## [0.13.0] — 2026-08-17
+
+### Added
+
+- **The third lever: risk knowledge.** Alongside your firm's appetite and
+  jurisdiction rules, AIGate now carries a curated advisory lens against
+  the MIT AI Risk Repository's public domain taxonomy (CC BY 4.0). Where a
+  use case's shape matches a known risk class, it's shown beside the
+  verdict — never inside it. Its schema has no field that can express a
+  tier, control, or verdict effect, so it cannot decide anything even by
+  accident, and a test proves `evaluate()`'s output is byte-identical
+  whether the lens is loaded or not. Where a matched risk has no rule
+  covering it yet, one tap files the gap into the rule-improvement queue.
+- **Model governance.** Intake now asks which AI model is running a use
+  case, same as it already asks which vendor. An unlisted or unapproved
+  model triggers a named review, exactly like an unapproved vendor
+  already does. Models are classed by provenance (vendor-hosted /
+  open-weights self-hosted / fine-tuned in-house) as an attribute the
+  firm's own rules judge — never a hardcoded penalty. AIGate's own
+  self-assessment now honestly declares the model it runs on.
+- **Approved-model families, not just exact versions.** A registry entry
+  can approve a whole model family by vendor + version pattern, so the
+  list doesn't go stale every time a vendor ships a point release. An
+  exact match still always wins where one exists, and this never weakens
+  the existing requirement that higher-stakes use cases pin an exact,
+  validated model version.
+- **The three levers, visibly distinct in the app.** The policy screen and
+  About page now name all three sources a verdict can trace to — firm
+  appetite (decides), jurisdiction packs (decide, where the law applies),
+  and risk knowledge (informs, never decides) — with the README diagram
+  and `docs/approach.md` updated to match.
+
 ## [0.12.0] — 2026-08-17
 
 ### Added

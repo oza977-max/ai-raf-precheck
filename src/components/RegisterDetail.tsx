@@ -11,6 +11,10 @@ import type { PrecedentCandidate } from '../engine/precedent';
 import SimilarCases from './SimilarCases';
 import type { EnrichedPrecedent } from './SimilarCases';
 import { getUseCases } from '../store/register';
+import type { KnowledgeMatch } from '../engine/knowledge-lens';
+import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
+import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
+import KnowledgeLensPanel from './KnowledgeLensPanel';
 
 // V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
 // presentation-only — renders the REAL audit store via getAll()
@@ -143,6 +147,80 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     add(latestVerdict.binding_constraint || null);
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
   }, [latestVerdict]);
+
+  // R11-KL-2/-3 (requirements-011.md; evaluation-engine.md §14
+  // ADR-EE-R11-1/-2). Advisory-only, read-only until the reviewer taps
+  // "file as coverage gap" — never fed into evaluate() and never derived
+  // from it. The full graph is not persisted on the register entry
+  // (ADR-RL-R3-1 consequences, same reason `graph` is not passed to
+  // VerdictDisplay above), so condition-matching against the graph cannot
+  // be redone here; instead this reads the entry ids the lens matched AT
+  // EVALUATION TIME (IntakeFlow, which does have the graph), carried
+  // beside the verdict on the verdict_produced/verdict_corrected event, and
+  // resolves them against the currently-loaded lens entries. `covered` is
+  // recomputed fresh here (not persisted) against THIS verdict's own rule
+  // ids, exactly like `challengeableRules` above.
+  const knowledgeLensEntries = useMemo(() => {
+    const result = loadKnowledgeLens(getCurrentKnowledgeLensYaml());
+    return result.valid ? result.entries : [];
+  }, []);
+  const knowledgeLensMatches = useMemo<KnowledgeMatch[]>(() => {
+    if (!latestVerdict) return [];
+    const payload = findLatestVerdictEvent(events);
+    const matchedIds = payload
+      ? payload.type === 'verdict_produced'
+        ? payload.knowledge_lens_matched_entry_ids
+        : payload.knowledge_lens_matched_entry_ids
+      : undefined;
+    if (!matchedIds || matchedIds.length === 0) return [];
+    const ruleIds = new Set(challengeableRules.map((r) => r.id));
+    return knowledgeLensEntries
+      .filter((entry) => matchedIds.includes(entry.id))
+      .map((entry) => ({
+        entry,
+        covered: entry.covering_rule_ids.some((id) => ruleIds.has(id)),
+      }))
+      .sort((a, b) => a.entry.id.localeCompare(b.entry.id));
+  }, [latestVerdict, events, knowledgeLensEntries, challengeableRules]);
+
+  const [gapBusyEntryId, setGapBusyEntryId] = useState<string | null>(null);
+  const [gapError, setGapError] = useState<string | null>(null);
+  const gapInFlight = useRef(false);
+
+  // ADR-EE-R11-2: reuses handleFileDissent's exact write path — the same
+  // event type (`rule_dissent_filed`), the same appendAuditEvent call
+  // shape, no new event type. `rule_id` carries the risk_domain (not a
+  // rule id) so the record is honest about what is being filed. One click
+  // writes exactly one event (R4's advisory-by-construction guarantee).
+  async function handleFileKnowledgeGap(match: KnowledgeMatch) {
+    if (gapInFlight.current) return;
+    gapInFlight.current = true;
+    setGapBusyEntryId(match.entry.id);
+    setGapError(null);
+    try {
+      if (!latestVerdict) return;
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'rule_dissent_filed',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'rule_dissent_filed',
+          verdict_id: latestVerdict.id,
+          rule_id: match.entry.risk_domain,
+          dissent: `Coverage gap: no firm or pack rule currently addresses ${match.entry.risk_domain} (${match.entry.risk_subdomain}).`,
+          filed_by_name: `${role} (risk-knowledge lens, ${match.entry.source_attribution})`,
+        },
+      });
+      await load();
+    } catch (err) {
+      setGapError(`Filing the coverage gap failed: ${err instanceof Error ? err.message : String(err)}.`);
+    } finally {
+      gapInFlight.current = false;
+      setGapBusyEntryId(null);
+    }
+  }
 
   // R8-SC-4: the reviewer sees precedent where they sign. Same derivation
   // as the intake panel; presentation-only, never engine input.
@@ -496,6 +574,18 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             memoLabel={summary.label}
             memoDescription={summary.description}
           />
+          {knowledgeLensMatches.length > 0 && (
+            <KnowledgeLensPanel
+              matches={knowledgeLensMatches}
+              onFileCoverageGap={(m) => void handleFileKnowledgeGap(m)}
+              gapBusyEntryId={gapBusyEntryId}
+            />
+          )}
+          {gapError && (
+            <p role="alert" className="register-detail__gap-error">
+              {gapError}
+            </p>
+          )}
         </>
       ) : (
         <p className="register-detail__no-verdict" role="status">
