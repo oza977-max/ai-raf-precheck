@@ -11,6 +11,19 @@ every verdict.
 
 ---
 
+## [0.11.1] — 2026-08-17
+
+### Fixed
+
+- **The guided form's audit trail now records the birth of a use case.**
+  Found by running cases through the actual app screens and comparing the
+  resulting trail against a seeded one, event by event: the AI intake path
+  wrote the "use case created" event (with your original description and
+  how it came in), but the guided form — the most-used path — never did.
+  Both paths now write it identically.
+
+---
+
 ## [0.11.0] — 2026-08-17
 
 An investment-bank portfolio in the box.
