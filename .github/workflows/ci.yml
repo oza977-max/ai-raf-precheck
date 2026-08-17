@@ -1,0 +1,29 @@
+# CI — closes the OQ-5 caveat that has ridden every release since 006:
+# "Ship-ready, manual gate applied, no CI exists." The gate is the same
+# ritual run locally before every commit, minus the live browser walk
+# (which stays human).
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # npm test, never bare vitest — the script sets the Node webstorage
+      # workaround (CLAUDE.md gotcha #1).
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/spec-parity-check.py
