@@ -11,6 +11,26 @@ every verdict.
 
 ---
 
+## [0.11.0] — 2026-08-17
+
+An investment-bank portfolio in the box.
+
+### Added
+
+- **"Load investment-bank portfolio"** (sidebar → Demo data): 16 use cases
+  across Markets, Advisory, Operations, Finance, HR, Technology, Risk,
+  Compliance and Legal — every verdict computed by the real engine at load
+  time, nothing canned. Most carry the full first-line-to-second-line
+  chain on the audit trail (named sample reviewers, clearly marked as
+  seeds); one case has a correction request with the reviewer's reason;
+  several are deliberately left awaiting sign-off so the reviewer queue
+  has real work; and one carries a filed rule challenge so the
+  rule-improvement queue shows a live example. Outcomes genuinely vary —
+  in appetite, in with controls, and outside — because the cases were
+  designed to exercise different rules, not to look good.
+
+---
+
 ## [0.10.0] — 2026-08-17
 
 Honest everywhere AND legible: the review screen recomposed. Round 9, from
