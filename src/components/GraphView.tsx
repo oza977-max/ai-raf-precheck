@@ -155,13 +155,15 @@ function NodeCard({
   onConfirm?: (nodeId: string) => void;
 }) {
   const [labelDraft, setLabelDraft] = useState(node.label);
+  // R9-SC-2 (ADR-IF-R9-1): consequences one click away, per card.
+  const [showWhy, setShowWhy] = useState(false);
   const uncertain = 'uncertain' in node && node.uncertain;
   const record = node as unknown as Record<string, unknown>;
 
   const vendor = 'vendor' in node ? (node as ProcessingNode).vendor : null;
 
   return (
-    <div className="graph-node" data-uncertain={uncertain ? 'true' : 'false'} data-unconfirmed={unconfirmed ? 'true' : 'false'}>
+    <div id={`card-${node.id}`} className="graph-node" data-uncertain={uncertain ? 'true' : 'false'} data-unconfirmed={unconfirmed ? 'true' : 'false'}>
       <div className="graph-node__header">
         <span className="graph-node__label">{node.label}</span>
         {editable && (
@@ -199,14 +201,19 @@ function NodeCard({
                   {quotes[spec.field] ? (
                     <span className="graph-node__basis">based on: &ldquo;{quotes[spec.field]}&rdquo;</span>
                   ) : guessed.includes(spec.field) ? (
-                    <span className="graph-node__guessed">
-                      the description does not say — the model guessed. Correct it here, or it will
-                      be asked as a question.
+                    // R9-SC-3: a quiet badge, not a second alarm — the
+                    // card-level banner carries the alarm; this points.
+                    <span className="graph-node__guessed-badge">
+                      guessed — the description does not say. Correct it, or it becomes a question.
                     </span>
                   ) : null}
-                  <span className="graph-node__consequence">{FIELD_CONSEQUENCES[spec.field]}</span>
+                  {showWhy && (
+                    <span className="graph-node__consequence">{FIELD_CONSEQUENCES[spec.field]}</span>
+                  )}
                   {fieldWarnings.map((w) => (
-                    <span key={w.message} className="graph-node__warning" role="alert">
+                    // R9-SC-3: advisory identity, visually distinct from the
+                    // blocking warn styling — advisory never blocks (R5-GR-4).
+                    <span key={w.message} className="graph-node__advisory" role="note">
                       ⚠ {w.message}
                     </span>
                   ))}
@@ -219,7 +226,18 @@ function NodeCard({
               <dt>vendor</dt>
               <dd>
                 <span className="graph-node__meaning">{vendor}</span>
-                <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>
+                {/* R9 live-verify finding: this custom row missed both the
+                    consequence gating AND the badge — and the first live
+                    case's guessed field was exactly `vendor`. Same rules as
+                    every looped field. */}
+                {quotes.vendor ? (
+                  <span className="graph-node__basis">based on: &ldquo;{quotes.vendor}&rdquo;</span>
+                ) : guessed.includes('vendor') ? (
+                  <span className="graph-node__guessed-badge">
+                    guessed — the description does not say. Correct it, or it becomes a question.
+                  </span>
+                ) : null}
+                {showWhy && <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>}
               </dd>
             </div>
           )}
@@ -276,6 +294,18 @@ function NodeCard({
 
       {/* R5-GR-2: the human states the machine's proposal is right. A
           correction (Edit → change) confirms implicitly via the reducer. */}
+      {!editing && (
+        <button type="button" className="graph-node__why" onClick={() => setShowWhy((w) => !w)}>
+          {showWhy ? 'Hide why these matter' : 'Why these values matter'}
+        </button>
+      )}
+      {/* R9-SC-4: the card that most needs action must not be the one with
+          no button. Opens the editor; ADR-IF-R6-2's no-plain-confirm holds. */}
+      {editable && !editing && guessed.length > 0 && (
+        <button type="button" className="graph-node__fix-guessed" onClick={onToggleEdit}>
+          Fix guessed values
+        </button>
+      )}
       {/* ADR-IF-R6-2: a guessed card renders NO plain confirm — cards with
           guessed fields are excluded from the unconfirmed set and resolve
           via correction or the questionnaire. */}

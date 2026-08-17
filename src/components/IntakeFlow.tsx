@@ -576,8 +576,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     return () => {
       cancelled = true;
     };
+    // Delta review 005 finding 1: a correction updates the graph while the
+    // step stays graph_review — the version in the dep re-runs the search
+    // so the precedent list always reflects the graph on screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.step]);
+  }, [state.step, state.step === 'graph_review' ? state.graphVersion : -1]);
 
   async function handleConfirmAndEvaluate(reviewerNote?: string) {
     if (state.step !== 'confirmation') return;
@@ -1079,6 +1082,59 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             {/* V1.1-C01: a real visual data-flow with a real per-field
                 correction editor — replaces the flat list whose Edit
                 button was a stub that appended " (corrected)" to labels. */}
+            {/* R9-SC-1 (ADR-IF-R9-1): the user's remaining obligations,
+                aggregated from existing state — the plan the gate error
+                used to reveal only on failure. */}
+            {(() => {
+              const nodeLabel = (id: string) =>
+                [...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes].find(
+                  (n) => n.id === id,
+                )?.label ?? id;
+              const items: Array<{ key: string; text: string; target: string }> = [];
+              for (const [nodeId, fields] of Object.entries(state.guessedFields ?? {})) {
+                if (fields.length > 0)
+                  items.push({
+                    key: `g-${nodeId}`,
+                    text: `Fix ${fields.length} guessed value${fields.length === 1 ? '' : 's'} on “${nodeLabel(nodeId)}”`,
+                    target: `card-${nodeId}`,
+                  });
+              }
+              for (const nodeId of state.unconfirmedNodeIds ?? []) {
+                items.push({ key: `c-${nodeId}`, text: `Confirm “${nodeLabel(nodeId)}”`, target: `card-${nodeId}` });
+              }
+              if (state.jurisdictionsConfirmed === false) {
+                items.push({ key: 'jur', text: 'Confirm jurisdictions', target: 'jurisdictions-panel' });
+              }
+              if (state.unconfirmedNodeIds === undefined && items.length === 0) return null;
+              return (
+                <div className="review-checklist" role="note">
+                  {items.length === 0 ? (
+                    <p className="review-checklist__done">
+                      All checked — nothing left to confirm. Proceed when ready.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="review-checklist__title">
+                        {items.length} step{items.length === 1 ? '' : 's'} before you can proceed:
+                      </p>
+                      <ul>
+                        {items.map((item) => (
+                          <li key={item.key}>
+                            <button
+                              type="button"
+                              className="review-checklist__item"
+                              onClick={() => document.getElementById(item.target)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}
+                            >
+                              {item.text}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             <GraphView
               graph={state.graph}
               editable
@@ -1093,15 +1149,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
               guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
             />
-            {/* R8-SC: precedent informs, the rules decide. */}
-            <SimilarCases matches={precedents} />
             {/* R7-JC (ADR-IF-R7-1): jurisdictions gate at review. Sweep-001
                 found a hallucinated valid code ("US") that would silently
                 activate a pack — so the model's reading is explicit, named,
                 editable within the policy's declared set, and never accepted
                 without a human act. */}
             {state.jurisdictionsConfirmed !== undefined && policyResult.valid && (
-              <div className="jurisdictions-panel">
+              <div className="jurisdictions-panel" id="jurisdictions-panel">
                 <h3>Jurisdictions — which regulatory rule packs apply</h3>
                 <p className="field-help">
                   {state.graph.jurisdictions.length > 0
@@ -1155,6 +1209,16 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                   <p className="graph-node__confirmed-note">Confirmed by you.</p>
                 )}
               </div>
+            )}
+            {/* R9-SC-4/-5: informational content AFTER required actions,
+                collapsed to its count (expand renders the full R8 panel). */}
+            {precedents.length > 0 && (
+              <details className="similar-cases-collapse">
+                <summary>
+                  {precedents.length} similar decided case{precedents.length === 1 ? '' : 's'} — show
+                </summary>
+                <SimilarCases matches={precedents} />
+              </details>
             )}
             {reviewGateError && (
               <p role="alert" className="intake-flow__gate-error">

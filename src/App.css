@@ -2430,3 +2430,91 @@ details input {
   font-size: 0.8rem;
   color: var(--ink-faint);
 }
+
+/* R9 — the review screen recomposed. */
+.review-checklist {
+  border: 1px solid var(--warn-border);
+  background: var(--warn-bg);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+.review-checklist__title {
+  font-weight: 600;
+  color: var(--warn-text);
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.review-checklist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.review-checklist__item {
+  background: none;
+  border: none;
+  padding: 0.1rem 0;
+  color: var(--warn-text);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.review-checklist__done {
+  margin: 0;
+  color: var(--low);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.graph-node__guessed-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  border: 1px dashed var(--warn-border);
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.graph-node__advisory {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink);
+  border-left: 3px solid #7a8ca8;
+  background: #eef1f6;
+  padding: 0.2rem 0.45rem;
+  margin-top: 0.2rem;
+}
+
+.graph-node__why {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0.2rem 0;
+}
+
+.graph-node__fix-guessed {
+  margin-top: 0.4rem;
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.similar-cases-collapse summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  margin: 0.6rem 0;
+}
+
+.intake-flow__submitted-description p:last-child {
+  max-height: 6.5rem;
+  overflow-y: auto;
+}

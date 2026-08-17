@@ -139,3 +139,16 @@ describe('probeLocalLlm — loopback-only enforcement', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+// Delta review 005 finding 3: the send path re-checks loopback itself.
+describe('localChatJson — loopback re-check at the send path', () => {
+  it('refuses to send when storage holds a non-local address, without touching the network', async () => {
+    localStorage.setItem('aigate:local-llm-url', 'https://example.com');
+    const result = await localChatJson('x', {});
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.kind === 'network-error') {
+      expect(result.error.message).toContain('not on this machine');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

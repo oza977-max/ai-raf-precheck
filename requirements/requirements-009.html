@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 9 &middot; AIGate &mdash; Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#round-9">Round 9 &mdash; Honest Everywhere AND Legible: the Review Screen Recomposed</a></li>
+                <li><a href="#provenance">Provenance</a></li>
+                <li><a href="#functional-requirements">Functional Requirements</a></li>
+                <li><a href="#non-functional">Non-Functional</a></li>
+                <li><a href="#preserved">Explicitly Preserved</a></li>
+                <li><a href="#index">Index</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+            </ul>
+        </nav>
+        <main class="main-content">
+            <header>
+                <h1>AIGate &mdash; Requirements, Round 9</h1>
+                <p class="metadata">Round 9 &middot; 17 August 2026 &middot; Generated from requirements-009.md &mdash; do not hand-edit</p>
+            </header>
+            <section id="round-9">
+                <h2>Round 9 &mdash; Honest Everywhere AND Legible: the Review Screen Recomposed</h2>
+                <p><strong>Status: APPROVED by the user (2026-08-17) &mdash; full scope including the R5-GR-1 criterion amendment. Build proceeds after delta-code-review findings are folded in.</strong></p>
+            </section>
+
+            <section id="provenance">
+                <h2>Provenance</h2>
+                <p>Design-review-001 (2026-08-17), the first composition review of the graph review screen after five rounds of additions. Verdict: <em>&ldquo;honest everywhere and legible nowhere.&rdquo;</em> Each disclosure (R5 meanings/consequences, R6 quotes/guessed markers, R7 jurisdictions, R8 precedents) is individually correct; their sum is ~1,200&ndash;1,600px for a three-card case, with the constant (consequence lines under every field) visually indistinguishable from the variable (the two guessed fields that need judgment), up to three same-styled alarms per card, required actions scattered across columns, and the user&rsquo;s remaining-obligations list existing only inside the Proceed-refusal error. <strong>Nothing honest is removed in this round &mdash; content becomes aggregated, prioritised, or one click away.</strong></p>
+            </section>
+
+            <section id="functional-requirements">
+                <h2>Functional Requirements</h2>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text"><strong>A review checklist heads the screen.</strong> Derived purely from existing state (<code>unconfirmedNodeIds</code>, <code>guessedFields</code>, <code>jurisdictionsConfirmed</code>): one line per remaining obligation (&ldquo;Confirm &lsquo;CRM data&rsquo;&rdquo;, &ldquo;Fix 2 guessed values on &lsquo;Draft email&rsquo;&rdquo;, &ldquo;Confirm jurisdictions&rdquo;), each scrolling to its card on tap, each disappearing when done. When empty it says so and points at Proceed.</p>
+                    <div class="fit-criterion">Fit criteria: the checklist lists exactly the outstanding obligations for a mixed fixture; completing one removes its line; items scroll-focus their card; zero-obligations renders the done state.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text"><strong>Consequence lines move behind one interaction.</strong> The per-field plain-English <em>meaning</em> stays always-visible (it is what the user checks); the <em>consequence</em> line (&ldquo;hard lines read this field&hellip;&rdquo;) renders on a per-card &ldquo;why these matter&rdquo; disclosure, default closed.</p>
+                    <div class="fit-criterion">Fit criterion: meanings render by default; consequences render after one click and satisfy R5-GR-1&rsquo;s content requirement. <strong>This amends R5-GR-1&rsquo;s fit criterion from &ldquo;displays&rdquo; to &ldquo;displays, or reveals in one click&rdquo; &mdash; recorded here as a deliberate renegotiation, approved with this round.</strong></div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text"><strong>One alarm per card.</strong> The card-level uncertainty banner (which already names the guessed fields) is the single alarm styling on a card. Per-field guessed markers shrink to short badges (&ldquo;guessed &mdash; correct it, or it becomes a question&rdquo;); plausibility warnings get a visually distinct advisory identity so advisory &ne; blocking at a glance.</p>
+                    <div class="fit-criterion">Fit criteria: a card with uncertainty + guessed fields + a plausibility warning renders exactly one warn-styled banner; badges and advisory markers render in their own distinct styles; every R5/R6 rendering requirement still satisfied (both guessed and quoted renderings appear).</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-4</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text"><strong>Every card ends with a visible next step, and required actions precede informational content.</strong> Guessed cards &mdash; which correctly have no plain confirm (ADR-IF-R6-2, unchanged) &mdash; render a &ldquo;Fix guessed values&rdquo; affordance that opens the card&rsquo;s editor. The jurisdictions panel moves above the similar-cases panel.</p>
+                    <div class="fit-criterion">Fit criteria: a guessed card shows the fix affordance and still no plain confirm; clicking it opens the editor; jurisdictions renders before similar cases in DOM order.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-5</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text"><strong>Similar cases collapse to a summary line</strong> (&ldquo;2 similar decided cases &mdash; show&rdquo;), expanding on demand to the full panel including its posture line.</p>
+                    <div class="fit-criterion">Fit criterion: collapsed by default with an accurate count; expanded content satisfies all R8 rendering criteria.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R9-SC-6</span>
+                        <span class="priority-chip priority-could">Could</span>
+                    </div>
+                    <p class="requirement-text"><strong>The &ldquo;what you told us&rdquo; description box caps its height</strong> with expand-on-click for long descriptions.</p>
+                </div>
+            </section>
+
+            <section id="non-functional">
+                <h2>Non-Functional (carried invariants)</h2>
+                <ul>
+                    <li><strong>R9-NF-1 (Must):</strong> No honesty disclosure deleted; every R5&ndash;R8 gate, guard and audit path (<code>NODE_CONFIRMED</code>, corrections, <code>JURISDICTIONS_SET</code>) unchanged in behaviour. Engine untouched.</li>
+                    <li><strong>R9-NF-2 (Must):</strong> No rendered string matches <code>/approved|rejected/i</code>; rendering writes nothing.</li>
+                </ul>
+            </section>
+
+            <section id="preserved">
+                <h2>Explicitly Preserved (from the review&rsquo;s &ldquo;must not be lost&rdquo; list)</h2>
+                <p>The gate-note contract sentence; no-bypass on guessed cards; earned &ldquo;Confirmed by you&rdquo;; quiet provenance quotes; the banner naming guessed fields; ignored-jurisdictions and split-graph notes; appetite vocabulary + posture line in similar cases; jurisdiction edits through the correction path.</p>
+            </section>
+
+            <section id="index">
+                <h2>Index</h2>
+                <table class="index-table">
+                    <thead><tr><th>ID</th><th>Summary</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr class="must"><td>R9-SC-1</td><td>Review checklist header, state-derived, scroll-linked</td><td>Must</td></tr>
+                        <tr class="must"><td>R9-SC-2</td><td>Consequences behind one click (R5-GR-1 criterion amended)</td><td>Must</td></tr>
+                        <tr class="must"><td>R9-SC-3</td><td>One alarm per card; badges + distinct advisory identity</td><td>Must</td></tr>
+                        <tr class="must"><td>R9-SC-4</td><td>Visible next step on every card; actions before information</td><td>Must</td></tr>
+                        <tr class="should"><td>R9-SC-5</td><td>Similar cases collapsed to a count, expand on demand</td><td>Should</td></tr>
+                        <tr class="could"><td>R9-SC-6</td><td>Description box height cap</td><td>Could</td></tr>
+                        <tr class="must"><td>R9-NF-1/2</td><td>Nothing honest removed; gates/audit unchanged; reserved words</td><td>Must</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-17</td><td>Round 9 drafted from design-review-001&rsquo;s six findings. Awaiting approval.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

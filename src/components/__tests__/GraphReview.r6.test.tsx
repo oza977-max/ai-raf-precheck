@@ -151,7 +151,9 @@ describe('R6-PV-3/-4 — provenance on the review screen (GraphView)', () => {
       />,
     );
     expect(screen.getByText(/based on: “credit risk data”/)).toBeInTheDocument();
-    expect(screen.getByText(/the description does not say — the model guessed/i)).toBeInTheDocument();
+    // R9-SC-3: the per-field marker is a quiet badge; the card banner is
+    // the alarm. Both renderings still appear (R6 fit criterion holds).
+    expect(screen.getByText(/guessed — the description does not say/i)).toBeInTheDocument();
   });
 
   it('TC-R6-PV-4-01: a card with a guessed field renders no plain confirm action', () => {
