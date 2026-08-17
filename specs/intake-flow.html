@@ -809,6 +809,10 @@ await audit.append({
 
     <p>Spec for <code>requirements/requirements-008.md</code>. <strong>ADR-IF-R8-1:</strong> similarity is <code>src/engine/precedent.ts</code> &mdash; pure token-overlap (the duplicate check&rsquo;s own idiom, threshold 0.15, top 3, ties by id) over caller-supplied summaries of DECIDED register entries; the orchestration (IntakeFlow at graph_review, RegisterDetail per case) supplies candidates and enriches only the ranked top three with controls read from each match&rsquo;s own audit trail. Rendered by <code>SimilarCases.tsx</code> in APPETITE vocabulary (never the status enum &mdash; reserved words) with the posture line &ldquo;precedent informs, the rules decide&rdquo; on every render. Presentation-only; nothing feeds the engine; graph-field similarity is recorded out of scope until graphs are persisted (ADR-RL-R3-1).</p>
 
+    <h2 id="r9">19. Round 9 &mdash; The Review Screen Recomposed (R9-SC)</h2>
+
+    <p>Spec for <code>requirements/requirements-009.md</code>; provenance is design-review-001&rsquo;s composition verdict (&ldquo;honest everywhere, legible nowhere&rdquo;). <strong>ADR-IF-R9-1:</strong> legibility is restored by AGGREGATION and PRIORITY, never deletion &mdash; every R5&ndash;R8 disclosure survives; three become one-interaction-away or collapsed-with-count. Mechanics: a checklist header derived purely from existing review state (<code>unconfirmedNodeIds</code> &rarr; &ldquo;Confirm &lt;label&gt;&rdquo;, <code>guessedFields</code> &rarr; &ldquo;Fix N guessed values on &lt;label&gt;&rdquo;, <code>jurisdictionsConfirmed === false</code> &rarr; &ldquo;Confirm jurisdictions&rdquo;), each item scroll-focusing its card via DOM ids (<code>card-&lt;nodeId&gt;</code>, <code>jurisdictions-panel</code>); consequence lines render behind a per-card &ldquo;why these matter&rdquo; toggle (R5-GR-1&rsquo;s fit criterion amended to &ldquo;displays, or reveals in one click&rdquo; &mdash; approved with the round); the card-level uncertainty banner is the ONLY warn-styled element on a card (guessed markers become quiet badges, plausibility warnings get a distinct advisory identity); guessed cards render a &ldquo;Fix guessed values&rdquo; affordance opening their editor (ADR-IF-R6-2&rsquo;s no-plain-confirm unchanged); the jurisdictions panel precedes the similar-cases panel, which collapses to a native-details summary carrying its count. Description box is CSS-capped with internal scroll (SC-6). No reducer, gate, or audit-path change anywhere in the round.</p>
+
     <h2 id="changelog">14. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
@@ -818,6 +822,7 @@ await audit.append({
         <tr><td>2026-08-16</td><td>&sect;16 added &mdash; round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect).</td></tr>
         <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`).</td></tr>
         <tr><td>2026-08-17</td><td>&sect;18 added &mdash; round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render).</td></tr>
+        <tr><td>2026-08-17</td><td>&sect;19 added &mdash; round 9 review-screen recomposition (ADR-IF-R9-1: aggregation and priority, never deletion; R5-GR-1 criterion amended with approval).</td></tr>
       </tbody>
     </table>
 
