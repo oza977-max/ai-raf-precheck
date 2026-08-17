@@ -9,6 +9,7 @@
 // "sent back" / "sent back for correction") rather than echoed verbatim.
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent } from '../store/types';
+import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { TIER_MEANINGS, TRACK_MEANINGS } from './field-copy';
 
 export interface ChallengeMemoInput {
@@ -17,6 +18,11 @@ export interface ChallengeMemoInput {
   description?: string;
   verdict: Verdict;
   events: AuditEvent[];
+  // R11-KL, added after the memo shipped in R10: the third lever rides
+  // BESIDE the memo the same way it rides beside the verdict — optional,
+  // additive, never affecting any other section. Absent = pre-R11 call
+  // sites and legacy verdicts stay valid.
+  knowledgeLensMatches?: KnowledgeMatch[];
 }
 
 const STATUS_TO_APPETITE: Record<Verdict['status'], string> = {
@@ -42,7 +48,7 @@ function heading(level: number, text: string): string {
 }
 
 export function buildChallengeMemo(input: ChallengeMemoInput): string {
-  const { label, useCaseId, description, verdict, events } = input;
+  const { label, useCaseId, description, verdict, events, knowledgeLensMatches } = input;
   const lines: string[] = [];
 
   lines.push(heading(1, `Effective challenge memo — ${label}`));
@@ -113,6 +119,22 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
       lines.push(`- **${entry.rule_id}** — ${entry.document} §${entry.section}`);
       lines.push(`  > ${entry.source_text}`);
       lines.push(`  Basis: ${entry.basis}. Sign-off: ${entry.sign_off}.`);
+    }
+  } else {
+    lines.push('none recorded');
+  }
+  lines.push('');
+
+  // RISK KNOWLEDGE (R11-KL, the third lever). Advisory only — this section
+  // restates what already rendered beside the verdict; filing a coverage
+  // gap here changes nothing about the verdict, same as everywhere else.
+  lines.push(heading(2, 'Risk knowledge (advisory — informs, never decides)'));
+  if (knowledgeLensMatches && knowledgeLensMatches.length > 0) {
+    for (const match of knowledgeLensMatches) {
+      const status = match.covered ? 'covered by a firm/pack rule' : 'no covering rule yet — coverage gap';
+      lines.push(`- **${match.entry.risk_domain}** — ${match.entry.risk_subdomain} (${status})`);
+      lines.push(`  ${match.entry.description}`);
+      lines.push(`  Source: ${match.entry.source_attribution}`);
     }
   } else {
     lines.push('none recorded');

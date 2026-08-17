@@ -6,6 +6,7 @@ import type { ProvisionalReason } from '../engine/provisional';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage } from '../store/types';
 import { buildChallengeMemo } from './challenge-memo';
+import type { KnowledgeMatch } from '../engine/knowledge-lens';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -28,6 +29,10 @@ interface VerdictDisplayProps {
   // falling back to a generic label.
   memoLabel?: string;
   memoDescription?: string;
+  // R11-KL: the third lever, computed by the caller (IntakeFlow / Register-
+  // Detail already compute this for KnowledgeLensPanel) and threaded through
+  // so the memo export can restate it — never recomputed here.
+  knowledgeLensMatches?: KnowledgeMatch[];
 }
 
 // BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
@@ -378,7 +383,7 @@ const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
     'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone. This is a gap in the risk appetite policy — one for whoever owns it, not a legal question.',
 };
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches }: VerdictDisplayProps) {
   // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
   // this screen and downloaded client-side. Nothing is written anywhere.
   const downloadMemo = () => {
@@ -388,6 +393,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       description: memoDescription,
       verdict,
       events: auditEvents,
+      knowledgeLensMatches,
     });
     const url = URL.createObjectURL(new Blob([memo], { type: 'text/markdown' }));
     const a = document.createElement('a');
