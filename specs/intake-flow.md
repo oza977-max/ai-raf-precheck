@@ -686,6 +686,30 @@ persisted on `graph_confirmed` as `answer_contexts?: string[]`
 the submitter note, labelled as the submitter's context — the rules did
 not read it.
 
+## 17. Round 7 — Jurisdiction Confirmation on the LLM Path (R7-JC)
+
+Spec for `requirements/requirements-007.md`. Presentation and orchestration
+only.
+
+**ADR-IF-R7-1 — jurisdictions gate at graph review, not as a
+questionnaire question.** The questionnaire asks single-select questions;
+jurisdictions are a multi-select over a policy-scoped set, and they gate
+which PACKS evaluate — they belong beside the graph they modify, under the
+same confirm-gate the R5 cards use. Mechanics: `graph_review` state gains
+`jurisdictionsConfirmed?: boolean` — set `false` at GRAPH_EXTRACTED on the
+LLM path only (like `unconfirmedNodeIds`), absent on the form path and all
+re-entry paths. New actions: `JURISDICTIONS_CONFIRMED` (accepts as shown)
+and `JURISDICTIONS_SET { jurisdictions, correction, updatedGraph }` (edit =
+replace the graph's list from the policy's declared codes, recorded as a
+GraphCorrection with node reference `graph` / field `jurisdictions`, and
+confirmation implied — an edit is stronger evidence than a click, the
+ADR-IF-R5-1 rule). `handleProceedFromGraphReview` refuses while
+`jurisdictionsConfirmed === false`, with its own message. The panel renders
+in the graph_review section (IntakeFlow), showing each claimed code with
+its policy name, "model-proposed" framing, checkbox editing limited to the
+policy's declared jurisdictions, and the none-stated wording for an empty
+list.
+
 ## 14. Changelog
 
 | Date | Change |
@@ -693,3 +717,4 @@ not read it.
 | 2026-07-29 | §13 added — round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine's input contract unchanged. |
 | 2026-08-16 | §15 added — round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm). |
 | 2026-08-16 | §16 added — round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect). |
+| 2026-08-17 | §17 added — round 7 jurisdiction confirmation on the LLM path (ADR-IF-R7-1: gate at graph review; edits are corrections with node reference `graph`). |

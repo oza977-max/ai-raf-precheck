@@ -53,7 +53,8 @@ describe('intakeReducer', () => {
     // R5-GR-2: the LLM path arrives with every node unconfirmed (empty here
     // because the fixture graph has no nodes — the KEY's presence is what
     // marks the gated path).
-    expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1', unconfirmedNodeIds: [] });
+    // R7-JC: the LLM path also arrives with jurisdictions unconfirmed.
+    expect(next).toEqual({ step: 'graph_review', description: 'x', graph: g, graphVersion: 1, corrections: [], useCaseId: 'uc-1', unconfirmedNodeIds: [], jurisdictionsConfirmed: false });
   });
 
   it('graph_review → graph_review on CORRECTION_APPLIED, appending the correction and bumping graphVersion [TC-UC-7-02] [TC-UC-7-03]', () => {

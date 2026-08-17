@@ -2356,3 +2356,28 @@ details input {
 .questionnaire__options--labelled button {
   text-align: left;
 }
+
+/* R7 — jurisdictions confirmation panel. */
+.jurisdictions-panel {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  margin: 0.8rem 0;
+}
+
+.jurisdictions-panel h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+}
+
+.jurisdictions-panel__option {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.jurisdictions-panel__confirm {
+  margin-top: 0.4rem;
+  background: var(--low);
+  border-color: var(--low);
+}

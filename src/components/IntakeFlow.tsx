@@ -451,6 +451,14 @@ export default function IntakeFlow() {
       );
       return;
     }
+    // R7-JC-2: jurisdictions select which REGULATIONS evaluate — they are
+    // never left model-asserted.
+    if (state.jurisdictionsConfirmed === false) {
+      setReviewGateError(
+        'Confirm the jurisdictions before proceeding. They decide which regulatory rule packs evaluate this use case, so the model\u2019s reading is never accepted on its own.',
+      );
+      return;
+    }
     setReviewGateError(null);
     if (!policyResult.valid) {
       throw new Error(
@@ -1023,6 +1031,67 @@ export default function IntakeFlow() {
               guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
             />
+            {/* R7-JC (ADR-IF-R7-1): jurisdictions gate at review. Sweep-001
+                found a hallucinated valid code ("US") that would silently
+                activate a pack — so the model's reading is explicit, named,
+                editable within the policy's declared set, and never accepted
+                without a human act. */}
+            {state.jurisdictionsConfirmed !== undefined && policyResult.valid && (
+              <div className="jurisdictions-panel">
+                <h3>Jurisdictions — which regulatory rule packs apply</h3>
+                <p className="field-help">
+                  {state.graph.jurisdictions.length > 0
+                    ? 'Proposed by the model from your description. Confirm or change it — this choice selects the regulatory rules.'
+                    : 'The model read no jurisdiction from your description — only the firm\u2019s own appetite rules will apply. Confirm, or pick the regions this use case touches.'}
+                </p>
+                {policyResult.policy.jurisdictions.map((j) => (
+                  <label key={j.code} className="jurisdictions-panel__option">
+                    <input
+                      type="checkbox"
+                      checked={state.graph.jurisdictions.includes(j.code)}
+                      disabled={state.jurisdictionsConfirmed}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...state.graph.jurisdictions, j.code]
+                          : state.graph.jurisdictions.filter((c) => c !== j.code);
+                        const updatedGraph = { ...state.graph, version: state.graph.version + 1, jurisdictions: next };
+                        dispatch({
+                          type: 'JURISDICTIONS_SET',
+                          updatedGraph,
+                          correction: {
+                            correction_id: crypto.randomUUID(),
+                            graph_version_before: state.graph.version,
+                            graph_version_after: updatedGraph.version,
+                            node_id: 'graph',
+                            field: 'jurisdictions',
+                            original_value: state.graph.jurisdictions,
+                            corrected_value: next,
+                            corrected_at: new Date().toISOString(),
+                            corrected_by: getRole(),
+                          },
+                        });
+                        setReviewGateError(null);
+                      }}
+                    />{' '}
+                    {j.name} ({j.code})
+                  </label>
+                ))}
+                {!state.jurisdictionsConfirmed ? (
+                  <button
+                    type="button"
+                    className="jurisdictions-panel__confirm"
+                    onClick={() => {
+                      dispatch({ type: 'JURISDICTIONS_CONFIRMED' });
+                      setReviewGateError(null);
+                    }}
+                  >
+                    {state.graph.jurisdictions.length > 0 ? 'These are right — confirm' : 'No jurisdictions — confirm'}
+                  </button>
+                ) : (
+                  <p className="graph-node__confirmed-note">Confirmed by you.</p>
+                )}
+              </div>
+            )}
             {reviewGateError && (
               <p role="alert" className="intake-flow__gate-error">
                 {reviewGateError}

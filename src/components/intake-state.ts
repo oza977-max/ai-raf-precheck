@@ -39,6 +39,11 @@ export type IntakeState =
       // no verified basis. Ephemeral review state, like unconfirmedNodeIds.
       provenance?: Record<string, Record<string, string>>;
       guessedFields?: Record<string, string[]>;
+      // R7-JC (ADR-IF-R7-1): false on the LLM path until the human confirms
+      // or edits the extracted jurisdictions — the field that selects which
+      // regulatory PACKS evaluate must never stay model-asserted. Absent on
+      // the form path (explicit answer, R3-JU) and re-entry paths.
+      jurisdictionsConfirmed?: boolean;
       // R5-GX-1 (ADR-IF-R5-2). Jurisdiction strings the extractor returned
       // that the loaded policy does not recognise — removed from the graph
       // before the human sees it, surfaced so the removal is visible.
@@ -116,6 +121,11 @@ export type IntakeAction =
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
   // R5-GR-2: the human states a model-proposed node is right as shown.
   | { type: 'NODE_CONFIRMED'; nodeId: string }
+  // R7-JC: accept the extracted jurisdictions as shown…
+  | { type: 'JURISDICTIONS_CONFIRMED' }
+  // …or replace them (policy-scoped codes only, enforced by the caller's
+  // UI); the edit is a recorded correction and confirms implicitly.
+  | { type: 'JURISDICTIONS_SET'; updatedGraph: DataFlowGraph; correction: GraphCorrection }
   | { type: 'QUESTIONS_GENERATED'; questions: IntakeQuestion[] }
   // R6-QN-1 (ADR-IF-R6-3): an answer that differs from the graph IS a
   // correction — carried with the answer so the reducer applies both
@@ -242,6 +252,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
                 .filter((id) => !(action.guessedFields && (action.guessedFields[id]?.length ?? 0) > 0)),
               ...(action.provenance ? { provenance: action.provenance } : {}),
               ...(action.guessedFields ? { guessedFields: action.guessedFields } : {}),
+              jurisdictionsConfirmed: false,
             }
           : {}),
         ...(action.ignoredJurisdictions && action.ignoredJurisdictions.length > 0
@@ -290,6 +301,20 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           : {}),
       };
 
+    case 'JURISDICTIONS_CONFIRMED':
+      if (state.step !== 'graph_review' || state.jurisdictionsConfirmed === undefined) return state;
+      return { ...state, jurisdictionsConfirmed: true };
+
+    case 'JURISDICTIONS_SET':
+      if (state.step !== 'graph_review') return state;
+      return {
+        ...state,
+        graph: action.updatedGraph,
+        graphVersion: action.updatedGraph.version,
+        corrections: [...state.corrections, action.correction],
+        ...(state.jurisdictionsConfirmed !== undefined ? { jurisdictionsConfirmed: true } : {}),
+      };
+
     case 'NODE_CONFIRMED':
       if (state.step !== 'graph_review' || !state.unconfirmedNodeIds) return state;
       return {
@@ -303,6 +328,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // empty-explanation guard): the UI refuses with a message, and the
       // reducer refuses regardless of what the UI did.
       if (state.unconfirmedNodeIds && state.unconfirmedNodeIds.length > 0) return state;
+      if (state.jurisdictionsConfirmed === false) return state;
       return {
         step: 'questionnaire',
         description: carriedDescription(state),
