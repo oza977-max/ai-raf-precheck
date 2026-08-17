@@ -6,6 +6,11 @@ import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import { TIER_MEANINGS, TRACK_MEANINGS } from './field-copy';
+import { findPrecedents } from '../engine/precedent';
+import type { PrecedentCandidate } from '../engine/precedent';
+import SimilarCases from './SimilarCases';
+import type { EnrichedPrecedent } from './SimilarCases';
+import { getUseCases } from '../store/register';
 
 // V1.2-A (design-gap-audit B3/B4/B5/B6). Rule 4 (cross-cutting.md §7):
 // presentation-only — renders the REAL audit store via getAll()
@@ -138,6 +143,45 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     add(latestVerdict.binding_constraint || null);
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
   }, [latestVerdict]);
+
+  // R8-SC-4: the reviewer sees precedent where they sign. Same derivation
+  // as the intake panel; presentation-only, never engine input.
+  const [precedents, setPrecedents] = useState<EnrichedPrecedent[]>([]);
+  useEffect(() => {
+    if (!summary) return;
+    let cancelled = false;
+    void (async () => {
+      const rows = await getUseCases('all');
+      const candidates: PrecedentCandidate[] = rows
+        .filter((r) => r.current_verdict_status !== null)
+        .map((r) => ({
+          id: r.use_case_id,
+          label: r.label,
+          description: r.description,
+          status: r.current_verdict_status!,
+          tier: r.tier,
+          track: r.track,
+          decided_at: r.last_evaluated_at,
+          policy_version: r.policy_version_at_evaluation,
+        }));
+      const matches = findPrecedents(
+        { label: summary.label, description: summary.description },
+        candidates,
+        summary.use_case_id,
+      );
+      const enriched: EnrichedPrecedent[] = [];
+      for (const m of matches) {
+        const evs = await getAuditEvents(m.id);
+        const payload = findLatestVerdictEvent(evs);
+        const verdict = payload ? (payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict) : null;
+        enriched.push({ ...m, controls: verdict?.controls ?? [] });
+      }
+      if (!cancelled) setPrecedents(enriched);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [summary]);
 
   const load = useCallback(async () => {
     const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);
@@ -453,6 +497,8 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           available, but it attests to the record as it stands — which is empty.
         </p>
       )}
+
+      <SimilarCases matches={precedents} />
 
       {showActionBar && (
         <div className="register-detail__actionbar">

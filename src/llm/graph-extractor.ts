@@ -85,7 +85,10 @@ const EXTRACT_GRAPH_SCHEMA = {
           hitl: { type: 'boolean' },
           basis_quotes: {
           type: 'object',
-          properties: { action_type: { type: 'string' },exposure: { type: 'string' },decision_bindingness: { type: 'string' },output_reversibility: { type: 'string' },scale: { type: 'string' } },
+          // decision_type/hitl quotes optional like their values (review 004
+          // finding 1: omitting them here made those fields unconditionally
+          // "guessed" — the model was never even asked for their basis).
+          properties: { action_type: { type: 'string' },exposure: { type: 'string' },decision_bindingness: { type: 'string' },output_reversibility: { type: 'string' },scale: { type: 'string' },decision_type: { type: 'string' },hitl: { type: 'string' } },
           required: ['action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale'],
         },
         },

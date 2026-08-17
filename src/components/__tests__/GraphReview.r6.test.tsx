@@ -296,3 +296,23 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
     expect(verdictEvent).toBeDefined();
   });
 });
+
+// Honesty review 004 finding 1: "Confirmed by you." must be earned.
+describe('R6 — the confirmed note is never unearned', () => {
+  it('a card with guessed fields shows no "Confirmed by you." before any human act', () => {
+    render(
+      <GraphView
+        graph={{
+          id: 'g9', version: 1, intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z',
+          input_nodes: [{ id: 'i9', label: 'x', data_class: 'Internal', data_zone: 'Zone C' }],
+          processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [],
+        }}
+        editable
+        unconfirmedNodeIds={[]}
+        onConfirmNode={vi.fn()}
+        guessedFields={{ i9: ['data_zone'] }}
+      />,
+    );
+    expect(screen.queryByText(/confirmed by you/i)).toBeNull();
+  });
+});

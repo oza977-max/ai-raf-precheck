@@ -106,7 +106,7 @@ Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who 
 ```
 npm install
 npm run dev      # app on http://localhost:5173
-npm test         # 417 tests
+npm test          # 529 tests
 npm run docs:rules   # regenerate docs/rules.md from the policy files
 ```
 
@@ -301,7 +301,7 @@ explains how to open it up later if that becomes the right call.
 ## Project status
 
 **V1 build complete, verified Demo-ready.** Engine, intake, register,
-lifecycle, jurisdiction packs, audit trail — 376 tests, and the full
+lifecycle, jurisdiction packs, audit trail — 529 tests, and the full
 acceptance suite of 158 cases walked with evidence in
 [`test/test-004.html`](test/test-004.html).
 

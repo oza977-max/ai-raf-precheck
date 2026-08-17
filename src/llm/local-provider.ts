@@ -32,6 +32,20 @@ export function localLlmEnabled(): boolean {
   return getLocalLlmUrl() !== null;
 }
 
+/** Honesty review 004 finding 2: the Settings copy promises the
+ *  description "never goes to the internet" — so the code must refuse any
+ *  non-loopback address rather than letting the claim drift from the
+ *  behavior. A firm deployment relaxes this inside its own boundary; the
+ *  demo does not. */
+export function isLoopbackUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+  } catch {
+    return false;
+  }
+}
+
 export function enableLocalLlm(url: string, model: string): void {
   localStorage.setItem(URL_KEY, url.trim().replace(/\/+$/, ''));
   localStorage.setItem(MODEL_KEY, model.trim());
@@ -49,6 +63,13 @@ export async function probeLocalLlm(
   model: string,
 ): Promise<{ ok: boolean; detail: string }> {
   const base = url.trim().replace(/\/+$/, '');
+  if (!isLoopbackUrl(base)) {
+    return {
+      ok: false,
+      detail:
+        'This demo only accepts an address on this machine (localhost) — the promise that your description never leaves it is enforced, not assumed. A firm deployment would point this at a model inside its own boundary.',
+    };
+  }
   try {
     const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return { ok: false, detail: `The server answered with status ${res.status}.` };
@@ -94,6 +115,10 @@ export async function localChatJson(
     const res = await fetch(`${url}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // Review 004 finding 3: without a timeout, a hung server left the
+      // extraction step on "Extracting…" forever with no retry control.
+      // 120s covers a cold model load + full generation with headroom.
+      signal: AbortSignal.timeout(120_000),
       body: JSON.stringify({
         model: getLocalLlmModel(),
         // "/no_think" is Qwen 3's in-prompt reasoning switch, needed because

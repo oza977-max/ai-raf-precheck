@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round 8 &middot; AIGate &mdash; Requirements</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority-could {
+            background-color: #d9a23c;
+            color: #fff;
+        }
+
+        .priority-wont {
+            background-color: #999;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="toc-nav">
+            <h3>Contents</h3>
+            <ul>
+                <li><a href="#round-8">Round 8 — Similar Decided Cases: the Corpus Starts Paying</a></li>
+                <li><a href="#provenance">Provenance</a></li>
+                <li><a href="#functional-requirements">Functional Requirements</a></li>
+                <li><a href="#out-of-scope">Out of Scope</a></li>
+                <li><a href="#index">Index</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+            </ul>
+        </nav>
+        <main class="main-content">
+            <header>
+                <h1>AIGate &mdash; Requirements, Round 8</h1>
+                <p class="metadata">Round 8 &middot; 17 August 2026 &middot; Generated from requirements-008.md &mdash; do not hand-edit</p>
+            </header>
+            <section id="round-8">
+                <h2>Round 8 &mdash; Similar Decided Cases: the Corpus Starts Paying</h2>
+                <p><strong>Status: APPROVED by the user (2026-08-17, &ldquo;go for all&rdquo;) &mdash; the corpus-as-moat feature from design-vision, first slice.</strong></p>
+            </section>
+
+            <section id="provenance">
+                <h2>Provenance</h2>
+                <p>The strategy note (2026-08-16): the register + audit trail is the firm&rsquo;s institutional memory of AI decisions, and retrieval beats training &mdash; a retrieved case is citable evidence. First slice: when someone reviews a use case, show them how similar cases were actually decided. Deliberately deterministic (token-overlap scoring, the duplicate check&rsquo;s own idiom) &mdash; no model, no embedding, fully explainable.</p>
+            </section>
+
+            <section id="functional-requirements">
+                <h2>Functional Requirements</h2>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R8-SC-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The graph review screen shall show up to three similar DECIDED cases (register entries carrying a verdict), each with: its name, its outcome in appetite vocabulary (&ldquo;inside appetite&rdquo; / &ldquo;inside appetite with controls&rdquo; / &ldquo;outside appetite&rdquo; &mdash; NEVER the status enum words, which are reserved), tier and track, the controls its verdict required, the policy version it was decided under, and its date.</p>
+                    <div class="fit-criterion">Fit criterion: with two decided similar cases and one undecided one seeded, the panel lists the two decided cases with outcome, tier, controls and policy version, and not the undecided one.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R8-SC-2</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">The panel shall state its posture on its face: precedent informs, the rules decide &mdash; these cases change nothing about this verdict. Presentation-only: nothing from the panel feeds the engine.</p>
+                    <div class="fit-criterion">Fit criterion: the posture line renders; the engine result for the case under review is byte-identical with the panel present and absent.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R8-SC-3</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">Similarity shall be a pure, deterministic engine helper (token-overlap over label + description, ranked, ties broken by id), computed over candidate summaries supplied by the caller &mdash; the engine island touches no store.</p>
+                    <div class="fit-criterion">Fit criteria: same inputs → same ranking (asserted); ranking prefers higher description overlap; the current use case is never its own precedent.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R8-SC-4</span>
+                        <span class="priority-chip priority-should">Should</span>
+                    </div>
+                    <p class="requirement-text">The 2LoD sign-off page shall show the same panel for the case under review, so the reviewer sees precedent where they sign.</p>
+                    <div class="fit-criterion">Fit criterion: the panel renders on RegisterDetail for a case with similar decided cases, with queries scoped per &sect;11.1 discipline.</div>
+                </div>
+
+                <div class="requirement">
+                    <div class="requirement-header">
+                        <span class="req-id">R8-NF-1</span>
+                        <span class="priority-chip priority-must">Must</span>
+                    </div>
+                    <p class="requirement-text">No rendered panel string matches <code>/approved|rejected/i</code> (the intake path carries the single-match guard); rendering writes no audit events; <code>evaluate()</code> unchanged.</p>
+                </div>
+            </section>
+
+            <section id="out-of-scope">
+                <h2>Out of Scope</h2>
+                <ul>
+                    <li>Retrieval by graph-field similarity &mdash; the graph is not persisted on the register (ADR-RL-R3-1 consequence); text overlap over label+description is the honest signal available today. Recorded as the natural next slice if graphs are ever persisted.</li>
+                    <li>Any model involvement. Retrieval stays citable evidence.</li>
+                </ul>
+            </section>
+
+            <section id="index">
+                <h2>Index</h2>
+                <table class="index-table">
+                    <thead><tr><th>ID</th><th>Summary</th><th>Priority</th></tr></thead>
+                    <tbody>
+                        <tr class="must"><td>R8-SC-1</td><td>Up to 3 similar decided cases with outcome/tier/controls/policy version on graph review</td><td>Must</td></tr>
+                        <tr class="must"><td>R8-SC-2</td><td>Advisory posture stated; presentation-only</td><td>Must</td></tr>
+                        <tr class="must"><td>R8-SC-3</td><td>Pure deterministic similarity helper over caller-supplied summaries</td><td>Must</td></tr>
+                        <tr class="should"><td>R8-SC-4</td><td>Same panel at 2LoD sign-off</td><td>Should</td></tr>
+                        <tr class="must"><td>R8-NF-1</td><td>Reserved words, no writes, engine untouched</td><td>Must</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-17</td><td>Round 8 created; approved in the &ldquo;go for all&rdquo; batch.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

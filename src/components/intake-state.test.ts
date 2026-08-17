@@ -267,7 +267,9 @@ describe('intakeReducer', () => {
       useCaseId: 'uc-1',
     };
     const next = intakeReducer(state, { type: 'CONFIRMED' });
-    expect(next).toEqual({ step: 'evaluation_pending', graph: g, useCaseId: 'uc-1' });
+    // Review 004 finding 2: description rides along so a failed evaluation
+    // can restore a working review screen.
+    expect(next).toEqual({ step: 'evaluation_pending', graph: g, useCaseId: 'uc-1', originalVerdictId: undefined, description: 'A tool that drafts client emails.' });
   });
 
   it('does not skip confirmation from questionnaire anymore (PROCEED_TO_EVALUATION_PASSTHROUGH removed, BC-P4C04-01)', () => {
@@ -340,6 +342,10 @@ describe('intakeReducer', () => {
       corrections: [],
       useCaseId: 'uc-1',
       originalVerdictId: 'verdict-abc',
+      // Review 004 finding 2: the jurisdictions panel must render (and stay
+      // editable) after a failed evaluation — the failure most likely to
+      // land here is jurisdiction/track-driven.
+      jurisdictionsConfirmed: true,
     });
   });
 

@@ -10,7 +10,7 @@ import { getCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
 import { selfAssessmentSeeded } from '../seeds/aigate-self-assessment';
-import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage } from '../store/register';
+import { addNode, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
@@ -19,6 +19,10 @@ import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types'
 import { coerceAnswerValue, generateQuestions, getQuestionBudget, questionsForGuessedFields } from '../engine/question-generator';
 import { detectContradictions } from '../engine/contradiction';
 import { plausibilityWarnings } from '../engine/plausibility';
+import { findPrecedents } from '../engine/precedent';
+import type { PrecedentCandidate } from '../engine/precedent';
+import SimilarCases from './SimilarCases';
+import type { EnrichedPrecedent } from './SimilarCases';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
@@ -38,7 +42,7 @@ import VerdictDisplay from './VerdictDisplay';
 // getRole() (P6-C01) replaces the hardcoded '1LoD' placeholder throughout.
 const INITIAL_STATE: IntakeState = { step: 'description_entry', description: '' };
 
-export default function IntakeFlow() {
+export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?: number } = {}) {
   // explore-001 D-002/D-003: restore any in-flight draft so a refresh,
   // browser Back, or a trip to the Register mid-intake no longer discards
   // the description, the guided-form answers and the extracted graph.
@@ -49,6 +53,18 @@ export default function IntakeFlow() {
   // to, with no explanation — the same class of surprise NF-2 exists to
   // prevent. Say what happened and offer a way out.
   const [showResumed, setShowResumed] = useState(restoredDraft.current);
+
+  // "+ New pre-check" while a flow is FINISHED starts a fresh one (known
+  // issue since v0.3.2). Only the verdict step resets: an in-progress
+  // draft is the user's work, and the resumed-draft banner already offers
+  // its own explicit Start over.
+  const lastNonce = useRef(newPrecheckNonce);
+  useEffect(() => {
+    if (newPrecheckNonce === lastNonce.current) return;
+    lastNonce.current = newPrecheckNonce;
+    if (state.step === 'verdict') handleStartOver();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newPrecheckNonce]);
 
   function handleStartOver() {
     clearDraft();
@@ -121,6 +137,9 @@ export default function IntakeFlow() {
   // R5-GR-2: the proceed-gate refusal message. State, not derived, so it
   // appears only after an attempted Proceed rather than scolding upfront.
   const [reviewGateError, setReviewGateError] = useState<string | null>(null);
+  // R8-SC: similar decided cases, enriched with each match's controls read
+  // from its own audit trail (3 reads max — the ranked top three only).
+  const [precedents, setPrecedents] = useState<EnrichedPrecedent[]>([]);
   // P7-C03: reads getCurrentPolicyYaml() (a saved-policy override, or the
   // bundled starter YAML) instead of a static import. App.tsx unmounts and
   // remounts IntakeFlow every time the user navigates away and back
@@ -516,6 +535,49 @@ export default function IntakeFlow() {
     if (state.step === 'verdict') clearDraft();
     else saveDraft(state);
   }, [state]);
+
+  // R8-SC-1/-3: precedents = decided register entries ranked by the pure
+  // engine helper; controls enriched from each match's own trail.
+  useEffect(() => {
+    if (state.step !== 'graph_review') {
+      setPrecedents([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const rows = await getUseCases('all');
+      const candidates: PrecedentCandidate[] = rows
+        .filter((r) => r.current_verdict_status !== null)
+        .map((r) => ({
+          id: r.use_case_id,
+          label: r.label,
+          description: r.description,
+          status: r.current_verdict_status!,
+          tier: r.tier,
+          track: r.track,
+          decided_at: r.last_evaluated_at,
+          policy_version: r.policy_version_at_evaluation,
+        }));
+      const subjectLabel = state.graph.input_nodes[0]?.label ?? '';
+      const matches = findPrecedents(
+        { label: subjectLabel, description: state.description },
+        candidates,
+        state.useCaseId,
+      );
+      const enriched: EnrichedPrecedent[] = [];
+      for (const m of matches) {
+        const events = await getAuditEvents(m.id);
+        const payload = findLatestVerdictEvent(events);
+        const verdict = payload ? (payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict) : null;
+        enriched.push({ ...m, controls: verdict?.controls ?? [] });
+      }
+      if (!cancelled) setPrecedents(enriched);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step]);
 
   async function handleConfirmAndEvaluate(reviewerNote?: string) {
     if (state.step !== 'confirmation') return;
@@ -1031,6 +1093,8 @@ export default function IntakeFlow() {
               guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
             />
+            {/* R8-SC: precedent informs, the rules decide. */}
+            <SimilarCases matches={precedents} />
             {/* R7-JC (ADR-IF-R7-1): jurisdictions gate at review. Sweep-001
                 found a hallucinated valid code ("US") that would silently
                 activate a pack — so the model's reading is explicit, named,

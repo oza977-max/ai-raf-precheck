@@ -30,7 +30,13 @@ export const EXPOSURES = [
   'market-facing',
 ] satisfies Exposure[];
 export const DECISION_BINDINGNESS = ['non-binding', 'advisory', 'material', 'binding'] satisfies DecisionBindingness[];
-export const ACTION_TYPES = ['read', 'draft', 'recommend', 'execute', 'trade', 'approve'] satisfies ActionType[];
+// 'inform' added 2026-08-17 (sweep-001 finding, decided by the user): a
+// chatbot ANSWERING questions had no honest value and was schema-forced to
+// the string-similar 'trade'. 'inform' = presents information or answers
+// directly; distinct from 'read' (retrieves/summarises for a reader) and
+// from 'recommend' (proposes an action). Deliberately matches none of the
+// strict action lists in the policy.
+export const ACTION_TYPES = ['read', 'inform', 'draft', 'recommend', 'execute', 'trade', 'approve'] satisfies ActionType[];
 export const DECISION_TYPES = [
   'credit-decision',
   'lending-decision',
