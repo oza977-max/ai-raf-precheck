@@ -126,6 +126,7 @@ describe('buildChallengeMemo', () => {
     expect(memo).toContain('## Inherent position');
     expect(memo).toContain('## Residual position');
     expect(memo).toContain('## The regulatory chain');
+    expect(memo).toContain('## Risk knowledge (advisory — informs, never decides)');
     expect(memo).toContain('## Provisional causes');
     expect(memo).toContain('## Sign-offs on the record');
     expect(memo).toContain('## Standing conditions');
@@ -265,5 +266,61 @@ describe('buildChallengeMemo', () => {
       events: [],
     });
     expect(memo.startsWith('# Effective challenge memo — Some Use Case')).toBe(true);
+  });
+});
+
+// R11-KL follow-up: the memo shipped in R10, before the knowledge lever
+// existed, and was never updated — found by the user comparing a generated
+// memo against the live verdict screen, which does show the panel.
+describe('buildChallengeMemo — R11-KL knowledge-lens section', () => {
+  it('TC-R11-KL-CM-1: renders matched entries with domain, description, source and coverage status', () => {
+    const memo = buildChallengeMemo({
+      label: 'Client email drafter',
+      useCaseId: 'uc-test',
+      verdict: makeVerdict(),
+      events: [],
+      knowledgeLensMatches: [
+        {
+          entry: {
+            id: 'KL-PRIV-01',
+            risk_domain: 'Privacy & Security',
+            risk_subdomain: 'Sensitive personal data exposure via model I/O',
+            description: 'Confidential or client PII flowing to a model endpoint can leak.',
+            source_attribution: 'MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0',
+            condition: {},
+            covering_rule_ids: ['INV-DATA-01'],
+          },
+          covered: true,
+        },
+        {
+          entry: {
+            id: 'KL-MALUSE-02',
+            risk_domain: 'Malicious Use',
+            risk_subdomain: 'AI-assisted fraud',
+            description: 'Generative systems lower the cost of convincing fraud.',
+            source_attribution: 'MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0',
+            condition: {},
+            covering_rule_ids: [],
+          },
+          covered: false,
+        },
+      ],
+    });
+    expect(memo).toContain('## Risk knowledge (advisory — informs, never decides)');
+    expect(memo).toContain('Privacy & Security');
+    expect(memo).toContain('covered by a firm/pack rule');
+    expect(memo).toContain('Malicious Use');
+    expect(memo).toContain('coverage gap');
+    expect(memo).toContain('MIT AI Risk Repository');
+  });
+
+  it('TC-R11-KL-CM-2: absent matches render "none recorded", not a missing section', () => {
+    const memo = buildChallengeMemo({
+      label: 'Client email drafter',
+      useCaseId: 'uc-test',
+      verdict: makeVerdict(),
+      events: [],
+    });
+    expect(memo).toContain('## Risk knowledge (advisory — informs, never decides)\nnone recorded');
   });
 });

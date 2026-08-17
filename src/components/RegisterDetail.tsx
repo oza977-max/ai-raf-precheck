@@ -573,6 +573,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             registerStage={summary.lifecycle_stage}
             memoLabel={summary.label}
             memoDescription={summary.description}
+            knowledgeLensMatches={knowledgeLensMatches}
           />
           {knowledgeLensMatches.length > 0 && (
             <KnowledgeLensPanel

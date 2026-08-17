@@ -1359,6 +1359,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             graph={lastGraph ?? undefined}
             registerStage={savedStage ?? undefined}
             onCorrect={handleCorrectVerdict}
+            memoLabel={submittedDescription.slice(0, 80) || 'AI use case'}
+            memoDescription={submittedDescription}
+            knowledgeLensMatches={knowledgeLensMatches}
           />
         )}
         {state.step === 'verdict' && verdict && knowledgeLensMatches.length > 0 && (
