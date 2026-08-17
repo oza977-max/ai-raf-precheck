@@ -80,6 +80,12 @@ const InvariantSchema = z.object({
   regulatory_basis: z.string().optional(),
 });
 
+// R10-CE (ADR-VA-R10-3): one axis of control effectiveness.
+const EffectivenessAxisSchema = z.object({
+  status: z.enum(['effective', 'deficient', 'not_assessed']),
+  detail: z.string().optional(),
+});
+
 const ControlSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -94,6 +100,10 @@ const ControlSchema = z.object({
       detail: z.string().optional(),
       attested_by: z.string().optional(),
       attested_at: z.string().optional(),
+      // R10-CE: optional design/operating effectiveness axes (COSO
+      // vocabulary). Backward compatible — absent axes = legacy evidence.
+      design: EffectivenessAxisSchema.optional(),
+      operating: EffectivenessAxisSchema.optional(),
     })
     .optional(),
 });

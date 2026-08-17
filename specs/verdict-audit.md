@@ -535,8 +535,38 @@ changed while they were reading, rather than silently attesting to the new one.
 | R3-JU-3 | §13, §13.1 | TC-R3-JU-3-01, -02, -03 |
 | R3-JU-6 | §13.2 | TC-R3-JU-6-01 … -04 |
 
-## 14. Changelog
+## 14. Round 10 — Speaking the Reviewer's Language (R10)
+
+Spec for `requirements/requirements-010.md`. Standard 2LoD concepts in
+AIGate's own design language; no engine decision change anywhere.
+
+**ADR-VA-R10-1 — the memo is presentation, generated from persisted
+data, writing nothing.** `src/components/challenge-memo.ts` (Rule 4:
+presentation) exports a pure `buildChallengeMemo(...)` → markdown string,
+assembled ONLY from the verdict object, the register summary, and the
+audit events already on screen — no store reads of its own, no writes
+(R10-NF-1). Download via Blob from both the intake verdict screen and the
+2LoD sign-off page. Appetite vocabulary throughout; every honesty marker
+(provisional causes, evidence status, name-not-verified) is carried
+verbatim — a memo that flatters the record would be the exact overclaim
+this product refuses.
+
+**ADR-VA-R10-2 — inherent/residual are LABELS on the existing
+computation.** The verdict already shows the position before controls
+(tripped rules) and with the minimal set (status + controls). R10-IR adds
+the standard vocabulary as framing labels only; nothing is recomputed.
+
+**ADR-VA-R10-3 — evidence grows two optional axes, backward compatible.**
+`ControlVerificationEvidence` gains optional `design` and `operating`
+sub-assessments ({ status: 'effective' | 'deficient' | 'not_assessed',
+detail? }). Legacy single-status evidence remains valid and renders
+unchanged; where axes are present the UI renders two chips (COSO
+vocabulary). VERIFIED continues to mean what it means — operating
+evidence exists.
+
+## 15. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-08-17 | §15 added — round 10. Challenge-memo export as pure presentation (ADR-VA-R10-1), inherent/residual as labels (ADR-VA-R10-2), two-axis evidence backward compatible (ADR-VA-R10-3). |
 | 2026-07-29 | §13 added — round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); they are separate assertions because they serve separate readers. |

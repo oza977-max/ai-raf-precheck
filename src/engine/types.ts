@@ -517,6 +517,16 @@ export interface ControlVerificationEvidence {
   detail?: string;
   attested_by?: string;
   attested_at?: string;
+  // R10-CE (ADR-VA-R10-3): optional COSO-style axes. Legacy single-status
+  // evidence stays valid and renders unchanged; where axes are present the
+  // UI shows both. They refine the evidence — they never change a verdict.
+  design?: ControlEffectivenessAssessment;
+  operating?: ControlEffectivenessAssessment;
+}
+
+export interface ControlEffectivenessAssessment {
+  status: 'effective' | 'deficient' | 'not_assessed';
+  detail?: string;
 }
 
 export interface KriThresholds {

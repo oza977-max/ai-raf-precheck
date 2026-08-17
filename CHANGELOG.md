@@ -11,6 +11,27 @@ every verdict.
 
 ---
 
+## [0.12.0] — 2026-08-17
+
+### Added
+
+- **A downloadable effective-challenge memo.** Every verdict screen — the
+  intake result and the 2LoD sign-off page — can now export a markdown memo
+  written in the reviewer's language: the verdict in appetite vocabulary,
+  the inherent and residual positions, the full regulatory chain with its
+  quoted sources, every sign-off on the record, and every provisional or
+  unverified marker carried verbatim. The memo restates the record; it does
+  not strengthen it, and generating one writes nothing anywhere.
+- **Inherent and residual framing on the verdict.** The rules that trip
+  before controls are now labelled as the inherent position, and the
+  minimal control set as the residual position — the standard 2LoD
+  vocabulary, as labels only. Nothing is recomputed.
+- **Design and operating effectiveness on control evidence.** A control's
+  verification evidence in the policy file may now attest the two standard
+  effectiveness axes separately (effective / deficient / not assessed), and
+  the verdict renders a chip for each. Existing single-status evidence
+  stays valid and renders exactly as before.
+
 ## [0.11.1] — 2026-08-17
 
 ### Fixed

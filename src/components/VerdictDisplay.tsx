@@ -5,6 +5,7 @@ import { isVerdictProvisional } from '../engine/provisional';
 import type { ProvisionalReason } from '../engine/provisional';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage } from '../store/types';
+import { buildChallengeMemo } from './challenge-memo';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -22,6 +23,11 @@ interface VerdictDisplayProps {
   // (verdict-audit.md §6.1), not a reviewer one. Required-with-a-no-op would
   // have left a control on the reviewer's page that still invites the click.
   onCorrect?: () => void;
+  // R10-CM: optional context for the challenge-memo export. Absent on older
+  // render paths and tests; the download renders whenever a verdict exists,
+  // falling back to a generic label.
+  memoLabel?: string;
+  memoDescription?: string;
 }
 
 // BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
@@ -130,8 +136,8 @@ function WhyThisVerdict({
       {explanation.tripped_invariants.length > 0 && (
         <>
           <p className="verdict__tripped-label">
-            Appetite invariants triggered — rules from your firm's risk appetite that this use case does not yet
-            satisfy. Each names the controls that would close it.
+            The inherent position — the risk before any controls. These are rules from your firm's risk appetite
+            that this use case does not yet satisfy. Each names the controls that would close it.
           </p>
           <ul className="verdict__tripped">
           {explanation.tripped_invariants.map((t) => (
@@ -341,7 +347,24 @@ const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
     'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone. This is a gap in the risk appetite policy — one for whoever owns it, not a legal question.',
 };
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription }: VerdictDisplayProps) {
+  // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
+  // this screen and downloaded client-side. Nothing is written anywhere.
+  const downloadMemo = () => {
+    const memo = buildChallengeMemo({
+      label: memoLabel ?? 'AI use case',
+      useCaseId: verdict.use_case_id,
+      description: memoDescription,
+      verdict,
+      events: auditEvents,
+    });
+    const url = URL.createObjectURL(new Blob([memo], { type: 'text/markdown' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `challenge-memo-${verdict.use_case_id.slice(0, 8)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   // §13.1a: the caveats remain the per-rule DETAIL rendered underneath the
   // banner — which rule is unadopted. They are no longer what determines
   // Provisional; that is `provisional_reasons`, read below. Filtering them
@@ -681,8 +704,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           <div className="verdict__controlset">
             <h3>Minimal control set (CS-1)</h3>
             <p className="verdict__controlset-sub">
-              Smallest set that holds the appetite margin. V1: statuses are attested in the policy file;
-              machine-checked evidence binding is V1.5.
+              The residual position — where the risk lands once these controls are in place. Smallest set that
+              holds the appetite margin. V1: statuses are attested in the policy file; machine-checked evidence
+              binding is V1.5.
             </p>
             {/* §15.1a (C-2). The verdict above is a historical record — what was
                 decided and attested. These statuses are CURRENT: whether the
@@ -715,6 +739,23 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                     </div>
                     {control && control.resolves.length > 0 && (
                       <p className="verdict__control-patches">Patches: {control.resolves.join(', ')}</p>
+                    )}
+                    {/* R10-CE (ADR-VA-R10-3): where the policy attests the two
+                        COSO axes, render both. Legacy single-status evidence
+                        has no axes and renders exactly as before. */}
+                    {(evidence?.design || evidence?.operating) && (
+                      <p className="verdict__control-axes">
+                        {(['design', 'operating'] as const).map((axis) => {
+                          const a = evidence?.[axis];
+                          if (!a) return null;
+                          return (
+                            <span key={axis} className={`verdict__axischip verdict__axischip--${a.status}`}>
+                              {axis === 'design' ? 'design' : 'operating'}:{' '}
+                              {a.status === 'not_assessed' ? 'not assessed' : a.status}
+                            </span>
+                          );
+                        })}
+                      </p>
                     )}
                     {verified && evidence?.detail && (
                       <p className="verdict__control-evidence">
@@ -900,6 +941,18 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         )}
       </details>
       )}
+
+      {/* R10-CM: export in the reviewer's language. The memo restates the
+          record — every provisional/pending/unverified marker survives into
+          it verbatim (ADR-VA-R10-1). */}
+      <div className="verdict__memo-export">
+        <button type="button" onClick={downloadMemo}>
+          Download effective-challenge memo (markdown)
+        </button>
+        <p className="verdict__memo-export-note">
+          A 2LoD-style memo generated from this record. It restates the record; it does not strengthen it.
+        </p>
+      </div>
 
       <p className="verdict__caveat">
         Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes (NF-2).

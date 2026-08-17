@@ -70,3 +70,4 @@ evidence, matching the existing meaning.
 | Date | Change |
 |---|---|
 | 2026-08-17 | Round 10 created from the competitive-landscape review; approved. |
+| 2026-08-17 | Built and shipped in v0.12.0 — memo export, inherent/residual labels, two-axis evidence. |

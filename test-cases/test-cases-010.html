@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 10 &middot; AIGate &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.25rem 0 0.75rem 0;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Requirement Block */
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .requirement {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .requirement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .req-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-chip {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority-must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority-should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .priority {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .priority.must {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .priority.should {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+
+        .requirement-text {
+            font-size: 1rem;
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .fit-criterion {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        /* Test case styles */
+        .test-case {
+            margin: 1.5rem 0;
+            padding: 1rem 1.25rem;
+            background-color: #fafaf8;
+            border-left: 3px solid #ccc;
+        }
+
+        .tc-id {
+            display: inline-block;
+            font-family: "Courier New", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background-color: #e8e8e0;
+            color: #1a1a1a;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .tc-name {
+            font-weight: 600;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+
+        .tc-bdd {
+            background-color: #fff;
+            border-left: 3px solid #ccc;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            font-family: "Courier New", monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .tc-bdd p {
+            text-align: left;
+            margin: 0.5rem 0;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Requirements Index Table */
+        .index-table tbody tr.must {
+            background-color: #fff;
+        }
+
+        .index-table tbody tr.should {
+            background-color: #f0f4fa;
+        }
+
+        .index-table tbody tr.could {
+            background-color: #fdf8f0;
+        }
+
+        .index-table tbody tr.wont {
+            background-color: #f0f0f0;
+        }
+
+        /* Numeric alignment */
+        td:last-child {
+            text-align: right;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid #ccc;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Section numbers */
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-num {
+            display: inline-block;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#test-suite-overview">Test Suite Overview</a></li>
+                <li><a href="#case-index">Case Index</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>AIGate &mdash; Test Cases, Round 10</h1>
+<p class="subtitle">11 test cases across 5 requirements</p>
+<p class="metadata">17 August 2026 &middot; Generated from test-cases-010.md &mdash; do not hand-edit</p>
+</header>
+                <p><em>Written 2026-08-17 alongside the build (v0.12.0) from <code>requirements/requirements-010.md</code>. Traceability 100% at birth.</em></p>
+                <p>Test files: <code>src/components/challenge-memo.test.ts</code> (the memo builder, pure) and <code>src/components/__tests__/VerdictDisplay.r10.test.tsx</code> (labels, axis chips, export affordance).</p>
+            <section id="test-suite-overview">
+                <h2>Test Suite Overview</h2>
+                <table>
+                    <thead><tr><th></th><th>Count</th></tr></thead>
+                    <tbody>
+                        <tr><td>Round-10 test cases</td><td>11 (incl. -03b)</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="case-index">
+                <h2>Case Index</h2>
+                <table>
+                    <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+                    <tbody>
+                        <tr><td>TC-R10-CM-1-01..-10 (11 tests incl. -03b)</td><td>Memo builder: every section present in order; verdict in appetite vocabulary only; <code>expect(memo).not.toMatch(/approved\|rejected/i)</code> over the whole output; 2LoD actions safe-worded ("signed off" / "sent back"); provisional causes in plain language; <code>[FIRM]</code> placeholders preserved verbatim; source text blockquoted; empty chain/events degrade to explicit "none recorded" lines, never silent absence</td></tr>
+                        <tr><td>TC-R10-IR-1-01</td><td>Tripped invariants framed as the inherent position (risk before controls); minimal control set framed as the residual position</td></tr>
+                        <tr><td>TC-R10-CE-1-01</td><td>Legacy single-status evidence renders exactly as before — no axis chips (backward compatibility)</td></tr>
+                        <tr><td>TC-R10-CE-1-02</td><td>Evidence with design + operating axes renders both chips, "not_assessed" worded as "not assessed"</td></tr>
+                        <tr><td>TC-R10-CM-2-01</td><td>The download control and its "restates the record; does not strengthen it" posture line render with any verdict</td></tr>
+                    </tbody>
+                </table>
+                <p><em>R10-NF-1 (no decision change) is held by the untouched engine plus the existing determinism suite (TC-PE-1-01, whole-result serialization over 10 runs); the memo path writes nothing (pure builder + client-side Blob download only), and the suite-wide reserved-words guard covers all new rendered strings.</em></p>
+            </section>
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-17</td><td>Written with the R10 build.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+</main>
+</div>
+</body>
+</html>
