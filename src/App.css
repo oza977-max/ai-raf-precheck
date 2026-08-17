@@ -1783,6 +1783,33 @@ details input {
   white-space: normal;
 }
 
+/* User report (2026-08-17): a flat list of same-weight tripped rules read
+   as jargon soup with no way to see "what's serious" at a glance. Grouped
+   by severity, worst first, with a one-line count summary above. */
+.verdict__tripped-summary {
+  margin: 0.3rem 0 0.8rem;
+  font-size: 0.82rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--ink-soft);
+}
+
+.verdict__tripped-group {
+  margin: 0 0 0.9rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--card-border);
+}
+
+.verdict__tripped-group--critical { border-left-color: var(--critical); }
+.verdict__tripped-group--high { border-left-color: var(--high); }
+.verdict__tripped-group--medium { border-left-color: var(--medium); }
+.verdict__tripped-group--low { border-left-color: var(--low); }
+
+.verdict__tripped-group-heading {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
 .verdict__tripped {
   margin: 0.5rem 0;
   padding-left: 1.1rem;
