@@ -600,6 +600,10 @@ export interface Control {
     detail?: string;
     attested_by?: string;
     attested_at?: string;
+    // R10-CE: optional COSO-style axes. Absent = legacy single-status
+    // evidence, rendered unchanged. Never affects the verdict.
+    design?:    { status: 'effective' | 'deficient' | 'not_assessed'; detail?: string };
+    operating?: { status: 'effective' | 'deficient' | 'not_assessed'; detail?: string };
   };
   verification: string;
 }

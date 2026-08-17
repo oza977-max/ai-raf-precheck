@@ -790,7 +790,17 @@ const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&g
         <tr><td>R3-JU-6</td><td>&sect;13.2</td><td>TC-R3-JU-6-01 &hellip; -04</td></tr>
       </tbody>
     </table>
-    <h2 id="changelog-r3">14. Changelog</h2>
+
+    <h2 id="r10-reviewer-language">14. Round 10 &mdash; Speaking the Reviewer's Language (R10)</h2>
+    <p>Spec for <code>requirements/requirements-010.md</code>. Standard 2LoD concepts in AIGate's own design language; no engine decision change anywhere.</p>
+
+    <p><strong>ADR-VA-R10-1 &mdash; the memo is presentation, generated from persisted data, writing nothing.</strong> <code>src/components/challenge-memo.ts</code> (Rule 4: presentation) exports a pure <code>buildChallengeMemo(...)</code> &rarr; markdown string, assembled ONLY from the verdict object, the register summary, and the audit events already on screen &mdash; no store reads of its own, no writes (R10-NF-1). Download via Blob from both the intake verdict screen and the 2LoD sign-off page. Appetite vocabulary throughout; every honesty marker (provisional causes, evidence status, name-not-verified) is carried verbatim &mdash; a memo that flatters the record would be the exact overclaim this product refuses.</p>
+
+    <p><strong>ADR-VA-R10-2 &mdash; inherent/residual are LABELS on the existing computation.</strong> The verdict already shows the position before controls (tripped rules) and with the minimal set (status + controls). R10-IR adds the standard vocabulary as framing labels only; nothing is recomputed.</p>
+
+    <p><strong>ADR-VA-R10-3 &mdash; evidence grows two optional axes, backward compatible.</strong> <code>ControlVerificationEvidence</code> gains optional <code>design</code> and <code>operating</code> sub-assessments ({ status: 'effective' | 'deficient' | 'not_assessed', detail? }). Legacy single-status evidence remains valid and renders unchanged; where axes are present the UI renders two chips (COSO vocabulary). VERIFIED continues to mean what it means &mdash; operating evidence exists.</p>
+
+    <h2 id="changelog-r3">15. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
       <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); separate assertions because they serve separate readers.</td></tr>
     </tbody></table>

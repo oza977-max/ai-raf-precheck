@@ -493,6 +493,8 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             auditEvents={events}
             policy={policy}
             registerStage={summary.lifecycle_stage}
+            memoLabel={summary.label}
+            memoDescription={summary.description}
           />
         </>
       ) : (
