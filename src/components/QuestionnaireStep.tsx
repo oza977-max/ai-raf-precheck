@@ -102,6 +102,13 @@ export default function QuestionnaireStep({
           {riskCount > 0
             ? `${riskCount} about risk signals${budget !== undefined ? ` (budget ≤${budget})` : ''}, ${guessedCount} because your description did not state them.`
             : `All ${guessedCount} are asked because your description did not state them — the model would otherwise be guessing.`}
+          {/* User report (2026-08-17): "why is it always about the same
+              number of questions?" — because a small local model can rarely
+              ground more than a few of the ~14 checked fields in a short
+              description, so most runs land in a similar range. Naming that
+              here turns a mysterious constant into an understood limit. */}
+          {' '}A short description rarely states every field a local model this size can verify — expect a
+          similar count most times, regardless of what the use case is.
         </p>
       )}
 
