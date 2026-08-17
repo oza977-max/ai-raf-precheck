@@ -1596,15 +1596,33 @@ details input {
   flex: 1;
 }
 
+/* User report (2026-08-17): this used to be a single nowrap mono chip
+   holding jargon ("loaded — SS1-23 (1 rule, v0.2-draft) · pending
+   adoption"). Now it's a plain-English sentence with the real pack
+   id/version surviving underneath as a quieter secondary line — same
+   facts, readable first, technical detail still there for anyone who
+   wants it. */
 .policy-view__pack-state {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.68rem;
-  color: var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
   background: var(--paper);
   border: 1px solid var(--card-border);
   border-radius: 4px;
-  padding: 0.1rem 0.45rem;
-  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  flex: 1 1 auto;
+}
+
+.policy-view__pack-state-plain {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  white-space: normal;
+}
+
+.policy-view__pack-state-detail {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--ink-faint);
 }
 
 .policy-view__hardlines li {
