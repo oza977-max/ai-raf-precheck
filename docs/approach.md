@@ -255,7 +255,7 @@ appetite: **you own what you adopt.** As of the last review (2026-07-26):
 | SR-26-2 | 1 | 1 | Draft |
 | DORA | 1 | 1 | Draft |
 | OSFI-E23 | 1 | 0 | Not authored — placeholder text |
-| MAS-FEAT | 1 | 0 | Not authored; source superseded |
+| MAS-FEAT | 1 | 0 | Not authored; source superseded — successor (MAS Guidelines on AI Risk Management) in consultation as of early 2026; the SG pack will be authored from the FINAL text on issuance, within its transition window |
 | FSA-JP | 1 | 0 | Not authored — no source identified |
 
 "Draft" means the quote was retrieved from the cited URL and copied verbatim,
