@@ -1,4 +1,4 @@
-import type { DataFlowGraph, PolicyFile, RuleRationale, VerdictExplanation } from '../engine/types';
+import type { DataFlowGraph, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
 import { graphSummaryRows } from './graph-summary';
 import { isVerdictProvisional } from '../engine/provisional';
@@ -46,6 +46,18 @@ const LIVING_STATUS_LABEL: Record<Verdict['living_status'], string> = {
   breached: 'breached — a condition has been crossed',
   revoked: 'revoked',
 };
+
+// Tripped-invariant grouping (presentation only — severity is engine data,
+// this just orders and buckets it). An unrecognised severity string still
+// renders, appended after the known order, rather than being silently
+// dropped from the count.
+const KNOWN_SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
+function severityGroups(invariants: TrippedInvariantDetail[]): Array<[string, TrippedInvariantDetail[]]> {
+  const unknown = [...new Set(invariants.map((t) => t.severity).filter((s) => !KNOWN_SEVERITIES.includes(s)))].sort();
+  return [...KNOWN_SEVERITIES, ...unknown]
+    .map((s): [string, TrippedInvariantDetail[]] => [s, invariants.filter((t) => t.severity === s)])
+    .filter(([, group]) => group.length > 0);
+}
 
 const STATUS_LABEL: Record<Verdict['status'], string> = {
   approved: 'Approved',
@@ -139,32 +151,51 @@ function WhyThisVerdict({
             The inherent position — the risk before any controls. These are rules from your firm's risk appetite
             that this use case does not yet satisfy. Each names the controls that would close it.
           </p>
-          <ul className="verdict__tripped">
-          {explanation.tripped_invariants.map((t) => (
-            <li key={t.id}>
-              <code>{t.id}</code>{' '}
-              <span className={`verdict__severity verdict__severity--${t.severity.toLowerCase()}`}>{t.severity}</span>{' '}
-              — {t.description}
-              <Citation text={t.regulatory_basis} />
-              {t.required_controls.length > 0 && (
-                <span className="verdict__tripped-controls">
-                  {' '}
-                  Closed by:{' '}
-                  {t.required_controls.map((cid, i) => {
-                    const name = findControlName(policy, cid);
-                    return (
-                      <span key={cid}>
-                        {i > 0 && '; '}
-                        {name ?? cid}
-                        {name && <code className="verdict__id-quiet">{cid}</code>}
-                      </span>
-                    );
-                  })}
-                </span>
-              )}
-            </li>
-            ))}
-          </ul>
+          {/* User report (2026-08-17): a flat list of 9 same-weight rules read
+              as jargon soup, even though each individual line is plain
+              English — no way to tell "critical" from "medium" at a glance,
+              no count to orient against. Grouping by severity + a one-line
+              summary is presentation only: same data, same words, same
+              engine output — just organised the way a reader actually scans
+              a list of problems (worst first). */}
+          <p className="verdict__tripped-summary">
+            {severityGroups(explanation.tripped_invariants)
+              .map(([severity, group]) => `${group.length} ${severity}`)
+              .join(' · ')}
+          </p>
+          {severityGroups(explanation.tripped_invariants).map(([severity, group]) => {
+            return (
+              <div key={severity} className={`verdict__tripped-group verdict__tripped-group--${severity.toLowerCase()}`}>
+                <h4 className="verdict__tripped-group-heading">
+                  <span className={`verdict__severity verdict__severity--${severity.toLowerCase()}`}>{severity}</span>
+                </h4>
+                <ul className="verdict__tripped">
+                  {group.map((t) => (
+                    <li key={t.id}>
+                      <code>{t.id}</code> — {t.description}
+                      <Citation text={t.regulatory_basis} />
+                      {t.required_controls.length > 0 && (
+                        <span className="verdict__tripped-controls">
+                          {' '}
+                          Closed by:{' '}
+                          {t.required_controls.map((cid, i) => {
+                            const name = findControlName(policy, cid);
+                            return (
+                              <span key={cid}>
+                                {i > 0 && '; '}
+                                {name ?? cid}
+                                {name && <code className="verdict__id-quiet">{cid}</code>}
+                              </span>
+                            );
+                          })}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </>
       )}
 
