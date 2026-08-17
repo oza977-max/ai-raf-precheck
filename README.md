@@ -6,13 +6,41 @@ A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into
 
 Describe the AI use case (plain language or a short structured form). AIGate maps it to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
 
-- a **verdict with its "why"** — which rule set the tier, which invariant tripped, each with its regulatory citation;
+- a **verdict with its "why"** — which rule set the **tier** (how much harm the case could do), which appetite rule (**"invariant"**) it tripped, each with its regulatory citation;
 - the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
 - a **regulatory reasoning chain** quoting the verbatim source text, the basis of the rule drawn from it, and the human sign-off behind every jurisdictional rule that fired;
 - **standing conditions** — the operating bounds the approval assumes (the verdict is a hypothesis; drift outside the bounds voids it);
-- an entry in a **graph-based AI register** with a role-gated 2LoD approval workflow and an append-only audit trail of every event.
+- an entry in a **graph-based AI register** with a second-line-of-defence (**"2LoD"**) approval workflow and an append-only audit trail of every event.
 
-Same inputs, same verdict, every time — no LLM in the decision path. The LLM only helps at the edges (reading descriptions in, explaining verdicts out).
+Same inputs, same verdict, every time — no LLM in the decision path.
+
+## What AIGate is not
+
+- **It does not tell you a use case is "compliant".** The output is "inside your stated appetite, with these controls" — a claim a firm can actually defend. "Compliant" is not something a tool can compute from a config file, and one that claims to is a liability.
+- It does not write your risk appetite. It enforces the one you give it.
+- It does not replace InfoSec, vendor risk, or legal review — it triggers those as named downstream steps.
+- It does not monitor deployed systems (V2) or catch systems that bypass intake.
+
+## One case, end to end
+
+Every use case becomes the same three-part picture — **what data goes in → what model processes it → what the output does** — and the rules judge that picture, not your prose.
+
+*"A chatbot that answers wealth clients' product and portfolio questions in natural language, with a human adviser escalation route."*
+
+```
+business product info ──▶  LLM on a cloud vendor  ──▶  answers shown to clients
+   (nothing sensitive,       (a person reviews           (recommends, doesn't
+    vendor-hosted)            its answers)                decide; reversible)
+```
+
+The engine walks that graph: no hard line crossed; client-facing generative output trips the disclosure and reliability rules; the smallest fix is a named control set (tell clients it's AI, ground the answers, keep the human escalation route). Verdict: **in appetite with those controls, tier High** — and because a UK jurisdiction rule fired that nobody at the firm has signed off yet, the verdict is stamped **provisional and says so**. This exact case ships as one of the six in-app samples, scored by the real engine.
+
+## Why it's different
+
+- **Deterministic, not generative.** Same inputs, same verdict, byte for byte — asserted by test. No LLM in the decision path; the optional model only reads descriptions in and explains verdicts out.
+- **It refuses to fabricate.** Unsigned rules make the verdict PROVISIONAL and say so; controls without evidence render UNVERIFIED; genuine legal ambiguity is routed to humans, not papered over.
+- **Everything is traceable.** Verdict → rule → verbatim regulatory text → the named human who signed it, on an append-only audit trail.
+- **Decisions accumulate.** Every verdict lands in a register the next pre-check consults — duplicate detection and similar-decided-cases turn the register into precedent, while the rules, not the precedent, decide.
 
 ## Why this exists
 
@@ -39,10 +67,11 @@ records the human, or says plainly that one is missing.
 
 ```mermaid
 flowchart TD
-    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model — one generic model slot<br/>(live since 2026-08-16; frontier<br/>models draft better)</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
+    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model — one generic model slot</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
     B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
-    B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output</i><br/><i>shown back for correction</i>"]
-    C --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
+    B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output —<br/>every value explained, quoted from<br/>your words, confirmed by you</i>"]
+    C --> C2["Jurisdictions confirmed<br/><i>the model may propose; only YOU<br/>confirm which regulations apply.<br/>Similar decided cases shown —<br/>precedent informs, rules decide</i>"]
+    C2 --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
     D --> E["Attestation<br/><i>timestamped, permanent,<br/>+ optional note for the reviewer</i>"]
     E --> F["⚙ Deterministic engine<br/><i>same answers → same verdict,<br/>every time. No LLM in here.</i>"]
 
@@ -101,59 +130,43 @@ Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who 
 
 **Honest limits, stated in the UI itself**: verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules; the audit trail is client-side (proof-of-concept grade — the system-of-record store is V1.5); artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
 
-## Run it
+## Try it (no install)
 
-```
-npm install
-npm run dev      # app on http://localhost:5173
-npm test          # 529 tests
-npm run docs:rules   # regenerate docs/rules.md from the policy files
-```
-
-No backend, no database, no API key required. The whole app is a static
-build (`npm run build` → `dist/`), so it can be hosted anywhere.
-
-**It is already live** at
-<https://oza977-max.github.io/ai-raf-precheck/> — served from the `gh-pages`
-branch, no install needed to try it.
-
-To republish after a change, one command:
-
-```
-npm run publish-site   # builds, then pushes dist/ to gh-pages
-```
-
-For automated deploys instead, `docs/github-pages-workflow.yml` is a
-ready-made Actions workflow — copy it to `.github/workflows/` (adding it
-requires a token with `workflow` scope, or use GitHub's web UI) and set Pages
-source to "GitHub Actions".
-
-The page makes **no external requests at all** — fonts are served from the app
-itself, so nothing is fetched from a third party and there is nothing for a
-corporate network to block.
-
-Note that the built page loads as a JavaScript module, so it must be
-*served* — opening `dist/index.html` from the filesystem will not work.
-
-A model is optional and only enables plain-language intake. Nothing
-in the decision path uses it.
-
-**Transparency note:** the plain-language path runs on a **local open
-model** (one generic model slot; Ollama, no key, no cloud — the description
-never leaves the machine). First live run **2026-08-16** (qwen3:4b), since
-exercised across a 15-domain sweep (`test/sweep-001.md`): it drafts usable
-graphs and misreads some fields — which the provenance quotes,
-guessed-field questions and per-field review exist to catch. **Frontier
-models draft noticeably better**; a firm deployment points the same slot at
-a stronger model inside its own boundary (e.g. its own cloud). The guided
-form remains the most-verified path.
+**Live now:** <https://oza977-max.github.io/ai-raf-precheck/> — open it, then
+**Demo data → Load sample use cases**, and open any verdict. Six worked
+examples span Low→Critical, in and out of appetite, all scored by the real
+engine. The page makes **no external requests at all** — fonts are served
+from the app itself, so there is nothing for a corporate network to block.
 
 **Handing this to someone to test?** Send them
 [`docs/tester-guide.md`](docs/tester-guide.md) — what to try, what to
 ignore, and the known gaps — and ask them to fill in
-[`backtest/capture-template.md`](backtest/capture-template.md). In the app,
-**Demo data → Load sample use cases** seeds six worked examples spanning
-Low→Critical and in/out of appetite, all scored by the real engine.
+[`backtest/capture-template.md`](backtest/capture-template.md).
+
+**Run it locally** (Node 22+):
+
+```
+npm install
+npm run dev          # app on http://localhost:5173
+npm test             # full suite
+npm run docs:rules   # regenerate docs/rules.md from the policy files
+```
+
+No backend, no database, no API key. The whole app is a static build
+(`npm run build` → `dist/`), so it can be hosted anywhere; the built page
+must be *served*, not opened from the filesystem. `npm run publish-site`
+republishes the live site.
+
+**Transparency note — where the AI model fits:** the plain-language intake
+path runs on a **local open model** (one generic model slot; Ollama, no
+key, no cloud — the description never leaves the machine, and the app
+refuses non-local addresses so that promise is enforced, not assumed). It
+drafts usable graphs and misreads some fields — which the provenance
+quotes, guessed-field questions and per-field review exist to catch.
+**Frontier models draft noticeably better**; a firm deployment points the
+same slot at a stronger model inside its own boundary. The guided form is
+the most-verified path, and the model is optional either way — nothing in
+the decision path uses it.
 
 ---
 
@@ -162,7 +175,7 @@ what question this actually answers, why a 200-page regulation yields two
 rules, how pack sign-off works in practice and what it costs, and what the
 approach honestly cannot do.
 
-## Before you use this — read this first
+## Adopt it — the rules are yours to own
 
 AIGate works by checking AI use cases against a **Risk Appetite Framework (RAF)** — a set of rules that defines what AI risk the bank will and won't accept. Every verdict, every control requirement, every jurisdiction override traces back to a rule in that framework.
 
@@ -195,7 +208,7 @@ AIGate evaluates use cases against **regulatory override packs** — structured 
 
 **Regulations evolve. This is the hardest problem in the product.**
 
-SR 26-2 landed in April 2026 and carved generative and agentic AI out of the model definition entirely — the US position moved, and a firm's own appetite now has to cover the gap. The EU AI Act's Digital Omnibus postponed Annex III high-risk obligations to 2 December 2027, while leaving Article 50 transparency live from 2 August 2026. OSFI E-23 comes into force 1 May 2027. Supervisory statements and implementing acts change the picture continuously. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability.
+Positions move: the US recently carved generative and agentic AI out of its model definition; the EU delayed some obligations while others became live law. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability. (The current per-pack states and dates live in [`docs/approach.md`](docs/approach.md), where they are maintained.)
 
 ### How AIGate approaches this
 
@@ -220,22 +233,13 @@ This means:
 
 ---
 
-## What AIGate does not do
+## Getting started, in order
 
-- It does not write your risk appetite for you. It enforces the one you give it.
-- It does not replace InfoSec review, vendor risk assessment, cloud security approval, or FinOps sign-off. It triggers those reviews as mandatory downstream steps when a use case requires them.
-- It does not monitor AI systems after deployment (that is V2 — live KRI monitoring).
-- It does not catch AI systems that bypass the intake process (shadow AI discovery is V2).
-
----
-
-## Getting started
-
-1. `npm install && npm run dev`, open http://localhost:5173
-2. Open `policy/appetite.yaml` — read the preamble, understand the starter rules
-3. Replace `[FIRM]` placeholders with your organisation's details
-4. Review the materiality tiers and adjust thresholds to match your actual risk appetite
-5. Submit your first use case — `backtest/use-cases.md` has worked examples with expected verdicts, or load the six in-app samples from **Demo data**
+1. **Try the live site** — load the samples, open two or three verdicts.
+2. Open `policy/appetite.yaml` — read the preamble, understand the starter rules.
+3. Replace `[FIRM]` placeholders with your organisation's details.
+4. Review the materiality tiers and adjust thresholds to your actual appetite.
+5. Submit your own use case — `backtest/use-cases.md` has worked examples with expected verdicts.
 
 **Explaining it to a regulator or a general audience?**
 [`docs/regulator-brief.md`](docs/regulator-brief.md) answers the five
@@ -256,10 +260,6 @@ outcome is pinned by a test, so the page cannot drift from the product.
 task-oriented guide for a risk reader — how to read a verdict, what each
 honesty marker means, how to run a sign-off, and what the tool will not tell
 you.
-
-The full requirement set is [`requirements/requirements.md`](requirements/requirements.md)
-(81 requirements). Read the markdown, not the HTML twin — the HTML carries
-only 55 of them and has drifted; it says so at the top.
 
 ---
 
@@ -312,9 +312,6 @@ without knowing the codebase. Coverage exists; the audit path does not. For a
 product that sells auditability, that is the right thing to be held to, and it
 is the first thing V1.5 closes.
 
-V1 is an engine-validation proof-of-concept. Artifact binding and the
-system-of-record audit store arrive in V1.5; live KRI monitoring against
-standing conditions is V2. Built with the
+V1 is an engine-validation proof-of-concept — see **What's next** for the
+V1.5/V2 ladder. Built with the
 [Grounded Vibe Methodology](https://github.com/gerquinn1978/gvm).
-
-*Developed using the Grounded Vibe Methodology*
