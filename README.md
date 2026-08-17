@@ -42,6 +42,21 @@ The engine walks that graph: no hard line crossed; client-facing generative outp
 - **Everything is traceable.** Verdict → rule → verbatim regulatory text → the named human who signed it, on an append-only audit trail.
 - **Decisions accumulate.** Every verdict lands in a register the next pre-check consults — duplicate detection and similar-decided-cases turn the register into precedent, while the rules, not the precedent, decide.
 
+## What's the tool, and what's yours
+
+Three layers, and knowing which is which unlocks the whole product:
+
+| Layer | What it is | Who owns it |
+|---|---|---|
+| **The tool** — engine, screens, register, audit trail | Fixed machinery: walks the use-case graph, applies whatever rules are loaded, records everything. Contains **no opinions about risk**. | The product |
+| **Your appetite** — `policy/appetite.yaml` | The firm's own positions: hard lines, invariants, controls, tiers. **Does ~90% of the work.** Plain commented YAML a risk manager can read. | **Your firm** |
+| **Jurisdiction packs** — `policy/packs/*.yaml` | Regulator-derived overrides, each rule quoting its verbatim source text with a named human sign-off. They only ever *modify* what your appetite decided. | Your Legal / Model Risk / Tech Risk |
+
+The tool with no policy is a calculator with no formula. The starter policy
+in the box is a complete working formula — yours the moment someone at your
+firm adopts it. **[docs/policy-to-yaml.md](docs/policy-to-yaml.md)** is the
+step-by-step guide for turning your own appetite prose into the YAML.
+
 ## Why this exists
 
 Every bank now has an AI governance process, and almost every one of them is

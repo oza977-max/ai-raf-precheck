@@ -260,7 +260,9 @@ Three things to understand before you file:
 
 ## Change the firm's appetite
 
-The appetite is a YAML file. You can read and edit it in the app.
+The appetite is a YAML file. You can read and edit it in the app. (Starting
+from your own prose instead? [policy-to-yaml.md](policy-to-yaml.md) is the
+step-by-step conversion guide.)
 
 1. Open **Appetite framework**. The policy is shown in full, with the hard
    lines and every declared jurisdiction pack.
