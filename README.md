@@ -4,7 +4,14 @@
 
 A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
-Describe the AI use case (plain language or a short structured form). AIGate maps it to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
+## Two ways to describe a use case
+
+You choose one, every time you start a pre-check:
+
+- **Guided form** — short, structured questions. No AI involved. This is the most-verified path.
+- **Plain language** — write a sentence or two about what the AI does; an optional local model reads it into the same structured graph for you to check and correct on the next screen. Nothing it proposes is used until a person confirms it — see [How regulatory grounding works — and its limits](#how-regulatory-grounding-works--and-its-limits) for what that model does and doesn't get right.
+
+Either way, AIGate maps the use case to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
 
 - a **verdict with its "why"** — which rule set the **tier** (how much harm the case could do), which appetite rule (**"invariant"**) it tripped, each with its regulatory citation;
 - the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
@@ -98,10 +105,11 @@ flowchart TD
     K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
     L -.->|"reviewer disputes a RULE,<br/>not the case"| M["⚑ Rule challenge<br/><i>advisory by construction —<br/>the verdict stands; filed to the<br/>rule-improvement queue</i>"]
 
+    classDef default fill:#fdfcf7,stroke:#8a8371,color:#1c1b18
     style F fill:#1c1b18,color:#f3f0e8
-    style M stroke-dasharray: 5 5
-    style H fill:#fdf0ef,stroke:#a8322a
-    style K fill:#f0faf4,stroke:#3a6b4a
+    style M stroke-dasharray: 5 5,fill:#fdfcf7,color:#1c1b18
+    style H fill:#fdf0ef,stroke:#a8322a,color:#1c1b18
+    style K fill:#f0faf4,stroke:#3a6b4a,color:#1c1b18
 ```
 
 ## The three levers
@@ -138,10 +146,11 @@ flowchart LR
     LENS -.->|"informs, beside<br/>the verdict"| V
     LENS -.->|"uncovered risk class"| Q
 
+    classDef default fill:#fdfcf7,stroke:#8a8371,color:#1c1b18
     style ENGINE fill:#1c1b18,color:#f3f0e8
-    style Q stroke-dasharray: 5 5
-    style LENS stroke-dasharray: 5 5
-    style MIT stroke-dasharray: 5 5
+    style Q stroke-dasharray: 5 5,fill:#fdfcf7,color:#1c1b18
+    style LENS stroke-dasharray: 5 5,fill:#f6f2fb,color:#1c1b18
+    style MIT stroke-dasharray: 5 5,fill:#f6f2fb,color:#1c1b18
 ```
 
 Both rule files are plain, commented YAML a risk manager can read and edit —
