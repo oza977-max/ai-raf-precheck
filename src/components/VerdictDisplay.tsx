@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { DataFlowGraph, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
 import { graphSummaryRows } from './graph-summary';
@@ -70,6 +71,46 @@ const STATUS_LABEL: Record<Verdict['status'], string> = {
   approved_with_controls: 'Approved with controls',
   rejected: 'Rejected',
 };
+
+/** R14 (verdict recomposition, 2026-08-18 — the R9 idiom applied to the
+ *  verdict screen): analytical panels fold behind one click. The closed
+ *  state carries a plain summary with the section's key number/state, so a
+ *  scanner gets the gist without opening; the open state is the full panel,
+ *  unchanged. Aggregation and priority, never deletion (ADR-IF-R9-1).
+ *  The title stays a real <h3> inside <summary> so heading queries and the
+ *  accessibility tree are unchanged. */
+function Fold({
+  title,
+  summary,
+  defaultOpen = false,
+  when = true,
+  headingInSummary = true,
+  className = '',
+  children,
+}: {
+  title: string;
+  summary: string;
+  defaultOpen?: boolean;
+  // When false the panel renders unfolded, exactly as before — used where
+  // the honesty floor forbids folding (e.g. any control still UNVERIFIED).
+  when?: boolean;
+  // The controlset keeps its own inner <h3> (tests and the memo scope by
+  // it), so its summary carries the title as a span instead.
+  headingInSummary?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (!when) return <>{children}</>;
+  return (
+    <details className={`verdict__fold ${className}`.trim()} open={defaultOpen || undefined}>
+      <summary className="verdict__fold-summary">
+        {headingInSummary ? <h3>{title}</h3> : <span className="verdict__fold-title">{title}</span>}
+        <span className="verdict__fold-gist">{summary}</span>
+      </summary>
+      <div className="verdict__fold-body">{children}</div>
+    </details>
+  );
+}
 
 function Citation({ text }: { text?: string }) {
   if (!text) return null;
@@ -659,6 +700,18 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         {verdict.status !== 'rejected' && registerStage === 'pre_checked' && ' Not final until a second-line reviewer signs off.'}
       </p>
 
+      {/* User report (2026-08-15): "the engine might be working but the verdict
+          should be something a business user understands — how it's derived and
+          WHAT THEY NEED TO DO". Everything needed for that list was already on
+          this screen, scattered across three panels and written in identifiers.
+          This assembles it. Nothing below is removed: the reviewer still signs
+          off against the full basis, and the audit trail still records that
+          they saw it. R14 design review (2026-08-18): moved ABOVE tier/track
+          and the binding rule — a submitter's first question ("what do I do")
+          was being answered two panels late; the identifiers serve the 2LoD
+          reader building the audit case and can follow. */}
+      <WhatToDo verdict={verdict} policy={policy} registerStage={registerStage} />
+
       <div className="verdict__cards">
         <div className="verdict__stat">
           <span className="verdict__stat-label">Tier</span>
@@ -685,31 +738,26 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       <div className="verdict__binding">
         <p>
           Binding constraint: <code>{verdict.binding_constraint || '—'}</code>
+          <span className="verdict__binding-gloss"> — the single rule that decided this</span>
         </p>
         {verdict.binding_path && <p className="verdict__binding-path">{verdict.binding_path}</p>}
       </div>
 
-      {/* User report (2026-08-15): "the engine might be working but the verdict
-          should be something a business user understands — how it's derived and
-          WHAT THEY NEED TO DO". Everything needed for that list was already on
-          this screen, scattered across three panels and written in identifiers.
-          This assembles it. Nothing below is removed: the reviewer still signs
-          off against the full basis, and the audit trail still records that
-          they saw it. */}
-      <WhatToDo verdict={verdict} policy={policy} registerStage={registerStage} />
-
       {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} policy={policy} />}
 
       {explanation && explanation.tripped_invariants.length > 0 && (
-        <div className="verdict__chain">
-          <h3>How fragile is this approval?</h3>
+        <Fold
+          title="How fragile is this approval?"
+          summary={`${verdict.single_covered_invariants.length} rule${verdict.single_covered_invariants.length === 1 ? '' : 's'} held by a single control · margin of safety ${Math.round(verdict.margin_achieved * 100)}% (your firm wants at least ${Math.round(verdict.margin_target * 100)}%)`}
+        ><div className="verdict__chain">
+          
           <p className="verdict__chain-sub">
             Some of the rules below are satisfied by exactly one control. If that control fails or is
             removed, the use case falls outside appetite immediately — there is no second control
             holding it. Those are the ones to watch.
           </p>
           <p className="verdict__chain-derived">
-            → HEADROOM&ensp;
+            Margin of safety:&ensp;
             {Math.round(verdict.margin_achieved * 100)}% of the triggered rules have more than one control
             available; your firm&rsquo;s target is {Math.round(verdict.margin_target * 100)}%
             {verdict.boundary_proximity && ' — below target'}
@@ -717,7 +765,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           {verdict.single_covered_invariants.length > 0 && (
             <>
               <p className="verdict__chain-derived">
-                → RESTING ON A SINGLE CONTROL&ensp;({verdict.single_covered_invariants.length})
+                Resting on a single control&ensp;({verdict.single_covered_invariants.length})
               </p>
               {/* Was a bare comma-separated list of ids — "INV-CITE-01,
                   INV-CONDUCT-01, INV-SEC-01, INV-SYNTHMARK-01" — which the
@@ -741,12 +789,21 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               </p>
             </>
           )}
-        </div>
+        </div></Fold>
       )}
 
       {verdict.inheritance && (
-        <div className="verdict__chain">
-          <h3>Platform &amp; vendor inheritance</h3>
+        <Fold
+          title="Platform & vendor inheritance"
+          summary={
+            verdict.inheritance
+              ? verdict.inheritance.resolved
+                ? `On the covered registry — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} inherited`
+                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry — nothing inherited`
+              : ''
+          }
+        ><div className="verdict__chain">
+          
           <p className="verdict__chain-sub">
             What an existing platform or vendor approval already covered, and the envelope that
             justified it. Controls are inherited only where this use case sits inside the covered
@@ -766,18 +823,18 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             {verdict.inheritance.resolved ? (
               verdict.inheritance.inherited_controls.length > 0 ? (
                 <p className="verdict__chain-derived">
-                  → INHERITED&ensp;{verdict.inheritance.inherited_controls.join(', ')} — already
+                  Inherited:&ensp;{verdict.inheritance.inherited_controls.join(', ')} — already
                   satisfied by this approval, so not re-imposed here.
                 </p>
               ) : (
                 <p className="verdict__chain-derived">
-                  → NOTHING INHERITED&ensp;this use case falls outside the covered envelope, so its
+                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
                   controls are assessed from scratch.
                 </p>
               )
             ) : (
               <p className="verdict__chain-derived">
-                → NOTHING INHERITED&ensp;this component is not on the covered registry. A full
+                Nothing inherited:&ensp;this component is not on the covered registry. A full
                 vendor and platform risk assessment is required.
               </p>
             )}
@@ -803,7 +860,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               </ul>
             )}
           </div>
-        </div>
+        </div></Fold>
       )}
 
       {/* R3-JU-3 / verdict-audit.md §13.1. The chain panel below renders only
@@ -836,8 +893,11 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       )}
 
       {explanation?.regulatory_chain && explanation.regulatory_chain.length > 0 && (
-        <div className="verdict__chain">
-          <h3>Regulatory reasoning chain (RA-9)</h3>
+        <Fold
+          title="Regulatory reasoning — the rules from law"
+          summary={`${explanation.regulatory_chain!.length} rule${explanation.regulatory_chain!.length === 1 ? '' : 's'} from regulation fired${(verdict.provisional_reasons ?? []).includes('unsigned_pack_rules') ? ' — pending firm sign-off' : ''}; each quotes its source text`}
+        ><div className="verdict__chain">
+          
           <p className="verdict__chain-sub">Every pack rule that fired, traceable to source text.</p>
           {explanation.regulatory_chain.map((entry) => (
             <div key={entry.rule_id} className="verdict__chain-entry">
@@ -851,12 +911,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 </span>
               </div>
               <blockquote className="verdict__chain-quote">“{entry.source_text}”</blockquote>
-              <p className="verdict__chain-derived">→ DERIVED&ensp;{entry.derived}</p>
+              <p className="verdict__chain-derived">Derived:&ensp;{entry.derived}</p>
               <p className="verdict__chain-signoff">SIGN-OFF&ensp;{entry.sign_off}</p>
               <p className="verdict__chain-basis-help">{BASIS_HELP[entry.basis]}</p>
             </div>
           ))}
-        </div>
+        </div></Fold>
       )}
 
       {/* Rendered only where correction is actually available. Absence here
@@ -873,7 +933,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // MINIMAL CONTROL SET (CS-1) panel with per-control verification
           // status. BC-V13-02: absent evidence renders UNVERIFIED, never a
           // blank or implied pass.
-          <div className="verdict__controlset">
+          <Fold
+            title="The control set, with evidence status"
+            summary={`${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all VERIFIED`}
+            when={verdict.controls.every((id) => policy.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified')}
+            headingInSummary={false}
+          ><div className="verdict__controlset">
             <h3>The control set, with evidence status</h3>
             <p className="verdict__controlset-sub">
               The residual position — where the risk lands once these controls are in place. Smallest set that
@@ -924,7 +989,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                           if (!a) return null;
                           return (
                             <span key={axis} className={`verdict__axischip verdict__axischip--${a.status}`}>
-                              {axis === 'design' ? 'design' : 'operating'}:{' '}
+                              {axis === 'design' ? 'built right (design)' : 'working right (operating)'}:{' '}
                               {a.status === 'not_assessed' ? 'not assessed' : a.status}
                             </span>
                           );
@@ -942,7 +1007,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 );
               })}
             </ul>
-          </div>
+          </div></Fold>
         ) : (
           // BC-V13-03: no policy, so no fabricated chips. §15.1a is explicit
           // that the status renders as UNKNOWN rather than UNVERIFIED —
@@ -1009,8 +1074,11 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         ))}
 
       {verdict.conditions.hypotheses.length > 0 && (
-        <div className="verdict__conditions">
-          <h3>What would make this verdict expire</h3>
+        <Fold
+          title="What would make this verdict expire"
+          summary={`Holds while ${verdict.conditions.hypotheses.length} standing condition${verdict.conditions.hypotheses.length === 1 ? '' : 's'} stay${verdict.conditions.hypotheses.length === 1 ? 's' : ''} inside bounds — nothing to do today`}
+        ><div className="verdict__conditions">
+          
           <p className="verdict__conditions-sub">
             <strong>Nothing to do today.</strong> This verdict was reached on the assumption that the system
             stays inside the bounds below. If it drifts outside any of them — or the deployment moves to a
@@ -1035,12 +1103,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               <li key={h}>{h}</li>
             ))}
           </ul>
-        </div>
+        </div></Fold>
       )}
 
       {graph && (
-        <div className="verdict__provenance">
-          <h3>What you told us</h3>
+        <Fold title="What you told us" summary="The answers this verdict was computed from, as attested at submission"><div className="verdict__provenance">
+          
           {/* Reported as duplicating the standing conditions. It does repeat
               the data zone and autonomy level — deliberately, because the two
               panels make different claims about the same value: this is what
@@ -1059,7 +1127,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               </div>
             ))}
           </div>
-        </div>
+        </div></Fold>
       )}
 
       {/* VD-6. The engine wrote living_status on every verdict since V1 and
