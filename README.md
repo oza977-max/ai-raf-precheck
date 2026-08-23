@@ -8,7 +8,11 @@ A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into
 > buy an AI tool. Today, finding out whether that's allowed takes weeks of
 > committee email. AIGate answers it in minutes: describe the use case,
 > confirm what the tool understood, and get a verdict computed by fixed,
-> citable rules — **no AI makes the decision**, ever. It's built and run by
+> citable rules — **no AI makes the decision**, ever. Three levers sit
+> behind every verdict: **your firm's appetite decides, regulation decides
+> where it applies, and a risk-knowledge lens built from the MIT AI Risk
+> Repository informs — flagging risks your rules don't yet cover — but
+> never decides.** It's built and run by
 > a practitioner who does this review work for a living, as a working
 > proof that a risk appetite can be executable instead of a PDF.
 > **Fastest way in:** open the [live demo](https://oza977-max.github.io/ai-raf-precheck/),
@@ -62,66 +66,20 @@ The engine walks that graph: no hard line crossed; client-facing generative outp
 
 ## What's the tool, and what's yours
 
-Three layers, and knowing which is which unlocks the whole product:
+The tool, plus the three levers every verdict traces to — knowing which is
+which unlocks the whole product:
 
 | Layer | What it is | Who owns it |
 |---|---|---|
 | **The tool** — engine, screens, register, audit trail | Fixed machinery: walks the use-case graph, applies whatever rules are loaded, records everything. Contains **no opinions about risk**. | The product |
 | **Your appetite** — `policy/appetite.yaml` | The firm's own positions: hard lines, invariants, controls, tiers. **Does ~90% of the work.** Plain commented YAML a risk manager can read. | **Your firm** |
 | **Jurisdiction packs** — `policy/packs/*.yaml` | Regulator-derived overrides, each rule quoting its verbatim source text with a named human sign-off. They only ever *modify* what your appetite decided. | Your Legal / Model Risk / Tech Risk |
+| **Risk knowledge** — `grounding/risk-knowledge.yaml` | A curated lens from the MIT AI Risk Repository's public taxonomy. **Informs, never decides** — flags known risk classes and gaps in your rules; structurally incapable of touching a verdict. | Your 2LoD (curation), MIT (taxonomy) |
 
 The tool with no policy is a calculator with no formula. The starter policy
 in the box is a complete working formula — yours the moment someone at your
 firm adopts it. **[docs/policy-to-yaml.md](docs/policy-to-yaml.md)** is the
 step-by-step guide for turning your own appetite prose into the YAML.
-
-## Why this exists
-
-Every bank now has an AI governance process, and almost every one of them is
-the same thing: a long questionnaire, a committee, and a wait measured in
-months. The bottleneck isn't diligence — it's that the firm's risk appetite
-lives as prose, so every use case has to be *interpreted* against it by
-scarce second-line people, one meeting at a time. Interpretation doesn't
-scale. Rules do.
-
-AIGate is a working test of one idea: **if the appetite were code, the first
-pass of that process would take minutes, not months** — and the answer would
-be the same for everyone, for stated reasons, on the record. It was built by
-a risk practitioner, on personal time with public sources, to find out
-whether the idea survives contact with realistic use cases.
-
-It is deliberately the *opposite* of adding AI to governance. The verdict is
-computed by deterministic rules; the honest boundary of what a tool may
-claim is enforced on every screen; and where a human must stand behind a
-judgement — every regulatory interpretation, every sign-off — the tool
-records the human, or says plainly that one is missing.
-
-## What happens to a use case
-
-```mermaid
-flowchart TD
-    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model — one generic model slot</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
-    B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
-    B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output —<br/>every value explained, quoted from<br/>your words, confirmed by you</i>"]
-    C --> C2["Jurisdictions confirmed<br/><i>the model may propose; only YOU<br/>confirm which regulations apply.<br/>Similar decided cases shown —<br/>precedent informs, rules decide</i>"]
-    C2 --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
-    D --> E["Attestation<br/><i>timestamped, permanent,<br/>+ optional note for the reviewer</i>"]
-    E --> F["⚙ Deterministic engine<br/><i>same answers → same verdict,<br/>every time. No LLM in here.</i>"]
-
-    F --> G{"Hard lines first<br/><i>5 absolute rules</i>"}
-    G -->|"one crossed"| H["✗ REJECTED<br/><i>no control set can fix it —<br/>change the case, or go to<br/>committee as an exception</i>"]
-    G -->|"none crossed"| I["18 appetite invariants<br/><i>+ tier, track, jurisdiction floors</i>"]
-    I --> J["Minimal control set<br/><i>solved, not suggested —<br/>smallest set that brings it<br/>inside appetite</i>"]
-    J --> K["✓ Verdict<br/><i>with the rule, the regulation and<br/>the sign-off behind every step</i>"]
-    K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
-    L -.->|"reviewer disputes a RULE,<br/>not the case"| M["⚑ Rule challenge<br/><i>advisory by construction —<br/>the verdict stands; filed to the<br/>rule-improvement queue</i>"]
-
-    classDef default fill:#fdfcf7,stroke:#8a8371,color:#1c1b18
-    style F fill:#1c1b18,color:#f3f0e8
-    style M stroke-dasharray: 5 5,fill:#fdfcf7,color:#1c1b18
-    style H fill:#fdf0ef,stroke:#a8322a,color:#1c1b18
-    style K fill:#f0faf4,stroke:#3a6b4a,color:#1c1b18
-```
 
 ## The three levers
 
@@ -130,6 +88,20 @@ challenges.** Every rule the engine applies traces to exactly one of three
 sources, and the verdict shows which — with the verbatim text and the
 human sign-off behind it. Only the first two can move a verdict; the third
 cannot, by construction of its own schema, not by convention:
+
+**The third lever, in plain words.** AIGate checks every use case against a
+risk-knowledge lens built from the [MIT AI Risk Repository](https://airisk.mit.edu/)'s
+public taxonomy of AI harms. The lens flags known risk classes that match
+your use case's shape — and, more importantly, tells you when none of your
+firm's rules or jurisdiction packs cover a risk it found. That gap goes
+straight into the rule-improvement queue for the humans who write your
+rules. The lens cannot change a verdict, set a tier, or require a control —
+its schema makes that structurally impossible, not just a house rule.
+Appetite and regulation decide; knowledge only points at what they haven't
+covered yet.
+
+*The diagram below shows the same thing in one picture — solid arrows
+decide, dashed arrows only inform:*
 
 ```mermaid
 flowchart LR
@@ -172,6 +144,60 @@ public domain taxonomy (Slattery et al., MIT FutureTech; CC BY 4.0;
 1,700+ risks from 65 frameworks) — see
 [docs/approach.md §2a](docs/approach.md#2a-the-third-lever--knowledge-and-its-honest-boundary)
 for the honest boundary on what "curated, not synced" actually means.
+
+## Why this exists
+
+Every bank now has an AI governance process, and almost every one of them is
+the same thing: a long questionnaire, a committee, and a wait measured in
+months. The bottleneck isn't diligence — it's that the firm's risk appetite
+lives as prose, so every use case has to be *interpreted* against it by
+scarce second-line people, one meeting at a time. Interpretation doesn't
+scale. Rules do.
+
+AIGate is a working test of one idea: **if the appetite were code, the first
+pass of that process would take minutes, not months** — and the answer would
+be the same for everyone, for stated reasons, on the record. It was built by
+a risk practitioner, on personal time with public sources, to find out
+whether the idea survives contact with realistic use cases.
+
+It is deliberately the *opposite* of adding AI to governance. The verdict is
+computed by deterministic rules; the honest boundary of what a tool may
+claim is enforced on every screen; and where a human must stand behind a
+judgement — every regulatory interpretation, every sign-off — the tool
+records the human, or says plainly that one is missing.
+
+## What happens to a use case
+
+
+*In one line: describe → duplicate check → confirm the extracted graph →
+answer only the questions the rules actually need → attest → deterministic
+verdict → register with second-line sign-off. The diagram shows the same
+pipeline with its branch points:*
+
+```mermaid
+flowchart TD
+    A["Describe the AI use case<br/><i>guided form (verified path), or<br/>plain language via a local open<br/>model — one generic model slot</i>"] --> B{"Duplicate check<br/><i>against the register</i>"}
+    B -->|"similar case exists"| B1["Adopt its classification<br/><i>recorded in the audit trail</i>"]
+    B -->|"genuinely new"| C["Data-flow graph<br/><i>input data → model → output —<br/>every value explained, quoted from<br/>your words, confirmed by you</i>"]
+    C --> C2["Jurisdictions confirmed<br/><i>the model may propose; only YOU<br/>confirm which regulations apply.<br/>Similar decided cases shown —<br/>precedent informs, rules decide</i>"]
+    C2 --> D["Targeted questions<br/><i>count driven by risk signals;<br/>contradictions flagged</i>"]
+    D --> E["Attestation<br/><i>timestamped, permanent,<br/>+ optional note for the reviewer</i>"]
+    E --> F["⚙ Deterministic engine<br/><i>same answers → same verdict,<br/>every time. No LLM in here.</i>"]
+
+    F --> G{"Hard lines first<br/><i>5 absolute rules</i>"}
+    G -->|"one crossed"| H["✗ REJECTED<br/><i>no control set can fix it —<br/>change the case, or go to<br/>committee as an exception</i>"]
+    G -->|"none crossed"| I["18 appetite invariants<br/><i>+ tier, track, jurisdiction floors</i>"]
+    I --> J["Minimal control set<br/><i>solved, not suggested —<br/>smallest set that brings it<br/>inside appetite</i>"]
+    J --> K["✓ Verdict<br/><i>with the rule, the regulation and<br/>the sign-off behind every step</i>"]
+    K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
+    L -.->|"reviewer disputes a RULE,<br/>not the case"| M["⚑ Rule challenge<br/><i>advisory by construction —<br/>the verdict stands; filed to the<br/>rule-improvement queue</i>"]
+
+    classDef default fill:#fdfcf7,stroke:#8a8371,color:#1c1b18
+    style F fill:#1c1b18,color:#f3f0e8
+    style M stroke-dasharray: 5 5,fill:#fdfcf7,color:#1c1b18
+    style H fill:#fdf0ef,stroke:#a8322a,color:#1c1b18
+    style K fill:#f0faf4,stroke:#3a6b4a,color:#1c1b18
+```
 
 ## What works today (V1 proof-of-concept)
 
