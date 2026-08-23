@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Site Survey 001</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Color-coding for Health Scorecard ── */
+    .score-5, .score-4 { background-color: #d4edda; color: #155724; font-weight: 600; }
+    .score-3 { background-color: #fff3cd; color: #856404; font-weight: 600; }
+    .score-1, .score-2 { background-color: #f8d7da; color: #721c24; font-weight: 600; }
+
+    /* ── Critical row highlight ── */
+    tbody tr.critical-row { background-color: #f8d7da; }
+    tbody tr.critical-row td { border-bottom: 1px solid #e8a8a8; }
+
+    /* ── Coherence badge ── */
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
+      border-radius: 3px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+
+    .badge-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #28a745;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">2026-08-18 — Survey Document</p>
+    <h1>AIGate — Site Survey 001</h1>
+    <p class="subtitle">Comprehensive architecture and health assessment of the AIGate codebase at v0.13.0.</p>
+
+    <h2 id="executive-summary">1. Executive Summary</h2>
+    <p><span class="badge badge-success">COHERENT — Scenario 1</span> AIGate is a coherent codebase — one consistent, deliberately enforced architecture, verified mechanically in this survey, with a test estate larger than its source (13,982 test LoC vs 12,885 source LoC, 597 tests across 62 files) and documentation discipline (21 requirements files, 9 paired spec documents with ADRs, per-round test-case docs, a backtest corpus with pinned predictions) that exceeds what most production teams maintain. The health scorecard is 5/5 on four of seven dimensions. The intended next work — the "R12 trust mechanics" round distilled from the three-panel concept review — is a user-facing feature round, so the recommended pipeline entry point is <code>/gvm-requirements</code> (as <code>requirements-012.md</code>), seeded by the panel findings. The risk register below carries one Critical item (automation-bias exposure on the self-service path) inherited from the concept review, not from code quality.</p>
+
+    <h2 id="codebase-profile">2. Codebase Profile</h2>
+    <table>
+      <caption>Table 1 — Codebase profile and composition</caption>
+      <thead>
+        <tr><th>Attribute</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Language / framework</td><td>TypeScript (strict), React 18, Vite, Vitest, Zod, idb (IndexedDB), js-yaml</td></tr>
+        <tr><td>Source size</td><td>12,885 LoC (src, excl. tests) · 13,982 LoC tests · 62 test files, 597 tests</td></tr>
+        <tr><td>Modules</td><td><code>engine/</code> 2,956 LoC (25 test files) · <code>components/</code> 6,750 (25) · <code>store/</code> 1,303 (6) · <code>llm/</code> 719 (3) · <code>seeds/</code> 867 (3)</td></tr>
+        <tr><td>Policy corpus</td><td><code>policy/appetite.yaml</code> 988 lines · 3 jurisdiction pack files · <code>grounding/risk-knowledge.yaml</code> 174 lines (14 curated MIT-taxonomy entries)</td></tr>
+        <tr><td>Git history</td><td>206 commits, single contributor (<code>oza977-max</code>), v0.2.0 → v0.13.0 across ~5 weeks of intense activity</td></tr>
+        <tr><td>Hotspots</td><td><code>IntakeFlow.tsx</code> (41 modifications), <code>App.css</code> (42), <code>VerdictDisplay.tsx</code> (25), <code>WalkingSkeleton.test.tsx</code> (29) — all consistent with the UI-round cadence, not churn from defects</td></tr>
+        <tr><td>CI</td><td>GitHub Actions: test + tsc + build + spec-parity on every push; public repo, GitHub Pages deploy</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Git archaeology note:</strong> commit messages are uniformly disciplined (<code>feat:</code>/<code>fix:</code>/<code>docs:</code> + requirement/round references), each release tagged. The hotspot files are the two largest UI composition points — expected for a product that shipped nine UI-heavy rounds; neither shows fix-after-fix churn patterns.</p>
+
+    <h2 id="architectural-map">3. Architectural Map</h2>
+    <p><strong>Pattern:</strong> a four-boundary layered monolith, declared in <code>specs/cross-cutting.md</code> §7 and CLAUDE.md, and — the survey's key finding — <strong>actually true under mechanical verification</strong>, not just claimed:</p>
+    <ol>
+      <li><strong><code>src/engine/*</code> — pure functional island.</strong> Fresh grep across all non-test engine files for React, the Anthropic SDK, store/llm/component imports, <code>Date.now()</code> and <code>Math.random()</code>: zero violations (two grep hits are comments stating the rule). <code>evaluate(graph, policy) → Verdict</code> is a pure function; determinism is enforced by a 10-run whole-result serialization test (TC-PE-1-01) and policy collections are sorted before iteration.</li>
+      <li><strong><code>src/llm/*</code> — sole SDK boundary.</strong> <code>@anthropic-ai/sdk</code> imported in exactly one file (<code>llm/client.ts</code>); the local-model path (<code>local-provider.ts</code>) enforces loopback-only at probe and send. LLM output enters the system only through a Zod canonical-vocabulary gate plus verbatim quote-verification (R6), with unverifiable fields demoted to "guessed."</li>
+      <li><strong><code>src/store/*</code> — persistence only.</strong> Repository pattern over IndexedDB (Kleppmann-informed append-only audit store: no delete/update API surface); no React imports (verified). Register is a real adjacency-list graph (nodes + edges), not a flat table — including the <code>ai_model</code>/<code>uses_model</code> schema activated in R11.</li>
+      <li><strong><code>src/components/*</code> — presentation only.</strong> Calls engine/store functions; business logic pushed down. In-flight <code>useRef</code> guards against double-write races into the append-only trail (a real defect class, twice fixed, now conventionalized).</li>
+    </ol>
+    <p><strong>Enterprise patterns present:</strong> Repository (store), append-only event log (audit trail), pure-function evaluation core, discriminated-union event payloads (Vanderkam-style), advisory-by-construction subsystems (precedents, knowledge lens — structurally incapable of touching the verdict).</p>
+    <p><strong>Conventions:</strong> uniform; reserved-words guard (<code>/approved|rejected/i</code>) enforced suite-wide; plain-language copy as a stated functional requirement; every rendered honesty state (PROVISIONAL, UNVERIFIED, "pending adoption") deliberate.</p>
+
+    <h2 id="health-scorecard">4. Health Scorecard</h2>
+    <table>
+      <caption>Table 2 — Codebase health dimensions and evidence</caption>
+      <thead>
+        <tr><th>Dimension</th><th>Score</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Coherence</td><td><span class="score-5">5</span></td><td>One architecture, mechanically verified boundaries, uniform conventions across 9 build rounds</td></tr>
+        <tr><td>Currency</td><td><span class="score-5">5</span></td><td>React 18 / Vite / Vitest / Zod / strict TS — current idioms throughout</td></tr>
+        <tr><td>Testability</td><td><span class="score-5">5</span></td><td>Test LoC > source LoC; pure engine; determinism property tests; 597 green; fake-indexeddb for store isolation</td></tr>
+        <tr><td>Modularity</td><td><span class="score-5">5</span></td><td>Four enforced boundaries; single SDK import point; advisory subsystems isolated by construction</td></tr>
+        <tr><td>Documentation</td><td><span class="score-5">5</span></td><td>21 requirements docs, 9 paired specs with ADRs, CLAUDE.md gotcha log, backtest corpus with pinned predictions, CHANGELOG per release</td></tr>
+        <tr><td>Dependency Health</td><td><span class="score-4">4</span></td><td>8 runtime deps, all maintained; minor version lag on <code>@anthropic-ai/sdk</code> and <code>zustand</code> 4.x; nothing vulnerable or abandoned</td></tr>
+        <tr><td>Usability (UI)</td><td><span class="score-4">4</span></td><td>Plain-language discipline and honest states are strong; known concern: feature surface has outgrown the first-time-user path (panel finding C-4), 15+ field intake (C-1)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="diagnosis">5. Diagnosis — Scenario 1: Coherent</h2>
+    <p>High, balanced scores; consistent patterns throughout; conventions followed; tests present and meaningful. New work should <strong>extend</strong> the existing design, not restructure it. Typical cause matches this project exactly: a single disciplined author with a methodology (GVM rounds: requirements → spec → test cases → build → ritual) applied consistently. No traces of drift, no mid-migration seams, no dead patterns.</p>
+    <p>One caveat the coherence itself creates: the codebase's health is <strong>method-dependent and single-owner</strong>. The discipline lives in CLAUDE.md, the specs, and one contributor's practice — a bus-factor observation echoed by the operational panel (C-2), not a structural defect.</p>
+
+    <h2 id="risk-areas">6. Risk Areas</h2>
+    <table>
+      <caption>Table 3 — Risk register, prioritised by severity</caption>
+      <thead>
+        <tr><th>Priority</th><th>Risk</th><th>Source</th></tr>
+      </thead>
+      <tbody>
+        <tr class="critical-row"><td><strong>Critical</strong></td><td>Automation bias on the Low-tier self-service path: fast, confident, unreviewed verdicts with no sampling audit — a consumer acting on this survey without addressing it would ship the exact failure mode the product warns others about</td><td>Concept-review panel A-4</td></tr>
+        <tr><td>Important</td><td>Corpus staleness is calendar-enforced, not machine-enforced: no <code>max_staleness_days</code>, no verdict-level "review overdue" state</td><td>A-1 / B-4 / C-2 (three-panel convergence)</td></tr>
+        <tr><td>Important</td><td>"VERIFIED" quote badge oversells: proves verbatim presence, not that the quote supports the assigned value</td><td>B-1</td></tr>
+        <tr><td>Important</td><td>Model-family approval (<code>version_pattern</code>) lacks a re-attest cadence — approves future releases nobody benchmarked</td><td>B-2</td></tr>
+        <tr><td>Important</td><td>First-time-user surface: reviewer machinery (challenges, precedents, lens) visible on the developer path; intake length</td><td>C-1 / C-4</td></tr>
+        <tr><td>Minor</td><td>Knowledge-lens entries lack <code>curated_by</code>/date attestation; memo attests a paraphrase not the YAML (hash gap); judge-002 rerun untracked</td><td>A-3 / A-5 / B-5</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="diagnostic-experts">7. Diagnostic Experts Used</h2>
+    <table>
+      <caption>Table 4 — Expert references consulted in this survey</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Role in survey</th><th>Cited</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Martin Fowler</td><td><em>Refactoring</em> 2e / <em>PoEAA</em></td><td>Pattern recognition (Repository, event log, layering)</td><td>Yes — §3</td></tr>
+        <tr><td>Michael Feathers</td><td><em>Working Effectively with Legacy Code</em></td><td>Testability/seam assessment</td><td>Yes — §4 Testability</td></tr>
+        <tr><td>Martin Kleppmann</td><td><em>Designing Data-Intensive Applications</em></td><td>Data-layer diagnosis (append-only log, adjacency-list register, schema evolution)</td><td>Yes — §3</td></tr>
+        <tr><td>Sam Newman</td><td><em>Building Microservices</em> 2e</td><td>Boundary assessment (module boundaries within monolith)</td><td>Yes — §3</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expert-coverage">8. Expert Coverage Assessment</h2>
+    <p><strong>Covered by existing reference files:</strong> AI governance &amp; regulation (<code>industry/ai-governance.md</code>: NIST AI RMF, EU AI Act, SR 26-2, SS1/23, OSFI E-23, MAS FEAT, Russell, O'Neil, Eubanks — all pre-scored, mostly Canonical); model risk (<code>industry/model-risk.md</code>: SR 11-7, SS1/23, Derman, Rebonato, Wilmott, Taleb, Molnar, BCBS 239); architecture &amp; data (<code>architecture-specialists.md</code>, <code>domain/data-intensive.md</code>); stack (TypeScript/React/testing via existing stack references used in specs: Vanderkam, Dodds, Beck).</p>
+    <p><strong>Gaps found (candidates surfaced by the concept-review panels, not yet in any reference file):</strong></p>
+    <table>
+      <caption>Table 5 — Expert candidates discovered as reference gaps</caption>
+      <thead>
+        <tr><th>Candidate</th><th>Work</th><th>Gap covered</th><th>Proposed classification</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Michael Power</td><td><em>The Audit Society</em> (OUP 1997)</td><td>Audit-ritual risk — attestation drifting from enforcement (finding A-5)</td><td>Established (pending scoring)</td><td>Discovered — awaiting user approval to persist</td></tr>
+        <tr><td>Donald Reinertsen</td><td><em>Principles of Product Development Flow</em> (2009)</td><td>Adoption economics, queues, cost of delay (C-1)</td><td>Established (pending scoring)</td><td>Discovered — awaiting approval</td></tr>
+        <tr><td>BJ Fogg</td><td><em>Tiny Habits</em> / Fogg Behavior Model</td><td>Voluntary-use trigger design (C-5)</td><td>Recognised (pending scoring)</td><td>Discovered — awaiting approval</td></tr>
+        <tr><td>Mitchell et al.</td><td>"Model Cards for Model Reporting" (FAT* 2019)</td><td>Model documentation tradition backing the approved-model registry (B-2/B-5)</td><td>Established (pending scoring)</td><td>Discovered — awaiting approval</td></tr>
+        <tr><td>OWASP</td><td><em>LLM Top-10</em> (2023-25)</td><td>Prompt-injection / LLM-security grounding for the intake edge (B-1/B-6)</td><td>Established (pending scoring)</td><td>Discovered — awaiting approval</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="recommended-experts">9. Recommended Project Experts</h2>
+    <table>
+      <caption>Table 6 — Complete expert roster for this codebase</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Tier</th><th>Classification</th><th>Reference file</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Martin Fowler</td><td><em>Refactoring</em> 2e / <em>PoEAA</em></td><td>1</td><td>Canonical</td><td>architecture-specialists.md</td><td>Existing</td></tr>
+        <tr><td>George Fairbanks</td><td><em>Just Enough Software Architecture</em></td><td>1</td><td>Established</td><td>architecture-specialists.md</td><td>Existing</td></tr>
+        <tr><td>Michael Keeling</td><td><em>Design It!</em></td><td>1</td><td>Established</td><td>architecture-specialists.md</td><td>Existing</td></tr>
+        <tr><td>Kent Beck</td><td><em>Test-Driven Development: By Example</em></td><td>1</td><td>Canonical</td><td>architecture-specialists.md</td><td>Existing</td></tr>
+        <tr><td>Martin Kleppmann</td><td><em>Designing Data-Intensive Applications</em></td><td>2a</td><td>Canonical</td><td>domain/data-intensive.md</td><td>Existing</td></tr>
+        <tr><td>Michael Feathers</td><td><em>Working Effectively with Legacy Code</em></td><td>2a</td><td>Recognised</td><td>domain/legacy-code.md</td><td>Existing</td></tr>
+        <tr><td>NIST AI RMF 1.0</td><td>Govern/Map/Measure/Manage</td><td>2b</td><td>Canonical</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>EU AI Act</td><td>Regulation (EU) 2024/1689</td><td>2b</td><td>Canonical</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>SR 26-2</td><td>Fed/OCC/FDIC MRM 2026</td><td>2b</td><td>Canonical</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>PRA SS1/23</td><td>MRM Principles for Banks</td><td>2b</td><td>Canonical</td><td>industry/model-risk.md</td><td>Existing</td></tr>
+        <tr><td>OSFI E-23</td><td>Enterprise-Wide MRM</td><td>2b</td><td>Canonical</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>MAS FEAT</td><td>FEAT Principles</td><td>2b</td><td>Established</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>SR 11-7</td><td>Supervisory Guidance on MRM</td><td>2b</td><td>Canonical</td><td>industry/model-risk.md</td><td>Existing</td></tr>
+        <tr><td>Stuart Russell</td><td><em>Human Compatible</em></td><td>2b</td><td>Established</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>Cathy O'Neil</td><td><em>Weapons of Math Destruction</em></td><td>2b</td><td>Established</td><td>industry/ai-governance.md</td><td>Existing</td></tr>
+        <tr><td>Emanuel Derman</td><td><em>Models.Behaving.Badly</em></td><td>2b</td><td>Established</td><td>industry/model-risk.md</td><td>Existing</td></tr>
+        <tr><td>Christoph Molnar</td><td><em>Interpretable Machine Learning</em> 2e</td><td>2b</td><td>Established</td><td>industry/model-risk.md</td><td>Existing</td></tr>
+        <tr><td>Dan Vanderkam</td><td><em>Effective TypeScript</em> 2e</td><td>3</td><td>Established</td><td>stack references</td><td>Existing</td></tr>
+        <tr><td>Kent C. Dodds</td><td>Testing Library</td><td>3</td><td>Established</td><td>stack references</td><td>Existing</td></tr>
+        <tr><td>Michael Power</td><td><em>The Audit Society</em></td><td>2b</td><td>Pending scoring</td><td>— (candidate)</td><td>Newly discovered</td></tr>
+        <tr><td>Donald Reinertsen</td><td><em>Product Development Flow</em></td><td>2a</td><td>Pending scoring</td><td>— (candidate)</td><td>Newly discovered</td></tr>
+        <tr><td>BJ Fogg</td><td>Fogg Behavior Model</td><td>2a</td><td>Pending scoring</td><td>— (candidate)</td><td>Newly discovered</td></tr>
+        <tr><td>Mitchell et al.</td><td>"Model Cards"</td><td>2b</td><td>Pending scoring</td><td>— (candidate)</td><td>Newly discovered</td></tr>
+        <tr><td>OWASP LLM Top-10</td><td>LLM security</td><td>2b</td><td>Pending scoring</td><td>— (candidate)</td><td>Newly discovered</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="route-recommendation">10. Route Recommendation</h2>
+    <p><strong>Work type:</strong> user-facing feature round — the R12 "trust mechanics" scope distilled from the three-panel concept review (staleness enforcement, honesty-badge recalibration, family re-attest cadence, Low-tier sampling audit, pilot-mode provisional split).</p>
+    <p><strong>Route:</strong> Coherent + user-facing feature → <code>/gvm-requirements</code>, producing <code>requirements/requirements-012.md</code> in "new round" mode, following the same numbered-round pattern as rounds 3–11.</p>
+    <p><strong>Seed input:</strong> the three concept-review panel reports (A-1..A-7, B-1..B-6, C-1..C-6) and the synthesis, plus the quick-wins list (README reorder, <code>curated_by</code> fields, badge copy, judge-002 tracking) which can bypass the pipeline as documentation-only fixes under shared rule 7.</p>
+    <p><strong>Existing documents as seed:</strong> requirements-001..011 (requirements), test-cases-003..011 (test cases), specs/ (7 spec domains) — all conform to the round pattern; R12 continues the sequence rather than restarting anything.</p>
+
+    <h2 id="open-questions">11. Open Questions</h2>
+    <div class="open-question">
+      <p><strong>OQ-1:</strong> Whether the five discovered expert candidates should be scored and persisted to the reference files (user approval required per discovery process).</p>
+    </div>
+    <div class="open-question">
+      <p><strong>OQ-2:</strong> Whether R12 should also absorb the two deferred Should-items (R11-KL-4 coverage map; judge-002 rerun) or leave them parked.</p>
+    </div>
+    <div class="open-question">
+      <p><strong>OQ-3:</strong> The bus-factor observation (§5): no code answer exists — it is an adoption/organizational question for the deployment phase.</p>
+    </div>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
