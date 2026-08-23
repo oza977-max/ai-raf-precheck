@@ -159,7 +159,7 @@ describe('Walking Skeleton', () => {
     // V1.3: proof-carrying controls — this Client-PII flow requires
     // CTRL-ENC-01, which carries the starter YAML's worked verification
     // example, so the CS-1 panel shows a VERIFIED chip.
-    expect(screen.getByText(/minimal control set \(CS-1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/the control set, with evidence status/i)).toBeInTheDocument();
     expect(screen.getByText('VERIFIED')).toBeInTheDocument();
 
     // Self-verifying, not just structurally implied: the LLM boundary was

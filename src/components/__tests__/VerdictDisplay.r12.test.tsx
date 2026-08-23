@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VerdictDisplay, { classifyProvisionalReason } from '../VerdictDisplay';
 import type { Verdict } from '../../types/verdict';
@@ -140,7 +140,10 @@ describe('R12-MISC-1 — memo hash', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} />);
     await user.click(screen.getByRole('button', { name: /download effective-challenge memo/i }));
 
-    expect(capturedBlob).not.toBeNull();
+    // The handler awaits crypto.subtle.digest before creating the blob —
+    // assert after it lands, not synchronously after the click (this was a
+    // 1-in-3 flake, caught by the 3x ritual on 2026-08-18).
+    await waitFor(() => expect(capturedBlob).not.toBeNull());
     const text = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
