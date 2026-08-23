@@ -1385,7 +1385,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           />
         )}
         {state.step === 'verdict' && verdict && knowledgeLensMatches.length > 0 && (
-          <KnowledgeLensPanel matches={knowledgeLensMatches} meta={knowledgeLensMeta} />
+          <KnowledgeLensPanel
+            matches={knowledgeLensMatches}
+            meta={knowledgeLensMeta}
+            // R13-UI-3: the intake verdict screen has no filing action (that
+            // is a reviewer act on the register page), but if a filing
+            // already exists on the trail it still shows as Filed.
+            filedRiskDomains={verdictAuditEvents
+              .filter((e) => e.payload.type === 'rule_dissent_filed')
+              .map((e) => (e.payload.type === 'rule_dissent_filed' ? e.payload.rule_id : ''))
+              .filter(Boolean)}
+          />
         )}
       </div>
     </div>

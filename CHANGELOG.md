@@ -11,6 +11,36 @@ every verdict.
 
 ---
 
+## [0.15.0] — 2026-08-18
+
+### Changed — the knowledge lens earns its place
+
+Two practical-judgment reviews (a second-line practitioner driving the
+live app; an AI-risk taxonomist auditing the curated file) judged the
+risk-knowledge panel "wallpaper a real review team would switch off
+within a month." Every finding fixed:
+
+- **Gaps now lead.** Uncovered risk classes render first, in their own
+  highlighted treatment, and a one-line notice appears near the top of
+  the case page whenever a gap exists — a gap can no longer hide below
+  the fold among "already covered" lines.
+- **"Already covered" collapses to one line** ("8 known risk domains
+  already addressed — show"), expandable. Nothing hidden; attention
+  directed.
+- **Filing a gap now shows it.** After "file as coverage gap", the entry
+  flips to a permanent "Filed — on the rule-improvement queue" state,
+  read from the audit trail itself so it survives reloads and cannot be
+  double-filed.
+- **Old cases say why they show nothing.** Cases decided before the lens
+  existed now carry "not evaluated against the risk-knowledge taxonomy"
+  instead of silent absence.
+- **The curated entries earn their matches.** A real bug fixed: the
+  vendor-concentration entry checked a value that doesn't exist in the
+  data model, so it misfired — and its "no rule covers this" claim is
+  now a documented decision rather than an accident. Three over-broad
+  entries that tagged whole model families (every agentic case, every
+  client-facing case) gained discriminating conditions.
+
 ## [0.14.0] — 2026-08-18
 
 ### Added — the trust-mechanics round (every concept-review finding closed)

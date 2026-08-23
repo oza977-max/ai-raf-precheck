@@ -722,8 +722,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
             {verdict.inheritance.dimensions.length > 0 && (
               <ul className="verdict__tripped">
-                {verdict.inheritance.dimensions.map((d) => (
-                  <li key={d.dimension}>
+                {/* Key includes the index: the flattened dimension list can
+                    legitimately carry the same dimension twice (platform AND
+                    vendor each check exposure/data_zones) — bare d.dimension
+                    collided, console-warned, and risked mis-reconciled rows. */}
+                {verdict.inheritance.dimensions.map((d, i) => (
+                  <li key={`${i}-${d.dimension}`}>
                     <code>{d.dimension}</code>{' '}
                     <span
                       className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}

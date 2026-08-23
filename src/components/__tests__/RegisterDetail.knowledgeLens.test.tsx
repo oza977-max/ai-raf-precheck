@@ -114,8 +114,12 @@ describe('RegisterDetail — knowledge lens panel (R11-KL-2)', () => {
     await screen.findByRole('region', { name: /verdict/i });
 
     expect(container.querySelector('.knowledge-lens')).toBeInTheDocument();
-    expect(screen.getByText(/Discrimination & Toxicity/)).toBeInTheDocument();
+    // R13-UI-1/2: the uncovered entry renders openly; the covered one sits
+    // behind the summary toggle — expand it before asserting its text.
     expect(screen.getByText(/Socioeconomic & Environmental harms/)).toBeInTheDocument();
+    const user = (await import('@testing-library/user-event')).default.setup();
+    await user.click(screen.getByRole('button', { name: /already addressed by firm or pack rules/i }));
+    expect(screen.getByText(/Discrimination & Toxicity/)).toBeInTheDocument();
     expect(screen.getByText(/informs — the rules decide/i)).toBeInTheDocument();
   });
 
