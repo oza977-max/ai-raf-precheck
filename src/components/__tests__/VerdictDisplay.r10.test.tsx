@@ -116,8 +116,9 @@ describe('R10-CE — two-axis effectiveness chips', () => {
         onCorrect={vi.fn()}
       />,
     );
-    expect(screen.getByText(/design:\s*effective/i)).toBeInTheDocument();
-    expect(screen.getByText(/operating:\s*not assessed/i)).toBeInTheDocument();
+    // R14 copy: the COSO axes named in plain words (design review 2026-08-18).
+    expect(screen.getByText(/built right \(design\):\s*effective/i)).toBeInTheDocument();
+    expect(screen.getByText(/working right \(operating\):\s*not assessed/i)).toBeInTheDocument();
   });
 });
 

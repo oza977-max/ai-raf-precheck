@@ -11,6 +11,30 @@ every verdict.
 
 ---
 
+## [0.16.0] — 2026-08-18
+
+### Changed — the verdict screen recomposed (the R9 treatment)
+
+A GVM design-review panel (Cooper / Krug / Fogg / Few grounding) decided
+what stays visible and what sits one click away — nothing removed:
+
+- **"What you need to do" now comes first**, right under the one-sentence
+  headline — before tier/track and the binding rule.
+- **"Why this verdict" stays open** — it is the reasoning that makes the
+  verdict defensible; everything below it is substantiation.
+- **Five panels fold behind one click, each with a gist you can read
+  without opening:** fragility ("7 rules held by a single control · margin
+  of safety 42%"), platform & vendor inheritance, the regulatory reasoning
+  chain ("1 rule from regulation fired — pending firm sign-off"), expiry
+  conditions, and "what you told us". The control-set panel folds only
+  when every control is already VERIFIED; any outstanding evidence keeps
+  it open.
+- **Plainer words:** "Margin of safety" replaces HEADROOM; "Derived:" /
+  "Inherited:" replace the all-caps arrow labels; the control-evidence
+  axes read "built right (design)" / "working right (operating)"; the
+  binding rule says "— the single rule that decided this"; an internal
+  spec id left a heading.
+
 ## [0.15.1] — 2026-08-18
 
 ### Changed — the verdict says what to do, in plain words
