@@ -70,9 +70,12 @@ entries:
       A model that consumes text or documents it did not author is a target
       for prompt injection and other adversarial-input attacks.
     source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    # R13-DATA-2: narrowed from any shared exposure to the EXTERNAL attack
+    # surface, de-mirroring this entry from INV-SEC-01's broader trigger so
+    # the covered/gap outcome can genuinely vary by case.
     condition:
       model_type: { in: ["deep-learning", "llm", "generative-ai", "agentic"] }
-      exposure: { in: ["internal-shared", "client-facing", "market-facing"] }
+      exposure: { in: ["client-facing", "market-facing"] }
     covering_rule_ids: ["INV-SEC-01"]
 
   - id: "KL-MISINFO-01"
@@ -107,8 +110,12 @@ entries:
       An agentic system with tool access can be manipulated or can drift into
       taking actions its operator never authorised.
     source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    # R13-DATA-2: tightened from model_type-only — "agentic" alone tagged
+    # every agentic case regardless of leash length. The risk described is
+    # unauthorised ACTION, which needs autonomy to act.
     condition:
       model_type: { in: ["agentic"] }
+      autonomy_level: { gte: 2 }
     covering_rule_ids: ["INV-AGENT-01", "INV-AUTONOMY-01"]
 
   - id: "KL-MALUSE-02"
@@ -142,8 +149,12 @@ entries:
       A client interacting with an AI system with no escalation path can be
       left with an unresolved or wrongly-decided matter.
     source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    # R13-DATA-2: tightened from exposure-only — "client-facing" alone fired
+    # on every client case. The harm described ("wrongly-decided matter")
+    # presupposes a decision at stake.
     condition:
       exposure: { in: ["client-facing"] }
+      decision_bindingness: { in: ["material", "binding"] }
     covering_rule_ids: ["INV-ESCALATE-01"]
 
   - id: "KL-SOCECON-01"
@@ -154,8 +165,15 @@ entries:
       operational and market risk beyond what any single use case's appetite
       review sees.
     source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    # R13-DATA-1 (practical-judgment review, 2026-08-18): the prior sentinel
+    # "in-house" does not exist in the data model — the real in-house values
+    # are "internal" and the [FIRM]-approved registry ids. With the wrong
+    # sentinel this entry misfired. The empty covering_rule_ids below is now
+    # a DELIBERATE decision, not an accident: INV-VENDOR-01 covers per-case
+    # vendor risk assessment; it does not cover portfolio CONCENTRATION,
+    # which is what this entry names. The gap claim is about concentration.
     condition:
-      vendor: { not_in: ["in-house"] }
+      vendor: { not_in: ["internal", "VENDOR-APPROVED-LLM"] }
     covering_rule_ids: []
 
   - id: "KL-SAFETY-01"

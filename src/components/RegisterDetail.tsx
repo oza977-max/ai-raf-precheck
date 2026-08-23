@@ -193,6 +193,26 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   const [gapError, setGapError] = useState<string | null>(null);
   const gapInFlight = useRef(false);
 
+  // R13-UI-3: gap filings already on this case's trail — the persistent
+  // "Filed" state the panel renders. Derived from events (re-read after
+  // each write), never local-only state a reload would forget.
+  const filedRiskDomains = useMemo(
+    () =>
+      events
+        .filter((e) => e.payload.type === 'rule_dissent_filed')
+        .map((e) => (e.payload.type === 'rule_dissent_filed' ? e.payload.rule_id : ''))
+        .filter(Boolean),
+    [events],
+  );
+
+  // R13-UI-4: a verdict stored BEFORE the lens existed carries no
+  // knowledge_lens_matched_entry_ids field at all — a different claim from
+  // "matched nothing", and the reader must be able to tell them apart.
+  const lensNotEvaluated = useMemo(() => {
+    const payload = findLatestVerdictEvent(events);
+    return !!payload && payload.knowledge_lens_matched_entry_ids === undefined;
+  }, [events]);
+
   // R12-AB-1 (ADR-VA-R12-1): the sampling spot-review panel. Same
   // double-click hazard as every other append-only write here — a
   // synchronous ref guard, copying handleFileDissent's exact pattern.
@@ -548,6 +568,15 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         {summary.provisional && <span className="graph-node__chip">Provisional</span>}
         <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
       </div>
+      {/* R13-UI-5: a gap must not hide below the fold. Renders ONLY when an
+          uncovered risk class exists for this case; no gaps, no notice. */}
+      {knowledgeLensMatches.some((m) => !m.covered) && (
+        <p className="knowledge-lens__top-notice" role="note">
+          {knowledgeLensMatches.filter((m) => !m.covered).length} known risk class
+          {knowledgeLensMatches.filter((m) => !m.covered).length === 1 ? ' has' : 'es have'} no covering rule —
+          see the risk-knowledge panel below.
+        </p>
+      )}
       {/* R5 follow-up: tier and track in plain words, from the same shared
           copy file as the form and the graph review. Rendered only when the
           value has a meaning — an unknown value gets no invented sentence. */}
@@ -639,8 +668,17 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               matches={knowledgeLensMatches}
               onFileCoverageGap={(m) => void handleFileKnowledgeGap(m)}
               gapBusyEntryId={gapBusyEntryId}
+              filedRiskDomains={filedRiskDomains}
               meta={knowledgeLensMeta}
             />
+          )}
+          {/* R13-UI-4: silent absence was indistinguishable from "no
+              matches". Say which one it is. */}
+          {lensNotEvaluated && (
+            <p className="knowledge-lens__not-evaluated">
+              Not evaluated against the risk-knowledge taxonomy — this case was decided before that check
+              existed. A re-evaluation would include it.
+            </p>
           )}
           {gapError && (
             <p role="alert" className="register-detail__gap-error">

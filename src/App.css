@@ -2628,6 +2628,65 @@ details input {
   gap: 0.15rem;
 }
 
+/* R13-UI-1/2/3/4/5 (practical-judgment review): gaps lead in a distinct
+   treatment; covered entries collapse; filing gets a persistent state;
+   absence gets an explanation; gaps get a top-of-page notice. */
+.knowledge-lens__item--gap {
+  border-left: 3px solid #8a6d1f;
+  border-top: none;
+  background: #fdf8ec;
+  padding: 0.6rem 0.8rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.knowledge-lens__gap-filed {
+  font-size: 0.8rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: #3a6b4a;
+}
+
+.knowledge-lens__no-gaps {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin: 0.4rem 0;
+}
+
+.knowledge-lens__covered-block {
+  margin-top: 0.5rem;
+  border-top: 1px dashed #7a5ca8;
+  padding-top: 0.5rem;
+}
+
+.knowledge-lens__covered-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: #5a3d82;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.knowledge-lens__not-evaluated {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  border: 1px dashed var(--card-border);
+  border-radius: 4px;
+  padding: 0.5rem 0.8rem;
+  margin: 0.8rem 0;
+}
+
+.knowledge-lens__top-notice {
+  font-size: 0.85rem;
+  color: #5a3d82;
+  background: #f6f2fb;
+  border: 1px dashed #7a5ca8;
+  border-radius: 4px;
+  padding: 0.45rem 0.8rem;
+  margin: 0.6rem 0;
+}
+
 .knowledge-lens__domain {
   font-weight: 600;
 }
