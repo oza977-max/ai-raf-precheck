@@ -258,6 +258,28 @@ describe('buildChallengeMemo', () => {
     expect(memo).not.toMatch(/approved|rejected/i);
   });
 
+  it('TC-R12-CM-HASH-01: prints "not computed" when policyHash is absent', () => {
+    const memo = buildChallengeMemo({
+      label: 'Client email drafter',
+      useCaseId: 'uc-test',
+      verdict: makeVerdict(),
+      events: [],
+    });
+    expect(memo).toContain('Policy content hash: not computed');
+  });
+
+  it('TC-R12-CM-HASH-02: prints the given hash when policyHash is present', () => {
+    const memo = buildChallengeMemo({
+      label: 'Client email drafter',
+      useCaseId: 'uc-test',
+      verdict: makeVerdict(),
+      events: [],
+      policyHash: 'ab12cd34ef56',
+    });
+    expect(memo).toContain('Policy content hash: ab12cd34ef56');
+    expect(memo).not.toContain('Policy content hash: not computed');
+  });
+
   it('TC-R10-CM-1-10: title includes the label', () => {
     const memo = buildChallengeMemo({
       label: 'Some Use Case',

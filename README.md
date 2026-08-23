@@ -4,6 +4,17 @@
 
 A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
+> **New here? The 90-second version.** Someone in a bank wants to build or
+> buy an AI tool. Today, finding out whether that's allowed takes weeks of
+> committee email. AIGate answers it in minutes: describe the use case,
+> confirm what the tool understood, and get a verdict computed by fixed,
+> citable rules — **no AI makes the decision**, ever. It's built and run by
+> a practitioner who does this review work for a living, as a working
+> proof that a risk appetite can be executable instead of a PDF.
+> **Fastest way in:** open the [live demo](https://oza977-max.github.io/ai-raf-precheck/),
+> click **About** for the plain-words tour, then **Register** to read a few
+> decided cases — no setup, nothing to install.
+
 ## Two ways to describe a use case
 
 You choose one, every time you start a pre-check:
@@ -276,10 +287,28 @@ This means:
 ## Getting started, in order
 
 1. **Try the live site** — load the samples, open two or three verdicts.
-2. Open `policy/appetite.yaml` — read the preamble, understand the starter rules.
-3. Replace `[FIRM]` placeholders with your organisation's details.
-4. Review the materiality tiers and adjust thresholds to your actual appetite.
-5. Submit your own use case — `backtest/use-cases.md` has worked examples with expected verdicts.
+2. **Back-test your own committee's past decisions** — before touching any
+   configuration, run cases your firm has *already decided* through the
+   gate and compare its verdicts with what your committee actually ruled.
+   [`backtest/use-cases.md`](backtest/use-cases.md) has eight worked
+   scenarios with paste-in descriptions and expected outcomes to show the
+   method. Where the tool disagrees with your committee, *that
+   disagreement is the finding* — it's either a wrong rule to fix or an
+   inconsistency worth knowing about. This is the fastest honest test of
+   whether appetite-as-code works for your firm, and it costs nothing but
+   an afternoon.
+3. Open `policy/appetite.yaml` — read the preamble, understand the starter rules.
+4. Replace `[FIRM]` placeholders with your organisation's details.
+5. Review the materiality tiers and adjust thresholds to your actual appetite.
+6. Submit your own new use cases through the gate.
+
+**Making it a habit, not a demo:** the pre-check only compounds if people
+come back. Two zero-build triggers that work today — bookmark the live
+site's **New pre-check** page in the team's AI/tooling request template
+("attach your AIGate verdict id to the ticket"), or add a checklist line to
+your PR/change template ("AI in this change? Link the pre-check verdict").
+The register then becomes the firm's memory of every AI decision without
+anyone maintaining a separate log.
 
 **Explaining it to a regulator or a general audience?**
 [`docs/regulator-brief.md`](docs/regulator-brief.md) answers the five
@@ -341,8 +370,9 @@ explains how to open it up later if that becomes the right call.
 ## Project status
 
 **V1 build complete, verified Demo-ready.** Engine, intake, register,
-lifecycle, jurisdiction packs, audit trail — 529 tests, and the full
-acceptance suite of 158 cases walked with evidence in
+lifecycle, jurisdiction packs, audit trail, model governance and the
+risk-knowledge lens — 597 tests at v0.13.0, and the full acceptance suite
+of 158 cases walked with evidence in
 [`test/test-004.html`](test/test-004.html).
 
 *Demo-ready* rather than *ship-ready* is the honest verdict, and the reason is

@@ -57,11 +57,13 @@ export function disableLocalLlm(): void {
 }
 
 /** Reachability + model presence, for the Settings "test" button. Never
- *  throws: the answer is a rendered string either way. */
+ *  throws: the answer is a rendered string either way.
+ *  R12-MG-2: also surfaces the model's Ollama digest, when found, so a firm
+ *  deployment has something to diff against a benchmarked build. */
 export async function probeLocalLlm(
   url: string,
   model: string,
-): Promise<{ ok: boolean; detail: string }> {
+): Promise<{ ok: boolean; detail: string; digest?: string }> {
   const base = url.trim().replace(/\/+$/, '');
   if (!isLoopbackUrl(base)) {
     return {
@@ -73,11 +75,11 @@ export async function probeLocalLlm(
   try {
     const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return { ok: false, detail: `The server answered with status ${res.status}.` };
-    const body = (await res.json()) as { models?: Array<{ name?: string }> };
+    const body = (await res.json()) as { models?: Array<{ name?: string; digest?: string }> };
     const names = (body.models ?? []).map((m) => m.name ?? '');
-    const found = names.some((n) => n === model || n === `${model}:latest`);
-    return found
-      ? { ok: true, detail: `Connected — ${model} is available.` }
+    const matched = (body.models ?? []).find((m) => m.name === model || m.name === `${model}:latest`);
+    return matched
+      ? { ok: true, detail: `Connected — ${model} is available.`, digest: matched.digest }
       : {
           ok: false,
           detail: `Connected, but ${model} is not downloaded. Run: ollama pull ${model}${

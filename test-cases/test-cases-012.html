@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 12 &middot; AIGate &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#test-suite-overview">Test Suite Overview</a></li>
+                <li><a href="#case-index">Case Index</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>AIGate &mdash; Test Cases, Round 12</h1>
+<p class="subtitle">23 test cases across 5 requirement families</p>
+<p class="metadata">18 August 2026 &middot; Generated from test-cases-012.md &mdash; do not hand-edit</p>
+</header>
+                <p><em>Written 2026-08-18 alongside the build (v0.14.0) from <code>requirements/requirements-012.md</code>. Traceability 100% at birth.</em></p>
+                <p>Test files: <code>src/engine/temporal.test.ts</code> (23 tests — the round's engine core), plus TC-R12-prefixed additions across <code>knowledge-lens.test.ts</code>, <code>packs.test.ts</code>, <code>policy.test.ts</code>, <code>challenge-memo.test.ts</code>, and nine new component test files covering the UI surfaces (sampling, staleness, provisional families, badges, nav gating).</p>
+            <section id="test-suite-overview">
+                <h2>Test Suite Overview</h2>
+                <table>
+                    <thead><tr><th></th><th>Coverage</th></tr></thead>
+                    <tbody>
+                        <tr><td>R12-ST — Staleness machine-enforced</td><td><code>computeStaleSources</code>, <code>applyReattestExpiry</code>, verdict staleness marker, policy screen, knowledge-lens meta</td></tr>
+                        <tr><td>R12-BD — Badges and causes</td><td>Quote affordance, confidence/basis mismatch marker, derived-basis chains, cause families</td></tr>
+                        <tr><td>R12-AB — Automation-bias countermeasures</td><td>Deterministic sampling queue, UI chip, event append, rule challenges read view</td></tr>
+                        <tr><td>R12-MG / R12-MISC / R12-AD</td><td>Schema, settings, memo hash, nav gating</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section id="case-index">
+                <h2>Case Index</h2>
+                <table>
+                    <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+                    <tbody>
+                        <tr><td>R12-ST</td><td><code>computeStaleSources</code>: pack past its window reported with exact days overdue; on-the-boundary date NOT stale; packs missing either field skipped; output sorted by pack id (NF-1). <code>applyReattestExpiry</code>: family entry past <code>reattest_by</code> treated as not approved; on/before the date unchanged; non-family and undated entries untouched; input policy not mutated. Verdict staleness marker renders (role=alert, PROVISIONAL idiom) when <code>stale_sources</code> non-empty; absent otherwise; legacy verdicts without the field render unchanged. Policy screen pack rows show "retrieved N days ago · review window D days" with an overdue state. Knowledge-lens meta parses ({meta, entries} form), legacy bare-array still accepted; meta renders curated_by/date/review owner + age warning past <code>max_staleness_days</code>.</td></tr>
+                        <tr><td>R12-BD</td><td>Quote affordance copy claims verbatim presence only ("check it supports the value") — no implication of validation. "Model confident — no verified basis" combined marker renders when confidence and quote-status disagree; advisory idiom, not an alarm. <code>derived</code>-basis chain entries carry "The regulator has not confirmed this reading." on the verdict and in the memo. Provisional causes group under "Sign-off gaps" vs "Substantive caveats"; register pilot line counts only verdicts whose causes are all sign-off gaps.</td></tr>
+                        <tr><td>R12-AB</td><td><code>isSampledForReview</code> deterministic (same id → same answer, 100 calls); ~1-in-K distribution over many ids; degenerate rates never select. Sampling chip appears on self-served Low-tier decided rows (2LoD view); cleared once a <code>sampling_reviewed</code> event exists. Review panel appends exactly ONE <code>sampling_reviewed</code> event on double-click (in-flight ref guard — same append-only data-integrity pattern as dissent filing). Rule challenges screen shows "challenged N times · fired on M decided cases" derived read-only from existing events.</td></tr>
+                        <tr><td>R12-MG / R12-MISC / R12-AD</td><td>Schema accepts <code>reattest_by</code>, <code>sampling_rate</code>, pack-level <code>retrieved_date</code>/<code>max_staleness_days</code>; wrong types rejected. Settings probe surfaces the local model's Ollama digest. Memo prints "Policy content hash: &lt;sha256&gt;" when supplied, "not computed" when absent (legacy call sites). 1LoD role hides the Rule challenges nav item (falls back to intake if active); 2LoD unchanged.</td></tr>
+                    </tbody>
+                </table>
+                <p><em>R12-NF-1 is held by construction (temporal functions take the date as a parameter; <code>evaluate()</code> signature untouched; TC-PE-1-01 unchanged) plus the temporal tests' fixed-date determinism. R12-NF-2 by the suite-wide reserved-words guard over every new string. R12-NF-3 by the single-event double-click test. R12-AD-4 (the declined fast path) needs no test — the deviation is recorded in requirements-012.md.</em></p>
+                <p><strong>Suite at close: 657 tests / 72 files, green ×3.</strong></p>
+            </section>
+            <section id="changelog">
+                <h2>Changelog</h2>
+                <table>
+                    <thead><tr><th>Date</th><th>Change</th></tr></thead>
+                    <tbody>
+                        <tr><td>2026-08-18</td><td>Written with the R12 build.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+</main>
+</div>
+</body>
+</html>

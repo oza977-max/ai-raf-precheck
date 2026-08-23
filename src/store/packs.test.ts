@@ -123,6 +123,55 @@ rules:${RULE}${basis}
     );
   });
 
+  it('TC-R12-SCHEMA-06: accepts pack-level retrieved_date and max_staleness_days', () => {
+    const withHeader = `
+pack_id: "PACK-A"
+version: "1.1"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+retrieved_date: "2026-07-01"
+max_staleness_days: 180
+rules:${RULE}
+    basis: "verbatim"
+`;
+    const { packs, errors } = loadPacks({ a: withHeader });
+    expect(errors).toEqual([]);
+    expect(packs[0]?.retrieved_date).toBe('2026-07-01');
+    expect(packs[0]?.max_staleness_days).toBe(180);
+  });
+
+  it('TC-R12-SCHEMA-07: rejects a pack-level max_staleness_days of the wrong type', () => {
+    const bad = `
+pack_id: "PACK-A"
+version: "1.1"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+max_staleness_days: "a lot"
+rules:${RULE}
+    basis: "verbatim"
+`;
+    const { packs, errors } = loadPacks({ a: bad });
+    expect(packs).toEqual([]);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('TC-R12-SCHEMA-08: pack loads fine without the new header fields (optional, backward compatible)', () => {
+    const { packs, errors } = loadPacks({ a: packYaml('PACK-A', '1.1') });
+    expect(errors).toEqual([]);
+    expect(packs[0]?.retrieved_date).toBeUndefined();
+    expect(packs[0]?.max_staleness_days).toBeUndefined();
+  });
+
   it('a rule with no basis is rejected on load [TC-RA-8-01]', () => {
     // TC-RA-8-01 originally demanded rejection for a missing CONFIDENCE SCORE.
     // Confidence was removed in V2-E as fabricated precision and replaced by

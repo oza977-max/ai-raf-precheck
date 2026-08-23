@@ -49,6 +49,11 @@ const PackSchema = z.object({
   reviewer_role: z.string().min(1),
   sign_off_date: z.string().min(1),
   rules: z.array(PackRuleSchema).min(1),
+  // R12-ST (ADR-PS-R12-1): pack-level freshness header, distinct from the
+  // existing per-rule source.retrieved_date above. Optional so every pre-
+  // R12 pack still loads unchanged.
+  retrieved_date: z.string().min(1).optional(),
+  max_staleness_days: z.number().optional(),
 });
 
 export interface PackLoadError {

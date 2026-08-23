@@ -23,6 +23,10 @@ export interface ChallengeMemoInput {
   // additive, never affecting any other section. Absent = pre-R11 call
   // sites and legacy verdicts stay valid.
   knowledgeLensMatches?: KnowledgeMatch[];
+  // R12-MISC (ADR-VA-R12-3): SHA-256 of the active policy content, computed
+  // by the CALLER (WebCrypto) — this builder stays synchronous and pure.
+  // Absent renders "not computed", never a blank or a fabricated value.
+  policyHash?: string;
 }
 
 const STATUS_TO_APPETITE: Record<Verdict['status'], string> = {
@@ -48,7 +52,7 @@ function heading(level: number, text: string): string {
 }
 
 export function buildChallengeMemo(input: ChallengeMemoInput): string {
-  const { label, useCaseId, description, verdict, events, knowledgeLensMatches } = input;
+  const { label, useCaseId, description, verdict, events, knowledgeLensMatches, policyHash } = input;
   const lines: string[] = [];
 
   lines.push(heading(1, `Effective challenge memo — ${label}`));
@@ -65,6 +69,7 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
       ? `Pack versions: ${packVersions.map(([pack, version]) => `${pack} ${version}`).join(', ')}`
       : 'Pack versions: none recorded',
   );
+  lines.push(`Policy content hash: ${policyHash ?? 'not computed'}`);
   lines.push('');
 
   // THE VERDICT.
@@ -119,6 +124,12 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
       lines.push(`- **${entry.rule_id}** — ${entry.document} §${entry.section}`);
       lines.push(`  > ${entry.source_text}`);
       lines.push(`  Basis: ${entry.basis}. Sign-off: ${entry.sign_off}.`);
+      // R12-BD-2: the same salience the verdict screen carries for a
+      // derived-basis reading — the memo restates the record, it does not
+      // soften it.
+      if (entry.basis === 'derived') {
+        lines.push('  The regulator has not confirmed this reading.');
+      }
     }
   } else {
     lines.push('none recorded');

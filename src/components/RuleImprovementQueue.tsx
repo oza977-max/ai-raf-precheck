@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAllForExport } from '../store/audit';
-import { getUseCases } from '../store/register';
+import { getUseCases, findLatestVerdictEvent } from '../store/register';
 import type { AuditEvent } from '../store/types';
 
 // Rule-improvement queue (FN-009). The receiving end of rule_dissent_filed:
@@ -59,8 +59,38 @@ export function deriveQueue(events: AuditEvent[], labels: Map<string, string>): 
   return result;
 }
 
+// R12-AB-2: read-only derivation over the audit trail already loaded for the
+// queue — no new writes, no new store calls. Counts DECIDED CASES a rule
+// fired on: for each use case, its LATEST verdict (never every historical
+// one — a corrected verdict supersedes, so counting both would double-count
+// the same case) is scanned for the rule id in tripped_invariants,
+// regulatory_chain, or binding_constraint. Exported for tests — pure.
+export function deriveFiredCounts(events: AuditEvent[]): Map<string, number> {
+  const byUseCase = new Map<string, AuditEvent[]>();
+  for (const ev of events) {
+    const list = byUseCase.get(ev.use_case_id) ?? [];
+    list.push(ev);
+    byUseCase.set(ev.use_case_id, list);
+  }
+  const counts = new Map<string, number>();
+  for (const caseEvents of byUseCase.values()) {
+    const payload = findLatestVerdictEvent(caseEvents);
+    if (!payload) continue;
+    const verdict = payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict;
+    const ruleIds = new Set<string>();
+    for (const t of verdict.explanation?.tripped_invariants ?? []) ruleIds.add(t.id);
+    for (const r of verdict.explanation?.regulatory_chain ?? []) ruleIds.add(r.rule_id);
+    if (verdict.binding_constraint) ruleIds.add(verdict.binding_constraint);
+    for (const ruleId of ruleIds) {
+      counts.set(ruleId, (counts.get(ruleId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 export default function RuleImprovementQueue() {
   const [queue, setQueue] = useState<RuleGroup[] | null>(null);
+  const [firedCounts, setFiredCounts] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +98,7 @@ export default function RuleImprovementQueue() {
       const [events, cases] = await Promise.all([getAllForExport(), getUseCases('all')]);
       if (cancelled) return;
       setQueue(deriveQueue(events, new Map(cases.map((c) => [c.use_case_id, c.label]))));
+      setFiredCounts(deriveFiredCounts(events));
     })();
     return () => {
       cancelled = true;
@@ -107,7 +138,10 @@ export default function RuleImprovementQueue() {
                 {group.rule_label && <span className="rule-queue__rule-label"> — {group.rule_label}</span>}
               </h3>
               <p className="rule-queue__count">
-                {group.entries.length} challenge{group.entries.length === 1 ? '' : 's'}
+                {group.entries.length} challenge{group.entries.length === 1 ? '' : 's'} · challenged{' '}
+                {group.entries.length} time{group.entries.length === 1 ? '' : 's'} · fired on{' '}
+                {firedCounts.get(group.rule_id) ?? 0} decided case
+                {(firedCounts.get(group.rule_id) ?? 0) === 1 ? '' : 's'}
               </p>
               <ul className="rule-queue__entries">
                 {group.entries.map((entry) => (

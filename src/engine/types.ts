@@ -350,6 +350,24 @@ export interface JurisdictionPack {
   reviewer_role: string;
   sign_off_date: string;
   rules: PackRule[];
+  // R12-ST (ADR-PS-R12-1): PACK-level (not per-rule) freshness header —
+  // distinct from PackRuleSource.retrieved_date, which is per-rule/per-quote.
+  // This pair says "as a whole, this pack's regulatory reading was last
+  // checked on this date, and is due another look after this many days."
+  // Both optional so every pre-R12 pack still loads unchanged.
+  retrieved_date?: string;
+  max_staleness_days?: number;
+}
+
+// R12-ST (ADR-EE-R12-1): computeStaleSources()'s pure output shape. Rides
+// beside the Verdict wrapper (like attested_at), never inside
+// EvaluationResult — that is what keeps evaluate() byte-identical (NF-1 /
+// TC-PE-1-01) whether or not staleness is computed.
+export interface StaleSource {
+  pack_id: string;
+  retrieved_date: string;
+  max_staleness_days: number;
+  days_overdue: number;
 }
 
 // RA-9: one entry per FIRED pack rule — the regulatory reasoning chain.
@@ -439,7 +457,11 @@ export interface PolicyFile {
   // R11-MG-1 (ADR-PS-R11-1, policy-schema.md §10a): the approved-model
   // registry. Optional so every pre-R11 policy still loads unchanged.
   approved_models?: ApprovedModel[];
-
+  // R12-AB (ADR-VA-R12-1): 1-in-K deterministic sampling rate for the 2LoD
+  // spot-review queue over self-served Low-tier verdicts. Optional — a
+  // policy without it samples nothing (isSampledForReview's degenerate
+  // "never" case), which is what keeps every pre-R12 policy valid.
+  sampling_rate?: number;
 }
 
 // R11-MG-1 (policy-schema.md §10a). `is_approved: false` entries are valid
@@ -463,6 +485,12 @@ export interface ApprovedModel {
   // family's own label (e.g. "gpt-4o-*"), not a real model string.
   is_family?: boolean;
   version_pattern?: string; // prefix match, e.g. "gpt-4o-" — no regex, no dynamic code (ADR-002 discipline)
+  // R12-MG (ADR-PS-R12-1): meaningful for FAMILY entries — an ISO date past
+  // which the family confers no approval (routes to unlisted/model-
+  // governance review instead). Optional so pinned (non-family) entries and
+  // every pre-R12 entry stay valid; applyReattestExpiry() is the pure
+  // engine transform that acts on it.
+  reattest_by?: string;
 }
 
 export interface TranslationAttestation {

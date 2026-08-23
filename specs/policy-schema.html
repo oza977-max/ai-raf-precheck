@@ -717,6 +717,10 @@ export interface ApprovedModel {
   // family's own label (e.g. "gpt-4o-*"), not a real model string.
   is_family?: boolean;
   version_pattern?: string;      // prefix match, e.g. "gpt-4o-" — no regex, no dynamic code (ADR-002 discipline)
+  // R12-MG-1: optional expiry date for family entries. Past this ISO date,
+  // the family confers no approval; declared models matching only the family
+  // route to model-governance review exactly as if unlisted. Absent = no window.
+  reattest_by?: string;          // ISO 8601 date
 }
 
 export interface TranslationAttestation {
@@ -966,7 +970,7 @@ platforms:
       </div>
     </details>
 
-    <h2 id="starter-config">Starter Config Pre-Population (PE-8, CF-2)</h2>
+    <h2 id="starter-config">10. Starter Config Pre-Population (PE-8, CF-2)</h2>
 
     <p>The starter <code>policy/appetite.yaml</code> ships pre-populated with:</p>
 
@@ -989,6 +993,21 @@ platforms:
     </table>
 
     <p>The starter config is derived directly from <code>grounding/raf-extraction.md</code> (sections A through H). A bank installing AIGate can evaluate its first use case without modifying the file — the <code>[FIRM]</code> markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).</p>
+
+    <h2 id="round-12-staleness">10c. Round 12 — Staleness, Re-attestation, Sampling Fields</h2>
+
+    <p>Spec for <code>requirements/requirements-012.md</code>.</p>
+
+    <p><strong>ADR-PS-R12-1 — time limits are authored data; the engine never reads a clock.</strong> New optional fields, all backward compatible (absent = no window, legacy behaviour):</p>
+
+    <ul>
+      <li>Jurisdiction pack header: <code>max_staleness_days: number</code> — alongside the existing <code>retrieved_date</code>. Owned by the pack author.</li>
+      <li><code>ApprovedModel</code> family entries: <code>reattest_by: string</code> (ISO date) — a family entry past this date confers no approval; the declared model routes to the model-governance review exactly as if unlisted.</li>
+      <li><code>PolicyFile</code>: <code>sampling_rate: number</code> (1-in-K; default documented in the starter file) — drives the deterministic Low-tier sampling queue.</li>
+      <li><code>grounding/risk-knowledge.yaml</code> header block: <code>curated_by</code>, <code>curated_date</code>, <code>taxonomy_version_reviewed</code>, <code>review_owner</code>, <code>max_staleness_days</code> — attribution + the named coverage-gap triage owner (A-3/A-6), validated by <code>parseKnowledgeLens</code>'s loader.</li>
+    </ul>
+
+    <p>All date comparisons happen against an <code>evaluated_at</code>/<code>now</code> value the CALLER passes in — determinism (NF-1) is preserved because the date is an explicit input, never <code>Date.now()</code> inside <code>src/engine/*</code>.</p>
 
     <h2 id="integration-points">Integration Points</h2>
 

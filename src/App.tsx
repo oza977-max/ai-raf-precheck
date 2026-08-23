@@ -63,6 +63,12 @@ export default function App() {
   function handleRoleChange(next: string) {
     setRole(next);
     setRoleState(next);
+    // R12-AD-2: the reviewer-only surface disappears for 1LoD — if it was
+    // open when the role switches, fall back to intake rather than leaving
+    // a 1LoD user stranded on a view whose nav item just vanished.
+    if (next !== '2LoD' && view === 'ruleQueue') {
+      setView('intake');
+    }
   }
 
   useEffect(() => {
@@ -172,12 +178,17 @@ export default function App() {
           >
             § Appetite framework
           </div>
-          <div
-            className={view === 'ruleQueue' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-            onClick={() => setView('ruleQueue')}
-          >
-            ⚑ Rule challenges
-          </div>
+          {/* R12-AD-2: the entry surface stays narrow for 1LoD — the
+              reviewer-only queue is hidden, never merely disabled. 2LoD
+              keeps seeing everything unchanged. */}
+          {role === '2LoD' && (
+            <div
+              className={view === 'ruleQueue' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+              onClick={() => setView('ruleQueue')}
+            >
+              ⚑ Rule challenges
+            </div>
+          )}
           <div
             className={view === 'about' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
             onClick={() => setView('about')}

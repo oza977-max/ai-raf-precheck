@@ -7,6 +7,7 @@ import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage } from '../store/types';
 import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
+import { getCurrentPolicyYaml } from '../store/policy-source';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -353,10 +354,12 @@ const BASIS_LABELS: Record<string, string> = {
   judgement: 'LEGAL JUDGEMENT',
 };
 
+// R12-BD-2: `derived` now carries the same salience as `judgement` — both
+// name, in plain terms, that the regulator has not confirmed this reading.
 const BASIS_HELP: Record<string, string> = {
   verbatim: 'This rule restates the quoted passage. Nothing was read into it.',
-  derived: 'This rule is an inference from the quoted passage, not something it says outright. Check the inference holds for your case.',
-  judgement: 'This rule rests on a reading of the law that the quoted passage does not settle. A qualified person has to stand behind it.',
+  derived: 'This rule is an inference from the quoted passage, not something it says outright. The regulator has not confirmed this reading — check the inference holds for your case.',
+  judgement: 'This rule rests on a reading of the law that the quoted passage does not settle. The regulator has not confirmed this reading — a qualified person has to stand behind it.',
 };
 
 // R3-JU-6: the labelled cause, addressed to a later reader of the record. The
@@ -383,10 +386,34 @@ const PROVISIONAL_REASON_LABEL: Record<ProvisionalReason, string> = {
     'Cause: the decision type entered is not one your policy has a rule for, so no decision-type rule could be applied. The tier and track above rest on the other answers alone. This is a gap in the risk appetite policy — one for whoever owns it, not a legal question.',
 };
 
+// R12-MISC-1 (ADR-VA-R12-3): SHA-256 over the active policy YAML content,
+// computed via WebCrypto — this is presentation-layer I/O (a hash of what's
+// on screen), not engine business logic, so it belongs at the component
+// layer, not inside the pure memo builder.
+async function hashPolicyYaml(yaml: string): Promise<string> {
+  const bytes = new TextEncoder().encode(yaml);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// R12-BD-3 / ADR-VA-R12-2: the family mapping is presentation-only — the
+// engine's provisional_reasons enum is unchanged. Sign-off gaps are
+// closeable paperwork; substantive caveats are real open questions.
+const SIGNOFF_GAP_REASONS: ReadonlySet<ProvisionalReason> = new Set(['unsigned_pack_rules']);
+
+export function classifyProvisionalReason(reason: ProvisionalReason): 'signoff_gap' | 'substantive' {
+  return SIGNOFF_GAP_REASONS.has(reason) ? 'signoff_gap' : 'substantive';
+}
+
 export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches }: VerdictDisplayProps) {
   // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
   // this screen and downloaded client-side. Nothing is written anywhere.
-  const downloadMemo = () => {
+  // R12-MISC-1: async so the policy hash (WebCrypto) can be computed before
+  // the memo is built and stamped into its header.
+  const downloadMemo = async () => {
+    const policyHash = await hashPolicyYaml(getCurrentPolicyYaml());
     const memo = buildChallengeMemo({
       label: memoLabel ?? 'AI use case',
       useCaseId: verdict.use_case_id,
@@ -394,6 +421,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       verdict,
       events: auditEvents,
       knowledgeLensMatches,
+      policyHash,
     });
     const url = URL.createObjectURL(new Blob([memo], { type: 'text/markdown' }));
     const a = document.createElement('a');
@@ -444,8 +472,30 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // the type says required, but old audit-trail data may resurface.
   const explanation: VerdictExplanation | undefined = verdict.explanation ?? undefined;
 
+  const staleSources = verdict.stale_sources ?? [];
+
   return (
     <section className={`verdict verdict--${verdict.status}`} aria-label="Verdict">
+      {/* R12-ST-1: an undismissable statement of fact, in the same honesty
+          idiom as the PROVISIONAL banner but its own block — staleness never
+          blocks a verdict, it just says the regulatory text behind it is
+          overdue a fresh look. */}
+      {staleSources.length > 0 && (
+        <div className="verdict__stale-banner" role="alert">
+          <strong>Review overdue</strong>
+          {staleSources.map((s) => {
+            const daysRetrieved = s.days_overdue + s.max_staleness_days;
+            return (
+              <p key={s.pack_id} data-stale-pack={s.pack_id}>
+                Review overdue — this verdict cites regulatory text from <code>{s.pack_id}</code> last
+                retrieved {daysRetrieved} days ago (window {s.max_staleness_days} days) — {s.days_overdue}{' '}
+                day{s.days_overdue === 1 ? '' : 's'} past due.
+              </p>
+            );
+          })}
+        </div>
+      )}
+
       {isProvisional && (
         <div className="verdict__provisional-banner" role="alert">
           {/* User report (2026-08-15): "why do we always say legal review
@@ -473,32 +523,51 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               P8-C05 owns the fuller prose statement for the submitter
               (R3-JU-3). This is the labelled cause, and it is here because
               this chunk is what made the empty banner reachable at scale. */}
-          {(verdict.provisional_reasons ?? []).map((reason) => (
-            <p key={reason} data-provisional-reason={reason}>
-              {PROVISIONAL_REASON_LABEL[reason]}
-              {/* Name the decision type, don't just say one was unrecognised.
-                  The engine computed `unclassified_decision_types` and the
-                  first cut of this banner never rendered it — the
-                  computed-but-never-consumed defect CLAUDE.md warns about,
-                  walked into again. A cause with no subject cannot be acted
-                  on: the firm needs to know WHICH decision type it has no
-                  position on, because that is the hole in its framework. */}
-              {reason === 'unclassified_decision_type' &&
-                (verdict.unclassified_decision_types ?? []).length > 0 && (
-                  <>
-                    {' '}
-                    Entered:{' '}
-                    {(verdict.unclassified_decision_types ?? []).map((d, i) => (
-                      <span key={d}>
-                        {i > 0 && ', '}
-                        <q>{d}</q>
-                      </span>
-                    ))}
-                    .
-                  </>
-                )}
-            </p>
-          ))}
+          {/* R12-BD-3 / ADR-VA-R12-2: causes split into two families so a
+              reader can tell "paperwork we can close" from "a real open
+              question" at a glance, rather than reading a flat list and
+              guessing which is which. */}
+          {(['signoff_gap', 'substantive'] as const).map((family) => {
+            const reasons = (verdict.provisional_reasons ?? []).filter(
+              (r) => classifyProvisionalReason(r) === family,
+            );
+            if (reasons.length === 0) return null;
+            return (
+              <div key={family} className={`verdict__provisional-family verdict__provisional-family--${family}`}>
+                <p className="verdict__provisional-family-heading">
+                  {family === 'signoff_gap'
+                    ? 'Sign-off gaps — paperwork that would close these'
+                    : 'Substantive caveats — real open questions'}
+                </p>
+                {reasons.map((reason) => (
+                  <p key={reason} data-provisional-reason={reason}>
+                    {PROVISIONAL_REASON_LABEL[reason]}
+                    {/* Name the decision type, don't just say one was unrecognised.
+                        The engine computed `unclassified_decision_types` and the
+                        first cut of this banner never rendered it — the
+                        computed-but-never-consumed defect CLAUDE.md warns about,
+                        walked into again. A cause with no subject cannot be acted
+                        on: the firm needs to know WHICH decision type it has no
+                        position on, because that is the hole in its framework. */}
+                    {reason === 'unclassified_decision_type' &&
+                      (verdict.unclassified_decision_types ?? []).length > 0 && (
+                        <>
+                          {' '}
+                          Entered:{' '}
+                          {(verdict.unclassified_decision_types ?? []).map((d, i) => (
+                            <span key={d}>
+                              {i > 0 && ', '}
+                              <q>{d}</q>
+                            </span>
+                          ))}
+                          .
+                        </>
+                      )}
+                  </p>
+                ))}
+              </div>
+            );
+          })}
           {lowCaveats.map((c, i) => (
             <p key={i}>{c.reason}</p>
           ))}
@@ -983,7 +1052,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           record — every provisional/pending/unverified marker survives into
           it verbatim (ADR-VA-R10-1). */}
       <div className="verdict__memo-export">
-        <button type="button" onClick={downloadMemo}>
+        <button type="button" onClick={() => void downloadMemo()}>
           Download effective-challenge memo (markdown)
         </button>
         <p className="verdict__memo-export-note">

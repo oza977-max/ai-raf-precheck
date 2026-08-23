@@ -1,4 +1,4 @@
-import type { KnowledgeMatch } from '../engine/knowledge-lens';
+import type { KnowledgeMatch, KnowledgeLensMeta } from '../engine/knowledge-lens';
 
 // R11-KL-2/-3 (requirements-011.md). Rule 4 (cross-cutting.md §7):
 // presentation-only — matches arrive already computed by the caller
@@ -11,10 +11,25 @@ export interface KnowledgeLensPanelProps {
   matches: KnowledgeMatch[];
   onFileCoverageGap?: (match: KnowledgeMatch) => void;
   gapBusyEntryId?: string | null;
+  // R12-ST-3: the risk-knowledge file's own curation header, threaded from
+  // the caller's loadKnowledgeLens() call — absent on a legacy/invalid
+  // file, which renders no meta line at all rather than a fabricated one.
+  meta?: KnowledgeLensMeta;
 }
 
-export default function KnowledgeLensPanel({ matches, onFileCoverageGap, gapBusyEntryId }: KnowledgeLensPanelProps) {
+// R12-ST-3: a clock read at the component layer is fine here (not engine
+// code) — this is presentation-only staleness display, not a decision.
+function daysSince(isoDate: string): number | null {
+  const then = Date.parse(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(then)) return null;
+  const now = Date.now();
+  return Math.floor((now - then) / (24 * 60 * 60 * 1000));
+}
+
+export default function KnowledgeLensPanel({ matches, onFileCoverageGap, gapBusyEntryId, meta }: KnowledgeLensPanelProps) {
   if (matches.length === 0) return null;
+  const age = meta ? daysSince(meta.curated_date) : null;
+  const overdue = meta && age !== null && age > meta.max_staleness_days;
   return (
     <div className="knowledge-lens">
       <h3>Risk-knowledge awareness</h3>
@@ -25,6 +40,17 @@ export default function KnowledgeLensPanel({ matches, onFileCoverageGap, gapBusy
         What a recognized external risk taxonomy says this shape of use case is known to risk.
         Informs — the rules decide. Nothing here changes the verdict for this case.
       </p>
+      {meta && (
+        <p className="knowledge-lens__meta">
+          Curated by {meta.curated_by} on {meta.curated_date} · review owner: {meta.review_owner}
+        </p>
+      )}
+      {overdue && (
+        <p className="knowledge-lens__meta-overdue" role="alert">
+          Review overdue — this taxonomy snapshot is {age} days old (review window {meta!.max_staleness_days}{' '}
+          days). The list below may not reflect the current taxonomy.
+        </p>
+      )}
       <ul className="knowledge-lens__list">
         {matches.map((m) => (
           <li key={m.entry.id} className="knowledge-lens__item">

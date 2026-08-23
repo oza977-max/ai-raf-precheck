@@ -11,6 +11,46 @@ every verdict.
 
 ---
 
+## [0.14.0] — 2026-08-18
+
+### Added — the trust-mechanics round (every concept-review finding closed)
+
+- **Staleness is now machine-enforced, not calendar-dependent.** Every
+  jurisdiction pack carries a review window; a verdict citing regulatory
+  text past its window shows an undismissable "review overdue" marker,
+  and the policy screen shows each pack's age. The risk-knowledge file
+  now names its curator, its review owner, and its own freshness window.
+- **A spot-check net under self-service.** Self-served low-tier verdicts
+  are deterministically sampled (1 in K, set in the policy file) for a
+  second-line spot review — the register flags "sampling review due" and
+  the review lands on the permanent record. The rule-challenges screen
+  now shows how often each rule fires versus how often it is challenged.
+- **Honesty badges recalibrated in both directions.** The quote marker
+  now says exactly what was checked ("found word-for-word — check it
+  supports the value"); a model that is confident with no verified basis
+  says so in one combined marker; rules inferred from regulatory text
+  state plainly that the regulator has not confirmed that reading; and
+  provisional causes split into "sign-off gaps" (closeable paperwork)
+  versus "substantive caveats", with the register showing how many
+  verdicts would be final once the paperwork lands.
+- **Model-family approvals now expire.** A family approval carries a
+  re-attest-by date; past it, the family confers no approval and the
+  model routes to review. Settings shows the local model's exact digest
+  so a deployment can verify it runs the build that was benchmarked.
+- **The challenge memo is tied to the enforced rules.** Each memo prints
+  a content hash of the active policy file, so what was attested can be
+  checked against what was enforced.
+- **A narrower front door.** The first-line role no longer sees
+  reviewer-only machinery; the README opens with a 90-second orientation
+  and "back-test your own committee's past decisions" is now the first
+  real adoption step.
+
+### Deliberately not built
+
+- A one-click "accept all AI-drafted fields" fast path was considered
+  and declined: it would reintroduce the exact automation-bias risk this
+  round exists to counter. The per-field confirmation gate stands.
+
 ## [0.13.0] — 2026-08-17
 
 ### Added

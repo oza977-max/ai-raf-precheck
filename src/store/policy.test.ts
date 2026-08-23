@@ -250,6 +250,60 @@ describe('ControlSchema — verification_evidence (V1.3)', () => {
   });
 });
 
+// R12 schema additions (TC-R12-SCHEMA; ADR-PS-R12-1).
+describe('R12 schema additions', () => {
+  it('TC-R12-SCHEMA-01: accepts sampling_rate as a top-level number', () => {
+    const yaml = VALID_YAML + '\nsampling_rate: 5\n';
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.policy.sampling_rate).toBe(5);
+  });
+
+  it('TC-R12-SCHEMA-02: rejects sampling_rate of the wrong type', () => {
+    const yaml = VALID_YAML + '\nsampling_rate: "five"\n';
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(false);
+  });
+
+  it('TC-R12-SCHEMA-03: is valid without sampling_rate (optional, backward compatible)', () => {
+    const result = loadPolicy(VALID_YAML);
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.policy.sampling_rate).toBeUndefined();
+  });
+
+  it('TC-R12-SCHEMA-04: accepts reattest_by on an approved_models entry', () => {
+    const yaml =
+      VALID_YAML +
+      `
+approved_models:
+  - model_id: "fam"
+    vendor: "v"
+    provenance_class: "vendor_hosted"
+    is_approved: true
+    is_family: true
+    reattest_by: "2027-01-01"
+`;
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) expect(result.policy.approved_models?.[0]?.reattest_by).toBe('2027-01-01');
+  });
+
+  it('TC-R12-SCHEMA-05: rejects reattest_by of the wrong type', () => {
+    const yaml =
+      VALID_YAML +
+      `
+approved_models:
+  - model_id: "fam"
+    vendor: "v"
+    provenance_class: "vendor_hosted"
+    is_approved: true
+    reattest_by: 20270101
+`;
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(false);
+  });
+});
+
 // Traceability close-out (2026-08-15): criteria that had no covering test.
 describe('the shipped policy file is the CF-1/CF-3 evidence', () => {
   it('is commented plain text a risk reader can open in any editor [TC-CF-1-01]', () => {

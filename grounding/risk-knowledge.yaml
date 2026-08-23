@@ -21,154 +21,163 @@
 # `covering_rule_ids` cites real ids from policy/appetite.yaml (verified by
 # grep against that file at authoring time).
 
-- id: "KL-DISC-01"
-  risk_domain: "Discrimination & Toxicity"
-  risk_subdomain: "Unfair discrimination in decisions about people"
-  description: >-
-    AI outputs that inform a decision about a person can encode unlawful or
-    unfair disparate treatment across protected groups.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    decision_type: { in: ["credit-decision", "lending-decision", "hiring", "pricing", "fraud-detection"] }
-  covering_rule_ids: ["INV-FAIRNESS-01"]
+meta:
+  curated_by: "project maintainer (2LoD practitioner)"
+  curated_date: "2026-08-17"
+  taxonomy_version_reviewed: "MIT AI Risk Repository public domain taxonomy, as published Aug 2026"
+  review_owner: "2LoD — AI Risk (review on each MIT quarterly update)"
+  max_staleness_days: 120
 
-- id: "KL-DISC-02"
-  risk_domain: "Discrimination & Toxicity"
-  risk_subdomain: "Toxic or abusive generated content reaching a person"
-  description: >-
-    A generative system talking directly to a client can produce toxic,
-    abusive, or otherwise harmful language the firm has not screened for.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["llm", "generative-ai", "agentic"] }
-    exposure: { in: ["client-facing"] }
-  covering_rule_ids: ["INV-CONDUCT-01"]
+entries:
+  - id: "KL-DISC-01"
+    risk_domain: "Discrimination & Toxicity"
+    risk_subdomain: "Unfair discrimination in decisions about people"
+    description: >-
+      AI outputs that inform a decision about a person can encode unlawful or
+      unfair disparate treatment across protected groups.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      decision_type: { in: ["credit-decision", "lending-decision", "hiring", "pricing", "fraud-detection"] }
+    covering_rule_ids: ["INV-FAIRNESS-01"]
 
-- id: "KL-PRIV-01"
-  risk_domain: "Privacy & Security"
-  risk_subdomain: "Sensitive personal data exposure via model I/O"
-  description: >-
-    Confidential or client PII flowing to a model endpoint can leak through
-    logging, caching, prompt injection, or vendor retention.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    data_class: { in: ["Client PII", "Confidential", "MNPI"] }
-  covering_rule_ids: ["INV-DATA-01"]
+  - id: "KL-DISC-02"
+    risk_domain: "Discrimination & Toxicity"
+    risk_subdomain: "Toxic or abusive generated content reaching a person"
+    description: >-
+      A generative system talking directly to a client can produce toxic,
+      abusive, or otherwise harmful language the firm has not screened for.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["client-facing"] }
+    covering_rule_ids: ["INV-CONDUCT-01"]
 
-- id: "KL-PRIV-02"
-  risk_domain: "Privacy & Security"
-  risk_subdomain: "Adversarial manipulation of model inputs"
-  description: >-
-    A model that consumes text or documents it did not author is a target
-    for prompt injection and other adversarial-input attacks.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["deep-learning", "llm", "generative-ai", "agentic"] }
-    exposure: { in: ["internal-shared", "client-facing", "market-facing"] }
-  covering_rule_ids: ["INV-SEC-01"]
+  - id: "KL-PRIV-01"
+    risk_domain: "Privacy & Security"
+    risk_subdomain: "Sensitive personal data exposure via model I/O"
+    description: >-
+      Confidential or client PII flowing to a model endpoint can leak through
+      logging, caching, prompt injection, or vendor retention.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      data_class: { in: ["Client PII", "Confidential", "MNPI"] }
+    covering_rule_ids: ["INV-DATA-01"]
 
-- id: "KL-MISINFO-01"
-  risk_domain: "Misinformation"
-  risk_subdomain: "Fabricated or ungrounded generated content"
-  description: >-
-    Generative output that informs a material decision can be fabricated or
-    unsupported by any retrievable source — a hallucination reaching a human
-    or a downstream system as if it were fact.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["llm", "generative-ai", "agentic"] }
-    decision_bindingness: { in: ["material", "binding"] }
-  covering_rule_ids: ["INV-HALLUC-01", "INV-CITE-01"]
+  - id: "KL-PRIV-02"
+    risk_domain: "Privacy & Security"
+    risk_subdomain: "Adversarial manipulation of model inputs"
+    description: >-
+      A model that consumes text or documents it did not author is a target
+      for prompt injection and other adversarial-input attacks.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["deep-learning", "llm", "generative-ai", "agentic"] }
+      exposure: { in: ["internal-shared", "client-facing", "market-facing"] }
+    covering_rule_ids: ["INV-SEC-01"]
 
-- id: "KL-MISINFO-02"
-  risk_domain: "Misinformation"
-  risk_subdomain: "Undisclosed AI-generated content reaching the public"
-  description: >-
-    AI-generated content leaving the firm without machine-readable marking
-    can be mistaken for human-authored material by its recipient.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["llm", "generative-ai", "agentic"] }
-    exposure: { in: ["client-facing", "market-facing"] }
-  covering_rule_ids: ["INV-SYNTHMARK-01"]
+  - id: "KL-MISINFO-01"
+    risk_domain: "Misinformation"
+    risk_subdomain: "Fabricated or ungrounded generated content"
+    description: >-
+      Generative output that informs a material decision can be fabricated or
+      unsupported by any retrievable source — a hallucination reaching a human
+      or a downstream system as if it were fact.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      decision_bindingness: { in: ["material", "binding"] }
+    covering_rule_ids: ["INV-HALLUC-01", "INV-CITE-01"]
 
-- id: "KL-MALUSE-01"
-  risk_domain: "Malicious Use"
-  risk_subdomain: "Autonomous action outside authorised scope"
-  description: >-
-    An agentic system with tool access can be manipulated or can drift into
-    taking actions its operator never authorised.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["agentic"] }
-  covering_rule_ids: ["INV-AGENT-01", "INV-AUTONOMY-01"]
+  - id: "KL-MISINFO-02"
+    risk_domain: "Misinformation"
+    risk_subdomain: "Undisclosed AI-generated content reaching the public"
+    description: >-
+      AI-generated content leaving the firm without machine-readable marking
+      can be mistaken for human-authored material by its recipient.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["llm", "generative-ai", "agentic"] }
+      exposure: { in: ["client-facing", "market-facing"] }
+    covering_rule_ids: ["INV-SYNTHMARK-01"]
 
-- id: "KL-MALUSE-02"
-  risk_domain: "Malicious Use"
-  risk_subdomain: "AI-assisted fraud against the firm or its clients"
-  description: >-
-    Generative and agentic systems lower the cost of producing convincing
-    fraudulent documents, communications, or transaction patterns.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    decision_type: { in: ["fraud-detection"] }
-  covering_rule_ids: []
+  - id: "KL-MALUSE-01"
+    risk_domain: "Malicious Use"
+    risk_subdomain: "Autonomous action outside authorised scope"
+    description: >-
+      An agentic system with tool access can be manipulated or can drift into
+      taking actions its operator never authorised.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["agentic"] }
+    covering_rule_ids: ["INV-AGENT-01", "INV-AUTONOMY-01"]
 
-- id: "KL-HCI-01"
-  risk_domain: "Human-Computer Interaction harms"
-  risk_subdomain: "Overreliance and automation bias"
-  description: >-
-    A human reviewing AI output on a material or binding decision can defer
-    to it uncritically, especially where the system cannot explain a single
-    outcome.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    model_type: { in: ["ml", "deep-learning", "llm", "generative-ai", "agentic"] }
-    decision_bindingness: { in: ["material", "binding"] }
-  covering_rule_ids: ["INV-EXPLAIN-01"]
+  - id: "KL-MALUSE-02"
+    risk_domain: "Malicious Use"
+    risk_subdomain: "AI-assisted fraud against the firm or its clients"
+    description: >-
+      Generative and agentic systems lower the cost of producing convincing
+      fraudulent documents, communications, or transaction patterns.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      decision_type: { in: ["fraud-detection"] }
+    covering_rule_ids: []
 
-- id: "KL-HCI-02"
-  risk_domain: "Human-Computer Interaction harms"
-  risk_subdomain: "No route to a human when the interaction goes wrong"
-  description: >-
-    A client interacting with an AI system with no escalation path can be
-    left with an unresolved or wrongly-decided matter.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    exposure: { in: ["client-facing"] }
-  covering_rule_ids: ["INV-ESCALATE-01"]
+  - id: "KL-HCI-01"
+    risk_domain: "Human-Computer Interaction harms"
+    risk_subdomain: "Overreliance and automation bias"
+    description: >-
+      A human reviewing AI output on a material or binding decision can defer
+      to it uncritically, especially where the system cannot explain a single
+      outcome.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      model_type: { in: ["ml", "deep-learning", "llm", "generative-ai", "agentic"] }
+      decision_bindingness: { in: ["material", "binding"] }
+    covering_rule_ids: ["INV-EXPLAIN-01"]
 
-- id: "KL-SOCECON-01"
-  risk_domain: "Socioeconomic & Environmental harms"
-  risk_subdomain: "Concentration risk from vendor dependency"
-  description: >-
-    Heavy reliance on a single external model vendor concentrates
-    operational and market risk beyond what any single use case's appetite
-    review sees.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    vendor: { not_in: ["in-house"] }
-  covering_rule_ids: []
+  - id: "KL-HCI-02"
+    risk_domain: "Human-Computer Interaction harms"
+    risk_subdomain: "No route to a human when the interaction goes wrong"
+    description: >-
+      A client interacting with an AI system with no escalation path can be
+      left with an unresolved or wrongly-decided matter.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      exposure: { in: ["client-facing"] }
+    covering_rule_ids: ["INV-ESCALATE-01"]
 
-- id: "KL-SAFETY-01"
-  risk_domain: "AI System Safety, Failures & Limitations"
-  risk_subdomain: "Undetected model performance drift"
-  description: >-
-    A model informing a material or binding decision can degrade silently
-    over time as the population or environment it was trained on shifts.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    decision_bindingness: { in: ["material", "binding"] }
-  covering_rule_ids: ["INV-DRIFT-01"]
+  - id: "KL-SOCECON-01"
+    risk_domain: "Socioeconomic & Environmental harms"
+    risk_subdomain: "Concentration risk from vendor dependency"
+    description: >-
+      Heavy reliance on a single external model vendor concentrates
+      operational and market risk beyond what any single use case's appetite
+      review sees.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      vendor: { not_in: ["in-house"] }
+    covering_rule_ids: []
 
-- id: "KL-SAFETY-02"
-  risk_domain: "AI System Safety, Failures & Limitations"
-  risk_subdomain: "Irreversible action taken under limited oversight"
-  description: >-
-    An autonomous system taking an irreversible action can commit before a
-    human has a realistic opportunity to intervene.
-  source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
-  condition:
-    output_reversibility: { in: ["irreversible"] }
-    autonomy_level: { gte: 2 }
-  covering_rule_ids: ["INV-IRREV-01"]
+  - id: "KL-SAFETY-01"
+    risk_domain: "AI System Safety, Failures & Limitations"
+    risk_subdomain: "Undetected model performance drift"
+    description: >-
+      A model informing a material or binding decision can degrade silently
+      over time as the population or environment it was trained on shifts.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      decision_bindingness: { in: ["material", "binding"] }
+    covering_rule_ids: ["INV-DRIFT-01"]
+
+  - id: "KL-SAFETY-02"
+    risk_domain: "AI System Safety, Failures & Limitations"
+    risk_subdomain: "Irreversible action taken under limited oversight"
+    description: >-
+      An autonomous system taking an irreversible action can commit before a
+      human has a realistic opportunity to intervene.
+    source_attribution: "MIT AI Risk Repository (Slattery et al., MIT FutureTech), CC BY 4.0"
+    condition:
+      output_reversibility: { in: ["irreversible"] }
+      autonomy_level: { gte: 2 }
+    covering_rule_ids: ["INV-IRREV-01"]
+
