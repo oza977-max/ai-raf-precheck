@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expert Scoring Report 001 — Five Discovered Candidates</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Classification coloring ── */
+    .classification-established {
+      background: #e8f4e8;
+      color: #2d5a2d;
+      font-weight: 600;
+    }
+
+    .classification-recognised {
+      background: #fef4e0;
+      color: #7d5d1f;
+      font-weight: 600;
+    }
+
+    .classification-canonical {
+      background: #d4e8d4;
+      color: #1a3a1a;
+      font-weight: 600;
+    }
+
+    /* ── Boundary case callout ── */
+    .boundary-case {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .boundary-case-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #d97706;
+      margin-bottom: 0.3rem;
+    }
+
+    .boundary-case p { margin-bottom: 0.3rem; }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution (per shared rule 24) ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+      table {
+        min-width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 18, 2026</p>
+    <h1>Expert Scoring Report 001</h1>
+    <p class="subtitle">Assessment of five discovered candidates by R12 concept-review panels, with primary evaluation and blind verification reconciliation.</p>
+
+    <h2 id="overview">Overview</h2>
+    <p><strong>Scope:</strong> Five experts discovered by the R12 concept-review panels (site-survey-001 §8). <strong>Experts assessed:</strong> 5 · <strong>Works assessed:</strong> 5 · <strong>Method:</strong> primary assessment + blind independent verification agent, reconciled per expert-scoring.md. Splits of exactly 1 resolve to the LOWER integer; no dimension diverged 2+ on any expert, so no score required user adjudication.</p>
+
+    <h2 id="expert-scorecard">Expert Scorecard</h2>
+
+    <h3 id="michael-power">Michael Power</h3>
+    <p><strong>Source:</strong> Michael Power, <em>The Audit Society: Rituals of Verification</em>, Oxford University Press (1997)</p>
+
+    <p><strong>Expert score:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Authority</th>
+          <th>Publication</th>
+          <th>Breadth</th>
+          <th>Adoption</th>
+          <th>Currency</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>5</td>
+          <td>5</td>
+          <td>4</td>
+          <td>4</td>
+          <td>3</td>
+          <td><span class="classification-established">Established (avg 4.2)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Authority — LSE Professor of Accounting; directed the ESRC Centre for Analysis of Risk and Regulation. Publication — Oxford University Press. Breadth — audit, risk management, regulation across institutional domains (<em>Organized Uncertainty</em>, 2007). Adoption — "audit society"/"audit explosion" are standard vocabulary across accounting, regulation and governance scholarship.</p>
+
+    <p><strong>Work score — <em>The Audit Society</em>:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Specificity</th>
+          <th>Depth</th>
+          <th>Currency</th>
+          <th>Influence</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>3</td>
+          <td>4</td>
+          <td>3</td>
+          <td>5</td>
+          <td><span class="classification-established">Established (avg 3.75)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Depth — sustained theoretical treatment across financial, environmental and quality audit. Influence — foundational text; the title phrase is a term of art well beyond the book.</p>
+
+    <p><strong>Verification:</strong> All ten dimensions matched across both passes. <strong>Confidence:</strong> High. <strong>Utilisation:</strong> no usage data — newly added.</p>
+
+    <h3 id="margaret-mitchell">Margaret Mitchell et al.</h3>
+    <p><strong>Source:</strong> Mitchell, Wu, Zaldivar, Barnes, Vasserman, Hutchinson, Spitzer, Raji, Gebru, "Model Cards for Model Reporting", ACM FAT*/FAccT (2019)</p>
+
+    <p><strong>Expert score:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Authority</th>
+          <th>Publication</th>
+          <th>Breadth</th>
+          <th>Adoption</th>
+          <th>Currency</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>5</td>
+          <td>3</td>
+          <td>5</td>
+          <td>4</td>
+          <td><span class="classification-established">Established (avg 4.2)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Authority — Mitchell co-led Google's Ethical AI team; Chief Ethics Scientist at Hugging Face. Publication — FAccT is the leading peer-reviewed venue for ML fairness/accountability. Adoption — model cards are a first-class artifact on the Hugging Face Hub and Google Cloud Model Cards. Currency — still the default documentation convention for released models in 2026.</p>
+
+    <p><strong>Work score — "Model Cards for Model Reporting":</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Specificity</th>
+          <th>Depth</th>
+          <th>Currency</th>
+          <th>Influence</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>5</td>
+          <td>3</td>
+          <td>4</td>
+          <td>5</td>
+          <td><span class="classification-established">Established (avg 4.25)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Specificity — a concrete template with named sections (intended use, factors, metrics, ethical considerations, caveats). Influence — spawned an industry-standard artifact, implemented as built-in tooling on major model hubs. Currency — the template survives near-unmodified in active use.</p>
+
+    <p><strong>Verification:</strong> All ten dimensions matched. <strong>Confidence:</strong> High. <strong>Utilisation:</strong> no usage data — newly added.</p>
+
+    <h3 id="owasp-llm">OWASP (LLM security)</h3>
+    <p><strong>Source:</strong> OWASP Foundation, <em>OWASP Top 10 for LLM Applications</em> (2023, maintained through 2025)</p>
+
+    <p><strong>Expert score:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Authority</th>
+          <th>Publication</th>
+          <th>Breadth</th>
+          <th>Adoption</th>
+          <th>Currency</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>4</td>
+          <td>3</td>
+          <td>5</td>
+          <td>5</td>
+          <td><span class="classification-established">Established (avg 4.2)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Authority — the recognized nonprofit standards body behind the classic Top 10, referenced by PCI-DSS-era compliance practice (split 5v4 → recorded 4). Adoption — baseline checklist for LLM red-teaming and security tooling vendors; referenced in cloud providers' AI security guidance. Currency — versioned updates through 2025 covering agentic risks.</p>
+
+    <p><strong>Work score — <em>Top 10 for LLM Applications</em>:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Specificity</th>
+          <th>Depth</th>
+          <th>Currency</th>
+          <th>Influence</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>3</td>
+          <td>5</td>
+          <td>4</td>
+          <td><span class="classification-established">Established (avg 4.0)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Specificity — ten named vulnerability classes with examples and mitigations (split 5v4 → 4). Currency — actively revised through 2025. Influence — baseline taxonomy across AI-security tooling and whitepapers (split 5v4 → 4).</p>
+
+    <div class="boundary-case">
+      <div class="boundary-case-label">Boundary Case</div>
+      <p>The primary pass's work average (4.5) sat in the Canonical band; reconciliation landed Established. Both pass averages recorded here for review.</p>
+    </div>
+
+    <p><strong>Verification:</strong> Three one-point splits, all resolved down; no divergence. <strong>Confidence:</strong> High. <strong>Utilisation:</strong> no usage data — newly added.</p>
+
+    <h3 id="bj-fogg">BJ Fogg</h3>
+    <p><strong>Source:</strong> BJ Fogg, <em>Tiny Habits: The Small Changes That Change Everything</em>, Houghton Mifflin Harcourt (2020); the Fogg Behavior Model (B=MAP)</p>
+
+    <p><strong>Expert score:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Authority</th>
+          <th>Publication</th>
+          <th>Breadth</th>
+          <th>Adoption</th>
+          <th>Currency</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>3</td>
+          <td>3</td>
+          <td>4</td>
+          <td>4</td>
+          <td><span class="classification-established">Established (avg 3.6)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Authority — founder/director, Stanford Behavior Design Lab. Adoption — B=MAP cited as foundational by Nir Eyal's <em>Hooked</em>; taught to tech-industry product teams via Stanford coursework. Currency — 2020 book, active lab and teaching. (Publication split 4v3 → 3: major trade press but a popular-audience channel.)</p>
+
+    <p><strong>Work score — <em>Tiny Habits</em>:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Specificity</th>
+          <th>Depth</th>
+          <th>Currency</th>
+          <th>Influence</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>3</td>
+          <td>4</td>
+          <td>4</td>
+          <td><span class="classification-established">Established (avg 3.75)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Specificity — named framework (Motivation × Ability × Prompt) plus a concrete applied method (anchor + tiny behavior + celebration). Currency — 2020, still underlies current behavior-design courses. Influence — standard reference across habit-formation literature.</p>
+
+    <p><strong>Verification:</strong> Nine matches, one one-point split resolved down. <strong>Confidence:</strong> High. <strong>Utilisation:</strong> no usage data — newly added.</p>
+
+    <h3 id="donald-reinertsen">Donald G. Reinertsen</h3>
+    <p><strong>Source:</strong> Donald G. Reinertsen, <em>The Principles of Product Development Flow: Second Generation Lean Product Development</em>, Celeritas Publishing (2009)</p>
+
+    <p><strong>Expert score:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Authority</th>
+          <th>Publication</th>
+          <th>Breadth</th>
+          <th>Adoption</th>
+          <th>Currency</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>3</td>
+          <td>2</td>
+          <td>3</td>
+          <td>4</td>
+          <td>3</td>
+          <td><span class="classification-recognised">Recognised (avg 3.0)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Adoption — foundational influence on SAFe's flow/WIP/cost-of-delay treatment and the Kanban community (Anderson). Splits on Authority (4v3), Publication (3v2) and Adoption (5v4) all resolved to the lower integer — Celeritas is his own imprint, which caps the publication channel score.</p>
+
+    <div class="boundary-case">
+      <div class="boundary-case-label">Boundary Case</div>
+      <p>The primary pass average (3.6) sat in the Established band; the blind pass (3.0) and the reconciled result are Recognised. Both recorded for review. The earlier site-survey table's "Established (pending scoring)" guess is corrected by this scoring.</p>
+    </div>
+
+    <p><strong>Work score — <em>The Principles of Product Development Flow</em>:</strong></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Specificity</th>
+          <th>Depth</th>
+          <th>Currency</th>
+          <th>Influence</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>4</td>
+          <td>4</td>
+          <td>3</td>
+          <td>4</td>
+          <td><span class="classification-established">Established (avg 3.75)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Evidence:</strong> Specificity — 175 numbered principles on batch size, queues, cost of delay (split 5v4 → 4). Depth — grounded in queueing theory and batch-size economics. Influence — cost-of-delay/WSJF embedded in SAFe's official framework (split 5v4 → 4). The work outranks the byline: Established work, Recognised expert.</p>
+
+    <p><strong>Verification:</strong> Two matches, three one-point splits resolved down; no divergence. <strong>Confidence:</strong> High. <strong>Utilisation:</strong> no usage data — newly added.</p>
+
+    <h2 id="recall-check">Recall Check</h2>
+    <p>Most-cited adjacent authorities NOT in the roster, flagged for the practitioner (no scores assigned — flagging only):</p>
+    <table>
+      <caption>Table 1 — Adjacent authorities not included in this assessment</caption>
+      <thead>
+        <tr>
+          <th>Candidate</th>
+          <th>Domain adjacency</th>
+          <th>Why flagged</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Gebru et al., "Datasheets for Datasets" (2018/2021)</td>
+          <td>Model/data documentation</td>
+          <td>The companion artifact to model cards; equally standard</td>
+        </tr>
+        <tr>
+          <td>David J. Anderson, <em>Kanban</em> (2010)</td>
+          <td>Flow/adoption</td>
+          <td>The other canonical flow text alongside Reinertsen</td>
+        </tr>
+        <tr>
+          <td>Nir Eyal, <em>Hooked</em> (2014)</td>
+          <td>Behavior design</td>
+          <td>Most-cited product-behavior text after Fogg</td>
+        </tr>
+        <tr>
+          <td>MITRE ATLAS</td>
+          <td>AI security</td>
+          <td>The adversarial-AI tactics knowledge base complementing OWASP</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="summary">Summary Table</h2>
+    <table>
+      <caption>Table 2 — Expert classification summary</caption>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Classification</th>
+          <th>Works</th>
+          <th>Highest work class</th>
+          <th>Verification</th>
+          <th>Utilisation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Michael Power</td>
+          <td><span class="classification-established">Established (4.2)</span></td>
+          <td>1</td>
+          <td><span class="classification-established">Established (3.75)</span></td>
+          <td>High — full match</td>
+          <td>newly added</td>
+        </tr>
+        <tr>
+          <td>Margaret Mitchell et al.</td>
+          <td><span class="classification-established">Established (4.2)</span></td>
+          <td>1</td>
+          <td><span class="classification-established">Established (4.25)</span></td>
+          <td>High — full match</td>
+          <td>newly added</td>
+        </tr>
+        <tr>
+          <td>OWASP</td>
+          <td><span class="classification-established">Established (4.2)</span></td>
+          <td>1</td>
+          <td><span class="classification-established">Established (4.0), boundary case</span></td>
+          <td>High</td>
+          <td>newly added</td>
+        </tr>
+        <tr>
+          <td>BJ Fogg</td>
+          <td><span class="classification-established">Established (3.6)</span></td>
+          <td>1</td>
+          <td><span class="classification-established">Established (3.75)</span></td>
+          <td>High</td>
+          <td>newly added</td>
+        </tr>
+        <tr>
+          <td>Donald Reinertsen</td>
+          <td><span class="classification-recognised">Recognised (3.0), boundary case</span></td>
+          <td>1</td>
+          <td><span class="classification-established">Established (3.75)</span></td>
+          <td>High</td>
+          <td>newly added</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><strong>Persistence targets:</strong> Power, Mitchell et al., OWASP → <code>industry/ai-governance.md</code>. Fogg → <code>domain/interaction-design.md</code>. Reinertsen → <code>domain/product-flow.md</code> (new file).</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
