@@ -174,7 +174,7 @@ describe('RegisterDetail — the sign-off page shows the verdict (P8-C07)', () =
     // Scoped to the control-set panel: the ids also appear in the invariant's
     // "Requires:" line, and an assertion satisfied by that line would pass on
     // a page that never rendered the minimal control set at all.
-    const controlSet = within(verdict.getByRole('heading', { name: /minimal control set/i }).parentElement!);
+    const controlSet = within(verdict.getByRole('heading', { name: /the control set, with evidence status/i }).parentElement!);
     expect(controlSet.getByText('CTRL-ENC-01')).toBeInTheDocument();
     expect(controlSet.getByText('CTRL-LOG-01')).toBeInTheDocument();
     // 5 — governance margin, and the id flagged as having no headroom

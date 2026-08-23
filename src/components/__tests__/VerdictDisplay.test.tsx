@@ -205,7 +205,9 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
     });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} onCorrect={vi.fn()} />);
 
-    expect(screen.getByText(/without encryption in transit/i)).toBeInTheDocument();
+    // Since the to-do rewrite (2026-08-18) the rule description also appears as
+    // "why this case needs it" under the control — two legitimate sites.
+    expect(screen.getAllByText(/without encryption in transit/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('High', { selector: '.verdict__severity' })).toBeInTheDocument();
     expect(screen.getAllByText('GDPR Art. 32(1)(a)').length).toBeGreaterThan(0);
     // Copy changed 2026-08-15: "Requires: CTRL-ENC-01" became "Closed by:
@@ -271,7 +273,7 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     expect(screen.getByText(/what you told us/i)).toBeInTheDocument();
     expect(screen.getByText('Client notes · Client PII')).toBeInTheDocument();
     expect(screen.getByText('Drafting model · llm')).toBeInTheDocument();
-    expect(screen.getByText(/in appetite — 1 control required, 0 downstream reviews triggered/i)).toBeInTheDocument();
+    expect(screen.getByText(/inside appetite once 1 control is in place/i)).toBeInTheDocument();
     expect(screen.getByText(/awaiting active 2LoD sign-off \(LC-2\)/i)).toBeInTheDocument();
   });
 });
@@ -311,7 +313,7 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
     const verdict = makeVerdict({ controls: ['CTRL-ENC-01', 'CTRL-HITL-02'] });
     render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policyStub} onCorrect={vi.fn()} />);
 
-    expect(screen.getByText(/minimal control set \(CS-1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/the control set, with evidence status/i)).toBeInTheDocument();
     expect(screen.getByText(/statuses are attested in the policy file/i)).toBeInTheDocument();
     expect(screen.getByText('VERIFIED')).toBeInTheDocument();
     expect(screen.getByText('UNVERIFIED')).toBeInTheDocument();

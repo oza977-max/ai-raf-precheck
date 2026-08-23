@@ -11,6 +11,31 @@ every verdict.
 
 ---
 
+## [0.15.1] — 2026-08-18
+
+### Changed — the verdict says what to do, in plain words
+
+User report: "Resolvable citations · CTRL-CITE-01 · outstanding" told a
+reader a code and a status, not what the control is, why this case needs
+it, or what done looks like — and "too much happening" to tell what the
+verdict was.
+
+- **One-sentence headline first:** "Inside appetite once 9 controls are
+  in place, with 2 separate reviews other teams own. Not final until a
+  second-line reviewer signs off."
+- **Every required control now explains itself** with three plain lines
+  read straight from the policy file and the verdict's own reasoning:
+  *what it is*, *why this case needs it* (the rule that demanded it, in
+  words), and *what "in place" looks like* (how you would evidence it).
+- **The to-do list is grouped** — controls to put in place / separate
+  reviews other teams own / then sign-off — instead of eleven
+  same-weight items.
+- Control codes demoted to quiet secondary text everywhere; the
+  evidence panel is named for what it shows ("The control set, with
+  evidence status") instead of a requirement id.
+- Also fixed a 1-in-3 flaky test on the memo-hash download (an async
+  race) — caught by the run-three-times ritual.
+
 ## [0.15.0] — 2026-08-18
 
 ### Changed — the knowledge lens earns its place

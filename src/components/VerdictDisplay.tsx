@@ -269,55 +269,109 @@ function WhatToDo({
         </p>
       ) : (
         <>
+          {/* User report (2026-08-18): "Resolvable citations · CTRL-CITE-01 ·
+              outstanding" tells a reader a code and a status but not what the
+              control IS, why THIS case needs it, or what done looks like — the
+              same honest-everywhere-legible-nowhere disease R9 cured on the
+              review screen. The policy file already carries a plain
+              description and a how-to-verify line for every control, and the
+              verdict already knows which rule demanded it. Show all three,
+              grouped so eleven items become three short lists. Nothing new is
+              computed — every line is read from data already on screen. */}
           <p className="verdict__todo-lead">
-            To bring this use case inside appetite, the following must be in place. Each item is required by a
-            rule — the rule is named against it below.
+            {controls.length > 0 && reviews.length > 0
+              ? `Put ${controls.length} control${controls.length === 1 ? '' : 's'} in place, and ${reviews.length} separate review${reviews.length === 1 ? '' : 's'} that other teams own still appl${reviews.length === 1 ? 'ies' : 'y'}.`
+              : controls.length > 0
+                ? `Put ${controls.length} control${controls.length === 1 ? '' : 's'} in place.`
+                : `${reviews.length} separate review${reviews.length === 1 ? '' : 's'} that other teams own still appl${reviews.length === 1 ? 'ies' : 'y'}.`}
+            {needsSignOff && ' Then a second-line reviewer signs off.'}{' '}
+            Each item below says what it is, why this case needs it, and what "in place" looks like.
           </p>
-          <ol className="verdict__todo-list">
-            {controls.map((id) => {
-              const control = policy?.controls.find((c) => c.id === id);
-              // Three states, not two. Without a policy loaded we cannot know
-              // whether evidence exists, and saying "no evidence recorded yet"
-              // would be a fabricated claim about a control nobody looked at —
-              // the exact defect BC-V13-03 pins for the chip below. The first
-              // draft of this panel had two states and got it wrong.
-              // A short chip rather than a sentence per row. The first cut
-              // repeated "no evidence recorded yet, so treat this as
-              // outstanding" eight times down the list, which buried the
-              // control names it was meant to support. The full meaning lives
-              // once, in the footnote below.
-              const status = !policy
-                ? 'evidence unknown'
-                : control?.verification_evidence?.status === 'verified'
-                  ? 'in place'
-                  : 'outstanding';
-              return (
-                <li key={id}>
-                  <strong>{control?.name ?? id}</strong>
-                  {control?.name && <code className="verdict__id-quiet">{id}</code>}
-                  <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
-                    {status}
+
+          {controls.length > 0 && (
+            <>
+              <h4 className="verdict__todo-group">Controls to put in place</h4>
+              <ol className="verdict__todo-list">
+                {controls.map((id) => {
+                  const control = policy?.controls.find((c) => c.id === id);
+                  // Three states, not two. Without a policy loaded we cannot
+                  // know whether evidence exists, and saying "no evidence
+                  // recorded yet" would be a fabricated claim about a control
+                  // nobody looked at — the exact defect BC-V13-03 pins.
+                  const status = !policy
+                    ? 'evidence unknown'
+                    : control?.verification_evidence?.status === 'verified'
+                      ? 'in place'
+                      : 'outstanding';
+                  // Which of this verdict's tripped rules demanded this control
+                  // — read from the explanation the engine already produced.
+                  const demandedBy = (verdict.explanation?.tripped_invariants ?? []).filter((t) =>
+                    t.required_controls.includes(id),
+                  );
+                  return (
+                    <li key={id} className="verdict__todo-item">
+                      <div className="verdict__todo-head">
+                        <strong>{control?.name ?? id}</strong>
+                        {control?.name && <code className="verdict__id-quiet">{id}</code>}
+                        <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
+                          {status}
+                        </span>
+                      </div>
+                      {control?.description && (
+                        <p className="verdict__todo-line">
+                          <span className="verdict__todo-label">What it is:</span> {control.description}
+                        </p>
+                      )}
+                      {demandedBy.length > 0 && (
+                        <p className="verdict__todo-line">
+                          <span className="verdict__todo-label">Why this case needs it:</span>{' '}
+                          {demandedBy.map((t) => t.description).join('; ')}
+                        </p>
+                      )}
+                      {control?.verification && (
+                        <p className="verdict__todo-line">
+                          <span className="verdict__todo-label">What &ldquo;in place&rdquo; looks like:</span>{' '}
+                          {control.verification}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
+          )}
+
+          {reviews.length > 0 && (
+            <>
+              <h4 className="verdict__todo-group">Separate reviews other teams own</h4>
+              <p className="verdict__todo-group-sub">
+                The verdict triggers these; it does not replace them.
+              </p>
+              <ul className="verdict__todo-list verdict__todo-list--reviews">
+                {reviews.map((r) => (
+                  <li key={r}>
+                    <strong>{r}</strong>
+                    <span className="verdict__todo-chip verdict__todo-chip--review">separate review</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {needsSignOff && (
+            <>
+              <h4 className="verdict__todo-group">Then</h4>
+              <ul className="verdict__todo-list verdict__todo-list--reviews">
+                <li>
+                  <strong>Second-line sign-off</strong>
+                  <span className="verdict__todo-status">
+                    {' '}
+                    — this use case is above the self-service threshold, so it is not final until 2LoD approves it
                   </span>
                 </li>
-              );
-            })}
-            {reviews.map((r) => (
-              <li key={r}>
-                <strong>{r}</strong>
-                <span className="verdict__todo-chip verdict__todo-chip--review">separate review</span>
-                <span className="verdict__todo-status"> — another team owns this; the verdict does not replace it</span>
-              </li>
-            ))}
-            {needsSignOff && (
-              <li>
-                <strong>Second-line sign-off</strong>
-                <span className="verdict__todo-status">
-                  {' '}
-                  — this use case is above the self-service threshold, so it is not final until 2LoD approves it
-                </span>
-              </li>
-            )}
-          </ol>
+              </ul>
+            </>
+          )}
           <p className="verdict__todo-foot">
             <strong>Outstanding</strong> means the policy file carries no attestation that this control exists —{' '}
             <em>not</em> that someone checked and found it missing. In this version those statuses are attested by
@@ -589,12 +643,20 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <code>{verdict.use_case_id.slice(0, 8)}</code> · evaluated{' '}
         {new Date(verdict.attested_at).toLocaleDateString()}
       </p>
+      {/* User report (2026-08-18): "it's not clear what the verdict is —
+          too much happening." One plain sentence, first, that a newcomer can
+          repeat back: the decision, what it hinges on, what happens next. */}
       <p className="verdict__appetite-line">
         {verdict.status === 'rejected'
-          ? 'Out of appetite — no control set can bring this use case inside.'
-          : `In appetite — ${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} required, ${
-              verdict.downstream_reviews.length
-            } downstream review${verdict.downstream_reviews.length === 1 ? '' : 's'} triggered.`}
+          ? 'Outside appetite — it crosses a hard line, so no set of controls can bring it inside. It cannot proceed as described.'
+          : verdict.controls.length === 0
+            ? 'Inside appetite as described — nothing to put in place.'
+            : `Inside appetite once ${verdict.controls.length} control${verdict.controls.length === 1 ? ' is' : 's are'} in place${
+                verdict.downstream_reviews.length > 0
+                  ? `, with ${verdict.downstream_reviews.length} separate review${verdict.downstream_reviews.length === 1 ? '' : 's'} other teams own`
+                  : ''
+              }.`}
+        {verdict.status !== 'rejected' && registerStage === 'pre_checked' && ' Not final until a second-line reviewer signs off.'}
       </p>
 
       <div className="verdict__cards">
@@ -812,7 +874,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // status. BC-V13-02: absent evidence renders UNVERIFIED, never a
           // blank or implied pass.
           <div className="verdict__controlset">
-            <h3>Minimal control set (CS-1)</h3>
+            <h3>The control set, with evidence status</h3>
             <p className="verdict__controlset-sub">
               The residual position — where the risk lands once these controls are in place. Smallest set that
               holds the appetite margin. V1: statuses are attested in the policy file; machine-checked evidence
@@ -837,8 +899,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 return (
                   <li key={id}>
                     <div className="verdict__control-head">
-                      <code>{id}</code>
-                      <span className="verdict__control-name">{control?.name ?? ''}</span>
+                      {/* Name first, id quiet — a reader scans for the thing,
+                          not the code (user report 2026-08-18). */}
+                      <span className="verdict__control-name">{control?.name ?? id}</span>
+                      {control?.name && <code className="verdict__id-quiet">{id}</code>}
                       <span
                         className={
                           verified ? 'verdict__vchip verdict__vchip--verified' : 'verdict__vchip verdict__vchip--unverified'
@@ -886,7 +950,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // nothing at all would be the same defect in the other direction:
           // a reader cannot distinguish "not checked" from "nothing to show".
           <div className="verdict__controlset">
-            <h3>Minimal control set (CS-1)</h3>
+            <h3>The control set, with evidence status</h3>
             <ul>
               {verdict.controls.map((id) => (
                 <li key={id}>

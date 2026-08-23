@@ -2739,3 +2739,46 @@ details input {
   max-height: 6.5rem;
   overflow-y: auto;
 }
+
+/* User report (2026-08-18): the to-do list named controls by code and
+   status only. Each item now carries three plain lines (what it is / why
+   this case needs it / what "in place" looks like) and the list is grouped
+   into controls / separate reviews / then sign-off. */
+.verdict__todo-group {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.verdict__todo-group-sub {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.verdict__todo-item {
+  margin-bottom: 0.7rem;
+}
+
+.verdict__todo-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.verdict__todo-line {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  max-width: 70ch;
+}
+
+.verdict__todo-label {
+  font-weight: 600;
+  color: var(--ink);
+}
