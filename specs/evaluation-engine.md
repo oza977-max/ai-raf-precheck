@@ -679,9 +679,34 @@ audit event type, no new write path — R4's "advisory by construction"
 guarantee (writes exactly one event and nothing else) is inherited, not
 re-proven.
 
-## 15. Changelog
+## 15. Round 12 — Time as an Explicit Input (R12-ST-1, R12-MG-1)
+
+Spec for `requirements/requirements-012.md`.
+
+**ADR-EE-R12-1 — staleness and re-attestation are pure pre/post
+transforms; `evaluate()`'s signature does not change.** Two new pure
+engine functions, both taking the date as a parameter:
+
+- `applyReattestExpiry(policy, todayIso)` → `PolicyFile` — returns a
+  policy where family entries past `reattest_by` are treated as
+  `is_approved: false`. The orchestrator calls this BEFORE `evaluate()`;
+  the engine core stays untouched and clock-free.
+- `computeStaleSources(packs, todayIso)` → `StaleSource[]` — pack code,
+  `retrieved_date`, `max_staleness_days`, days overdue, for every loaded
+  pack past its window. The orchestrator calls this alongside
+  `evaluate()` and attaches the result to the Verdict WRAPPER (the same
+  layer that already adds `attested_at`) — never inside
+  `EvaluationResult`, so TC-PE-1-01's byte-identity guarantee is
+  untouched by construction.
+
+Both are deterministic given their inputs; tests pass fixed dates. The
+only clock reads remain at the component layer, where `attested_at` is
+already produced.
+
+## 16. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-08-18 | §15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction. |
 | 2026-07-29 | §13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations in `VerdictDisplay.tsx` and `store/register.ts` that round 3 would otherwise have required editing in parallel. |
 | 2026-08-17 | §14 added — round 11 knowledge lens (ADR-EE-R11-1: pure function outside evaluate()'s call graph, reusing matchesCondition unchanged — determinism true by construction; ADR-EE-R11-2: coverage-gap filing reuses R4's dissent write path exactly). |

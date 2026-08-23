@@ -201,13 +201,27 @@ function NodeCard({
                       quote never reaches here — the substring check already
                       demoted it to guessed. */}
                   {quotes[spec.field] ? (
-                    <span className="graph-node__basis">based on: &ldquo;{quotes[spec.field]}&rdquo;</span>
+                    // R12-BD-1: the affordance no longer implies the quote was
+                    // validated — it says what was actually checked (found
+                    // verbatim) and asks the human to check the rest.
+                    <span
+                      className="graph-node__basis"
+                      title="Found word-for-word in your description — check it supports the value shown"
+                    >
+                      based on: &ldquo;{quotes[spec.field]}&rdquo;
+                    </span>
                   ) : guessed.includes(spec.field) ? (
                     // R9-SC-3: a quiet badge, not a second alarm — the
                     // card-level banner carries the alarm; this points.
                     <span className="graph-node__guessed-badge">
                       guessed — the description does not say. Correct it, or it becomes a question.
                     </span>
+                  ) : !uncertain ? (
+                    // R12-BD-1: the model reported confidence for this field,
+                    // but there is no verified quote behind it — a single
+                    // combined marker, quiet/advisory idiom (not an alarm),
+                    // rather than leaving the field looking untouched.
+                    <span className="graph-node__no-basis">model confident — no verified basis</span>
                   ) : null}
                   {showWhy && (
                     <span className="graph-node__consequence">{FIELD_CONSEQUENCES[spec.field]}</span>
@@ -233,11 +247,18 @@ function NodeCard({
                     case's guessed field was exactly `vendor`. Same rules as
                     every looped field. */}
                 {quotes.vendor ? (
-                  <span className="graph-node__basis">based on: &ldquo;{quotes.vendor}&rdquo;</span>
+                  <span
+                    className="graph-node__basis"
+                    title="Found word-for-word in your description — check it supports the value shown"
+                  >
+                    based on: &ldquo;{quotes.vendor}&rdquo;
+                  </span>
                 ) : guessed.includes('vendor') ? (
                   <span className="graph-node__guessed-badge">
                     guessed — the description does not say. Correct it, or it becomes a question.
                   </span>
+                ) : !uncertain ? (
+                  <span className="graph-node__no-basis">model confident — no verified basis</span>
                 ) : null}
                 {showWhy && <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>}
               </dd>
@@ -249,11 +270,18 @@ function NodeCard({
               <dd>
                 <span className="graph-node__meaning">{declaredModelId}</span>
                 {quotes.declared_model_id ? (
-                  <span className="graph-node__basis">based on: &ldquo;{quotes.declared_model_id}&rdquo;</span>
+                  <span
+                    className="graph-node__basis"
+                    title="Found word-for-word in your description — check it supports the value shown"
+                  >
+                    based on: &ldquo;{quotes.declared_model_id}&rdquo;
+                  </span>
                 ) : guessed.includes('declared_model_id') ? (
                   <span className="graph-node__guessed-badge">
                     guessed — the description does not say. Correct it, or it becomes a question.
                   </span>
+                ) : !uncertain ? (
+                  <span className="graph-node__no-basis">model confident — no verified basis</span>
                 ) : null}
                 {showWhy && (
                   <span className="graph-node__consequence">{FIELD_CONSEQUENCES.declared_model_id}</span>

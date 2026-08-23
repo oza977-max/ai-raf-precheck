@@ -21,6 +21,12 @@ effective_date: "2026-04-17"
 reviewer_name: "[FIRM] — Model Risk"
 reviewer_role: "Head of Model Risk"
 sign_off_date: "[DATE]"
+# R12-ST (ADR-PS-R12-1): PACK-level freshness header — when this pack's
+# regulatory reading was as a whole last checked, and how many days before
+# it is due another look. Distinct from the per-rule source.retrieved_date
+# below.
+retrieved_date: "2026-07-26"
+max_staleness_days: 180
 
 rules:
   - id: "SR262-US-REV-01"

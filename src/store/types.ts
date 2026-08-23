@@ -14,7 +14,8 @@ export type AuditEventType =
   | 're_evaluation_queued'
   | 'twoloD_reviewed'
   | 'reasoning_trace_generated'
-  | 'rule_dissent_filed';
+  | 'rule_dissent_filed'
+  | 'sampling_reviewed';
 
 export interface AuditEvent {
   event_id: string;
@@ -123,6 +124,19 @@ export type AuditEventPayload =
       rule_label?: string;
       dissent: string;
       filed_by_name: string;
+    }
+  // R12-AB (ADR-VA-R12-1): written ONLY when a human actually reviews a
+  // sampled verdict — nothing is stored or queued by isSampledForReview()
+  // itself, which is re-applied at render time from the verdict id. Same
+  // append-only, no-writer-here-yet split as the rest of this round: the UI
+  // pass adds the write path. `verdict_id` follows the same threaded-from-
+  // render pattern as twoloD_reviewed/rule_dissent_filed — never re-derived
+  // at write time.
+  | {
+      type: 'sampling_reviewed';
+      verdict_id: string;
+      reviewed_by_name: string;
+      outcome_note?: string;
     };
 
 // Register types per register-lifecycle.md §4.1–4.2.
@@ -200,4 +214,16 @@ export interface UseCaseSummary {
   last_evaluated_at: string | null;
   policy_version_at_evaluation: string | null;
   stale_assessment: boolean;
+  // R12-BD-3: re-exposes the verdict's own provisional_reasons — never a
+  // second derivation, just carried through so the register's pilot line
+  // can classify causes without loading every case's full verdict record.
+  provisional_reasons: string[];
+  // R12-AB-1: the id of the current verdict, needed by isSampledForReview();
+  // absent when there is no verdict.
+  current_verdict_id: string | null;
+  // R12-AB-1: computed here (register.ts already loads the full audit trail
+  // per row) — true when this is a self-served Low-tier decided verdict
+  // that the deterministic sampling function selected AND no
+  // sampling_reviewed event exists yet for it.
+  sampling_review_due: boolean;
 }

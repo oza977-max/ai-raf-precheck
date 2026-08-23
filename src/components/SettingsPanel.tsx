@@ -32,6 +32,7 @@ export default function SettingsPanel() {
   const [localModel, setLocalModel] = useState(getLocalLlmModel());
   const [localSaved, setLocalSaved] = useState(localLlmEnabled());
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [localDigest, setLocalDigest] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -201,10 +202,12 @@ export default function SettingsPanel() {
                   enableLocalLlm(localUrl, localModel);
                   setLocalSaved(true);
                   setLocalStatus(`Saved. ${probe.detail}`);
+                  setLocalDigest(probe.digest ?? null);
                 } else {
                   // Refuse-rather-than-record: a URL that does not answer is
                   // not saved, so the intake path never silently degrades.
                   setLocalStatus(probe.detail);
+                  setLocalDigest(null);
                 }
                 setProbing(false);
               })();
@@ -225,6 +228,12 @@ export default function SettingsPanel() {
             </button>
           )}
           {localStatus && <p role="status">{localStatus}</p>}
+          {localDigest && (
+            <p className="field-help">
+              digest: sha256:{localDigest.replace(/^sha256:/, '').slice(0, 12)}&hellip; — compare against the
+              digest of the build you benchmarked
+            </p>
+          )}
         </div>
       </details>
     </>

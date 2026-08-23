@@ -4,6 +4,8 @@ import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
+import type { ProvisionalReason } from '../engine/provisional';
+import { classifyProvisionalReason } from './VerdictDisplay';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
 // no direct IndexedDB/audit access. register-lifecycle.md §10.
@@ -41,7 +43,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const summaries = await getUseCases(is2LoD ? 'all' : role, currentPolicyVersion);
+      const summaries = await getUseCases(is2LoD ? 'all' : role, currentPolicyVersion, policy?.sampling_rate);
       if (cancelled) return;
       setRows(summaries);
       setLoaded(true);
@@ -54,7 +56,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
     return () => {
       cancelled = true;
     };
-  }, [role, is2LoD, currentPolicyVersion, refreshKey]);
+  }, [role, is2LoD, currentPolicyVersion, refreshKey, policy?.sampling_rate]);
 
   const tiers = useMemo(() => Array.from(new Set(rows.map((r) => r.tier).filter((v): v is string => v !== null))), [rows]);
   const tracks = useMemo(() => Array.from(new Set(rows.map((r) => r.track).filter((v): v is string => v !== null))), [rows]);
@@ -123,6 +125,20 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
 
   const aigateRow = rows.find((r) => r.use_case_id === AIGATE_USE_CASE_ID);
 
+  // R12-BD-3 (ADR-VA-R12-2): "N of M verdicts here would be final once
+  // outstanding sign-offs land" — counts decided, provisional verdicts
+  // whose causes are ALL sign-off gaps (never a mix with a substantive
+  // caveat), over the total decided verdicts in this view.
+  const decidedRows = rows.filter((r) => r.current_verdict_status !== null);
+  const signoffGapOnlyCount = decidedRows.filter(
+    (r) =>
+      r.provisional &&
+      r.provisional_reasons.length > 0 &&
+      r.provisional_reasons.every(
+        (reason) => classifyProvisionalReason(reason as ProvisionalReason) === 'signoff_gap',
+      ),
+  ).length;
+
   if (rows.length === 0) {
     return (
       <section className="card register-view">
@@ -155,6 +171,13 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
         <div className="register-view__banner" role="status">
           AIGate self-assessment pending 2LoD approval — verdicts are provisional until cleared.
         </div>
+      )}
+
+      {decidedRows.length > 0 && (
+        <p className="register-view__pilot-line" role="status">
+          {signoffGapOnlyCount} of {decidedRows.length} verdicts here would be final once outstanding
+          sign-offs land.
+        </p>
       )}
 
       {is2LoD && policyUpdatePending && (
@@ -234,6 +257,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
             <th>Last Evaluated</th>
             <th>Policy Version</th>
             {is2LoD && <th>Stale</th>}
+            {is2LoD && <th>Sampling</th>}
           </tr>
         </thead>
         <tbody>
@@ -259,6 +283,13 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               <td>{row.last_evaluated_at ? new Date(row.last_evaluated_at).toLocaleDateString() : '—'}</td>
               <td>{row.policy_version_at_evaluation ?? '—'}</td>
               {is2LoD && <td>{row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}</td>}
+              {is2LoD && (
+                <td>
+                  {row.sampling_review_due && (
+                    <span className="register-view__sampling-badge">sampling review due</span>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

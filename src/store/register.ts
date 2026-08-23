@@ -2,6 +2,7 @@ import { openRegisterDb } from './db';
 import { append, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
 import { isVerdictProvisional } from '../engine/provisional';
+import { isSampledForReview } from '../engine/temporal';
 import type { PolicyFile, ProcessingNode } from '../engine/types';
 
 // Rule 3 (cross-cutting.md §7): persistence-only, no evaluation logic, no LLM, no React.
@@ -89,7 +90,12 @@ export function findLatestVerdictEvent(
 // computed here by scanning the use case's audit trail (verdict-audit.md §8:
 // "computed by scanning AuditEvent[], not persisted separately"), not read
 // from RegisterNodeMetadata.
-function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyVersion?: string): UseCaseSummary {
+function toSummary(
+  node: RegisterNode,
+  auditEvents: AuditEvent[],
+  currentPolicyVersion?: string,
+  samplingRate?: number,
+): UseCaseSummary {
   if (node.metadata.node_type !== 'use_case') {
     throw new Error(`toSummary() called on non-use_case node: ${node.node_id}`);
   }
@@ -116,6 +122,24 @@ function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyV
     verdict && currentPolicyVersion !== undefined && verdict.policy_version !== currentPolicyVersion
   );
 
+  // R12-AB-1: "self-served" = never touched by a 2LoD sign-off event — a
+  // decided Low-tier verdict that reached its outcome without a reviewer.
+  // Deterministic selection is re-applied here (register.ts already loads
+  // the full trail per row for staleAssessment/isProvisional above, so this
+  // is a free read, not a new N+1).
+  const wasTwoLoDReviewed = auditEvents.some((e) => e.payload.type === 'twoloD_reviewed');
+  const alreadySamplingReviewed =
+    verdict !== undefined &&
+    auditEvents.some((e) => e.payload.type === 'sampling_reviewed' && e.payload.verdict_id === verdict.id);
+  const samplingReviewDue = Boolean(
+    verdict &&
+      metadata.tier === 'Low' &&
+      !wasTwoLoDReviewed &&
+      samplingRate !== undefined &&
+      isSampledForReview(verdict.id, samplingRate) &&
+      !alreadySamplingReviewed,
+  );
+
   return {
     use_case_id: node.node_id,
     label: node.label,
@@ -130,6 +154,9 @@ function toSummary(node: RegisterNode, auditEvents: AuditEvent[], currentPolicyV
     last_evaluated_at: latestVerdictEventEntry?.occurred_at ?? null,
     policy_version_at_evaluation: verdict?.policy_version ?? null,
     stale_assessment: staleAssessment,
+    provisional_reasons: verdict?.provisional_reasons ? [...verdict.provisional_reasons] : [],
+    current_verdict_id: verdict?.id ?? null,
+    sampling_review_due: samplingReviewDue,
   };
 }
 
@@ -204,7 +231,11 @@ export async function updateLifecycleStage(
 // N+1 audit query per use case — acceptable at V1 scale (small register),
 // documented as a known scaling limit in build/prompts/P6-C01.md, not
 // silently ignored.
-export async function getUseCases(role: 'all' | string, currentPolicyVersion?: string): Promise<UseCaseSummary[]> {
+export async function getUseCases(
+  role: 'all' | string,
+  currentPolicyVersion?: string,
+  samplingRate?: number,
+): Promise<UseCaseSummary[]> {
   const db = await openRegisterDb();
 
   const nodes =
@@ -219,14 +250,15 @@ export async function getUseCases(role: 'all' | string, currentPolicyVersion?: s
   return Promise.all(
     useCaseNodes.map(async (node) => {
       const auditEvents = await getAuditEvents(node.node_id);
-      return toSummary(node, auditEvents, currentPolicyVersion);
+      return toSummary(node, auditEvents, currentPolicyVersion, samplingRate);
     })
   );
 }
 
 export async function getUseCase(
   useCaseId: string,
-  currentPolicyVersion?: string
+  currentPolicyVersion?: string,
+  samplingRate?: number,
 ): Promise<UseCaseSummary | undefined> {
   const db = await openRegisterDb();
   const node = await db.get('register_nodes', useCaseId);
@@ -234,7 +266,7 @@ export async function getUseCase(
     return undefined;
   }
   const auditEvents = await getAuditEvents(useCaseId);
-  return toSummary(node, auditEvents, currentPolicyVersion);
+  return toSummary(node, auditEvents, currentPolicyVersion, samplingRate);
 }
 
 // register-lifecycle.md §10.2: the "Policy updated" banner fires when a

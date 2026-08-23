@@ -888,6 +888,13 @@ binding_constraint_order: ["severity", "control_burden", "id"]
 
 safety_margin: 0.10
 
+# R12-AB (ADR-VA-R12-1): 1-in-5 self-served Low-tier verdicts surface for a
+# 2LoD spot review (deterministic, hash-based selection — never randomness,
+# never the same verdict twice). This is a starter value, not a calibrated
+# one: a firm should set this from its own audit appetite for how much of
+# the low-risk self-serve population it wants a second set of eyes on.
+sampling_rate: 5
+
 # ==============================================================================
 # APPROVED PLATFORM REGISTRY (PV-1) — [FIRM] MUST REPLACE
 # ==============================================================================
@@ -986,3 +993,8 @@ approved_models:
     is_family: true
     version_pattern: "gpt-4o-"
     license_note: "Illustrative only — no firm has actually approved this family"
+    # R12-MG illustrative only — a firm would set this to its own model-risk
+    # re-attestation cadence (~6 months out from initial approval); past
+    # this date the family confers no approval and routes to the model-
+    # governance review instead (applyReattestExpiry).
+    reattest_by: "2027-02-23"

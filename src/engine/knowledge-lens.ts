@@ -73,22 +73,63 @@ const KnowledgeLensEntrySchema = z
   })
   .strict();
 
+// R12-ST-3 (ADR-PS-R12-1): the file's own staleness/provenance header —
+// "who curated this snapshot, against what taxonomy version, and how
+// stale is too stale." .strict() so a smuggled/unknown meta key rejects
+// the whole file rather than passing through silently, the same
+// discipline KnowledgeLensEntrySchema already applies to entries.
+export interface KnowledgeLensMeta {
+  curated_by: string;
+  curated_date: string;
+  taxonomy_version_reviewed: string;
+  review_owner: string;
+  max_staleness_days: number;
+}
+
+const KnowledgeLensMetaSchema = z
+  .object({
+    curated_by: z.string().min(1),
+    curated_date: z.string().min(1),
+    taxonomy_version_reviewed: z.string().min(1),
+    review_owner: z.string().min(1),
+    max_staleness_days: z.number(),
+  })
+  .strict();
+
 export type KnowledgeLensParseResult =
-  | { valid: true; entries: KnowledgeLensEntry[] }
+  | { valid: true; entries: KnowledgeLensEntry[]; meta?: KnowledgeLensMeta }
   | { valid: false; errors: string[] };
 
-/** Pure parse/validate over already-parsed JS values (an array of entry
- *  objects — e.g. the result of `js-yaml`'s `load()` on
- *  grounding/risk-knowledge.yaml). YAML/file I/O deliberately lives outside
- *  this module (a small loader in src/store or test setup), keeping this
- *  file free of any I/O per Rule 1. */
+/** Pure parse/validate over an already-parsed JS value (the result of
+ *  `js-yaml`'s `load()` on grounding/risk-knowledge.yaml). YAML/file I/O
+ *  deliberately lives outside this module (src/store/knowledge-lens-loader.ts),
+ *  keeping this file free of any I/O per Rule 1.
+ *
+ *  Two accepted shapes, both valid:
+ *    - `{ meta: {...}, entries: [...] }` — the R12-ST-3 shape, meta parsed
+ *      and returned.
+ *    - a bare array of entries — the pre-R12 shape, for backward
+ *      compatibility; `meta` is simply absent on the result. */
 export function parseKnowledgeLens(raw: unknown): KnowledgeLensParseResult {
-  if (!Array.isArray(raw)) {
-    return { valid: false, errors: ['risk-knowledge file must be an array of entries'] };
+  let entriesRaw: unknown;
+  let metaRaw: unknown;
+
+  if (Array.isArray(raw)) {
+    entriesRaw = raw;
+  } else if (raw !== null && typeof raw === 'object' && 'entries' in raw) {
+    entriesRaw = (raw as Record<string, unknown>).entries;
+    metaRaw = (raw as Record<string, unknown>).meta;
+  } else {
+    return { valid: false, errors: ['risk-knowledge file must be an array of entries, or an object with an "entries" array'] };
   }
+
+  if (!Array.isArray(entriesRaw)) {
+    return { valid: false, errors: ['risk-knowledge "entries" must be an array'] };
+  }
+
   const entries: KnowledgeLensEntry[] = [];
   const errors: string[] = [];
-  raw.forEach((item, i) => {
+  entriesRaw.forEach((item, i) => {
     const result = KnowledgeLensEntrySchema.safeParse(item);
     if (!result.success) {
       const idHint = typeof (item as Record<string, unknown>)?.id === 'string' ? (item as { id: string }).id : `[${i}]`;
@@ -99,10 +140,27 @@ export function parseKnowledgeLens(raw: unknown): KnowledgeLensParseResult {
       entries.push(result.data as KnowledgeLensEntry);
     }
   });
+
+  let meta: KnowledgeLensMeta | undefined;
+  if (metaRaw !== undefined) {
+    const metaResult = KnowledgeLensMetaSchema.safeParse(metaRaw);
+    if (!metaResult.success) {
+      for (const issue of metaResult.error.issues) {
+        errors.push(`meta: ${issue.path.join('.') || '(root)'} — ${issue.message}`);
+      }
+    } else {
+      meta = metaResult.data;
+    }
+  }
+
   if (errors.length > 0) return { valid: false, errors };
   // NF-1 discipline: sorted by id before returning, same as every other
   // engine/policy collection (evaluate.ts's sortedById()).
-  return { valid: true, entries: [...entries].sort((a, b) => a.id.localeCompare(b.id)) };
+  return {
+    valid: true,
+    entries: [...entries].sort((a, b) => a.id.localeCompare(b.id)),
+    ...(meta ? { meta } : {}),
+  };
 }
 
 /** ADR-EE-R11-1: pure function, never called from evaluate.ts. Matches each

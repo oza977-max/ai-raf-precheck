@@ -81,6 +81,58 @@ describe('parseKnowledgeLens (TC-R11-KL-1)', () => {
   });
 });
 
+describe('parseKnowledgeLens — R12-ST-3 header/meta (TC-R12-KLMETA)', () => {
+  const validMeta = {
+    curated_by: 'project maintainer (2LoD practitioner)',
+    curated_date: '2026-08-17',
+    taxonomy_version_reviewed: 'MIT AI Risk Repository public domain taxonomy, as published Aug 2026',
+    review_owner: '2LoD — AI Risk (review on each MIT quarterly update)',
+    max_staleness_days: 120,
+  };
+
+  it('TC-R12-KLMETA-01: accepts { meta, entries } with a valid header, returning meta', () => {
+    const result = parseKnowledgeLens({ meta: validMeta, entries: [entry()] });
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.entries).toHaveLength(1);
+      expect(result.meta).toEqual(validMeta);
+    }
+  });
+
+  it('TC-R12-KLMETA-02: a bare entries array (no header) is still valid — backward compat, meta absent', () => {
+    const result = parseKnowledgeLens([entry()]);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.entries).toHaveLength(1);
+      expect(result.meta).toBeUndefined();
+    }
+  });
+
+  it('TC-R12-KLMETA-03: rejects a meta block containing an unrecognised key', () => {
+    const result = parseKnowledgeLens({ meta: { ...validMeta, extra_field: 'nope' }, entries: [entry()] });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.errors.join(' ')).toMatch(/extra_field|unrecognized|unrecognised/i);
+  });
+
+  it('TC-R12-KLMETA-04: rejects a meta block missing a required field', () => {
+    const bad = { ...validMeta } as Record<string, unknown>;
+    delete bad.max_staleness_days;
+    const result = parseKnowledgeLens({ meta: bad, entries: [entry()] });
+    expect(result.valid).toBe(false);
+  });
+
+  it('TC-R12-KLMETA-05: the real grounding/risk-knowledge.yaml file carries a valid, complete meta header', () => {
+    const yaml = readFileSync(resolve(__dirname, '../../grounding/risk-knowledge.yaml'), 'utf-8');
+    const result = loadKnowledgeLens(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.meta).toBeDefined();
+      expect(result.meta?.curated_by).toContain('2LoD');
+      expect(result.meta?.max_staleness_days).toBe(120);
+    }
+  });
+});
+
 describe('matchKnowledgeLens (TC-R11-KL-3)', () => {
   it('matches an entry whose condition the graph satisfies', () => {
     const g = graph({ input_nodes: [{ id: 'i1', label: 'z', data_class: 'Client PII', data_zone: 'Zone B' }] });

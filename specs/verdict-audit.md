@@ -139,7 +139,8 @@ export type AuditEventType =
   | 'duplicate_dismissed'      // UC-2 — a surfaced match was reviewed and set aside
   | 'classification_adopted'   // UC-2 — this record's classification came from another use case
   | 'reasoning_trace_generated' // VD-8 LLM call completed
-  | 'rule_dissent_filed';      // FN-009 — a reviewer challenges a rule; advisory, never changes the verdict
+  | 'rule_dissent_filed'       // FN-009 — a reviewer challenges a rule; advisory, never changes the verdict
+  | 'sampling_reviewed';       // R12-AB (ADR-VA-R12-1) — a 2LoD spot review of a deterministically sampled verdict actually happened
 
 export interface AuditEvent {
   event_id: string;             // UUID v4
@@ -194,6 +195,17 @@ export type AuditEventPayload =
       rule_label?: string;
       dissent: string;
       filed_by_name: string;
+    }
+  // R12-AB (§15, ADR-VA-R12-1). Written ONLY when a human actually reviews
+  // a verdict isSampledForReview() selected — nothing is stored or queued
+  // by the sampling check itself, which is re-applied at render time from
+  // the verdict id already on screen. verdict_id follows the same
+  // threaded-from-render pattern as twoloD_reviewed/rule_dissent_filed.
+  | {
+      type: 'sampling_reviewed';
+      verdict_id: string;
+      reviewed_by_name: string;
+      outcome_note?: string;
     };
 
 **Both added by round 4 (UC-2).** The duplicate check surfaces a match and the
@@ -564,9 +576,41 @@ unchanged; where axes are present the UI renders two chips (COSO
 vocabulary). VERIFIED continues to mean what it means — operating
 evidence exists.
 
-## 15. Changelog
+## 15. Round 12 — Sampling, Cause Families, the Memo Hash (R12-AB, R12-BD-3, R12-MISC-1)
+
+Spec for `requirements/requirements-012.md`.
+
+**ADR-VA-R12-1 — the sampling queue is a pure selection over verdict ids;
+the trail records reviews, never selections.** `isSampledForReview(
+verdictId, samplingRate)` — a deterministic hash-mod-K over the verdict
+id (stable across sessions, no randomness anywhere near the engine). The
+2LoD register view derives "sampling review due" by applying the function
+at render time to self-served Low-tier verdicts; nothing is written until
+a human actually reviews, which appends a `sampling_reviewed` audit event
+(append-only idiom, in-flight ref guard, same as every other 2LoD write).
+Selection-at-render + event-on-review means the queue needs no stored
+state and can never drift from the trail.
+
+**ADR-VA-R12-2 — provisional causes render in two families, mapped in
+presentation only.** Sign-off gaps (closeable paperwork):
+`unsigned_pack_rules`, unattested translation. Substantive caveats:
+`no_regulatory_basis`, `unclassified_decision_type`. The engine's
+`provisional_reasons` enum is unchanged — the family mapping is a
+presentation-layer table, and the register's pilot line ("N of M would be
+final once sign-offs land") counts verdicts whose ONLY causes are in the
+sign-off-gap family.
+
+**ADR-VA-R12-3 — the memo carries a policy content hash the CALLER
+computes.** `buildChallengeMemo` stays synchronous and pure; it accepts
+an optional `policyHash` string the caller derives (SHA-256 over the
+active policy YAML via WebCrypto) and prints it in the header. Absent =
+legacy call sites, line reads "not computed". The memo is thereby tied to
+the enforced ruleset, not a paraphrase (Power's audit-ritual risk, A-5).
+
+## 16. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-08-18 | §15 added — round 12. ADR-VA-R12-1 (stateless deterministic sampling queue), ADR-VA-R12-2 (provisional cause families in presentation), ADR-VA-R12-3 (caller-computed policy hash on the memo). |
 | 2026-08-17 | §15 added — round 10. Challenge-memo export as pure presentation (ADR-VA-R10-1), inherent/residual as labels (ADR-VA-R10-2), two-axis evidence backward compatible (ADR-VA-R10-3). |
 | 2026-07-29 | §13 added — round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); they are separate assertions because they serve separate readers. |

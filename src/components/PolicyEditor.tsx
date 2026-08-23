@@ -205,6 +205,30 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
                       <span className="policy-view__pack-state-detail">
                         {jurisdictionPacks.map((p) => `${p.pack_id} v${p.version}`).join(' + ')}
                       </span>
+                      {/* R12-ST-2: pack age, per pack — a clock read is fine here
+                          (component layer, not engine). Styled like the invalid-
+                          pack state when the review window has lapsed, so a
+                          lapsed owner is as visible as a load error. */}
+                      {jurisdictionPacks.map((p) => {
+                        if (p.retrieved_date === undefined || p.max_staleness_days === undefined) return null;
+                        const retrieved = Date.parse(`${p.retrieved_date}T00:00:00Z`);
+                        if (Number.isNaN(retrieved)) return null;
+                        const daysAgo = Math.floor((Date.now() - retrieved) / (24 * 60 * 60 * 1000));
+                        const overdue = daysAgo > p.max_staleness_days;
+                        return (
+                          <span
+                            key={p.pack_id}
+                            className={
+                              overdue
+                                ? 'policy-view__pack-age policy-view__pack-age--overdue'
+                                : 'policy-view__pack-age'
+                            }
+                          >
+                            {p.pack_id}: retrieved {daysAgo} day{daysAgo === 1 ? '' : 's'} ago · review window{' '}
+                            {p.max_staleness_days} days{overdue ? ' — review overdue' : ''}
+                          </span>
+                        );
+                      })}
                     </span>
                   ) : packError ? (
                     <span className="policy-view__pack-state policy-view__pack-state--invalid">

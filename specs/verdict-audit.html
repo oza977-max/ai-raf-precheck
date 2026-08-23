@@ -272,7 +272,7 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
     <code>src/store/types.ts</code>.</em></p>
     <pre><code>interface AuditEvent {
   eventId: string;                     // UUID
-  eventType: 'verdict-issued' | 'verdict-corrected' | 'audit-query' | 'audit-export';
+  eventType: 'verdict-issued' | 'verdict-corrected' | 'audit-query' | 'audit-export' | 'sampling_reviewed';
   timestamp: number;                   // Unix ms
   actor: {
     userId: string;
@@ -800,9 +800,20 @@ const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&g
 
     <p><strong>ADR-VA-R10-3 &mdash; evidence grows two optional axes, backward compatible.</strong> <code>ControlVerificationEvidence</code> gains optional <code>design</code> and <code>operating</code> sub-assessments ({ status: 'effective' | 'deficient' | 'not_assessed', detail? }). Legacy single-status evidence remains valid and renders unchanged; where axes are present the UI renders two chips (COSO vocabulary). VERIFIED continues to mean what it means &mdash; operating evidence exists.</p>
 
-    <h2 id="changelog-r3">15. Changelog</h2>
+    <h2 id="round-12-sampling">15. Round 12 — Sampling, Cause Families, the Memo Hash</h2>
+
+    <p>Spec for <code>requirements/requirements-012.md</code>.</p>
+
+    <p><strong>ADR-VA-R12-1 — the sampling queue is a pure selection over verdict ids; the trail records reviews, never selections.</strong> <code>isSampledForReview(verdictId, samplingRate)</code> — a deterministic hash-mod-K over the verdict id (stable across sessions, no randomness anywhere near the engine). The 2LoD register view derives "sampling review due" by applying the function at render time to self-served Low-tier verdicts; nothing is written until a human actually reviews, which appends a <code>sampling_reviewed</code> audit event (append-only idiom, in-flight ref guard, same as every other 2LoD write). Selection-at-render + event-on-review means the queue needs no stored state and can never drift from the trail.</p>
+
+    <p><strong>ADR-VA-R12-2 — provisional causes render in two families, mapped in presentation only.</strong> Sign-off gaps (closeable paperwork): <code>unsigned_pack_rules</code>, unattested translation. Substantive caveats: <code>no_regulatory_basis</code>, <code>unclassified_decision_type</code>. The engine's <code>provisional_reasons</code> enum is unchanged — the family mapping is a presentation-layer table, and the register's pilot line ("N of M would be final once sign-offs land") counts verdicts whose ONLY causes are in the sign-off-gap family.</p>
+
+    <p><strong>ADR-VA-R12-3 — the memo carries a policy content hash the CALLER computes.</strong> <code>buildChallengeMemo</code> stays synchronous and pure; it accepts an optional <code>policyHash</code> string the caller derives (SHA-256 over the active policy YAML via WebCrypto) and prints it in the header. Absent = legacy call sites, line reads "not computed". The memo is thereby tied to the enforced ruleset, not a paraphrase (Power's audit-ritual risk, A-5).</p>
+
+    <h2 id="changelog-r3">16. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
-      <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); separate assertions because they serve separate readers.</td></tr>
+      <tr><td>2026-08-18</td><td>&sect;15 added — round 12. ADR-VA-R12-1 (stateless deterministic sampling queue), ADR-VA-R12-2 (provisional cause families in presentation), ADR-VA-R12-3 (caller-computed policy hash on the memo).</td></tr>
+      <tr><td>2026-07-29</td><td>&sect;13 added — round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); separate assertions because they serve separate readers.</td></tr>
     </tbody></table>
 
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>

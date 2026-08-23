@@ -347,3 +347,22 @@ Independent review pass 2 reached the same conclusion unprompted.
 covering tests, confirm no further edge case is open, and close. It should NOT
 re-implement the migration. If C03 finds a genuine gap, record it here rather
 than rebuilding what exists.
+
+---
+
+## FN-011 — judge-002: reason-before-prediction rerun (R12-MISC-2, tracked)
+
+judge-001 (docs/reviews/judge-001.md, 2026-08-17) measured the local
+model (qwen3:4b) at 1/11 concordance as a verdict judge, with the
+reasoning RIGHT in 10/11 — diagnosed as a structured-decoding artifact:
+the schema forced `prediction` to decode before `reason`, so the model
+committed to an answer before working through it. The obvious follow-up
+— swap the field order so reasoning decodes first — was named in that
+report and never run. Panel finding B-5 (2026-08-18) flagged the stale
+null result.
+
+**Owner:** project maintainer (2LoD practitioner). **Trigger:** next
+session touching src/llm/* or any claim about local-model capability in
+docs — rerun as judge-002 with reason-first schema over the same 11
+cases before making or repeating any such claim. **Not** a release
+blocker; the runtime path never relied on the judge experiment.

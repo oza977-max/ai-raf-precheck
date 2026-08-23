@@ -162,6 +162,9 @@ const ApprovedModelSchema = z.object({
   // approval fields. Optional so every pre-R11-MG-1a policy stays valid.
   is_family: z.boolean().optional(),
   version_pattern: z.string().optional(),
+  // R12-MG (ADR-PS-R12-1): meaningful for family entries — see
+  // ApprovedModel.reattest_by in src/engine/types.ts.
+  reattest_by: z.string().optional(),
 });
 
 const PolicyFileSchema = z.object({
@@ -201,6 +204,9 @@ const PolicyFileSchema = z.object({
   // a firm's existing policy stays valid; evaluate() falls back to the same
   // order when it is absent.
   binding_constraint_order: z.array(z.enum(['severity', 'control_burden', 'id'])).optional(),
+  // R12-AB (ADR-VA-R12-1): see PolicyFile.sampling_rate in
+  // src/engine/types.ts. Optional, 1-in-K semantics.
+  sampling_rate: z.number().optional(),
 });
 
 // --- ADR-002 (policy-schema.md §8): only these operator keys are valid inside

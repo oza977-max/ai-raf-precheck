@@ -24,6 +24,7 @@ import type { PrecedentCandidate } from '../engine/precedent';
 import SimilarCases from './SimilarCases';
 import type { EnrichedPrecedent } from './SimilarCases';
 import { matchKnowledgeLens } from '../engine/knowledge-lens';
+import { applyReattestExpiry, computeStaleSources } from '../engine/temporal';
 import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
 import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
 import KnowledgeLensPanel from './KnowledgeLensPanel';
@@ -165,10 +166,16 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
   // R11-KL-1: parsed once, entirely separate from policy/packs — this is
   // advisory-only and never touched by evaluate().
-  const knowledgeLensEntries = useMemo(() => {
-    const result = loadKnowledgeLens(getCurrentKnowledgeLensYaml());
-    return result.valid ? result.entries : [];
-  }, []);
+  const knowledgeLensResult = useMemo(() => loadKnowledgeLens(getCurrentKnowledgeLensYaml()), []);
+  const knowledgeLensEntries = useMemo(
+    () => (knowledgeLensResult.valid ? knowledgeLensResult.entries : []),
+    [knowledgeLensResult],
+  );
+  // R12-ST-3: the file's own curation header, threaded through as a prop so
+  // KnowledgeLensPanel can render "curated by … · review owner …" and an
+  // age warning — absent on a legacy/invalid file, which the panel treats
+  // the same as "no meta to show".
+  const knowledgeLensMeta = knowledgeLensResult.valid ? knowledgeLensResult.meta : undefined;
   // R11-KL-2: the rule ids THIS verdict actually relied on, read from its
   // own explanation — same derivation RegisterDetail.tsx's
   // `challengeableRules` uses, so "covered" means the same thing in both
@@ -718,15 +725,27 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
     }
+    // R12-ST-1 (ADR-EE-R12-1): pure pre-transform, run BEFORE evaluate() so
+    // an expired family entry is simply unapproved by the time evaluate()
+    // sees the policy — "today" is read here at the component layer, never
+    // inside engine code.
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+    const attestablePolicy = applyReattestExpiry(policyResult.policy, today);
+
     // §6.1: the engine evaluates the corrected graph as a fresh call —
     // there is no "partial re-evaluation".
-    const evalResult = evaluate(graph, policyResult.policy, loadedPacks);
+    const evalResult = evaluate(graph, attestablePolicy, loadedPacks);
     if (!evalResult.ok) {
       throw new Error(`Evaluation failed: ${evalResult.error.kind}`);
     }
     const result = evalResult.value;
 
-    const now = new Date().toISOString();
+    // R12-ST-1: computed alongside evaluate(), never inside it — rides on
+    // the Verdict wrapper, keeping TC-PE-1-01's byte-identical guarantee
+    // true by construction.
+    const staleSources = computeStaleSources(loadedPacks, today);
+
     const fullVerdict: Verdict = {
       ...result,
       id: crypto.randomUUID(),
@@ -737,6 +756,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       attested_at: now,
       graph_version: graph.version,
       corrections: [],
+      ...(staleSources.length > 0 ? { stale_sources: staleSources } : {}),
     };
     setVerdict(fullVerdict);
     setLastGraph(graph);
@@ -1365,7 +1385,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           />
         )}
         {state.step === 'verdict' && verdict && knowledgeLensMatches.length > 0 && (
-          <KnowledgeLensPanel matches={knowledgeLensMatches} />
+          <KnowledgeLensPanel matches={knowledgeLensMatches} meta={knowledgeLensMeta} />
         )}
       </div>
     </div>

@@ -816,11 +816,25 @@ interface VerdictTraceData {
 
     <p><strong>ADR-EE-R11-2 &mdash; the coverage-gap filing reuses R4&rsquo;s dissent write path exactly.</strong> Per requirements-011.md R11-KL-3, an uncovered match&rsquo;s &ldquo;file as coverage gap&rdquo; action calls the same <code>fileDissent</code>-family function <code>RegisterDetail.tsx</code> already uses for rule challenges (verdict-audit.md &sect;4.3 <code>rule_dissent_filed</code>), naming the risk class in place of a rule id. No new audit event type, no new write path &mdash; R4&rsquo;s &ldquo;advisory by construction&rdquo; guarantee (writes exactly one event and nothing else) is inherited, not re-proven.</p>
 
-    <h2 id="changelog-r3">15. Changelog</h2>
+    <h2 id="round-12-time">15. Round 12 — Time as an Explicit Input (R12-ST-1, R12-MG-1)</h2>
+
+    <p>Spec for <code>requirements/requirements-012.md</code>.</p>
+
+    <p><strong>ADR-EE-R12-1 — staleness and re-attestation are pure pre/post transforms; <code>evaluate()</code>'s signature does not change.</strong> Two new pure engine functions, both taking the date as a parameter:</p>
+
+    <ul>
+      <li><code>applyReattestExpiry(policy, todayIso)</code> → <code>PolicyFile</code> — returns a policy where family entries past <code>reattest_by</code> are treated as <code>is_approved: false</code>. The orchestrator calls this BEFORE <code>evaluate()</code>; the engine core stays untouched and clock-free.</li>
+      <li><code>computeStaleSources(packs, todayIso)</code> → <code>StaleSource[]</code> — pack code, <code>retrieved_date</code>, <code>max_staleness_days</code>, days overdue, for every loaded pack past its window. The orchestrator calls this alongside <code>evaluate()</code> and attaches the result to the Verdict WRAPPER (the same layer that already adds <code>attested_at</code>) — never inside <code>EvaluationResult</code>, so TC-PE-1-01's byte-identity guarantee is untouched by construction.</li>
+    </ul>
+
+    <p>Both are deterministic given their inputs; tests pass fixed dates. The only clock reads remain at the component layer, where <code>attested_at</code> is already produced.</p>
+
+    <h2 id="changelog-r3">16. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td>2026-07-29</td><td>&sect;13 added &mdash; round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>
+        <tr><td>2026-08-18</td><td>&sect;15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction.</td></tr>
+        <tr><td>2026-07-29</td><td>&sect;13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>
         <tr><td>2026-08-17</td><td>&sect;14 added &mdash; round 11 knowledge lens (ADR-EE-R11-1: pure function outside evaluate()&rsquo;s call graph, reusing matchesCondition unchanged &mdash; determinism true by construction; ADR-EE-R11-2: coverage-gap filing reuses R4&rsquo;s dissent write path exactly).</td></tr>
       </tbody>
     </table>

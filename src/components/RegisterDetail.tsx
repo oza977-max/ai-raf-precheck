@@ -82,6 +82,10 @@ function eventDetail(event: AuditEvent): string {
     case 'rule_dissent_filed':
       // "name not verified" for the same reason as twoloD_reviewed: no sign-in.
       return `Rule ${p.rule_id} challenged by ${p.filed_by_name} (name not verified): “${p.dissent}” Advisory — the verdict stands unchanged; the challenge goes to the rule-improvement queue.`;
+    case 'sampling_reviewed':
+      // R12-AB-1: the automation-bias countermeasure — a deterministically
+      // sampled self-served verdict got its human spot review.
+      return `Sampling review of verdict ${p.verdict_id.slice(0, 8)}… by ${p.reviewed_by_name} (name not verified)${p.outcome_note ? ` — ${p.outcome_note}` : ''}. Spot check of a self-served case; the verdict stands unchanged unless separately corrected.`;
   }
 }
 
@@ -160,10 +164,12 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   // resolves them against the currently-loaded lens entries. `covered` is
   // recomputed fresh here (not persisted) against THIS verdict's own rule
   // ids, exactly like `challengeableRules` above.
-  const knowledgeLensEntries = useMemo(() => {
-    const result = loadKnowledgeLens(getCurrentKnowledgeLensYaml());
-    return result.valid ? result.entries : [];
-  }, []);
+  const knowledgeLensResult = useMemo(() => loadKnowledgeLens(getCurrentKnowledgeLensYaml()), []);
+  const knowledgeLensEntries = useMemo(
+    () => (knowledgeLensResult.valid ? knowledgeLensResult.entries : []),
+    [knowledgeLensResult],
+  );
+  const knowledgeLensMeta = knowledgeLensResult.valid ? knowledgeLensResult.meta : undefined;
   const knowledgeLensMatches = useMemo<KnowledgeMatch[]>(() => {
     if (!latestVerdict) return [];
     const payload = findLatestVerdictEvent(events);
@@ -186,6 +192,56 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   const [gapBusyEntryId, setGapBusyEntryId] = useState<string | null>(null);
   const [gapError, setGapError] = useState<string | null>(null);
   const gapInFlight = useRef(false);
+
+  // R12-AB-1 (ADR-VA-R12-1): the sampling spot-review panel. Same
+  // double-click hazard as every other append-only write here — a
+  // synchronous ref guard, copying handleFileDissent's exact pattern.
+  const [samplingReviewerName, setSamplingReviewerName] = useState('');
+  const [samplingNote, setSamplingNote] = useState('');
+  const [samplingBusy, setSamplingBusy] = useState(false);
+  const [samplingError, setSamplingError] = useState<string | null>(null);
+  const [samplingResult, setSamplingResult] = useState<string | null>(null);
+  const samplingInFlight = useRef(false);
+
+  async function handleSamplingReview() {
+    if (samplingInFlight.current) return;
+    samplingInFlight.current = true;
+    setSamplingBusy(true);
+    setSamplingError(null);
+    try {
+      if (!latestVerdict) {
+        setSamplingError('There is no verdict here, so there is nothing to spot-review.');
+        return;
+      }
+      if (!samplingReviewerName.trim()) {
+        setSamplingError('Enter your name. The spot review is recorded permanently, so the record says who did it.');
+        return;
+      }
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'sampling_reviewed',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'sampling_reviewed',
+          verdict_id: latestVerdict.id,
+          reviewed_by_name: samplingReviewerName.trim(),
+          ...(samplingNote.trim() ? { outcome_note: samplingNote.trim() } : {}),
+        },
+      });
+      setSamplingResult('Sampling review recorded in the audit trail.');
+      setSamplingReviewerName('');
+      setSamplingNote('');
+      await load();
+    } catch (err) {
+      setSamplingError(`Recording the review failed: ${err instanceof Error ? err.message : String(err)}.`);
+      await load();
+    } finally {
+      samplingInFlight.current = false;
+      setSamplingBusy(false);
+    }
+  }
 
   // ADR-EE-R11-2: reuses handleFileDissent's exact write path — the same
   // event type (`rule_dissent_filed`), the same appendAuditEvent call
@@ -267,10 +323,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   }, [summary?.use_case_id, summary?.label, summary?.description]);
 
   const load = useCallback(async () => {
-    const [s, evs] = await Promise.all([getUseCase(useCaseId), getAuditEvents(useCaseId)]);
+    const [s, evs] = await Promise.all([
+      getUseCase(useCaseId, undefined, policy?.sampling_rate),
+      getAuditEvents(useCaseId),
+    ]);
     setSummary(s ?? null);
     setEvents(evs);
-  }, [useCaseId]);
+  }, [useCaseId, policy?.sampling_rate]);
 
   useEffect(() => {
     void load();
@@ -580,6 +639,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               matches={knowledgeLensMatches}
               onFileCoverageGap={(m) => void handleFileKnowledgeGap(m)}
               gapBusyEntryId={gapBusyEntryId}
+              meta={knowledgeLensMeta}
             />
           )}
           {gapError && (
@@ -635,6 +695,47 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             </button>
           </div>
         </div>
+      )}
+
+      {/* R12-AB-1 (ADR-VA-R12-1): the automation-bias countermeasure — a
+          deterministically selected self-served Low-tier verdict gets a
+          human spot review. 2LoD-only; renders only until the review is
+          recorded (summary.sampling_review_due goes false once the
+          sampling_reviewed event lands and the row is reloaded). */}
+      {role === '2LoD' && summary.sampling_review_due && !samplingResult && (
+        <div className="register-detail__sampling">
+          <h3>Sampling spot review due</h3>
+          <p className="field-help">
+            This self-served case was deterministically selected (1 in {policy?.sampling_rate ?? '?'}).
+          </p>
+          <label htmlFor="sampling-reviewer-name">Your name</label>
+          <input
+            id="sampling-reviewer-name"
+            type="text"
+            value={samplingReviewerName}
+            onChange={(e) => setSamplingReviewerName(e.target.value)}
+          />
+          <label htmlFor="sampling-note">Note (optional)</label>
+          <input
+            id="sampling-note"
+            type="text"
+            value={samplingNote}
+            onChange={(e) => setSamplingNote(e.target.value)}
+          />
+          <button type="button" disabled={samplingBusy} onClick={() => void handleSamplingReview()}>
+            Record spot review
+          </button>
+          {samplingError && (
+            <p role="alert" className="register-detail__error">
+              {samplingError}
+            </p>
+          )}
+        </div>
+      )}
+      {samplingResult && (
+        <p className="register-detail__result" role="status">
+          {samplingResult}
+        </p>
       )}
 
       {actionResult && (

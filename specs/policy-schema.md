@@ -874,6 +874,32 @@ cannot smuggle a deciding effect in even by accident. `parseKnowledgeLens`
 
 ---
 
+## 10c. Round 12 — Staleness, Re-attestation, Sampling Fields (R12-ST, R12-MG-1, R12-AB-1)
+
+Spec for `requirements/requirements-012.md`.
+
+**ADR-PS-R12-1 — time limits are authored data; the engine never reads a
+clock.** New optional fields, all backward compatible (absent = no window,
+legacy behaviour):
+
+- Jurisdiction pack header: `max_staleness_days: number` — alongside the
+  existing `retrieved_date`. Owned by the pack author.
+- `ApprovedModel` family entries: `reattest_by: string` (ISO date) — a
+  family entry past this date confers no approval; the declared model
+  routes to the model-governance review exactly as if unlisted.
+- `PolicyFile`: `sampling_rate: number` (1-in-K; default documented in the
+  starter file) — drives the deterministic Low-tier sampling queue.
+- `grounding/risk-knowledge.yaml` header block: `curated_by`,
+  `curated_date`, `taxonomy_version_reviewed`, `review_owner`,
+  `max_staleness_days` — attribution + the named coverage-gap triage
+  owner (A-3/A-6), validated by `parseKnowledgeLens`'s loader.
+
+All date comparisons happen against an `evaluated_at`/`now` value the
+CALLER passes in — determinism (NF-1) is preserved because the date is an
+explicit input, never `Date.now()` inside `src/engine/*`.
+
+---
+
 ## 11. Integration Points
 
 | Integrated with | What this spec provides |
