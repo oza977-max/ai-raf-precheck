@@ -10,40 +10,56 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25) — supersedes everything below
+## CURRENT STATE (2026-08-25, paused mid-R15-C1) — supersedes everything below
 
 **v0.16.0 live, 659 tests, CI green.** Read build/OPERATING-REGIME.md
-first — three standing owner rules (context handover, model router,
-audit-trail check-ins) apply to every session.
+first (context-handover / model-router / audit-trail rules + the
+"main-loop model follows work type" addendum — Sonnet for build
+sessions, Fable/Opus for synthesis).
 
-Since the 2026-08-17 block below: R10 (reviewer's language: memo export,
-inherent/residual, two-axis evidence, v0.12.0) → R11 (third lever: model
-governance + MIT risk-knowledge lens, v0.13.0) → three-panel concept
-review + site-survey-001 (verdict: Coherent) → R12 (trust mechanics: all
-17 findings, v0.14.0) → expert-scoring-001 (5 new roster experts) → R13
-(knowledge lens earns its place, v0.15.0) → v0.15.1 (verdict to-do plain
-language) → R14 (verdict screen folds per design panel, v0.16.0) →
-**design-deliberation-001** (6 panels, 4 rounds, unanimous: targeted
-redesign; reviews/design-deliberation-001/ holds proposal + conflicts +
-dissents + skeptic amendments).
+**PAUSED HERE, ON OWNER REQUEST (usage limit approaching) — clean
+stopping point, working tree CLEAN (nothing uncommitted).**
 
-**IN FLIGHT: R15 = Option B targeted redesign, APPROVED by owner
-2026-08-25** ("Lets go option B") — five build chunks per the chair's
-proposal AMENDED by the two skeptics' fixes (read
-reviews/design-deliberation-001/summary.json "skeptics" — four
-must-fix amendments: graphSummaryRows fixed at the shared source; no
-sticky Sign-off nav jump / no rubber-stamp path; role caveat at the
-sign-off block; R14-already-shipped framing correction; plus the
-register Flags-column change needs a register-lifecycle.md §10.2
-amendment). Chunk order: register → verdict → form+confirm →
-policy+header → graph-review+queue. requirements-015.md is the next
-artifact; then GVM pipeline as always (test cases → build → review →
-verify → doc → deploy). Session caps: subagent work hit the session
-limit 2026-08-25 (resets 11pm Asia/Calcutta) — build chunks should
-dispatch after reset; main-loop doc work is unaffected.
+R15 (Option B targeted redesign) is APPROVED and in progress.
+requirements/requirements-015.md is the build contract; the design
+source of truth is reviews/design-deliberation-001/proposal.md; the
+skeptics' amendments (S1-S4) are bound into requirements-015 §1 as
+Musts. Chunk order: **C1 register (IN PROGRESS) → C2 verdict → C3
+form+confirm → C4 policy+header → C5 graph-review+queue.**
+
+**C1 status:** dispatched twice. First attempt (agentId
+a0e5518f624cfa05c) returned a completion report but made ZERO file
+changes — `git status` was clean after — a nested-dispatch/description-
+only failure, caught by verifying before trusting. Redispatched
+(agentId abfbee58413513ef0) with an explicit "do the work yourself,
+right now, in this turn" instruction. **Its outcome is UNKNOWN as of
+this pause** — it may have completed, partially completed, or still be
+running in the background; the session ended before its notification
+was seen.
+
+**Next session must, in order:**
+1. Run `git status --short` FIRST. If it shows changes, that's
+   abfbee58413513ef0's work — read the diff, do NOT trust any prior
+   "done" claim without seeing it, then run the full verification
+   yourself: `npm test` x3, `npx tsc --noEmit`, `npm run build`,
+   `python3 scripts/spec-parity-check.py`, live browser walkthrough of
+   the Register screen. If clean and correct, commit + push (the
+   audit-trail rule — every chunk committed when verified).
+2. If `git status` is clean, redispatch chunk 1 from
+   requirements-015.md §1 R15-C1 (the prompt used for abfbee58413513ef0
+   is a good template — search this session's tool calls, or just
+   re-read proposal.md §3.3 + §3.8 + §7 and requirements-015 R15-C1/S4
+   and write a fresh dispatch).
+3. Continue chunk order C2 → C5 once C1 is verified and shipped, each
+   with its own independent verification before commit — never trust an
+   agent's self-report alone (this session's own near-miss is the
+   reason why).
+
+**Model for the build session: Sonnet** (already switched
+2026-08-25, per the router addendum — build work does not need
+Fable/Opus).
 
 ---
-
 ## CURRENT STATE (2026-08-17) — superseded, kept for history
 
 **v0.9.0+ live, 537 tests, CI green on GitHub (first run 2026-08-17).**
