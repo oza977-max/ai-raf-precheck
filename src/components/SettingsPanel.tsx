@@ -122,14 +122,15 @@ export default function SettingsPanel() {
           </button>
 
           <p>
-            Or a fuller picture: {ibCaseCount()} investment-bank use cases across Markets,
-            Advisory, Operations, Finance, HR, Technology, Risk, Compliance and Legal — each
-            scored by the real engine, most carrying a full 1LoD→2LoD chain on the audit trail
-            (several are left awaiting sign-off so the reviewer queue has real work, and one
-            carries a rule challenge). Reviewer names are seeded samples, marked as such.
+            A fuller picture loads automatically on first visit: {ibCaseCount()} investment-bank
+            use cases across Markets, Advisory, Operations, Finance, HR, Technology, Risk,
+            Compliance and Legal — each scored by the real engine, most carrying a full
+            1LoD→2LoD chain on the audit trail (several are left awaiting sign-off so the reviewer
+            queue has real work, and one carries a rule challenge). This button is here if you
+            cleared your data and want it back. Reviewer names are seeded samples, marked as such.
           </p>
           <button type="button" onClick={handleSeedIb} disabled={busy !== 'none'}>
-            {busy === 'seeding-ib' ? 'Loading…' : 'Load investment-bank portfolio'}
+            {busy === 'seeding-ib' ? 'Loading…' : 'Reload investment-bank portfolio'}
           </button>
 
           {!confirmingClear && (

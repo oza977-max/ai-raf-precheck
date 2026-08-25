@@ -13,6 +13,7 @@ import { translationAttestationStatus } from './engine/attestation';
 import { loadPacks } from './store/packs';
 import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
+import { seedIbPortfolio } from './seeds/ib-portfolio';
 import './fonts.css';
 import './App.css';
 
@@ -113,6 +114,15 @@ export default function App() {
     seedStarted.current = true;
     seedAigateSelfAssessment(policyResult.policy, loadedPacks).catch((err) => {
       console.warn('AIGate self-assessment seeding failed:', err);
+    });
+    // A first-time visitor's register was otherwise empty but for AIGate's
+    // own self-assessment — nothing to show the risk-knowledge lens, the
+    // 2LoD sign-off queue or a filed rule challenge actually doing
+    // something. seedIbPortfolio() is idempotent and race-safe the same
+    // way (in-flight promise cache, per-id skip in store/register) — same
+    // best-effort, non-blocking pattern as the self-assessment above.
+    seedIbPortfolio(policyResult.policy, loadedPacks).catch((err) => {
+      console.warn('Investment-bank portfolio seeding failed:', err);
     });
   }
 
