@@ -1,0 +1,308 @@
+{
+ "verdicts": [
+  [
+   "Clarity & plain language (Redish / Doumo",
+   "targeted-redesign"
+  ],
+  [
+   "AI Governance (NIST AI RMF \u00b7 Stuart Russ",
+   "targeted-redesign"
+  ],
+  [
+   "Regulation & supervisory defensibility (",
+   "targeted-redesign"
+  ],
+  [
+   "Banking practice & the two users (SR 11-",
+   "targeted-redesign"
+  ],
+  [
+   "Interaction Design (Cooper / Krug / Fogg",
+   "targeted-redesign"
+  ],
+  [
+   "Information layout &amp; accessibility (",
+   "targeted-redesign"
+  ]
+ ],
+ "objections_total": 32,
+ "blocking": [
+  [
+   "Banking practice & the tw",
+   "Interaction Design (Coope",
+   "ID-4: pin the sign-off action bar (name, notes, Approve/Requ",
+   "As written, with no role gate, this makes the single worst thing on today's page better for Priya and worse for James at the same time. Today James at least has to scroll past the Approve button to ignore it; under ID-4 "
+  ],
+  [
+   "Clarity & plain language ",
+   "Information layout & acce",
+   "F1's worked example for the new STAGE_LABELS map \u2014 explicitl",
+   "This recreates, in the very fix meant to clean up the register, the exact regression CLAUDE.md's gotcha section warns about: 'the verdict screen is asserted with a single-match /approved|rejected/i query... avoid those t"
+  ],
+  [
+   "AI Governance (NIST AI RM",
+   "Interaction Design (Coope",
+   "Finding ID-6 \u2014 'fold [model confident \u2014 no verified basis] i",
+   "These are not the same epistemic state and collapsing them is a governance regression dressed as a UI simplification. 'Guessed' means the model told the reader it doesn't know. 'Confident \u2014 no verified basis' means the m"
+  ]
+ ],
+ "chair_rec": "targeted-redesign",
+ "headline": "Six panels, six independent lenses, one verdict: AIGate is not too technical because of what it says \u2014 it is too technical because of where and how it says it. Nothing in the engine, the rules, the audit trail, or the honesty markers needs to change. What needs to change is the order, grouping and vocabulary on the four screens that never received the treatment the graph-review screen got in Round 9 \u2014 the verdict/sign-off page, the guided intake form, the register list and the appetite-framework screen \u2014 plus one screen none of the panels caught: the Confirm & attest step still shows raw codes (\"traditional-ml \u00b7 L3 \u00b7 Zone B \u00b7 execute\") at the exact moment a submitter signs their name to the description. I recommend a targeted redesign delivered as one coordinated round of five build chunks, in the R9 manner (aggregate, prioritise, put one click away \u2014 never delete). Not a copy patch: it would leave the verdict page and the form as confusing as today. Not a full redesign: no panel found a fault in the flow or the information architecture, and a rebuild would put the caveats that make the product defensible first in line to be lost. Every disagreement between panels is settled below by a stated principle rather than a vote, and every overruled position is recorded. Three facts from the code that neither round of the panels had: the sign-off buttons are already hidden from the 1LoD role today (so the role-gating fight was about a decision already shipped \u2014 the fix is to label the role switcher honestly), the verdict page already has an accessible fold component with an honesty-floor override (so the recomposition is cheaper than the panels assumed), and the \"describe in plain language\" path is already the default entry point.",
+ "options": [
+  {
+   "name": "Option A \u2014 Patch the copy",
+   "what": "STAGE_LABELS for the register; strip internal requirement codes (LC-2, NF-2, PE-4, VD-4, UC-*) from every sentence; technical terms on form options become a small muted suffix; 'firm rules (invariants)'; reword the no-basis badge; plain labels on the Confirm & attest screen; relabel the role switcher as a view preference.",
+   "cost": "1\u20132 build chunks, roughly two days of pipeline work at the project's R9/R14 pace; one or two releases; modest test churn (scoped queries, reserved-word checks).",
+   "risk": "Low technical risk, high product risk: the verdict/sign-off page stays a wall and the intake form stays a flat list of 16 questions, so the 'too confusing' complaint survives on the two screens that matter most. This is the floor, not the fix."
+  },
+  {
+   "name": "Option B \u2014 Targeted redesign, one coordinated round (recommended)",
+   "what": "Everything in A plus: verdict/sign-off page recomposed (provisional banner first, 'Before you sign off' checklist with jump links, one line per rule with all citations visible, controls as summary-then-detail, section nav, advisory qualifier at first mention); guided form grouped into five plain-language sections with help behind 'Why we ask' and no field hidden; register with a 2LoD 'awaiting your sign-off' default, grouped filters, an always-visible legend, a provisional banner and a Flags column; appetite-framework screen with the readable rulebook by default and the YAML editor behind a disclosure; graph-review label reuse, badge reword, 'not stated' flag and aria state; queue copy and source tags; header fidelity chip. Shipped as a requirements round with test cases so 'never delete' is test-enforced.",
+   "cost": "Five build chunks in order (register \u2192 verdict \u2192 form + confirm \u2192 policy + header \u2192 graph review + queue), roughly 6\u20139 working days at the project's recent pace; each chunk carries the house ritual (tests \u00d73, typecheck, build, spec .md + .html parity, live walkthrough, commit and push). Expect to update scoped test queries in several files and to write an R-next requirements document first.",
+   "risk": "Moderate and known: reserved-word collisions (gated per label), an implementer conflating regulatory citations with spec IDs (gated by the three-class rule), spec drift between .md and .html (parity check), and the Low-tier stage-label semantics needing a builder check before landing. No engine, audit or honesty change, so the determinism and honesty test suites remain the safety net."
+  },
+  {
+   "name": "Option C \u2014 Full redesign",
+   "what": "New information architecture and visual language from a fresh mockup; re-derive every screen and every disclosure.",
+   "cost": "3\u20136 weeks plus full re-verification of ~540 tests; discards field-copy.ts, the R9 and R14 recompositions and the accessible fold infrastructure that already work where applied.",
+   "risk": "Highest. The hedged-sounding caveats that make the product defensible \u2014 'self-asserted, not verified', 'restates the record; it does not strengthen it', 'proof-of-concept grade' \u2014 are the first casualties of a 'make it feel finished' pass; and no panel found a fault in the flow or architecture that would justify it. Not recommended."
+  }
+ ],
+ "conflicts": [
+  [
+   "Banking practice F1 vs Clarity, Interaction design",
+   "Whether the Approve / Request correction / Challenge controls should be rendered only for the 2LoD role",
+   "Keep the gating the product already ships (RegisterDetail.tsx renders the action bar only for role 2LoD and stage pre_checked) \u2014 both sides argued as if this were new. Add no new role-based hiding this round; relabel the",
+   "P1 honesty floor (the UI never implies a capability it lacks) + P4 per-role defaults, never per-role"
+  ],
+  [
+   "Banking practice F6 / AI governance AIG-7 / Regula",
+   "Whether the raw-YAML policy editor should be gated behind the 2LoD role",
+   "Default view of the appetite-framework screen is the human-readable rulebook (lever cards, hard lines, packs, risk knowledge) for every role; the YAML editor sits behind a closed-by-default disclosure with an honest one-",
+   "P1 honesty floor + P3 layer, never delete + Regulation's narrower 'who can change the rules'"
+  ],
+  [
+   "Interaction design ID-4 vs Regulation, AI governan",
+   "Pin a sticky sign-off action bar directly under the verdict summary",
+   "No sticky Approve button. A state-derived 'Before you sign off' checklist header (binding rule with citation, controls and evidence counts, jurisdiction status, rulebook-translation status, advisory risk-gap) with jump l",
+   "P1 defensibility floor \u2014 the attestation must follow the evidence it attests to; P5 reflow/focus"
+  ],
+  [
+   "Information layout F3 vs Regulation (with Clarity ",
+   "Fold the 12-rule 'Why this verdict' list to one visible rule plus a count",
+   "One line per rule \u2014 plain name, severity, rule ID as quiet code, citation chip \u2014 all 12 visible by default grouped Critical/High/Medium; description and 'closed by' open per rule; one-line legend for hard line / firm rul",
+   "P1 citation chain traceable without a click + P3 compress, never hide"
+  ],
+  [
+   "Interaction design ID-7 and Information layout F7 ",
+   "Remove 'translation fidelity: unattested' from the persistent header",
+   "Compress, don't remove: a small warning chip with an accessible disclosure (not the existing title= tooltip) on every screen, and a full-sentence line in the verdict page's sign-off checklist.",
+   "P1 \u2014 a pack-level provisional marker travels with every decision it qualifies; P3 layer, never delet"
+  ],
+  [
+   "Interaction design ID-6 vs AI governance (blocking",
+   "Fold 'model confident \u2014 no verified basis' into the 'guessed' visual language",
+   "Keep three distinct provenance states and the no-plain-confirm gating unchanged; reword the badge toward action ('not found in your text \u2014 worth a second look'); same badge shape as guessed so they read as a family, but ",
+   "P1 \u2014 the epistemic states are load-bearing against automation bias; P2 served by rewording"
+  ],
+  [
+   "Interaction design ID-3 vs AI governance AIG-3, Re",
+   "Put platform, vendor and decision type behind an 'advanced' toggle on the guided form",
+   "No field goes behind a toggle. Density comes from five plain-language section groups, help text collapsed behind 'Why we ask', and '(optional \u2014 blank means: \u2026)' phrasing; decision type and human-check get a quiet 'not st",
+   "P1 \u2014 model identity is first-class governance data and decision-bearing omissions must stay visible;"
+  ],
+  [
+   "Information layout vs Clarity F6, Interaction desi",
+   "Hover tooltips as the delivery mechanism for meanings and technical codes",
+   "No hover-only meaning anywhere (including the header's current title attribute). Short meanings render as always-visible secondary text or a legend; technical codes as a muted always-visible suffix; long content behind a",
+   "P5 accessibility is part of comprehension (WCAG 1.4.13, 4.1.2)"
+  ],
+  [
+   "Interaction design ID-1 (list including INV-*, CTR",
+   "Which bracketed codes to strip from rendered prose",
+   "Three named classes: internal spec/requirement codes (LC-2, NF-2, PE-4, VD-4, NF-10, UC-4, UC-6) deleted outright; rule and control IDs (INV-*, CTRL-*, HL-*, DR-*) kept as quiet code beside the plain name; regulatory cit",
+   "P1 + P3 carve-out (exhaust is not a disclosure) + P4 plain word with the code beside it"
+  ],
+  [
+   "Interaction design ID-2 aside vs Clarity, AI gover",
+   "Whether the register's Stage column is redundant with Status",
+   "Keep both; relabel Stage in plain words via STAGE_LABELS. Stage (where the case is in its life) and Verdict (what the rules decided) answer different questions, and the 2LoD default view depends on Stage.",
+   "P3 never delete; the workflow dimension powers the reviewer's queue"
+  ],
+  [
+   "Interaction design vs Information layout F6",
+   "Vocabulary of the guided form's section headers",
+   "Plain header with the engine term beside it ('What it uses (input data)'), fieldset/legend for screen readers, one continuous scroll with no paging.",
+   "P4 both-sides design"
+  ],
+  [
+   "Clarity F2 vs Regulation",
+   "Replace the 'Approved with controls \u00b7 Provisional \u00b7 pre_checked' chip stack with one plain sentence",
+   "Additive: a plain lead sentence is added; the literal 'Approved with controls \u00b7 Provisional' pair stays together beside it; only the raw pre_checked token leaves the row.",
+   "P1 \u2014 the literal verdict and its qualifier stay visually inseparable wherever the verdict renders"
+  ],
+  [
+   "Banking practice F7 vs AI governance, R9-SC-2",
+   "Collapse confident, quoted fields on the graph review into a one-line 'N fields confirmed automatically' summary",
+   "Overruled: the values are what the human attests to and 'confirmed automatically' would overclaim. Long provenance quotes may truncate with expand; values never collapse.",
+   "P1 \u2014 the human attests to what they see"
+  ],
+  [
+   "Information layout F8 vs AI governance",
+   "Outstanding-control checklist lines 'disappearing when done'",
+   "Lines move to an 'addressed' group with their IN PLACE / UNVERIFIED status still attached; nothing vanishes.",
+   "P1 + P3"
+  ],
+  [
+   "AI governance AIG-6 with Information layout's acce",
+   "Mostly-empty Stale and Sampling columns",
+   "Single 'Flags' column; badge only when true; stable accessible name for the empty state.",
+   "P3 + P5"
+  ],
+  [
+   "Information layout F1 worked example vs Clarity (b",
+   "Stage label for the approved stage rendered as 'Approved'",
+   "'Cleared' \u2014 avoids the /approved|rejected/i trap and does not overclaim for Low-tier self-service cases; a shared reserved-word gate applies to every new label in the round.",
+   "P6 reserved words and determinism"
+  ],
+  [
+   "Interaction design and Banking practice vs the shi",
+   "Make the plain-language description path the default entry point",
+   "It already is step 1 for everyone; only the model-based reading is gated on a configured local model. No change; one copy check on step 1 for the no-model case.",
+   "Fact over assumption"
+  ]
+ ],
+ "dissents": [
+  [
+   "Interaction design (ID-4)",
+   "Pin the name/notes/Approve action bar as a sticky element directly under the verdict summary so the trigger lands while motivation is high.",
+   "An attestation control positioned before the evidence it attests to is the ritual-checking failure effective-challenge review exists to prevent (Regulation, Governance, Banking all"
+  ],
+  [
+   "Interaction design (ID-6)",
+   "Fold 'model confident \u2014 no verified basis' into the existing 'guessed' visual language.",
+   "Guessed and confident-without-basis are different epistemic states with different gating (guessed cards get no plain confirm); merging their visual language invites merging their l"
+  ],
+  [
+   "Interaction design (ID-3)",
+   "Progressively disclose platform, vendor and decision type behind an 'advanced' toggle.",
+   "Model/vendor/platform identity is the data the firm's own silent-substitution rule depends on (Governance non-negotiable) and decision type / human-check are decision-bearing field"
+  ],
+  [
+   "Interaction design (ID-1 list ",
+   "Treat INV-*, CTRL-*, HL-* rule and control IDs as internal identifiers that must never appear in rendered copy.",
+   "Rule and control IDs are the exact audit citation a second-line reviewer needs to map a verdict to the rulebook (Governance, Regulation, Clarity). They stay, demoted to quiet code "
+  ],
+  [
+   "Interaction design (ID-7) and ",
+   "Remove 'translation fidelity: unattested' from the persistent header, keeping it only where it is actionable.",
+   "It is a pack-level provisional marker that bears on every citation a reviewer weighs at sign-off; removing it from the decision path is a real loss (Clarity, Regulation, Banking). "
+  ],
+  [
+   "Information layout (F3)",
+   "Keep only the single Critical rule and a count visible; fold the full 12-rule list behind 'show all rules'.",
+   "The rule list is the evidentiary chain, not reference material; eleven citations must not sit below a fold by default (Regulation's non-negotiable; Governance and Clarity concurred"
+  ],
+  [
+   "Information layout (F1 worked ",
+   "Map the approved lifecycle stage to the label 'Approved'.",
+   "It reintroduces the /approved|rejected/i test-fragility trap CLAUDE.md warns about (Clarity's blocking objection) and could overclaim for Low-tier self-service cases; 'Cleared' is "
+  ],
+  [
+   "Banking practice (F1)",
+   "Render the Approve/Request correction/Challenge block only when the active role is 2LoD, and key the sticky action bar's content to role.",
+   "The first half is already shipped (RegisterDetail.tsx gates the action bar on role and stage in JSX) so it is moot; the second half falls with ID-4. Going further \u2014 adding new role"
+  ],
+  [
+   "Banking practice (F6)",
+   "Gate the raw-YAML edit/save control behind the 2LoD role the same way rule challenges already are.",
+   "A case reviewer is not automatically a rule author (Regulation) and a self-asserted role is not a lock (Governance, IxD). Resolved by information-architecture separation \u2014 readable"
+  ],
+  [
+   "Banking practice (F7)",
+   "Collapse fully-confident quoted fields on the graph review into a one-line 'N fields confirmed automatically' summary per card.",
+   "The values are what the human attests to (R9-SC-2: meaning always visible) and 'confirmed automatically' claims a confirmation that has not happened (Governance non-negotiable). Lo"
+  ],
+  [
+   "Regulation & supervisory (coun",
+   "Platform and vendor may go behind progressive disclosure while decision type and human-check stay visible.",
+   "Minor: Governance's non-negotiable that model/vendor/platform remain explicit first-class fields wins; no field is hidden on the guided form."
+  ],
+  [
+   "Clarity & plain language (F6 m",
+   "Deliver Tier/Track meanings as hover tooltips on the register chips; replace the status chip stack with a plain sentence.",
+   "On mechanism only: hover-only content fails touch, keyboard and screen-reader users (Layout), so the meanings become an always-visible legend; and the literal 'Approved with contro"
+  ],
+  [
+   "Information layout (F6 exact h",
+   "Reuse GraphView's exact 'Input data / Processing / Output' headings as the form's section headers.",
+   "Modified, not rejected: those are the engine's data-flow words (IxD); the headers read in the submitter's language with the engine term beside them, preserving continuity for the r"
+  ]
+ ],
+ "preserved": [
+  "Clarity & plain language: no honesty disclosure deleted (unsigned packs stay provisional, controls without evidence stay UNVERIFIED, the audit trail keeps saying client-side / proof-of-concept); canonical vocabulary (enum values, rule IDs, control IDs) stays retrievable on every screen as quiet code or muted suffix while never being the first thing a non-technical reader sees; every new label has a plain-English companion sourced from field-copy.ts (STAGE_LABELS, TIER/TRACK meanings); reserved-word discipline gated on every new string; R9's disclosure shape reused rather than reinvented; determinism and engine untouched (Rule 4 presentation-only).",
+  "Interaction design: the deterministic, non-chatbot framing and the plain-English 'why' stay visible; each persona's question leads its screen (James: 'What you need to do'; Priya: 'Before you sign off'); internal spec/requirement IDs (LC-2, NF-2, PE-4, VD-4, UC-*) removed from all rendered prose (rule/control IDs retained as quiet code \u2014 recorded dissent); reserved words not reintroduced; the guided-form restructure changes presentation only, never the canonical field set or values.",
+  "Information layout & accessibility: every honesty marker (PROVISIONAL, UNVERIFIED, OUTSTANDING, guessed, no-verified-basis) legible by text or icon, never colour alone; progressive disclosure reorders or folds but never deletes; default-open state tracks importance (provisional banner first, evidence table unfolded while anything is unverified); every new fold/toggle carries aria-expanded/aria-controls or uses the native details Fold; no raw enum on any screen; no hover-only meaning (including fixing the header's existing title tooltip).",
+  "AI governance: per-field AI-proposed / quoted / guessed / confident-no-basis marking stays intact and the guessed-card no-plain-confirm rule is untouched, with no 'confirm all'; model, vendor and platform remain explicit, correctable, first-class fields on the form and the review; the three-lever split (appetite decides / regulation decides where it applies / knowledge informs) stays visually and structurally distinct with the advisory qualifier attached at first mention; hard lines, firm invariants and jurisdiction-pack rules remain three labelled kinds with a legend, never merged; the attestation record ('Confirmed by you', who proposed vs corrected, provisional-until-signed-off) stays intact; no copy claims more certainty than the system has.",
+  "Regulation & supervisory defensibility: every rule line keeps its exact regulatory citation, visible without a click; 'Approved with controls' never renders apart from its 'Provisional' qualifier; the audit trail stays append-only, unfolded, complete and labelled proof-of-concept; named human sign-off stays a distinct action with the self-asserted-identity caveat verbatim beside Approve; the effective-challenge memo keeps 'It restates the record; it does not strengthen it' verbatim; the three-lever separation is visible on every rule-bearing screen (risk-knowledge in a visibly different container); the rule \u2192 control \u2192 citation \u2192 evidence-status chain stays traceable end to end; 'translation fidelity: unattested' stays on the decision path as a chip and a checklist line.",
+  "Banking practice & the two users: every verdict stays traceable to a named rule and citation even when compressed for James; Provisional / UNVERIFIED / guessed / no-verified-basis keep their current strength; the three-lever ownership model stays explicit on every rule-bearing screen; sign-off actions remain unreachable and visually absent in the 1LoD view (as already shipped) with the role switcher honestly labelled a view preference; plain-language simplification stays strictly a rendering concern and never reduces the question set, field coverage, or citation depth."
+ ],
+ "skeptics": [
+  [
+   "Honesty-and-defensibility skeptic: does any elemen",
+   true,
+   "The proposal's core recommendation is sound and unusually well-grounded in the actual source \u2014 every claim I spot-checked against GraphView.tsx, ConfirmationStep.tsx, RegisterDetail.tsx, register.ts and field-copy.ts held up, including the two novel code-level facts (role gating already shipped; UC-6 raw codes at attestation). But the fix for that very raw-code defect is scoped to the wrong surface: the same graphSummaryRows() function that produces \"traditional-ml \u00b7 L3 \u00b7 Zone B \u00b7 execute\" also renders inside VerdictDisplay.tsx's Record & provenance panel on the verdict/sign-off page \u2014 the exact page \u00a73.1 is redesigning for Priya \u2014 and no part of \u00a73.1 or \u00a73.5 names or fixes that second call site, so a 2LoD reviewer would still meet raw codes at sign-off after the round ships. Separately, the new \"Before you sign off\" checklist plus a sticky nav item that jumps straight to Sign-off lets a reviewer reach Approve in one click without ever touching the reasoning or evidence \u2014 reintroducing, under a different name, the exact ritual-checking risk the chair explicitly rejected ID-4's sticky Approve bar for \u2014 and the audit trail's actor field is the same self-asserted, ungated role string that drives whether the Approve button even renders, yet only the signer's name gets an honesty caveat, not the role. Recommend: fix the graph-summary scope gap and the nav/checklist rubber-stamp path before the R-next ticket is written; both are small, targeted amendments that don't touch the recommendation itself.",
+   [
+    [
+     "\u00a73.1 Verdict/sign-off recomposition + \u00a73.5 Confirm & attest fix",
+     "blocking",
+     "graph-summary.ts's graphSummaryRows() \u2014 which produces the raw 'traditional-ml \u00b7 L3 \u00b7 Zone B \u00b7 execute' string the chair singles out as the one defect no panel caught \u2014 is imported and rendered in TWO",
+     "Route graphSummaryRows()'s output through field-copy.ts at the shared function (or a shared rendering wrapper used by both callers) rather than fixing ConfirmationStep.tsx in isolation, so VerdictDisp"
+    ],
+    [
+     "\u00a73.1 verdict page \u2014 'Before you sign off' checklist + sticky section n",
+     "serious",
+     "The sticky section nav includes 'Sign-off' as an always-clickable item from the moment the page loads, and the checklist above it is presented as a compressed five-line summary. A 2LoD reviewer can cl",
+     "Either omit 'Sign-off' from the sticky nav (require scrolling through the reasoning, as today, to reach it) or gate the Approve control's enabled state behind having expanded/visited the checklist ite"
+    ],
+    [
+     "\u00a73.8 role-switcher relabel ('Viewing as \u2014 a view preference; this buil",
+     "serious",
+     "RegisterDetail.tsx confirms the entire action bar (Approve/Request correction/Challenge) is gated purely on the client-side string `role === '2LoD'` (line 548), and every audit event this round writes",
+     "Add the same 'self-asserted, no sign-in' caveat next to the role indicator on the sign-off block (not just the header switcher), and render the audit-trail's actor field with that caveat attached wher"
+    ]
+   ]
+  ],
+  [
+   "Feasibility for James (1LoD, 10 min) and Priya (2L",
+   true,
+   "The core call \u2014 targeted redesign, presentation-only, five chunks in the R9 manner \u2014 is sound and every constraint that matters (engine island, determinism, append-only audit, honesty markers) is genuinely respected; most of the chair's \"facts from the code\" check out under direct inspection. But the headline claim that the verdict/sign-off page \"never received the Round-9 treatment\" is factually wrong \u2014 requirements-014.md shows an R14 recomposition applying that exact idiom (folds, honesty-floor-never-folds, \"What you need to do\" moved under the headline) was approved and shipped in the same v0.16.0 build the chair reviewed, which both inflates chunk 2's portrayed scope/cost and undercuts the document's central \"we found what the panels couldn't see\" claim. Five further concrete gaps \u2014 a shared raw-code-rendering function split across two build chunks, a checklist that visually promises interactivity it doesn't have, a register column change that contradicts an existing Must-level test/spec requirement without a planned requirements amendment, an under-flagged collision with the codebase's known brittle `/approved|rejected/i` test pattern on the exact page being rewritten, and one internally contradictory build gate \u2014 need fixing before a build session should start, but none of them touch the recommendation itself: this survives as Option B once those six items are corrected in the document.",
+   [
+    [
+     "Headline / \u00a71 and \u00a73.1 \u2014 \"the verdict/sign-off page ... never received",
+     "blocking",
+     "Factually false. requirements/requirements-014.md records Round 14, \"The Verdict Screen Recomposed,\" approved 2026-08-18 and explicitly scoped as \"the R9 idiom applied to the verdict screen\" \u2014 folds w",
+     "Correct the headline and \u00a73.1 framing to \"received R14, a partial R9-idiom pass, on 2026-08-18 \u2014 this round finishes the job\": list exactly what R14 already delivered (fold structure, ordering, honest"
+    ],
+    [
+     "\u00a73.5 Confirm & attest vs. VerdictDisplay.tsx \"What you told us\" fold",
+     "serious",
+     "graph-summary.ts's graphSummaryRows() is shared between ConfirmationStep.tsx (the screen the proposal fixes) and VerdictDisplay.tsx's \"What you told us\" fold, which renders the identical raw codes (tr",
+     "Note graph-summary.ts as a shared dependency in \u00a73.1 and \u00a73.5, move the graphSummaryRows() label fix into chunk 2 (or make chunk 2 explicitly depend on it), and add \"What you told us\" to the \u00a73.1 wire"
+    ],
+    [
+     "\u00a73.1 \"Before you sign off\" checklist \u2014 the \u2610 glyphs",
+     "serious",
+     "The checklist renders five items with a \u2610 prefix and says each \"jumps to its section\" \u2014 i.e., they are static facts with a jump-link, not completable tasks. But \u2610 means a real, togglable checkbox inpu",
+     "Use a distinct glyph/affordance for the read-and-jump checklist (e.g. a chevron or bullet, not a checkbox square) so it's visually distinguishable from the product's real checkbox inputs, and say so e"
+    ],
+    [
+     "\u00a73.3 Register \"Flags\" column vs. RegisterView.test.tsx TC-RG-2-02 / re",
+     "serious",
+     "An existing Must-level acceptance test (TC-RG-2-02, \"2LoD view shows all use cases ... with the \u00a710.2 column set including Submitter and Stale\") asserts a named \"Stale\" column/badge (.register-view__s",
+     "Either drop the Stale/Sampling merge from scope, or add an explicit requirements-amendment step to chunk 1 that updates register-lifecycle.md \u00a710.2's column-set requirement and re-derives TC-RG-2-02 b"
+    ]
+   ]
+  ]
+ ]
+}
