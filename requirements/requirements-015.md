@@ -133,6 +133,7 @@ attested values. Option C (full redesign) declined by the owner.
 | Date | Change |
 |---|---|
 | 2026-08-25 | Round 15 drafted from design-deliberation-001's Option B + skeptic amendments; approved by the owner the same day. |
+| 2026-08-25 | All five chunks (R15-C1 through R15-C5) now built, each independently re-verified (`npm test` ×3, `tsc`, build, spec-parity) — see `test-cases/test-cases-015.md` for per-chunk traces. This is a build-status note, not a release; version bump, tag and publish are a separate step. |
 
 ---
 

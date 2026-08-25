@@ -2400,8 +2400,20 @@ details input {
   font-size: 0.95rem;
 }
 
-.rule-queue__rule-label {
+/* R15-C5 (proposal §3.9): the plain rule name now leads the heading; the
+   rule id is demoted to quiet code beside it, not deleted. */
+.rule-queue__rule-id {
+  margin-left: 0.4rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
   font-weight: 400;
+  color: var(--ink-faint);
+}
+
+/* R15-C5: distinguishes a human reviewer's challenge from one the
+   risk-knowledge lens filed automatically — same weight, no alarm color. */
+.rule-queue__source-tag {
+  font-weight: 600;
   color: var(--ink-faint);
 }
 
@@ -2697,14 +2709,58 @@ details input {
   font-size: 0.9rem;
 }
 
-.graph-node__guessed-badge {
+/* R15-C5 (proposal §3.6): quiet code beside the plain field label — the
+   engine field name is demoted, not deleted. Inherits the dt's uppercase
+   mono treatment naturally since it sits inside the same <dt>. */
+.graph-node__field-code {
+  margin-left: 0.35rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+}
+
+/* R15-C5: shared badge family for "look again" provenance states —
+   "guessed" and "not found in your text — worth a second look" read as one
+   visual family so a reviewer's eye groups them, while each keeps its own
+   modifier class and its own text (dissent #6, IxD ID-6 overruled — the
+   two states and their gating are NOT merged). "not stated" shares the
+   shape but a quieter, non-alarm color: it flags an unanswered field, not
+   an unverified one. */
+.graph-node__badge {
   display: inline-block;
   font-size: 0.75rem;
-  color: var(--ink-faint);
-  border: 1px dashed var(--warn-border);
   border-radius: 4px;
   padding: 0.05rem 0.4rem;
   margin-top: 0.15rem;
+}
+
+.graph-node__guessed-badge {
+  color: var(--ink-faint);
+  border: 1px dashed var(--warn-border);
+}
+
+.graph-node__badge--no-basis {
+  color: var(--ink-faint);
+  border: 1px dashed var(--warn-border);
+}
+
+.graph-node__badge--not-stated {
+  color: var(--ink-faint);
+  border: 1px dashed var(--ink-faint);
+}
+
+/* R15-C5: the truncate-with-expand control for a long provenance quote —
+   the field VALUE above it never truncates; only this supporting quote may. */
+.graph-node__quote-expand {
+  display: inline-block;
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 0;
+  margin-left: 0.3rem;
 }
 
 .graph-node__advisory {
