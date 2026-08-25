@@ -10,77 +10,38 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25, paused mid-R15-C1) — supersedes everything below
+## CURRENT STATE (2026-08-25, R15-C1 shipped) — supersedes everything below
 
-**v0.16.0 live, 659 tests, CI green.** Read build/OPERATING-REGIME.md
-first (context-handover / model-router / audit-trail rules + the
-"main-loop model follows work type" addendum — Sonnet for build
-sessions, Fable/Opus for synthesis).
+**v0.16.0 + R15-C1 live, 669 tests, working tree clean.** Read
+build/OPERATING-REGIME.md first (context-handover / model-router /
+audit-trail rules; Sonnet for build sessions).
 
-**PAUSED HERE, ON OWNER REQUEST (usage limit approaching) — clean
-stopping point, working tree CLEAN (nothing uncommitted).**
+R15 (Option B targeted redesign) in progress. requirements/
+requirements-015.md is the build contract; design source of truth is
+reviews/design-deliberation-001/proposal.md; skeptic amendments S1-S4
+bound as Musts. Chunk order: **C1 register (SHIPPED) → C2 verdict
+(NEXT) → C3 form+confirm → C4 policy+header → C5 graph-review+queue.**
 
-R15 (Option B targeted redesign) is APPROVED and in progress.
-requirements/requirements-015.md is the build contract; the design
-source of truth is reviews/design-deliberation-001/proposal.md; the
-skeptics' amendments (S1-S4) are bound into requirements-015 §1 as
-Musts. Chunk order: **C1 register (IN PROGRESS) → C2 verdict → C3
-form+confirm → C4 policy+header → C5 graph-review+queue.**
+**C1 lesson learned, now standing practice:** a build agent's own
+"done" report is not verification. First C1 dispatch returned a
+complete-sounding report with ZERO actual file changes (git status
+clean after). Caught only by checking git status before trusting.
+Redispatched with an explicit "do the work yourself, right now"
+instruction; that one produced real diffs, independently re-verified
+(tests x3 incl. a proper `git stash -u` baseline comparison, tsc,
+build, spec-parity, live browser walkthrough with zero console errors)
+before commit. Apply this to every future chunk: read the diff, run
+the ritual yourself, never commit on a self-report alone.
 
-**C1 status:** dispatched twice. First attempt (agentId
-a0e5518f624cfa05c) returned a completion report but made ZERO file
-changes — `git status` was clean after — a nested-dispatch/description-
-only failure, caught by verifying before trusting. Redispatched
-(agentId abfbee58413513ef0, "do the work yourself, right now") — THIS
-ONE DID WRITE REAL CHANGES, confirmed by `git status --short` at pause
-time:
+**Next: dispatch R15-C2** (verdict/sign-off recomposition) per
+requirements-015.md R15-C2 + proposal.md §3.1, with skeptic amendments
+S1 (frame as finishing R14's partial pass, not "never touched"), S2
+(no checkbox glyphs on the sign-off checklist; no direct nav shortcut
+to Sign-off — must scroll through reasoning), S3 (role honesty at the
+point of approval, not just the header). This is the biggest chunk —
+budget accordingly.
 
-```
- M specs/register-lifecycle.html
- M specs/register-lifecycle.md
- M src/App.css
- M src/App.tsx
- M src/components/RegisterView.tsx
- M src/components/__tests__/App.r12.test.tsx
- M src/components/__tests__/RegisterView.r12.test.tsx
- M src/components/__tests__/RegisterView.test.tsx
- M src/components/__tests__/WalkingSkeleton.test.tsx
- M src/components/field-copy.ts
-?? src/components/__tests__/App.r15c1.test.tsx
-?? src/components/__tests__/RegisterView.r15c1.test.tsx
-```
-
-**UNVERIFIED AND UNCOMMITTED as of this pause** — the diffs exist on
-disk but no test/tsc/build/parity check has run yet this session, and
-the agent's own self-report was never read. Do not trust it unread.
-
-**Next session must, in order:**
-1. Read the agent's actual reply first: `abfbee58413513ef0` — get its
-   full result via the harness (its report should still be resumable/
-   readable), specifically the Low-tier "Cleared" lifecycle-check
-   conclusion it was asked for.
-2. `git diff` each file above and sanity-read it against
-   requirements-015.md R15-C1 and proposal.md §3.3/§3.8 before running
-   anything — confirm it actually did S4 (the register-lifecycle spec
-   amendment) FIRST, not as an afterthought.
-3. Run the full verification yourself: `npm test` x3, `npx tsc
-   --noEmit`, `npm run build`, `python3 scripts/spec-parity-check.py`,
-   live browser walkthrough of the Register screen (2LoD default view,
-   legend, Flags column, self-assessment row, role-switcher honesty
-   note). Fix anything that fails.
-4. If clean and correct, commit + push (the audit-trail rule — every
-   chunk committed when verified, never left dangling).
-5. Continue chunk order C2 → C5, each with its own independent
-   verification before commit — never trust an agent's self-report
-   alone (this session's own near-miss on the FIRST c1 attempt is
-   exactly why).
-
-**Model for the build session: Sonnet** (already switched
-2026-08-25, per the router addendum — build work does not need
-Fable/Opus).
-
----
-## CURRENT STATE (2026-08-17) — superseded, kept for history
+---## CURRENT STATE (2026-08-17) — superseded, kept for history
 
 **v0.9.0+ live, 537 tests, CI green on GitHub (first run 2026-08-17).**
 Since the sections below were written, five releases shipped in two days:
