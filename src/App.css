@@ -350,8 +350,17 @@ body {
   margin-top: 0;
 }
 
+/* The register is a nine-column table. Narrowing columns would make it
+   unreadable, so it scrolls inside its own box at any width — the page
+   never does. (Previously this only applied under the 720px mobile
+   breakpoint; the same overflow happens at the 780px desktop content
+   width once Submitter/Stage/Flags are all visible for 2LoD.) */
 .register-view table {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
@@ -2095,14 +2104,6 @@ details input {
 
   .app-header__role-select {
     max-width: 100%;
-  }
-
-  /* The register is a nine-column table. Narrowing columns would make it
-     unreadable, so it scrolls inside its own box — the page does not. */
-  .register-view table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
   }
 
   /* Two-up summary grids stack. */
