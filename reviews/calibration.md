@@ -27,6 +27,7 @@ against.
 | 5 | 2026-08-09 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
 | 6 | 2026-08-15 | test | full mode | 0 | 0 | 0 | **Ship-ready** (OQ-5: user chose ship; no CI, manual evidence) |
 | 1 | 2026-08-25 | doc | A,B,C,D (standalone) | 2 | 15 | 10 | **Do not publish — revise first** ("After Deployment" briefing, 2nd ed.; all C+I fixed same-session per owner triage → 3rd ed. republished; R2 recommended) |
+| 2 | 2026-08-25 | doc | A,B,C,D strict | 0 | 3 | 4 | **Publish with revisions** (3rd ed. scored 8.2 — integrity 9 ↑, transparency 8 ↑, prose 6 ↓ regression from R1 fixes; all 3 Importants + prose pass fixed per owner triage → 4th ed.; stopping rule not yet met, targeted R3 optional) |
 
 ## Round 1 measurements
 
@@ -367,3 +368,22 @@ estimated coverage well under 80%; **R2 recommended** after fixes.
 **Recurring-candidate (watch in R2):** press-graded stats drifting into
 settled-fact prose (Stanford/McKinsey pattern); ledger scope gaps
 (claims that aren't numbers escaping the ledger).
+
+## Doc review round 2 (2026-08-25) — strict, same day
+
+**Key lesson: fixes create defects.** Both genuinely new R2 findings
+were introduced BY R1 fixes (the closing verdict contradicting the
+build-status box; the no-common-cause caveat breaking the "four
+mechanisms" framing), and Panel D measured a prose REGRESSION (long
+paragraphs 2→6) caused by fix-density. Verification rounds must diff
+the fixes, not just re-scan the document.
+
+**Second lesson, confirming R1's:** the IBM "63% no AI governance
+policy" was the same either/or-combined-stat error already fixed once
+for the Wolters Kluwer 72% — the correction standard must be applied to
+ALL stats when one instance is found, not just the flagged one.
+Candidate build-check if it recurs in R3.
+
+All external spot-checks this round verified verbatim at primary
+sources (Fed FEDS Notes, EUR-Lex OJ date for Reg 2026/1744, IBM 20%/
++$670K); MAS consultation confirmed via cache.
