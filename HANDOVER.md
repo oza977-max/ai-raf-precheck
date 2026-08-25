@@ -10,9 +10,9 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25, R15-C1 shipped) — supersedes everything below
+## CURRENT STATE (2026-08-25, R15-C2 shipped) — supersedes everything below
 
-**v0.16.0 + R15-C1 live, 669 tests, working tree clean.** Read
+**v0.16.0 + R15-C1 + R15-C2 live, 680 tests, working tree clean.** Read
 build/OPERATING-REGIME.md first (context-handover / model-router /
 audit-trail rules; Sonnet for build sessions).
 
@@ -20,26 +20,31 @@ R15 (Option B targeted redesign) in progress. requirements/
 requirements-015.md is the build contract; design source of truth is
 reviews/design-deliberation-001/proposal.md; skeptic amendments S1-S4
 bound as Musts. Chunk order: **C1 register (SHIPPED) → C2 verdict
-(NEXT) → C3 form+confirm → C4 policy+header → C5 graph-review+queue.**
+(SHIPPED) → C3 form+confirm (NEXT) → C4 policy+header → C5
+graph-review+queue.**
 
-**C1 lesson learned, now standing practice:** a build agent's own
-"done" report is not verification. First C1 dispatch returned a
-complete-sounding report with ZERO actual file changes (git status
-clean after). Caught only by checking git status before trusting.
-Redispatched with an explicit "do the work yourself, right now"
-instruction; that one produced real diffs, independently re-verified
-(tests x3 incl. a proper `git stash -u` baseline comparison, tsc,
-build, spec-parity, live browser walkthrough with zero console errors)
-before commit. Apply this to every future chunk: read the diff, run
-the ritual yourself, never commit on a self-report alone.
+**Standing practice (from C1): a build agent's own "done" report is
+not verification.** Every chunk gets independently re-verified by the
+orchestrating session before HANDOVER.md is updated: read the actual
+diff against the contract file-by-file, rerun tests/tsc/build/
+spec-parity yourself (not just trust the agent's numbers), and do a
+live browser walkthrough yourself when the agent couldn't. C2 followed
+this fully — diff-reviewed against S1/S2/S3, ritual rerun independently
+(680/680 tests, tsc clean, build clean, spec-parity clean), and a live
+walkthrough on the register + a real verdict page confirmed the
+section nav has no Sign-off shortcut, the checklist renders as jump
+links (not checkboxes), and the S3 honesty line sits beside the
+untouched G5-protected self-asserted-name caveat. No issues found.
 
-**Next: dispatch R15-C2** (verdict/sign-off recomposition) per
-requirements-015.md R15-C2 + proposal.md §3.1, with skeptic amendments
-S1 (frame as finishing R14's partial pass, not "never touched"), S2
-(no checkbox glyphs on the sign-off checklist; no direct nav shortcut
-to Sign-off — must scroll through reasoning), S3 (role honesty at the
-point of approval, not just the header). This is the biggest chunk —
-budget accordingly.
+**Next: dispatch R15-C3** (guided form + Confirm & attest +
+questionnaire tag) per requirements-015.md R15-C3 + proposal.md
+§3.2/§3.5/§3.7, with skeptic amendment S1b (Must): the raw-code fix
+must land at the SHARED source — `graph-summary.ts#graphSummaryRows()`
+routes through field-copy.ts labels — so both call sites
+(ConfirmationStep and VerdictDisplay's "What you told us" fold) are
+fixed at once. Check whether C2 already touched graphSummaryRows() (it
+didn't, per the C2 diff — VerdictDisplay's fold section wasn't in
+scope) before assuming S1b is still fully open.
 
 ---## CURRENT STATE (2026-08-17) — superseded, kept for history
 
