@@ -662,24 +662,33 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             memoLabel={summary.label}
             memoDescription={summary.description}
             knowledgeLensMatches={knowledgeLensMatches}
+            // R15-C2 (proposal §3.1, S2): same condition the action bar
+            // below already renders on — 2LoD role, stage awaiting sign-off.
+            showSignOffChecklist={showActionBar}
+            hasRiskKnowledgeSection={knowledgeLensMatches.length > 0 || lensNotEvaluated}
           />
-          {knowledgeLensMatches.length > 0 && (
-            <KnowledgeLensPanel
-              matches={knowledgeLensMatches}
-              onFileCoverageGap={(m) => void handleFileKnowledgeGap(m)}
-              gapBusyEntryId={gapBusyEntryId}
-              filedRiskDomains={filedRiskDomains}
-              meta={knowledgeLensMeta}
-            />
-          )}
-          {/* R13-UI-4: silent absence was indistinguishable from "no
-              matches". Say which one it is. */}
-          {lensNotEvaluated && (
-            <p className="knowledge-lens__not-evaluated">
-              Not evaluated against the risk-knowledge taxonomy — this case was decided before that check
-              existed. A re-evaluation would include it.
-            </p>
-          )}
+          {/* R15-C2: id target for VerdictDisplay's section nav / sign-off
+              checklist "Risk knowledge" jump link — this panel lives outside
+              VerdictDisplay, so the anchor has to sit here. */}
+          <div id="risk-knowledge-section">
+            {knowledgeLensMatches.length > 0 && (
+              <KnowledgeLensPanel
+                matches={knowledgeLensMatches}
+                onFileCoverageGap={(m) => void handleFileKnowledgeGap(m)}
+                gapBusyEntryId={gapBusyEntryId}
+                filedRiskDomains={filedRiskDomains}
+                meta={knowledgeLensMeta}
+              />
+            )}
+            {/* R13-UI-4: silent absence was indistinguishable from "no
+                matches". Say which one it is. */}
+            {lensNotEvaluated && (
+              <p className="knowledge-lens__not-evaluated">
+                Not evaluated against the risk-knowledge taxonomy — this case was decided before that check
+                existed. A re-evaluation would include it.
+              </p>
+            )}
+          </div>
           {gapError && (
             <p role="alert" className="register-detail__gap-error">
               {gapError}
@@ -701,6 +710,14 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           <p className="register-detail__actionbar-title">
             {summary.tier ?? 'This'} tier — awaiting 2LoD action (LC-2). This use case cannot advance to Approved
             until you sign off.
+          </p>
+          {/* R15-C2, skeptic amendment S3 (Must): the role indicator carries
+              the same no-sign-in honesty at the point of approval, not only
+              in the header (App.tsx's "Viewing as" note, R15-C1). This is a
+              new string, distinct from the "Your name" field's own
+              G5-protected caveat below, which is left untouched. */}
+          <p className="register-detail__actionbar-role-note">
+            Signing off as 2LoD — a view preference, not a permission; this build has no sign-in.
           </p>
           <label htmlFor="twolod-name">Your name</label>
           <input

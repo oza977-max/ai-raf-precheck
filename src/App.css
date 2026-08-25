@@ -1013,6 +1013,13 @@ details input {
   font-size: 0.9rem;
 }
 
+/* R15-C2, S3: role honesty note at the point of approval. */
+.register-detail__actionbar-role-note {
+  margin: 0 0 0.8rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
 .register-detail__actionbar input[type='text'] {
   max-width: 420px;
   margin-bottom: 0.6rem;
@@ -2835,6 +2842,109 @@ details input {
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* R15-C2: "summary-then-detail; Expand all" (proposal §3.1). */
+.verdict__todo-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.verdict__todo-expand-all {
+  font-size: 0.78rem;
+  background: none;
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.verdict__todo-item summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.verdict__todo-item summary::-webkit-details-marker {
+  display: none;
+}
+
+/* R15-C2 (proposal §3.1): sticky section nav. No "Sign-off" entry, by
+   design (skeptic amendment S2, Must) — see VerdictDisplay.tsx. flex-wrap
+   plus position: sticky (not fixed) lets the nav collapse onto multiple
+   lines and scroll with the page at high zoom instead of overlapping
+   content (G3). */
+.verdict__section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.75rem 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.verdict__section-nav a {
+  color: var(--navy);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.verdict__section-nav a:hover,
+.verdict__section-nav a:focus-visible {
+  text-decoration: underline;
+}
+
+/* R15-C2: "Before you sign off" — jump links, not checkboxes (S2, Must). */
+.verdict__signoff-checklist {
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.verdict__signoff-checklist h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.verdict__signoff-checklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.verdict__signoff-checklist-list li::before {
+  content: '\203A';
+  margin-right: 0.4rem;
+  color: var(--ink-faint);
+}
+
+.verdict__signoff-checklist-list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.verdict__signoff-checklist-list a:hover,
+.verdict__signoff-checklist-list a:focus-visible {
+  text-decoration: underline;
+}
+
+.verdict__signoff-checklist-foot {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
   color: var(--ink-soft);
 }
 

@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useState } from 'react';
 import type { DataFlowGraph, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
 import { graphSummaryRows } from './graph-summary';
@@ -35,6 +36,18 @@ interface VerdictDisplayProps {
   // Detail already compute this for KnowledgeLensPanel) and threaded through
   // so the memo export can restate it — never recomputed here.
   knowledgeLensMatches?: KnowledgeMatch[];
+  // R15-C2 (finishing R14's partial R9-idiom pass; proposal §3.1, S2/S3):
+  // the caller (RegisterDetail) owns role + stage, so it decides whether the
+  // "Before you sign off" checklist and section nav render — the same
+  // condition the action bar already renders on (2LoD role, stage awaiting
+  // sign-off). VerdictDisplay never re-derives that gate itself.
+  showSignOffChecklist?: boolean;
+  // Whether RegisterDetail is rendering a risk-knowledge section below this
+  // component (KnowledgeLensPanel or the "not evaluated" note) — used only
+  // to decide whether the checklist/section-nav include that jump link.
+  // Never used to hide or show anything else (G6 — no new role-conditional
+  // rendering).
+  hasRiskKnowledgeSection?: boolean;
 }
 
 // BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
@@ -86,6 +99,7 @@ function Fold({
   when = true,
   headingInSummary = true,
   className = '',
+  id,
   children,
 }: {
   title: string;
@@ -98,11 +112,14 @@ function Fold({
   // it), so its summary carries the title as a span instead.
   headingInSummary?: boolean;
   className?: string;
+  // R15-C2: section-nav / sign-off-checklist jump targets. Only set where a
+  // nav or checklist line actually points here.
+  id?: string;
   children: React.ReactNode;
 }) {
   if (!when) return <>{children}</>;
   return (
-    <details className={`verdict__fold ${className}`.trim()} open={defaultOpen || undefined}>
+    <details id={id} className={`verdict__fold ${className}`.trim()} open={defaultOpen || undefined}>
       <summary className="verdict__fold-summary">
         {headingInSummary ? <h3>{title}</h3> : <span className="verdict__fold-title">{title}</span>}
         <span className="verdict__fold-gist">{summary}</span>
@@ -159,7 +176,7 @@ function WhyThisVerdict({
   const isHardLineRejection = verdict.status === 'rejected' && explanation.binding_reason !== null;
 
   return (
-    <div className="verdict__why">
+    <div className="verdict__why" id="verdict-why-section">
       <h3>Why this verdict</h3>
 
       {/* User-reported: the panel listed rule IDs and never said what kind of
@@ -255,7 +272,7 @@ function WhyThisVerdict({
         ) : (
           <>
             Evaluated against {explanation.hard_lines_checked} hard lines and {explanation.invariants_checked}{' '}
-            invariants —{' '}
+            firm rules (invariants) —{' '}
             {explanation.tripped_invariants.length === 0
               ? 'none triggered.'
               : `${explanation.tripped_invariants.length} triggered.`}
@@ -285,9 +302,18 @@ function WhatToDo({
   const controls = verdict.controls ?? [];
   const reviews = verdict.downstream_reviews ?? [];
   const needsSignOff = registerStage === 'pre_checked';
+  // R15-C2 (proposal §3.1): "summary-then-detail; default collapsed per
+  // item, Expand all". Status chip stays on the always-visible summary line
+  // (Governance's clarification of Layout F8 — items move to "addressed",
+  // they never vanish); the three-line body opens per item via a native
+  // <details>, so open/closed state is programmatic (G3) without any extra
+  // wiring. "Expand all" just opens every item's <details> at once.
+  const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
+  const allControlsExpanded = controls.length > 0 && controls.every((id) => expandedControls.has(id));
+  const toggleExpandAll = () => setExpandedControls(allControlsExpanded ? new Set() : new Set(controls));
 
   return (
-    <div className="verdict__todo">
+    <div className="verdict__todo" id="verdict-todo-section">
       <h3>What you need to do</h3>
 
       {rejected ? (
@@ -331,7 +357,12 @@ function WhatToDo({
 
           {controls.length > 0 && (
             <>
-              <h4 className="verdict__todo-group">Controls to put in place</h4>
+              <div className="verdict__todo-group-head">
+                <h4 className="verdict__todo-group">Controls to put in place</h4>
+                <button type="button" className="verdict__todo-expand-all" onClick={toggleExpandAll}>
+                  {allControlsExpanded ? 'Collapse all' : 'Expand all'}
+                </button>
+              </div>
               <ol className="verdict__todo-list">
                 {controls.map((id) => {
                   const control = policy?.controls.find((c) => c.id === id);
@@ -351,13 +382,25 @@ function WhatToDo({
                   );
                   return (
                     <li key={id} className="verdict__todo-item">
-                      <div className="verdict__todo-head">
-                        <strong>{control?.name ?? id}</strong>
-                        {control?.name && <code className="verdict__id-quiet">{id}</code>}
-                        <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
-                          {status}
-                        </span>
-                      </div>
+                      <details
+                        open={expandedControls.has(id) || undefined}
+                        onToggle={(e) => {
+                          const open = e.currentTarget.open;
+                          setExpandedControls((prev) => {
+                            const next = new Set(prev);
+                            if (open) next.add(id);
+                            else next.delete(id);
+                            return next;
+                          });
+                        }}
+                      >
+                        <summary className="verdict__todo-head">
+                          <strong>{control?.name ?? id}</strong>
+                          {control?.name && <code className="verdict__id-quiet">{id}</code>}
+                          <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
+                            {status}
+                          </span>
+                        </summary>
                       {control?.description && (
                         <p className="verdict__todo-line">
                           <span className="verdict__todo-label">What it is:</span> {control.description}
@@ -375,6 +418,7 @@ function WhatToDo({
                           {control.verification}
                         </p>
                       )}
+                      </details>
                     </li>
                   );
                 })}
@@ -502,7 +546,79 @@ export function classifyProvisionalReason(reason: ProvisionalReason): 'signoff_g
   return SIGNOFF_GAP_REASONS.has(reason) ? 'signoff_gap' : 'substantive';
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches }: VerdictDisplayProps) {
+/** R15-C2 (proposal §3.1, S2): "Before you sign off" — every line reads
+ *  state already computed elsewhere on this page (no second derivation,
+ *  ADR-EE-R3-1's discipline); every line is a jump link, not a checkbox. */
+function SignOffChecklist({
+  verdict,
+  policy,
+  hasRiskKnowledgeSection,
+}: {
+  verdict: Verdict;
+  policy?: PolicyFile;
+  hasRiskKnowledgeSection?: boolean;
+}) {
+  const reasons = verdict.provisional_reasons ?? [];
+  const controls = verdict.controls ?? [];
+  const outstanding = controls.filter((id) => {
+    const c = policy?.controls.find((c) => c.id === id);
+    return !(c?.verification_evidence?.status === 'verified');
+  }).length;
+  const inPlace = controls.length - outstanding;
+  const verified = controls.filter(
+    (id) => policy?.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified',
+  ).length;
+
+  return (
+    <div className="verdict__signoff-checklist">
+      <h3>Before you sign off — check these first</h3>
+      <ul className="verdict__signoff-checklist-list">
+        {verdict.binding_constraint && (
+          <li>
+            <a href="#verdict-why-section">
+              Decided by <code className="verdict__id-quiet">{verdict.binding_constraint}</code>
+              {verdict.binding_path ? ` — ${verdict.binding_path}` : ''}
+            </a>
+          </li>
+        )}
+        {controls.length > 0 && (
+          <li>
+            <a href="#verdict-controls-section">
+              {controls.length} control{controls.length === 1 ? '' : 's'} named · {outstanding} outstanding ·{' '}
+              {inPlace} in place{policy ? ` · evidence: ${verified} verified, ${controls.length - verified} unverified` : ''}
+            </a>
+          </li>
+        )}
+        {reasons.includes('no_regulatory_basis') && (
+          <li>
+            <a href="#verdict-jurisdiction-section">
+              No country rulebook applied — firm rules only. If a jurisdiction does apply, say so on
+              the intake form and evaluate again.
+            </a>
+          </li>
+        )}
+        {reasons.includes('unsigned_pack_rules') && (
+          <li>
+            <a href="#verdict-provisional-banner">
+              Rulebook translation: unattested — the jurisdiction pack rules used here are proposed
+              readings your firm has not yet adopted.
+            </a>
+          </li>
+        )}
+        {hasRiskKnowledgeSection && (
+          <li>
+            <a href="#risk-knowledge-section">
+              Risk-knowledge coverage — informs the review; it does not decide the verdict.
+            </a>
+          </li>
+        )}
+      </ul>
+      <p className="verdict__signoff-checklist-foot">Then sign off at the bottom.</p>
+    </div>
+  );
+}
+
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection }: VerdictDisplayProps) {
   // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
   // this screen and downloaded client-side. Nothing is written anywhere.
   // R12-MISC-1: async so the policy hash (WebCrypto) can be computed before
@@ -592,7 +708,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       )}
 
       {isProvisional && (
-        <div className="verdict__provisional-banner" role="alert">
+        <div className="verdict__provisional-banner" role="alert" id="verdict-provisional-banner">
           {/* User report (2026-08-15): "why do we always say legal review
               required — is it always legal?" It is not. Packs are signed by
               Legal/Compliance, Model Risk and Technology Risk depending on
@@ -669,7 +785,42 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div>
       )}
 
-      <p className="verdict__eyebrow">Verdict</p>
+      {/* R15-C2 (finishing R14's partial R9-idiom pass; proposal §3.1).
+          "Before you sign off" — a compression of the reasoning already on
+          this page, not a bypass of it: every line here is read from state
+          computed above, and every line jumps to the section that carries
+          the full detail. Skeptic amendment S2 (Must): jump-link
+          affordances only (a bullet the reader clicks to scroll), never a
+          checkbox glyph — this is read-and-jump, not a completable task
+          list, so nothing here should look tickable. Rendered under the
+          exact condition the action bar already renders on (2LoD role,
+          stage awaiting sign-off) — the caller (RegisterDetail) computes
+          that and passes it down; VerdictDisplay does not re-derive it. */}
+      {showSignOffChecklist && (
+        <SignOffChecklist
+          verdict={verdict}
+          policy={policy}
+          hasRiskKnowledgeSection={hasRiskKnowledgeSection}
+        />
+      )}
+
+      {/* Sticky section nav (proposal §3.1; skeptic amendment S2, Must):
+          deliberately has NO "Sign-off" entry. A one-click path from
+          page-load straight to Approve is the rubber-stamp risk the design
+          panel rejected (dissent #3 in the deliberation) — the reviewer
+          reaches sign-off by scrolling through the reasoning, same as
+          today. Plain anchor links, not a JS router: keyboard- and
+          screen-reader-navigable by default, and they degrade to normal
+          in-page links if JS never runs. */}
+      <nav className="verdict__section-nav" aria-label="Verdict sections">
+        <a href="#verdict-section">Verdict</a>
+        <a href="#verdict-todo-section">What the submitter must do</a>
+        <a href="#verdict-why-section">Why</a>
+        {verdict.controls.length > 0 && <a href="#verdict-controls-section">Controls &amp; evidence</a>}
+        {hasRiskKnowledgeSection && <a href="#risk-knowledge-section">Risk knowledge</a>}
+      </nav>
+
+      <p className="verdict__eyebrow" id="verdict-section">Verdict</p>
       {/* §13.3: Provisional is a qualifier carried ALONGSIDE the status, not a
           fourth status. The heading used to be replaced by the word
           "Provisional", which hid the underlying determination — a reader
@@ -876,7 +1027,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           record as having no regulatory basis would be a claim about history
           nobody checked. */}
       {(verdict.provisional_reasons ?? []).includes('no_regulatory_basis') && (
-        <div className="verdict__chain" data-no-regulatory-basis>
+        <div className="verdict__chain" data-no-regulatory-basis id="verdict-jurisdiction-section">
           <h3>No jurisdiction rulebook was applied</h3>
           <p className="verdict__chain-sub">
             No jurisdiction pack applied to this use case, so no country rulebook was used and
@@ -894,6 +1045,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {explanation?.regulatory_chain && explanation.regulatory_chain.length > 0 && (
         <Fold
+          id="verdict-jurisdiction-section"
           title="Regulatory reasoning — the rules from law"
           summary={`${explanation.regulatory_chain!.length} rule${explanation.regulatory_chain!.length === 1 ? '' : 's'} from regulation fired${(verdict.provisional_reasons ?? []).includes('unsigned_pack_rules') ? ' — pending firm sign-off' : ''}; each quotes its source text`}
         ><div className="verdict__chain">
@@ -934,6 +1086,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // status. BC-V13-02: absent evidence renders UNVERIFIED, never a
           // blank or implied pass.
           <Fold
+            id="verdict-controls-section"
             title="The control set, with evidence status"
             summary={`${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all VERIFIED`}
             when={verdict.controls.every((id) => policy.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified')}
@@ -1014,7 +1167,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // absence of a policy is not evidence of absent evidence. Saying
           // nothing at all would be the same defect in the other direction:
           // a reader cannot distinguish "not checked" from "nothing to show".
-          <div className="verdict__controlset">
+          <div className="verdict__controlset" id="verdict-controls-section">
             <h3>The control set, with evidence status</h3>
             <ul>
               {verdict.controls.map((id) => (
