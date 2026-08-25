@@ -273,8 +273,13 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     // Heading renamed "Record & provenance" -> "What you told us". The panel
     // and its rows are the guarantee, not the title.
     expect(screen.getByText(/what you told us/i)).toBeInTheDocument();
-    expect(screen.getByText('Client notes · Client PII')).toBeInTheDocument();
-    expect(screen.getByText('Drafting model · llm')).toBeInTheDocument();
+    // R15-C3 (proposal §3.5, S1b): graphSummaryRows() now routes every value
+    // through field-copy.ts's plainWithCode() — the raw enum alone
+    // ("Client PII", "llm") is no longer what this attestation-adjacent
+    // panel renders; a short plain phrase leads, the code stays quiet
+    // beside it.
+    expect(screen.getByText('Client notes · Personal details of clients · Client PII')).toBeInTheDocument();
+    expect(screen.getByText('Drafting model · A chatbot or writing assistant · LLM')).toBeInTheDocument();
     expect(screen.getByText(/inside appetite once 1 control is in place/i)).toBeInTheDocument();
     expect(screen.getByText(/awaiting active 2LoD sign-off \(LC-2\)/i)).toBeInTheDocument();
   });

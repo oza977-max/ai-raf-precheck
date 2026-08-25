@@ -1353,6 +1353,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             onUndo={() => dispatch({ type: 'ANSWER_UNDONE' })}
             {...(policyResult.valid ? getQuestionBudget(state.graph, policyResult.policy) : {})}
             onAnswer={handleAnswerSubmitted}
+            policy={policyResult.valid ? policyResult.policy : undefined}
           />
           </>
         )}

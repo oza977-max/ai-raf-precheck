@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { IntakeQuestion, QuestionAnswer } from '../engine/types';
+import type { IntakeQuestion, PolicyFile, QuestionAnswer } from '../engine/types';
+import { findRuleDescription } from '../engine/find-rule-description';
 import {
   ACTION_TYPE_LABELS,
   AUTONOMY_LABELS,
@@ -48,6 +49,11 @@ interface QuestionnaireStepProps {
   // v0.7.1: the most recent recorded answer, for the confirmation line.
   lastAnswer?: QuestionAnswer;
   onUndo?: () => void;
+  // R15-C3 (proposal §3.7): "where a question is triggered by a rule, show
+  // the rule's plain name with the ID quiet." Optional so every existing
+  // caller stays valid; a question triggered without a resolvable policy
+  // falls back to the rule id alone, exactly as before.
+  policy?: PolicyFile;
 }
 
 export default function QuestionnaireStep({
@@ -58,6 +64,7 @@ export default function QuestionnaireStep({
   onAnswer,
   lastAnswer,
   onUndo,
+  policy,
 }: QuestionnaireStepProps) {
   const [textValue, setTextValue] = useState('');
   const [context, setContext] = useState('');
@@ -88,7 +95,6 @@ export default function QuestionnaireStep({
 
   return (
     <section aria-label="Targeted questions" className="questionnaire">
-      <div className="questionnaire__tag">UC-4 · TARGETED QUESTIONS</div>
       {/* v0.7.1: the count explains itself. The old line rendered
           "0 / 10 · budget ≤5" — a promise of five next to a queue of ten,
           because guessed-field questions are mandatory and outside the risk
@@ -132,9 +138,19 @@ export default function QuestionnaireStep({
       <p className="questionnaire__text">{current.text}</p>
       {current.triggered_by.length > 0 && (
         <p className="questionnaire__triggered-by">
-          {current.triggered_by.includes('R6-PV-2:guessed')
-            ? 'asked because your description does not state this, and the model would otherwise be guessing'
-            : `triggered by ${current.triggered_by.join(', ')}`}
+          {current.triggered_by.includes('R6-PV-2:guessed') ? (
+            'asked because your description does not state this, and the model would otherwise be guessing'
+          ) : (
+            <>
+              triggered by{' '}
+              {current.triggered_by.map((ruleId, i) => (
+                <span key={ruleId}>
+                  {i > 0 && ', '}
+                  {findRuleDescription(policy, ruleId) ?? ruleId} <code>{ruleId}</code>
+                </span>
+              ))}
+            </>
+          )}
         </p>
       )}
 

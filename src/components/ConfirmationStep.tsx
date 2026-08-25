@@ -27,7 +27,6 @@ export default function ConfirmationStep({ graph, corrections, onConfirm }: Conf
 
   return (
     <section aria-label="Confirm and evaluate">
-      <div className="questionnaire__tag">UC-6 · CONFIRM &amp; ATTEST</div>
       <h2>Confirm and evaluate</h2>
       <p className="confirmation__notice">
         This confirmation is your attestation — timestamped and permanently recorded.

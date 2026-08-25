@@ -16,6 +16,7 @@ import {
   DATA_ZONE_LABELS,
   DECISION_TYPE_LABELS,
   EXPOSURE_LABELS,
+  FIELD_CONSEQUENCES,
   MODEL_TYPE_LABELS,
   REVERSIBILITY_LABELS,
   SCALE_LABELS,
@@ -119,6 +120,27 @@ function RequiredMark({ controlId }: { controlId: string }) {
       {' '}
       *
     </span>
+  );
+}
+
+/** R15-C3 (proposal §3.2): "help paragraphs live behind accessible 'Why we
+ *  ask' disclosures... any load-bearing sentence stays visible outside the
+ *  disclosure." The one-line prompt each field already renders via
+ *  `field-help` stays visible; this adds the longer methodology sentence
+ *  behind a native `<details>` (same disclosure mechanism as VerdictDisplay's
+ *  Fold, so open/closed state is programmatic, never hover-only — G3).
+ *
+ *  Sourced from FIELD_CONSEQUENCES (field-copy.ts, R5-GR-1) — written for
+ *  exactly this purpose and, until this chunk, computed and never rendered
+ *  anywhere (the "computed but never consumed" defect class, CLAUDE.md). */
+function WhyWeAsk({ field }: { field: string }) {
+  const text = FIELD_CONSEQUENCES[field];
+  if (!text) return null;
+  return (
+    <details className="field-why">
+      <summary>Why we ask</summary>
+      <p>{text}</p>
+    </details>
   );
 }
 
@@ -236,6 +258,12 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
     setJurisdictionAnswer('none');
   }
 
+  // R15-C3 (proposal §3.2): counts describe the form as it actually renders,
+  // not a fixed wireframe number — a hardcoded "16" would drift the moment a
+  // field is added or removed, which is the same class of honesty failure
+  // CLAUDE.md warns about for rendered claims.
+  const totalFieldCount = 19;
+
   return (
     <section aria-label="Structured intake form">
       <p role="status">
@@ -244,388 +272,465 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         same outcome. (Configuring a model in Settings unlocks an optional plain-English alternative
         to this form; it changes how the description is read in, not how it is scored.)
       </p>
-
-      <label htmlFor="sf-name">What do you want to call it?
-        <RequiredMark controlId="sf-name" />
-      </label>
-      <input
-        id="sf-name"
-        {...requiredProps('sf-name')}
-        type="text"
-        value={values.useCaseName ?? ''}
-        onChange={(e) => update('useCaseName', e.target.value)}
-      />
-
-      <label htmlFor="sf-description">In a sentence or two, what does it do?
-        <RequiredMark controlId="sf-description" />
-      </label>
-      <textarea
-        id="sf-description"
-        {...requiredProps('sf-description')}
-        value={values.description ?? ''}
-        onChange={(e) => update('description', e.target.value)}
-      />
-
-      <label htmlFor="sf-input-data-class">What kind of information does it use?
-        <RequiredMark controlId="sf-input-data-class" />
-      </label>
-      <p className="field-help">
-        Pick the most sensitive kind it touches, even if that&apos;s only occasionally.
+      <p className="structured-form__meta">
+        5 sections · {totalFieldCount} questions ({REQUIRED_FIELDS.length} required) · about ten
+        minutes. One continuous scroll — nothing is hidden behind an &ldquo;advanced&rdquo; toggle.
       </p>
-      <select
-        id="sf-input-data-class"
-        {...requiredProps('sf-input-data-class')}
-        value={values.inputDataClass ?? ''}
-        onChange={(e) => update('inputDataClass', e.target.value as StructuredFormValues['inputDataClass'])}
-      >
-        <option value="">Select…</option>
-        {DATA_CLASSES.map((v) => (
-          <option key={v} value={v}>
-            {DATA_CLASS_LABELS[v]}
-          </option>
-        ))}
-      </select>
 
-      <label htmlFor="sf-input-data-zone">Where does that information sit today?
-        <RequiredMark controlId="sf-input-data-zone" />
-      </label>
-      <p className="field-help">
-        Before the AI touches it. If it is stored in more than one place, pick the least protected.
-      </p>
-      <select
-        id="sf-input-data-zone"
-        {...requiredProps('sf-input-data-zone')}
-        value={values.inputDataZone ?? ''}
-        onChange={(e) => update('inputDataZone', e.target.value as StructuredFormValues['inputDataZone'])}
-      >
-        <option value="">Select…</option>
-        {DATA_ZONES.map((v) => (
-          <option key={v} value={v}>
-            {DATA_ZONE_LABELS[v]}
-          </option>
-        ))}
-      </select>
+      <fieldset className="structured-form__section">
+        <legend>1&nbsp;&nbsp;About it</legend>
 
-      <label htmlFor="sf-model-type">What kind of AI is it?
-        <RequiredMark controlId="sf-model-type" />
-      </label>
-      <p className="field-help">
-        If you are not sure, pick the closest description — you can correct it on the next screen.
-      </p>
-      <select
-        id="sf-model-type"
-        {...requiredProps('sf-model-type')}
-        value={values.modelType ?? ''}
-        onChange={(e) => update('modelType', e.target.value as StructuredFormValues['modelType'])}
-      >
-        <option value="">Select…</option>
-        {MODEL_TYPES.map((v) => (
-          <option key={v} value={v}>
-            {MODEL_TYPE_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-autonomy">How much can it do without a person?</label>
-      <select
-        id="sf-autonomy"
-        value={values.autonomyLevel ?? 0}
-        onChange={(e) => update('autonomyLevel', Number(e.target.value) as StructuredFormValues['autonomyLevel'])}
-      >
-        {([0, 1, 2, 3, 4] as const).map((level) => (
-          <option key={level} value={level}>
-            {AUTONOMY_LABELS[level]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-processing-zone">Where does the AI itself run?
-        <RequiredMark controlId="sf-processing-zone" />
-      </label>
-      <p className="field-help">
-        Not where the data is stored — where it gets sent to be processed. A cloud AI service counts as an
-        outside supplier even if your data normally never leaves the firm. Information moving from a more
-        protected place to a less protected one is the single thing these rules watch for most closely.
-      </p>
-      <select
-        id="sf-processing-zone"
-        {...requiredProps('sf-processing-zone')}
-        value={values.processingDataZone ?? ''}
-        onChange={(e) =>
-          update('processingDataZone', e.target.value as StructuredFormValues['processingDataZone'])
-        }
-      >
-        <option value="">Select…</option>
-        {DATA_ZONES.map((v) => (
-          <option key={v} value={v}>
-            {DATA_ZONE_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-action-type">What does it actually produce or do?
-        <RequiredMark controlId="sf-action-type" />
-      </label>
-      <select
-        id="sf-action-type"
-        {...requiredProps('sf-action-type')}
-        value={values.outputActionType ?? ''}
-        onChange={(e) => update('outputActionType', e.target.value as StructuredFormValues['outputActionType'])}
-      >
-        <option value="">Select…</option>
-        {ACTION_TYPES.map((v) => (
-          <option key={v} value={v}>
-            {ACTION_TYPE_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-exposure">Who sees what it produces?
-        <RequiredMark controlId="sf-exposure" />
-      </label>
-      <p className="field-help">Pick the widest audience it reaches.</p>
-      <select
-        id="sf-exposure"
-        {...requiredProps('sf-exposure')}
-        value={values.outputExposure ?? ''}
-        onChange={(e) => update('outputExposure', e.target.value as StructuredFormValues['outputExposure'])}
-      >
-        <option value="">Select…</option>
-        {EXPOSURES.map((v) => (
-          <option key={v} value={v}>
-            {EXPOSURE_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-bindingness">How much weight does its output carry?
-        <RequiredMark controlId="sf-bindingness" />
-      </label>
-      <p className="field-help">
-        Be honest about what happens in practice rather than what the process says. If people almost always
-        go with what it says, that is closer to &ldquo;substantially drives the decision&rdquo; than to
-        &ldquo;one input among several&rdquo;.
-      </p>
-      <select
-        id="sf-bindingness"
-        {...requiredProps('sf-bindingness')}
-        value={values.decisionBindingness ?? ''}
-        onChange={(e) =>
-          update('decisionBindingness', e.target.value as StructuredFormValues['decisionBindingness'])
-        }
-      >
-        <option value="">Select…</option>
-        {DECISION_BINDINGNESS.map((v) => (
-          <option key={v} value={v}>
-            {BINDINGNESS_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?
-        <RequiredMark controlId="sf-reversibility" />
-      </label>
-      <p className="field-help">
-        Think about the point at which someone would notice. Money already sent, a message already seen by
-        a client, or a filing already made generally cannot be taken back.
-      </p>
-      <select
-        id="sf-reversibility"
-        {...requiredProps('sf-reversibility')}
-        value={values.outputReversibility ?? ''}
-        onChange={(e) =>
-          update('outputReversibility', e.target.value as StructuredFormValues['outputReversibility'])
-        }
-      >
-        <option value="">Select…</option>
-        {['reversible', 'irreversible', 'unknown'].map((v) => (
-          <option key={v} value={v}>
-            {REVERSIBILITY_LABELS[v]}
-          </option>
-        ))}
-      </select>
-
-      <label htmlFor="sf-platform">Which approved platform does it run on? (optional)</label>
-      <p className="field-help">
-        If it runs on a platform your firm has already approved, say so — the controls that approval
-        already covers are not asked for again. Choosing one your firm has not approved routes it to a
-        full platform risk assessment.
-      </p>
-      <select
-        id="sf-platform"
-        value={values.platform ?? ''}
-        onChange={(e) => update('platform', e.target.value || undefined)}
-      >
-        <option value="">Not on an approved platform / don&apos;t know</option>
-        {platforms.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.id})
-          </option>
-        ))}
-        <option value="__other__">Something else — not on the list</option>
-      </select>
-
-      <label htmlFor="sf-vendor">Whose model or service is it? (optional)</label>
-      <p className="field-help">
-        If you leave this unanswered it is assessed as built in-house. A vendor not on the approved
-        list is treated as a new vendor and triggers a full vendor risk assessment.
-      </p>
-      <select
-        id="sf-vendor"
-        value={values.vendor ?? ''}
-        onChange={(e) => update('vendor', e.target.value || undefined)}
-      >
-        {/* D-006: this read "Built in-house (internal)" — the unchosen state
-            presented as something the user had declared. The graph then showed
-            "vendor: internal" and the next screen asked them to attest it was
-            accurate. The sentinel is unchanged; what changed is that the form
-            now says what it will assume, before the attestation rather than
-            after it. */}
-        <option value="">Not stated — will be assessed as built in-house</option>
-        {vendors.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.name} ({v.id})
-          </option>
-        ))}
-        <option value="__other__">Another vendor — not on the list</option>
-      </select>
-
-      <label htmlFor="sf-model">
-        Which model does it run on?
-        <RequiredMark controlId="sf-model" />
-      </label>
-      <p className="field-help">
-        Choose the model from the firm&apos;s approved-model registry, or say it is not listed and
-        name it. A model that is not on the registry, or is on it without sign-off, is not blocked
-        here — it routes to a model governance review on the verdict.
-      </p>
-      <select
-        id="sf-model"
-        {...requiredProps('sf-model')}
-        value={values.declaredModelIdOther !== undefined ? '__other__' : (values.declaredModelId ?? '')}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === '__other__') {
-            update('declaredModelId', undefined);
-            update('declaredModelIdOther', '');
-          } else {
-            update('declaredModelIdOther', undefined);
-            update('declaredModelId', v || undefined);
-          }
-        }}
-      >
-        <option value="">Choose a model&hellip;</option>
-        {approvedModels.map((m) => (
-          <option key={m.model_id} value={m.model_id}>
-            {m.model_id} ({m.vendor})
-          </option>
-        ))}
-        <option value="__other__">Not listed — name it</option>
-      </select>
-      {values.declaredModelIdOther !== undefined && (
+        <label htmlFor="sf-name">What do you want to call it?
+          <RequiredMark controlId="sf-name" />
+        </label>
         <input
+          id="sf-name"
+          {...requiredProps('sf-name')}
           type="text"
-          aria-label="Name the model"
-          placeholder="e.g. gpt-4o, llama-3-70b"
-          value={values.declaredModelIdOther}
-          onChange={(e) => update('declaredModelIdOther', e.target.value)}
+          value={values.useCaseName ?? ''}
+          onChange={(e) => update('useCaseName', e.target.value)}
         />
-      )}
 
-      <label htmlFor="sf-decision-type">What kind of decision does it feed? (optional)</label>
-      <p className="field-help">
-        Some areas carry extra legal duties — lending and hiring especially. If none of these fit,
-        choose <em>Something else — let me describe it</em> and say what it is; the verdict will show that your policy has no
-        rule for it. Leave blank only if it feeds no decision at all.
-      </p>
-      <select
-        id="sf-decision-type"
-        value={values.decisionTypeOther !== undefined ? '__other__' : (values.decisionType ?? '')}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === '__other__') {
-            // Clearing decisionType is the whole point: the two are mutually
-            // exclusive, and leaving a stale known type behind would let a
-            // policy rule fire for a decision the submitter just told us was
-            // something else.
-            update('decisionType', undefined);
-            update('decisionTypeOther', '');
-          } else {
-            update('decisionTypeOther', undefined);
-            update('decisionType', (v || undefined) as StructuredFormValues['decisionType']);
-          }
-        }}
-      >
-        <option value="">None / not applicable</option>
-        {DECISION_TYPES.map((v) => (
-          <option key={v} value={v}>
-            {DECISION_TYPE_LABELS[v]}
-          </option>
-        ))}
-        <option value="__other__">Something else — let me describe it</option>
-      </select>
+        <label htmlFor="sf-description">In a sentence or two, what does it do?
+          <RequiredMark controlId="sf-description" />
+        </label>
+        <textarea
+          id="sf-description"
+          {...requiredProps('sf-description')}
+          value={values.description ?? ''}
+          onChange={(e) => update('description', e.target.value)}
+        />
+      </fieldset>
 
-      {values.decisionTypeOther !== undefined && (
-        <>
-          <label htmlFor="sf-decision-type-other">What kind of decision is it?</label>
-          <p className="field-help">
-            In your own words — for example &ldquo;collections prioritisation&rdquo; or &ldquo;AML alert
-            triage&rdquo;. This is recorded with the verdict, and because your policy has no rule for it,
-            the tier will rest on your other answers alone. That is stated on the verdict, not hidden.
+      <fieldset className="structured-form__section">
+        <legend>2&nbsp;&nbsp;What it uses <span className="structured-form__section-code">(input data)</span></legend>
+
+        <label htmlFor="sf-input-data-class">What kind of information does it use?
+          <RequiredMark controlId="sf-input-data-class" />
+        </label>
+        <p className="field-help">
+          Pick the most sensitive kind it touches, even if that&apos;s only occasionally.
+        </p>
+        <select
+          id="sf-input-data-class"
+          {...requiredProps('sf-input-data-class')}
+          value={values.inputDataClass ?? ''}
+          onChange={(e) => update('inputDataClass', e.target.value as StructuredFormValues['inputDataClass'])}
+        >
+          <option value="">Select…</option>
+          {DATA_CLASSES.map((v) => (
+            <option key={v} value={v}>
+              {DATA_CLASS_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="data_class" />
+
+        <label htmlFor="sf-input-data-zone">Where does that information sit today?
+          <RequiredMark controlId="sf-input-data-zone" />
+        </label>
+        <p className="field-help">
+          Before the AI touches it. If it is stored in more than one place, pick the least protected.
+        </p>
+        <select
+          id="sf-input-data-zone"
+          {...requiredProps('sf-input-data-zone')}
+          value={values.inputDataZone ?? ''}
+          onChange={(e) => update('inputDataZone', e.target.value as StructuredFormValues['inputDataZone'])}
+        >
+          <option value="">Select…</option>
+          {DATA_ZONES.map((v) => (
+            <option key={v} value={v}>
+              {DATA_ZONE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="data_zone" />
+      </fieldset>
+
+      <fieldset className="structured-form__section">
+        <legend>3&nbsp;&nbsp;What the AI is and how it runs <span className="structured-form__section-code">(processing)</span></legend>
+
+        <label htmlFor="sf-model-type">What kind of AI is it?
+          <RequiredMark controlId="sf-model-type" />
+        </label>
+        <p className="field-help">
+          If you are not sure, pick the closest description — you can correct it on the next screen.
+        </p>
+        <select
+          id="sf-model-type"
+          {...requiredProps('sf-model-type')}
+          value={values.modelType ?? ''}
+          onChange={(e) => update('modelType', e.target.value as StructuredFormValues['modelType'])}
+        >
+          <option value="">Select…</option>
+          {MODEL_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {MODEL_TYPE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="model_type" />
+
+        <label htmlFor="sf-autonomy">How much can it do without a person?</label>
+        <select
+          id="sf-autonomy"
+          value={values.autonomyLevel ?? 0}
+          onChange={(e) => update('autonomyLevel', Number(e.target.value) as StructuredFormValues['autonomyLevel'])}
+        >
+          {([0, 1, 2, 3, 4] as const).map((level) => (
+            <option key={level} value={level}>
+              {AUTONOMY_LABELS[level]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="autonomy_level" />
+
+        <label htmlFor="sf-processing-zone">Where does the AI itself run?
+          <RequiredMark controlId="sf-processing-zone" />
+        </label>
+        {/* Load-bearing sentence (proposal §3.2): the storage-vs-processing
+            distinction is the one people get wrong, and the one the
+            zone-crossing rules turn on. It stays visible outside the
+            disclosure; the rest of the methodology paragraph does not. */}
+        <p className="field-help">
+          Not where the data is stored — where it gets sent to be processed.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>
+            A cloud AI service counts as an outside supplier even if your data normally never leaves
+            the firm. Information moving from a more protected place to a less protected one is the
+            single thing these rules watch for most closely.
           </p>
+        </details>
+        <select
+          id="sf-processing-zone"
+          {...requiredProps('sf-processing-zone')}
+          value={values.processingDataZone ?? ''}
+          onChange={(e) =>
+            update('processingDataZone', e.target.value as StructuredFormValues['processingDataZone'])
+          }
+        >
+          <option value="">Select…</option>
+          {DATA_ZONES.map((v) => (
+            <option key={v} value={v}>
+              {DATA_ZONE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="sf-platform">
+          Which approved platform does it run on? (optional — blank means: not on an approved platform)
+        </label>
+        <p className="field-help">
+          If it runs on a platform your firm has already approved, say so — the controls that approval
+          already covers are not asked for again.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>Choosing one your firm has not approved routes it to a full platform risk assessment.</p>
+        </details>
+        <select
+          id="sf-platform"
+          value={values.platform ?? ''}
+          onChange={(e) => update('platform', e.target.value || undefined)}
+        >
+          <option value="">Not on an approved platform / don&apos;t know</option>
+          {platforms.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.id})
+            </option>
+          ))}
+          <option value="__other__">Something else — not on the list</option>
+        </select>
+
+        <label htmlFor="sf-vendor">
+          Whose model or service is it? (optional — blank means: assessed as built in-house)
+        </label>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>
+            A vendor not on the approved list is treated as a new vendor and triggers a full vendor
+            risk assessment.
+          </p>
+        </details>
+        <select
+          id="sf-vendor"
+          value={values.vendor ?? ''}
+          onChange={(e) => update('vendor', e.target.value || undefined)}
+        >
+          {/* D-006: this read "Built in-house (internal)" — the unchosen state
+              presented as something the user had declared. The graph then showed
+              "vendor: internal" and the next screen asked them to attest it was
+              accurate. The sentinel is unchanged; what changed is that the form
+              now says what it will assume, before the attestation rather than
+              after it. */}
+          <option value="">Not stated — will be assessed as built in-house</option>
+          {vendors.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} ({v.id})
+            </option>
+          ))}
+          <option value="__other__">Another vendor — not on the list</option>
+        </select>
+
+        <label htmlFor="sf-model">
+          Which model does it run on?
+          <RequiredMark controlId="sf-model" />
+        </label>
+        <p className="field-help">
+          Choose the model from the firm&apos;s approved-model registry, or say it is not listed and
+          name it.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>
+            A model that is not on the registry, or is on it without sign-off, is not blocked here —
+            it routes to a model governance review on the verdict.
+          </p>
+        </details>
+        <select
+          id="sf-model"
+          {...requiredProps('sf-model')}
+          value={values.declaredModelIdOther !== undefined ? '__other__' : (values.declaredModelId ?? '')}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === '__other__') {
+              update('declaredModelId', undefined);
+              update('declaredModelIdOther', '');
+            } else {
+              update('declaredModelIdOther', undefined);
+              update('declaredModelId', v || undefined);
+            }
+          }}
+        >
+          <option value="">Choose a model&hellip;</option>
+          {approvedModels.map((m) => (
+            <option key={m.model_id} value={m.model_id}>
+              {m.model_id} ({m.vendor})
+            </option>
+          ))}
+          <option value="__other__">Not listed — name it</option>
+        </select>
+        {values.declaredModelIdOther !== undefined && (
           <input
-            id="sf-decision-type-other"
             type="text"
-            value={values.decisionTypeOther}
-            onChange={(e) => update('decisionTypeOther', e.target.value)}
-            placeholder="e.g. collections prioritisation"
+            aria-label="Name the model"
+            placeholder="e.g. gpt-4o, llama-3-70b"
+            value={values.declaredModelIdOther}
+            onChange={(e) => update('declaredModelIdOther', e.target.value)}
           />
-        </>
-      )}
+        )}
+      </fieldset>
 
-      <label htmlFor="sf-hitl">Does a person check it before anything happens? (optional)</label>
-      <select
-        id="sf-hitl"
-        value={values.hitl === undefined ? '' : values.hitl ? 'yes' : 'no'}
-        onChange={(e) =>
-          update('hitl', e.target.value === '' ? undefined : e.target.value === 'yes')
-        }
-      >
-        <option value="">Not specified</option>
-        <option value="yes">Yes — a human approves before action</option>
-        <option value="no">No — the system acts without prior human review</option>
-      </select>
+      <fieldset className="structured-form__section">
+        <legend>4&nbsp;&nbsp;What comes out and who it reaches <span className="structured-form__section-code">(output)</span></legend>
 
-      <label htmlFor="sf-scale">How widely is it used?
-        <RequiredMark controlId="sf-scale" />
-      </label>
-      <select
-        id="sf-scale"
-        {...requiredProps('sf-scale')}
-        value={values.outputScale ?? ''}
-        onChange={(e) => update('outputScale', e.target.value as StructuredFormValues['outputScale'])}
-      >
-        <option value="">Select…</option>
-        {['limited', 'at_scale'].map((v) => (
-          <option key={v} value={v}>
-            {SCALE_LABELS[v]}
-          </option>
-        ))}
-      </select>
+        <label htmlFor="sf-action-type">What does it actually produce or do?
+          <RequiredMark controlId="sf-action-type" />
+        </label>
+        <select
+          id="sf-action-type"
+          {...requiredProps('sf-action-type')}
+          value={values.outputActionType ?? ''}
+          onChange={(e) => update('outputActionType', e.target.value as StructuredFormValues['outputActionType'])}
+        >
+          <option value="">Select…</option>
+          {ACTION_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {ACTION_TYPE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="action_type" />
 
-      <label htmlFor="sf-replaces">
-        <input
-          id="sf-replaces"
-          type="checkbox"
-          checked={values.replacesPriorModel ?? false}
-          onChange={(e) => update('replacesPriorModel', e.target.checked)}
-        />
-        It replaces something we already use (a model, a tool or a manual process)
-      </label>
+        <label htmlFor="sf-exposure">Who sees what it produces?
+          <RequiredMark controlId="sf-exposure" />
+        </label>
+        <p className="field-help">Pick the widest audience it reaches.</p>
+        <select
+          id="sf-exposure"
+          {...requiredProps('sf-exposure')}
+          value={values.outputExposure ?? ''}
+          onChange={(e) => update('outputExposure', e.target.value as StructuredFormValues['outputExposure'])}
+        >
+          <option value="">Select…</option>
+          {EXPOSURES.map((v) => (
+            <option key={v} value={v}>
+              {EXPOSURE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="exposure" />
 
-      <fieldset id="sf-jurisdiction" {...requiredProps('sf-jurisdiction')}>
+        <label htmlFor="sf-bindingness">How much weight does its output carry?
+          <RequiredMark controlId="sf-bindingness" />
+        </label>
+        {/* Load-bearing (proposal §3.2): this is the sentence a submitter
+            needs to answer honestly rather than to the letter of the
+            process. The illustrative example stays behind the disclosure. */}
+        <p className="field-help">
+          Be honest about what happens in practice rather than what the process says.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>
+            If people almost always go with what it says, that is closer to &ldquo;substantially
+            drives the decision&rdquo; than to &ldquo;one input among several&rdquo;.{' '}
+            {FIELD_CONSEQUENCES.decision_bindingness}
+          </p>
+        </details>
+        <select
+          id="sf-bindingness"
+          {...requiredProps('sf-bindingness')}
+          value={values.decisionBindingness ?? ''}
+          onChange={(e) =>
+            update('decisionBindingness', e.target.value as StructuredFormValues['decisionBindingness'])
+          }
+        >
+          <option value="">Select…</option>
+          {DECISION_BINDINGNESS.map((v) => (
+            <option key={v} value={v}>
+              {BINDINGNESS_LABELS[v]}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?
+          <RequiredMark controlId="sf-reversibility" />
+        </label>
+        <p className="field-help">
+          Think about the point at which someone would notice.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>
+            Money already sent, a message already seen by a client, or a filing already made
+            generally cannot be taken back. {FIELD_CONSEQUENCES.output_reversibility}
+          </p>
+        </details>
+        <select
+          id="sf-reversibility"
+          {...requiredProps('sf-reversibility')}
+          value={values.outputReversibility ?? ''}
+          onChange={(e) =>
+            update('outputReversibility', e.target.value as StructuredFormValues['outputReversibility'])
+          }
+        >
+          <option value="">Select…</option>
+          {['reversible', 'irreversible', 'unknown'].map((v) => (
+            <option key={v} value={v}>
+              {REVERSIBILITY_LABELS[v]}
+            </option>
+          ))}
+        </select>
+
+        <label htmlFor="sf-decision-type">
+          What kind of decision does it feed? (optional — leave blank only if it feeds no decision at
+          all)
+        </label>
+        <p className="field-help">
+          Some areas carry extra legal duties — lending and hiring especially. If none of these fit,
+          choose <em>Something else — let me describe it</em> and say what it is.
+        </p>
+        <details className="field-why">
+          <summary>Why we ask</summary>
+          <p>{FIELD_CONSEQUENCES.decision_type} The verdict will show that your policy has no rule for it.</p>
+        </details>
+        <select
+          id="sf-decision-type"
+          value={values.decisionTypeOther !== undefined ? '__other__' : (values.decisionType ?? '')}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === '__other__') {
+              // Clearing decisionType is the whole point: the two are mutually
+              // exclusive, and leaving a stale known type behind would let a
+              // policy rule fire for a decision the submitter just told us was
+              // something else.
+              update('decisionType', undefined);
+              update('decisionTypeOther', '');
+            } else {
+              update('decisionTypeOther', undefined);
+              update('decisionType', (v || undefined) as StructuredFormValues['decisionType']);
+            }
+          }}
+        >
+          <option value="">None / not applicable</option>
+          {DECISION_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {DECISION_TYPE_LABELS[v]}
+            </option>
+          ))}
+          <option value="__other__">Something else — let me describe it</option>
+        </select>
+
+        {values.decisionTypeOther !== undefined && (
+          <>
+            <label htmlFor="sf-decision-type-other">What kind of decision is it?</label>
+            <p className="field-help">
+              In your own words — for example &ldquo;collections prioritisation&rdquo; or &ldquo;AML alert
+              triage&rdquo;. This is recorded with the verdict, and because your policy has no rule for it,
+              the tier will rest on your other answers alone. That is stated on the verdict, not hidden.
+            </p>
+            <input
+              id="sf-decision-type-other"
+              type="text"
+              value={values.decisionTypeOther}
+              onChange={(e) => update('decisionTypeOther', e.target.value)}
+              placeholder="e.g. collections prioritisation"
+            />
+          </>
+        )}
+
+        <label htmlFor="sf-hitl">
+          Does a person check it before anything happens? (optional — blank means: not specified)
+        </label>
+        <WhyWeAsk field="hitl" />
+        <select
+          id="sf-hitl"
+          value={values.hitl === undefined ? '' : values.hitl ? 'yes' : 'no'}
+          onChange={(e) =>
+            update('hitl', e.target.value === '' ? undefined : e.target.value === 'yes')
+          }
+        >
+          <option value="">Not specified</option>
+          <option value="yes">Yes — a human approves before action</option>
+          <option value="no">No — the system acts without prior human review</option>
+        </select>
+
+        <label htmlFor="sf-scale">How widely is it used?
+          <RequiredMark controlId="sf-scale" />
+        </label>
+        <select
+          id="sf-scale"
+          {...requiredProps('sf-scale')}
+          value={values.outputScale ?? ''}
+          onChange={(e) => update('outputScale', e.target.value as StructuredFormValues['outputScale'])}
+        >
+          <option value="">Select…</option>
+          {['limited', 'at_scale'].map((v) => (
+            <option key={v} value={v}>
+              {SCALE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        <WhyWeAsk field="scale" />
+
+        <label htmlFor="sf-replaces">
+          <input
+            id="sf-replaces"
+            type="checkbox"
+            checked={values.replacesPriorModel ?? false}
+            onChange={(e) => update('replacesPriorModel', e.target.checked)}
+          />
+          It replaces something we already use (a model, a tool or a manual process)
+        </label>
+      </fieldset>
+
+      <fieldset id="sf-jurisdiction" {...requiredProps('sf-jurisdiction')} className="structured-form__section">
         <legend>
-          Which countries or regions does it touch?
+          5&nbsp;&nbsp;Where it applies <span className="structured-form__section-code">(jurisdictions)</span>
           <RequiredMark controlId="sf-jurisdiction" />
         </legend>
         <p className="field-help">
@@ -652,6 +757,8 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
           None of these, or not sure yet
         </label>
       </fieldset>
+
+      <p className="structured-form__scroll-note">One continuous scroll — no Next/Back paging.</p>
 
       <button type="button" onClick={handleSubmit} disabled={!isComplete(values)}>
         Continue
