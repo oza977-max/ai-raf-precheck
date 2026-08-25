@@ -10,7 +10,41 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-17) — supersedes the tables below
+## CURRENT STATE (2026-08-25) — supersedes everything below
+
+**v0.16.0 live, 659 tests, CI green.** Read build/OPERATING-REGIME.md
+first — three standing owner rules (context handover, model router,
+audit-trail check-ins) apply to every session.
+
+Since the 2026-08-17 block below: R10 (reviewer's language: memo export,
+inherent/residual, two-axis evidence, v0.12.0) → R11 (third lever: model
+governance + MIT risk-knowledge lens, v0.13.0) → three-panel concept
+review + site-survey-001 (verdict: Coherent) → R12 (trust mechanics: all
+17 findings, v0.14.0) → expert-scoring-001 (5 new roster experts) → R13
+(knowledge lens earns its place, v0.15.0) → v0.15.1 (verdict to-do plain
+language) → R14 (verdict screen folds per design panel, v0.16.0) →
+**design-deliberation-001** (6 panels, 4 rounds, unanimous: targeted
+redesign; reviews/design-deliberation-001/ holds proposal + conflicts +
+dissents + skeptic amendments).
+
+**IN FLIGHT: R15 = Option B targeted redesign, APPROVED by owner
+2026-08-25** ("Lets go option B") — five build chunks per the chair's
+proposal AMENDED by the two skeptics' fixes (read
+reviews/design-deliberation-001/summary.json "skeptics" — four
+must-fix amendments: graphSummaryRows fixed at the shared source; no
+sticky Sign-off nav jump / no rubber-stamp path; role caveat at the
+sign-off block; R14-already-shipped framing correction; plus the
+register Flags-column change needs a register-lifecycle.md §10.2
+amendment). Chunk order: register → verdict → form+confirm →
+policy+header → graph-review+queue. requirements-015.md is the next
+artifact; then GVM pipeline as always (test cases → build → review →
+verify → doc → deploy). Session caps: subagent work hit the session
+limit 2026-08-25 (resets 11pm Asia/Calcutta) — build chunks should
+dispatch after reset; main-loop doc work is unaffected.
+
+---
+
+## CURRENT STATE (2026-08-17) — superseded, kept for history
 
 **v0.9.0+ live, 537 tests, CI green on GitHub (first run 2026-08-17).**
 Since the sections below were written, five releases shipped in two days:
