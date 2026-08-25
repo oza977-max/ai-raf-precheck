@@ -26,6 +26,7 @@ against.
 | 4 | 2026-08-08 | test | full mode | 0 | 2 | 1 | **Demo-ready** |
 | 5 | 2026-08-09 | test | full mode | 0 | 0 | 0 | **Demo-ready** |
 | 6 | 2026-08-15 | test | full mode | 0 | 0 | 0 | **Ship-ready** (OQ-5: user chose ship; no CI, manual evidence) |
+| 1 | 2026-08-25 | doc | A,B,C,D (standalone) | 2 | 15 | 10 | **Do not publish — revise first** ("After Deployment" briefing, 2nd ed.; all C+I fixed same-session per owner triage → 3rd ed. republished; R2 recommended) |
 
 ## Round 1 measurements
 
@@ -336,3 +337,33 @@ cleared it.
 
 | 2026-08-04 | /gvm-test 003 (full mode, post-Phase-8) | Demo-ready | 148 cases walked: 123 PASS, 7 FAIL, 9 STUB, 5 deliberate deviations, 1 BLOCKED. VV-2(a) failed; no VV-4 trigger. Systemic finding: five deviations decided in code comments and never written back to requirements.md. |
 | 3 | 2026-08-07 | code | A,B,C,D,E,blind | 1 | 5 | 2 | **Merge with caveats** — 3 of 6 findings introduced during the round-4 fix pass; blind panel found the identity gap |
+
+## Doc review round 1 (2026-08-25) — "After Deployment" briefing
+
+**Scores (Panel D, analytic):** Argument 9 · Factual integrity 8 ·
+Evidence transparency 7 · Prose/audience fit 7 · Dataviz 9 → **8.0
+overall** (whitepaper threshold 9.0; public-facing 9.3).
+
+**Capture-recapture:** ~30 unique findings, only 2 confirmed cross-panel
+overlaps (Fig-2 arithmetic B∩D; dek A∩C) — sparse overlap implies
+estimated coverage well under 80%; **R2 recommended** after fixes.
+**Borderline filter:** 5 raised, 3 kept (60%).
+
+**Anchor examples (doc dimension):**
+- Factual integrity, worst: "EU AI Act high-risk live 2 Aug 2026" —
+  false at publication (Digital Omnibus postponed Annex III to Dec
+  2027, OJ 24 Jul 2026); survived TWO editions and a 4-agent research
+  pass because everyone verified the statistic's original source, not
+  its current status. Regulatory-status claims age; re-check at every
+  edition, not just at first citation.
+- Factual integrity, worst-2: Fig-2 caption exclusions double-counted
+  (654+323+3≠977); panels caught what the author's own arithmetic
+  missed. Always have someone re-add the figure captions.
+- Evidence transparency, best: withdrawn-statistics paragraph naming
+  what failed verification and why — panels called it exemplary.
+- Dataviz, best: bar-width encodings spot-checked to reconcile with
+  labelled counts within rounding across all figures.
+
+**Recurring-candidate (watch in R2):** press-graded stats drifting into
+settled-fact prose (Stanford/McKinsey pattern); ledger scope gaps
+(claims that aren't numbers escaping the ledger).
