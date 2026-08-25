@@ -394,9 +394,17 @@ Shows only the current user's use cases. Columns: Use Case Name, Tier, Track, St
 
 ### 10.2 2LoD view
 
-Shows all use cases across all teams. Columns: Use Case Name, Submitter, Tier, Track, Status, Last Evaluated, Policy Version, Stale. Filter chips: Tier, Track, Stage, Verdict Status. Search bar: full-text over use case name.
+Shows all use cases across all teams. Columns: Use Case Name, Submitter, Tier, Track, Status, Stage, Last Evaluated, Policy Version, Flags. Filter chips: Tier, Track, Stage, Verdict Status. Search bar: full-text over use case name.
 
-A "Stale" badge appears on use cases where `stale_assessment: true` (the policy or pack versions have changed since the verdict was issued).
+**R15-C1/S4 amendment (2026-08-25):** the Stale and Sampling columns are merged
+into a single "Flags" column, carrying a badge for each condition that is
+true (`stale_assessment: true` and/or `sampling_review_due: true`). A row
+with neither flag still renders a stable, accessible cell name (e.g. "not
+flagged") rather than an empty cell, so screen readers do not hear nothing.
+This supersedes the two-column set below, which is kept only as history.
+
+~~A "Stale" badge appears on use cases where `stale_assessment: true` (the
+policy or pack versions have changed since the verdict was issued).~~
 
 The "Policy updated" banner appears at the top of the 2LoD view when any active use case has a `re_evaluation_queued` audit event more recent than its last `verdict_produced` event.
 
@@ -667,3 +675,4 @@ gatekeeper" framing.
 |---|---|
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |
 | 2026-08-17 | §17 added — round 11. ADR-RL-R11-1 consumes the dormant `ai_model`/`uses_model` schema (deduped by `model_id`); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path. |
+| 2026-08-25 | R15-C1/S4 — §10.2's Must-level column set amended: Stale and Sampling merge into one "Flags" column (badge per true condition; accessible empty-state name when neither applies), and Stage joins the visible columns. TC-RG-2-02 updated to assert the amended set. |

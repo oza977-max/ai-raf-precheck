@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
 import { append } from '../../store/audit';
@@ -143,6 +144,11 @@ describe('R12-AB-1 — sampling queue chip', () => {
     const policy = { sampling_rate: SAMPLING_RATE } as unknown as PolicyFile;
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
 
+    // R15-C1 renegotiation: this row is self-served Low tier ("Cleared" /
+    // 'approved' stage), so it sits outside the new 2LoD default "awaiting
+    // your sign-off" view — reveal it with Show all, preserving the test's
+    // original intent (assert the sampling chip on this row).
+    await userEvent.click(await screen.findByRole('button', { name: /show all/i }));
     const label = await screen.findByText('Self-served low tier');
     const row = label.closest('tr')!;
     expect(row).toHaveTextContent(/sampling review due/i);
@@ -165,6 +171,9 @@ describe('R12-AB-1 — sampling queue chip', () => {
     const policy = { sampling_rate: SAMPLING_RATE } as unknown as PolicyFile;
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
 
+    // R15-C1 renegotiation: same self-served Low-tier ('approved' stage)
+    // row, outside the new default view — see TC-R12-AB-1-01 above.
+    await userEvent.click(await screen.findByRole('button', { name: /show all/i }));
     const label = await screen.findByText('Already reviewed');
     const row = label.closest('tr')!;
     expect(row).not.toHaveTextContent(/sampling review due/i);

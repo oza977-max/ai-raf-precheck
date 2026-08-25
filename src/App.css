@@ -422,6 +422,91 @@ body {
   border: 1px solid var(--high);
   border-radius: 4px;
   padding: 0.1rem 0.4rem;
+  margin-right: 0.3rem;
+}
+
+.register-view__sampling-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+/* R15-C1 (proposal §3.3): Flags column empty state — visually blank but
+   with a stable accessible name (G3) so a screen reader hears "not
+   flagged" rather than nothing on an unflagged row. */
+.register-view__flags-empty {
+  display: inline-block;
+}
+
+.register-view__showing-line {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin: 0 0 0.8rem;
+}
+
+.register-view__show-all-toggle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.register-view__chip-group-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  align-self: center;
+  margin-left: 0.4rem;
+}
+
+.register-view__chip-group-label:first-child {
+  margin-left: 0;
+}
+
+/* R15-C1 (proposal §3.3): always-visible legend, replacing tooltip-only
+   meanings (G3 — no hover-only meaning). */
+.register-view__legend {
+  margin: 0.8rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.register-view__legend dt {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  margin-bottom: 0.3rem;
+}
+
+.register-view__legend dd {
+  margin: 0 0 0.25rem;
+}
+
+.register-view__provisional-banner {
+  font-weight: 500;
+}
+
+.register-view__row--self-assessment td {
+  background: var(--paper);
+}
+
+.register-view__self-assessment-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
 }
 
 /* ── Typography ── */

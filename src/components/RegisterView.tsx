@@ -6,6 +6,7 @@ import type { UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { ProvisionalReason } from '../engine/provisional';
 import { classifyProvisionalReason } from './VerdictDisplay';
+import { STAGE_LABELS } from './field-copy';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
 // no direct IndexedDB/audit access. register-lifecycle.md §10.
@@ -33,6 +34,13 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
   const [stageFilter, setStageFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // R15-C1 (proposal §3.3): 2LoD default view is "awaiting your sign-off",
+  // with "Show all" one click away. This is a VIEW FILTER on top of the
+  // existing 1LoD/2LoD data scoping (getUseCases already returns 'all' for
+  // 2LoD, own-submissions for 1LoD) — no new role-conditional rendering
+  // (G6). Default false = the narrowed view; true = everything this role
+  // can already see.
+  const [showAll, setShowAll] = useState(false);
   // V1.2-A: row click -> detail view; refreshKey bumps on return so a
   // 2LoD approval's stage change is immediately visible in the list.
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -69,9 +77,16 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
     [rows],
   );
 
+  // "Awaiting your sign-off" = rows still at the pre_checked stage — the
+  // stage whose label is "Awaiting 2LoD sign-off" (STAGE_LABELS). Applied
+  // before the filter chips, same as any other filter — Show all just
+  // widens the pool the chips then narrow.
+  const awaitingSignoffRows = useMemo(() => rows.filter((r) => r.lifecycle_stage === 'pre_checked'), [rows]);
+
   const visibleRows = useMemo(() => {
     if (!is2LoD) return rows;
-    return rows.filter((r) => {
+    const scoped = showAll ? rows : awaitingSignoffRows;
+    return scoped.filter((r) => {
       if (tierFilter && r.tier !== tierFilter) return false;
       if (trackFilter && r.track !== trackFilter) return false;
       if (stageFilter && r.lifecycle_stage !== stageFilter) return false;
@@ -79,7 +94,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
       if (search.trim() && !r.label.toLowerCase().includes(search.trim().toLowerCase())) return false;
       return true;
     });
-  }, [rows, is2LoD, tierFilter, trackFilter, stageFilter, statusFilter, search]);
+  }, [rows, is2LoD, showAll, awaitingSignoffRows, tierFilter, trackFilter, stageFilter, statusFilter, search]);
 
   // register-lifecycle.md §10.3 (RG-5) — 2LoD-only export, deferred from
   // P6-C01. Browser download via Blob + a temporary anchor; no business
@@ -154,8 +169,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
 
       {!is2LoD && (
         <p className="register-view__scope-note">
-          You&apos;re viewing as 1LoD — you see your own submissions. The full register and 2LoD approval actions
-          require the 2LoD role.
+          You&apos;re viewing as 1LoD — a view preference, not a permission; this build has no sign-in.
         </p>
       )}
 
@@ -174,16 +188,36 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
       )}
 
       {decidedRows.length > 0 && (
-        <p className="register-view__pilot-line" role="status">
+        <div className="register-view__banner register-view__provisional-banner" role="note">
           {signoffGapOnlyCount} of {decidedRows.length} verdicts here would be final once outstanding
           sign-offs land.
-        </p>
+        </div>
       )}
 
       {is2LoD && policyUpdatePending && (
         <div className="register-view__banner" role="status">
           Policy updated — some assessments may need re-evaluation.
         </div>
+      )}
+
+      {is2LoD && (
+        <p className="register-view__showing-line" role="status">
+          {showAll ? (
+            <>
+              Showing: all {rows.length}{' '}
+              <button type="button" className="register-view__show-all-toggle" onClick={() => setShowAll(false)}>
+                Show only awaiting sign-off ({awaitingSignoffRows.length})
+              </button>
+            </>
+          ) : (
+            <>
+              Showing: awaiting your sign-off ({awaitingSignoffRows.length}){' '}
+              <button type="button" className="register-view__show-all-toggle" onClick={() => setShowAll(true)}>
+                Show all ({rows.length})
+              </button>
+            </>
+          )}
+        </p>
       )}
 
       {is2LoD && (
@@ -201,6 +235,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
             </button>
           </div>
           <div className="register-view__chips">
+            <span className="register-view__chip-group-label">Tier:</span>
             {tiers.map((tier) => (
               <button
                 key={tier}
@@ -211,6 +246,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
                 {tier}
               </button>
             ))}
+            <span className="register-view__chip-group-label">Track:</span>
             {tracks.map((track) => (
               <button
                 key={track}
@@ -221,6 +257,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
                 Track {track}
               </button>
             ))}
+            <span className="register-view__chip-group-label">Stage:</span>
             {stages.map((stage) => (
               <button
                 key={stage}
@@ -228,9 +265,10 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
                 className={stageFilter === stage ? 'chip chip--active' : 'chip'}
                 onClick={() => setStageFilter(stageFilter === stage ? null : stage)}
               >
-                {stage}
+                {STAGE_LABELS[stage]}
               </button>
             ))}
+            <span className="register-view__chip-group-label">Verdict:</span>
             {statuses.map((status) => (
               <button
                 key={status}
@@ -242,6 +280,22 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               </button>
             ))}
           </div>
+          {/* R15-C1 (proposal §3.3): always-visible legend, replacing tooltip
+              meanings — copied verbatim from the target-state wireframe. */}
+          <dl className="register-view__legend">
+            <dt>Legend</dt>
+            <dd>
+              Tier = how much could go wrong — Critical, High and Medium wait for second-line sign-off; Low is
+              self-service.
+            </dd>
+            <dd>
+              Track = which oversight regime applies — I classic model risk · II extra scrutiny · III AI governance.
+            </dd>
+            <dd>
+              Stage = where the case is in its life. Verdict = what the rules decided; &quot;Provisional&quot; means
+              the rulebook behind it is not yet signed off by your firm.
+            </dd>
+          </dl>
         </div>
       )}
 
@@ -256,18 +310,26 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
             <th>Stage</th>
             <th>Last Evaluated</th>
             <th>Policy Version</th>
-            {is2LoD && <th>Stale</th>}
-            {is2LoD && <th>Sampling</th>}
+            {is2LoD && <th>Flags</th>}
           </tr>
         </thead>
         <tbody>
-          {visibleRows.map((row) => (
+          {visibleRows.map((row) => {
+            const isSelfAssessment = row.use_case_id === AIGATE_USE_CASE_ID;
+            return (
             <tr
               key={row.use_case_id}
-              className="register-view__row"
+              className={
+                isSelfAssessment ? 'register-view__row register-view__row--self-assessment' : 'register-view__row'
+              }
               onClick={() => setSelectedId(row.use_case_id)}
             >
-              <td>{row.label}</td>
+              <td>
+                {row.label}
+                {isSelfAssessment && (
+                  <span className="register-view__self-assessment-tag">self-assessment</span>
+                )}
+              </td>
               {is2LoD && <td>{row.submitted_by}</td>}
               <td>{row.tier ?? '—'}</td>
               <td>{row.track ?? '—'}</td>
@@ -278,20 +340,32 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
                 {row.provisional && <span className="register-provisional"> · Provisional</span>}
               </td>
               <td>
-                <span className={`register-stage register-stage--${row.lifecycle_stage}`}>{row.lifecycle_stage}</span>
+                <span
+                  className={`register-stage register-stage--${row.lifecycle_stage}`}
+                  data-stage={row.lifecycle_stage}
+                >
+                  {STAGE_LABELS[row.lifecycle_stage]}
+                </span>
               </td>
               <td>{row.last_evaluated_at ? new Date(row.last_evaluated_at).toLocaleDateString() : '—'}</td>
               <td>{row.policy_version_at_evaluation ?? '—'}</td>
-              {is2LoD && <td>{row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}</td>}
               {is2LoD && (
                 <td>
-                  {row.sampling_review_due && (
-                    <span className="register-view__sampling-badge">sampling review due</span>
+                  {row.stale_assessment || row.sampling_review_due ? (
+                    <>
+                      {row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}
+                      {row.sampling_review_due && (
+                        <span className="register-view__sampling-badge">sampling review due</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="register-view__flags-empty" aria-label="not flagged" />
                   )}
                 </td>
               )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </section>
