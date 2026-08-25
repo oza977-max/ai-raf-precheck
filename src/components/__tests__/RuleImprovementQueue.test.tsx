@@ -78,7 +78,9 @@ describe('RuleImprovementQueue', () => {
     const groups = await screen.findAllByRole('heading', { level: 3 });
     // Sorted by rule id — deterministic, matching the product's ordering
     // discipline everywhere else.
-    expect(groups.map((h) => h.textContent)).toEqual(['INV-DATA-01 — Client PII rule', 'TIER-PII-01']);
+    // R15-C5 (proposal §3.9, Clarity F8): plain rule name leads, id follows
+    // as quiet code.
+    expect(groups.map((h) => h.textContent)).toEqual(['Client PII rule INV-DATA-01', 'TIER-PII-01']);
 
     const invGroup = groups[0]!.closest('li')!;
     expect(within(invGroup).getByText(/2 challenges/i)).toBeInTheDocument();

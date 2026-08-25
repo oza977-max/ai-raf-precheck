@@ -82,4 +82,78 @@ suite, and TypeScript's structural checks.
 
 ---
 
+## R15-C5 — Graph review refinements + rule-improvement queue
+
+Proposal §3.6 + §3.9 + §3.10's one-line describe-step note. The last of
+R15's five chunks. `GraphView.tsx`'s field labels now reuse the four
+question-derived words the proposal names, sourced from a single new
+`field-copy.ts` export (`GRAPH_FIELD_LABELS`) rather than re-typed inline;
+the engine field name stays visible beside each as quiet code
+(`.graph-node__field-code`), following the same "quiet code beside plain
+label" pattern used everywhere else in this redesign, not deleted.
+"model confident — no verified basis" is reworded to "not found in your
+text — worth a second look" and now shares a `.graph-node__badge` base
+class with "guessed" (same shape, same visual family) while keeping its
+own modifier class (`--no-basis` vs. `--guessed`) and its own text — the
+merge IxD ID-6 asked for and the panel rejected in §5 was not made; the
+underlying three provenance states (quoted / guessed / confident-no-basis)
+and the no-plain-confirm gate for guessed cards are untouched code paths,
+confirmed by reading `GraphView.tsx`'s conditional branches, which are
+unchanged in structure. A silently-unanswered optional field (decision
+type, human-in-the-loop) now renders a quiet `.graph-node__badge--not-stated`
+badge instead of a plain "not stated" text node indistinguishable from a
+real value. The "Why these values matter" disclosure button gained
+`aria-expanded`/`aria-controls`, replacing nothing (it had neither before —
+this closes the gap, matching the pattern from C1/C2/C4). Long provenance
+quotes (`ProvenanceQuote`) truncate past 90 characters with a
+`aria-expanded` "show full quote" button; the field VALUE beside the quote
+is never touched by this truncation — it always renders in full. In
+`RuleImprovementQueue.tsx`, each group heading now leads with the plain
+rule label and demotes the rule id to quiet code (falling back to the id
+alone when no label was ever resolved, e.g. a free-typed rule reference);
+"fired on N decided cases" is reworded to "has applied to N decided
+cases"; each entry now carries a source tag distinguishing "filed by a
+reviewer" from "filed by the risk-knowledge lens", derived by reading the
+existing `filed_by_name` string's `"(risk-knowledge lens, ...)"` marker
+(the coverage-gap write path, ADR-EE-R11-2) rather than by adding a new
+audit-event field — no write path changed. The "advisory by construction"
+paragraph (`.rule-queue__intro`) and the append-only caveat
+(`.rule-queue__caveat`) are untouched verbatim — grepped for and confirmed
+unmodified before and after this change. §3.10 (intake describe, About,
+Settings, Demo data) needed no code change: reading `IntakeFlow.tsx`
+confirmed the step-1 no-model-configured copy already states in one line
+what happens next, so this note was already true.
+
+| ID | Asserts |
+|---|---|
+| TC-R15-C5-01 | `GraphView.tsx`'s `data_class`, `decision_bindingness`, `output_reversibility` and `autonomy_level` field rows render the plain question-derived label from `field-copy.ts`'s `GRAPH_FIELD_LABELS`, with the engine field name still present as a `<code>` element beside it — verified by reading the JSX; no automated test previously asserted the old inline label text, so none needed renegotiating |
+| TC-R15-C5-02 | `GraphView.r12.test.tsx` TC-R12-BD-1-02/03 — renegotiated in place: the confident-no-basis marker's text assertion moved from `/model confident — no verified basis/i` to `/not found in your text — worth a second look/i`; the underlying condition under test (no quote, not guessed, model not marked uncertain) is unchanged |
+| TC-R15-C5-03 | The "guessed" and "no-basis" badges both render `.graph-node__badge` plus their own distinct modifier class (`.graph-node__badge--guessed` / `.graph-node__badge--no-basis`) and distinct text — confirmed by reading `ProvenanceBadge` in `GraphView.tsx`, a single small component the three call sites (field loop, vendor row, model row) share, replacing three near-duplicated inline blocks |
+| TC-R15-C5-04 | `GraphReview.r6.test.tsx`'s guessed-badge assertion (`/guessed — the description does not say/i`) and `GraphReview.r9.test.tsx`'s `.graph-node__guessed-badge` count assertion both pass unchanged — the guessed badge's class and text were preserved exactly, only its markup source moved into `ProvenanceBadge` |
+| TC-R15-C5-05 | `GraphReview.r5.test.tsx` TC-R5-GR-1-03 — absent optional fields still render the exact text "not stated" (now wrapped in `.graph-node__badge--not-stated` rather than a bare text node) — passes unchanged, confirming the reword did not touch this string |
+| TC-R15-C5-06 | The "Why these values matter" button renders `aria-expanded={showWhy}` and `aria-controls` pointing at the node's `<dl id="why-${node.id}">` — verified by reading the JSX; no automated test previously covered this button's accessible state, so none needed renegotiating |
+| TC-R15-C5-07 | `ProvenanceQuote` truncates quote text over 90 characters with a `show full quote` button carrying `aria-expanded`; the sibling `.graph-node__meaning` span (the field value) is rendered outside `ProvenanceQuote` entirely and is never passed through it — confirmed by reading the component boundary |
+| TC-R15-C5-08 | `RuleImprovementQueue.test.tsx`'s heading-order assertion — renegotiated from `'INV-DATA-01 — Client PII rule'` to `'Client PII rule INV-DATA-01'`, asserting the plain label now leads and the id trails as quiet code; the no-label fallback case (`'TIER-PII-01'`) is unchanged |
+| TC-R15-C5-09 | `RuleImprovementQueue.r12.test.tsx` TC-R12-AB-2-01 — renegotiated from `/challenged 1 time · fired on 1 decided case/i` to `/challenged 1 time · has applied to 1 decided case/i`; the underlying `deriveFiredCounts` computation is untouched |
+| TC-R15-C5-10 | Each queue entry renders a `.rule-queue__source-tag` reading "filed by a reviewer" or "filed by the risk-knowledge lens", derived in `deriveQueue()` from whether `filed_by_name` contains the literal marker `(risk-knowledge lens` — no new field was added to the `rule_dissent_filed` audit-event type (`store/types.ts` unchanged) |
+| TC-R15-C5-11 | `RuleImprovementQueue.test.tsx` TC-R4-RC-5-01 through -05 (empty state, grouping/ordering, advisory posture text, reserved-words guard, hostile-dissent-as-text) and TC-R4-NF-2-01 (no duplicate writes on remount) all pass unchanged — the advisory paragraph and append-only caveat were not edited |
+| TC-R15-C5-12 | `.rule-queue__intro` and `.rule-queue__caveat` text is byte-identical before and after this chunk — confirmed by diff against the pre-chunk file |
+
+### Verification
+
+`npm test` ×3 — 682/682, identical across all three runs (unchanged count
+from R15-C4: two existing test files were renegotiated in place for the
+reworded copy, no test was added or removed). `npx tsc --noEmit` clean
+(one type error surfaced and fixed during the build: `ProvenanceQuote`'s
+`text` prop needed a non-null assertion on `quotes[spec.field]` inside the
+already-truthy-checked branch). `npm run build` clean. `python3
+scripts/spec-parity-check.py` — clean (R1–R8 all pass; no spec `.md`/`.html`
+file was touched this chunk). No live browser walkthrough — this build
+pass did not have that tooling available; verified instead by reading the
+rendered JSX, the full test suite, and TypeScript's structural checks.
+This is the last of R15's five chunks; requirements-015.md's Changelog
+notes the build status (not a release) in the same pass.
+
+---
+
 *Developed using the Grounded Vibe Methodology*

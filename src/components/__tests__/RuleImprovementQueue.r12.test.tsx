@@ -128,13 +128,15 @@ async function seedUseCaseWithVerdict(id: string, label: string) {
 }
 
 describe('RuleImprovementQueue — challenge-rate instrument (R12-AB-2)', () => {
-  it('TC-R12-AB-2-01: renders "challenged N times · fired on M decided cases" per rule', async () => {
+  it('TC-R12-AB-2-01: renders "challenged N times · has applied to M decided cases" per rule', async () => {
     const id = crypto.randomUUID();
     await seedUseCaseWithVerdict(id, 'Client email drafter');
     render(<RuleImprovementQueue />);
 
     const heading = await screen.findByRole('heading', { level: 3, name: /INV-DATA-01/ });
     const group = heading.closest('li')!;
-    expect(within(group).getByText(/challenged 1 time · fired on 1 decided case/i)).toBeInTheDocument();
+    // R15-C5 (proposal §3.9): "fired on N decided cases" → "has applied to
+    // N decided cases".
+    expect(within(group).getByText(/challenged 1 time · has applied to 1 decided case/i)).toBeInTheDocument();
   });
 });

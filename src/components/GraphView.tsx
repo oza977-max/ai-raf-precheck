@@ -19,6 +19,7 @@ import {
   DECISION_TYPE_LABELS,
   EXPOSURE_LABELS,
   FIELD_CONSEQUENCES,
+  GRAPH_FIELD_LABELS,
   MODEL_TYPE_LABELS,
   REVERSIBILITY_LABELS,
   SCALE_LABELS,
@@ -129,6 +130,60 @@ const OUTPUT_FIELDS: FieldSpec[] = [
 
 type AnyNode = InputNode | ProcessingNode | OutputNode;
 
+// R15-C5 (proposal §3.6, dissent #13 in §4): a long provenance quote may
+// truncate with a way to expand it, but this is only ever applied to the
+// QUOTE — the field VALUE it supports is rendered separately, in full,
+// unconditionally. Native disclosure (aria-expanded), not a hover/CSS trick
+// (G3 / proposal §4 #8).
+const QUOTE_TRUNCATE_AT = 90;
+
+function ProvenanceQuote({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = text.length > QUOTE_TRUNCATE_AT;
+  const shown = !long || expanded ? text : `${text.slice(0, QUOTE_TRUNCATE_AT).trimEnd()}…`;
+  return (
+    <>
+      based on: &ldquo;{shown}&rdquo;
+      {long && (
+        <button
+          type="button"
+          className="graph-node__quote-expand"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded ? 'show less' : 'show full quote'}
+        </button>
+      )}
+    </>
+  );
+}
+
+// R15-C5 (proposal §3.6, dissent #6 / IxD ID-6 overruled): "not found in
+// your text — worth a second look" and "guessed" share a badge FAMILY
+// (.graph-node__badge — same shape/visual language) so a reviewer's eye
+// groups them as "look again" states, but each keeps its own class and its
+// own text — they are not merged into one label or one meaning. The
+// three-state provenance logic above (quoted / guessed / confident-no-basis)
+// and the no-plain-confirm gate for guessed cards are unchanged; this
+// component only renders what that existing logic decided.
+function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated' }) {
+  if (kind === 'guessed') {
+    return (
+      <span className="graph-node__badge graph-node__badge--guessed graph-node__guessed-badge">
+        guessed — the description does not say. Correct it, or it becomes a question.
+      </span>
+    );
+  }
+  if (kind === 'no-basis') {
+    return (
+      <span className="graph-node__badge graph-node__badge--no-basis">
+        not found in your text — worth a second look
+      </span>
+    );
+  }
+  return <span className="graph-node__badge graph-node__badge--not-stated">not stated</span>;
+}
+
 function NodeCard({
   node,
   fields,
@@ -186,43 +241,59 @@ function NodeCard({
       )}
 
       {!editing && (
-        <dl className="graph-node__meanings">
+        <dl className="graph-node__meanings" id={`why-${node.id}`}>
           {fields.map((spec) => {
             const raw = record[spec.field];
             const has = raw !== undefined && raw !== null;
-            const meaning = has ? spec.meanings?.[String(raw)] ?? String(raw) : 'not stated';
+            const meaning = has ? spec.meanings?.[String(raw)] ?? String(raw) : null;
             const fieldWarnings = warnings.filter((w) => w.field === spec.field);
+            // R15-C5 (proposal §3.6): the label reuses the guided form's
+            // question words; the engine field name stays as quiet code
+            // beside it rather than being deleted (three-class code rule).
+            const plainLabel = GRAPH_FIELD_LABELS[spec.field] ?? spec.label;
             return (
               <div key={spec.field} className="graph-node__meaning-row">
-                <dt>{spec.label}</dt>
+                <dt>
+                  {plainLabel} <code className="graph-node__field-code">{spec.field}</code>
+                </dt>
                 <dd>
-                  <span className="graph-node__meaning">{meaning}</span>
-                  {/* R6-PV-3: provenance or its honest absence. A fabricated
-                      quote never reaches here — the substring check already
-                      demoted it to guessed. */}
-                  {quotes[spec.field] ? (
-                    // R12-BD-1: the affordance no longer implies the quote was
-                    // validated — it says what was actually checked (found
-                    // verbatim) and asks the human to check the rest.
-                    <span
-                      className="graph-node__basis"
-                      title="Found word-for-word in your description — check it supports the value shown"
-                    >
-                      based on: &ldquo;{quotes[spec.field]}&rdquo;
-                    </span>
-                  ) : guessed.includes(spec.field) ? (
-                    // R9-SC-3: a quiet badge, not a second alarm — the
-                    // card-level banner carries the alarm; this points.
-                    <span className="graph-node__guessed-badge">
-                      guessed — the description does not say. Correct it, or it becomes a question.
-                    </span>
-                  ) : !uncertain ? (
-                    // R12-BD-1: the model reported confidence for this field,
-                    // but there is no verified quote behind it — a single
-                    // combined marker, quiet/advisory idiom (not an alarm),
-                    // rather than leaving the field looking untouched.
-                    <span className="graph-node__no-basis">model confident — no verified basis</span>
-                  ) : null}
+                  {has ? (
+                    <>
+                      {/* The field VALUE — never truncated, never hidden;
+                          only the quote beside it may collapse. */}
+                      <span className="graph-node__meaning">{meaning}</span>
+                      {/* R6-PV-3: provenance or its honest absence. A fabricated
+                          quote never reaches here — the substring check already
+                          demoted it to guessed. */}
+                      {quotes[spec.field] ? (
+                        // R12-BD-1: the affordance no longer implies the quote was
+                        // validated — it says what was actually checked (found
+                        // verbatim) and asks the human to check the rest.
+                        <span
+                          className="graph-node__basis"
+                          title="Found word-for-word in your description — check it supports the value shown"
+                        >
+                          <ProvenanceQuote text={quotes[spec.field]!} />
+                        </span>
+                      ) : guessed.includes(spec.field) ? (
+                        // R9-SC-3: a quiet badge, not a second alarm — the
+                        // card-level banner carries the alarm; this points.
+                        <ProvenanceBadge kind="guessed" />
+                      ) : !uncertain ? (
+                        // R12-BD-1/R15-C5: the model reported confidence for
+                        // this field, but there is no verified quote behind
+                        // it — reworded toward action, same badge family as
+                        // "guessed", own distinct label and meaning.
+                        <ProvenanceBadge kind="no-basis" />
+                      ) : null}
+                    </>
+                  ) : (
+                    // R15-C5 (proposal §3.6): a silently-unanswered optional
+                    // field (decision type, human-in-the-loop) reads as a
+                    // quiet "not stated" badge, not as a confirmed value and
+                    // not as an error.
+                    spec.optional && <ProvenanceBadge kind="not-stated" />
+                  )}
                   {showWhy && (
                     <span className="graph-node__consequence">{FIELD_CONSEQUENCES[spec.field]}</span>
                   )}
@@ -251,14 +322,12 @@ function NodeCard({
                     className="graph-node__basis"
                     title="Found word-for-word in your description — check it supports the value shown"
                   >
-                    based on: &ldquo;{quotes.vendor}&rdquo;
+                    <ProvenanceQuote text={quotes.vendor} />
                   </span>
                 ) : guessed.includes('vendor') ? (
-                  <span className="graph-node__guessed-badge">
-                    guessed — the description does not say. Correct it, or it becomes a question.
-                  </span>
+                  <ProvenanceBadge kind="guessed" />
                 ) : !uncertain ? (
-                  <span className="graph-node__no-basis">model confident — no verified basis</span>
+                  <ProvenanceBadge kind="no-basis" />
                 ) : null}
                 {showWhy && <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>}
               </dd>
@@ -274,14 +343,12 @@ function NodeCard({
                     className="graph-node__basis"
                     title="Found word-for-word in your description — check it supports the value shown"
                   >
-                    based on: &ldquo;{quotes.declared_model_id}&rdquo;
+                    <ProvenanceQuote text={quotes.declared_model_id} />
                   </span>
                 ) : guessed.includes('declared_model_id') ? (
-                  <span className="graph-node__guessed-badge">
-                    guessed — the description does not say. Correct it, or it becomes a question.
-                  </span>
+                  <ProvenanceBadge kind="guessed" />
                 ) : !uncertain ? (
-                  <span className="graph-node__no-basis">model confident — no verified basis</span>
+                  <ProvenanceBadge kind="no-basis" />
                 ) : null}
                 {showWhy && (
                   <span className="graph-node__consequence">{FIELD_CONSEQUENCES.declared_model_id}</span>
@@ -343,7 +410,16 @@ function NodeCard({
       {/* R5-GR-2: the human states the machine's proposal is right. A
           correction (Edit → change) confirms implicitly via the reducer. */}
       {!editing && (
-        <button type="button" className="graph-node__why" onClick={() => setShowWhy((w) => !w)}>
+        // R15-C5 (proposal §3.6): aria-expanded/aria-controls on the
+        // disclosure, consistent with the accessible-disclosure pattern
+        // established in C1/C2/C4 — never a title= tooltip or hover trick.
+        <button
+          type="button"
+          className="graph-node__why"
+          aria-expanded={showWhy}
+          aria-controls={`why-${node.id}`}
+          onClick={() => setShowWhy((w) => !w)}
+        >
           {showWhy ? 'Hide why these matter' : 'Why these values matter'}
         </button>
       )}

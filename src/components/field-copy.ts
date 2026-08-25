@@ -193,6 +193,18 @@ export function plainWithCode(fullLabel: string): string {
   return `${shortPhrase(fullLabel)} · ${extractParenCode(fullLabel)}`;
 }
 
+// R15-C5 (proposal §3.6): graph-review field labels reuse the guided form's
+// own question words (StructuredForm.tsx, built R15-C3) instead of a second,
+// separately-invented phrasing for the same field. Named explicitly by the
+// proposal; the engine field name stays visible as quiet code beside it —
+// it is not deleted (the three-class code rule, proposal §4 #9).
+export const GRAPH_FIELD_LABELS: Record<string, string> = {
+  data_class: 'kind of information',
+  decision_bindingness: 'how much weight its output carries',
+  output_reversibility: 'can it be undone?',
+  autonomy_level: 'how much it does without a person',
+};
+
 export const STAGE_LABELS: Record<LifecycleStage, string> = {
   idea: 'Idea',
   exploring: 'Exploring',

@@ -21,7 +21,19 @@ interface DissentEntry {
   verdict_id: string;
   dissent: string;
   filed_by_name: string;
+  // R15-C5 (proposal §3.9): distinguishes a challenge a 2LoD reviewer typed
+  // from one the risk-knowledge lens filed automatically off an uncovered
+  // match ("file as coverage gap", RegisterDetail.tsx). There is no separate
+  // field on the event for this today — the coverage-gap write path
+  // (ADR-EE-R11-2) is the SAME rule_dissent_filed event, distinguished only
+  // by how filed_by_name is composed: "<role> (risk-knowledge lens, ...)"
+  // for a lens filing, a free-typed name for a reviewer filing. No new audit
+  // event type or field is introduced here (Rule 3/G4) — this reads the
+  // existing string, it does not change what gets written.
+  source: 'reviewer' | 'lens';
 }
+
+const LENS_MARKER = '(risk-knowledge lens';
 
 interface RuleGroup {
   rule_id: string;
@@ -52,6 +64,7 @@ export function deriveQueue(events: AuditEvent[], labels: Map<string, string>): 
       verdict_id: p.verdict_id,
       dissent: p.dissent,
       filed_by_name: p.filed_by_name,
+      source: p.filed_by_name.includes(LENS_MARKER) ? 'lens' : 'reviewer',
     });
   }
   const result = [...groups.values()].sort((a, b) => a.rule_id.localeCompare(b.rule_id));
@@ -133,13 +146,22 @@ export default function RuleImprovementQueue() {
         <ul className="rule-queue__groups">
           {queue.map((group) => (
             <li key={group.rule_id} className="rule-queue__group">
+              {/* R15-C5 (proposal §3.9, Clarity F8): plain rule name leads,
+                  the id follows as quiet code — not the id-first heading
+                  this screen used before. A free-typed reference with no
+                  resolved label has only the id to show. */}
               <h3>
-                <code>{group.rule_id}</code>
-                {group.rule_label && <span className="rule-queue__rule-label"> — {group.rule_label}</span>}
+                {group.rule_label ? (
+                  <>
+                    {group.rule_label} <code className="rule-queue__rule-id">{group.rule_id}</code>
+                  </>
+                ) : (
+                  <code>{group.rule_id}</code>
+                )}
               </h3>
               <p className="rule-queue__count">
                 {group.entries.length} challenge{group.entries.length === 1 ? '' : 's'} · challenged{' '}
-                {group.entries.length} time{group.entries.length === 1 ? '' : 's'} · fired on{' '}
+                {group.entries.length} time{group.entries.length === 1 ? '' : 's'} · has applied to{' '}
                 {firedCounts.get(group.rule_id) ?? 0} decided case
                 {(firedCounts.get(group.rule_id) ?? 0) === 1 ? '' : 's'}
               </p>
@@ -148,6 +170,15 @@ export default function RuleImprovementQueue() {
                   <li key={entry.event_id} className="rule-queue__entry">
                     <p className="rule-queue__dissent">&ldquo;{entry.dissent}&rdquo;</p>
                     <p className="rule-queue__meta">
+                      {/* R15-C5 (proposal §3.9, Regulation F7): a small tag
+                          distinguishing a human reviewer's challenge from one
+                          the risk-knowledge lens filed automatically off an
+                          uncovered match. Same weight as a human dissent —
+                          neither has authority over the verdict. */}
+                      <span className="rule-queue__source-tag">
+                        {entry.source === 'lens' ? 'filed by the risk-knowledge lens' : 'filed by a reviewer'}
+                      </span>
+                      {' · '}
                       {entry.filed_by_name} (name not verified) · on {entry.use_case_label} ·{' '}
                       {new Date(entry.occurred_at).toLocaleDateString()} · verdict{' '}
                       <code>{entry.verdict_id.slice(0, 8)}</code>

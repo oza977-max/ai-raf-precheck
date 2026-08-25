@@ -44,7 +44,8 @@ describe('R12-BD-1 — badge recalibration', () => {
         onConfirmNode={vi.fn()}
       />,
     );
-    expect(screen.getAllByText(/model confident — no verified basis/i).length).toBeGreaterThan(0);
+    // R15-C5 (proposal §3.6): reworded toward action; same badge, new text.
+    expect(screen.getAllByText(/not found in your text — worth a second look/i).length).toBeGreaterThan(0);
   });
 
   it('TC-R12-BD-1-03: a quoted field does not also render the combined marker', () => {
@@ -57,6 +58,6 @@ describe('R12-BD-1 — badge recalibration', () => {
         provenance={{ i1: { data_class: 'credit risk data', data_zone: 'Zone C' } }}
       />,
     );
-    expect(screen.queryByText(/model confident — no verified basis/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not found in your text — worth a second look/i)).not.toBeInTheDocument();
   });
 });
