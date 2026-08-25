@@ -4,6 +4,19 @@
 
 A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
+## The problem, in four numbers
+
+This project publishes its own research base. From **[After Deployment](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)** — our expert-reviewed briefing computed directly from the MIT AI Risk Repository V4 and 20+ verification-graded sources ([source file in this repo](public/research/after-deployment.html)):
+
+| | |
+|---|---|
+| **84%** | of timing-classified AI risks materialise **after** deployment — the approval meeting is where the risk *starts*, not where it ends *(MIT AI Risk Repository V4, computed for the briefing)* |
+| **18% → 44%** | market share of the top-3 AI model providers in UK financial services, 2022→2024 — one silent vendor model change now moves many use cases at once *(Bank of England / FCA survey)* |
+| **72%** | of US bankers name either model kill-switches (34%) or regulatory failure-reporting (38%) as their bank's *least-prepared* area — the two capabilities that only matter after launch *(Wolters Kluwer, n=230, 2026)* |
+| **+127%** | one-year growth in US financial-sector AI adoption — the exposure is compounding faster than the governance *(Federal Reserve, Apr 2026)* |
+
+The industry's answer so far is heavier pre-approval process — longer questionnaires, more committees. The evidence says that effort is aimed at roughly a sixth of the catalogued risk. **AIGate's answer is different: automate the pre-check so it stops being the bottleneck, and let it produce the one thing post-deployment governance cannot exist without — a register that knows exactly what was approved, under which rules, with which controls, and what would make that approval stale.** You cannot monitor "AI risk". You can only monitor a named thing against a named rule. That's what this build creates.
+
 > **New here? The 90-second version.** Someone in a bank wants to build or
 > buy an AI tool. Today, finding out whether that's allowed takes weeks of
 > committee email. AIGate answers it in minutes: describe the use case,
@@ -17,7 +30,9 @@ A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into
 > proof that a risk appetite can be executable instead of a PDF.
 > **Fastest way in:** open the [live demo](https://oza977-max.github.io/ai-raf-precheck/),
 > click **About** for the plain-words tour, then **Register** to read a few
-> decided cases — no setup, nothing to install.
+> decided cases — no setup, nothing to install. For the *why*, read
+> [the research](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)
+> this project publishes alongside the code.
 
 ## Two ways to describe a use case
 
@@ -154,11 +169,26 @@ lives as prose, so every use case has to be *interpreted* against it by
 scarce second-line people, one meeting at a time. Interpretation doesn't
 scale. Rules do.
 
+And the effort is pointed at the wrong end of the lifecycle. Our own
+research ([After Deployment](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html) —
+two rounds of adversarial expert review, every statistic graded by how it
+survived verification) found that 84% of catalogued AI risks materialise
+after a system goes live: vendors silently swap models under approved use
+cases, adversaries attack what pre-launch testing never sees, accuracy
+drifts while the approval memo stays green. Post-deployment risk splits
+into two families needing opposite controls — deliberate misuse and quiet
+malfunction — and most governance programmes run standing controls for
+neither.
+
 AIGate is a working test of one idea: **if the appetite were code, the first
 pass of that process would take minutes, not months** — and the answer would
-be the same for everyone, for stated reasons, on the record. It was built by
-a risk practitioner, on personal time with public sources, to find out
-whether the idea survives contact with realistic use cases.
+be the same for everyone, for stated reasons, on the record. And because
+every verdict lands on a register carrying its rules, controls and expiry
+conditions, the pre-check produces the substrate that ongoing monitoring
+attaches to — the second act this evidence demands (see
+[the positioning strategy](strategy/post-deployment-positioning.md)). It
+was built by a risk practitioner, on personal time with public sources, to
+find out whether the idea survives contact with realistic use cases.
 
 It is deliberately the *opposite* of adding AI to governance. The verdict is
 computed by deterministic rules; the honest boundary of what a tool may
@@ -384,6 +414,20 @@ wired into it:
 The order is deliberate: first judge honestly (V1), then verify what you
 were told (V1.5), then monitor what you approved (V2). Each stage keeps the
 rule this whole product is built on — never claim more than you can prove.
+
+V2's shape now has an evidence base, not just an intention. The
+[After Deployment research](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)
+shows post-deployment risk is two different problems — **misuse** (people
+weaponising deployed systems; an adversarial-testing problem) and
+**malfunction** (systems failing without malice; a detection problem) — so
+V2 is two arms, built separately, under one design rule taken from that
+research's review: *a monitoring signal must force a register-state
+change, or it doesn't ship.* No dashboards for their own sake. The first
+brick is small and already scoped: when a vendor model changes under an
+approved use case, the approval reopens itself into the existing
+re-evaluation queue. The full reasoning — what gets built, in what order,
+and what deliberately doesn't — is in
+[strategy/post-deployment-positioning.md](strategy/post-deployment-positioning.md).
 
 ## Licence
 

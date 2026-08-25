@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After Deployment</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F7F5F0;
+    --card: #FFFFFF;
+    --ink: #211F1A;
+    --ink-soft: #57534A;
+    --ink-faint: #8A8478;
+    --rule: #E3DFD5;
+    --blue: #2563A8;
+    --amber: #C2703D;
+    --neutral-bar: #A8A296;
+    --warn-bg: #F7EBDD;
+    --warn-border: #E0C4A3;
+    --accent-ink: #1E3A5F;
+    --ok: #3D6B4F;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171511;
+      --card: #201E19;
+      --ink: #ECE8DF;
+      --ink-soft: #B5AFA2;
+      --ink-faint: #837D70;
+      --rule: #383429;
+      --blue: #4E8FCB;
+      --amber: #C97C3F;
+      --neutral-bar: #6B6558;
+      --warn-bg: #2A2318;
+      --warn-border: #4E3F28;
+      --accent-ink: #A8C4E0;
+      --ok: #6FA383;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #171511;
+    --card: #201E19;
+    --ink: #ECE8DF;
+    --ink-soft: #B5AFA2;
+    --ink-faint: #837D70;
+    --rule: #383429;
+    --blue: #4E8FCB;
+    --amber: #C97C3F;
+    --neutral-bar: #6B6558;
+    --warn-bg: #2A2318;
+    --warn-border: #4E3F28;
+    --accent-ink: #A8C4E0;
+    --ok: #6FA383;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 1.25rem 6rem;
+  }
+  .sheet { max-width: 860px; margin: 0 auto; }
+  .prose { max-width: 68ch; }
+
+  .masthead { padding: 3.5rem 0 2.25rem; border-bottom: 3px solid var(--ink); }
+  .masthead .kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--amber); margin: 0 0 0.9rem;
+  }
+  h1 {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-weight: 600; font-size: clamp(2.1rem, 5.5vw, 3.3rem);
+    line-height: 1.08; margin: 0 0 1rem; text-wrap: balance;
+  }
+  .masthead .dek {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 1.18rem; line-height: 1.55; color: var(--ink-soft);
+    max-width: 62ch; margin: 0 0 1.4rem;
+  }
+  .masthead .byline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.74rem; color: var(--ink-faint); margin: 0; line-height: 1.7;
+  }
+
+  .tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    margin: 2.5rem 0 0;
+  }
+  .tile { background: var(--card); padding: 1.3rem 1.2rem 1.15rem; }
+  .tile .num {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 2.15rem; font-weight: 600; line-height: 1;
+    font-variant-numeric: tabular-nums; margin: 0 0 0.45rem;
+  }
+  .tile .num.amber { color: var(--amber); }
+  .tile .label { font-size: 0.82rem; color: var(--ink-soft); line-height: 1.45; margin: 0; }
+  .tile .src { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; color: var(--ink-faint); margin: 0.5rem 0 0; }
+
+  h2 {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-weight: 600; font-size: 1.55rem; line-height: 1.25;
+    margin: 3.2rem 0 0.4rem; text-wrap: balance;
+  }
+  .sec-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 3.4rem 0 -2.9rem;
+  }
+  h3 {
+    font-family: 'IBM Plex Sans', sans-serif; font-weight: 600;
+    font-size: 1.05rem; margin: 2rem 0 0.35rem;
+  }
+  p { margin: 0.85rem 0; }
+  a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  strong { font-weight: 600; }
+
+  .pull {
+    border-left: 3px solid var(--amber);
+    padding: 0.15rem 0 0.15rem 1.15rem; margin: 1.6rem 0;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 1.12rem; line-height: 1.5; color: var(--ink);
+  }
+
+  figure {
+    margin: 2rem 0; background: var(--card);
+    border: 1px solid var(--rule); padding: 1.4rem 1.5rem 1.2rem;
+  }
+  figure .fig-title { font-weight: 600; font-size: 0.95rem; margin: 0 0 0.15rem; }
+  figure .fig-sub { font-size: 0.8rem; color: var(--ink-soft); margin: 0 0 1.1rem; }
+  figcaption {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem;
+    color: var(--ink-faint); margin-top: 1rem; line-height: 1.5;
+  }
+
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin: 0 0 1rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--ink-soft); }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .swatch.post { background: var(--amber); }
+  .swatch.pre { background: var(--blue); }
+  .swatch.gray { background: var(--neutral-bar); }
+
+  .barrow { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 0.6rem; align-items: start; margin-bottom: 0.85rem; }
+  .barrow .blabel { font-size: 0.8rem; line-height: 1.3; color: var(--ink); padding-top: 0.05rem; }
+  .barrow .blabel .pct { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--amber); font-weight: 500; }
+  .bars { display: flex; flex-direction: column; gap: 2px; }
+  .bar { height: 13px; border-radius: 0 4px 4px 0; position: relative; min-width: 2px; }
+  .bar.post { background: var(--amber); }
+  .bar.pre { background: var(--blue); }
+  .bar.solo { background: var(--blue); height: 15px; }
+  .bar .v {
+    position: absolute; left: calc(100% + 7px); top: 50%; transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .stackbar { display: flex; gap: 2px; height: 34px; margin: 0.4rem 0 0.8rem; }
+  .stackbar > div { display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .stackbar .seg-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: #FFFFFF; white-space: nowrap;
+  }
+  .stack-keys { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-soft); }
+
+  /* 2x2 quadrant */
+  .quad { display: grid; grid-template-columns: auto 1fr 1fr; gap: 2px; margin: 0.5rem 0 0.4rem; }
+  .quad .axis-top { grid-column: 2 / 4; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .quad .axis-top div, .quad .axis-side {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--ink-faint); text-align: center;
+    display: flex; align-items: center; justify-content: center; padding: 0.3rem;
+  }
+  .quad .axis-side { writing-mode: vertical-rl; transform: rotate(180deg); }
+  .qcell { padding: 1.1rem 1rem; text-align: center; border-radius: 4px; background: var(--paper); border: 1px solid var(--rule); }
+  .qcell .qn { font-family: 'IBM Plex Serif', Georgia, serif; font-size: 1.7rem; font-weight: 600; line-height: 1; }
+  .qcell .qt { font-size: 0.74rem; color: var(--ink-soft); margin-top: 0.35rem; line-height: 1.35; }
+  .qcell.hot { background: var(--warn-bg); border-color: var(--warn-border); }
+  .qcell.hot .qn { color: var(--amber); }
+
+  /* dumbbell / change bars */
+  .change { margin-bottom: 1.1rem; }
+  .change .clabel { font-size: 0.8rem; margin-bottom: 0.25rem; }
+  .change .ctrack { position: relative; height: 15px; }
+  .change .cbar-from { position: absolute; top: 0; height: 13px; background: var(--neutral-bar); border-radius: 0 4px 4px 0; }
+  .change .cbar-to { position: absolute; top: 0; height: 13px; background: var(--amber); border-radius: 0 4px 4px 0; opacity: 0.92; }
+  .change .cv { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--ink-soft); margin-top: 1.05rem; display: block; }
+
+  .tablewrap { overflow-x: auto; margin: 1.6rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; background: var(--card); border: 1px solid var(--rule); }
+  th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500;
+  }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  .grade { font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; padding: 0.1rem 0.45rem; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+  .grade.primary { color: var(--ok); }
+  .grade.press { color: var(--amber); }
+
+  .path { counter-reset: step; margin: 1.8rem 0; padding: 0; list-style: none; }
+  .path li {
+    counter-increment: step; position: relative;
+    padding: 0 0 1.5rem 3.1rem; border-left: 1px solid var(--rule); margin-left: 1rem;
+  }
+  .path li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .path li::before {
+    content: counter(step);
+    position: absolute; left: -1.05rem; top: -0.15rem;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--accent-ink); color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+  }
+  :root[data-theme="dark"] .path li::before { color: #171511; }
+  .path li b { display: block; font-size: 0.98rem; margin-bottom: 0.2rem; }
+  .path li p { margin: 0; font-size: 0.9rem; color: var(--ink-soft); }
+
+  .note {
+    background: var(--warn-bg); border: 1px solid var(--warn-border);
+    padding: 0.9rem 1.15rem; font-size: 0.88rem; margin: 1.6rem 0; border-radius: 4px;
+  }
+
+  .sources { font-size: 0.82rem; color: var(--ink-soft); }
+  .sources ol { padding-left: 1.3rem; margin: 0.8rem 0; }
+  .sources li { margin-bottom: 0.45rem; }
+
+  hr.sec { border: none; border-top: 1px solid var(--rule); margin: 3rem 0 0; }
+
+  @media (max-width: 560px) {
+    .barrow { grid-template-columns: 1fr; gap: 0.25rem; }
+    .bar .v { font-size: 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="sheet">
+
+<header class="masthead">
+  <p class="kicker">Research briefing · AI risk in production · 4th edition — two review rounds, corrections disclosed</p>
+  <h1>After Deployment</h1>
+  <p class="dek">AI risk is not only an approval problem — 84% of it materialises after deployment. The evidence: 1,724 catalogued risks, four incident databases, three supervisors' 2025–26 surveys and the freshest drift studies, every statistic graded by how well it survives verification — and the operating model that follows for financial institutions.</p>
+  <p class="byline">25 August 2026 · Primary analysis of the MIT AI Risk Repository V4 (3 Dec 2025, CC BY 4.0) · 20+ secondary sources, each verification-graded in the ledger at the end · corrections from the 1st edition noted inline</p>
+</header>
+
+<div class="tiles">
+  <div class="tile">
+    <p class="num amber">84%</p>
+    <p class="label">of timing-classified AI risks materialise <strong>after</strong> deployment (977 of 1,167 pre/post-coded entries)</p>
+    <p class="src">MIT AI Risk Repository V4 — computed for this briefing</p>
+  </div>
+  <div class="tile">
+    <p class="num">362</p>
+    <p class="label">documented AI incidents in 2025 — up 55% on 2024; organisations with 3–5 incidents jumped from 30% to 50%</p>
+    <p class="src">Stanford AI Index 2026</p>
+  </div>
+  <div class="tile">
+    <p class="num amber">+127%</p>
+    <p class="label">year-on-year growth in US financial-sector AI adoption through late 2025, reaching 30% of firms; 63% of finance workers use GenAI at work</p>
+    <p class="src">Federal Reserve FEDS Notes, Apr 2026</p>
+  </div>
+  <div class="tile">
+    <p class="num">20%</p>
+    <p class="label">of breached organisations had a breach linked to <strong>shadow AI</strong> — costing $670K above the average; 63% have no AI governance policy, or are still writing one</p>
+    <p class="src">IBM/Ponemon Cost of a Data Breach 2025</p>
+  </div>
+</div>
+
+<p class="sec-label">Part one</p>
+<h2>What the evidence base actually says</h2>
+<div class="prose">
+<p>The MIT AI Risk Repository (Slattery et al., MIT FutureTech) is the largest structured catalogue of AI risks in the academic literature: <strong>1,724 individual risks extracted from 80 frameworks and papers</strong>, each coded for what caused it, whether it was intentional, and — the axis this briefing is about — <em>when it occurs</em>. We analysed the V4 release (December 2025) directly for this briefing; every number in this section is computed from the source file, not quoted from a summary.</p>
+<p>Of the risks that could be coded for timing, <strong>977 occur post-deployment against 190 pre-deployment</strong> — 84% of the codable set. (A further 430 entries are timing-ambiguous or span both phases; even counting all of those against, post-deployment risks are still an outright majority of everything coded.) And the skew is not an artefact of older literature: papers published in <strong>2025 alone code 88% of their risks as post-deployment</strong> — the newest research leans harder into the pattern, not softer.</p>
+</div>
+
+<figure>
+  <p class="fig-title">Figure 1 — Where risks occur, by domain: post-deployment vs pre-deployment</p>
+  <p class="fig-sub">Count of timing-coded risks in each of the repository's seven harm domains. Percentage = post-deployment share of that domain's pre/post-coded risks.</p>
+  <div class="legend">
+    <span><span class="swatch post"></span>Post-deployment</span>
+    <span><span class="swatch pre"></span>Pre-deployment</span>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Malicious actors &amp; misuse <span class="pct">99% post</span></div>
+    <div class="bars"><div class="bar post" style="width:100%"><span class="v">239</span></div><div class="bar pre" style="width:0.9%"><span class="v">2</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">AI system safety, failures &amp; limitations <span class="pct">74% post</span></div>
+    <div class="bars"><div class="bar post" style="width:83.7%"><span class="v">200</span></div><div class="bar pre" style="width:29.3%"><span class="v">70</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Socioeconomic &amp; environmental <span class="pct">73% post</span></div>
+    <div class="bars"><div class="bar post" style="width:54.4%"><span class="v">130</span></div><div class="bar pre" style="width:20.1%"><span class="v">48</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Discrimination &amp; toxicity <span class="pct">86% post</span></div>
+    <div class="bars"><div class="bar post" style="width:53.1%"><span class="v">127</span></div><div class="bar pre" style="width:8.4%"><span class="v">20</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Privacy &amp; security <span class="pct">76% post</span></div>
+    <div class="bars"><div class="bar post" style="width:46%"><span class="v">110</span></div><div class="bar pre" style="width:14.6%"><span class="v">35</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Human–computer interaction <span class="pct">100% post</span></div>
+    <div class="bars"><div class="bar post" style="width:35.1%"><span class="v">84</span></div><div class="bar pre" style="width:0%"><span class="v">0</span></div></div>
+  </div>
+  <div class="barrow">
+    <div class="blabel">Misinformation <span class="pct">97% post</span></div>
+    <div class="bars"><div class="bar post" style="width:25.1%"><span class="v">60</span></div><div class="bar pre" style="width:0.9%"><span class="v">2</span></div></div>
+  </div>
+  <figcaption>Source: MIT AI Risk Repository V4 (3 Dec 2025), CC BY 4.0 — 1,167 risks coded unambiguously pre- or post-deployment; timing-ambiguous entries (430) and uncoded rows excluded. A further 27 post- and 13 pre-deployment entries carry no domain code and appear in no bar, which is why the bars sum to 950/177 rather than 977/190 (950+27=977; 177+13=190). Analysis: this briefing.</figcaption>
+</figure>
+
+<div class="prose">
+<p>Cross-tabulating <em>who</em> causes post-deployment risk against <em>whether it was deliberate</em> produces the sharpest finding in the dataset. Post-deployment risk lives in two opposite corners:</p>
+</div>
+
+<figure>
+  <p class="fig-title">Figure 2 — The two faces of post-deployment risk</p>
+  <p class="fig-sub">The 977 post-deployment risks, cross-tabulated: causal entity × intent. Two quadrants dominate — and they need opposite controls.</p>
+  <div class="quad">
+    <div></div>
+    <div class="axis-top"><div>Intentional</div><div>Unintentional</div></div>
+    <div class="axis-side">Human-caused</div>
+    <div class="qcell hot"><div class="qn">280</div><div class="qt"><strong>Misuse</strong> — people weaponising deployed systems. Caught by adversarial testing &amp; abuse monitoring.</div></div>
+    <div class="qcell"><div class="qn">68</div><div class="qt">Human error in operation</div></div>
+    <div class="axis-side">AI-caused</div>
+    <div class="qcell"><div class="qn">81</div><div class="qt">AI acting deliberately against intent</div></div>
+    <div class="qcell hot"><div class="qn">225</div><div class="qt"><strong>Malfunction</strong> — systems failing without malice. Caught by drift &amp; outcome monitoring.</div></div>
+  </div>
+  <figcaption>Source: MIT AI Risk Repository V4, post-deployment entries with coded entity and intent. 320 entries ambiguous on one or both axes omitted from the grid; 3 uncoded entries excluded — 654 gridded + 320 + 3 = 977. Analysis: this briefing.</figcaption>
+</figure>
+
+<div class="prose">
+<p>The governance consequence is direct: <strong>misuse (280 risks) and malfunction (225 risks) are the two dominant quadrants, and no single control covers both.</strong> Adversarial testing never catches quiet drift; drift monitoring never catches a fraudster. A monitoring regime is only credible if it runs both.</p>
+</div>
+
+<figure>
+  <p class="fig-title">Figure 3 — The largest post-deployment risk clusters</p>
+  <p class="fig-sub">Top eight sub-domains by count of post-deployment risks. The top three are all adversarial.</p>
+  <div class="barrow"><div class="blabel">Disinformation, surveillance &amp; influence at scale</div><div class="bars"><div class="bar solo" style="width:100%"><span class="v">74</span></div></div></div>
+  <div class="barrow"><div class="blabel">Fraud, scams &amp; targeted manipulation</div><div class="bars"><div class="bar solo" style="width:97.3%"><span class="v">72</span></div></div></div>
+  <div class="barrow"><div class="blabel">Cyberattacks, weapon development &amp; mass harm</div><div class="bars"><div class="bar solo" style="width:95.9%"><span class="v">71</span></div></div></div>
+  <div class="barrow"><div class="blabel">Lack of capability or robustness</div><div class="bars"><div class="bar solo" style="width:86.5%"><span class="v">64</span></div></div></div>
+  <div class="barrow"><div class="blabel">Exposure to toxic content</div><div class="bars"><div class="bar solo" style="width:86.5%"><span class="v">64</span></div></div></div>
+  <div class="barrow"><div class="blabel">AI system security vulnerabilities &amp; attacks</div><div class="bars"><div class="bar solo" style="width:86.5%"><span class="v">64</span></div></div></div>
+  <div class="barrow"><div class="blabel">Overreliance &amp; unsafe use</div><div class="bars"><div class="bar solo" style="width:71.6%"><span class="v">53</span></div></div></div>
+  <div class="barrow"><div class="blabel">Unfair discrimination &amp; misrepresentation</div><div class="bars"><div class="bar solo" style="width:67.6%"><span class="v">50</span></div></div></div>
+  <figcaption>Source: MIT AI Risk Repository V4, post-deployment entries with a coded sub-domain. Analysis: this briefing.</figcaption>
+</figure>
+
+<div class="prose">
+<p>The live incident trackers agree with the catalogue. The AI Incident Database's own Q2 2026 roundup logged <strong>148 new incidents in three months</strong> (May–July 2026), with AI-enabled scams and fraud its single largest editorial cluster (27 incidents) — the same adversarial cluster that tops Figure 3. The OECD's AI Incidents Monitor now screens over <strong>150,000 news articles daily</strong> to surface roughly ten confirmed incidents or hazards a day. And Stanford's Index adds the recurrence finding: the share of organisations reporting <em>one or two</em> incidents fell (42%→29%) while the share reporting <em>three to five</em> rose (30%→50%) — incidents are not spread thinly across the market; they compound inside the firms that deploy most.</p>
+</div>
+
+<p class="sec-label">Part two</p>
+<h2>Why post-deployment dominates — and why it is getting worse</h2>
+<div class="prose">
+<p>Three mechanisms explain the skew (§1, §2, §4), and a compounding pressure amplifies all of them (§3) — each with hard 2025–26 measurements behind it.</p>
+
+<h3>1. The model you approved is not the model you are running</h3>
+<p>Hosted LLMs change under their consumers without version bumps. The canonical measurement (Chen, Zaharia &amp; Zou, published in <em>Harvard Data Science Review</em>): GPT-4's directly-executable code generation fell <strong>from over 50% to 10% in three months</strong> (March–June 2023) with no version change, and its accuracy on a simple number-theory task fell from 84% to 51% over the same window. The mechanism is still live: Anthropic's September 2025 postmortem documents a routing bug that at its worst hour hit <strong>16% of Claude Sonnet 4 requests</strong>, with roughly <strong>30% of Claude Code users</strong> catching at least one degraded response — weeks of production impact, no API change.</p>
+<p>For a bank this means the system that passed validation in March is behaviourally a different system in June — a risk class ("silent model substitution") that by definition cannot exist pre-deployment.</p>
+
+<h3>2. Adversaries only show up after launch</h3>
+<p>The three largest post-deployment clusters in Figure 3 — disinformation at scale, fraud and manipulation, cyberattack enablement — all require a deployed system to exploit or to weaponise. The attacker's own capability curve is the alarming one: on Stanford's Cybench benchmark of realistic cybersecurity challenges, AI agents' unguided solve rate went <strong>from 15% to 93% in a single year</strong> (2024→2025).</p>
+
+<h3>3. The compounding pressure: more deployment, less visibility</h3>
+<p>Stanford's AI Index reports 362 documented incidents in 2025, up 55% year-on-year, with organisational AI adoption at 88% — and its Foundation Model Transparency Index <em>fell</em> from 58 to 40 over the same period. McKinsey's global survey reports 51% of AI-using organisations with at least one negative consequence already — and the firms using AI most reporting <em>more</em> consequences, not fewer, despite broader risk programmes. More deployment, more incidents, less visibility into the models underneath — three trends moving the wrong way at once. They come from unrelated surveys and prove no common cause; a bank sits at their intersection either way.</p>
+
+<h3>4. Autonomy moves the failure point downstream</h3>
+<p>Agentic systems act rather than draft, which converts every model error from "a person caught it in review" into "a transaction happened." The reliability numbers are unforgiving: on τ-bench, a controlled benchmark of AI agents handling realistic customer-service tasks with real tools, a frontier model completed 61% of retail-domain tasks on a first attempt (and only about 35% on the harder airline domain) — but completed <strong>all eight repeats of the same task less than 25% of the time</strong>. Consistency, not capability, is the production gap.</p>
+<p>Gartner predicts over 40% of agentic AI projects will be cancelled by end-2027 on cost, value and <em>inadequate risk controls</em>; the Bank of England warned in June 2026 that existing oversight frameworks were not designed for autonomous agents in payments and trading. The MIT data agrees from the other direction: human–computer interaction risks (overreliance, ceded agency) are 100% post-deployment.</p>
+
+<p class="pull">A pre-approval gate answers "should this ship?" The evidence says the harder question is "is this still the thing we approved, and is it still behaving?" — asked continuously, for the life of the system.</p>
+</div>
+
+<p class="sec-label">Part three</p>
+<h2>The financial-industry overlay</h2>
+<div class="prose">
+<p>Banking concentrates the conditions under which post-deployment risk does the most damage: irreversible transactions, regulated fairness duties, market-correlated behaviour, and deep third-party dependence. The supervisors' own survey data now quantifies all four — and the concentration numbers are the starkest.</p>
+</div>
+
+<figure>
+  <p class="fig-title">Figure 4 — Adoption up, dependence up, concentration doubling</p>
+  <p class="fig-sub">UK regulated firms, BoE/FCA joint survey (2022 → 2024): the share of AI implemented by third parties and the market share of the top three model providers both roughly doubled in two years.</p>
+  <div class="legend">
+    <span><span class="swatch gray"></span>2022 survey</span>
+    <span><span class="swatch post"></span>2024 survey</span>
+  </div>
+  <div class="change">
+    <div class="clabel">Firms using AI</div>
+    <div class="ctrack"><div class="cbar-from" style="width:58%"></div><div class="cbar-to" style="width:75%; clip-path: inset(0 0 0 77.3%);"></div></div>
+    <span class="cv">58% → 75%</span>
+  </div>
+  <div class="change">
+    <div class="clabel">AI use cases implemented by third parties</div>
+    <div class="ctrack"><div class="cbar-from" style="width:17%"></div><div class="cbar-to" style="width:33%; clip-path: inset(0 0 0 51.5%);"></div></div>
+    <span class="cv">17% → 33%</span>
+  </div>
+  <div class="change">
+    <div class="clabel">Share of named model providers held by the top 3</div>
+    <div class="ctrack"><div class="cbar-from" style="width:18%"></div><div class="cbar-to" style="width:44%; clip-path: inset(0 0 0 40.9%);"></div></div>
+    <span class="cv">18% → 44%</span>
+  </div>
+  <figcaption>Source: Bank of England / FCA, third survey of AI and machine learning in UK financial services (Nov 2024; 118 firms) — the same figures the FSB's Oct 2025 report reuses as its concentration case study. Grey = 2022 baseline; amber extension = 2024 level.</figcaption>
+</figure>
+
+<div class="prose">
+<p>The same survey's cloud-provider concentration is starker still — the top three hold roughly three-quarters of UK financial-services cloud usage. Figure 4 shows the model-provider line because that is where a silent model change propagates from.</p>
+<p>The adoption side, meanwhile, is accelerating on every measure a supervisor publishes. The EBA's December 2025 innovation monitoring puts EU bank AI adoption at roughly 90%, with general-purpose AI rising from near zero to about 65% of banks in two years (chart-derived figures). The Federal Reserve's April 2026 analysis of Census survey data puts US financial-sector adoption at 30% of firms — <strong>up 127% in a year</strong> — with 63% of financial-sector <em>workers</em> reporting work use of generative AI, the highest of any industry. The FSB's October 2025 report frames the systemic consequence: third-party concentration, correlated models (many firms wrong the same way at once), and — telling for anything built on monitoring — authorities themselves hampered by data gaps and no standard risk taxonomy.</p>
+<p>The governance side is not keeping pace, and now there are numbers for the gap. IBM/Ponemon's 2025 breach study: 63% of organisations <strong>either have no AI governance policy or are still developing one</strong>. Only 17% have technical controls against staff pasting confidential data into public AI tools. Of organisations that suffered an AI-related security incident, 97% lacked proper AI access controls — and one in five breached organisations traces a breach to <em>shadow AI</em>, at $670K above the average breach cost.</p>
+<p>In banking specifically, Wolters Kluwer's H1 2026 <em>US Banking AI Risk and Governance Index</em> (230 US banking professionals) found <strong>72% named either model kill-switch protocols (34%) or regulatory reporting of AI failures (38%) as the area where their bank is least prepared</strong> — the two capabilities that only matter after deployment. <em>(Correction from this briefing's first edition: that 72% is a combined either/or figure, not "72% lack kill switches"; an earlier "18% confident of passing review" statistic could not be traced to the underlying survey and has been withdrawn.)</em></p>
+<p>Regulation has already moved to the same ground — with one twist that is itself evidence. The EU AI Act's high-risk regime, including credit scoring of natural persons by name, was due to go live on 2 August 2026. A month before that date, the Digital Omnibus (Regulation (EU) 2026/1744, Official Journal 24 July 2026) <strong>postponed the Annex III high-risk obligations to 2 December 2027</strong>, leaving the Article 50 transparency duties in force on the original date. <em>(Correction from this briefing's first edition, which stated the high-risk regime was already live.)</em></p>
+<p>The point survives the postponement. The obligations are unchanged and lifecycle-shaped — post-market monitoring plans, serious-incident reporting, logged human oversight, conformity that must hold <em>in operation</em> — and the deferral moves the compliance deadline, not the risk: every mechanism in Part 2 keeps operating while the paperwork waits. The UK's SS1/23 and Canada's OSFI E-23 have run on lifecycle logic since 2023–24.</p>
+<p>MAS consulted on AI risk-management guidelines covering all AI uses including agentic in November 2025 (12-month transition proposed) and, per industry press, followed with runtime safeguards for agentic finance ("SAFR") in July 2026 — policy-bound execution, real-time validation, escalation, complete audit trails, demonstrated in operation rather than asserted at approval.</p>
+</div>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Risk cluster (MIT V4)</th><th>How it lands in a bank</th><th>Regulatory hook</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Fraud &amp; manipulation<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">72 post-deployment risks</span></td>
+      <td>AI-assisted phishing of clients and staff; deepfake authorisation fraud; manipulation of client-facing chatbots into harmful commitments. Largest single cluster in AIID's Q2 2026 intake.</td>
+      <td>CFPB chatbot guidance (exposure under US unfair-and-deceptive-practices law, "UDAAP"); EU AI Act Art. 50 disclosure duties (in force since Aug 2026)</td>
+    </tr>
+    <tr>
+      <td>Robustness failures<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">64</span></td>
+      <td>Silent vendor model drift changing credit, surveillance or pricing behaviour mid-quarter (GPT-4: 50%→10% in 3 months; Anthropic: 16% of requests at peak); hallucinated figures in regulated communications</td>
+      <td>SS1/23 ongoing monitoring; EU AI Act post-market monitoring; OSFI E-23 lifecycle</td>
+    </tr>
+    <tr>
+      <td>Security attacks<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">64</span></td>
+      <td>Prompt injection against document-processing pipelines; data-extraction from models grounded on client data; attacker capability rising fast (Cybench agent solve rate 15%→93% in one year)</td>
+      <td>DORA (the EU's digital-resilience regulation) ICT-risk regime; EU AI Act cybersecurity requirements for high-risk systems (from Dec 2027)</td>
+    </tr>
+    <tr>
+      <td>Discrimination<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">50</span></td>
+      <td>Disparate impact emerging in production credit/hiring decisions as populations drift from training data — already the subject of state-level enforcement settlements in the US</td>
+      <td>EU AI Act Annex III (credit scoring high-risk, applying from Dec 2027); ECOA (US fair-lending law); Consumer Duty</td>
+    </tr>
+    <tr>
+      <td>Overreliance<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">53</span></td>
+      <td>Staff treating AI drafts as checked facts; review steps that exist on paper but not in behaviour; agentic actions outrunning oversight (τ-bench: &lt;25% success on 8 repeats of the same task)</td>
+      <td>MAS runtime safeguards (2026, press-reported); BoE agentic-AI warning (June 2026); EU AI Act logged human-oversight duty (from Dec 2027)</td>
+    </tr>
+    <tr>
+      <td>Concentration<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">Socioecon. domain, 130</span></td>
+      <td>One vendor outage or one bad model update propagating across every use case at once — and across competitors on the same stack. Top-3 model providers: 18%→44% of the UK market in two years.</td>
+      <td>FSB 2024/2025 vulnerability reports; DORA critical-third-party regime</td>
+    </tr>
+    <tr>
+      <td>Shadow AI<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">ungoverned use</span></td>
+      <td>Staff-adopted tools outside the register entirely: 20% of breached orgs trace a breach to shadow AI (+$670K); 63% of finance workers already use GenAI at work — governed or not</td>
+      <td>EU AI Act deployer duties (high-risk set from Dec 2027); IBM/Ponemon 2025 as the actuarial evidence base</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="sec-label">Part four</p>
+<h2>The path forward</h2>
+<div class="prose">
+<p>The through-line of every source above — the MIT timing data, the two-quadrant split, the supervisors' concentration numbers, the banks' own kill-switch gap — is one shift: <strong>from approval as an event to appetite as a standing condition.</strong> Concretely, in seven steps. The sequence is practical, not a ranking of importance: the register comes first because every later step reads from it (expiry conditions flag register entries, pinning re-triggers register re-evaluations, sampled reviews and red-team cycles are scheduled off it), not because it matters most:</p>
+</div>
+
+<ol class="path">
+  <li>
+    <b>Make the register the system of record, not the approval memo</b>
+    <p>Every AI use case on one register with its verdict, the rule that decided it, the controls it depends on, and a full audit trail. If the register cannot answer "what is running, under which rules, approved by whom" in one query, nothing downstream works. This is also the raw material for the AI Act's documentation duties — and the only structural answer to shadow AI: a register cheap enough to use that going around it stops being the path of least resistance.</p>
+  </li>
+  <li>
+    <b>Give every approval an expiry logic</b>
+    <p>An approval should state the conditions under which it stops being valid: policy version changes, jurisdiction pack updates, vendor model substitution, control evidence going stale, re-attestation dates passing. Stale approvals must surface themselves — flagged on the register, not discovered in an audit.</p>
+  </li>
+  <li>
+    <b>Pin models and detect substitution</b>
+    <p>Version pinning plus output fingerprinting on vendor models, so silent drift becomes a detected event that triggers re-evaluation. The GPT-4 (50%→10%) and Anthropic (16% of requests) measurements make this the best-quantified post-deployment mechanism on record — and with top-3 provider concentration at 44% and doubling, a single silent update now moves many use cases at once. Zero tolerance for unmonitored vendor model change.</p>
+  </li>
+  <li>
+    <b>Sample outcomes, not just designs</b>
+    <p>Post-hoc sampled review of production decisions, scheduled off the register per use case — the control for the <em>malfunction</em> quadrant (225 risks): drift, disparate impact, degraded accuracy that no pre-launch test can see. For at-scale recommendation and decision systems this should be a standing control, not an incident response.</p>
+  </li>
+  <li>
+    <b>Adversarially test in production conditions, on a cycle</b>
+    <p>The control for the <em>misuse</em> quadrant (280 risks) — injection, extraction, manipulation — only testable against the deployed system, against an attacker capability curve that went 15%→93% in a year. Red-teaming belongs on a recurring calendar tied to the register, re-triggered by model or policy change, not done once at launch.</p>
+  </li>
+  <li>
+    <b>Build the incident muscle before the regulator asks</b>
+    <p>Kill-switch protocols, an internal AI-incident taxonomy, and reporting lines that can produce a serious-incident notification in AI Act timeframes. Wolters Kluwer's index makes this the sector's most concrete self-declared weakness (34% kill-switches, 38% failure reporting), and Stanford's recurrence data (3–5-incident firms up from 30% to 50%) says the firms that need it most are the ones deploying fastest.</p>
+  </li>
+  <li>
+    <b>Feed what production teaches back into the rules</b>
+    <p>A channel from operation to rulebook: challenges filed against rules, coverage gaps logged against an external taxonomy, precedent from decided cases informing the next decision. The evidence for needing it is in Part 1's own structure — the taxonomy runs to 24 sub-domains while most firms' rulebooks address far fewer, and the FSB's complaint that authorities lack shared risk taxonomies is the system-level version of the same gap: rules that never learn from operation. This is how a firm's appetite framework compounds instead of decaying — and over time it becomes the corpus no vendor can replicate.</p>
+  </li>
+</ol>
+
+<div class="note prose">
+<strong>Where our build already stands, honestly.</strong>
+<ul style="margin:0.6rem 0 0.6rem 1.1rem; padding:0; line-height:1.7">
+  <li><strong>1 Register &amp; audit trail</strong> — built (rule-traced verdicts, append-only trail)</li>
+  <li><strong>2 Expiry logic</strong> — built (staleness flags, re-evaluation queues, re-attestation dates)</li>
+  <li><strong>3 Model pinning</strong> — partial: family pinning and the fingerprinting control exist as named controls; the detection mechanics are still to build</li>
+  <li><strong>4 Outcome sampling</strong> — built as a control and a sampling flag</li>
+  <li><strong>5 Adversarial cycle</strong> — partial: a named required control, not yet a scheduled cycle</li>
+  <li><strong>6 Incident reporting</strong> — <em>not built</em> — the real gap, matching the sector's own self-assessment</li>
+  <li><strong>7 Feedback loop</strong> — built (rule-improvement queue, risk-knowledge coverage gaps)</li>
+</ul>
+Step 6 is also this briefing's own sharpest tension: the capability our evidence argues for most directly — the monitoring-native one — is the one we have not built. Naming that is the point of the exercise; it is the next build. The MIT sub-domain layer (24 categories vs the 7 we match on today) is the natural next deepening of the lens.
+</div>
+
+<div class="prose">
+<h3>The verdict, for a reader who runs a risk function</h3>
+<p>The evidence supports three plain conclusions. First, if your AI governance spends most of its effort before launch, it is aimed at roughly a sixth of the catalogued risk. Second, the two dominant post-deployment quadrants — deliberate misuse and quiet malfunction — need different standing controls, and most institutions currently operate neither on a cycle. Third, the regulatory deferral to December 2027 is breathing room for compliance paperwork, not for the risk itself; the mechanisms in Part 2 do not read the Official Journal. The practical move this quarter is step 6, on top of a register you keep current: know what is running, and be able to say what you would do within hours of it misbehaving.</p>
+</div>
+
+<hr class="sec">
+<h2>Verification ledger</h2>
+<div class="prose">
+<p>Every load-bearing statistic and regulatory-status claim in this briefing, graded by how it was verified. <span class="grade primary">primary</span> = re-verified at the original source (the database, the regulator's own document, the paper itself) and re-clickable; <span class="grade press">press / chart-read</span> = reported by credible press or read off an unlabelled official chart — usable, but say so when quoting. Statistics that failed verification were removed from this edition and are listed last.</p>
+</div>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Statistic</th><th>Source</th><th>Grade</th></tr></thead>
+  <tbody>
+    <tr><td>84% post-deployment; all Figure 1–3 + quadrant counts</td><td>MIT AI Risk Repository V4 workbook — computed directly for this briefing</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>GPT-4 drift: &gt;50%→10% code executability; 84%→51% accuracy</td><td>Chen, Zaharia &amp; Zou (arXiv:2307.09009; Harvard Data Science Review)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>16% of Sonnet 4 requests at peak; ~30% of Claude Code users affected</td><td>Anthropic engineering postmortem, 17 Sep 2025 (vendor's own)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>τ-bench: 61% first-attempt success (retail domain; ~35% airline) vs &lt;25% success across all 8 repeats of the same task</td><td>Yao et al., τ-bench (arXiv:2406.12045)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>EU AI Act Annex III high-risk obligations postponed 2 Aug 2026 → 2 Dec 2027; Art. 50 transparency unchanged</td><td>Digital Omnibus, Regulation (EU) 2026/1744 (OJ 24 Jul 2026) — corroborated across multiple legal analyses; OJ text itself not re-fetched</td><td><span class="grade press">press-corroborated</span></td></tr>
+    <tr><td>BoE/FCA: 75% adoption; 17%→33% third-party; 18%→44% top-3 providers</td><td>BoE/FCA 3rd AI survey (Nov 2024, n=118); reused in FSB Oct 2025 report</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>Fed: 30% financial-sector adoption, +127% YoY; 63% worker GenAI use</td><td>Federal Reserve FEDS Notes, 3 Apr 2026 (BTOS/RPS analysis)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>IBM: 20% shadow-AI breaches, +$670K; 63% with no AI governance policy or one still in development; 97% lacked access controls; 17% technical controls</td><td>IBM/Ponemon Cost of a Data Breach 2025 (600+ orgs)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>Wolters Kluwer: 72% = 34% kill-switch + 38% failure-reporting (either/or)</td><td>US Banking AI Risk &amp; Governance Index, H1 2026 (n=230), via American Banker 10 Jun 2026</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>AIID: 148 incidents May–Jul 2026; fraud/scams largest theme (27)</td><td>AI Incident Database quarterly roundup (its own blog)</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>OECD AIM: 150,000 articles/day screened; ~10 incidents/hazards daily</td><td>OECD.AI incidents methodology page</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>MAS AI risk guidelines consultation, Nov 2025, 12-month transition</td><td>mas.gov.sg consultation page</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>Stanford: 362 incidents (+55%); recurrence 30%→50%; transparency 58→40; Cybench 15%→93%; 74% cite inaccuracy</td><td>Stanford AI Index 2026 — corroborated across multiple independent write-ups; full PDF not re-fetched</td><td><span class="grade press">press-corroborated</span></td></tr>
+    <tr><td>EBA: ~90% EU bank AI adoption; GPAI ~0→65%</td><td>EBA Innovation Monitoring 2025 (PDF verified) — values read off an unlabelled chart</td><td><span class="grade press">chart-read</span></td></tr>
+    <tr><td>McKinsey: 51% report ≥1 negative consequence</td><td>McKinsey State of AI (Mar 2025) — via search of mckinsey.com, not re-fetched</td><td><span class="grade press">press</span></td></tr>
+    <tr><td>Gartner: &gt;40% agentic projects cancelled by 2027 (a prediction, not a measurement)</td><td>Gartner press release, Jun 2025</td><td><span class="grade press">press</span></td></tr>
+    <tr><td>MAS "SAFR" runtime safeguards, Jul 2026</td><td>QA Financial (industry press); not yet located at mas.gov.sg</td><td><span class="grade press">press</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="prose">
+<p><strong>Withdrawn across editions after failing verification:</strong> "the EU AI Act high-risk regime is live" (1st edition — corrected above: postponed to Dec 2027); "18% of banking leaders confident of passing an independent AI-controls review within 90 days" (untraceable to the underlying Wolters Kluwer survey); "a $2.5M state settlement for AI disparate impact" (2nd edition — press-reported, never pinned to a primary document; replaced with an unquantified reference to state-level enforcement); "~800–900 AIID incidents through Q1 2026, 35–45% YoY growth" (third-party aggregator, unconfirmed); all RAG-hallucination percentages circulating on marketing blogs (58–89% reduction claims among others — no identifiable primary source); browser-agent injection success rates for specific frontier models (likely real, but not yet pinned to a dated primary document).</p>
+</div>
+
+<hr class="sec">
+<h2>Sources</h2>
+<div class="sources prose">
+<ol>
+  <li>Slattery, P. et al. (MIT FutureTech), <a href="https://airisk.mit.edu/">The AI Risk Repository</a>, V4 release, 3 Dec 2025, CC BY 4.0 — all Figure 1–3 and quadrant statistics computed directly from the source workbook for this briefing.</li>
+  <li>Chen, Zaharia &amp; Zou, <a href="https://arxiv.org/abs/2307.09009"><em>How is ChatGPT's behavior changing over time?</em></a> (2023, Harvard Data Science Review).</li>
+  <li>Anthropic, <a href="https://www.anthropic.com/engineering/a-postmortem-of-three-recent-issues"><em>A postmortem of three recent issues</em></a>, 17 Sep 2025.</li>
+  <li>Yao et al., <a href="https://arxiv.org/abs/2406.12045">τ-bench</a> (2024); see also <a href="https://arxiv.org/pdf/2604.27789">Test Before You Deploy: Governing Updates in the LLM Supply Chain</a> (2026).</li>
+  <li>Bank of England / FCA, third survey of <em>AI and machine learning in UK financial services</em>, Nov 2024; Bank of England FPC, <em>Financial Stability in Focus: AI</em>, Apr 2025.</li>
+  <li>Federal Reserve, <a href="https://www.federalreserve.gov/econres/notes/feds-notes/monitoring-ai-adoption-in-the-u-s-economy-20260403.html"><em>Monitoring AI Adoption in the US Economy</em></a>, FEDS Notes, 3 Apr 2026.</li>
+  <li>Financial Stability Board, <a href="https://www.fsb.org/uploads/P101025.pdf"><em>Monitoring Adoption of AI and Related Vulnerabilities in the Financial Sector</em></a>, 10 Oct 2025; <a href="https://www.fsb.org/2026/06/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-consultation-report/"><em>Sound Practices for Responsible Adoption of AI</em></a> (consultation), Jun 2026.</li>
+  <li>EBA, <a href="https://eba.europa.eu/sites/default/files/2025-12/771866e0-6e40-43ec-866e-2947d600fe81/EBA%20innovation%20monitoring%202025.pdf"><em>Innovation Monitoring 2025</em></a>, 19 Dec 2025; EU AI Act, <a href="https://artificialintelligenceact.eu/annex/3/">Annex III</a>; EBA, <em>AI Act implications for the EU banking sector</em>, Nov 2025.</li>
+  <li>IBM / Ponemon Institute, <em>Cost of a Data Breach Report 2025</em>.</li>
+  <li>Wolters Kluwer, <em>US Banking AI Risk and Governance Index</em>, H1 2026 — via <a href="https://www.americanbanker.com/news/72-of-banks-lack-ai-model-kill-switches-failure-reporting">American Banker</a>, 10 Jun 2026.</li>
+  <li>AI Incident Database, <a href="https://incidentdatabase.ai/blog/incident-report-2026-may-june-july">Incident roundup May–July 2026</a>; OECD.AI, <a href="https://oecd.ai/en/incidents-methodology">AI Incidents Monitor methodology</a>.</li>
+  <li>Stanford HAI, <a href="https://hai.stanford.edu/ai-index/2026-ai-index-report">The 2026 AI Index Report</a>.</li>
+  <li>McKinsey, <em>The State of AI</em>, Mar 2025; Gartner press release on agentic AI project cancellations, Jun 2025; Evident Insights, <a href="https://evidentinsights.com/ai-index/">Evident AI Index</a> (4th ed., Oct 2025).</li>
+  <li>Monetary Authority of Singapore, <a href="https://www.mas.gov.sg/publications/consultations/2025/consultation-paper-on-guidelines-on-artificial-intelligence-risk-management">Consultation on Guidelines on AI Risk Management</a>, 13 Nov 2025; agentic-finance runtime safeguards per <a href="https://qa-financial.com/mas-puts-agentic-ai-testing-under-scrutiny/">QA Financial</a>, Aug 2026 (press).</li>
+  <li>Bank of England (S. Breeden), remarks on agentic AI and regulatory reform, Jun 2026; CFPB, <em>Chatbots in consumer finance</em>; UK PRA SS1/23; OSFI Guideline E-23.</li>
+</ol>
+<h3>How the numbers were computed</h3>
+<p>The MIT V4 workbook was parsed programmatically. The headline "84%" is 977 post-deployment ÷ (977 post + 190 pre) timing-coded risks. Of the repository's 1,724 total risks, 1,167 carry an unambiguous pre/post timing code, 430 are coded "Other" (ambiguous or spanning both phases), and the remaining 127 carry no timing code at all — the last two groups are excluded from the denominator, as stated beneath each figure. Quadrant counts apply the same rule to the entity and intent codes. Secondary research was conducted on 25 August 2026 by four parallel research passes (incident databases, regulators, industry surveys, empirical studies), each instructed to prefer primary sources and to flag what could not be verified; the verification ledger reflects those flags without smoothing. This briefing is analysis, not legal advice.</p>
+</div>
+
+</div>
+
+</body>
+</html>
