@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doc Review — After Deployment (research briefing) — Round 1 — 2026-08-25</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Priority Chips (MoSCoW) ── */
+    .priority {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .priority.must { background: #111; color: #fff; }
+    .priority.should { background: #bbb; color: #fff; }
+    .priority.could { background: #e8e8e0; color: #666; }
+    .priority.wont { background: #fff; color: #999; border: 1px solid #ccc; }
+
+    /* ── Test Case Components ── */
+    .test-case {
+      background: #f7f7f0;
+      border-left: 3px solid #669;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .tc-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .tc-name {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .tc-bdd p {
+      margin-bottom: 0.2rem;
+      padding-left: 1rem;
+    }
+
+    .tc-trace {
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 0.4rem;
+      font-style: italic;
+    }
+
+    .tc-detail {
+      font-size: 0.9rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .tc-detail h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .health-issue {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .health-issue.acknowledged {
+      opacity: 0.6;
+      border-left-color: #ccc;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+
+    /* ── Verdict Box (Review Components) ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.ready { border-color: #27ae60; background: #f0faf4; }
+    .verdict.ready .verdict-text { color: #27ae60; }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+
+    .verdict.not-ready { border-color: #c0392b; background: #fdf0ef; }
+    .verdict.not-ready .verdict-text { color: #c0392b; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026</p>
+    <h1>Doc Review — After Deployment (research briefing) — Round 1 — 2026-08-25</h1>
+    <p class="subtitle">Review of the "After Deployment" research briefing, 2nd edition (post-deployment AI risk / financial industry), published as a claude.ai artifact. Standalone whitepaper category.</p>
+
+    <!-- Verdict Box -->
+    <div class="verdict not-ready" id="verdict">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-text">Do not publish — revise before release</div>
+      <p class="verdict-basis">2 Critical findings (a false load-bearing regulatory claim and its absence from the verification ledger). All Critical and Important findings were triaged by the owner the same session and fixed in the 3rd edition, now republished; a Round-2 verification review is recommended before external circulation.</p>
+    </div>
+
+    <!-- Score Card -->
+    <div class="score-card" id="score-card">
+      <div class="overall-score">8.0 / 10</div>
+      <div class="score-breakdown">
+        <div class="score-item">Argument &amp; structure: 9/10</div>
+        <div class="score-item">Factual integrity: 8/10</div>
+        <div class="score-item">Evidence transparency: 7/10</div>
+        <div class="score-item">Prose &amp; audience fit: 7/10</div>
+        <div class="score-item">Data visualisation: 9/10</div>
+      </div>
+    </div>
+
+    <!-- Document Reviewed -->
+    <h2 id="document-reviewed">Document Reviewed</h2>
+    <p>The "After Deployment" research briefing, 2nd edition (post-deployment AI risk / financial industry), published as a claude.ai artifact. Standalone whitepaper category.</p>
+
+    <!-- Review Overview -->
+    <h2 id="review-overview">Review Overview</h2>
+    <p>Four parallel defect-class panels applied: A Argument &amp; Structure (Doumont/McKee); B Factual Accuracy &amp; Attribution (Orwell/Weinberg, with live primary-source spot-checks); C Prose &amp; Audience Fit (Zinsser/Williams/Orwell/Redish); D Scoring (Marzano/Stevens &amp; Levi/Gilb). Round 1, liberal criterion, no dual review (first doc-type round).</p>
+
+    <!-- Expert Panels -->
+    <h2 id="expert-panels">Expert Panels</h2>
+    <ul>
+      <li><strong>Panel A: Argument &amp; Structure</strong> — Doumont/McKee heuristics; logical flow, claims hierarchy, visual information hierarchy.</li>
+      <li><strong>Panel B: Factual Accuracy &amp; Attribution</strong> — Orwell/Weinberg principles; primary-source verification, citation completeness, live spot-checking.</li>
+      <li><strong>Panel C: Prose &amp; Audience Fit</strong> — Zinsser/Williams/Orwell/Redish standards; clarity, conciseness, reader adaptation, register consistency.</li>
+      <li><strong>Panel D: Scoring</strong> — Marzano/Stevens &amp; Levi/Gilb rubrics; holistic and analytical scoring across all dimensions.</li>
+    </ul>
+
+    <!-- Critical Issues -->
+    <h2 id="critical-issues">Critical Issues</h2>
+    <p>Two findings that prevent publication:</p>
+
+    <div class="issue critical">
+      <div class="issue-title">False regulatory claim: EU AI Act high-risk regime live date</div>
+      <p class="issue-detail">"EU AI Act high-risk regime went live 2 Aug 2026" was false at publication. The Digital Omnibus (Regulation (EU) 2026/1744, OJ 24 Jul 2026) postponed Annex III high-risk obligations to 2 Dec 2027 (Art. 50 transparency unchanged). This claim is load-bearing for Part 3 and anchors a critical regulatory narrative. Found by Panel B via live spot-check; independently re-verified by the orchestrating session. FIXED in 3rd ed. (correction disclosed inline).</p>
+      <div class="issue-location">Part 3; cross-referenced in Parts 1 and 4</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">Regulatory claim absent from verification ledger</div>
+      <p class="issue-detail">The regulatory claim above was absent from the briefing's own verification ledger despite its completeness framing. The ledger discloses verification status for most factual claims but omitted this load-bearing regulatory-status claim. FIXED (ledger row added; ledger scope widened to regulatory-status claims).</p>
+      <div class="issue-location">Verification ledger (§5)</div>
+    </div>
+
+    <!-- Important Issues -->
+    <h2 id="important-issues">Important Issues</h2>
+    <p>Fifteen findings, all fixed in 3rd edition:</p>
+
+    <div class="issue important">
+      <div class="issue-detail">Fig 1 domain bars sum to 950/177 vs stated 977/190 (27+13 entries lack domain codes) — caption now discloses.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Fig 2 caption arithmetic double-counted exclusions — corrected to 654+320+3=977.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">τ-bench figures were retail-domain-only, presented as general — domain named, airline ~35% added.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">"$2.5M state settlement" had no source/ledger row — withdrawn, replaced with unquantified enforcement reference.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Stanford/McKinsey press-graded stats read as settled fact in prose — attribution hedges added.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Dek's binary "not an approval problem" oversold — reframed "not only".</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Path-forward "maturity order" asserted — replaced with justified practical sequencing.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Step 7 lacked evidentiary hook — tied to taxonomy-gap/FSB evidence.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">"Exposure vs observability curves" juxtaposition presented as finding — reframed with no-common-cause caveat.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Incident-reporting build-gap tension unengaged — one honest sentence added.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">No closing verdict for the reader — "The verdict, for a reader who runs a risk function" section added.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Dek buried thesis behind 50-word source inventory — front-loaded.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">τ-bench/"pass^8" jargon unglossed incl. in ledger — glossed/spelled out.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Build-status note was a 150-word wall — converted to per-step status list.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-detail">Method note buried in smallest type — promoted to headed, body-size section.</div>
+    </div>
+
+    <!-- Minor Issues -->
+    <h2 id="minor-issues">Minor Issues</h2>
+    <p>Ten findings, partially fixed:</p>
+
+    <div class="issue minor">
+      <div class="issue-detail">Unglossed UDAAP/DORA (fixed with glosses).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">Cloud top-3 concentration 73% omitted (added).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">"etc." register wobble (fixed).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">1,724-total reconciliation bucket (fixed in method note).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">63%-coincidence across two different stats (not fixed — accepted).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">Long sentences in Part 3 (partially fixed).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">Caption/body register split unsignposted (not fixed — accepted convention).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">Fig 4 three-message title (accepted).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">H2 topic-labels (accepted).</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-detail">Part-4 numeric callbacks for section-jumping readers (partially addressed).</div>
+    </div>
+
+    <!-- Capture-Recapture Analysis -->
+    <h2 id="capture-recapture">Capture-Recapture Analysis</h2>
+    <p><strong>Round 1 findings:</strong> ~33 findings raised across panels, ~30 unique after dedup. Cross-panel overlaps sparse (2 confirmed overlaps: Fig-2 arithmetic B∩D; dek issues A∩C). Lincoln-Petersen on sparse overlaps is noisy but implies estimated coverage well below 80% — Round 2 recommended after fixes.</p>
+
+    <!-- Borderline Filter -->
+    <h2 id="borderline-filter">Borderline Filter</h2>
+    <p>Five findings raised as borderline; 3 kept (60%), 2 discarded:</p>
+    <ul>
+      <li><strong>Kept:</strong> Fig-2 arithmetic (promoted, multi-panel); τ-bench scope; Part-4 callbacks.</li>
+      <li><strong>Discarded:</strong> Fig-4 title; caption register (accepted as convention).</li>
+    </ul>
+
+    <!-- External Spot-Checks -->
+    <h2 id="external-spot-checks">External Spot-Checks (Panel B)</h2>
+    <table>
+      <caption>Table 1 — Primary-source verification results</caption>
+      <thead>
+        <tr><th>Claim</th><th>Source</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GPT-4 drift 52%→10% &amp; 84%→51%</td><td>arXiv:2307.09009</td><td>VERIFIED</td></tr>
+        <tr><td>Anthropic 16%/30% postmortem</td><td>Official publication</td><td>VERIFIED</td></tr>
+        <tr><td>τ-bench 61%/&lt;25%</td><td>Benchmark documentation</td><td>PARTIAL (retail-only scope caveat)</td></tr>
+        <tr><td>EU AI Act high-risk live 2 Aug 2026</td><td>Regulation (EU) 2026/1744, OJ 24 Jul 2026</td><td>FAILED (postponed to 2 Dec 2027)</td></tr>
+        <tr><td>BoE/FCA 75%/33%/44%</td><td>Official reports/data</td><td>VERIFIED</td></tr>
+      </tbody>
+    </table>
+
+    <!-- What Prevents a Higher Score -->
+    <h2 id="what-prevents-higher-score">What Prevents a Higher Score</h2>
+
+    <h3 id="argument-ceiling">Argument &amp; Structure — 9/10</h3>
+    <p>Two H2s remain topic labels (accepted, minor). No structural ceiling after fixes.</p>
+
+    <h3 id="factual-integrity-ceiling">Factual Integrity — 8/10</h3>
+    <p>Arithmetic disclosure gaps now fixed; residual ceiling is reliance on chart-read/press-graded secondary stats, structural until primary PDFs are fetched.</p>
+
+    <h3 id="evidence-transparency-ceiling">Evidence Transparency — 7/10</h3>
+    <p>Fixed by ledger additions; residual: Stanford full PDF and OJ text not re-fetched (press-corroborated grade honest but below primary).</p>
+
+    <h3 id="prose-ceiling">Prose &amp; Audience Fit — 7/10</h3>
+    <p>Fixed glosses/structure; residual: density inherent to a stats-heavy briefing.</p>
+
+    <h3 id="dataviz-ceiling">Data Visualisation — 9/10</h3>
+    <p>Fig 2 caption fixed; no structural ceiling.</p>
+
+    <!-- Methodology Note -->
+    <h2 id="methodology">Methodology &amp; Coverage</h2>
+    <p>This review applied four independent panels (A–D) in parallel against established heuristics and rubrics. Findings were deduplicated and triaged by severity. The capture-recapture method (Lincoln-Petersen) suggests first-round coverage below 80%; a second verification review is recommended after the 3rd-edition publication to validate fixes and catch any regressions.</p>
+
+    <!-- GVM Attribution -->
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
