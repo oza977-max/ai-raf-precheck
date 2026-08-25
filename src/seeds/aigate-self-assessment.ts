@@ -3,6 +3,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import { addNode, addEdge, addUseCaseModelLink, getUseCase } from '../store/register';
 import { append } from '../store/audit';
 import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
+import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
@@ -163,7 +164,11 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
     event_type: 'verdict_produced',
     occurred_at: now,
     actor: 'system',
-    payload: { type: 'verdict_produced', verdict },
+    payload: {
+      type: 'verdict_produced',
+      verdict,
+      knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(AIGATE_USE_CASE_GRAPH, verdict),
+    },
   });
 
   // BC-P7C01-01: routed through the exact same function as any other use

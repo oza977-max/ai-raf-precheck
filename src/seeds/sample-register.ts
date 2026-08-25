@@ -4,6 +4,7 @@ import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
 import { addNode, getUseCase } from '../store/register';
 import { append } from '../store/audit';
+import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
@@ -203,7 +204,11 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
       event_type: 'verdict_produced',
       occurred_at: now,
       actor: 'system',
-      payload: { type: 'verdict_produced', verdict },
+      payload: {
+        type: 'verdict_produced',
+        verdict,
+        knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(graph, verdict),
+      },
     });
 
     const routed = routeToWorkflow(result.tier, policy);
