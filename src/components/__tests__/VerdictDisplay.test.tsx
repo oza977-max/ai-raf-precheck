@@ -178,7 +178,9 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
     expect(screen.getByText('TIER-MEDIUM')).toBeInTheDocument();
     expect(screen.getByText('exposure')).toBeInTheDocument();
     expect(screen.getByText('SS1/23 §3.4')).toBeInTheDocument();
-    expect(screen.getByText(/evaluated against 5 hard lines and 2 invariants/i)).toBeInTheDocument();
+    // R15-C2 (proposal §3.1, IxD ID-8 / Clarity F7): "invariants" → "firm
+    // rules (invariants)" in the stat line.
+    expect(screen.getByText(/evaluated against 5 hard lines and 2 firm rules \(invariants\)/i)).toBeInTheDocument();
     expect(screen.getByText(/none triggered/i)).toBeInTheDocument();
   });
 
