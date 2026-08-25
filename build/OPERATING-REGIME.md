@@ -53,3 +53,9 @@ design-vision.md stays gitignored.)*
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+**Addendum (2026-08-25):** the main-loop model follows the session's work
+type — Fable/Opus-class for synthesis and judgment sessions (deliberation
+chairs, requirements from conflicting inputs, review reconciliation),
+Sonnet for build sessions executing an approved spec. The intelligence of
+a build round lives in its documents, not its driver.
