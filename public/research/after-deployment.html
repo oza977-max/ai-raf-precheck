@@ -245,7 +245,7 @@
 <div class="sheet">
 
 <header class="masthead">
-  <p class="kicker">Research briefing · AI risk in production · 5th edition — standalone, two review rounds, corrections disclosed</p>
+  <p class="kicker">Research briefing · AI risk in production · 6th edition — standalone, MAS primary-sourced, two review rounds</p>
   <h1>After Deployment</h1>
   <p class="dek">AI risk is not only an approval problem — 84% of it materialises after deployment. The evidence: 1,724 catalogued risks, four incident databases, three supervisors' 2025–26 surveys and the freshest drift studies, every statistic graded by how well it survives verification — and the operating model that follows for financial institutions.</p>
   <p class="byline">25 August 2026 · Primary analysis of the MIT AI Risk Repository V4 (3 Dec 2025, CC BY 4.0) · 20+ secondary sources, each verification-graded in the ledger at the end · corrections from the 1st edition noted inline</p>
@@ -421,7 +421,8 @@
 <p>In banking specifically, Wolters Kluwer's H1 2026 <em>US Banking AI Risk and Governance Index</em> (230 US banking professionals) found <strong>72% named either model kill-switch protocols (34%) or regulatory reporting of AI failures (38%) as the area where their bank is least prepared</strong> — the two capabilities that only matter after deployment. <em>(Correction from this briefing's first edition: that 72% is a combined either/or figure, not "72% lack kill switches"; an earlier "18% confident of passing review" statistic could not be traced to the underlying survey and has been withdrawn.)</em></p>
 <p>Regulation has already moved to the same ground — with one twist that is itself evidence. The EU AI Act's high-risk regime, including credit scoring of natural persons by name, was due to go live on 2 August 2026. A month before that date, the Digital Omnibus (Regulation (EU) 2026/1744, Official Journal 24 July 2026) <strong>postponed the Annex III high-risk obligations to 2 December 2027</strong>, leaving the Article 50 transparency duties in force on the original date. <em>(Correction from this briefing's first edition, which stated the high-risk regime was already live.)</em></p>
 <p>The point survives the postponement. The obligations are unchanged and lifecycle-shaped — post-market monitoring plans, serious-incident reporting, logged human oversight, conformity that must hold <em>in operation</em> — and the deferral moves the compliance deadline, not the risk: every mechanism in Part 2 keeps operating while the paperwork waits. The UK's SS1/23 and Canada's OSFI E-23 have run on lifecycle logic since 2023–24.</p>
-<p>MAS consulted on AI risk-management guidelines covering all AI uses including agentic in November 2025 (12-month transition proposed) and, per industry press, followed with runtime safeguards for agentic finance ("SAFR") in July 2026 — policy-bound execution, real-time validation, escalation, complete audit trails, demonstrated in operation rather than asserted at approval.</p>
+<p>Singapore is the sharpest data point in this section, because it is the one supervisor that has moved from lifecycle language to a runtime specification for agentic AI by name. MAS consulted on AI risk-management guidelines covering all AI uses, agentic included, in November 2025. In March 2026 it published an AI Risk Management Toolkit built with a 24-institution industry consortium (Project MindForge — HSBC, Citi, UBS, DBS and others among them) covering traditional AI, generative AI, and agentic AI specifically. Then on 3 July 2026 it went further than any other supervisor in this briefing: <strong><em>Safeguards for Agentic Finance at Runtime</em> ("SAFR")</strong> defines a governance checkpoint sitting between every agent's proposed action and its execution, so that <q>no agentic action reaches execution without having been declared, authorised, and assessed</q> — with the case for doing it at runtime, not at approval, stated in the paper's own words: it exists to enforce governance objectives <q>at the moment an agent proposes to act, in production, at the speed and volume at which agents actually operate</q>. That sentence is this briefing's thesis, written by a regulator rather than derived from a risk catalogue.</p>
+<p class="pull">MAS, <em>Safeguards for Agentic Finance at Runtime</em>, 3 July 2026: governance objectives must be enforced <q>at the moment an agent proposes to act, in production, at the speed and volume at which agents actually operate.</q></p>
 </div>
 
 <div class="tablewrap">
@@ -453,7 +454,7 @@
     <tr>
       <td>Overreliance<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">53</span></td>
       <td>Staff treating AI drafts as checked facts; review steps that exist on paper but not in behaviour; agentic actions outrunning oversight (τ-bench: &lt;25% success on 8 repeats of the same task)</td>
-      <td>MAS runtime safeguards (2026, press-reported); BoE agentic-AI warning (June 2026); EU AI Act logged human-oversight duty (from Dec 2027)</td>
+      <td>MAS SAFR runtime governance checkpoint (3 Jul 2026); BoE agentic-AI warning (June 2026); EU AI Act logged human-oversight duty (from Dec 2027)</td>
     </tr>
     <tr>
       <td>Concentration<br><span style="font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--ink-faint)">Socioecon. domain, 130</span></td>
@@ -541,7 +542,8 @@
     <tr><td>EBA: ~90% EU bank AI adoption; GPAI ~0→65%</td><td>EBA Innovation Monitoring 2025 (PDF verified) — values read off an unlabelled chart</td><td><span class="grade press">chart-read</span></td></tr>
     <tr><td>McKinsey: 51% report ≥1 negative consequence</td><td>McKinsey State of AI (Mar 2025) — via search of mckinsey.com, not re-fetched</td><td><span class="grade press">press</span></td></tr>
     <tr><td>Gartner: &gt;40% agentic projects cancelled by 2027 (a prediction, not a measurement)</td><td>Gartner press release, Jun 2025</td><td><span class="grade press">press</span></td></tr>
-    <tr><td>MAS "SAFR" runtime safeguards, Jul 2026</td><td>QA Financial (industry press); not yet located at mas.gov.sg</td><td><span class="grade press">press</span></td></tr>
+    <tr><td>MAS "SAFR" runtime safeguards, 3 Jul 2026, incl. direct quotes</td><td>mas.gov.sg information paper; quotes corroborated via Baker McKenzie legal summary</td><td><span class="grade primary">primary</span></td></tr>
+    <tr><td>MAS AI Risk Management Toolkit, Mar 2026, 24-institution consortium (Project MindForge)</td><td>mas.gov.sg media release</td><td><span class="grade primary">primary</span></td></tr>
   </tbody>
 </table>
 </div>
@@ -567,7 +569,7 @@
   <li>AI Incident Database, <a href="https://incidentdatabase.ai/blog/incident-report-2026-may-june-july">Incident roundup May–July 2026</a>; OECD.AI, <a href="https://oecd.ai/en/incidents-methodology">AI Incidents Monitor methodology</a>.</li>
   <li>Stanford HAI, <a href="https://hai.stanford.edu/ai-index/2026-ai-index-report">The 2026 AI Index Report</a>.</li>
   <li>McKinsey, <em>The State of AI</em>, Mar 2025; Gartner press release on agentic AI project cancellations, Jun 2025; Evident Insights, <a href="https://evidentinsights.com/ai-index/">Evident AI Index</a> (4th ed., Oct 2025).</li>
-  <li>Monetary Authority of Singapore, <a href="https://www.mas.gov.sg/publications/consultations/2025/consultation-paper-on-guidelines-on-artificial-intelligence-risk-management">Consultation on Guidelines on AI Risk Management</a>, 13 Nov 2025; agentic-finance runtime safeguards per <a href="https://qa-financial.com/mas-puts-agentic-ai-testing-under-scrutiny/">QA Financial</a>, Aug 2026 (press).</li>
+  <li>Monetary Authority of Singapore: <a href="https://www.mas.gov.sg/publications/consultations/2025/consultation-paper-on-guidelines-on-artificial-intelligence-risk-management">Consultation on Guidelines on AI Risk Management</a>, 13 Nov 2025; <a href="https://www.mas.gov.sg/news/media-releases/2026/mas-partners-industry-to-develop-ai-risk-management-toolkit-for-the-financial-sector">AI Risk Management Toolkit</a> (Project MindForge, 24-institution consortium), 20 Mar 2026; <a href="https://www.mas.gov.sg/publications/monographs-or-information-paper/2026/safeguards-for-agentic-finance-at-runtime"><em>Safeguards for Agentic Finance at Runtime</em> (SAFR)</a>, 3 Jul 2026 — quotes corroborated via <a href="https://www.bakermckenzie.com/en/insight/publications/2026/07/singapore-mas-publishes-agentic-ai-safeguards-for-financial-institutions">Baker McKenzie</a>.</li>
   <li>Bank of England (S. Breeden), remarks on agentic AI and regulatory reform, Jun 2026; CFPB, <em>Chatbots in consumer finance</em>; UK PRA SS1/23; OSFI Guideline E-23.</li>
 </ol>
 <h3>How the numbers were computed</h3>
