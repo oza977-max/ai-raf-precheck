@@ -43,6 +43,11 @@ export default function App() {
   // item was clicked; IntakeFlow decides whether that means reset (only a
   // finished flow resets — an in-progress draft keeps its own Start-over).
   const [newPrecheckNonce, setNewPrecheckNonce] = useState(0);
+  // R15-C4 (proposal §3.8): the fidelity chip's explanation used to live in
+  // a title= tooltip — hover-only meaning, a G3 violation. Now an
+  // aria-expanded disclosure carries the same attestation.reason text,
+  // visible to keyboard and screen-reader users, not just a mouse hover.
+  const [fidelityDetailOpen, setFidelityDetailOpen] = useState(false);
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), [policyRevision]);
   const currentPolicyVersion = policyResult.valid ? policyResult.policy.version : '0.1-starter';
@@ -129,12 +134,20 @@ export default function App() {
               of the shipped starter policy, and it would have kept saying so
               after somebody attested. The engine is pure, so today's date is
               supplied here rather than read inside it. */}
-          <span
-            className={attestation.status === 'attested' ? 'app-header__ok' : 'app-header__warn'}
-            title={attestation.reason}
-          >
-            translation fidelity: {attestation.status}
+          <span className="app-header__fidelity">
+            <span className={attestation.status === 'attested' ? 'app-header__ok' : 'app-header__warn'}>
+              {attestation.status === 'attested' ? '' : '⚠ '}translation fidelity: {attestation.status}
+            </span>
+            <button
+              type="button"
+              className="app-header__fidelity-toggle"
+              aria-expanded={fidelityDetailOpen}
+              onClick={() => setFidelityDetailOpen((v) => !v)}
+            >
+              {fidelityDetailOpen ? 'hide' : 'details ▸'}
+            </button>
           </span>
+          {fidelityDetailOpen && <p className="app-header__fidelity-detail">{attestation.reason}</p>}
           <span className="app-header__sep">·</span>
           {/* R15-C1 (proposal §3.8): relabelled "Viewing as" with a visible
               (not title=) honesty note, and first-mention glosses on the
