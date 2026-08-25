@@ -31,29 +31,49 @@ form+confirm → C4 policy+header → C5 graph-review+queue.**
 a0e5518f624cfa05c) returned a completion report but made ZERO file
 changes — `git status` was clean after — a nested-dispatch/description-
 only failure, caught by verifying before trusting. Redispatched
-(agentId abfbee58413513ef0) with an explicit "do the work yourself,
-right now, in this turn" instruction. **Its outcome is UNKNOWN as of
-this pause** — it may have completed, partially completed, or still be
-running in the background; the session ended before its notification
-was seen.
+(agentId abfbee58413513ef0, "do the work yourself, right now") — THIS
+ONE DID WRITE REAL CHANGES, confirmed by `git status --short` at pause
+time:
+
+```
+ M specs/register-lifecycle.html
+ M specs/register-lifecycle.md
+ M src/App.css
+ M src/App.tsx
+ M src/components/RegisterView.tsx
+ M src/components/__tests__/App.r12.test.tsx
+ M src/components/__tests__/RegisterView.r12.test.tsx
+ M src/components/__tests__/RegisterView.test.tsx
+ M src/components/__tests__/WalkingSkeleton.test.tsx
+ M src/components/field-copy.ts
+?? src/components/__tests__/App.r15c1.test.tsx
+?? src/components/__tests__/RegisterView.r15c1.test.tsx
+```
+
+**UNVERIFIED AND UNCOMMITTED as of this pause** — the diffs exist on
+disk but no test/tsc/build/parity check has run yet this session, and
+the agent's own self-report was never read. Do not trust it unread.
 
 **Next session must, in order:**
-1. Run `git status --short` FIRST. If it shows changes, that's
-   abfbee58413513ef0's work — read the diff, do NOT trust any prior
-   "done" claim without seeing it, then run the full verification
-   yourself: `npm test` x3, `npx tsc --noEmit`, `npm run build`,
-   `python3 scripts/spec-parity-check.py`, live browser walkthrough of
-   the Register screen. If clean and correct, commit + push (the
-   audit-trail rule — every chunk committed when verified).
-2. If `git status` is clean, redispatch chunk 1 from
-   requirements-015.md §1 R15-C1 (the prompt used for abfbee58413513ef0
-   is a good template — search this session's tool calls, or just
-   re-read proposal.md §3.3 + §3.8 + §7 and requirements-015 R15-C1/S4
-   and write a fresh dispatch).
-3. Continue chunk order C2 → C5 once C1 is verified and shipped, each
-   with its own independent verification before commit — never trust an
-   agent's self-report alone (this session's own near-miss is the
-   reason why).
+1. Read the agent's actual reply first: `abfbee58413513ef0` — get its
+   full result via the harness (its report should still be resumable/
+   readable), specifically the Low-tier "Cleared" lifecycle-check
+   conclusion it was asked for.
+2. `git diff` each file above and sanity-read it against
+   requirements-015.md R15-C1 and proposal.md §3.3/§3.8 before running
+   anything — confirm it actually did S4 (the register-lifecycle spec
+   amendment) FIRST, not as an afterthought.
+3. Run the full verification yourself: `npm test` x3, `npx tsc
+   --noEmit`, `npm run build`, `python3 scripts/spec-parity-check.py`,
+   live browser walkthrough of the Register screen (2LoD default view,
+   legend, Flags column, self-assessment row, role-switcher honesty
+   note). Fix anything that fails.
+4. If clean and correct, commit + push (the audit-trail rule — every
+   chunk committed when verified, never left dangling).
+5. Continue chunk order C2 → C5, each with its own independent
+   verification before commit — never trust an agent's self-report
+   alone (this session's own near-miss on the FIRST c1 attempt is
+   exactly why).
 
 **Model for the build session: Sonnet** (already switched
 2026-08-25, per the router addendum — build work does not need
