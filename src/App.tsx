@@ -136,8 +136,13 @@ export default function App() {
             translation fidelity: {attestation.status}
           </span>
           <span className="app-header__sep">·</span>
+          {/* R15-C1 (proposal §3.8): relabelled "Viewing as" with a visible
+              (not title=) honesty note, and first-mention glosses on the
+              options — makes the existing 1LoD/2LoD gating honest about
+              being a view preference, not access control (P1). No new
+              role-conditional rendering added (G6). */}
           <label htmlFor="role-switcher" className="app-header__role-label">
-            Role
+            Viewing as
           </label>
           <select
             id="role-switcher"
@@ -145,9 +150,10 @@ export default function App() {
             value={role}
             onChange={(e) => handleRoleChange(e.target.value)}
           >
-            <option value="1LoD">1LoD — James · Dev</option>
-            <option value="2LoD">2LoD — Priya · AI Risk</option>
+            <option value="1LoD">1LoD — James · Dev (first line — submitter)</option>
+            <option value="2LoD">2LoD — Priya · AI Risk (second line — reviewer)</option>
           </select>
+          <span className="app-header__role-note">a view preference — this build has no sign-in</span>
         </div>
       </header>
 

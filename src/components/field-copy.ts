@@ -7,6 +7,7 @@ import type {
   Exposure,
   ModelType,
 } from '../engine/types';
+import type { LifecycleStage } from '../store/types';
 
 // Presentation copy for the guided intake form (user feedback, V2-E: "input
 // data class, input data zone, AI model type... is not very business
@@ -142,4 +143,30 @@ export const TRACK_MEANINGS: Record<string, string> = {
   I: 'overseen as a traditional model, under classic model risk management.',
   II: 'overseen as a model with extra scrutiny — it replaces a prior model or acts with high autonomy.',
   III: 'overseen by AI governance — generative or agentic AI that newer regulation carves out of the classic model definition.',
+};
+
+// R15-C1 (proposal §3.3): register Stage column + filter chips render raw
+// `lifecycle_stage` enum values today ("pre_checked", "approved" — the
+// audience's canonical vocabulary, not a business reader's). Presentation
+// only (Rule 4) — the raw value is kept alongside via a data-* attribute
+// on the cell for audit-trail reconciliation, it is not replaced.
+//
+// Builder check (proposal §3.3, "confirm against the Low-tier lifecycle
+// before landing"): `workflow-router.ts`'s `self-service` branch (Low
+// tier) routes straight to `lifecycle_stage: 'approved'` with
+// `requires_twoLoD_action: false` — no 2LoD ever touches it. So the
+// label for `approved` must not claim a person signed off on it.
+// "Cleared" passes: it says the case is no longer pending, without
+// asserting who or what action cleared it, so it is true for both the
+// self-service Low-tier path and a 2LoD sign-off. "Signed off" would
+// have overclaimed for the self-service case; "Approved" is banned
+// outright by the reserved-word gate (G1, /approved|rejected/i).
+export const STAGE_LABELS: Record<LifecycleStage, string> = {
+  idea: 'Idea',
+  exploring: 'Exploring',
+  pre_checked: 'Awaiting 2LoD sign-off',
+  approved: 'Cleared',
+  in_production: 'In production',
+  monitored: 'Monitored',
+  retired: 'Retired',
 };

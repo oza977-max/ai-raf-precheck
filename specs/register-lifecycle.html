@@ -1158,7 +1158,11 @@ async function runSelfAssessment(
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
       <tr><td>2026-07-29</td><td>&sect;15 added &mdash; round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today&rsquo;s policy.</td></tr>
       <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 11. ADR-RL-R11-1 consumes the dormant <code>ai_model</code>/<code>uses_model</code> schema (deduped by <code>model_id</code>); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path.</td></tr>
+      <tr><td>2026-08-25</td><td>R15-C1/S4 &mdash; the Register View 2LoD column set (&sect;10.2 of <code>register-lifecycle.md</code>) is amended: Stale and Sampling merge into one &ldquo;Flags&rdquo; column, carrying a badge per true condition and a stable, accessible empty-state name (e.g. &ldquo;not flagged&rdquo;) when neither applies; Stage joins the visible columns. TC-RG-2-02 updated to assert the amended set.</td></tr>
     </tbody></table>
+
+    <h2 id="r15-c1-s4-flags-column">18. R15-C1/S4 &mdash; Stale/Sampling Merge into &ldquo;Flags&rdquo;</h2>
+    <p>Amends the 2LoD Register View column set described above (&sect;10.2 of the paired <code>register-lifecycle.md</code>): the previously separate Stale and Sampling columns are merged into a single &ldquo;Flags&rdquo; column. A badge renders for each condition that is currently true (<code>stale_assessment</code>, <code>sampling_review_due</code>); a row with neither condition true still renders a stable, accessible cell name (e.g. <code>aria-label=&quot;not flagged&quot;</code> or an sr-only text node) rather than an empty, nameless cell. Landed in the same change as the test update (TC-RG-2-02), never silently.</p>
   </main>
 
   <script>

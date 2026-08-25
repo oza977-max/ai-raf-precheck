@@ -107,8 +107,12 @@ describe('Walking Skeleton', () => {
     // previously ignored how much weight the output carried, so an internal
     // material decision self-served on exposure alone. Medium is 2LoD-notify,
     // so the node lands at 'pre_checked'. Switch to 2LoD to see the chip.
-    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
-    expect(await screen.findByRole('button', { name: 'pre_checked' })).toBeInTheDocument();
+    // R15-C1 renegotiation: selector updated from /role/i to /viewing as/i —
+    // the role-switcher label changed (proposal §3.8), same lookup intent.
+    // The Stage chip also now renders the STAGE_LABELS plain word, not the
+    // raw 'pre_checked' enum.
+    await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
+    expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
   });
 
   it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call [TC-NF-4-01]', async () => {
@@ -673,8 +677,11 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
     await user.click(screen.getByText('▤ Register'));
-    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
-    expect(await screen.findByRole('button', { name: 'pre_checked' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
+    // R15-C1 renegotiation: the Stage filter chip now renders the
+    // STAGE_LABELS plain word ("Awaiting 2LoD sign-off"), not the raw
+    // 'pre_checked' enum — same assertion, updated text.
+    expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
   });
 
   it('P5-C02: the real LLM-generated reasoning trace renders in the verdict details section', async () => {
@@ -717,7 +724,7 @@ describe('Walking Skeleton', () => {
     // No submission action taken — the seed fires from a mount effect, not
     // from anything the user does. Only navigate to see it.
     await user.click(screen.getByText('▤ Register'));
-    await user.selectOptions(screen.getByLabelText(/role/i), '2LoD');
+    await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
 
     expect(await screen.findByText('AIGate (self-assessment)')).toBeInTheDocument();
   });

@@ -13,7 +13,11 @@ function makeUseCaseMetadata(
   return {
     node_type: 'use_case',
     submitted_by: '1LoD',
-    lifecycle_stage: 'idea',
+    // R15-C1 renegotiation: default changed from 'idea' to 'pre_checked' so
+    // these fixtures land in the 2LoD default "awaiting your sign-off" view
+    // without every test needing to click "Show all" — preserves each
+    // test's original intent (rows visible immediately after render).
+    lifecycle_stage: 'pre_checked',
     current_verdict_id: null,
     tier: 'High',
     track: 'II',
@@ -51,7 +55,12 @@ describe('RegisterView', () => {
     expect(screen.queryByPlaceholderText(/search/i)).not.toBeInTheDocument();
   });
 
-  it('TC-RG-2-02: 2LoD view shows all use cases across submitters with the §10.2 column set including Submitter and Stale', async () => {
+  // R15-C1/S4 renegotiation: register-lifecycle.md §10.2's Must-level column
+  // set is amended (Stale + Sampling merge into one "Flags" column, Stage
+  // joins the visible columns) — see the spec changelog entry dated
+  // 2026-08-25. This test now asserts the amended set instead of the old
+  // Stale-only column.
+  it('TC-RG-2-02: 2LoD view shows all use cases across submitters with the amended §10.2 column set (Flags merged)', async () => {
     const a = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'From A' });
     const b = makeUseCaseNode({
       node_id: crypto.randomUUID(),
@@ -67,6 +76,10 @@ describe('RegisterView', () => {
     expect(screen.getByText('From B')).toBeInTheDocument();
     expect(screen.getAllByText('1LoD').length + screen.getAllByText('actor-b').length).toBeGreaterThan(0);
     expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+    // Flags column replaces the separate Stale/Sampling columns.
+    expect(screen.getByRole('columnheader', { name: 'Flags' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Stale' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Sampling' })).not.toBeInTheDocument();
   });
 
   it('TC-RG-3-01: 2LoD tier filter chip narrows the visible rows', async () => {
