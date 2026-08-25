@@ -245,7 +245,7 @@
 <div class="sheet">
 
 <header class="masthead">
-  <p class="kicker">Research briefing · AI risk in production · 4th edition — two review rounds, corrections disclosed</p>
+  <p class="kicker">Research briefing · AI risk in production · 5th edition — standalone, two review rounds, corrections disclosed</p>
   <h1>After Deployment</h1>
   <p class="dek">AI risk is not only an approval problem — 84% of it materialises after deployment. The evidence: 1,724 catalogued risks, four incident databases, three supervisors' 2025–26 surveys and the freshest drift studies, every statistic graded by how well it survives verification — and the operating model that follows for financial institutions.</p>
   <p class="byline">25 August 2026 · Primary analysis of the MIT AI Risk Repository V4 (3 Dec 2025, CC BY 4.0) · 20+ secondary sources, each verification-graded in the ledger at the end · corrections from the 1st edition noted inline</p>
@@ -507,17 +507,7 @@
 </ol>
 
 <div class="note prose">
-<strong>Where our build already stands, honestly.</strong>
-<ul style="margin:0.6rem 0 0.6rem 1.1rem; padding:0; line-height:1.7">
-  <li><strong>1 Register &amp; audit trail</strong> — built (rule-traced verdicts, append-only trail)</li>
-  <li><strong>2 Expiry logic</strong> — built (staleness flags, re-evaluation queues, re-attestation dates)</li>
-  <li><strong>3 Model pinning</strong> — partial: family pinning and the fingerprinting control exist as named controls; the detection mechanics are still to build</li>
-  <li><strong>4 Outcome sampling</strong> — built as a control and a sampling flag</li>
-  <li><strong>5 Adversarial cycle</strong> — partial: a named required control, not yet a scheduled cycle</li>
-  <li><strong>6 Incident reporting</strong> — <em>not built</em> — the real gap, matching the sector's own self-assessment</li>
-  <li><strong>7 Feedback loop</strong> — built (rule-improvement queue, risk-knowledge coverage gaps)</li>
-</ul>
-Step 6 is also this briefing's own sharpest tension: the capability our evidence argues for most directly — the monitoring-native one — is the one we have not built. Naming that is the point of the exercise; it is the next build. The MIT sub-domain layer (24 categories vs the 7 we match on today) is the natural next deepening of the lens.
+<strong>The honest tension in this list.</strong> Step 6 — incident-reporting muscle — is the one the evidence in Part 3 argues for most directly: it is the industry's own self-declared weakest point (Wolters Kluwer: 34% named kill-switches, 38% named failure-reporting, as their bank's least-prepared area) and the most monitoring-native item on this list. It is also, by the same survey's own account, the one most institutions have not built. Naming that gap plainly is more useful than smoothing over it — a governance programme that is strong on paper everywhere except the one capability its own risk officers flag as weakest is not a governance programme with a rounding error, it has found its real priority.
 </div>
 
 <div class="prose">
