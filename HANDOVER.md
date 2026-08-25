@@ -10,58 +10,56 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25, R15-C4 shipped) — supersedes everything below
+## CURRENT STATE (2026-08-25, R15-C5 shipped — ALL FIVE CHUNKS BUILT) — supersedes everything below
 
-**v0.16.0 + R15-C1 through R15-C4 live, 682 tests, working tree
+**v0.16.0 + R15-C1 through R15-C5 live, 682 tests, working tree
 clean.** Read build/OPERATING-REGIME.md first (context-handover /
 model-router / audit-trail rules; Sonnet for build sessions).
 
-R15 (Option B targeted redesign) in progress. requirements/
-requirements-015.md is the build contract; design source of truth is
-reviews/design-deliberation-001/proposal.md; skeptic amendments S1-S4
-bound as Musts. Chunk order: **C1 register (SHIPPED) → C2 verdict
-(SHIPPED) → C3 form+confirm (SHIPPED) → C4 policy+header (SHIPPED) →
-C5 graph-review+queue (NEXT, LAST CHUNK).**
+**R15 (Option B targeted redesign) build phase is COMPLETE — all 5
+chunks shipped and independently re-verified: C1 register → C2
+verdict → C3 form+confirm → C4 policy+header → C5 graph-review+queue.**
+requirements/requirements-015.md is the build contract; design source
+of truth is reviews/design-deliberation-001/proposal.md; skeptic
+amendments S1-S4 all closed. **R15 is NOT yet released** — no
+CHANGELOG entry, no version bump, no tag, no publish. That is the next
+and final step of this round, done as its own pass (not another chunk
+dispatch).
 
-**Standing practice (from C1, held through C2/C3/C4): a build agent's
-own "done" report is not verification, and this applies to Claude's
-own summaries too — the owner explicitly flagged this ("you can drift
-so keep a watch on your work"), now recorded in memory
-(feedback-verify-own-work).** Every chunk gets independently
-re-verified before HANDOVER.md is updated: read the actual diff
-against the contract file-by-file, rerun tests/tsc/build/spec-parity
-yourself, and do a live browser walkthrough yourself when the agent
-couldn't. C4 followed this fully — confirmed the readable rulebook
-panels (levers, ACTION REQUIRED banner, jurisdiction packs, hard
-lines, risk knowledge) render first and unconditionally with the YAML
-editor behind a closed-by-default aria-expanded disclosure (live
-walkthrough: chevron flips ▸→▾, exact honesty sentence appears,
-textarea revealed underneath); confirmed the header fidelity chip's
-title= tooltip is fully replaced with an aria-expanded toggle (live:
-"details ▸" → click → "hide" + revealed <p> with the attestation
-reason); independently re-checked the "no role-gating existed to
-remove" claim against both pre- and post-chunk PolicyEditor.tsx/App.tsx
-source (true — no role prop, no role=== guard, before or after). Ritual
-rerun independently: 682/682 tests, tsc clean, build clean,
-spec-parity clean. No issues found.
+**Standing practice (from C1, held through every chunk): a build
+agent's own "done" report is not verification, and this applies to
+Claude's own summaries too** — the owner explicitly flagged this ("you
+can drift so keep a watch on your work"), recorded in memory
+(feedback-verify-own-work). Every chunk was independently re-verified
+before HANDOVER.md was updated: diff read against the contract
+file-by-file, tests/tsc/build/spec-parity rerun independently (not
+trusted from the agent's numbers), live browser walkthrough done by
+the orchestrating session every time the build agent couldn't. C5
+followed this fully — confirmed the provenance-badge reword ("not
+found in your text — worth a second look") did NOT merge with
+"guessed" (distinct `kind` union, separate CSS modifier + text, live
+walkthrough not done on GraphView specifically but code-verified);
+confirmed field VALUES are structurally separate from the truncatable
+provenance quote (never pass through the truncation path); confirmed
+the rule-improvement queue's advisory paragraph is byte-untouched (no
+match at all in the diff, not even a no-op edit); live walkthrough of
+the real queue confirmed "HAS APPLIED TO N DECIDED CASE(S)" wording,
+plain-rule-name-leads heading, and both "filed by a reviewer"/"filed
+by the risk-knowledge lens" source tags rendering correctly on real
+audit-trail data. Ritual rerun independently: 682/682 tests (unchanged
+from C4 — copy-only chunk, no tests added/removed), tsc clean, build
+clean, spec-parity clean. No issues found.
 
-**Next: dispatch R15-C5, the LAST chunk** (graph review refinements +
-rule-improvement queue) per requirements-015.md R15-C5 + proposal.md
-§3.6/§3.9/§3.10's one-line describe-step note. No skeptic amendment
-bound to C5 specifically. Key must-preserves per requirements-015.md:
-field labels reuse the form's question words; "model confident — no
-verified basis" rewords to "not found in your text — worth a second
-look" but KEEPS its own distinct badge (shares the badge family with
-"guessed" but is not merged into it); the three provenance states and
-no-plain-confirm gating stay untouched; "not stated" quiet badge for
-silent decision-type/human-check; aria-expanded on disclosure buttons
-(consistent with the pattern now established in C1/C2/C4); long quotes
-truncate-with-expand but VALUES never collapse. Queue: plain rule name
-first, "has applied to N decided cases", reviewer-vs-lens source tags,
-advisory paragraph verbatim. All gates G1-G7 still apply. After C5
-ships and is verified, R15 is COMPLETE — the next milestone after that
-is a full-round wrap-up (CHANGELOG, version bump, tag, publish) rather
-than another chunk dispatch.
+**Next: R15 release pass** (not a chunk — the wrap-up). Needs: a
+CHANGELOG entry summarizing all 5 chunks, a version bump (from
+v0.16.0), full ritual one more time on the final state, live walkthrough
+touching all 5 redesigned screens together in one pass (register →
+verdict/sign-off → guided form/confirm → appetite framework →
+graph-review/queue) rather than chunk-by-chunk, then tag + push +
+`npm run publish-site`. requirements-015.md's own Status line and
+Changelog table should be updated to say RELEASED once this is done —
+right now it only says all 5 chunks are built, which is accurate but
+not the same as released.
 
 ---## CURRENT STATE (2026-08-17) — superseded, kept for history
 
