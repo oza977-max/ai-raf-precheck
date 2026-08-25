@@ -161,6 +161,38 @@ export const TRACK_MEANINGS: Record<string, string> = {
 // self-service Low-tier path and a 2LoD sign-off. "Signed off" would
 // have overclaimed for the self-service case; "Approved" is banned
 // outright by the reserved-word gate (G1, /approved|rejected/i).
+// R15-C3 (proposal §3.5, skeptic amendment S1b — Must). graph-summary.ts's
+// graphSummaryRows() renders raw engine vocabulary (`traditional-ml`, `L3`,
+// `Zone B`, `execute`) on the two screens that ask a human to attest the
+// graph is accurate: ConfirmationStep's "Confirm & attest" grid and
+// VerdictDisplay's "What you told us" fold. S1b requires the fix to live
+// HERE, at the shared source both call sites already import from
+// (graph-summary.ts is explicitly "one source... no duplicated
+// derivation" per its own header comment) — not patched independently in
+// either component, which would let the two copies drift apart exactly as
+// CLAUDE.md's specs/copy-drift warning describes.
+//
+// Each full *_LABELS entry above already carries "short plain phrase — extra
+// detail (CODE)"; this derives "short plain phrase · CODE" from it rather
+// than hand-duplicating a second copy of every string, so the short and
+// long forms cannot say different things about the same value.
+function extractParenCode(fullLabel: string): string {
+  const m = fullLabel.match(/\(([^()]+)\)\s*$/);
+  return m ? m[1]! : fullLabel;
+}
+
+function shortPhrase(fullLabel: string): string {
+  const withoutCode = fullLabel.replace(/\s*\([^()]*\)\s*$/, '');
+  const dashIndex = withoutCode.indexOf('—');
+  return (dashIndex === -1 ? withoutCode : withoutCode.slice(0, dashIndex)).trim();
+}
+
+/** "A model trained on historical data · traditional ML" — the compact
+ *  plain-phrase-then-quiet-code form graphSummaryRows() renders. */
+export function plainWithCode(fullLabel: string): string {
+  return `${shortPhrase(fullLabel)} · ${extractParenCode(fullLabel)}`;
+}
+
 export const STAGE_LABELS: Record<LifecycleStage, string> = {
   idea: 'Idea',
   exploring: 'Exploring',
