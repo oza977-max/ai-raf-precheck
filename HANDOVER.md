@@ -10,9 +10,9 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25, R15-C3 shipped) — supersedes everything below
+## CURRENT STATE (2026-08-25, R15-C4 shipped) — supersedes everything below
 
-**v0.16.0 + R15-C1 + R15-C2 + R15-C3 live, 680 tests, working tree
+**v0.16.0 + R15-C1 through R15-C4 live, 682 tests, working tree
 clean.** Read build/OPERATING-REGIME.md first (context-handover /
 model-router / audit-trail rules; Sonnet for build sessions).
 
@@ -20,40 +20,48 @@ R15 (Option B targeted redesign) in progress. requirements/
 requirements-015.md is the build contract; design source of truth is
 reviews/design-deliberation-001/proposal.md; skeptic amendments S1-S4
 bound as Musts. Chunk order: **C1 register (SHIPPED) → C2 verdict
-(SHIPPED) → C3 form+confirm (SHIPPED) → C4 policy+header (NEXT) → C5
-graph-review+queue.**
+(SHIPPED) → C3 form+confirm (SHIPPED) → C4 policy+header (SHIPPED) →
+C5 graph-review+queue (NEXT, LAST CHUNK).**
 
-**Standing practice (from C1, held through C2 and C3): a build agent's
-own "done" report is not verification.** Every chunk gets independently
-re-verified by the orchestrating session before HANDOVER.md is updated:
-read the actual diff against the contract file-by-file, rerun tests/
-tsc/build/spec-parity yourself, and do a live browser walkthrough
-yourself when the agent couldn't. C3 followed this fully — verified the
-S1b shared-source fix is real (both ConfirmationStep and
-VerdictDisplay's "What you told us" fold still import
-`graphSummaryRows()`; the fix lives once in `graph-summary.ts` via a
-new `plainWithCode()` helper in field-copy.ts, no duplicated logic),
-confirmed the "approved platform" wording flagged by a naive grep was
-pre-existing (checked against the pre-chunk file, not new copy), ritual
-rerun independently (680/680, tsc clean, build clean, spec-parity
-clean), and a live walkthrough of the actual guided form confirmed all
-5 fieldsets, the "(optional — blank means: …)" phrasing, "Why we ask"
-disclosures with load-bearing sentences kept visible outside them, and
-no advanced-toggle pattern. No issues found.
+**Standing practice (from C1, held through C2/C3/C4): a build agent's
+own "done" report is not verification, and this applies to Claude's
+own summaries too — the owner explicitly flagged this ("you can drift
+so keep a watch on your work"), now recorded in memory
+(feedback-verify-own-work).** Every chunk gets independently
+re-verified before HANDOVER.md is updated: read the actual diff
+against the contract file-by-file, rerun tests/tsc/build/spec-parity
+yourself, and do a live browser walkthrough yourself when the agent
+couldn't. C4 followed this fully — confirmed the readable rulebook
+panels (levers, ACTION REQUIRED banner, jurisdiction packs, hard
+lines, risk knowledge) render first and unconditionally with the YAML
+editor behind a closed-by-default aria-expanded disclosure (live
+walkthrough: chevron flips ▸→▾, exact honesty sentence appears,
+textarea revealed underneath); confirmed the header fidelity chip's
+title= tooltip is fully replaced with an aria-expanded toggle (live:
+"details ▸" → click → "hide" + revealed <p> with the attestation
+reason); independently re-checked the "no role-gating existed to
+remove" claim against both pre- and post-chunk PolicyEditor.tsx/App.tsx
+source (true — no role prop, no role=== guard, before or after). Ritual
+rerun independently: 682/682 tests, tsc clean, build clean,
+spec-parity clean. No issues found.
 
-test-cases/test-cases-015.md now exists (started this chunk; C1/C2
-shipped without one — noted honestly by the build agent, not hidden).
-It has no .html twin — spec-parity-check.py doesn't gate test-cases/,
-only specs/*.md — so this is a known, disclosed gap, not a violation.
-
-**Next: dispatch R15-C4** (appetite framework split + header chip) per
-requirements-015.md R15-C4 + proposal.md §3.4/§3.8. No skeptic
-amendment bound to C4 specifically (S1-S4 are C1-C3 scoped) — but all
-seven gates G1-G7 still apply, including G6 (readable rulebook as
-default view for every role, YAML editor NOT role-gated) and the
-header "translation fidelity: unattested" chip becoming an accessible
-disclosure (button + aria-expanded, replacing the current title=
-tooltip).
+**Next: dispatch R15-C5, the LAST chunk** (graph review refinements +
+rule-improvement queue) per requirements-015.md R15-C5 + proposal.md
+§3.6/§3.9/§3.10's one-line describe-step note. No skeptic amendment
+bound to C5 specifically. Key must-preserves per requirements-015.md:
+field labels reuse the form's question words; "model confident — no
+verified basis" rewords to "not found in your text — worth a second
+look" but KEEPS its own distinct badge (shares the badge family with
+"guessed" but is not merged into it); the three provenance states and
+no-plain-confirm gating stay untouched; "not stated" quiet badge for
+silent decision-type/human-check; aria-expanded on disclosure buttons
+(consistent with the pattern now established in C1/C2/C4); long quotes
+truncate-with-expand but VALUES never collapse. Queue: plain rule name
+first, "has applied to N decided cases", reviewer-vs-lens source tags,
+advisory paragraph verbatim. All gates G1-G7 still apply. After C5
+ships and is verified, R15 is COMPLETE — the next milestone after that
+is a full-round wrap-up (CHANGELOG, version bump, tag, publish) rather
+than another chunk dispatch.
 
 ---## CURRENT STATE (2026-08-17) — superseded, kept for history
 
