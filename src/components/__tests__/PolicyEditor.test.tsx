@@ -62,9 +62,39 @@ tier_workflow:
 safety_margin: 0.10
 `;
 
+// R15-C4 (proposal §3.4): the YAML editor now sits behind a closed-by-
+// default disclosure — open it before touching the textarea.
+async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /edit the rulebook as yaml/i }));
+}
+
 describe('PolicyEditor', () => {
-  it('pre-fills the textarea with the currently active policy YAML (P7-C03)', () => {
+  it('R15-C4: the YAML editor disclosure is closed by default and the textarea is not in the document', () => {
     render(<PolicyEditor />);
+    expect(screen.getByRole('button', { name: /edit the rulebook as yaml/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.queryByLabelText(/policy yaml/i)).not.toBeInTheDocument();
+  });
+
+  it('R15-C4: opening the disclosure reveals the textarea and the no-sign-in honesty line', async () => {
+    const user = userEvent.setup();
+    render(<PolicyEditor />);
+    await openYamlEditor(user);
+    expect(screen.getByRole('button', { name: /edit the rulebook as yaml/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(
+      screen.getByText(/this build has no sign-in — anyone can open this\. a real deployment restricts it to the rule authors\./i),
+    ).toBeInTheDocument();
+  });
+
+  it('pre-fills the textarea with the currently active policy YAML (P7-C03)', async () => {
+    const user = userEvent.setup();
+    render(<PolicyEditor />);
+    await openYamlEditor(user);
     const textarea = screen.getByLabelText(/policy yaml/i) as HTMLTextAreaElement;
     expect(textarea.value.length).toBeGreaterThan(0);
     expect(textarea.value).toContain('policy_id');
@@ -73,6 +103,7 @@ describe('PolicyEditor', () => {
   it('validates a valid policy and shows a success message, without saving', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
+    await openYamlEditor(user);
 
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
@@ -87,6 +118,7 @@ describe('PolicyEditor', () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
     render(<PolicyEditor onSaved={onSaved} />);
+    await openYamlEditor(user);
 
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
@@ -102,6 +134,7 @@ describe('PolicyEditor', () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
     render(<PolicyEditor onSaved={onSaved} />);
+    await openYamlEditor(user);
 
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
@@ -129,6 +162,7 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.getByText(/action required/i)).toBeInTheDocument();
     expect(screen.getByText(/verdicts are provisional until your CRO adopts/i)).toBeInTheDocument();
 
+    await openYamlEditor(user);
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
     await user.paste(MINIMAL_VALID_POLICY_YAML); // no [FIRM] markers
@@ -138,6 +172,7 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
   it('review finding, pass 1: [FIRM] mentions in comment lines alone do NOT trigger the NF-10 banner (an adopted framework keeping the template header is not provisional)', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
+    await openYamlEditor(user);
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
     // Valid policy, real markers filled in, but the instructional comment
@@ -179,6 +214,7 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
   it('invalid YAML shows the panels-unavailable note instead of stale panels', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
+    await openYamlEditor(user);
     const textarea = screen.getByLabelText(/policy yaml/i);
     await user.clear(textarea);
     await user.paste('definitely: not: valid: yaml');

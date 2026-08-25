@@ -46,6 +46,39 @@ have tooling access to run.
 | Date | Change |
 |---|---|
 | 2026-08-25 | Written with the R15-C3 build. |
+| 2026-08-25 | R15-C4 section added. |
+
+---
+
+## R15-C4 — Appetite framework split + header chip
+
+Proposal §3.4, §3.8. Readable rulebook (levers, action-required banner,
+jurisdiction packs, hard lines, risk knowledge) is now the default view of
+`PolicyEditor.tsx` for every role; the YAML editor sits behind a
+closed-by-default `aria-expanded` disclosure carrying the honest no-sign-in
+line. The header's "translation fidelity" chip drops its `title=` tooltip
+for a visible warning + an `aria-expanded` disclosure carrying the same
+`attestation.reason` text.
+
+| ID | Asserts |
+|---|---|
+| TC-R15-C4-01 | `PolicyEditor`'s YAML-editor disclosure button renders `aria-expanded="false"` on first render and the `#policy-yaml-input` textarea is not in the document until it is opened — the readable panels above it (levers, jurisdiction packs, hard lines, risk knowledge) render regardless, satisfying "readable rulebook is the default view" |
+| TC-R15-C4-02 | Opening the disclosure flips `aria-expanded` to `true`, reveals the textarea, Validate/Save and the verbatim honesty sentence "This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors." |
+| TC-R15-C4-03 | All pre-existing `PolicyEditor.test.tsx` and `PolicyEditor.r12.test.tsx` coverage (pre-fill, validate, save success/failure, ACTION REQUIRED banner, jurisdiction pack list, hard lines, pack age/overdue, invalid-YAML panel suppression) is unchanged in behaviour — only renegotiated to open the disclosure first before querying the textarea |
+| TC-R15-C4-04 | `WalkingSkeleton.test.tsx`'s P7-C03 Part B save-flow integration test opens the disclosure before finding the textarea; the real-save assertion (queued count, header policy version bump) is otherwise unchanged |
+| TC-R15-C4-05 | No role prop is read by `PolicyEditor`, and none was before this chunk — confirmed by reading the component and its call site in `App.tsx` (`<PolicyEditor onSaved={...} />`, unconditional). The "NOT role-gated" requirement (§3.4) was already true structurally; this chunk adds a code comment recording the check rather than removing gating that did not exist. This is the documented exception to G6 (§7 gates), not a violation of it |
+| TC-R15-C4-06 | `App.tsx`'s fidelity chip no longer renders a `title=` attribute; a button with `aria-expanded` toggles a `<p>` containing `attestation.reason` verbatim — verified by reading the JSX (no automated App.tsx test previously covered the `title=` tooltip, so none needed renegotiating) |
+| TC-R15-C4-07 | `VerdictDisplay.tsx`'s "Rulebook translation: unattested — the jurisdiction pack rules used here are proposed readings your firm has not yet adopted." checklist line (added R15-C2) is untouched — confirmed by diff; this chunk only touches the header instance |
+
+### Verification
+
+`npm test` ×3 — 682/682, identical across runs (up from 680 in R15-C3; six
+tests added, four renegotiated in place). `npx tsc --noEmit` clean.
+`npm run build` clean. `python3 scripts/spec-parity-check.py` — clean
+(R1–R8 all pass; no spec `.md`/`.html` file was touched this chunk). No
+live browser walkthrough — this build pass did not have that tooling
+available; verified instead by reading the rendered JSX, the full test
+suite, and TypeScript's structural checks.
 
 ---
 

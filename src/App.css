@@ -92,6 +92,7 @@ body {
   font-size: 0.78rem;
   color: #b7b2a3;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
@@ -114,6 +115,31 @@ body {
 
 .app-header__warn {
   color: #d99a3f;
+}
+
+.app-header__fidelity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.app-header__fidelity-toggle {
+  background: transparent;
+  color: #b7b2a3;
+  border: 1px solid var(--header-border);
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.05rem 0.3rem;
+  cursor: pointer;
+}
+
+.app-header__fidelity-detail {
+  flex-basis: 100%;
+  margin: 0.1rem 0 0;
+  color: #b7b2a3;
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 
 .app-header__role-label {
@@ -1580,6 +1606,32 @@ details input {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.74rem;
   letter-spacing: 0.05em;
+}
+
+.policy-view__yaml-disclosure {
+  margin: 2rem 0 1rem;
+  border-top: 1px solid var(--header-border);
+  padding-top: 1rem;
+}
+
+.policy-view__yaml-toggle {
+  background: transparent;
+  border: none;
+  color: var(--header-text);
+  font-size: 0.9rem;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.policy-view__yaml-panel {
+  margin-top: 0.9rem;
+}
+
+.policy-view__yaml-honesty {
+  font-size: 0.85rem;
+  color: var(--warn-text);
+  margin: 0 0 0.75rem;
 }
 
 .policy-view__yaml {

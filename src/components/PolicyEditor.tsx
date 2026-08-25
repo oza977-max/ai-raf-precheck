@@ -15,8 +15,20 @@ interface PolicyEditorProps {
 // calls store/policy.ts's loadPolicy()/onPolicyUpdated() and
 // store/policy-source.ts's setCurrentPolicyYaml(). P7-C03: real Save flow,
 // pre-filled with the currently active policy.
+//
+// R15-C4 (proposal §3.4): the readable rulebook (levers, action-required
+// banner, jurisdiction packs, hard lines, risk knowledge) is the DEFAULT
+// view for every role — it used to sit under a raw YAML editor with Save
+// as the page's main object. The YAML editor is now behind a closed-by-
+// default disclosure. This view is NOT role-gated: a second-line reviewer
+// is not automatically a rule author, and a self-asserted role is not a
+// lock (P1) — so separation is by information architecture and an honest
+// sentence, not a fake permission. No role prop is read anywhere in this
+// component; nothing here was gated by role before this chunk either, so
+// there was nothing to remove — this comment records that check (G6).
 export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   const [yaml, setYaml] = useState(() => getCurrentPolicyYaml());
+  const [yamlEditorOpen, setYamlEditorOpen] = useState(false);
   const [result, setResult] = useState<
     | { status: 'idle' }
     | { status: 'validated'; warnings: string[] }
@@ -119,55 +131,77 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         </div>
       )}
 
-      <label htmlFor="policy-yaml-input">Policy YAML</label>
-      <textarea
-        id="policy-yaml-input"
-        className="policy-view__yaml"
-        value={yaml}
-        onChange={(e) => setYaml(e.target.value)}
-        spellCheck={false}
-      />
-      <button type="button" onClick={handleValidate}>
-        Validate
-      </button>
-      <button type="button" onClick={() => void handleSave()}>
-        Save
-      </button>
+      {/* R15-C4 (proposal §3.4): closed by default — the plain-language
+          panels above are what everyone reads first; this is for the
+          people who author the rules. */}
+      <div className="policy-view__yaml-disclosure">
+        <button
+          type="button"
+          className="policy-view__yaml-toggle"
+          aria-expanded={yamlEditorOpen}
+          onClick={() => setYamlEditorOpen((v) => !v)}
+        >
+          {yamlEditorOpen ? '▾' : '▸'} Edit the rulebook as YAML — for the people who author the rules. Changing it
+          changes every future verdict.
+        </button>
 
-      {result.status === 'validated' && (
-        <div role="status">
-          <p>Policy is valid.</p>
-          {result.warnings.length > 0 && (
-            <ul>
-              {result.warnings.map((w) => (
-                <li key={w}>{w}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+        {yamlEditorOpen && (
+          <div className="policy-view__yaml-panel">
+            <p className="policy-view__yaml-honesty">
+              This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors.
+            </p>
+            <label htmlFor="policy-yaml-input">Policy YAML</label>
+            <textarea
+              id="policy-yaml-input"
+              className="policy-view__yaml"
+              value={yaml}
+              onChange={(e) => setYaml(e.target.value)}
+              spellCheck={false}
+            />
+            <button type="button" onClick={handleValidate}>
+              Validate
+            </button>
+            <button type="button" onClick={() => void handleSave()}>
+              Save
+            </button>
 
-      {result.status === 'saved' && (
-        <div role="status">
-          <p>
-            Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
-            re-evaluation.
-          </p>
-        </div>
-      )}
+            {result.status === 'validated' && (
+              <div role="status">
+                <p>Policy is valid.</p>
+                {result.warnings.length > 0 && (
+                  <ul>
+                    {result.warnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
-      {result.status === 'error' && (
-        <div role="alert">
-          <p>Policy is invalid.</p>
-          <ul>
-            {result.errors.map((e, i) => (
-              <li key={`${e.field}-${i}`}>
-                <strong>{e.field}</strong>: {e.reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            {result.status === 'saved' && (
+              <div role="status">
+                <p>
+                  Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
+                  re-evaluation.
+                </p>
+              </div>
+            )}
+
+            {result.status === 'error' && (
+              <div role="alert">
+                <p>Policy is invalid.</p>
+                <ul>
+                  {result.errors.map((e, i) => (
+                    <li key={`${e.field}-${i}`}>
+                      <strong>{e.field}</strong>: {e.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {livePolicy && (
         <div className="policy-view__panel">
