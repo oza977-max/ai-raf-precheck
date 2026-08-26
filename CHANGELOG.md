@@ -11,6 +11,76 @@ every verdict.
 
 ---
 
+## [0.17.0] — 2026-08-26
+
+### Changed — R15, the targeted redesign (Option B)
+
+A six-panel design deliberation (AI governance, regulation, banking
+practice, clarity, interaction design, information layout) recommended a
+targeted redesign over a full rebuild — presentation only, the engine and
+audit model untouched. Shipped in five chunks:
+
+- **Register** — 2LoD default view is "awaiting your sign-off," Show-all
+  one click away; grouped filter chips with an always-visible legend; Stale
+  and Sampling merged into one Flags column; stage labels in plain words
+  (`pre_checked` → "Awaiting 2LoD sign-off") with the raw value kept for
+  audit reconciliation; role switcher relabelled "Viewing as" with an
+  explicit no-sign-in note.
+- **Verdict & sign-off** — a "Before you sign off" checklist of jump links
+  (never checkboxes — this is read-and-jump, not a task list); sticky
+  section nav that deliberately excludes a direct link to Sign-off, so a
+  reviewer still has to scroll through the reasoning; the self-asserted-name
+  caveat now also appears at the point of approval, not just the header.
+- **Guided form & Confirm & attest** — five plain-language sections
+  (About it / input data / processing / output / jurisdictions); optional
+  fields state what leaving them blank means; long help text moves behind
+  "Why we ask" disclosures, load-bearing sentences stay visible outside
+  them; the raw engine vocabulary that used to leak into the attest screen
+  and the verdict's "what you told us" fold (`traditional-ml`, `L3`, `Zone
+  B`) now renders in plain words from one shared source, so both screens
+  stay in sync by construction.
+- **Appetite framework & header** — the readable rulebook (levers, action
+  banner, jurisdiction packs, hard lines, risk knowledge) is the default
+  view for every role; the YAML editor sits behind a closed-by-default
+  disclosure with an honest no-sign-in line; the header's translation-
+  fidelity warning is now a visible chip with an accessible expand/hide
+  detail, not a hover-only tooltip.
+- **Graph review & rule-improvement queue** — "model confident — no
+  verified basis" reworded to "not found in your text — worth a second
+  look," kept as its own distinct badge (not merged with "guessed" — a
+  design panel explicitly rejected collapsing the two); long provenance
+  quotes truncate with an expand action, the extracted value itself never
+  does; the queue leads with the plain rule name and a "has applied to N
+  decided cases" line, and now tags each entry as filed by a reviewer or
+  by the risk-knowledge lens.
+
+### Fixed
+
+- The register table's Policy Version and Flags columns could overflow
+  past the page edge at ordinary desktop widths — the table now scrolls
+  inside its own bounds at any width, not just on mobile.
+- A first-time visitor's register showed only the app's own
+  self-assessment. The 16-case investment-bank sample portfolio now loads
+  automatically alongside it, so the register, sign-off queue and
+  risk-knowledge lens all have something real to show without a manual
+  "load sample data" step.
+- Seeded sample verdicts (both the investment-bank portfolio and the
+  smaller sample set) never carried the marker that tells the app they'd
+  been checked against the risk-knowledge lens — so every seeded case
+  looked like it predated that feature and the MIT AI Risk Repository
+  panel never appeared on them. Fixed at the shared seeding source.
+
+### Added
+
+- **Research**: "After Deployment" — a published research briefing on
+  post-deployment AI risk and its implications for financial institutions,
+  built from the MIT AI Risk Repository and 20+ independently graded
+  regulatory and industry sources, with two rounds of adversarial review.
+  Linked from the README and served at `/research/after-deployment.html`
+  on the live demo.
+
+---
+
 ## [0.16.0] — 2026-08-18
 
 ### Changed — the verdict screen recomposed (the R9 treatment)
