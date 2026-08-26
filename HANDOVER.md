@@ -10,21 +10,24 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-25, R15-C5 shipped — ALL FIVE CHUNKS BUILT) — supersedes everything below
+## CURRENT STATE (2026-08-26, v0.17.0 RELEASED) — supersedes everything below
 
-**v0.16.0 + R15-C1 through R15-C5 live, 682 tests, working tree
-clean.** Read build/OPERATING-REGIME.md first (context-handover /
-model-router / audit-trail rules; Sonnet for build sessions).
+**v0.17.0 live, 682 tests, working tree clean, tagged and published.**
+Read build/OPERATING-REGIME.md first (context-handover / model-router /
+audit-trail rules; Sonnet for build sessions).
 
-**R15 (Option B targeted redesign) build phase is COMPLETE — all 5
-chunks shipped and independently re-verified: C1 register → C2
-verdict → C3 form+confirm → C4 policy+header → C5 graph-review+queue.**
-requirements/requirements-015.md is the build contract; design source
-of truth is reviews/design-deliberation-001/proposal.md; skeptic
-amendments S1-S4 all closed. **R15 is NOT yet released** — no
-CHANGELOG entry, no version bump, no tag, no publish. That is the next
-and final step of this round, done as its own pass (not another chunk
-dispatch).
+**R15 (Option B targeted redesign) is fully released.** All 5 chunks
+built, independently re-verified, and shipped as v0.17.0: C1 register →
+C2 verdict → C3 form+confirm → C4 policy+header → C5 graph-review+queue.
+Plus two post-C5 fixes folded into the same release (register table
+overflow at desktop widths; seeded verdicts missing the risk-knowledge
+lens marker) and the "After Deployment" research briefing added to the
+repo and site. requirements/requirements-015.md marked RELEASED.
+CHANGELOG.md [0.17.0] has the full user-facing summary. Release-pass
+ritual: 682/682 tests (one WalkingSkeleton flake on the first run,
+clean on 3 consecutive reruns — timing, not a regression), tsc clean,
+build clean, spec-parity clean, live walkthrough of register →
+verdict/sign-off → appetite framework with zero console errors.
 
 **Standing practice (from C1, held through every chunk): a build
 agent's own "done" report is not verification, and this applies to
@@ -50,16 +53,20 @@ audit-trail data. Ritual rerun independently: 682/682 tests (unchanged
 from C4 — copy-only chunk, no tests added/removed), tsc clean, build
 clean, spec-parity clean. No issues found.
 
-**Next: R15 release pass** (not a chunk — the wrap-up). Needs: a
-CHANGELOG entry summarizing all 5 chunks, a version bump (from
-v0.16.0), full ritual one more time on the final state, live walkthrough
-touching all 5 redesigned screens together in one pass (register →
-verdict/sign-off → guided form/confirm → appetite framework →
-graph-review/queue) rather than chunk-by-chunk, then tag + push +
-`npm run publish-site`. requirements-015.md's own Status line and
-Changelog table should be updated to say RELEASED once this is done —
-right now it only says all 5 chunks are built, which is accurate but
-not the same as released.
+**Next: V2 requirements, if the owner wants to proceed.**
+strategy/post-deployment-positioning.md (2026-08-25) is a PROPOSED
+next-round scope, not yet a requirements document — synthesised from
+the "After Deployment" research plus three expert position papers
+(Rumelt/Power/Reinertsen lenses). Its core move: a
+`model_version_changed` event that forces a register entry into
+re-evaluation-required and re-enters the existing re-evaluation queue —
+the first, smallest brick of the "verdict is a hypothesis" idea
+design-vision.md has carried since June (see its own new V2 section,
+2026-08-25, for the fuller evidence-backed shape: two arms — misuse
+detection vs malfunction/adversarial cadence — under one rule, "a
+monitoring signal must force register state or it does not ship").
+Do NOT start building from the strategy doc directly — run
+`/gvm-requirements` off it first if the owner approves the direction.
 
 ---## CURRENT STATE (2026-08-17) — superseded, kept for history
 

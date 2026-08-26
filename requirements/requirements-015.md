@@ -2,13 +2,16 @@
 
 ## Round 15 — Option B: The Targeted Redesign
 
-**Status: APPROVED by the owner (2026-08-25) — "Lets go option B",
-with the standing operating regime (build/OPERATING-REGIME.md) and the
-GVM pipeline ("GVM style build as always"). Scope: the chair's
-reconciled proposal from design-deliberation-001
-(reviews/design-deliberation-001/proposal.md — the SOURCE OF TRUTH for
-per-screen target states; this document indexes it and binds the
-amendments), as AMENDED by the two adversarial skeptics' fixes below.**
+**Status: RELEASED as v0.17.0 (2026-08-26).** Approved by the owner
+(2026-08-25) — "Lets go option B", with the standing operating regime
+(build/OPERATING-REGIME.md) and the GVM pipeline ("GVM style build as
+always"). Scope: the chair's reconciled proposal from
+design-deliberation-001 (reviews/design-deliberation-001/proposal.md —
+the SOURCE OF TRUTH for per-screen target states; this document indexes
+it and binds the amendments), as AMENDED by the two adversarial
+skeptics' fixes below. All five chunks built, each independently
+re-verified (diff review, ritual rerun, live walkthrough) before commit;
+see CHANGELOG.md [0.17.0] for the released scope.
 
 ## Provenance
 
