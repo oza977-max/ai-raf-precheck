@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Site Survey 002</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Badge Styles ── */
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+    }
+
+    .badge.coherent { background: #d4f1d4; color: #2d6a2d; border: 1px solid #5a9f5a; }
+
+    /* ── Health Scorecard ── */
+    .health-scorecard {
+      margin: 1.5rem 0 2rem;
+      max-width: 640px;
+    }
+
+    .scorecard-row {
+      display: flex;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .scorecard-row:nth-child(even) { background: #f9f9f4; }
+    .scorecard-row:last-child { border-bottom: 2px solid #333; }
+
+    .scorecard-dimension {
+      flex: 0 0 180px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: #333;
+    }
+
+    .scorecard-score {
+      flex: 0 0 60px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-align: center;
+      padding: 0.3rem 0.6rem;
+      border-radius: 3px;
+      margin-right: 1rem;
+    }
+
+    .scorecard-score.score-5 { background: #d4f1d4; color: #2d6a2d; }
+    .scorecard-score.score-4 { background: #d4f1d4; color: #2d6a2d; }
+    .scorecard-score.score-3 { background: #fff3cd; color: #856404; }
+    .scorecard-score.score-1 { background: #f8d7da; color: #721c24; }
+    .scorecard-score.score-2 { background: #f8d7da; color: #721c24; }
+
+    .scorecard-evidence {
+      flex: 1;
+      font-size: 0.88rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    /* ── Risk Areas Table ── */
+    .risk-summary {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+      font-size: 0.92rem;
+    }
+
+    .risk-summary strong {
+      color: #333;
+    }
+
+    .severity-critical { background: #f8d7da; color: #721c24; padding: 0.2rem 0.6rem; border-radius: 3px; font-weight: 600; }
+    .severity-important { background: #fff3cd; color: #856404; padding: 0.2rem 0.6rem; border-radius: 3px; font-weight: 600; }
+    .severity-minor { background: #e8e8e0; color: #666; padding: 0.2rem 0.6rem; border-radius: 3px; font-weight: 600; }
+
+    /* ── Recommendation Tracks ── */
+    .track-container {
+      display: flex;
+      gap: 2rem;
+      margin: 1.5rem 0 2rem;
+      max-width: 100%;
+    }
+
+    .track {
+      flex: 1;
+      min-width: 300px;
+      background: #f7f7f0;
+      border-left: 4px solid #333;
+      padding: 1.2rem;
+      max-width: 640px;
+    }
+
+    .track.track-a { border-left-color: #2d6a2d; }
+    .track.track-b { border-left-color: #5a5a8a; }
+
+    .track-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.4rem;
+    }
+
+    .track-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      color: #111;
+    }
+
+    .track p {
+      max-width: none;
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── Expert Table ── */
+    .expert-tier {
+      margin: 1.5rem 0 2rem;
+      max-width: 640px;
+    }
+
+    .tier-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-top: 1.2rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .tier-title:first-of-type {
+      margin-top: 0;
+    }
+
+    .expert-list {
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .expert-item {
+      padding: 0.3rem 0;
+      color: #333;
+    }
+
+    /* ── Code & Inline Elements ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+      margin-top: 0.4rem;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+      .track-container {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .track {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">2026-08-26 — Site Survey</p>
+    <h1>AIGate — Site Survey 002</h1>
+    <p class="subtitle">Coherent codebase eight days after full UI redesign; two fixable issues, no architectural drift.</p>
+
+    <h2 id="executive-summary">1. Executive Summary</h2>
+    <p>AIGate remains a <strong>Coherent</strong> <span class="badge coherent">Coherent</span> codebase (Scenario 1) eight days and one full UI redesign (R15, five chunks, v0.17.0) later. Phase 2 ran as a genuine module-per-agent fan-out for the first time — the first live use of the newly-wired <code>gvm-graph</code> skill — with every architectural claim independently verified against real code rather than trusted from a single worker's report. The core four-boundary architecture holds: the engine's "pure island" claim, the store's append-only audit trail, and the LLM SDK's single-import boundary were all re-verified true, not just re-asserted.</p>
+    <span class="sidenote">Surveyed at v0.17.0 (commit 69e412a, working tree clean). Prior survey: site-survey-001 (2026-08-18, v0.13.0)</span>
+
+    <p>Two real, fixable issues surfaced that survey-001 did not have to catch: a UI label-mapping regression introduced during R15 (<code>RegisterDetail.tsx</code> shows a raw enum where the register list correctly shows a plain-language label), and three high-severity dependency CVEs (js-yaml, nanoid, postcss), all fixable via <code>npm audit fix</code> with no breaking changes. Neither is architectural — both are the kind of thing a healthy, fast-moving codebase accumulates between surveys.</p>
+
+    <p>The health scorecard is unchanged at the top (Documentation and Currency both 5/5) with one new score this round (Usability, now tracked given R15's redesign) and one real deduction (Dependency Health, 3/5, for the unpatched CVEs). Two tracks follow from this survey: a <strong>targeted fix</strong> round (<code>/gvm-build</code> directly) for the two issues found here, and — separately — <strong><code>/gvm-requirements</code></strong> for the post-deployment monitoring work (V2) already scoped in <code>strategy/post-deployment-positioning.md</code>, which should be fed in as seed input rather than started from a blank page.</p>
+
+    <h2 id="codebase-profile">2. Codebase Profile</h2>
+    <table>
+      <caption>Table 1 — Codebase at a glance (v0.17.0)</caption>
+      <thead>
+        <tr>
+          <th>Attribute</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Language / framework</strong></td>
+          <td>TypeScript (strict), React 18, Vite 8, Vitest 4, Zod, idb (IndexedDB), js-yaml, Anthropic SDK</td>
+        </tr>
+        <tr>
+          <td><strong>Source size</strong></td>
+          <td>~30,447 LoC across <code>src/</code> (incl. tests) · 76 test files, 682 tests</td>
+        </tr>
+        <tr>
+          <td><strong>Modules</strong></td>
+          <td><code>engine/</code> 24 files, 3,138 LoC · <code>components/</code> 21 files, 7,975 LoC · <code>store/</code> 12 files, 1,372 LoC · <code>llm/</code> 6 files, 721 LoC · <code>seeds/</code> 4 files, 912 LoC · <code>types/</code> 2 files, 51 LoC</td>
+        </tr>
+        <tr>
+          <td><strong>Policy corpus</strong></td>
+          <td><code>policy/appetite.yaml</code> + jurisdiction packs + <code>grounding/risk-knowledge.yaml</code> (MIT AI Risk Repository-derived, 13 curated entries)</td>
+        </tr>
+        <tr>
+          <td><strong>Git history</strong></td>
+          <td>239 commits, single contributor (<code>oza977-max</code>), all activity within the last year</td>
+        </tr>
+        <tr>
+          <td><strong>Hotspots</strong></td>
+          <td><code>App.css</code>, <code>IntakeFlow.tsx</code>, <code>VerdictDisplay.tsx</code>, <code>engine/types.ts</code>, <code>engine/evaluate.ts</code> — all expected round-cadence files, no fix-after-fix churn pattern</td>
+        </tr>
+        <tr>
+          <td><strong>Documentation</strong></td>
+          <td>14 requirements docs (rounds 002–015), 8 paired spec docs, 14 test-case docs, a requirements health-report with a decisions log, CHANGELOG.md, HANDOVER.md, plus user-facing docs (approach, glossary, regulator brief, user guide)</td>
+        </tr>
+        <tr>
+          <td><strong>Dependency health</strong></td>
+          <td><strong>3 high-severity CVEs found this round</strong> (js-yaml — production, exponential-time DoS in flow-collection parsing; nanoid and postcss — dev/build tooling), all fixable via <code>npm audit fix</code>, no <code>--force</code> required</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="architectural-map">3. Architectural Map</h2>
+    <p><strong>Pattern:</strong> the same four-boundary layered architecture from survey-001, re-verified independently this round via <code>gvm-graph</code>'s module-per-agent fan-out rather than a single sequential pass:</p>
+
+    <h3 id="arch-engine">Engine: Pure Functional Island</h3>
+    <p>A rules-engine pipeline: <code>evaluate()</code> orchestrates ~9 named steps, each delegated to a single-purpose module. Fresh grep across all non-test engine imports found only type imports, relative imports, and <code>zod</code> (schema validation, no I/O) — no React, no SDK, no <code>Date.now()</code>/<code>Math.random()</code> outside comments stating the rule. Determinism mechanism confirmed concrete: policy collections explicitly sorted by id before iteration (<code>evaluate.ts:44-48</code>). <code>Result&lt;T,E&gt;</code> discriminated unions used consistently instead of exceptions.
+    <span class="sidenote">File:line references throughout this section and §6 pulled from independent module-per-agent verification</span></p>
+
+    <h3 id="arch-store">Store: Persistence Only, One Nuance</h3>
+    <p>Repository pattern over IndexedDB (<code>db.ts</code> centralises all <code>openDB</code> access). The audit trail is genuinely append-only at the write layer — <code>append()</code> uses <code>db.add()</code>, not <code>put()</code>, and throws on duplicate ID (<code>audit.ts:24-29</code>), with no update/delete function anywhere in the module. A real store-layer concurrency mechanism exists (a monotonic tie-breaker for same-millisecond writes, <code>audit.ts:15-22</code>), distinct from the UI's <code>useRef</code> guard.</p>
+    <span class="sidenote">One thing that looked like a boundary violation on first read and was independently verified benign: <code>register.ts</code> imports <code>isVerdictProvisional</code> and <code>isSampledForReview</code> from <code>src/engine</code> — both are pure, side-effect-free predicates (confirmed by reading their implementations)</span></p>
+
+    <p>Two limitations are acknowledged in-code, not hidden: register updates and their audit-event writes are not transactional (documented V1 limitation), and <code>getUseCases</code> has an N+1 query pattern (documented as an accepted V1 scaling limit).</p>
+
+    <h3 id="arch-llm">LLM: Sole SDK Boundary</h3>
+    <p>A thin gateway pattern (<code>client.ts</code>) wraps the Anthropic SDK; a parallel gateway (<code>local-provider.ts</code>) wraps a local Ollama model behind the same <code>LlmResult</code> contract. Project-wide grep for <code>@anthropic-ai/sdk</code> found exactly one real import (<code>client.ts</code>) — every other hit is a <code>vi.mock(...)</code> stub in a test file. <code>isLoopbackUrl</code> is enforced twice independently in the local-model path as deliberate defence-in-depth, called out in comments as "belt and suspenders."
+    <span class="sidenote">Re-verified this round by independent module scan</span></p>
+
+    <h3 id="arch-components">Components: Presentation Only, One Confirmed Regression</h3>
+    <p>No component defines its own evaluation/scoring logic — all business logic is delegated to <code>src/engine</code>/<code>src/store</code>. The <code>useRef</code> in-flight-guard convention against duplicate audit writes was applied faithfully across every new state-heavy component R15 introduced.</p>
+
+    <p><strong>Confirmed bug:</strong> <code>RegisterDetail.tsx:569</code> renders the raw <code>lifecycle_stage</code> enum value directly (e.g. <code>pre_checked</code>) instead of mapping it through <code>STAGE_LABELS</code>, even though <code>RegisterView.tsx</code> (same data, same field-copy module) correctly shows the plain-language label on the register list. <code>RegisterDetail.tsx</code> only imports <code>TIER_MEANINGS</code>/<code>TRACK_MEANINGS</code> from <code>field-copy.ts</code>, confirming this is a real omission, not an unused-import artefact. This is exactly the kind of inconsistency R15-C1 was built to eliminate — it fixed the register list and missed the detail page. Separately, <code>field-copy.ts</code> (the shared copy source) is imported by only 5 of 16 top-level components — worth a light convention pass, not urgent.</p>
+
+    <h3 id="arch-seeds">Seeds: Genuinely Use the Real Engine</h3>
+    <p>All three seed generators (<code>sample-register.ts</code>, <code>ib-portfolio.ts</code>, <code>aigate-self-assessment.ts</code>) call <code>evaluate()</code> from <code>src/engine</code> and construct persisted verdicts from its real output — none fabricate a result. One real inconsistency: the three seed files disagree on failure handling when <code>evaluate()</code> fails — one throws, one silently skips — not yet unified.</p>
+
+    <p><strong>Enterprise patterns present:</strong> Repository (store), append-only event log (audit trail), pure-function evaluation core, gateway/adapter (LLM boundary, dual-provider), discriminated-union error handling, advisory-by-construction subsystems (risk-knowledge lens, precedents — structurally incapable of touching the verdict).</p>
+
+    <h2 id="health-scorecard">4. Health Scorecard</h2>
+    <div class="health-scorecard">
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Coherence</div>
+        <div class="scorecard-score score-4">4/5</div>
+        <div class="scorecard-evidence">Consistent patterns verified across all four modules; two real inconsistencies found this round (RegisterDetail label gap, field-copy.ts partial adoption) keep it off 5</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Currency</div>
+        <div class="scorecard-score score-5">5/5</div>
+        <div class="scorecard-evidence">React 18, TypeScript 5.6, Vite 8, Vitest 4 — nothing dated</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Testability</div>
+        <div class="scorecard-score score-4">4/5</div>
+        <div class="scorecard-evidence">682 tests; IndexedDB and network properly mocked in every relevant test; a handful of files (<code>client.ts</code>, <code>duplicate-check.ts</code>, two small components, <code>knowledge-lens-for-seed.ts</code>) have no dedicated test file</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Modularity</div>
+        <div class="scorecard-score score-4">4/5</div>
+        <div class="scorecard-evidence">Engine's pure-island boundary independently re-verified true; store access is spread across 8 of 16 top-level components rather than centralised through fewer containers</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Documentation</div>
+        <div class="scorecard-score score-5">5/5</div>
+        <div class="scorecard-evidence">Inline Rule/ADR citations at every boundary; 14 requirements docs, 8 specs, 14 test-case docs, CHANGELOG, HANDOVER — exceeds what most production teams maintain</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Dependency Health</div>
+        <div class="scorecard-score score-3">3/5</div>
+        <div class="scorecard-evidence">3 high-severity CVEs found this round (js-yaml production, nanoid + postcss dev), all trivially fixable via <code>npm audit fix</code>, none abandoned</div>
+      </div>
+      <div class="scorecard-row">
+        <div class="scorecard-dimension">Usability</div>
+        <div class="scorecard-score score-4">4/5</div>
+        <div class="scorecard-evidence">R15 specifically targeted this dimension (plain-language labels, accessible disclosures); the confirmed RegisterDetail bug is precisely the kind of regression this score exists to catch</div>
+      </div>
+    </div>
+
+    <h2 id="diagnosis">5. Diagnosis</h2>
+    <p><strong>Scenario: Coherent (unchanged from survey-001).</strong> The score pattern — high coherence, high currency, high documentation, with narrow and specific deductions rather than diffuse ones — matches a single disciplined author following one methodology consistently across 239 commits and five UI redesign rounds since the last survey. Nothing found this round suggests drift or fracture; the two issues found are the ordinary residue of fast, real shipping, not evidence of an eroding design. The user confirmed this diagnosis matches their own sense of the codebase before this survey proceeded to expert selection.</p>
+
+    <h2 id="risk-areas">6. Risk Areas</h2>
+    <div class="risk-summary">
+      <strong>Priority breakdown:</strong> 0 Critical, 2 Important (amber/orange), 4 Minor (grey). All fixable with no architectural changes required.
+    </div>
+
+    <table>
+      <caption>Table 2 — Risk areas by priority</caption>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Finding</th>
+          <th>Evidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="severity-important">Important</span></td>
+          <td><code>RegisterDetail.tsx</code> shows a raw <code>lifecycle_stage</code> enum value instead of the plain-language <code>STAGE_LABELS</code> mapping that <code>RegisterView.tsx</code> correctly uses for the same field — a real UI inconsistency a 2LoD reviewer would see on the detail page after seeing the correct label on the list.</td>
+          <td><code>src/components/RegisterDetail.tsx:569</code> vs <code>src/components/RegisterView.tsx:268,347</code></td>
+        </tr>
+        <tr>
+          <td><span class="severity-important">Important</span></td>
+          <td>Three high-severity dependency CVEs: js-yaml (production, exponential parsing time / DoS in flow collections — the library that parses <code>policy/appetite.yaml</code>), nanoid and postcss (dev/build tooling). All fixable via <code>npm audit fix</code> with no breaking-change flag required.</td>
+          <td><code>npm audit</code> output, 2026-08-26</td>
+        </tr>
+        <tr>
+          <td><span class="severity-minor">Minor</span></td>
+          <td>Register updates and their corresponding audit-event writes are not transactional — a partial-write risk under failure, acknowledged in-code as a documented V1 limitation.</td>
+          <td><code>src/store/register.ts:188-226</code>
+          <span class="sidenote">Documented V1 limitation, accepted trade-off</span></td>
+        </tr>
+        <tr>
+          <td><span class="severity-minor">Minor</span></td>
+          <td>Three seed generators disagree on failure-handling philosophy when <code>evaluate()</code> fails (throw vs silent skip) — not itself a bug, but an inconsistency worth unifying.</td>
+          <td><code>src/seeds/aigate-self-assessment.ts:127-129</code> vs <code>src/seeds/sample-register.ts:176-177</code></td>
+        </tr>
+        <tr>
+          <td><span class="severity-minor">Minor</span></td>
+          <td>Shared copy source <code>field-copy.ts</code> is imported by only 5 of 16 top-level components — worth a light convention sweep to confirm the other 11 have no duplicate-string exposure, not urgent.</td>
+          <td><code>src/components/RegisterView.tsx:9</code> vs absence in <code>StepTracker.tsx</code>, <code>AboutPanel.tsx</code>, <code>SimilarCases.tsx</code>, <code>ContradictionReview.tsx</code></td>
+        </tr>
+        <tr>
+          <td><span class="severity-minor">Minor</span></td>
+          <td><code>client.ts</code>, <code>duplicate-check.ts</code>, <code>knowledge-lens-for-seed.ts</code>, <code>StepTracker.tsx</code>, and <code>ContradictionReview.tsx</code> have no dedicated test file — exercised only indirectly via other files' tests.</td>
+          <td><code>src/llm/</code> and <code>src/components/__tests__/</code> directory listings</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="diagnostic-experts">7. Diagnostic Experts Used</h2>
+    <table>
+      <caption>Table 3 — Expert roles in this survey</caption>
+      <thead>
+        <tr>
+          <th>Expert</th>
+          <th>Role in this survey</th>
+          <th>Cited in diagnosis?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Martin Fowler (<em>Refactoring</em> 2e, <em>PoEAA</em>)</td>
+          <td>Pattern identification — rules-engine pipeline, repository, gateway patterns</td>
+          <td>Yes — architectural map §3</td>
+        </tr>
+        <tr>
+          <td>Michael Feathers (<em>Working Effectively with Legacy Code</em>)</td>
+          <td>Legacy/testability assessment — seams, characterisation, test coverage gaps</td>
+          <td>Yes — health scorecard, risk areas</td>
+        </tr>
+        <tr>
+          <td>Martin Kleppmann (<em>Designing Data-Intensive Applications</em>)</td>
+          <td>Data-layer diagnosis — append-only trail verification, concurrency handling, N+1 pattern</td>
+          <td>Yes — architectural map §3, risk areas</td>
+        </tr>
+        <tr>
+          <td>Sam Newman (<em>Building Microservices</em> 2e)</td>
+          <td>Boundary assessment — module boundaries, SDK import confinement</td>
+          <td>Yes — architectural map §3</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="expert-coverage">8. Expert Coverage Assessment</h2>
+    <p>No new domain, pattern, or technology surfaced this round that isn't already covered by the project's existing 53-expert roster (accumulated across prior GVM rounds). The stack is unchanged since survey-001; the one new activity this round — <code>gvm-graph</code>'s module-per-agent fan-out — is itself the execution mechanism, not a domain requiring its own grounding expert. No gaps found; no new experts discovered or added.</p>
+
+    <h2 id="recommended-experts">9. Recommended Project Experts</h2>
+    <p>The existing roster (53 experts, accumulated across 15+ prior GVM rounds) remains current and sufficient. Full roster spans:</p>
+
+    <div class="expert-tier">
+      <div class="tier-title">Tier 1 (architecture, testing, requirements, writing)</div>
+      <div class="expert-list">
+        <div class="expert-item">Martin Fowler, Frederick Brooks, Kent Beck, Robert C. Martin, Sandi Metz, Steve McConnell, Andrew Hunt, Paul Clements, Simon Brown, George Fairbanks, Michael Keeling, Bass/Clements/Kazman, Boris Beizer, Cem Kaner, Lee Copeland, Dan North, Karl Wiegers, Jeff Patton, Mike Cohn, Alan Cooper, Jean-luc Doumont, Robert McKee, George Orwell, Gerald Weinberg, William Zinsser, Joseph Williams, Janice Redish, Robert Marzano, Stevens & Levi, Tom Gilb, Clayton Christensen</div>
+      </div>
+    </div>
+
+    <div class="expert-tier">
+      <div class="tier-title">Tier 2a (data &amp; service patterns)</div>
+      <div class="expert-list">
+        <div class="expert-item">Martin Kleppmann, Sam Newman, Michael Feathers</div>
+      </div>
+    </div>
+
+    <div class="expert-tier">
+      <div class="tier-title">Tier 2b (banking / AI-risk regulatory)</div>
+      <div class="expert-list">
+        <div class="expert-item">PRA SS1/23, OSFI E-23, Federal Reserve/OCC/FDIC SR 26-2, NIST AI RMF, EU AI Act, COSO ERM, MAS FEAT, James Lam, Philippa Girling, Emanuel Derman, Cathy O'Neil, Christoph Molnar, Stuart Russell, Virginia Eubanks, Nassim Nicholas Taleb</div>
+      </div>
+    </div>
+
+    <div class="expert-tier">
+      <div class="tier-title">Discovered (Tier "discovered")</div>
+      <div class="expert-list">
+        <div class="expert-item">Michael Power (<em>The Audit Society</em>), Margaret Mitchell et al. (Model Cards), OWASP (LLM Top 10), BJ Fogg (<em>Tiny Habits</em>), Donald Reinertsen (Product Development Flow)</div>
+      </div>
+    </div>
+
+    <p><strong>Status:</strong> all existing, none newly added this round.</p>
+
+    <h2 id="route-recommendation">10. Route Recommendation</h2>
+    <p>Two separate tracks follow from this survey, because two kinds of work are waiting:</p>
+
+    <div class="track-container">
+      <div class="track track-a">
+        <div class="track-label">Track A</div>
+        <div class="track-title">Targeted Fix</div>
+        <p>Route to <code>/gvm-build</code> directly.</p>
+        <p>The RegisterDetail label bug and the dependency CVEs are both well-understood, well-scoped fixes in a Coherent codebase. Per the route matrix (Coherent + Targeted fix → <code>/gvm-build</code>), no requirements phase is needed — the fix is the requirement.</p>
+      </div>
+      <div class="track track-b">
+        <div class="track-label">Track B</div>
+        <div class="track-title">User-Facing Feature</div>
+        <p>Route to <code>/gvm-requirements</code>.</p>
+        <p>The post-deployment monitoring work (V2) already scoped in <code>strategy/post-deployment-positioning.md</code> and <code>design-vision.md</code>'s V2 section is new functionality that changes what a 2LoD reviewer experiences. Per the route matrix (Coherent + User-facing feature → <code>/gvm-requirements</code>), and per this skill's own rule on existing documentation as seed input, both documents should be fed into that round rather than starting from a blank page.</p>
+      </div>
+    </div>
+
+    <p>The user decides which track to run first, or both — the survey recommends, it does not mandate.</p>
+
+    <h2 id="open-questions">11. Open Questions</h2>
+    <div class="open-question">
+      <p><strong>OQ-1:</strong> Whether the three-seed-file failure-handling inconsistency (throw vs. silent skip) should be unified now or left as a low-priority convention item — not assessed as urgent by this survey, left to the owner.</p>
+    </div>
+
+    <div class="open-question">
+      <p><strong>OQ-2:</strong> Whether <code>field-copy.ts</code>'s partial adoption (5 of 16 components) reflects components that genuinely have no shared-copy needs, or latent duplicate-string exposure — would need a closer per-file read than this survey's module-level scan performed.</p>
+    </div>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
