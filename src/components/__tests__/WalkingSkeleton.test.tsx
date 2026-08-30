@@ -99,7 +99,7 @@ describe('Walking Skeleton', () => {
     // Navigate to the Register view (P6-C01) via the sidebar.
     await user.click(screen.getByText('▤ Register'));
     expect(await screen.findByText('Register', { selector: '.register-view h2' })).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
+    expect(await screen.findByRole('row', { name: /email drafting model/i })).toBeInTheDocument();
 
     // TC-LC-2-01 (P6-C02): routeToWorkflow() drives the lifecycle stage from
     // the tier, not a hardcoded 'idea'. This fixture is internal-only but
