@@ -1,0 +1,23 @@
+---
+schema_version: 1
+session_id: explore-006
+mission: >-
+  A non-technical, governance-naive reader encounters the verdict screen
+  cold — no prior context on 2LoD, invariants, tiers, tracks, or model
+  risk vocabulary. Walk the verdict/sign-off flow (VerdictDisplay.tsx and
+  the register detail page it renders inside) as that persona would, and
+  log every point where the screen assumes knowledge the persona doesn't
+  have, or presents so much at once that the persona would lose the
+  thread. Claude performs the mechanical walkthrough (browser + code
+  reading) and proposes candidate findings; the owner classifies severity,
+  confirms GWT, and confirms reproduction for each one via AskUserQuestion
+  prompts during the session, per Hard Gate 4 (ADR-205) — Claude does not
+  self-assign severity.
+timebox_minutes: 30
+target:
+  - http://localhost:5173
+  - src/components/VerdictDisplay.tsx
+  - src/components/RegisterDetail.tsx
+tour: feature
+runner: oza977-max
+---
