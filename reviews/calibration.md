@@ -29,6 +29,7 @@ against.
 | 1 | 2026-08-25 | doc | A,B,C,D (standalone) | 2 | 15 | 10 | **Do not publish — revise first** ("After Deployment" briefing, 2nd ed.; all C+I fixed same-session per owner triage → 3rd ed. republished; R2 recommended) |
 | 2 | 2026-08-25 | doc | A,B,C,D strict | 0 | 3 | 4 | **Publish with revisions** (3rd ed. scored 8.2 — integrity 9 ↑, transparency 8 ↑, prose 6 ↓ regression from R1 fixes; all 3 Importants + prose pass fixed per owner triage → 4th ed.; stopping rule not yet met, targeted R3 optional) |
 | 2 | 2026-08-31 | design | A,B,C,D,E,G (G supplementary, strict) | 6 | 8 | 3 | **Build with caveats** (verdict/sign-off screen; triggered by explore-006's 3 Critical UX findings; 4 panels independently converged on the same fix mechanism for the core finding; owner chose fix-everything) |
+| 3 | 2026-08-31 | design | A,C,D,E,G strict (no B/F — no contract/quality-attribute change) | 2 | 6 | 3 | **Build with caveats** (verdict screen information architecture and narrative flow — not another leak sweep; owner's own proposed 5-beat restructure independently stress-tested rather than rubber-stamped; both Criticals are proposal-design gaps, not pre-existing code bugs — beat 4 forced grouping [C+G converged] and binding-constraint deletion's false premise [A+D converged]; triage pending) |
 
 ## Round 1 measurements
 
@@ -429,6 +430,69 @@ confirmed as a *pattern*, not a single defect — 6 separate instances
 found this round alone. If this recurs in a future round after the
 current fix pass, promote to a build check (grep for bare `{verdict.*id}`
 or `<code>{...}</code>` renders with no adjacent label resolution).
+
+## Design review round 3 (2026-08-31) — verdict screen information
+architecture and narrative flow
+
+**Scope note.** This round did not re-scan for jargon or leaked IDs —
+that class was round 2's job and is fixed. This round targeted a
+different defect class entirely: the screen's *shape* — is it organized
+by data type (one panel per engine field) or by narrative arc (decision
+→ why → action → risk → record)? The owner's own diagnosis and a
+sketched 5-beat restructure (Minto Pyramid Principle) were the object
+under review, not the code as-shipped — a deliberate departure from
+prior rounds, where the review target was always the current build.
+
+**Scores (full review):** Requirements coverage 7 · Structural soundness
+6 · Implementability 7 · Security 9 · Audience hospitality (Panel G,
+supplementary) 7. Panels B (interface contracts) and F (quality
+attributes) did not run — no API/data contract changes and no new
+quality-attribute scenario in scope; both explicitly recorded as
+not-applicable rather than silently skipped.
+
+**Multi-panel convergence — again the strongest signal.** Two
+independent pairs of panels, each scanning for an unrelated defect
+class, converged on the same two problems in the *proposal itself*: (C
++ G) on beat 4 being a forced grouping — only expiry-conditions
+actually fits "what could change this"; (A + D) on the binding-constraint
+deletion resting on a false premise — the appetite line the proposal
+claimed made it redundant never actually renders the rule ID at all.
+Consistent with round 2's finding: unprompted convergence across
+orthogonal panels is the highest-confidence signal this methodology
+produces, this time catching flaws in the *reviewer's own proposal*
+rather than in shipped code — the panels did not rubber-stamp the
+diagnosis they were handed.
+
+**Anchor examples:**
+- Worst, structural soundness: beat 4 ("what could change this") bundles
+  fragility (present-tense, not forward-looking), inheritance
+  (provenance, not risk), and living-status (a status readout) alongside
+  the one panel that actually belongs there (expiry) — bucketed for
+  beat-count symmetry, not conceptual unity. The clearest instance this
+  project has produced of a synthesis step imposing a clean-sounding
+  structure the underlying content doesn't actually support.
+- Worst, audience hospitality: the proposal folds beat 4 away by default
+  for non-2LoD readers — hiding "this decision could expire or fall
+  apart" from exactly the first-time, non-technical reader the owner
+  named as the person they're most worried about losing. A fix aimed at
+  that reader that would have made their actual worry *less* visible if
+  built as sketched.
+- Best, implementability: Panel D produced a concrete, six-step
+  incremental build sequence (each step independently shippable and
+  test-verifiable) rather than treating the restructure as one big-bang
+  change — directly actionable, no further design work needed to start
+  building steps 1-4.
+
+**Recurring-candidate, watch in future rounds:** this is the second
+round in a row (round 2, round 3) where a reviewing panel found a real
+defect the main-loop synthesis had missed *before* dispatching the
+panels — round 2 found the reserved-word "rejected" leak outside its
+own mandate; round 3 found the binding-constraint deletion's premise
+was factually wrong. If a third round produces a similar catch, promote
+"synthesis-stage claims about existing code get independently verified
+by at least one panel before being treated as ground truth" to a
+standing process note in this skill's Hard Gates, not just an
+observation here.
 
 **Root-cause finding, not just a defect list (Panel A):** no requirement
 in this project forbids internal spec-ID leaks into rendered text, and

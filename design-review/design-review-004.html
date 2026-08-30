@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Review 004 — Verdict Screen Narrative Flow</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Verdict Box ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .issue-fix {
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ── Criterion Rows ── */
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026 — Living Document</p>
+    <h1>Design Review 004</h1>
+    <p class="subtitle">Verdict Screen Narrative Flow. Round 3 (full-depth 5-panel review), STRICT criteria.</p>
+
+    <div class="verdict caveats">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-text">Build with caveats</div>
+      <p class="verdict-basis">The 5-beat direction is correct and independently confirmed as the right fix across all 5 panels, but the proposal-as-sketched has real gaps that must be resolved before implementation, not deferred. Two critical gaps (beat 4's forced grouping and the binding-constraint deletion premise) were independently identified by separate panels and are load-bearing to the restructure. Build sequence supplied; implementation requires explicit resolution of these two points and specification ambiguities at 4 sites before code starts.</p>
+    </div>
+
+    <h2 id="executive-summary">Executive Summary</h2>
+    <p>Following explore-006 and design-review-003 (which fixed jargon leaks and fold mechanics), the user reported the verdict screen "still doesn't flow properly, it should have a story." A 5-beat restructure was proposed following the Minto Pyramid Principle (decision → next action → basis → what-could-change-it → the record) to replace the current 19-block field-ordered layout. This design review independently stress-tested that proposal via 5 parallel panels (A, C, D, E, G; no Panel B/interface-contracts or Panel F/quality-attributes as noted below). Every panel independently confirmed the core diagnosis is real—decision restated 4–6 times before the reader finds the thread; two competing in-page navigation devices—not exaggerated. But two separate panels independently converged on the same defect in the proposed fix: beat 4 is a forced grouping with real conceptual misfit, and folding it by default hides exactly the "could this break" information most-likely readers want visible. A second independent convergence: the premise for deleting the binding-constraint block is factually wrong, which would move required disclosure from always-visible to hidden-behind-a-fold for specific audiences.</p>
+
+    <p><strong>Panel D confirmed one real, unconditional test break</strong> (the in-page nav bar's existence is asserted by a test) requiring deliberate test update, not silent deletion. <strong>Panel C flagged latent technical debt</strong> (Fold's defaultOpen is mount-time-only) that the restructure doesn't fix. <strong>Panel G flagged a scope gap</strong>: a tier/track chip-before-legend finding from design-review-003 sits outside this restructure's stated scope and risks being left as unaddressed debt.</p>
+
+    <h2 id="scope-and-methodology">Scope & Methodology Note</h2>
+    <p><strong>Panel B (Interface Contracts)</strong> did not run: this is a pure UI reorganization with no change to the actual component API or contract between VerdictDisplay and RegisterDetail, and no new fields enter or leave that interface. <strong>Panel F (Quality Attributes / ATAM Utility Tree)</strong> did not run: no new quality-attribute scenario is introduced; the existing utility tree from the original build covers performance/scalability/availability already and nothing in this restructure changes those tactics. Both gaps are explicitly scoped out, not oversights.</p>
+
+    <h2 id="critical-findings">Critical Findings</h2>
+    <p>Two critical issues, both proposal-design gaps (not existing-code bugs):</p>
+
+    <div class="issue critical">
+      <div class="issue-title">1. Beat 4 grouping is not a real conceptual unity and should not be folded by default.</div>
+      <div class="issue-detail">Panels C and G independently converged on this defect. Panel C: "fragility, inheritance, and living-status are being placed there for beat-count symmetry" — only expiry-conditions genuinely matches "what could change this"; fragility is present-tense (today's margin, not a future trigger), inheritance is provenance of already-granted controls, living-status is a current-state readout closer to "the record." Panel G, independently: folding this beat by default hides "this decision is not permanent and could break" from exactly the audience most likely to want it — recommends promoting beat 4 to always-visible (changing the visible-by-default set from 2 beats to 3), and renaming it to name its actual content directly ("What could go wrong / when this expires") rather than the scan-ambiguous "What could change this."</div>
+      <div class="issue-location">VerdictDisplay.tsx §beat 4 (proposal location)</div>
+      <div class="issue-fix"><strong>Fix:</strong> Split beat 4 into its true parts — expiry-conditions gets its own always-open beat; fragility joins beat 3 (basis — it's about the strength of the reasoning); inheritance and living-status join beat 5 (the record — provenance and status readout). Rename beat 4 to "When this expires" and render it always-open, not folded.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">2. The binding-constraint block deletion is based on a false premise and risks a real disclosure regression.</div>
+      <div class="issue-detail">Panels A and D independently converged on this defect. Panel A: VD-2 (Must) requires the exact binding invariant be shown; if the standalone block at VerdictDisplay.tsx:910–916 is deleted and its only remaining rendering falls inside the beat-3 fold (closed by default for non-2LoD per reasoningDefaultOpen), a 1LoD submitter loses default visibility of information VD-2 requires — RA-9's audience-dependent-fold exception explicitly does not extend to VD-2. Panel D, independently: the premise itself is wrong — VerdictDisplay.tsx's appetite line (lines 860–873) never renders the binding_constraint code or binding_path at all; it states only control/review counts. There is nothing to be "redundant with."</div>
+      <div class="issue-location">VerdictDisplay.tsx:860–873, :910–916 (proposal location)</div>
+      <div class="issue-fix"><strong>Fix:</strong> Do not delete the block; either keep it in beat 1 (compact, one line) or explicitly carry binding_constraint + binding_path into whatever beat-1 summary line replaces it, and confirm it renders regardless of role/fold state. Verify that VD-2's disclosure requirement is satisfied by the final DOM.</div>
+    </div>
+
+    <h2 id="important-findings">Important Findings</h2>
+    <p>Six important issues requiring attention:</p>
+
+    <div class="issue important">
+      <div class="issue-title">3. Section-nav deletion breaks a real, confirmed test and removes a deliberate anti-rubber-stamp design decision.</div>
+      <div class="issue-detail">Panel D confirmed the test break at VerdictDisplay.r15c2.test.tsx:67–74 — nav's existence and its lack of a sign-off link are directly asserted. Panel E, independently: the nav's code comment records a deliberate decision that "a one-click path from page-load straight to Approve is the rubber-stamp risk the design panel rejected" — if the nav goes, the sign-off checklist becomes the sole place enforcing "no direct jump to sign-off," and that discipline should be stated explicitly there, not assumed.</div>
+      <div class="issue-location">VerdictDisplay.tsx:~line (nav section); test at VerdictDisplay.r15c2.test.tsx:67–74</div>
+      <div class="issue-fix"><strong>Fix:</strong> Update (not silently delete) the r15c2 test in the same commit as the nav removal, and add a one-line comment at SignOffChecklist's definition recording that it is now the sole no-direct-jump-to-sign-off enforcement point.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">4. "Extend reasoningDefaultOpen to more Folds" and "wrap beat 3 in a plain section" are underspecified.</div>
+      <div class="issue-detail">Panel D. VerdictDisplay.tsx has 7 Fold call sites; only 1 currently takes the reasoningDefaultOpen prop. The proposal doesn't name which of the other 6 "more" refers to — a real behavioral fork. Separately, Fold's when={false} fallback path renders a bare fragment and drops the id prop entirely (confirmed at VerdictDisplay.tsx:100–135) — a developer using when={false} to get a "plain section" instead of a wrapping Fold would silently lose the anchor id the checklist/nav jump-links depend on, a silent bug.</div>
+      <div class="issue-location">VerdictDisplay.tsx:100–135, multiple Fold sites (~7)</div>
+      <div class="issue-fix"><strong>Fix:</strong> Name every Fold call site by its current title string that should adopt reasoningDefaultOpen; specify the beat-3 wrapper as literal JSX (a real &lt;section&gt; with its own heading, not a Fold with when={false}), preserving each inner panel's own Fold/id.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">5. The proposal's own count of "restated 4 times" undersells the defect, but its fix is confirmed correct.</div>
+      <div class="issue-detail">Panel G traced 5–6 distinct textual restatements of the decision (provisional banner, sign-off checklist's first bullet, section nav, h2 heading, appetite line, WhatToDo's lead sentence) before new information appears. Beat 1's proposed consolidation directly resolves this and is confirmed to extend — not regress — design-review-003's WhyThisVerdict fold fix (VerdictDisplay.tsx:918–935). This is recorded as Important only because the undercount itself should be corrected in any build ticket describing this work, so scope isn't underestimated.</div>
+      <div class="issue-location">VerdictDisplay.tsx multiple locations</div>
+      <div class="issue-fix"><strong>Fix:</strong> Correct the count to 5–6 in any build ticket; build beat 1 exactly as scoped, no further consolidation needed beyond what's proposed.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">6. A design-review-003 finding (tier/track chip-before-legend ordering) sits outside this restructure's scope.</div>
+      <div class="issue-detail">Panel G. The proposal only reorganizes inside VerdictDisplay.tsx; RegisterDetail.tsx's chip/legend ordering (logged as an Important finding two rounds ago) would remain unaddressed while the team believes "the story is fixed" screen-wide. This is not a defect in the current proposal, but a scope-gap risk.</div>
+      <div class="issue-location">RegisterDetail.tsx:562–602 (outside proposed scope)</div>
+      <div class="issue-fix"><strong>Fix:</strong> Either fold this into the current restructure's scope, or explicitly carry it forward in calibration.md as still-open so it isn't silently dropped.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">7. Several "above/below" deictic copy references will break silently once panels move.</div>
+      <div class="issue-detail">Panel D — enumerated via grep + manual read, distinguishing real cross-panel references from false-positive numeric/threshold uses of the words. Five real instances requiring explicit handling: VerdictDisplay.tsx:198 (Why-panel primer, forward reference to regulatory chain), :334 (WhatToDo rejected-path, forward reference to Why/regulatory chain), :1088 (jurisdiction "no chain" block, backward reference to Why-panel citations), :1161–1163 (controls "as-of" line, backward reference to the verdict heading), :1322–1326 (provenance panel, backward reference to the expiry-conditions Fold — the most fragile, since beat 4's internal reordering directly threatens it).</div>
+      <div class="issue-location">VerdictDisplay.tsx:198, :334, :1088, :1161–1163, :1322–1326</div>
+      <div class="issue-fix"><strong>Fix:</strong> Resolve each individually as part of the beat-4/beat-5 regroup, not as a generic "fix the copy" pass. Keep a checklist of all five locations in the build ticket.</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">8. showSubmitterAffordances gates two separate UI elements with one boolean.</div>
+      <div class="issue-detail">Panel D. VerdictDisplay.tsx:697 comment references FN-004 as the reason a "Correct this classification?" button and the reasoning-trace details were deliberately kept under one gate. If beat 5 relocates the reasoning-trace details away from the correction button, the restructure must keep both conditioned on the same onCorrect !== undefined check, not accidentally fork it.</div>
+      <div class="issue-location">VerdictDisplay.tsx:697</div>
+      <div class="issue-fix"><strong>Fix:</strong> Verify after the beat restructure that both affordances remain gated together and document why in a code comment.</div>
+    </div>
+
+    <h2 id="minor-findings">Minor Findings</h2>
+
+    <div class="issue minor">
+      <div class="issue-title">9. Anchor ids for #verdict-controls-section and #verdict-jurisdiction-section defined twice in mutually-exclusive branches.</div>
+      <div class="issue-detail">Panel D. Each is defined in both a policy vs no-policy branch or regulatory_chain empty vs non-empty branch — not a live bug today, but any beat restructure touching these blocks must preserve both id assignments in both branches.</div>
+      <div class="issue-location">VerdictDisplay.tsx (policy/no-policy and chain/no-chain branches)</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">10. #risk-knowledge-section existence governed by inter-component contract with no sync check.</div>
+      <div class="issue-detail">Panel D. RegisterDetail computes a boolean prop and passes it to VerdictDisplay; there is no compile-time or runtime check that the two stay in sync. Pre-existing, not proposal-induced, but worth tightening if beat 5 touches this area.</div>
+      <div class="issue-location">VerdictDisplay.tsx (consumer); RegisterDetail.tsx (provider)</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">11. If reasoningDefaultOpen is extended to gate more sections, rename it to something section-neutral.</div>
+      <div class="issue-detail">Panel E. VerdictDisplay.tsx:52–61 has an explicit "this is a default, not access control" code comment that is doing real communicative work. If the pattern is copied to new sites, preserve that comment. Don't silently drop it when the property is reused.</div>
+      <div class="issue-location">VerdictDisplay.tsx:52–61</div>
+      <div class="issue-fix"><strong>Fix:</strong> Rename to analyticalSectionsDefaultOpen or similar if extended to 2+ sites; preserve the explicit "default, not access control" comment at each new call site.</div>
+    </div>
+
+    <h2 id="observations">Observations</h2>
+    <p>Two observations with no severity tag:</p>
+    <ul>
+      <li><strong>Duplicate-computation risk check:</strong> The tier/track stat-card merge and binding-constraint deletion were checked for duplicate-computation risk (the kind of bug this codebase has fixed multiple times this session) and found safe — all read from the same verdict.* fields, no independent re-derivation. [Panel C]</li>
+      <li><strong>Beat 3 is the genuinely sound beat:</strong> Beat 3's grouping (Why + regulatory-chain + controls + downstream-reviews) is confirmed as the one beat that's a genuinely clean fit — all four already share the Fold abstraction consistently, making this the lowest-risk, highest-value part of the restructure. [Panel C]</li>
+    </ul>
+
+    <h2 id="implementation-path">Implementation Path</h2>
+    <p>From Panel D, a tested sequence before code starts:</p>
+    <ol>
+      <li><strong>Tier/track card merge + binding-constraint fix (self-contained, zero test risk):</strong> Merge stat cards and resolve binding-constraint visibility per finding 2.</li>
+      <li><strong>Above/below deictic copy fixes (zero structural risk):</strong> Resolve five locations (finding 7) proactively before beat reordering.</li>
+      <li><strong>Checklist reposition (no test currently pins its position):</strong> Move to beat 1 if the proposal calls for it.</li>
+      <li><strong>reasoningDefaultOpen extension, one named Fold at a time:</strong> Explicitly name each of the 6 call sites that will adopt the prop; apply it incrementally.</li>
+      <li><strong>Section-nav deletion, paired with its required test update in the same commit:</strong> Update VerdictDisplay.r15c2.test.tsx:67–74 and document the new no-direct-jump enforcement point in SignOffChecklist.</li>
+      <li><strong>The full beat regroup (with beat 4 corrected per findings 1 and split as described), shipped last:</strong> Anchor ids and cross-panel deictic references re-verified against final DOM order before shipping.</li>
+    </ol>
+
+    <h2 id="cross-panel-themes">Cross-Panel Themes</h2>
+    <p><strong>Theme 1: Independent convergence on beat 4's construction defect (finding 1)</strong> — Panels C and G, scanning for entirely different defect classes (structural soundness and audience hospitality), independently arrived at identical concrete observation: beat 4 is a forced grouping that doesn't fit its assigned conceptual role. This is the strongest evidence in this review that this specific part of the proposal needs to change, not just be caveated.</p>
+
+    <p><strong>Theme 2: Independent convergence on binding-constraint deletion premise (finding 2)</strong> — Panels A and D, again scanning for different defect classes (requirements coverage and implementability), independently checked the premise and found it factually wrong. The appetite line never renders binding_path, so deletion would be information loss, not de-duplication. Strongest evidence in the review for this second point requiring change.</p>
+
+    <p><strong>Theme 3: Specification ambiguities gate implementation (finding 4)</strong> — Two underspecified items ("which Folds" and "what exact JSX for beat 3's wrapper") are not just nits — they're decision points where two developers would build different things without explicit direction. Must be resolved in the build ticket, not left as "TBD in code".</p>
+
+    <h2 id="panel-scores">Detailed Scores</h2>
+    <p>Full review mode, 0–10 per panel, with one-sentence rubric anchor and gap statement:</p>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel A: Requirements Coverage</div>
+      <div class="criterion-score mid">7/10</div>
+      <div class="criterion-note">Conditionally safe; one binding condition (VD-2 disclosure, finding 2) must be resolved, one pre-existing NF-11 gap found independent of the proposal.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel C: Structural Soundness</div>
+      <div class="criterion-score mid">6/10</div>
+      <div class="criterion-note">Right shape, incompletely applied; beat 3 is genuinely sound, beat 4 is presentational grouping dressed as principled structure.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel D: Implementability</div>
+      <div class="criterion-score mid">7/10</div>
+      <div class="criterion-note">Buildable with a clear incremental sequence, but two real specification ambiguities (which Folds, what exact JSX for beat 3's wrapper) must be resolved before a developer can proceed without guessing.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel E: Security</div>
+      <div class="criterion-score high">9/10</div>
+      <div class="criterion-note">No change to the actual role-visibility model; only a documentation-discipline reminder if reasoningDefaultOpen's scope grows.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel G: Audience Hospitality</div>
+      <div class="criterion-score mid">7/10</div>
+      <div class="criterion-note">Correctly diagnoses and would fix the core complaint, but beat 4's folding-by-default and naming choices work against the exact reader this panel protects.</div>
+    </div>
+
+    <h2 id="what-prevents-higher">What Prevents a Higher Score</h2>
+    <p>Gap statement for each sub-10 panel:</p>
+    <ul>
+      <li><strong>Panel A (7/10):</strong> The VD-2 disclosure condition (finding 2) must be resolved.</li>
+      <li><strong>Panel C (6/10):</strong> Beat 4's forced grouping (finding 1) must be split into its true parts.</li>
+      <li><strong>Panel D (7/10):</strong> The two specification ambiguities (finding 4) must be explicitly resolved in the build ticket before code.</li>
+      <li><strong>Panel E (9/10):</strong> Only the documentation-discipline note (finding 11) if reasoningDefaultOpen scope expands; minor.</li>
+      <li><strong>Panel G (7/10):</strong> Beat 4's default-folded state and naming must change per finding 1; the current proposal hides exactly the information this audience most needs visible unprompted.</li>
+    </ul>
+
+    <h2 id="post-review-guidance">Post-Review Guidance</h2>
+    <p>This review was NOT a liberal-threshold R1 scan with capture-recapture estimation; it was a strict, full-depth pass with 5 named panels running in parallel. All findings are load-bearing. The verdict "Build with caveats" means the direction is right, but the two critical gaps and four important specification points must be resolved before implementation, not during it. The build sequence above incorporates this staging. Owner sign-off recommended before code starts; implementer and owner should jointly review this report, confirm the two critical findings and four specification points, and lock the build ticket accordingly.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

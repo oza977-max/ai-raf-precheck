@@ -58,6 +58,17 @@ interface VerdictDisplayProps {
   // it down; VerdictDisplay never re-derives role itself. Omitted defaults
   // to true (open), preserving existing behaviour for any render path that
   // doesn't pass it.
+  //
+  // design-review round 3 (2026-08-31, Panel D): now also gates the
+  // fragility, regulatory-reasoning, and controls-with-evidence Folds — the
+  // three panels grouped into beat 3 ("the basis") alongside Why. This is
+  // still only a default-open/closed hint (Panel E): every Fold's content is
+  // always in the DOM for every role, this never hides anything from a
+  // role, it only changes what's expanded on first render. It deliberately
+  // does NOT extend to beat 5's provenance/inheritance Folds (reference
+  // material, not part of the reasoning a 2LoD reviewer must read) or to
+  // beat 4's expiry section (which is not a Fold at all — see its own
+  // comment at the render site).
   reasoningDefaultOpen?: boolean;
 }
 
@@ -555,7 +566,11 @@ export function classifyProvisionalReason(reason: ProvisionalReason): 'signoff_g
 
 /** R15-C2 (proposal §3.1, S2): "Before you sign off" — every line reads
  *  state already computed elsewhere on this page (no second derivation,
- *  ADR-EE-R3-1's discipline); every line is a jump link, not a checkbox. */
+ *  ADR-EE-R3-1's discipline); every line is a jump link, not a checkbox.
+ *  design-review round 3: since the in-page section nav was deleted, this
+ *  checklist is now the SOLE place enforcing S2's anti-rubber-stamp rule —
+ *  no line here may jump directly to the sign-off action. Keep it that way
+ *  if this component is edited again; there is no other enforcement point. */
 function SignOffChecklist({
   verdict,
   policy,
@@ -804,41 +819,6 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div>
       )}
 
-      {/* R15-C2 (finishing R14's partial R9-idiom pass; proposal §3.1).
-          "Before you sign off" — a compression of the reasoning already on
-          this page, not a bypass of it: every line here is read from state
-          computed above, and every line jumps to the section that carries
-          the full detail. Skeptic amendment S2 (Must): jump-link
-          affordances only (a bullet the reader clicks to scroll), never a
-          checkbox glyph — this is read-and-jump, not a completable task
-          list, so nothing here should look tickable. Rendered under the
-          exact condition the action bar already renders on (2LoD role,
-          stage awaiting sign-off) — the caller (RegisterDetail) computes
-          that and passes it down; VerdictDisplay does not re-derive it. */}
-      {showSignOffChecklist && (
-        <SignOffChecklist
-          verdict={verdict}
-          policy={policy}
-          hasRiskKnowledgeSection={hasRiskKnowledgeSection}
-        />
-      )}
-
-      {/* Sticky section nav (proposal §3.1; skeptic amendment S2, Must):
-          deliberately has NO "Sign-off" entry. A one-click path from
-          page-load straight to Approve is the rubber-stamp risk the design
-          panel rejected (dissent #3 in the deliberation) — the reviewer
-          reaches sign-off by scrolling through the reasoning, same as
-          today. Plain anchor links, not a JS router: keyboard- and
-          screen-reader-navigable by default, and they degrade to normal
-          in-page links if JS never runs. */}
-      <nav className="verdict__section-nav" aria-label="Verdict sections">
-        <a href="#verdict-section">Verdict</a>
-        <a href="#verdict-todo-section">What the submitter must do</a>
-        <a href="#verdict-why-section">Why</a>
-        {verdict.controls.length > 0 && <a href="#verdict-controls-section">Controls &amp; evidence</a>}
-        {hasRiskKnowledgeSection && <a href="#risk-knowledge-section">Risk knowledge</a>}
-      </nav>
-
       <p className="verdict__eyebrow" id="verdict-section">Verdict</p>
       {/* §13.3: Provisional is a qualifier carried ALONGSIDE the status, not a
           fourth status. The heading used to be replaced by the word
@@ -872,18 +852,15 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           ' Not final until a second-line reviewer (2LoD) signs off.'}
       </p>
 
-      {/* User report (2026-08-15): "the engine might be working but the verdict
-          should be something a business user understands — how it's derived and
-          WHAT THEY NEED TO DO". Everything needed for that list was already on
-          this screen, scattered across three panels and written in identifiers.
-          This assembles it. Nothing below is removed: the reviewer still signs
-          off against the full basis, and the audit trail still records that
-          they saw it. R14 design review (2026-08-18): moved ABOVE tier/track
-          and the binding rule — a submitter's first question ("what do I do")
-          was being answered two panels late; the identifiers serve the 2LoD
-          reader building the audit case and can follow. */}
-      <WhatToDo verdict={verdict} policy={policy} needsSignOff={needsSignOff} />
-
+      {/* design-review round 3 (2026-08-31, Panels A+D — beat 1, "the
+          decision"): tier/track and the binding constraint stay here,
+          immediately under the appetite line — the review found deleting
+          the binding-constraint block was based on a false premise (the
+          appetite line never states which rule decided the case) and would
+          have hidden a fact NF-11/VD-2 require stay visible. Only the
+          binding constraint's gloss changes: it now resolves through the
+          same findRuleDescription lookup every other rule-id render on this
+          page uses, closing a pre-existing NF-11 gap the review also found. */}
       <div className="verdict__cards">
         <div className="verdict__stat">
           <span className="verdict__stat-label">Tier</span>
@@ -897,6 +874,22 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div>
       </div>
 
+      {verdict.binding_constraint && (
+        <div className="verdict__binding">
+          <p>
+            Decided by {fallbackDescription ?? verdict.binding_path ?? 'the rule below'}{' '}
+            <code className="verdict__id-quiet">{verdict.binding_constraint}</code>
+          </p>
+          {/* binding_path renders separately only when the line above used a
+              real resolved description — when no description is available,
+              binding_path is already the fallback text shown inline, and
+              repeating it here would duplicate the exact same string. */}
+          {verdict.binding_path && fallbackDescription && (
+            <p className="verdict__binding-path">{verdict.binding_path}</p>
+          )}
+        </div>
+      )}
+
       {mediumCaveats.length > 0 && (
         <div className="verdict__medium-caveat" role="alert">
           {mediumCaveats.map((c, i) => (
@@ -907,14 +900,36 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div>
       )}
 
-      <div className="verdict__binding">
-        <p>
-          Binding constraint: <code>{verdict.binding_constraint || '—'}</code>
-          <span className="verdict__binding-gloss"> — the single rule that decided this</span>
-        </p>
-        {verdict.binding_path && <p className="verdict__binding-path">{verdict.binding_path}</p>}
-      </div>
+      {/* design-review round 3 (beat 2, "what happens next"): WhatToDo
+          unchanged — Panel G confirmed this beat already answers the
+          reader's second question cleanly, right after the decision. */}
+      <WhatToDo verdict={verdict} policy={policy} needsSignOff={needsSignOff} />
 
+      {/* design-review round 3 (Panel A): no requirement pins the checklist
+          to page-load-first; moving it here (after the reader knows the
+          decision and the next step) lets it double as the entry point into
+          the basis below, instead of acting as a second table of contents
+          competing with the deleted nav. Same render condition as before —
+          RegisterDetail still owns the gate. */}
+      {showSignOffChecklist && (
+        <SignOffChecklist
+          verdict={verdict}
+          policy={policy}
+          hasRiskKnowledgeSection={hasRiskKnowledgeSection}
+        />
+      )}
+
+      {/* design-review round 3 (beat 3, "the basis" — Panels A/C/D/G
+          converged this is the one beat that's a genuinely clean fit: Why,
+          fragility, and the regulatory reasoning chain already shared the
+          Fold pattern before this round; fragility moves in from the old
+          "what could change this" bucket because Panel C found it's a
+          statement about the STRENGTH of the reasoning, not a forward-
+          looking risk — a plain <section>, not a wrapping Fold, so each
+          panel's own id/Fold/heading survives untouched (Panel D: Fold's
+          `when=false` path drops the id prop, so reusing Fold here would
+          have silently broken every jump link into this section). */}
+      <section className="verdict__basis" aria-label="Why, and on what evidence">
       {explanation && (
         <Fold
           id="verdict-why-section"
@@ -937,6 +952,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       {explanation && explanation.tripped_invariants.length > 0 && (
         <Fold
           title="How fragile is this approval?"
+          defaultOpen={reasoningDefaultOpen}
           summary={`${verdict.single_covered_invariants.length} rule${verdict.single_covered_invariants.length === 1 ? '' : 's'} held by a single control · margin of safety ${Math.round(verdict.margin_achieved * 100)}% (your firm wants at least ${Math.round(verdict.margin_target * 100)}%)`}
         ><div className="verdict__chain">
           
@@ -981,91 +997,6 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div></Fold>
       )}
 
-      {verdict.inheritance && (
-        <Fold
-          title="Platform & vendor inheritance"
-          summary={
-            verdict.inheritance
-              ? verdict.inheritance.resolved
-                ? `On the covered registry — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} inherited`
-                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry — nothing inherited`
-              : ''
-          }
-        ><div className="verdict__chain">
-          
-          <p className="verdict__chain-sub">
-            What an existing platform or vendor approval already covered, and the envelope that
-            justified it. Controls are inherited only where this use case sits inside the covered
-            envelope.
-          </p>
-
-          <div className="verdict__chain-entry">
-            <div className="verdict__chain-head">
-              <code>{verdict.inheritance.declared_platform ?? verdict.inheritance.declared_vendor}</code>
-              <span
-                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'registered' : 'unregistered'}`}
-              >
-                {verdict.inheritance.resolved ? 'On the covered registry' : 'Not on the registry'}
-              </span>
-            </div>
-
-            {verdict.inheritance.resolved ? (
-              verdict.inheritance.inherited_controls.length > 0 ? (
-                <p className="verdict__chain-derived">
-                  {/* design-review-003 (Panel B): every other control list on
-                      this page resolves the id through policy.controls before
-                      showing it — this one used to print the raw id list. */}
-                  Inherited:&ensp;
-                  {verdict.inheritance.inherited_controls
-                    .map((id) => findControlName(policy, id) ?? id)
-                    .join(', ')}{' '}
-                  — already satisfied by this approval, so not re-imposed here.
-                </p>
-              ) : (
-                <p className="verdict__chain-derived">
-                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
-                  controls are assessed from scratch.
-                </p>
-              )
-            ) : (
-              <p className="verdict__chain-derived">
-                Nothing inherited:&ensp;this component is not on the covered registry. A full
-                vendor and platform risk assessment is required.
-              </p>
-            )}
-
-            {verdict.inheritance.dimensions.length > 0 && (
-              <ul className="verdict__tripped">
-                {/* Key includes the index: the flattened dimension list can
-                    legitimately carry the same dimension twice (platform AND
-                    vendor each check exposure/data_zones) — bare d.dimension
-                    collided, console-warned, and risked mis-reconciled rows. */}
-                {verdict.inheritance.dimensions.map((d, i) => (
-                  <li key={`${i}-${d.dimension}`}>
-                    {/* design-review-003 (Panel B): field-copy.ts already
-                        maintains GRAPH_FIELD_LABELS for this exact field-key
-                        set, consumed elsewhere (the intake form, graph
-                        summaries) — this list used to bypass it and print
-                        the raw internal key. */}
-                    {GRAPH_FIELD_LABELS[d.dimension] ?? d.dimension}
-                    {GRAPH_FIELD_LABELS[d.dimension] && (
-                      <code className="verdict__id-quiet"> {d.dimension}</code>
-                    )}{' '}
-                    <span
-                      className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}
-                    >
-                      {d.fits ? 'Within envelope' : 'Outside envelope'}
-                    </span>{' '}
-                    — cleared for {d.ceiling}
-                    {d.observed !== undefined && <>; this use case has {d.observed}</>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div></Fold>
-      )}
-
       {/* R3-JU-3 / verdict-audit.md §13.1. The chain panel below renders only
           when there is a chain, so a verdict with no active pack used to show
           nothing here at all — and "no regulation applies", "we did not check"
@@ -1099,6 +1030,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <Fold
           id="verdict-jurisdiction-section"
           title="Regulatory reasoning — the rules from law"
+          defaultOpen={reasoningDefaultOpen}
           summary={`${explanation.regulatory_chain!.length} rule${explanation.regulatory_chain!.length === 1 ? '' : 's'} from regulation fired${(verdict.provisional_reasons ?? []).includes('unsigned_pack_rules') ? ' — pending firm sign-off' : ''}; each quotes its source text`}
         ><div className="verdict__chain">
           
@@ -1123,14 +1055,6 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div></Fold>
       )}
 
-      {/* Rendered only where correction is actually available. Absence here
-          is the requirement, not an oversight (TC-R3-RD-8-01). */}
-      {showSubmitterAffordances && onCorrect && (
-        <button type="button" onClick={onCorrect}>
-          Correct this classification?
-        </button>
-      )}
-
       {verdict.controls.length > 0 &&
         (policy ? (
           // V1.3 (design-vision decision #3): proof-carrying controls —
@@ -1140,6 +1064,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           <Fold
             id="verdict-controls-section"
             title="The control set, with evidence status"
+            defaultOpen={reasoningDefaultOpen}
             summary={`${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all VERIFIED`}
             when={verdict.controls.every((id) => policy.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified')}
             headingInSummary={false}
@@ -1277,13 +1202,22 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             )}
           </div>
         ))}
+      </section>
 
+      {/* design-review round 3 (beat 4, "what could go wrong" — Panel G,
+          re-confirmed by Panel C): the old "what could change this" bucket
+          also held fragility, inheritance, and living-status, none of which
+          are forward-looking the way expiry is — they moved out (fragility
+          into beat 3 above, inheritance and living-status into beat 5
+          below). What's left is the one thing that genuinely fits, and
+          Panel G found folding it away by default hides exactly the fact a
+          first-time, non-technical reader is most likely to want unprompted
+          ("could this fall apart later?") — so unlike every other analytical
+          panel on this page, this one is NOT a Fold. It always renders open,
+          for every audience, no click required. */}
       {verdict.conditions.hypotheses.length > 0 && (
-        <Fold
-          title="What would make this verdict expire"
-          summary={`Holds while ${verdict.conditions.hypotheses.length} standing condition${verdict.conditions.hypotheses.length === 1 ? '' : 's'} stay${verdict.conditions.hypotheses.length === 1 ? 's' : ''} inside bounds — nothing to do today`}
-        ><div className="verdict__conditions">
-          
+        <section className="verdict__conditions" aria-label="What could go wrong">
+          <h3>What could go wrong — and when this expires</h3>
           <p className="verdict__conditions-sub">
             <strong>Nothing to do today.</strong> This verdict was reached on the assumption that the system
             stays inside the bounds below. If it drifts outside any of them — or the deployment moves to a
@@ -1308,12 +1242,19 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               <li key={h}>{h}</li>
             ))}
           </ul>
-        </div></Fold>
+        </section>
       )}
 
+      {/* design-review round 3 (beat 5, "the record"): provenance,
+          platform/vendor inheritance, living status, and the audit/export
+          affordances — reference material for whoever needs to check the
+          record later, not part of the reader's first pass. Inheritance
+          moves in from the old beat 4 (it's provenance of an existing
+          approval, not a forward-looking risk); living-status moves in for
+          the same reason (a status readout, not a trigger). */}
       {graph && (
         <Fold title="What you told us" summary="The answers this verdict was computed from, as attested at submission"><div className="verdict__provenance">
-          
+
           {/* Reported as duplicating the standing conditions. It does repeat
               the data zone and autonomy level — deliberately, because the two
               panels make different claims about the same value: this is what
@@ -1331,6 +1272,91 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 <span className="confirmation__grid-value">{row.value}</span>
               </div>
             ))}
+          </div>
+        </div></Fold>
+      )}
+
+      {verdict.inheritance && (
+        <Fold
+          title="Platform & vendor inheritance"
+          summary={
+            verdict.inheritance
+              ? verdict.inheritance.resolved
+                ? `On the covered registry — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} inherited`
+                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry — nothing inherited`
+              : ''
+          }
+        ><div className="verdict__chain">
+
+          <p className="verdict__chain-sub">
+            What an existing platform or vendor approval already covered, and the envelope that
+            justified it. Controls are inherited only where this use case sits inside the covered
+            envelope.
+          </p>
+
+          <div className="verdict__chain-entry">
+            <div className="verdict__chain-head">
+              <code>{verdict.inheritance.declared_platform ?? verdict.inheritance.declared_vendor}</code>
+              <span
+                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'registered' : 'unregistered'}`}
+              >
+                {verdict.inheritance.resolved ? 'On the covered registry' : 'Not on the registry'}
+              </span>
+            </div>
+
+            {verdict.inheritance.resolved ? (
+              verdict.inheritance.inherited_controls.length > 0 ? (
+                <p className="verdict__chain-derived">
+                  {/* design-review-003 (Panel B): every other control list on
+                      this page resolves the id through policy.controls before
+                      showing it — this one used to print the raw id list. */}
+                  Inherited:&ensp;
+                  {verdict.inheritance.inherited_controls
+                    .map((id) => findControlName(policy, id) ?? id)
+                    .join(', ')}{' '}
+                  — already satisfied by this approval, so not re-imposed here.
+                </p>
+              ) : (
+                <p className="verdict__chain-derived">
+                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
+                  controls are assessed from scratch.
+                </p>
+              )
+            ) : (
+              <p className="verdict__chain-derived">
+                Nothing inherited:&ensp;this component is not on the covered registry. A full
+                vendor and platform risk assessment is required.
+              </p>
+            )}
+
+            {verdict.inheritance.dimensions.length > 0 && (
+              <ul className="verdict__tripped">
+                {/* Key includes the index: the flattened dimension list can
+                    legitimately carry the same dimension twice (platform AND
+                    vendor each check exposure/data_zones) — bare d.dimension
+                    collided, console-warned, and risked mis-reconciled rows. */}
+                {verdict.inheritance.dimensions.map((d, i) => (
+                  <li key={`${i}-${d.dimension}`}>
+                    {/* design-review-003 (Panel B): field-copy.ts already
+                        maintains GRAPH_FIELD_LABELS for this exact field-key
+                        set, consumed elsewhere (the intake form, graph
+                        summaries) — this list used to bypass it and print
+                        the raw internal key. */}
+                    {GRAPH_FIELD_LABELS[d.dimension] ?? d.dimension}
+                    {GRAPH_FIELD_LABELS[d.dimension] && (
+                      <code className="verdict__id-quiet"> {d.dimension}</code>
+                    )}{' '}
+                    <span
+                      className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}
+                    >
+                      {d.fits ? 'Within envelope' : 'Outside envelope'}
+                    </span>{' '}
+                    — cleared for {d.ceiling}
+                    {d.observed !== undefined && <>; this use case has {d.observed}</>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div></Fold>
       )}
@@ -1357,6 +1383,18 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <p className="verdict__stage-note" role="status">
           {STAGE_NOTE[registerStage]}
         </p>
+      )}
+
+      {/* Rendered only where correction is actually available. Absence here
+          is the requirement, not an oversight (TC-R3-RD-8-01). Kept next to
+          the reasoning trace: both are gated on showSubmitterAffordances
+          (FN-004) because they're one concept — the submitter's own view of
+          their record — not two independent controls that happen to share a
+          boolean. */}
+      {showSubmitterAffordances && onCorrect && (
+        <button type="button" onClick={onCorrect}>
+          Correct this classification?
+        </button>
       )}
 
       {showSubmitterAffordances && (

@@ -64,13 +64,26 @@ describe('VerdictDisplay — R15-C2 sign-off checklist and section nav', () => {
     expect(document.querySelectorAll('.verdict__signoff-checklist input[type="checkbox"]').length).toBe(0);
   });
 
-  it('TC-R15-C2-03 (S2, Must): the section nav has no direct Sign-off entry', () => {
+  it('TC-R15-C2-03 (S2, Must — updated design-review round 3): the section nav is gone; the sign-off checklist is now the sole jump-list and still has no direct Sign-off entry', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} showSignOffChecklist />);
-    const nav = document.querySelector('.verdict__section-nav');
-    expect(nav).toBeInTheDocument();
-    expect(nav?.textContent).not.toMatch(/sign-off/i);
-    // The nav does still point at reasoning sections.
-    expect(screen.getByRole('link', { name: /why/i })).toHaveAttribute('href', '#verdict-why-section');
+    // design-review round 3: the in-page nav was deleted — it was a second
+    // table of contents competing with this checklist (Panel G's "where am
+    // I" trunk-test failure). The checklist inherits sole responsibility for
+    // S2's anti-rubber-stamp discipline: no entry here jumps straight to
+    // sign-off.
+    expect(document.querySelector('.verdict__section-nav')).not.toBeInTheDocument();
+    const checklist = document.querySelector('.verdict__signoff-checklist');
+    expect(checklist).toBeInTheDocument();
+    // No jump link inside the checklist points at an approve/sign-off
+    // action — every link here is a reasoning-section anchor, never a
+    // shortcut past the reasoning to the action itself.
+    const links = [...(checklist?.querySelectorAll('a') ?? [])];
+    expect(links.every((a) => !/sign.?off|approve/i.test(a.textContent ?? ''))).toBe(true);
+    // The checklist does still point at reasoning sections — its first line
+    // ("Decided by ...") is the jump link into Why, not a link literally
+    // labelled "why" (the nav used to have one; the checklist's own line is
+    // more informative and replaces it).
+    expect(screen.getByRole('link', { name: /decided by/i })).toHaveAttribute('href', '#verdict-why-section');
   });
 
   it('TC-R15-C2-04: jurisdiction and translation-fidelity checklist lines appear only when their provisional reason is present', () => {
@@ -85,9 +98,9 @@ describe('VerdictDisplay — R15-C2 sign-off checklist and section nav', () => {
     expect(screen.queryByText(/rulebook translation: unattested/i)).not.toBeInTheDocument();
   });
 
-  it('TC-R15-C2-05: risk-knowledge checklist and nav lines appear only when the caller says that section exists', () => {
+  it('TC-R15-C2-05: risk-knowledge checklist line appears only when the caller says that section exists (design-review round 3: nav deleted, checklist is now the only jump-list)', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} showSignOffChecklist hasRiskKnowledgeSection />);
-    expect(screen.getByRole('link', { name: /risk knowledge/i })).toHaveAttribute('href', '#risk-knowledge-section');
+    expect(screen.getByRole('link', { name: /risk-knowledge/i })).toHaveAttribute('href', '#risk-knowledge-section');
   });
 
   it('TC-R15-C2-06: "firm rules (invariants)" wording replaces the bare "invariants" stat', () => {
