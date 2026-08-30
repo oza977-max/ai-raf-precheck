@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-006</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-006</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-006</li>
+<li><strong>Mission:</strong> A non-technical, governance-naive reader encounters the verdict screen cold — no prior context on 2LoD, invariants, tiers, tracks, or model risk vocabulary. Walk the verdict/sign-off flow (VerdictDisplay.tsx and the register detail page it renders inside) as that persona would, and log every point where the screen assumes knowledge the persona doesn&#x27;t have, or presents so much at once that the persona would lose the thread. Claude performs the mechanical walkthrough (browser + code reading) and proposes candidate findings; the owner classifies severity, confirms GWT, and confirms reproduction for each one via AskUserQuestion prompts during the session, per Hard Gate 4 (ADR-205) — Claude does not self-assign severity.</li>
+<li><strong>Tour:</strong> feature</li>
+<li><strong>Timebox (minutes):</strong> 30</li>
+<li><strong>Runner:</strong> oza977-max</li>
+<li><strong>Target:</strong><ul>
+<li>http://localhost:5173</li>
+<li>src/components/VerdictDisplay.tsx</li>
+<li>src/components/RegisterDetail.tsx</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>00:00 — Session opened. STUBS.md absent from project root; registry empty, every Critical defect this session is non-stub (arms VV-4(d) on next /gvm-test run).</li>
+<li>00:02 — Switched role to 2LoD, opened Register, selected a Critical-tier case (&#x27;[IB] HR — CV screening for analyst hiring&#x27;) as the highest-stakes screen a naive reader could land on.</li>
+<li>00:05 — Read the verdict page top-to-bottom exactly as encountered, no prior scroll-ahead, simulating a reader with zero governance/banking vocabulary.</li>
+<li>00:08 — Filed D-001: raw internal footnote code &#x27;NF-7&#x27; leaking into user-facing Sign-off gaps text.</li>
+<li>00:14 — Filed D-002: bare rule ID &#x27;INV-FAIRNESS-01&#x27; appears before any plain-language gloss reaches the reader.</li>
+<li>00:20 — Filed D-003: &#x27;Why this verdict&#x27; section&#x27;s default-unfolded state (a deliberate R9 decision for 2LoD reviewers) produces the exact information-density complaint that opened this session, for the non-technical persona.</li>
+<li>00:25 — Practitioner classified all three findings Critical. Session closed early relative to the 30-minute timebox — signal was clear and consistent, no value in padding further.</li>
+</ul>
+<h2>Defects</h2>
+<h3>D-001 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> A reader viewing a Provisional verdict&#x27;s Sign-off gaps section, with no prior context on internal spec-ID conventions</li>
+<li><strong>When:</strong> they read the jurisdiction-pack line</li>
+<li><strong>Then:</strong> they see the raw internal footnote code &#x27;NF-7&#x27; rendered directly in the text, with zero explanation — reads as a leaked debug/internal reference, not a polished product</li>
+<li><strong>Reproduction:</strong> http://localhost:5173 -&gt; switch role to 2LoD -&gt; Register -&gt; open any Critical-tier use case with an unadopted jurisdiction pack rule (e.g. &#x27;[IB] HR — CV screening for analyst hiring&#x27;) -&gt; read the &#x27;Sign-off gaps&#x27; box near the top: &#x27;DORA Article 28(4)(c) — proposed interpretation, pending firm adoption (pack not adopted; NF-7)&#x27;</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-002 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> A governance-naive reader reaching the &#x27;Before you sign off — check these first&#x27; checklist</li>
+<li><strong>When:</strong> they read the first line, &#x27;Decided by INV-FAIRNESS-01 — ...&#x27;</li>
+<li><strong>Then:</strong> they see a bare rule ID with no plain-language gloss at that point in the page — they must scroll far down to &#x27;Why this verdict&#x27; to learn INV-FAIRNESS-01 means &#x27;AI informing a decision about a person must be tested for disparate outcomes...&#x27; — the checklist is meant to be the fast first read but forces jargon before the plain-language version reaches them</li>
+<li><strong>Reproduction:</strong> http://localhost:5173 -&gt; switch role to 2LoD -&gt; Register -&gt; open &#x27;[IB] HR — CV screening for analyst hiring&#x27; -&gt; read the &#x27;Before you sign off — check these first&#x27; box, first line</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h3>D-003 — Critical</h3>
+<ul>
+<li><strong>Given:</strong> A governance-naive first-time reader on a Critical-tier verdict page</li>
+<li><strong>When:</strong> they scroll past the checklist into &#x27;Why this verdict&#x27;, which stays fully unfolded by deliberate R9 design decision (for the expert 2LoD audience)</li>
+<li><strong>Then:</strong> they hit 6 unfolded invariants at once, each carrying a raw rule ID, a full legal citation, and a &#x27;Closed by&#x27; control-ID mapping, with no way to collapse the section — this is the exact &#x27;too much going on, confusing&#x27; complaint that opened this session</li>
+<li><strong>Reproduction:</strong> http://localhost:5173 -&gt; switch role to 2LoD -&gt; Register -&gt; open &#x27;[IB] HR — CV screening for analyst hiring&#x27; -&gt; scroll to &#x27;WHY THIS VERDICT&#x27; -&gt; observe all 6 invariants (4 High, 2 Medium) rendered simultaneously, unfolded, with IDs/citations/closures all visible</li>
+<li><strong>Stub-path:</strong> (none)</li>
+</ul>
+<h2>Observations</h2>
+<p><em>None recorded.</em></p>
+<h2>Overall Assessment</h2>
+<p>All three defects were classified Critical by the practitioner. The session confirms the original worry directly: the verdict screen genuinely fails a non-technical, governance-naive reader in three distinct ways — an internal spec-ID literally leaking into rendered text (D-001, a straightforward defect against the project&#x27;s own three-classes-of-code rule), a structural ordering problem where jargon reaches the reader before its plain-language gloss does (D-002), and a deliberate prior design decision (R9&#x27;s &#x27;Why this verdict stays open&#x27; choice, made for the expert 2LoD audience) that actively works against a first-time reader (D-003). The practitioner&#x27;s assessment: this needs a design pass grounded specifically in audience hospitality for a non-technical reader — not another general-purpose redesign round, since five prior rounds (R9, R12, R13, R14, R15-C2) have already iterated on this screen without resolving the complaint. D-003 in particular surfaces a real tension: the screen currently serves one audience (expert 2LoD reviewers) well at the direct expense of another (first-time/non-technical readers) — the next design pass needs to either serve both explicitly (e.g. a collapsed-by-default state with an obvious expand) or make a deliberate, disclosed choice about which audience the screen optimizes for.</p>
+</body>
+</html>
