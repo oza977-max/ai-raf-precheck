@@ -241,7 +241,10 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     // 2026-08-15). The guarantee is the honesty one and it is unchanged: the
     // panel must say that NOTHING watches these automatically, so nobody reads
     // a threshold list as an alarm that will go off.
-    expect(screen.getByText(/what would make this verdict expire/i)).toBeInTheDocument();
+    // design-review round 3 (Panel G): retitled and promoted out of a Fold —
+    // this is now beat 4, "What could go wrong", rendered open by default
+    // for every reader rather than folded away.
+    expect(screen.getByText(/what could go wrong/i)).toBeInTheDocument();
     expect(screen.getByText(/nobody automatically/i)).toBeInTheDocument();
     expect(screen.getAllByText(/later release/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Data zone pinned: Zone B')).toBeInTheDocument();
