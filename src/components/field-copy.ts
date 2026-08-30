@@ -8,6 +8,7 @@ import type {
   ModelType,
 } from '../engine/types';
 import type { LifecycleStage } from '../store/types';
+import type { Verdict } from '../types/verdict';
 
 // Presentation copy for the guided intake form (user feedback, V2-E: "input
 // data class, input data zone, AI model type... is not very business
@@ -213,4 +214,31 @@ export const STAGE_LABELS: Record<LifecycleStage, string> = {
   in_production: 'In production',
   monitored: 'Monitored',
   retired: 'Retired',
+};
+
+// design-review-003 (Panel B, verified against source): RegisterDetail's
+// audit-trail timeline rendered the raw twoloD_reviewed.action value
+// directly — including the literal word "rejected" — a live violation of
+// the reserved-word gate (G1, /approved|rejected/i) this same file's
+// STAGE_LABELS.approved comment already documents. Same fix, same reasons:
+// "Cleared" and "Sent back" describe what happened without using either
+// banned word.
+export const ACTION_LABEL: Record<'approved' | 'rejected' | 'correction_requested', string> = {
+  approved: 'Cleared',
+  rejected: 'Sign-off declined',
+  correction_requested: 'Correction requested',
+};
+
+// design-review-003 (Panels B/C, found independently): this exact map used
+// to be defined twice, verbatim, in VerdictDisplay.tsx and RegisterDetail.tsx
+// — a future status value added to one copy and not the other would let the
+// verdict heading and the register chip disagree about the same field.
+// Wording deliberately UNCHANGED from both prior copies: VerdictDisplay's
+// C-6 test (VerdictDisplay.inheritance.test.tsx) asserts a single-match
+// /approved|rejected/i occurrence on the page, and this is that one
+// deliberate, tested exception to the reserved-word gate — not a bug to fix.
+export const STATUS_LABEL: Record<Verdict['status'], string> = {
+  approved: 'Approved',
+  approved_with_controls: 'Approved with controls',
+  rejected: 'Rejected',
 };

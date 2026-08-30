@@ -217,7 +217,9 @@ describe('VerdictDisplay — why this verdict (V1.1-C01)', () => {
     // the control that satisfies this invariant is shown against it.
     expect(screen.getByText(/closed by/i)).toBeInTheDocument();
     expect(screen.getAllByText(/CTRL-ENC-01/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/1 triggered/i)).toBeInTheDocument();
+    // design-review-003: the Fold summary gist for "Why this verdict" now
+    // previews the same trigger count shown in the body — two legitimate sites.
+    expect(screen.getAllByText(/1 triggered/i).length).toBeGreaterThan(0);
   });
 
   it('BC-V11C01-04: a pre-V1.1 verdict without explanation renders without crashing (no why section)', () => {
@@ -281,7 +283,9 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     expect(screen.getByText('Client notes · Personal details of clients · Client PII')).toBeInTheDocument();
     expect(screen.getByText('Drafting model · A chatbot or writing assistant · LLM')).toBeInTheDocument();
     expect(screen.getByText(/inside appetite once 1 control is in place/i)).toBeInTheDocument();
-    expect(screen.getByText(/awaiting active 2LoD sign-off \(LC-2\)/i)).toBeInTheDocument();
+    // design-review-003 (Panel A): the "(LC-2)" internal-ID parenthetical
+    // was removed from this stage note — the same fact is stated plainly.
+    expect(screen.getByText(/awaiting active 2LoD sign-off/i)).toBeInTheDocument();
   });
 });
 
