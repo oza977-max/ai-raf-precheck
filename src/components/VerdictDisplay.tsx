@@ -1,4 +1,3 @@
-import type React from 'react';
 import { useState } from 'react';
 import type { DataFlowGraph, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
@@ -11,6 +10,7 @@ import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
+import { Fold } from './Fold';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -99,50 +99,6 @@ function severityGroups(invariants: TrippedInvariantDetail[]): Array<[string, Tr
   return [...KNOWN_SEVERITIES, ...unknown]
     .map((s): [string, TrippedInvariantDetail[]] => [s, invariants.filter((t) => t.severity === s)])
     .filter(([, group]) => group.length > 0);
-}
-
-/** R14 (verdict recomposition, 2026-08-18 — the R9 idiom applied to the
- *  verdict screen): analytical panels fold behind one click. The closed
- *  state carries a plain summary with the section's key number/state, so a
- *  scanner gets the gist without opening; the open state is the full panel,
- *  unchanged. Aggregation and priority, never deletion (ADR-IF-R9-1).
- *  The title stays a real <h3> inside <summary> so heading queries and the
- *  accessibility tree are unchanged. */
-function Fold({
-  title,
-  summary,
-  defaultOpen = false,
-  when = true,
-  headingInSummary = true,
-  className = '',
-  id,
-  children,
-}: {
-  title: string;
-  summary: string;
-  defaultOpen?: boolean;
-  // When false the panel renders unfolded, exactly as before — used where
-  // the honesty floor forbids folding (e.g. any control still UNVERIFIED).
-  when?: boolean;
-  // The controlset keeps its own inner <h3> (tests and the memo scope by
-  // it), so its summary carries the title as a span instead.
-  headingInSummary?: boolean;
-  className?: string;
-  // R15-C2: section-nav / sign-off-checklist jump targets. Only set where a
-  // nav or checklist line actually points here.
-  id?: string;
-  children: React.ReactNode;
-}) {
-  if (!when) return <>{children}</>;
-  return (
-    <details id={id} className={`verdict__fold ${className}`.trim()} open={defaultOpen || undefined}>
-      <summary className="verdict__fold-summary">
-        {headingInSummary ? <h3>{title}</h3> : <span className="verdict__fold-title">{title}</span>}
-        <span className="verdict__fold-gist">{summary}</span>
-      </summary>
-      <div className="verdict__fold-body">{children}</div>
-    </details>
-  );
 }
 
 function Citation({ text }: { text?: string }) {

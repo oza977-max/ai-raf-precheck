@@ -1048,7 +1048,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'duplicate_check' && adoptedFrom && (
           <section aria-label="Classification adopted" className="dup-gate">
-            <div className="questionnaire__tag">UC-2 · CLASSIFICATION ADOPTED</div>
+            {/* NF-11 (design-review round 4, Panel A): "UC-2" was the
+                internal requirements-doc ID for this screen, rendered bare
+                with no reader-facing purpose. Dropped, not glossed — there
+                is nothing here a reader needs the code for. */}
+            <div className="questionnaire__tag">CLASSIFICATION ADOPTED</div>
             <p>
               <strong>Classification adopted from {adoptedFrom}.</strong> This use case is on the
               register with that tier and track, and no intake questions were asked.
@@ -1064,7 +1068,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'duplicate_check' && !adoptedFrom && (
           <section aria-label="Duplicate check" className="dup-gate">
-            <div className="questionnaire__tag">UC-2 · DUPLICATE CHECK</div>
+            <div className="questionnaire__tag">DUPLICATE CHECK</div>
+            {/* design-review round 4 (Panel G, Important): the screen never
+                said why this check runs. It exists so similar use cases get
+                consistent tier/track decisions, and so you don't answer the
+                same questions twice for the same underlying risk. */}
+            <p className="field-help">
+              Checking whether a similar use case already has a classification, so this one gets a
+              consistent answer instead of a fresh set of questions for the same underlying risk.
+            </p>
             {!duplicateCheckDone ? (
               <p>Checking the existing inventory for similar use cases…</p>
             ) : (
@@ -1072,20 +1084,34 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                 {duplicateMatch ? (
                   <div className="duplicate-card" role="alert">
                     <p className="duplicate-card__title">One similar use case exists in the register</p>
+                    {/* BC-V12C-02: the matched label stays redacted for 1LoD
+                        — unchanged by this fix. design-review round 4
+                        (Panel G — Intake: Duplicate check, Critical #1/#2):
+                        what WAS wrong is that the non-2LoD copy said
+                        "Contact AI Risk to adopt" while the button right
+                        below adopted immediately, with no role check at all
+                        — the words and the only clickable thing on the
+                        screen disagreed. Fixed by describing what the button
+                        actually does, for both roles, instead of claiming a
+                        gate that doesn't exist. */}
                     {getRole() === '2LoD' ? (
                       <p>
                         Overlapping use case: <strong>{duplicateMatch.label}</strong>
-                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}. Consider adopting its
-                        classification, or confirm this one is genuinely new.
+                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}.
                       </p>
                     ) : (
                       <p>
                         A use case with overlapping characteristics
-                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on record. Full
-                        detail is visible to the 2nd Line of Defence. Contact AI Risk to adopt its classification,
-                        or confirm yours is genuinely new.
+                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on
+                        record. Full detail is visible to the 2nd Line of Defence.
                       </p>
                     )}
+                    <p className="dup-gate__clear">
+                      Adopting skips the questions and graph review below — this record goes straight
+                      onto the register with that tier and track, and carries no verdict of its own. If
+                      the two use cases turn out to differ, run a fresh pre-check rather than editing
+                      this one afterward.
+                    </p>
                   </div>
                 ) : (
                   <p className="dup-gate__clear">
@@ -1135,7 +1161,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                 </div>
               </>
             ) : (
-              <p>Extracting graph…</p>
+              /* design-review round 4 (Panel G — Intake: Graph review,
+                 Critical): "graph" was the operative word in this loading
+                 state, the screen title, and the ARIA region label — never
+                 defined, right after a screen that promised plain language. */
+              <p>Reading your description…</p>
             )}
           </div>
         )}
@@ -1173,7 +1203,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'graph_review' && (
           <section>
-            <h2>Review extracted graph</h2>
+            {/* design-review round 4 (Panel G, Critical): was "Review
+                extracted graph" — system-side vocabulary (what the LLM did)
+                where the user's actual goal is "did the system understand
+                my use case." */}
+            <h2>Confirm what we understood</h2>
             {/* D-001 (charter 004): the description was captured, used for
                 extraction, and never shown again — so the user was asked to
                 confirm a graph against a description they could no longer

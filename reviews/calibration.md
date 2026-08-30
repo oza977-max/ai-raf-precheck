@@ -30,6 +30,7 @@ against.
 | 2 | 2026-08-25 | doc | A,B,C,D strict | 0 | 3 | 4 | **Publish with revisions** (3rd ed. scored 8.2 — integrity 9 ↑, transparency 8 ↑, prose 6 ↓ regression from R1 fixes; all 3 Importants + prose pass fixed per owner triage → 4th ed.; stopping rule not yet met, targeted R3 optional) |
 | 2 | 2026-08-31 | design | A,B,C,D,E,G (G supplementary, strict) | 6 | 8 | 3 | **Build with caveats** (verdict/sign-off screen; triggered by explore-006's 3 Critical UX findings; 4 panels independently converged on the same fix mechanism for the core finding; owner chose fix-everything) |
 | 3 | 2026-08-31 | design | A,C,D,E,G strict (no B/F — no contract/quality-attribute change) | 2 | 6 | 3 | **Build with caveats** (verdict screen information architecture and narrative flow — not another leak sweep; owner's own proposed 5-beat restructure independently stress-tested rather than rubber-stamped; both Criticals are proposal-design gaps, not pre-existing code bugs — beat 4 forced grouping [C+G converged] and binding-constraint deletion's false premise [A+D converged]; triage pending) |
+| 4 | 2026-08-31 | design | A,C,D,E, + Panel G fanned out one sub-panel per screen (9 screens) — 13 panels total (no B/F) | 10 | 14 | 8 | **Build with caveats** (app-wide narrative flow — same audience-hospitality lens applied to every screen outside the already-fixed verdict screen; owner asked "look at all screens with same lens"; strongest signal is 3-panel convergence [A+C+D] that the round-3 fix — Fold, NF-11 — was built as a one-screen patch, not a reusable house convention, and did not propagate; triage pending) |
 
 ## Round 1 measurements
 
@@ -501,3 +502,73 @@ coding mistake, is why 5 prior design rounds (R9, R12, R13, R14, R15-C2)
 never caught this. The fix pass this round should close the code-level
 defects AND add the missing requirement, or the class of bug can recur
 in a future feature.
+
+## Design review round 4 (2026-08-31) — app-wide narrative flow
+
+**Scope note.** The owner asked to apply round 3's audience-hospitality
+lens to every screen in the app, not just the one it was built for.
+Nine screens/steps (the 6-step intake flow, the register list, the
+appetite framework, rule challenges + about) were scanned in parallel
+by Panel G, one sub-panel per screen — the first time this skill has
+fanned a single panel out across that many independent targets in one
+round. Four holistic panels ran once, app-wide, excluding the verdict
+screen (already fixed). No Panel B/F — same rationale as round 3.
+
+**Scores (full review):** Requirements coverage 6 · Structural soundness
+5 · Implementability 6 · Security 9 · Audience hospitality (Panel G,
+averaged across 9 screens) 4. Lowest Panel G score of any design round
+run so far on this project — worse than the verdict screen scored
+*before* round 3's fix (3/10).
+
+**Multi-panel convergence — the strongest signal, again, but this time
+about a systemic gap rather than a single defect.** Three panels
+(A, C, D), each scanning for an unrelated defect class, independently
+converged on the same root cause: round 3's fix was built as a
+one-screen patch, not a reusable house convention, so it could not
+propagate. Panel A found NF-11 already violated on two other screens
+(regression-by-omission, not a new gap). Panel C and Panel D
+independently found the `Fold` component that made the fix work is a
+private, unexported function — reinvented three different ways
+elsewhere with three different accessibility semantics, rather than
+reused once. Three-panel convergence on a *process* gap, not a code
+defect, is a new pattern for this project's calibration history — worth
+watching whether it recurs.
+
+**Anchor examples:**
+- Worst, audience hospitality: the intake flow's duplicate-check step,
+  where the on-screen instruction text for a non-2LoD user ("contact
+  AI Risk to adopt") is directly contradicted by a fully clickable
+  button right next to it that performs the adoption itself with zero
+  role gating — the screen's words and its only interactive affordance
+  disagree with each other.
+- Worst, requirements coverage: `NF-10` rendered bare, unglossed, inside
+  an `alert`-role banner on the Appetite framework screen — the single
+  highest-visibility NF-11 violation found, because alert-role content
+  is precisely what a screen reader or a scanning eye lands on first.
+- Best, implementability: Panel D didn't just flag the Fold-reuse gap,
+  it ranked all four candidate screens by fix risk (RuleImprovementQueue
+  easiest → graph-review step hardest, with a named reason for each) and
+  caught a real DOM-semantics trap in advance — swapping PolicyEditor's
+  hand-rolled disclosure for the extracted Fold would change whether
+  collapsed content is removed from the DOM or merely hidden, which an
+  existing test already guards, but only if the implementer knows to
+  check it.
+
+**Recurring-candidate, now confirmed a pattern across 3 consecutive
+rounds:** round 2 found a defect outside its panel's own mandate
+(reserved-word leak), round 3 found the reviewer's own proposal
+contained a factual error, round 4 found the reviewer's own round-3 fix
+never propagated past the screen it shipped on. Per the round-3 note,
+this is the third instance — promote "synthesis-stage claims about
+existing code or prior fixes get independently verified by at least one
+panel before being treated as settled" to a standing process note in
+`gvm-design-review`'s Hard Gates, not just an observation here.
+
+**Process implication, not just a defect list:** the implementation
+path for this round explicitly sequences "extract Fold into a shared
+component" as step 1, before any screen-specific fix — every other
+fix in this round's findings depends on that extraction existing.
+Future design reviews of newly-added screens should check reusable
+patterns (Fold, NF-11's gloss discipline) as part of Panel A's
+requirements-coverage pass by default, not wait for a dedicated
+app-wide round to discover the drift.

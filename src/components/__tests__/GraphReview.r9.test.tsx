@@ -51,7 +51,7 @@ async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/describe your ai use case/i), DESCRIPTION);
   await user.click(screen.getByRole('button', { name: /read & extract/i }));
   await user.click(await screen.findByRole('button', { name: /new use case/i }));
-  await screen.findByText(/review extracted graph/i);
+  await screen.findByText(/confirm what we understood/i);
 }
 
 describe('R9-SC-1 — the review checklist', () => {
@@ -208,7 +208,7 @@ describe('form path — the trail records the birth event', () => {
     }
     await user.click(document.getElementById('sf-jurisdiction-none')!);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
-    await screen.findByText(/review extracted graph/i);
+    await screen.findByText(/confirm what we understood/i);
 
     const created = (await getAllForExport()).filter((e) => e.payload.type === 'use_case_created');
     const mine = created.find(

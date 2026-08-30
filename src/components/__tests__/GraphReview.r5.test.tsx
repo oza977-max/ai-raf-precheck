@@ -212,7 +212,7 @@ async function reachGraphReview(user: ReturnType<typeof userEvent.setup>) {
   );
   await user.click(screen.getByRole('button', { name: /read & extract/i }));
   await user.click(await screen.findByRole('button', { name: /new use case/i }));
-  await screen.findByText(/review extracted graph/i);
+  await screen.findByText(/confirm what we understood/i);
 }
 
 describe('R5-GR-2 / R5-GX-1 — flow level', () => {
@@ -229,7 +229,7 @@ describe('R5-GR-2 / R5-GX-1 — flow level', () => {
 
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     expect(await screen.findByText(/3 cards still need your confirmation/i)).toBeInTheDocument();
-    expect(screen.getByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(screen.getByText(/confirm what we understood/i)).toBeInTheDocument();
 
     // Confirm all three; the gate opens.
     for (;;) {
@@ -238,7 +238,7 @@ describe('R5-GR-2 / R5-GX-1 — flow level', () => {
       await user.click(buttons[0]!);
     }
     await user.click(screen.getByRole('button', { name: /proceed/i }));
-    expect(screen.queryByText(/review extracted graph/i)).toBeNull();
+    expect(screen.queryByText(/confirm what we understood/i)).toBeNull();
   });
 
   it('TC-R5-GR-2-02: the review screen states that values are proposed, not scored', async () => {

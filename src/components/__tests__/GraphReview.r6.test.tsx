@@ -246,7 +246,7 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
     await user.type(screen.getByLabelText(/describe your ai use case/i), DESCRIPTION);
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /new use case/i }));
-    await screen.findByText(/review extracted graph/i);
+    await screen.findByText(/confirm what we understood/i);
 
     // p1 has guessed fields → no confirm button on it; i1 and o1 are fully
     // quoted → confirm them.

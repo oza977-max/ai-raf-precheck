@@ -167,7 +167,11 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
 
     // The old behaviour sailed to "Confirm and evaluate". The fix surfaces
     // the contradiction review instead — both statements, resolution required.
-    expect((await screen.findAllByText(/contradiction/i)).length).toBeGreaterThan(0);
+    // design-review round 4 (Panel G): the screen's own copy no longer uses
+    // the word "contradiction" (reframed as "don't agree" — a helpful catch,
+    // not an accusation); the region's aria-label still says "Contradiction
+    // review" for assistive tech, which is what this now asserts against.
+    expect(await screen.findByRole('region', { name: /contradiction review/i })).toBeInTheDocument();
     // Both halves of the contradiction are stated, per UC-5.
     expect(screen.getAllByText(/no client\/personal data/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /confirm and evaluate/i })).toBeNull();

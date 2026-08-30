@@ -3087,15 +3087,17 @@ details input {
   color: var(--ink);
 }
 
-/* R14 — verdict folds (R9 idiom applied to the verdict screen). */
-.verdict__fold {
+/* Fold — shared progressive-disclosure component (src/components/Fold.tsx).
+   design-review round 4: renamed from verdict__fold* to ui__fold* so every
+   screen can use the same house convention, not just the verdict screen. */
+.ui__fold {
   border: 1px solid var(--card-border);
   border-radius: 6px;
   margin: 0.9rem 0;
   background: var(--paper);
 }
 
-.verdict__fold-summary {
+.ui__fold-summary {
   cursor: pointer;
   list-style: none;
   padding: 0.6rem 0.9rem;
@@ -3105,37 +3107,37 @@ details input {
   gap: 0.25rem 0.8rem;
 }
 
-.verdict__fold-summary::-webkit-details-marker { display: none; }
+.ui__fold-summary::-webkit-details-marker { display: none; }
 
-.verdict__fold-summary::before {
+.ui__fold-summary::before {
   content: '▸';
   font-size: 0.8rem;
   color: var(--ink-faint);
   margin-right: 0.2rem;
 }
 
-.verdict__fold[open] > .verdict__fold-summary::before { content: '▾'; }
+.ui__fold[open] > .ui__fold-summary::before { content: '▾'; }
 
-.verdict__fold-summary h3 {
+.ui__fold-summary h3 {
   margin: 0;
   font-size: 0.95rem;
   display: inline;
 }
 
-.verdict__fold-gist {
+.ui__fold-gist {
   font-size: 0.82rem;
   color: var(--ink-soft);
 }
 
-.verdict__fold-body {
+.ui__fold-body {
   padding: 0 0.9rem 0.8rem;
 }
 
 /* The folded panels keep their own inner chrome; remove the doubled frame. */
-.verdict__fold-body > .verdict__chain,
-.verdict__fold-body > .verdict__controlset,
-.verdict__fold-body > .verdict__conditions,
-.verdict__fold-body > .verdict__provenance {
+.ui__fold-body > .verdict__chain,
+.ui__fold-body > .verdict__controlset,
+.ui__fold-body > .verdict__conditions,
+.ui__fold-body > .verdict__provenance {
   border: none;
   margin: 0;
   padding: 0;
@@ -3143,4 +3145,4 @@ details input {
 }
 
 .verdict__binding-gloss { font-size: 0.82rem; color: var(--ink-faint); }
-.verdict__fold-title { font-weight: 600; font-size: 0.95rem; }
+.ui__fold-title { font-weight: 600; font-size: 0.95rem; }
