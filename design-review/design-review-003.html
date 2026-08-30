@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Review 003 — Verdict/Sign-off Screen: Audience Hospitality</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Verdict Box ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .issue-fix {
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ── Criterion Rows ── */
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026 — Living Document</p>
+    <h1>Design Review 003</h1>
+    <p class="subtitle">Verdict/Sign-off Screen: Audience Hospitality. Round 2 (calibration from R1), STRICT criteria.</p>
+
+    <div class="verdict caveats">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-text">Build with caveats</div>
+      <p class="verdict-basis">6 Critical, 8 Important findings, all traced to exact file:line with fixes already specified or directly implementable using existing patterns in the same files (Fold component, findRuleDescription, field-copy.ts). No architectural blocker — the codebase already contains every mechanism the fixes need. Owner has approved fixing all Critical and Important findings in this same session.</p>
+    </div>
+
+    <h2 id="executive-summary">Executive Summary</h2>
+    <p>This screen has been through 5 prior redesign rounds (R9, R12, R13, R14, R15-C2) without resolving a recurring "too much going on, confusing" complaint from the owner. A real exploratory-test session (explore-006, practitioner-classified, not LLM-self-graded) found 3 Critical UX defects for a non-technical reader. This design review, triggered by that session, confirms and substantially extends those findings — 6 Critical and 8 Important issues total after cross-panel deduplication (from ~25 raw panel findings).</p>
+
+    <p>Panel A's key structural insight: no requirement in this project currently forbids internal spec-ID leaks into rendered text, or specifies fold-state-by-audience — that gap in the requirements, not a coding mistake, is why 5 prior rounds never caught this class of defect. Three independent panels (C, D, G) converged on the identical concrete fix mechanism for the review's core finding.</p>
+
+    <h2 id="requirements-coverage">Requirements Coverage Matrix</h2>
+    <table>
+      <caption>Coverage against active project requirements</caption>
+      <thead>
+        <tr>
+          <th>Requirement</th>
+          <th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>VD-1</code></td>
+          <td>Partial — SignOffChecklist violates no-jargon-without-gloss criterion</td>
+        </tr>
+        <tr>
+          <td><code>VD-2</code> through <code>VD-7</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>VD-8</code></td>
+          <td>Partial — LLM reasoning-trace path covered; pack-citation path leaks internal spec-ID</td>
+        </tr>
+        <tr>
+          <td><code>RA-7</code>, <code>RA-8</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>RA-9</code></td>
+          <td>Partial — chain rendered but auditor-followability undermined by ID leak</td>
+        </tr>
+        <tr>
+          <td><code>RA-10</code></td>
+          <td>N/A to this screen</td>
+        </tr>
+        <tr>
+          <td><code>RA-11</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>RA-12</code></td>
+          <td>N/A — V1.5, not built</td>
+        </tr>
+        <tr>
+          <td><code>NF-7</code></td>
+          <td>Partial — own ID "NF-7" ironically leaks into rendered text</td>
+        </tr>
+        <tr>
+          <td><code>NF-8</code>, <code>NF-9</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>NF-10</code></td>
+          <td>Missing/undocumented on this screen</td>
+        </tr>
+        <tr>
+          <td><code>LC-2</code>, <code>LC-3</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>RG-2</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>CS-1</code>, <code>CS-3</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td><code>R3-RD-1</code></td>
+          <td>Covered structurally, but fold-state/density not specified</td>
+        </tr>
+        <tr>
+          <td><code>R3-RD-2/3/4</code>, <code>R3-JU-3/JU-6</code>, <code>R3-NF-2</code></td>
+          <td>Covered</td>
+        </tr>
+        <tr>
+          <td>(no ID exists)</td>
+          <td>Missing — "no raw internal spec-ID in user-facing text"</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="critical-findings">Critical Findings</h2>
+    <p>Six critical issues, all with traced locations and specified fixes:</p>
+
+    <div class="issue critical">
+      <div class="issue-title">1. Internal spec-IDs leak into rendered text</div>
+      <div class="issue-detail">Panels A, D, G converged. NF-7 rendered in VerdictDisplay.tsx (provisional-only); NF-2, VD-4, and LC-2 rendered in RegisterDetail.tsx headings and text (every visit, not provisional). Users see "(NF-7)", "(NF-2)", "(VD-4)", "(LC-2)" parenthetical codes throughout the screen.</div>
+      <div class="issue-location">VerdictDisplay.tsx:56, :1353; engine/jurisdiction.ts:93; RegisterDetail.tsx:716, :909, :919</div>
+      <div class="issue-fix"><strong>Fix:</strong> One-line string edits stripping the parenthetical codes. NF-7's source is engine/jurisdiction.ts:93 where jurisdiction name is concatenated with spec-ID.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">2. Sign-off checklist leads with bare rule ID before gloss</div>
+      <div class="issue-detail">Panels A, B, D, G converged. Structural, fires for every verdict. Section reads "Decided by <code>{verdict.binding_constraint}</code>" with no plain-language description of what that constraint means, leaving non-technical readers in the dark.</div>
+      <div class="issue-location">VerdictDisplay.tsx:576-582</div>
+      <div class="issue-fix"><strong>Fix:</strong> Call the already-imported <code>findRuleDescription(policy, verdict.binding_constraint)</code> and render the description first, ID demoted to quiet code — an identical pattern already exists at VerdictDisplay.tsx:927.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">3. "Why this verdict" has no fold/collapse mechanism</div>
+      <div class="issue-detail">Panels A, C, D, G — four independent panels — all identified this as the core defect. VerdictDisplay.tsx:897 renders "Why this verdict" reasoning as a bare <code>&lt;div&gt;</code> while every sibling analytical panel (fragility, inheritance, regulatory reasoning, control set, expiry conditions, "what you told us") uses the existing <code>Fold</code> component with <code>defaultOpen={false}</code>. This is THE reason 5 prior rounds never fixed the "too much going on" complaint — the page renders permanently dense.</div>
+      <div class="issue-location">VerdictDisplay.tsx:897</div>
+      <div class="issue-fix"><strong>Fix (independently converged by 3 panels):</strong> Thread the <code>role</code> prop RegisterDetail.tsx already holds (already used for <code>showSignOffChecklist</code> at line 672) into VerdictDisplay as a new prop; wrap WhyThisVerdict in <code>&lt;Fold defaultOpen={role === '2LoD'}&gt;</code>, matching the existing Fold summary-gist pattern used elsewhere in the same file.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">4. Audit trail literally renders the word "rejected"</div>
+      <div class="issue-detail">Panel B independently verified against source. RegisterDetail.tsx:71-73 renders <code>p.action.replace('_', ' ')</code> where <code>action: 'approved' | 'rejected' | 'correction_requested'</code> (confirmed in src/store/types.ts:93). Direct live violation of this project's own explicit reserved-word rule (HR3-08, the <code>/approved|rejected/i</code> acceptance-test collision rule documented in verdict-audit.md §13.3).</div>
+      <div class="issue-location">RegisterDetail.tsx:71-73; src/store/types.ts:93</div>
+      <div class="issue-fix"><strong>Fix:</strong> Add an <code>ACTION_LABEL</code> map (e.g., approved→"signed off", rejected→"sign-off rejected — correction not requested") mirroring the existing <code>STAGE_LABELS</code> precedent, render through it instead of the raw enum.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">5. Audit-trail timeline shows raw enum where the same field shows label elsewhere</div>
+      <div class="issue-detail">Panel B. RegisterDetail.tsx:62-63 renders <code>${p.from_stage} → ${p.to_stage}</code> raw, while RegisterDetail.tsx:573 correctly uses <code>STAGE_LABELS</code> for the same field on the same page. Direct self-contradiction.</div>
+      <div class="issue-location">RegisterDetail.tsx:62-63 vs :573</div>
+      <div class="issue-fix"><strong>Fix:</strong> Replace raw enum with <code>${STAGE_LABELS[p.from_stage]} → ${STAGE_LABELS[p.to_stage]}</code>.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">6. STATUS_LABEL lookup table defined twice, independently</div>
+      <div class="issue-detail">Panels B and C found this separately. VerdictDisplay.tsx:82-86 and RegisterDetail.tsx:33-37 are verbatim duplicates; neither imports from the shared field-copy.ts both files already import from. Drift risk: a future status value added to one copy and not the other would make the verdict heading and register chip disagree silently.</div>
+      <div class="issue-location">VerdictDisplay.tsx:82-86 and RegisterDetail.tsx:33-37 (duplicates)</div>
+      <div class="issue-fix"><strong>Fix:</strong> Hoist one export into field-copy.ts, both components import it.</div>
+    </div>
+
+    <h2 id="important-findings">Important Findings</h2>
+    <p>Eight important issues requiring attention:</p>
+
+    <div class="issue important">
+      <div class="issue-title">7. Inheritance panel shows raw control IDs, not resolved via findControlName</div>
+      <div class="issue-detail">Panel B. VerdictDisplay.tsx:976-979 renders control IDs directly while every other control list on the page uses <code>findControlName</code> for plain-language resolution.</div>
+      <div class="issue-location">VerdictDisplay.tsx:976-979</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">8. Inheritance panel shows raw internal field keys instead of GRAPH_FIELD_LABELS</div>
+      <div class="issue-detail">Panel B. VerdictDisplay.tsx:999-1007 renders enum keys directly where other parts of the page use the <code>GRAPH_FIELD_LABELS</code> lookup pattern.</div>
+      <div class="issue-location">VerdictDisplay.tsx:999-1007</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">9. "Hard line" appears in first sentence before its only definition 650+ lines later</div>
+      <div class="issue-detail">Panel G. VerdictDisplay.tsx:843 uses "hard line" without gloss; the definition appears at :897 and is itself conditionally rendered.</div>
+      <div class="issue-location">VerdictDisplay.tsx:843 vs :897</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">10. Tier/Track chips render before their plain-language legend</div>
+      <div class="issue-detail">Panel G. RegisterDetail.tsx:562-563 renders chips; the legend explaining their meaning appears later at :588-601 and is conditionally rendered, so users may see the chips without ever seeing the legend.</div>
+      <div class="issue-location">RegisterDetail.tsx:562-563 vs :588-601</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">11. "2LoD" is never expanded anywhere on this screen</div>
+      <div class="issue-detail">Panel G. Multiple sites render the abbreviation without defining it for a first-time reader unfamiliar with banking terminology.</div>
+      <div class="issue-location">Multiple locations in VerdictDisplay.tsx and RegisterDetail.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">12. "Sign-off still required" independently derived as literal string in 3 places</div>
+      <div class="issue-detail">Panel C. VerdictDisplay.tsx:304, :851 and RegisterDetail.tsx:548 all independently check this condition as a string comparison with no shared source of truth. A future workflow change risks the three sites disagreeing.</div>
+      <div class="issue-location">VerdictDisplay.tsx:304, :851; RegisterDetail.tsx:548</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">13. Rule-dissent dropdown falls back to bare ID when no label attached</div>
+      <div class="issue-detail">Panel B. RegisterDetail.tsx:838 renders an unresolved ID with no gloss when no label was attached, leaving users without context.</div>
+      <div class="issue-location">RegisterDetail.tsx:838</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">14. NF-10 (translation-fidelity attestation) not rendered or traced on this screen</div>
+      <div class="issue-detail">Panel A. Possibly an undocumented gap, possibly an intentional V1 deferral never recorded as such. Requires clarification from product owner.</div>
+      <div class="issue-location">No location (missing feature)</div>
+    </div>
+
+    <h2 id="minor-observations">Minor & Observations</h2>
+    <p>ALL-CAPS badges ("ON THE COVERED REGISTRY", "WITHIN ENVELOPE") read as alarm rather than information for a first-time reader — sentence case recommended (Panel G, Minor). "Unattested" left bare in one checklist instance despite being glossed elsewhere on the page (Panel G, Observation). "2LoD" abbreviation register inconsistency between two nearby sentences (Panel G, Minor).</p>
+
+    <h2 id="panel-sections">Per-Panel Findings</h2>
+
+    <h3 id="panel-a">Panel A: Requirements Coverage (Wiegers/Cohn)</h3>
+    <p>Panel A reviewed structural coverage against active project requirements. Key findings:</p>
+    <ul>
+      <li>Critical: VD-1 partial (gloss criterion violated in sign-off checklist)</li>
+      <li>Critical: VD-8 partial (pack-citation path leaks spec-ID)</li>
+      <li>Critical: NF-7 ironically self-violates by rendering in its own output</li>
+      <li>Important: NF-10 missing from screen without documented rationale</li>
+      <li>Structural gap: no requirement forbids internal-only identifiers in rendered text (root cause of recurring defect class)</li>
+      <li>Structural gap: R3-RD-1 covered but fold-state-by-audience not specified</li>
+    </ul>
+
+    <h3 id="panel-b">Panel B: Interface Contracts (Keeling/Newman/Kleppmann)</h3>
+    <p>Panel B audited field rendering consistency across the screen. Key findings:</p>
+    <ul>
+      <li>Critical: Audit trail renders "rejected" violating reserved-word filter (live acceptance-test blocker)</li>
+      <li>Critical: Audit timeline uses raw enum while same field uses STAGE_LABELS elsewhere on page</li>
+      <li>Critical: STATUS_LABEL defined twice with no shared source (drift risk)</li>
+      <li>Important: Inheritance panel renders raw control IDs instead of findControlName</li>
+      <li>Important: Inheritance panel renders raw field keys instead of GRAPH_FIELD_LABELS</li>
+      <li>Important: Rule-dissent dropdown falls back to bare ID with no gloss</li>
+      <li>Consistency finding: 7 real contract mismatches, but field-copy.ts works correctly where used</li>
+    </ul>
+
+    <h3 id="panel-c">Panel C: Structural Soundness (Fowler/Brooks/Fairbanks)</h3>
+    <p>Panel C audited internal coherence and state discipline. Key findings:</p>
+    <ul>
+      <li>Critical: WhyThisVerdict built without adjustable seam (no Fold component) while all siblings use it</li>
+      <li>Critical: STATUS_LABEL duplication (drift risk)</li>
+      <li>Important: "Sign-off still required" logic independently re-derived in 3 places (no shared source)</li>
+      <li>Positive: Audit-read-not-recompute discipline followed; state ownership is clean overall</li>
+      <li>Verdict: Internally coherent except for the one section that needs an adjustable seam</li>
+    </ul>
+
+    <h3 id="panel-d">Panel D: Implementability (McConnell/Hunt&amp;Thomas)</h3>
+    <p>Panel D assessed fix feasibility and pattern precedent. Key findings:</p>
+    <ul>
+      <li>Critical: Internal spec-ID leaks (findings 1, 2, 7, 8) — six instances of ID-before-gloss pattern, proven fixes exist at parallel locations in same files</li>
+      <li>Critical: WhyThisVerdict fold mechanism — design decision needed (this review supplied it), implementation pattern proven by existing Fold usage</li>
+      <li>Verdict: Genuinely high implementability score (8/10) — every Critical except #3 has proven one-line fix precedented in codebase; #3 needed design call (now supplied)</li>
+    </ul>
+
+    <h3 id="panel-e">Panel E: Security (Anderson/Bratus-Patterson-Sassaman)</h3>
+    <p>Panel E audited for injection, unsanitized rendering, and data-integrity risk. Key findings:</p>
+    <ul>
+      <li>Clean: Self-asserted-name caveat confirmed present and honored</li>
+      <li>Clean: Append-only audit trail enforced (no rewrites, no deletes)</li>
+      <li>Clean: No unsanitized rendering found; all user-supplied values properly escaped</li>
+      <li>Verdict: 10/10 — no security findings</li>
+    </ul>
+
+    <h3 id="panel-g">Panel G: Audience Hospitality (Krug/Redish/Zinsser/Doumont/Cooper/Fogg)</h3>
+    <p>Panel G assessed serving non-technical, governance-naive readers. Key findings (the core concern):</p>
+    <ul>
+      <li>Critical: Six distinct ID-before-gloss instances (findings 1, 2, 7, 8, 9, 10) — systemic pattern, not isolated oversight</li>
+      <li>Critical: WhyThisVerdict permanently open and dense — primary reason for "too much going on" complaint across 5 redesign rounds</li>
+      <li>Important: "Hard line" used before definition, definition conditionally rendered</li>
+      <li>Important: Tier/Track chips render before legend</li>
+      <li>Important: "2LoD" never expanded</li>
+      <li>Minor: ALL-CAPS badges alarm-coded instead of info-coded</li>
+      <li>Minor: Abbreviation register inconsistency</li>
+      <li>Verdict: 3/10 — this screen currently cannot serve a first-time non-technical reader without the fixes above</li>
+    </ul>
+
+    <h2 id="cross-panel-themes">Cross-Panel Themes</h2>
+    <p><strong>Theme 1: ID-before-gloss pattern (findings 1, 2, 7, 8, 9, 10)</strong> — six separate instances where internal-only identifiers appear on-screen before or without adjacent plain-language gloss. This is a systemic defect class, not an isolated mistake. Root cause: no requirement exists forbidding it. Recommendation: Add a new non-functional requirement (e.g., NF-11: "no internal-only identifier renders on a user-facing screen without an adjacent plain-language gloss") and add it to pre-submission review checklist.</p>
+
+    <p><strong>Theme 2: Fold-mechanism gap (finding 3)</strong> — the review's central and most-converged finding. Four independent panels identified this as the single thing preventing the screen from serving non-technical readers. All other analytical panels use Fold with sensible defaults; WhyThisVerdict was built without one. Recommendation: Thread <code>role</code> prop and wrap in Fold.</p>
+
+    <p><strong>Theme 3: Duplication and shared-source gaps (findings 6, 12)</strong> — STATUS_LABEL defined twice, "sign-off still required" logic derived in three places. The codebase has proven shared-source patterns (field-copy.ts, STAGE_LABELS, findRuleDescription) that work correctly where used. These are implementation discipline issues, not missing mechanisms.</p>
+
+    <h2 id="panel-scores">Detailed Scores</h2>
+    <p>Full review mode, 0–10 per panel, with one-sentence rubric anchor and gap statement:</p>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel A: Requirements Coverage</div>
+      <div class="criterion-score mid">6/10</div>
+      <div class="criterion-note">Structurally complete against existing requirements, but the requirement that would have prevented this defect class was never written. Gap is fixable by adding NF-11, not a redesign.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel B: Interface Contracts</div>
+      <div class="criterion-score low">5/10</div>
+      <div class="criterion-note">7 real contract mismatches found including one live reserved-word violation. The shared field-copy.ts source exists and works correctly where actually used, so this is inconsistent application, not a missing mechanism.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel C: Structural Soundness</div>
+      <div class="criterion-score mid">6/10</div>
+      <div class="criterion-note">Internally coherent overall (state ownership is clean, audit-read-not-recompute discipline followed), but the one section needing an adjustable seam (WhyThisVerdict) was built without one, and duplication risks silent drift.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel D: Implementability</div>
+      <div class="criterion-score high">8/10</div>
+      <div class="criterion-note">Genuinely high: every Critical finding except #3 has a proven one-line or copy-paste fix already precedented elsewhere in the same files; #3 needed a design decision, which this review supplied.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel E: Security</div>
+      <div class="criterion-score high">10/10</div>
+      <div class="criterion-note">No findings. The self-asserted-name caveat, append-only trail, and lack of unsanitized rendering all confirmed clean on inspection.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel G: Audience Hospitality</div>
+      <div class="criterion-score low">3/10</div>
+      <div class="criterion-note">The review's core concern: this screen currently cannot serve a first-time non-technical reader without the fixes above. Six distinct ID-before-gloss instances plus permanently-open dense reasoning panel is a systemic pattern, not an isolated oversight.</div>
+    </div>
+
+    <h2 id="score-prevents-higher">What Prevents a Higher Score</h2>
+    <p>Gap statements for each panel scoring below 10 (all gaps are explicitly fixable, none structural, since the owner has approved fixing everything this session):</p>
+    <ul>
+      <li><strong>Panel A (6/10):</strong> Fixable — add NF-11 forbidding ID-before-gloss and specify fold-state-by-audience in R3-RD-1.</li>
+      <li><strong>Panel B (5/10):</strong> Fixable — unify field-label rendering by consolidating STATUS_LABEL, action labels, and field labels into field-copy.ts; apply them consistently across two files.</li>
+      <li><strong>Panel C (6/10):</strong> Fixable — wrap WhyThisVerdict in Fold; consolidate "sign-off still required" logic into a shared constant.</li>
+      <li><strong>Panel D (8/10):</strong> Not fixable to 10 — requires design decision (which review supplied) before implementation can proceed; scoring reflects that design was needed as input.</li>
+      <li><strong>Panel E (10/10):</strong> No gap.</li>
+      <li><strong>Panel G (3/10):</strong> Fixable — apply ID-before-gloss pattern fixes (findings 1, 2, 7, 8, 9, 10), fold WhyThisVerdict, reorder legend ahead of chips, expand abbreviations inline.</li>
+    </ul>
+
+    <h2 id="borderline-filter">Borderline Filter Results</h2>
+    <p>N/A this round — R2 strict criteria, no [BORDERLINE] tags used by any panel.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

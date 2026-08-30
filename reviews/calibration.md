@@ -28,6 +28,7 @@ against.
 | 6 | 2026-08-15 | test | full mode | 0 | 0 | 0 | **Ship-ready** (OQ-5: user chose ship; no CI, manual evidence) |
 | 1 | 2026-08-25 | doc | A,B,C,D (standalone) | 2 | 15 | 10 | **Do not publish — revise first** ("After Deployment" briefing, 2nd ed.; all C+I fixed same-session per owner triage → 3rd ed. republished; R2 recommended) |
 | 2 | 2026-08-25 | doc | A,B,C,D strict | 0 | 3 | 4 | **Publish with revisions** (3rd ed. scored 8.2 — integrity 9 ↑, transparency 8 ↑, prose 6 ↓ regression from R1 fixes; all 3 Importants + prose pass fixed per owner triage → 4th ed.; stopping rule not yet met, targeted R3 optional) |
+| 2 | 2026-08-31 | design | A,B,C,D,E,G (G supplementary, strict) | 6 | 8 | 3 | **Build with caveats** (verdict/sign-off screen; triggered by explore-006's 3 Critical UX findings; 4 panels independently converged on the same fix mechanism for the core finding; owner chose fix-everything) |
 
 ## Round 1 measurements
 
@@ -387,3 +388,52 @@ Candidate build-check if it recurs in R3.
 All external spot-checks this round verified verbatim at primary
 sources (Fed FEDS Notes, EUR-Lex OJ date for Reg 2026/1744, IBM 20%/
 +$670K); MAS consultation confirmed via cache.
+
+## Design review round 2 (2026-08-31) — verdict/sign-off screen, audience hospitality
+
+**Scores (full review):** Requirements coverage 6 · Interface contracts 5 ·
+Structural soundness 6 · Implementability 8 · Security 10 · Audience
+hospitality (Panel G, supplementary) 3. No dimension gap flagged as
+structural — every finding, including the core one, has a proven fix
+using patterns already in the codebase.
+
+**Multi-panel convergence — the strongest signal this round.** Four
+independent panels (A, C, D, G) landed on the identical root cause and
+fix mechanism for the review's central finding ("Why this verdict" has
+no fold seam) without seeing each other's output. This is the pattern
+calibration should watch for going forward: when 3+ panels converge
+unprompted on one fix, treat it as high-confidence even before manual
+verification — though manual verification still ran and confirmed it.
+
+**Anchor examples:**
+- Worst, audience hospitality: the sign-off checklist (the screen's
+  designated "fast first read") leads with a bare rule ID before any
+  plain-language gloss reaches the reader — found independently by 4
+  panels, the single clearest instance of "jargon precedes its own
+  gloss" in the whole review.
+- Worst, interface contracts: `RegisterDetail.tsx`'s audit-trail
+  timeline renders the literal word "rejected" — a live violation of
+  the project's own explicit reserved-word rule (HR3-08), caught by a
+  panel whose mandate was contract mismatches, not reserved words —
+  cross-panel scanning found what a reserved-word-specific check would
+  have caught directly, worth noting as a coverage argument for keeping
+  panels orthogonal by defect class rather than by area.
+- Best, implementability: every Critical finding except the core one
+  had a working precedent already in the same file — `findRuleDescription`
+  used two hundred lines away for an identical problem, `STAGE_LABELS`
+  correctly used for the same field the audit trail gets wrong. The
+  fixes are consistency fixes, not new capability.
+
+**Recurring-candidate, watch in future rounds:** ID-before-gloss is now
+confirmed as a *pattern*, not a single defect — 6 separate instances
+found this round alone. If this recurs in a future round after the
+current fix pass, promote to a build check (grep for bare `{verdict.*id}`
+or `<code>{...}</code>` renders with no adjacent label resolution).
+
+**Root-cause finding, not just a defect list (Panel A):** no requirement
+in this project forbids internal spec-ID leaks into rendered text, and
+none specifies fold-state-by-audience — that requirements gap, not a
+coding mistake, is why 5 prior design rounds (R9, R12, R13, R14, R15-C2)
+never caught this. The fix pass this round should close the code-level
+defects AND add the missing requirement, or the class of bug can recur
+in a future feature.
