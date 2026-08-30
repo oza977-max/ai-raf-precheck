@@ -5,7 +5,7 @@ import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
-import { TIER_MEANINGS, TRACK_MEANINGS } from './field-copy';
+import { TIER_MEANINGS, TRACK_MEANINGS, STAGE_LABELS } from './field-copy';
 import { findPrecedents } from '../engine/precedent';
 import type { PrecedentCandidate } from '../engine/precedent';
 import SimilarCases from './SimilarCases';
@@ -566,7 +566,12 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         </span>
         {/* §13.3: a qualifier, not a fourth status. */}
         {summary.provisional && <span className="graph-node__chip">Provisional</span>}
-        <span className={`register-stage register-stage--${summary.lifecycle_stage}`}>{summary.lifecycle_stage}</span>
+        <span
+          className={`register-stage register-stage--${summary.lifecycle_stage}`}
+          data-stage={summary.lifecycle_stage}
+        >
+          {STAGE_LABELS[summary.lifecycle_stage]}
+        </span>
       </div>
       {/* R13-UI-5: a gap must not hide below the fold. Renders ONLY when an
           uncovered risk class exists for this case; no gaps, no notice. */}
