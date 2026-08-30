@@ -10,6 +10,7 @@ import type { AuditEvent, LifecycleStage } from '../store/types';
 import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
+import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -48,12 +49,22 @@ interface VerdictDisplayProps {
   // Never used to hide or show anything else (G6 — no new role-conditional
   // rendering).
   hasRiskKnowledgeSection?: boolean;
+  // design-review-003 (2026-08-31, Panel A/C/D/G — four independent panels
+  // converged on this fix): "Why this verdict" was the one analytical panel
+  // never wrapped in Fold, so its unfolded-by-default state (R9's original,
+  // deliberate choice for 2LoD reviewers) had no seam to vary for a
+  // first-time non-technical reader. Same pattern as showSignOffChecklist —
+  // the caller (RegisterDetail) owns role, decides the default, and passes
+  // it down; VerdictDisplay never re-derives role itself. Omitted defaults
+  // to true (open), preserving existing behaviour for any render path that
+  // doesn't pass it.
+  reasoningDefaultOpen?: boolean;
 }
 
 // BC-V12B-03: wording avoids the words "approved"/"rejected" — existing
 // acceptance tests assert a single match on /approved|rejected/i.
 const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
-  pre_checked: 'Saved to register — awaiting active 2LoD sign-off (LC-2).',
+  pre_checked: 'Saved to register — awaiting active 2LoD sign-off.',
   approved: 'Saved to register — self-service final.',
   in_production: 'Saved to register — in production.',
 };
@@ -78,12 +89,6 @@ function severityGroups(invariants: TrippedInvariantDetail[]): Array<[string, Tr
     .map((s): [string, TrippedInvariantDetail[]] => [s, invariants.filter((t) => t.severity === s)])
     .filter(([, group]) => group.length > 0);
 }
-
-const STATUS_LABEL: Record<Verdict['status'], string> = {
-  approved: 'Approved',
-  approved_with_controls: 'Approved with controls',
-  rejected: 'Rejected',
-};
 
 /** R14 (verdict recomposition, 2026-08-18 — the R9 idiom applied to the
  *  verdict screen): analytical panels fold behind one click. The closed
@@ -176,9 +181,7 @@ function WhyThisVerdict({
   const isHardLineRejection = verdict.status === 'rejected' && explanation.binding_reason !== null;
 
   return (
-    <div className="verdict__why" id="verdict-why-section">
-      <h3>Why this verdict</h3>
-
+    <div className="verdict__why">
       {/* User-reported: the panel listed rule IDs and never said what kind of
           rule they were or where they came from. The product's whole claim is
           that a verdict traces to a rule — which is worth nothing if the
@@ -292,16 +295,19 @@ function WhyThisVerdict({
 function WhatToDo({
   verdict,
   policy,
-  registerStage,
+  needsSignOff,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
-  registerStage?: LifecycleStage;
+  // design-review-003 (Panel C): "needs sign-off" used to be independently
+  // re-derived from registerStage in three places across two files — a
+  // future workflow change (e.g. a routing stage between pre_checked and
+  // approved) risked the sites disagreeing. Computed once by the caller now.
+  needsSignOff: boolean;
 }) {
   const rejected = verdict.status === 'rejected';
   const controls = verdict.controls ?? [];
   const reviews = verdict.downstream_reviews ?? [];
-  const needsSignOff = registerStage === 'pre_checked';
   // R15-C2 (proposal §3.1): "summary-then-detail; default collapsed per
   // item, Expand all". Status chip stays on the always-visible summary line
   // (Governance's clarification of Layout F8 — items move to "addressed",
@@ -320,7 +326,7 @@ function WhatToDo({
         <>
           <p className="verdict__todo-lead">
             This use case is outside appetite as described, and no set of controls changes that — it crosses a
-            hard line. There is nothing to implement.
+            hard line (an absolute rule your firm cannot control its way around). There is nothing to implement.
           </p>
           <p className="verdict__todo-lead">
             Your options are to change the use case so it no longer crosses that line, or to take it to the
@@ -451,7 +457,8 @@ function WhatToDo({
                   <strong>Second-line sign-off</strong>
                   <span className="verdict__todo-status">
                     {' '}
-                    — this use case is above the self-service threshold, so it is not final until 2LoD approves it
+                    — this use case is above the self-service threshold, so it is not final until a second-line
+                    reviewer (2LoD) approves it
                   </span>
                 </li>
               </ul>
@@ -560,6 +567,14 @@ function SignOffChecklist({
 }) {
   const reasons = verdict.provisional_reasons ?? [];
   const controls = verdict.controls ?? [];
+  // design-review-003 (Panels A/B/D/G): this checklist is the screen's
+  // designated fast first read, but its own first line used to lead with
+  // a bare rule ID before any plain-language version reached the reader —
+  // the exact pattern findRuleDescription already exists to fix, used two
+  // hundred lines away in WhyThisVerdict (find-rule-description.ts).
+  const bindingDescription = verdict.binding_constraint
+    ? findRuleDescription(policy, verdict.binding_constraint)
+    : undefined;
   const outstanding = controls.filter((id) => {
     const c = policy?.controls.find((c) => c.id === id);
     return !(c?.verification_evidence?.status === 'verified');
@@ -576,8 +591,8 @@ function SignOffChecklist({
         {verdict.binding_constraint && (
           <li>
             <a href="#verdict-why-section">
-              Decided by <code className="verdict__id-quiet">{verdict.binding_constraint}</code>
-              {verdict.binding_path ? ` — ${verdict.binding_path}` : ''}
+              Decided by {bindingDescription ?? verdict.binding_path ?? 'the rule below'}
+              {' '}<code className="verdict__id-quiet">{verdict.binding_constraint}</code>
             </a>
           </li>
         )}
@@ -618,7 +633,11 @@ function SignOffChecklist({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true }: VerdictDisplayProps) {
+  // design-review-003 (Panel C): computed once here instead of separately
+  // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
+  // comment for why the duplication was a risk worth closing.
+  const needsSignOff = registerStage === 'pre_checked';
   // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
   // this screen and downloaded client-side. Nothing is written anywhere.
   // R12-MISC-1: async so the policy hash (WebCrypto) can be computed before
@@ -840,7 +859,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           repeat back: the decision, what it hinges on, what happens next. */}
       <p className="verdict__appetite-line">
         {verdict.status === 'rejected'
-          ? 'Outside appetite — it crosses a hard line, so no set of controls can bring it inside. It cannot proceed as described.'
+          ? 'Outside appetite — it crosses a hard line (an absolute rule your firm cannot control its way around), so no set of controls can bring it inside. It cannot proceed as described.'
           : verdict.controls.length === 0
             ? 'Inside appetite as described — nothing to put in place.'
             : `Inside appetite once ${verdict.controls.length} control${verdict.controls.length === 1 ? ' is' : 's are'} in place${
@@ -848,7 +867,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                   ? `, with ${verdict.downstream_reviews.length} separate review${verdict.downstream_reviews.length === 1 ? '' : 's'} other teams own`
                   : ''
               }.`}
-        {verdict.status !== 'rejected' && registerStage === 'pre_checked' && ' Not final until a second-line reviewer signs off.'}
+        {verdict.status !== 'rejected' &&
+          needsSignOff &&
+          ' Not final until a second-line reviewer (2LoD) signs off.'}
       </p>
 
       {/* User report (2026-08-15): "the engine might be working but the verdict
@@ -861,7 +882,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           and the binding rule — a submitter's first question ("what do I do")
           was being answered two panels late; the identifiers serve the 2LoD
           reader building the audit case and can follow. */}
-      <WhatToDo verdict={verdict} policy={policy} registerStage={registerStage} />
+      <WhatToDo verdict={verdict} policy={policy} needsSignOff={needsSignOff} />
 
       <div className="verdict__cards">
         <div className="verdict__stat">
@@ -894,7 +915,24 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         {verdict.binding_path && <p className="verdict__binding-path">{verdict.binding_path}</p>}
       </div>
 
-      {explanation && <WhyThisVerdict verdict={verdict} explanation={explanation} policy={policy} />}
+      {explanation && (
+        <Fold
+          id="verdict-why-section"
+          title="Why this verdict"
+          defaultOpen={reasoningDefaultOpen}
+          // design-review-003: a hard-line rejection's reasoning is the
+          // single most important thing on the page for that verdict — the
+          // same honesty-floor exception UNVERIFIED controls already get.
+          when={!(verdict.status === 'rejected' && explanation.binding_reason !== null)}
+          summary={
+            verdict.status === 'rejected' && explanation.binding_reason !== null
+              ? `${explanation.hard_lines_checked} hard lines checked — ${verdict.binding_constraint} tripped`
+              : `${explanation.hard_lines_checked} hard lines · ${explanation.invariants_checked} firm rules — ${explanation.tripped_invariants.length} triggered`
+          }
+        >
+          <WhyThisVerdict verdict={verdict} explanation={explanation} policy={policy} />
+        </Fold>
+      )}
 
       {explanation && explanation.tripped_invariants.length > 0 && (
         <Fold
@@ -967,15 +1005,21 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               <span
                 className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'registered' : 'unregistered'}`}
               >
-                {verdict.inheritance.resolved ? 'ON THE COVERED REGISTRY' : 'NOT ON THE REGISTRY'}
+                {verdict.inheritance.resolved ? 'On the covered registry' : 'Not on the registry'}
               </span>
             </div>
 
             {verdict.inheritance.resolved ? (
               verdict.inheritance.inherited_controls.length > 0 ? (
                 <p className="verdict__chain-derived">
-                  Inherited:&ensp;{verdict.inheritance.inherited_controls.join(', ')} — already
-                  satisfied by this approval, so not re-imposed here.
+                  {/* design-review-003 (Panel B): every other control list on
+                      this page resolves the id through policy.controls before
+                      showing it — this one used to print the raw id list. */}
+                  Inherited:&ensp;
+                  {verdict.inheritance.inherited_controls
+                    .map((id) => findControlName(policy, id) ?? id)
+                    .join(', ')}{' '}
+                  — already satisfied by this approval, so not re-imposed here.
                 </p>
               ) : (
                 <p className="verdict__chain-derived">
@@ -998,11 +1042,19 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                     collided, console-warned, and risked mis-reconciled rows. */}
                 {verdict.inheritance.dimensions.map((d, i) => (
                   <li key={`${i}-${d.dimension}`}>
-                    <code>{d.dimension}</code>{' '}
+                    {/* design-review-003 (Panel B): field-copy.ts already
+                        maintains GRAPH_FIELD_LABELS for this exact field-key
+                        set, consumed elsewhere (the intake form, graph
+                        summaries) — this list used to bypass it and print
+                        the raw internal key. */}
+                    {GRAPH_FIELD_LABELS[d.dimension] ?? d.dimension}
+                    {GRAPH_FIELD_LABELS[d.dimension] && (
+                      <code className="verdict__id-quiet"> {d.dimension}</code>
+                    )}{' '}
                     <span
                       className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}
                     >
-                      {d.fits ? 'WITHIN ENVELOPE' : 'OUTSIDE ENVELOPE'}
+                      {d.fits ? 'Within envelope' : 'Outside envelope'}
                     </span>{' '}
                     — cleared for {d.ceiling}
                     {d.observed !== undefined && <>; this use case has {d.observed}</>}
@@ -1350,7 +1402,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       </div>
 
       <p className="verdict__caveat">
-        Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes (NF-2).
+        Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes.
       </p>
     </section>
   );

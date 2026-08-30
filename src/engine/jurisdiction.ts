@@ -90,7 +90,11 @@ export function caveatForFiredRule(rule: PackRule, pack?: PackSignOff): Confiden
       ruleId: rule.id,
       field: 'jurisdiction_pack',
       confidence: 'low',
-      reason: `${cite} — proposed interpretation, pending firm adoption (pack not adopted; NF-7)`,
+      // design-review-003 (Panels A/D/G): the requirement-code parenthetical
+      // used to render verbatim on the verdict screen (explore-006 D-001) —
+      // the same fact is already stated in plain words by
+      // PROVISIONAL_REASON_LABEL.unsigned_pack_rules elsewhere on the page.
+      reason: `${cite} — proposed interpretation, pending firm adoption (pack not adopted)`,
     };
   }
   // V2-E: the caveat now follows what the rule is DOING to the source

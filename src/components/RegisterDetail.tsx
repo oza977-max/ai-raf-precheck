@@ -5,7 +5,8 @@ import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
-import { TIER_MEANINGS, TRACK_MEANINGS, STAGE_LABELS } from './field-copy';
+import { TIER_MEANINGS, TRACK_MEANINGS, STAGE_LABELS, ACTION_LABEL, STATUS_LABEL } from './field-copy';
+import { findRuleDescription } from '../engine/find-rule-description';
 import { findPrecedents } from '../engine/precedent';
 import type { PrecedentCandidate } from '../engine/precedent';
 import SimilarCases from './SimilarCases';
@@ -29,12 +30,6 @@ interface RegisterDetailProps {
   policy?: PolicyFile;
   onBack: () => void;
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  approved: 'Approved',
-  approved_with_controls: 'Approved with controls',
-  rejected: 'Rejected',
-};
 
 // Per-type detail lines derived from the real payload union — never a
 // generic JSON dump (build/prompts/V1.2-A.md scope decision 6).
@@ -60,7 +55,11 @@ function eventDetail(event: AuditEvent): string {
         p.new_verdict.track
       }. Supersedes verdict ${p.original_verdict_id.slice(0, 8)}…`;
     case 'lifecycle_stage_changed':
-      return `${p.from_stage} → ${p.to_stage}`;
+      // design-review-003 (Panel B): this used to print the raw enum
+      // ("pre_checked → approved") while the stage chip two sections above,
+      // for the same field, correctly shows "Awaiting 2LoD sign-off" /
+      // "Cleared" via STAGE_LABELS — a direct visible self-contradiction.
+      return `${STAGE_LABELS[p.from_stage]} → ${STAGE_LABELS[p.to_stage]}`;
     case 're_evaluation_queued':
       return `Policy updated to v${p.policy_version} — re-evaluation queued. Stage unchanged.`;
     case 'twoloD_reviewed':
@@ -68,11 +67,15 @@ function eventDetail(event: AuditEvent): string {
       // leads. "(name not verified)" is not a hedge — this build has no
       // sign-in, and a trail that implied otherwise would claim more than it
       // can support.
-      return `${p.action.replace('_', ' ')}${
+      // design-review-003 (Panel B, verified against source): p.action's raw
+      // value included the literal word "rejected" — a live violation of the
+      // reserved-word gate (G1). ACTION_LABEL fixes it the same way
+      // STAGE_LABELS already fixes the identical class of problem.
+      return `${ACTION_LABEL[p.action]}${
         p.attested_by_name ? ` by ${p.attested_by_name} (name not verified)` : ' — no name recorded'
       }${p.notes ? ` — ${p.notes}` : ''}`;
     case 'reasoning_trace_generated':
-      return 'Plain-English reasoning trace generated and stored with the verdict (VD-8).';
+      return 'Plain-English reasoning trace generated and stored with the verdict.';
     case 'duplicate_dismissed':
       return `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`;
     case 'classification_adopted':
@@ -148,9 +151,12 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       for (const t of ex.tripped_invariants) add(t.id, t.description);
       for (const r of ex.regulatory_chain ?? []) add(r.rule_id);
     }
-    add(latestVerdict.binding_constraint || null);
+    // design-review-003 (Panel B): this used to add binding_constraint with
+    // no label, falling back to the bare id in the challenge dropdown —
+    // same fix as the sign-off checklist, applied here too.
+    add(latestVerdict.binding_constraint || null, findRuleDescription(policy, latestVerdict.binding_constraint) ?? undefined);
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
-  }, [latestVerdict]);
+  }, [latestVerdict, policy]);
 
   // R11-KL-2/-3 (requirements-011.md; evaluation-engine.md §14
   // ADR-EE-R11-1/-2). Advisory-only, read-only until the reviewer taps
@@ -573,18 +579,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           {STAGE_LABELS[summary.lifecycle_stage]}
         </span>
       </div>
-      {/* R13-UI-5: a gap must not hide below the fold. Renders ONLY when an
-          uncovered risk class exists for this case; no gaps, no notice. */}
-      {knowledgeLensMatches.some((m) => !m.covered) && (
-        <p className="knowledge-lens__top-notice" role="note">
-          {knowledgeLensMatches.filter((m) => !m.covered).length} known risk class
-          {knowledgeLensMatches.filter((m) => !m.covered).length === 1 ? ' has' : 'es have'} no covering rule —
-          see the risk-knowledge panel below.
-        </p>
-      )}
       {/* R5 follow-up: tier and track in plain words, from the same shared
           copy file as the form and the graph review. Rendered only when the
-          value has a meaning — an unknown value gets no invented sentence. */}
+          value has a meaning — an unknown value gets no invented sentence.
+          design-review-003 (Panel G): moved to sit immediately after the
+          chips, ahead of the risk-knowledge notice, so a reader glancing at
+          the top of the page sees the chip and its gloss together rather
+          than separated by an unrelated paragraph. */}
       {(summary.tier && TIER_MEANINGS[summary.tier]) || (summary.track && TRACK_MEANINGS[summary.track]) ? (
         <p className="register-detail__chip-legend">
           {summary.tier && TIER_MEANINGS[summary.tier] && (
@@ -599,6 +600,16 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           )}
         </p>
       ) : null}
+
+      {/* R13-UI-5: a gap must not hide below the fold. Renders ONLY when an
+          uncovered risk class exists for this case; no gaps, no notice. */}
+      {knowledgeLensMatches.some((m) => !m.covered) && (
+        <p className="knowledge-lens__top-notice" role="note">
+          {knowledgeLensMatches.filter((m) => !m.covered).length} known risk class
+          {knowledgeLensMatches.filter((m) => !m.covered).length === 1 ? ' has' : 'es have'} no covering rule —
+          see the risk-knowledge panel below.
+        </p>
+      )}
 
       {/* ADR-RL-R3-1 / §15.1. The verdict a reviewer is being asked to attest
           to, rendered from the persisted record rather than recomputed.
@@ -671,6 +682,11 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             // below already renders on — 2LoD role, stage awaiting sign-off.
             showSignOffChecklist={showActionBar}
             hasRiskKnowledgeSection={knowledgeLensMatches.length > 0 || lensNotEvaluated}
+            // design-review-003: the caller owns role, so it decides the
+            // reasoning panel's default state — open for the 2LoD reviewer
+            // who is actually deciding this case, collapsed with a plain
+            // gist for anyone else viewing the same page.
+            reasoningDefaultOpen={role === '2LoD'}
           />
           {/* R15-C2: id target for VerdictDisplay's section nav / sign-off
               checklist "Risk knowledge" jump link — this panel lives outside
@@ -713,7 +729,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       {showActionBar && (
         <div className="register-detail__actionbar">
           <p className="register-detail__actionbar-title">
-            {summary.tier ?? 'This'} tier — awaiting 2LoD action (LC-2). This use case cannot advance to Approved
+            {summary.tier ?? 'This'} tier — awaiting 2LoD action. This use case cannot move to Cleared
             until you sign off.
           </p>
           {/* R15-C2, skeptic amendment S3 (Must): the role indicator carries
@@ -906,7 +922,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       )}
 
       <div className="register-detail__timeline">
-        <h3>Audit trail (VD-4 / NF-2) · append-only</h3>
+        <h3>Audit trail · append-only</h3>
         {/* explore-002 observation: the heading previously read "Immutable
             audit trail" with this caveat placed BELOW the event list, so the
             strong word was read first and the qualifier last — if at all, on
@@ -916,7 +932,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         <p className="register-detail__caveat">
           Append-only by construction: nothing here can be edited or deleted through the application.
           But this is V1 — the trail is held in your browser, so it is proof-of-concept grade, not
-          tamper-evident against anyone with access to this machine (NF-2).
+          tamper-evident against anyone with access to this machine.
         </p>
         <ul className="timeline">
           {events.map((event) => (

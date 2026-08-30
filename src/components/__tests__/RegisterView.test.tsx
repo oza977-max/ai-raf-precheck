@@ -280,7 +280,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Timeline probe case'));
 
-    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
+    expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
     expect(screen.getByText('graph_confirmed')).toBeInTheDocument();
     expect(screen.getByText('verdict_produced')).toBeInTheDocument();
     expect(screen.getByText(/approved with controls · High · Track II/i)).toBeInTheDocument();
@@ -400,7 +400,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     expect(await screen.findByText(/viewing as 1LoD/i)).toBeInTheDocument();
 
     await user.click(screen.getByText('Role gate probe'));
-    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
+    expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
   });
 });
@@ -420,7 +420,7 @@ describe('RegisterDetail — audit trail honesty (explore-002)', () => {
     render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Honesty probe case'));
 
-    expect(await screen.findByText(/audit trail \(VD-4/i)).toBeInTheDocument();
+    expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
     expect(screen.queryByText(/immutable/i)).not.toBeInTheDocument();
     expect(screen.getByText(/not tamper-evident/i)).toBeInTheDocument();
 

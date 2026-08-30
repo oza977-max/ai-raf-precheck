@@ -478,6 +478,8 @@ against its own quote. **Do not reinstate the confidence score.**
 **RA-9 (Must):** The verdict shall display the full reasoning chain for every regulatory override that fired: the primary source text, the rule derived from it, and how the rule applies to the specific use case. The bank shall be able to verify the reasoning against the original regulatory text without asking the product owner.
 
 > Fit criterion: For every regulatory override in a verdict, the output shows: document name, section, verbatim text, derived rule, and the specific graph attribute that triggered it. Example: *"EU AI Act Annex III §5(b) states: 'AI systems used for creditworthiness assessment are high-risk.' This use case produces a credit score — forced to Critical tier."*
+>
+> Fit criterion (added: design-review-003, Panels A/C/D/G — explore-006's D-002/D-003): the reasoning chain is available in full on every verdict, but its default visibility is audience-dependent, not uniformly open or closed. For a 2LoD reviewer (the audience whose job requires reading it before sign-off), the reasoning chain renders expanded by default. For every other audience, it renders collapsed behind a plain-language summary they can open on demand. Both states expose the identical full content — only the default fold state differs.
 
 **RA-10 (Must):** When a regulatory pack is updated, the system shall identify which rules cite regulatory text that has changed, and surface only those rules for human review. Rules citing unchanged text do not require re-review.
 
@@ -506,6 +508,10 @@ against its own quote. **Do not reinstate the confidence score.**
 **NF-8 (Must):** The verdict audit trail shall record, for every regulatory rule that fired: the primary source document, section, and verbatim text; the derived rule; the confidence score; the reviewer name, role, and sign-off date; and whether a local bank override was applied.
 
 > Fit criterion: A regulator asking "why was this classified Track II?" receives: the exact SS1/23 section text, the rule derived from it, the confidence score, who reviewed it and when, and any bank-level override on top. The full reasoning chain is in the record — not just a version number.
+
+**NF-11 (Must):** *(added: design-review-003, Panel A — the requirements coverage gap behind explore-006's D-001/D-002/D-003 and the verdict-screen redesign it triggered)* No internal-only identifier — a requirement ID, spec ID, control ID, rule ID, or similar code meaningful only to the team that built the system — shall render on a user-facing screen without an adjacent plain-language gloss. A non-technical or non-governance reader must be able to understand every displayed fact without recognising the code.
+
+> Fit criterion: A screen scan for tokens matching the project's internal ID patterns (e.g. `[A-Z]{2,4}-\d+`) finds none rendered bare; every match is either absent from user-facing copy or immediately followed by a plain-language description resolved from the relevant lookup (e.g. `findRuleDescription`, `findControlName`, `field-copy.ts` label maps) with the raw code demoted to a quiet, secondary annotation.
 
 **NF-9 (Should):** The system shall display a staleness warning when the regulatory text a rule cites has been superseded or when a pack rule has not been re-reviewed within a configurable threshold (default: 12 months). The warning names the specific rule and section, not just the pack.
 
