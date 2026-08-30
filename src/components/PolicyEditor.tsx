@@ -93,16 +93,32 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   return (
     <div className="policy-view">
       <h2>Appetite framework</h2>
+
+      {/* design-review round 4 (Panel G — Appetite framework, Important):
+          this banner used to render fourth, after copy that reads like the
+          framework is already a settled, adopted rulebook. The one fact
+          that most changes how to read the rest of the page — is this real
+          or a placeholder? — now comes first. The bare "(NF-10)" citation
+          is also dropped (NF-11, Panel A): the sentence says the same thing
+          in words already. */}
+      {hasFirmMarkers && (
+        <div className="policy-view__action-required" role="alert">
+          <strong>ACTION REQUIRED</strong> — Starter config in use. <code>[FIRM]</code> markers and
+          translation-fidelity attestation are unfilled — verdicts are provisional until your CRO adopts this
+          framework.
+        </div>
+      )}
+
+      <p className="policy-view__framing">
+        The bank&apos;s rules, machine-readable and versioned. Every verdict traces back to a rule in here. The
+        engine enforces it — it does not invent it.
+      </p>
       <p className="policy-view__meta">
         {livePolicy
           ? `policy v${livePolicy.version} · ${livePolicy.jurisdictions.length} jurisdiction pack${
               livePolicy.jurisdictions.length === 1 ? '' : 's'
             } declared`
           : 'panels unavailable — YAML invalid'}
-      </p>
-      <p className="policy-view__framing">
-        The bank&apos;s rules, machine-readable and versioned. Every verdict traces back to a rule in here. The
-        engine enforces it — it does not invent it.
       </p>
 
       {/* R11-UI-1: three levers, named and visually distinct, each with its
@@ -122,14 +138,6 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
           <p className="policy-view__lever-power">Informs — never decides.</p>
         </div>
       </div>
-
-      {hasFirmMarkers && (
-        <div className="policy-view__action-required" role="alert">
-          <strong>ACTION REQUIRED</strong> — Starter config in use. <code>[FIRM]</code> markers and
-          translation-fidelity attestation are unfilled — verdicts are provisional until your CRO adopts this
-          framework (NF-10).
-        </div>
-      )}
 
       {/* R15-C4 (proposal §3.4): closed by default — the plain-language
           panels above are what everyone reads first; this is for the
@@ -289,7 +297,7 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         <div className="policy-view__panel">
           <h3>Hard lines — no control set can fix</h3>
           <p className="policy-view__panel-sub">
-            Checked first. A use case crossing one is rejected immediately (PE-4).
+            Checked first. A use case crossing one is rejected immediately.
           </p>
           <ul className="policy-view__hardlines">
             {livePolicy.hard_lines.map((hl) => (

@@ -206,7 +206,9 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
   it('D3: lists the hard lines with the checked-first framing', () => {
     render(<PolicyEditor />);
     expect(screen.getByText(/hard lines — no control set can fix/i)).toBeInTheDocument();
-    expect(screen.getByText(/rejected immediately \(PE-4\)/i)).toBeInTheDocument();
+    // design-review round 4 (Panel A, NF-11): the bare "(PE-4)" citation was
+    // dropped — the sentence already says the same thing in plain words.
+    expect(screen.getByText(/rejected immediately/i)).toBeInTheDocument();
     expect(screen.getByText('HL-001')).toBeInTheDocument();
     expect(screen.getByText('HL-006')).toBeInTheDocument();
   });

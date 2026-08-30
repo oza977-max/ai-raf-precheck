@@ -149,7 +149,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
@@ -540,7 +540,7 @@ describe('Walking Skeleton', () => {
 
     // Click "Correct this classification?" — re-enters graph_review.
     await user.click(screen.getByRole('button', { name: /correct this classification/i }));
-    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
 
     // Make a real field correction, then walk back through to a new verdict.
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
@@ -635,7 +635,7 @@ describe('Walking Skeleton', () => {
     // Must NOT hang on "Evaluating..." — a real error renders and the
     // flow returns to graph_review, not a dead end.
     expect(await screen.findByRole('alert')).toHaveTextContent(/evaluation could not complete/i);
-    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
   });
 
   it('TC-LC-2-02 (P6-C02): a High-tier verdict routes the register node to lifecycle_stage "pre_checked" pending 2LoD approval, not auto-approved', async () => {
@@ -705,7 +705,7 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
-    expect(await screen.findByText(/review extracted graph/i)).toBeInTheDocument();
+    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
     await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -904,7 +904,7 @@ describe('Register row naming (charter 004 D-004)', () => {
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    await screen.findByText(/review extracted graph/i);
+    await screen.findByText(/confirm what we understood/i);
     await confirmAllNodes(user);
     await user.click(screen.getByRole('button', { name: /proceed/i }));
     await screen.findByRole('heading', { name: /confirm and evaluate/i });
@@ -950,7 +950,7 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
     await user.click(screen.getByLabelText(/none.*not sure/i));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    await screen.findByText(/review extracted graph/i);
+    await screen.findByText(/confirm what we understood/i);
     // The user can check the graph against their own words, on the screen
     // that asks them to confirm it.
     expect(screen.getByText(typed)).toBeInTheDocument();

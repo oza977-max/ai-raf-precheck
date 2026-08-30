@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Review 005 — App-Wide Narrative Flow</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Verdict Box ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .issue-fix {
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ── Criterion Rows ── */
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">August 2026 — Living Document</p>
+    <h1>Design Review 005</h1>
+    <p class="subtitle">App-Wide Narrative Flow. Round 4 (full-depth multi-panel review), STRICT criteria.</p>
+
+    <div class="verdict caveats">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-text">Build with caveats</div>
+      <p class="verdict-basis">The pattern that fixed the verdict screen (Minto-style decision-first structure, the Fold progressive-disclosure component, NF-11's ID-gloss discipline) turns out to be an island: every other screen in the app either never received it, or independently reinvented a worse version of it. The fixes are well-understood and mostly small per-screen, but there is real Critical-severity user confusion on several screens today, and one structural prerequisite (extracting the Fold component so it's reusable) should happen before most of the screen-level fixes, not after.</p>
+    </div>
+
+    <h2 id="executive-summary">Executive Summary</h2>
+    <p>Following round 3's verdict-screen rebuild, the owner asked to apply the same "does this tell a clear story to a first-time, non-technical, non-governance-aware reader" lens across every screen in the app. Nine screens/steps were scanned in parallel by Panel G (Audience Hospitality): the 6-step intake flow (Describe, Duplicate check, Graph extraction/review, Questionnaire, Contradiction review, Confirmation+journey spine), the Register list, the Appetite framework/policy editor, and Rule challenges+About. Four holistic panels (A Requirements Coverage, C Structural Soundness, D Implementability, E Security) ran across the whole app, excluding the already-fixed verdict screen.</p>
+
+    <p>Three cross-cutting themes emerged, each independently confirmed by multiple panels: (1) NF-11 — the "no bare internal ID without a plain-language gloss" rule written specifically because of a verdict-screen defect — is already being violated on other screens (Panel A found UC-2, UC-5, PE-4, NF-10 all rendered bare, one inside an alert-role banner), meaning the fix from round 3 was never propagated past the screen that prompted it. (2) The Fold component (decision-first, collapse-the-rest) that made the verdict screen work is a private, unexported function trapped inside VerdictDisplay.tsx — Panel C and Panel D independently found it's been reinvented three or four different ways elsewhere (a hand-rolled toggle in PolicyEditor, a bare native &lt;details&gt; in IntakeFlow, an ad hoc show-all toggle in RegisterView), each with subtly different accessibility semantics, and recommend extracting it into a shared, exported component before any further screen work. (3) Several screens have genuine, severe first-time-user comprehension failures independent of the Fold/NF-11 themes — most seriously the intake flow's duplicate-check step, where the on-screen instruction text for non-2LoD users ("contact AI Risk to adopt") is directly contradicted by a fully clickable button next to it that performs the adoption itself with no role gating at all.</p>
+
+    <h2 id="scope-and-methodology">Scope & Methodology Note</h2>
+    <p><strong>Panel B (Interface Contracts)</strong> did not run: this review focuses on information architecture and audience hospitality for existing screens, not contract changes. <strong>Panel F (Quality Attributes / ATAM Utility Tree)</strong> did not run: no new quality-attribute scenario is introduced in scope; performance, scalability, and accessibility are already covered by the existing utility tree and nothing in these screen-level fixes changes those tactics. Both gaps are explicitly scoped out per the review's design, matching round 3's methodology.</p>
+
+    <h2 id="critical-findings">Critical Findings</h2>
+    <p>Ten critical issues requiring resolution before build:</p>
+
+    <div class="issue critical">
+      <div class="issue-title">1. Duplicate-check step: the visible button contradicts the instruction text next to it.</div>
+      <div class="issue-detail">For a non-2LoD submitter, the copy says "Contact AI Risk to adopt its classification" — but the very next element is a live "Adopt this classification" button with zero role gating. A first-time reader has no reason to believe the button does anything different from what the text just told them someone else must do. [Panel G — Intake: Duplicate check]</div>
+      <div class="issue-location">IntakeFlow.tsx duplicate-check step, handleAdoptClassification</div>
+      <div class="issue-fix"><strong>Fix:</strong> Either disable/hide the button for non-2LoD roles, or change the copy to match what the button actually does.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">2. Duplicate-check step: adopting a classification skips the whole questionnaire and graph review, and nothing says so before the click.</div>
+      <div class="issue-detail">The explanation of what "adopt" really means (no intake questions asked, carries no verdict of its own, differences should become a fresh pre-check) exists in the code — but only renders AFTER the button is clicked. This is a consequence-visibility defect that forces click-and-regret. [Panel G — Intake: Duplicate check]</div>
+      <div class="issue-location">IntakeFlow.tsx duplicate-check step</div>
+      <div class="issue-fix"><strong>Fix:</strong> Move that explanation before the button, replacing or supplementing the terse "Adopt this classification" label.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">3. Graph review step: "graph" is never defined and appears as the operative word in the loading state, the screen's own h2 title, and the ARIA region label.</div>
+      <div class="issue-detail">"Extracting graph…", "Review extracted graph", <code>aria-label="Data-flow graph"</code> — a first-time reader has no way to connect this vocabulary to what they just typed in plain English one screen earlier. The good explanation exists but is gated behind a specific state. [Panel G — Intake: Graph extraction/review]</div>
+      <div class="issue-location">GraphReviewStep.tsx, GraphView.tsx</div>
+      <div class="issue-fix"><strong>Fix:</strong> Rewrite the h2 and loading label to goal-directed language ("Confirm what we understood" / "Reading your description…"), and move the one sentence that explains the task well to always render first, not state-gated.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">4. Graph review step: raw engine field names (autonomy_level, decision_bindingness, etc.) render as bare code on every single card.</div>
+      <div class="issue-detail">Deliberate per an existing code comment, but for a first-time reader this undercuts the plain-English framing the rest of the screen works hard to establish, with no explanation of why the codes are there or that they're safe to ignore. [Panel G — Intake: Graph extraction/review]</div>
+      <div class="issue-location">GraphView.tsx card rendering</div>
+      <div class="issue-fix"><strong>Fix:</strong> Either remove the raw field names, or add a one-sentence tooltip explaining they are internal labels and safe to ignore.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">5. Questionnaire step: the "why this matters" copy for each field is not wired into the questionnaire screen.</div>
+      <div class="issue-detail">The copy (FIELD_CONSEQUENCES in field-copy.ts) exists and is wired into two other screens but is simply missing from QuestionnaireStep.tsx — a first-time user answering a question sees only bare question text and a terse "triggered by RULE-ID" line, never the plain-language reason the question exists. [Panel G — Intake: Questionnaire]</div>
+      <div class="issue-location">QuestionnaireStep.tsx</div>
+      <div class="issue-fix"><strong>Fix:</strong> Import FIELD_CONSEQUENCES and render it under every question.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">6. Contradiction review: the two conflicting statements are shown as bare bold text with no explanation of source, relationship, or which one to trust — plus a raw internal field name and a bare internal ID tag ("UC-5") both leak onto the screen.</div>
+      <div class="issue-detail">No sentence anywhere says "you said X earlier, but Y here contradicts it." The heading and the raw <code>field: {c.field}</code> label frame this as a technical validation error, not the helpful catch the product intends. The bare "UC-5" tag is a regression of NF-11. [Panel G — Intake: Contradiction review, Panel A confirmed the UC-5 leak independently]</div>
+      <div class="issue-location">ContradictionReviewStep.tsx</div>
+      <div class="issue-fix"><strong>Fix:</strong> Rewrite as a plain-language template naming where each statement came from, replace the raw field-name label with a resolved description, remove the bare "UC-5" tag or gloss it.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">7. Contradiction review: the instruction asks the user to "correct one of the values above," but there is no editing control on screen — only a free-text box.</div>
+      <div class="issue-detail">The stated option doesn't exist as an affordance; the user has to guess everything must go through prose in the textarea. This is a severe comprehension gap for first-time users. [Panel G — Intake: Contradiction review]</div>
+      <div class="issue-location">ContradictionReviewStep.tsx</div>
+      <div class="issue-fix"><strong>Fix:</strong> Either add inline edit controls for the conflicting values, or rewrite the instruction to match what the textarea actually allows.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">8. Register list: 1LoD users (first-time submitters) get no "what needs my attention" signal at all.</div>
+      <div class="issue-detail">The entire narrowing mechanism, the plain-language legend explaining Tier/Track/Stage, and the Flags column (the one place stale/attention-needed items are surfaced) are all gated behind <code>is2LoD</code> — a 1LoD user sees a flat, unsorted, unexplained table with the one column engineered to say "look here" invisible to them. [Panel G — Register list]</div>
+      <div class="issue-location">RegisterView.tsx, narrowing/legend logic</div>
+      <div class="issue-fix"><strong>Fix:</strong> Extend the is2LoD-gated legend and flags-based narrowing to 1LoD, scoped to "your submissions needing attention."</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">9. Register list: no default sort or urgency ordering for either role.</div>
+      <div class="issue-detail">Even the 2LoD "awaiting sign-off" view has no ordering by staleness or severity within it — a reviewer must read every row to find what's actually urgent. This fails the basic "don't make me think" principle. [Panel G — Register list]</div>
+      <div class="issue-location">RegisterView.tsx table rendering</div>
+      <div class="issue-fix"><strong>Fix:</strong> Add default sort by status urgency (e.g., Correction Requested, then Pending Sign-Off, then Approved); secondary sort by timestamp descending.</div>
+    </div>
+
+    <div class="issue critical">
+      <div class="issue-title">10. NF-11 (no bare internal ID without a plain-language gloss) is already violated outside the verdict screen — regression-by-omission.</div>
+      <div class="issue-detail">Bare IDs found: UC-2 and UC-5 (intake flow screen tags), PE-4 (Appetite framework body copy), NF-10 (Appetite framework ACTION REQUIRED alert banner — the highest-visibility instance). The fix pattern this needs already exists and works on RegisterView, RuleImprovementQueue, and AboutPanel — it was simply never propagated past VerdictDisplay after being built. [Panel A, independently corroborated by Panel G finding on UC-5]</div>
+      <div class="issue-location">IntakeFlow.tsx, PolicyEditor.tsx</div>
+      <div class="issue-fix"><strong>Fix:</strong> Apply the ID-gloss pattern from RegisterView to all bare instances; document the pattern in CLAUDE.md as a project convention.</div>
+    </div>
+
+    <h2 id="important-findings">Important Findings</h2>
+    <p>Fourteen important findings, grouped by screen:</p>
+
+    <div class="issue important">
+      <div class="issue-title">11. Intake Describe step: the submit button never says what happens after clicking or that nothing is final yet.</div>
+      <div class="issue-detail">The button reads "Read & extract →" with no explanation of the consequence. The StepTracker shown on this very screen exposes internal step names ("Graph," "Duplicates") right next to a paragraph promising "plain language," undercutting its own promise one paragraph later. [Panel G — Describe]</div>
+      <div class="issue-location">DescribeStep.tsx, StepTracker.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">12. Intake Duplicate check: the screen never explains WHY duplicate-checking matters.</div>
+      <div class="issue-detail">Only what was found and what to do — consistency across similar systems, avoiding redundant review — are the real reasons, but neither are stated. [Panel G — Duplicate check]</div>
+      <div class="issue-location">DuplicateCheckStep.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">13. Graph review: the input/processing/output card layout IS a flow diagram but nothing narrates that metaphor for a first-time reader.</div>
+      <div class="issue-detail">The correction mechanism (Edit/Fix buttons) is discoverable but never signposted up front. [Panel G — Graph review]</div>
+      <div class="issue-location">GraphView.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">14. Questionnaire step: questions with no triggered_by rule get zero "why" explanation; the existing "triggered by RULE-ID" phrasing reads as compliance jargon rather than outcome-oriented reason.</div>
+      <div class="issue-detail">The code only handles two of three cases. [Panel G — Questionnaire]</div>
+      <div class="issue-location">QuestionnaireStep.tsx field-copy wiring</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">15. Contradiction review: neither statement is labeled with its source (which question, which part of the description).</div>
+      <div class="issue-detail">The user can't reason about which one is likely correct without re-reading their own prior answers from memory. [Panel G — Contradiction review]</div>
+      <div class="issue-location">ContradictionReviewStep.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">16. Confirmation step: the Back button silently disappears with zero on-screen explanation that this is the last editable step.</div>
+      <div class="issue-detail">The word "attestation" is asked to carry the entire weight of "this is final and permanently recorded" with no plain-language backup. [Panel G — Confirmation + journey spine]</div>
+      <div class="issue-location">ConfirmationStep.tsx, StepTracker.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">17. Register list: column headers (Tier, Track, Stage) are unexplained jargon for the 1LoD path.</div>
+      <div class="issue-detail">Up to four status banners stack with identical visual weight regardless of whether they're actionable alerts or FYI notes. [Panel G — Register list, Panel C independently found the same banner-priority problem]</div>
+      <div class="issue-location">RegisterView.tsx column headers and status rendering</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">18. Appetite framework: the "ACTION REQUIRED — this is a provisional starter template" banner renders FOURTH on the page.</div>
+      <div class="issue-detail">After a framing paragraph and a three-lever grid that both read as though the framework were already adopted, the one fact that most changes how to read the rest of the page is sequenced last, not first. [Panel G — Appetite framework]</div>
+      <div class="issue-location">PolicyEditor.tsx initial render order</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">19. Rule challenges: the empty state (most first-time visitors' experience) explains only HOW to file a challenge, never WHAT a rule challenge is.</div>
+      <div class="issue-detail">The good explanation exists but only renders once the queue is populated. [Panel G — Rule challenges + About]</div>
+      <div class="issue-location">RuleImprovementQueue.tsx empty state</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">20. About page: the primary call-to-action is the very last element, after roughly 1000 words.</div>
+      <div class="issue-detail">A skeptical-but-busy first-time reader following Krug's "don't make me think" may abandon before reaching it. [Panel G — About]</div>
+      <div class="issue-location">AboutPanel.tsx CTA placement</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">21. App-wide structural: the Fold component is module-private inside VerdictDisplay.tsx.</div>
+      <div class="issue-detail">PolicyEditor, IntakeFlow, and RegisterView each independently reinvented the same "collapse by default, decision first" idea with different markup and different accessibility semantics (hand-rolled useState toggle, bare native &lt;details&gt;, ad hoc "show all" text toggle). [Panel C, independently confirmed by Panel D]</div>
+      <div class="issue-location">VerdictDisplay.tsx Fold component</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">22. Implementability: extracting Fold into its own exported component should happen BEFORE any screen-specific narrative-flow fix.</div>
+      <div class="issue-detail">Duplicating it even once more increases drift risk immediately. [Panel D]</div>
+      <div class="issue-location">VerdictDisplay.tsx, prospective src/components/Fold.tsx</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">23. Implementability: the intake flow's graph-review step is the riskiest single screen to modify.</div>
+      <div class="issue-detail">It has the most interdependent state, an id-anchored scroll-to-target checklist wired directly into GraphView and the jurisdictions panel, and zero DOM-structure test coverage for that step. A bad reorder could ship silently. [Panel D]</div>
+      <div class="issue-location">GraphReviewStep.tsx, GraphView.tsx integration with checklist</div>
+    </div>
+
+    <div class="issue important">
+      <div class="issue-title">24. Security: two deliberate friction points in the intake flow are hard, programmatic blocks that must stay that way.</div>
+      <div class="issue-detail">The jurisdictions-confirmation gate and the graph-review "N steps before you can proceed" checklist exist specifically to stop a model-guessed value from silently governing the outcome. Any future streamlining pass must keep both as hard gates in the handler logic, not just visually present. [Panel E]</div>
+      <div class="issue-location">IntakeFlow.tsx handler logic, GraphReviewStep.tsx checklist</div>
+    </div>
+
+    <h2 id="minor-findings">Minor Findings</h2>
+
+    <div class="issue minor">
+      <div class="issue-title">25. Intake Describe: disabled submit button gives no inline reason it's disabled.</div>
+      <div class="issue-detail">[Panel G]</div>
+      <div class="issue-location">DescribeStep.tsx button state</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">26. Duplicate check: "tier"/"track" used with no gloss on this screen.</div>
+      <div class="issue-detail">[Panel G]</div>
+      <div class="issue-location">DuplicateCheckStep.tsx</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">27. Questionnaire: a select-type question on a field outside the hardcoded OPTION_LABELS map silently renders the bare engine enum value with no translation.</div>
+      <div class="issue-detail">[Panel G]</div>
+      <div class="issue-location">QuestionnaireStep.tsx select rendering</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">28. Confirmation/journey spine: StepTracker's labels name the tool's internal process stages, not the user's goal.</div>
+      <div class="issue-detail">"Describe," "Graph," "Confirm" vs. "get a fast, fair answer." [Panel G]</div>
+      <div class="issue-location">StepTracker.tsx</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">29. Appetite framework: the version/jurisdiction-pack-count meta line renders before the plain-language framing paragraph.</div>
+      <div class="issue-detail">[Panel G]</div>
+      <div class="issue-location">PolicyEditor.tsx header order</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">30. About page: "No AI is in the decision" is momentarily undercut two sentences later by disclosure of an optional local model that "misreads some fields."</div>
+      <div class="issue-detail">[Panel G]</div>
+      <div class="issue-location">AboutPanel.tsx</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">31. Rule challenges: "2LoD" used unexplained on a screen a user could land on directly.</div>
+      <div class="issue-detail">A user without having visited About first gets no definition. [Panel G]</div>
+      <div class="issue-location">RuleImprovementQueue.tsx</div>
+    </div>
+
+    <div class="issue minor">
+      <div class="issue-title">32. PolicyEditor: swapping its hand-rolled YAML disclosure for the extracted Fold component would change whether collapsed content is removed-from-DOM vs. merely hidden.</div>
+      <div class="issue-detail">The existing test PolicyEditor.test.tsx asserting "textarea is not in the document" when closed would catch a regression here, but the implementer needs to know to check it. [Panel D]</div>
+      <div class="issue-location">PolicyEditor.tsx, PolicyEditor.test.tsx</div>
+    </div>
+
+    <h2 id="observations">Observations</h2>
+    <p>Five observations with no severity tag:</p>
+    <ul>
+      <li><strong>AboutPanel.tsx has zero internal-ID leaks:</strong> It is the cleanest screen in the review with respect to NF-11 and plain language — it should be the reference example alongside the verdict screen when fixing the Critical/Important findings above. [Panel A]</li>
+      <li><strong>RegisterView's Tier/Track/Stage/Verdict legend is a stronger pattern:</strong> Explain once, not per-instance gloss. [Panel A]</li>
+      <li><strong>PolicyEditor's YAML editor is honestly gated:</strong> A progressive-disclosure toggle with explicit no-auth disclosure copy — a genuine strength, not a defect. [Panel G — Appetite framework, Panel E]</li>
+      <li><strong>GraphView's per-card "why these values matter" toggle:</strong> A legitimate, narrower use of progressive disclosure that should NOT be treated as a Fold candidate — the screen's job is to force full review before confirmation, a deliberate, well-documented design choice, not an oversight. [Panel C]</li>
+      <li><strong>RuleImprovementQueue is the easiest screen to retrofit:</strong> Flat list, no id-anchored scroll targets, thin state. [Panel D]</li>
+    </ul>
+
+    <h2 id="panel-scores">Detailed Scores</h2>
+    <p>Full review mode, 0–10 per panel, with one-sentence rubric anchor and gap statement:</p>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel A: Requirements Coverage</div>
+      <div class="criterion-score low">6/10</div>
+      <div class="criterion-note">NF-11 holds on 3 of 5 non-verdict screens reviewed; the two gaps (IntakeFlow, PolicyEditor) are regressions-by-omission, not new defect classes.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel C: Structural Soundness</div>
+      <div class="criterion-score low">5/10</div>
+      <div class="criterion-note">The Fold pattern is sound but not reusable; it has already been reinvented three times with inconsistent accessibility semantics.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel D: Implementability</div>
+      <div class="criterion-score low">6/10</div>
+      <div class="criterion-note">Most fixes are well-scoped and low-risk; one screen (graph review) carries real reorder risk with zero test coverage to catch a regression.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel E: Security</div>
+      <div class="criterion-score high">9/10</div>
+      <div class="criterion-note">No weakening of any actual gate; two deliberate friction points identified and named so future work doesn't remove them by accident.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">Panel G: Audience Hospitality (avg 9 screens)</div>
+      <div class="criterion-score low">4/10</div>
+      <div class="criterion-note">The verdict-screen fix pattern did not propagate; several screens have first-time-user comprehension failures as severe as anything found on the pre-round-3 verdict screen.</div>
+    </div>
+
+    <h2 id="what-prevents-higher">What Prevents a Higher Score</h2>
+    <p>Gap statement for each sub-10 panel:</p>
+    <ul>
+      <li><strong>Panel A (6/10):</strong> The two NF-11 regressions (UC-5, PE-4, NF-10 bare IDs).</li>
+      <li><strong>Panel C (5/10):</strong> Fold's lack of reusability; three independent reinventions create drift risk.</li>
+      <li><strong>Panel D (6/10):</strong> Graph-review's untested reorder risk with high state interdependency.</li>
+      <li><strong>Panel E (9/10):</strong> Only the documentation-discipline note if friction points are accidentally softened in future work; minor.</li>
+      <li><strong>Panel G (4/10):</strong> The sheer number of first-time-reader comprehension failures found across 9 screens, and the pattern they reveal: the round-3 fix was a one-screen patch, not a reusable house convention.</li>
+    </ul>
+
+    <h2 id="cross-panel-themes">Cross-Panel Themes</h2>
+    <p><strong>Theme 1: Independent convergence on Fold's reusability defect</strong> — Panels C and D, scanning for different defect classes (structural soundness and implementability), independently found three separate reinventions of the Fold pattern in PolicyEditor, IntakeFlow, and RegisterView. This is the strongest evidence that extracting Fold and documenting the pattern as a project convention should be its own prerequisite chunk, not folded into the first screen-specific fix, because every subsequent screen fix depends on it existing.</p>
+
+    <p><strong>Theme 2: Independent convergence on NF-11 regression</strong> — Panels A and G independently identified the same phenomenon: the "no bare internal ID without gloss" rule written specifically to fix a verdict-screen defect is already being violated elsewhere (UC-2, UC-5 in intake flow; PE-4, NF-10 in Appetite framework). This is the strongest evidence that the fix pattern from round 3 was built as a one-screen patch, not a reusable house convention, and cannot propagate.</p>
+
+    <p><strong>Theme 3: The verdict-screen fix was a one-screen patch, not a reusable house convention</strong> — The Minto-style structure, the Fold component, and the NF-11 discipline together made the verdict screen work. All three exist only on that screen, and when the same team faced similar problems on other screens, they locally reinvented answers instead of reusing the proven pattern. Extracting Fold into src/components/Fold.tsx, documenting the NF-11 rule at the point where it's enforced (not just on the verdict screen), and treating both as project conventions (alongside field-copy.ts) is the structural prerequisite before any screen-specific fix — not deferred, not optional.</p>
+
+    <h2 id="implementation-path">Implementation Path</h2>
+    <p>From Panel D, a tested sequence before code starts:</p>
+    <ol>
+      <li><strong>Extract Fold from VerdictDisplay.tsx into a shared, exported component (src/components/Fold.tsx):</strong> Rename its verdict__fold* CSS classes to something screen-agnostic — small, contained, zero screen-specific risk, unblocks everything else.</li>
+      <li><strong>Fix the two duplicate-check Criticals (button/text contradiction, missing pre-click consequence):</strong> Self-contained, no shared-component dependency.</li>
+      <li><strong>Fix the Contradiction-review Criticals (bare statements, missing edit affordance) and the UC-5/UC-2 NF-11 leaks:</strong> Same file/area, can be fixed together.</li>
+      <li><strong>Wire FIELD_CONSEQUENCES into QuestionnaireStep.tsx:</strong> Small, contained.</li>
+      <li><strong>Fix the Register-list 1LoD visibility gap:</strong> Extend the is2LoD-gated legend/flags/narrowing pattern to 1LoD, scoped to "your submissions needing attention" — contained but touches role-conditional logic, test carefully.</li>
+      <li><strong>Reorder the Appetite-framework ACTION REQUIRED banner and fix the PE-4/NF-10 leaks:</strong> Contained structural fix.</li>
+      <li><strong>Graph-review step fixes (the "graph" vocabulary, field-name leaks, metaphor narration):</strong> Do LAST, after Fold extraction, and re-verify the checklist's scroll-to-target wiring explicitly since there is no test coverage to catch a silent break.</li>
+    </ol>
+
+    <h2 id="post-review-guidance">Post-Review Guidance</h2>
+    <p>This review was NOT a liberal-threshold R1 scan with capture-recapture estimation; it was a strict, full-depth pass with 9 named per-screen panels and 4 holistic panels running in parallel. All findings are load-bearing. The verdict "Build with caveats" means the pattern from round 3 is sound and should be propagated, but the structural prerequisite (Fold extraction and NF-11 pattern documentation) should be resolved before most of the screen-level fixes. The implementation path above incorporates this staging. Owner sign-off recommended before code starts; implementer and owner should jointly review this report, confirm the prerequisite extraction and the four highest-severity Critical findings (duplicate-check, graph-review vocabulary, questionnaire FIELD_CONSEQUENCES, contradiction-review statements), and lock the build ticket accordingly.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

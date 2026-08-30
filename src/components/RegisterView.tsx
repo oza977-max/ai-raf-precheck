@@ -200,6 +200,22 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
         </div>
       )}
 
+      {/* design-review round 4 (Panel G — Register list, Critical): 1LoD got
+          no "what needs my attention" signal at all — the legend and the
+          Flags column (the one place stale/attention-needed rows are
+          surfaced) were both is2LoD-gated, leaving a first-time submitter a
+          flat, unexplained table. 2LoD has a queue concept (awaiting
+          sign-off); 1LoD doesn't, so this is a count, not a toggle. */}
+      {!is2LoD &&
+        (() => {
+          const attention = rows.filter((r) => r.current_verdict_status === 'rejected' || r.stale_assessment);
+          return attention.length > 0 ? (
+            <p className="register-view__showing-line" role="status">
+              {attention.length} of {rows.length} need your attention — rejected or stale.
+            </p>
+          ) : null;
+        })()}
+
       {is2LoD && (
         <p className="register-view__showing-line" role="status">
           {showAll ? (
@@ -280,24 +296,27 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               </button>
             ))}
           </div>
-          {/* R15-C1 (proposal §3.3): always-visible legend, replacing tooltip
-              meanings — copied verbatim from the target-state wireframe. */}
-          <dl className="register-view__legend">
-            <dt>Legend</dt>
-            <dd>
-              Tier = how much could go wrong — Critical, High and Medium wait for second-line sign-off; Low is
-              self-service.
-            </dd>
-            <dd>
-              Track = which oversight regime applies — I classic model risk · II extra scrutiny · III AI governance.
-            </dd>
-            <dd>
-              Stage = where the case is in its life. Verdict = what the rules decided; &quot;Provisional&quot; means
-              the rulebook behind it is not yet signed off by your firm.
-            </dd>
-          </dl>
         </div>
       )}
+
+      {/* design-review round 4 (Panel G, Important): the legend explaining
+          Tier/Track/Stage/Verdict was gated behind is2LoD along with the
+          filter controls — but the column headers it explains render for
+          every role. Moved out of the is2LoD block so both roles see it. */}
+      <dl className="register-view__legend">
+        <dt>Legend</dt>
+        <dd>
+          Tier = how much could go wrong — Critical, High and Medium wait for second-line sign-off; Low is
+          self-service.
+        </dd>
+        <dd>
+          Track = which oversight regime applies — I classic model risk · II extra scrutiny · III AI governance.
+        </dd>
+        <dd>
+          Stage = where the case is in its life. Verdict = what the rules decided; &quot;Provisional&quot; means
+          the rulebook behind it is not yet signed off by your firm.
+        </dd>
+      </dl>
 
       <table>
         <thead>
@@ -310,7 +329,11 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
             <th>Stage</th>
             <th>Last Evaluated</th>
             <th>Policy Version</th>
-            {is2LoD && <th>Flags</th>}
+            {/* design-review round 4 (Panel G, Critical): Flags was the one
+                column engineered to say "look here" and it was invisible to
+                1LoD entirely — a 1LoD user whose own case went stale had no
+                way to see that from this list. */}
+            <th>Flags</th>
           </tr>
         </thead>
         <tbody>
@@ -349,20 +372,18 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               </td>
               <td>{row.last_evaluated_at ? new Date(row.last_evaluated_at).toLocaleDateString() : '—'}</td>
               <td>{row.policy_version_at_evaluation ?? '—'}</td>
-              {is2LoD && (
-                <td>
-                  {row.stale_assessment || row.sampling_review_due ? (
-                    <>
-                      {row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}
-                      {row.sampling_review_due && (
-                        <span className="register-view__sampling-badge">sampling review due</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="register-view__flags-empty" aria-label="not flagged" />
-                  )}
-                </td>
-              )}
+              <td>
+                {row.stale_assessment || row.sampling_review_due ? (
+                  <>
+                    {row.stale_assessment && <span className="register-view__stale-badge">Stale</span>}
+                    {row.sampling_review_due && (
+                      <span className="register-view__sampling-badge">sampling review due</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="register-view__flags-empty" aria-label="not flagged" />
+                )}
+              </td>
             </tr>
             );
           })}

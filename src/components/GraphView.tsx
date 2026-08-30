@@ -505,7 +505,19 @@ export default function GraphView({
           Jurisdictions are asked explicitly later in the flow.
         </p>
       )}
-      <div className="graph-view" aria-label="Data-flow graph">
+      {/* design-review round 4 (Panel G — Intake: Graph review, Important):
+          the three-column layout with arrows visually IS a flow diagram,
+          but nothing narrated that for a first-time reader — it was
+          presented as self-evident. This always renders, unlike the
+          conditional gate-note above (which is honestly about confirmation
+          state, not the layout itself). Also renamed the region's aria
+          label away from "Data-flow graph" — the same unexplained term the
+          heading and loading state used to use (Critical, fixed above). */}
+      <p className="graph-view__narration">
+        Each card below is one piece of your use case: what goes in, what happens to it, and what
+        comes out.
+      </p>
+      <div className="graph-view" aria-label="What goes in, what happens, what comes out">
         {column('Input data', graph.input_nodes, INPUT_FIELDS)}
         <div className="graph-view__arrow" aria-hidden="true">
           →
@@ -519,7 +531,7 @@ export default function GraphView({
       {/* R5-GR-5: a count, not a heuristic. */}
       {editable && graph.processing_nodes.length >= 2 && (
         <p className="graph-view__hint" role="note">
-          This graph has {graph.processing_nodes.length} processing steps. If these are really two
+          This use case has {graph.processing_nodes.length} processing steps. If these are really two
           separate tools, submit them separately — one use case per pre-check gets sharper verdicts.
         </p>
       )}

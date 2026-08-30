@@ -9,6 +9,7 @@ import {
   DATA_ZONE_LABELS,
   DECISION_TYPE_LABELS,
   EXPOSURE_LABELS,
+  FIELD_CONSEQUENCES,
   MODEL_TYPE_LABELS,
   REVERSIBILITY_LABELS,
   SCALE_LABELS,
@@ -136,13 +137,27 @@ export default function QuestionnaireStep({
       )}
 
       <p className="questionnaire__text">{current.text}</p>
+      {/* design-review round 4 (Panel G — Intake: Questionnaire, Critical):
+          FIELD_CONSEQUENCES already exists and is wired into StructuredForm
+          and GraphView — it was never imported here, so every question on
+          this screen showed no "why we're asking" at all. Shown for every
+          question now, not just rule-triggered ones (the prior code only
+          handled two of three cases). */}
+      {FIELD_CONSEQUENCES[current.field] && (
+        <p className="field-help">{FIELD_CONSEQUENCES[current.field]}</p>
+      )}
       {current.triggered_by.length > 0 && (
         <p className="questionnaire__triggered-by">
           {current.triggered_by.includes('R6-PV-2:guessed') ? (
             'asked because your description does not state this, and the model would otherwise be guessing'
           ) : (
             <>
-              triggered by{' '}
+              {/* design-review round 4 (Panel G, Important): "triggered by"
+                  is mechanism language ("a rule fired"), not outcome
+                  language. FIELD_CONSEQUENCES above now carries the plain
+                  "why" for every question; this line stays only to name
+                  which specific rule(s), for a reader who wants to check. */}
+              Specifically, because of{' '}
               {current.triggered_by.map((ruleId, i) => (
                 <span key={ruleId}>
                   {i > 0 && ', '}
