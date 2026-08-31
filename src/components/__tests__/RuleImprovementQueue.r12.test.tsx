@@ -60,6 +60,8 @@ describe('deriveFiredCounts (R12-AB-2)', () => {
         occurred_at: '2026-01-01T00:00:00.000Z',
         actor: 'system',
         payload: { type: 'verdict_produced' as const, verdict: makeVerdict({ use_case_id: 'uc-1', id: 'v1' }) },
+        prev_hash: null,
+        hash: 'test-hash-1',
       },
       // A correction supersedes — the same case must count once, not twice.
       {
@@ -73,6 +75,8 @@ describe('deriveFiredCounts (R12-AB-2)', () => {
           original_verdict_id: 'v1',
           new_verdict: makeVerdict({ use_case_id: 'uc-1', id: 'v1b' }),
         },
+        prev_hash: 'test-hash-1',
+        hash: 'test-hash-2',
       },
       {
         event_id: '3',
@@ -81,6 +85,8 @@ describe('deriveFiredCounts (R12-AB-2)', () => {
         occurred_at: '2026-01-01T00:00:00.000Z',
         actor: 'system',
         payload: { type: 'verdict_produced' as const, verdict: makeVerdict({ use_case_id: 'uc-2', id: 'v2' }) },
+        prev_hash: 'test-hash-2',
+        hash: 'test-hash-3',
       },
     ];
     const counts = deriveFiredCounts(events);

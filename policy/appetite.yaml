@@ -895,6 +895,24 @@ safety_margin: 0.10
 # the low-risk self-serve population it wants a second set of eyes on.
 sampling_rate: 5
 
+# explore-007 D-002 (round 8): Track (I/II/III) is this app's own invented
+# oversight-regime category — it has no meaning to a real firm's committee
+# structure until the firm says what it maps to. This is an ILLUSTRATIVE
+# example, following the same [FIRM]-placeholder convention as the rest of
+# this starter file — a real firm replaces these with its own committee
+# names, or removes tracks it doesn't use. Absent entirely = AIGate shows
+# only its own generic Track description, never an invented firm process.
+governance_mapping:
+  I:
+    committee: "[FIRM] Model Risk Management Committee"
+    note: "classic model risk — pricing, valuation, or regulatory capital models"
+  II:
+    committee: "[FIRM] Model Risk Management Committee"
+    note: "AI on model risk management — extra scrutiny for high-autonomy or model-replacing systems"
+  III:
+    committee: "[FIRM] New Product/Process Approval (NPPA)"
+    note: "AI governance — everything else, chaired by Operations with Compliance/Legal/InfoSec sign-off"
+
 # ==============================================================================
 # APPROVED PLATFORM REGISTRY (PV-1) — [FIRM] MUST REPLACE
 # ==============================================================================

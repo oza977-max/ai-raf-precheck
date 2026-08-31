@@ -284,8 +284,11 @@ describe('RegisterDetail (V1.2-A)', () => {
     expect(screen.getByText('graph_confirmed')).toBeInTheDocument();
     expect(screen.getByText('verdict_produced')).toBeInTheDocument();
     expect(screen.getByText(/approved with controls · High · Track II/i)).toBeInTheDocument();
-    // honest NF-2 caveat (design-vision L-3)
-    expect(screen.getByText(/proof-of-concept grade, not\s+tamper-evident/i)).toBeInTheDocument();
+    // explore-007 D-001 fix (round 8): the audit trail is now genuinely
+    // hash-chained and verified live, not just asserted as "not
+    // tamper-evident" — see the honest-caveat test below for the updated
+    // wording and the chain-integrity check it now proves.
+    expect(screen.getByText(/hash-chained to the one before it/i)).toBeInTheDocument();
   });
 
   it('B5: 2LoD Approve appends twoloD_reviewed then lifecycle_stage_changed and advances the stage to approved', async () => {
@@ -422,7 +425,11 @@ describe('RegisterDetail — audit trail honesty (explore-002)', () => {
 
     expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
     expect(screen.queryByText(/immutable/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/not tamper-evident/i)).toBeInTheDocument();
+    // explore-007 D-001 fix (round 8): the trail is now genuinely
+    // hash-chained (detectable tampering) but still honestly qualified —
+    // it's client-side, so a full consistent rewrite can't be ruled out.
+    expect(screen.getByText(/hash-chained to the one before it/i)).toBeInTheDocument();
+    expect(screen.getByText(/cannot rule out someone with full local access/i)).toBeInTheDocument();
 
     // The qualifier must PRECEDE the events in document order — that was the
     // whole finding, not the wording alone.
@@ -432,7 +439,7 @@ describe('RegisterDetail — audit trail honesty (explore-002)', () => {
     // whose document position this test is actually about. Same collision
     // class as HR3-08, different string: a single-match query on text that a
     // newly-reused component also renders.
-    const caveat = screen.getByText(/the trail is held in your browser/i);
+    const caveat = screen.getByText(/client-side, browser-held store/i);
     const firstEvent = screen.getByText('graph_confirmed');
     expect(caveat.compareDocumentPosition(firstEvent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

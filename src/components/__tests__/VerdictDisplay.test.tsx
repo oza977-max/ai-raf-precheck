@@ -128,6 +128,8 @@ describe('VerdictDisplay', () => {
         occurred_at: '2026-01-01T00:00:00.000Z',
         actor: 'system',
         payload: { type: 'verdict_produced' as const, verdict, reasoning_trace: 'Track II per SS1/23 §3.4.' },
+        prev_hash: null,
+        hash: 'test-hash',
       },
     ];
     render(<VerdictDisplay verdict={verdict} auditEvents={auditEvents} onCorrect={vi.fn()} />);

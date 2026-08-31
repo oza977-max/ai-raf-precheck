@@ -13,6 +13,8 @@ describe('openAuditDb', () => {
       occurred_at: new Date().toISOString(),
       actor: 'user-1',
       payload: { type: 'use_case_created' as const, description: 'A tool', intake_method: 'llm' as const },
+      prev_hash: null,
+      hash: 'test-hash',
     };
 
     await db.add('audit_events', event);
@@ -31,6 +33,8 @@ describe('openAuditDb', () => {
       occurred_at: new Date().toISOString(),
       actor: 'user-1',
       payload: { type: 'use_case_created' as const, description: 'A tool', intake_method: 'llm' as const },
+      prev_hash: null,
+      hash: 'test-hash',
     };
 
     await db.add('audit_events', event);

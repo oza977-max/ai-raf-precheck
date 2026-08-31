@@ -1183,7 +1183,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             platforms={policyResult.valid ? policyResult.policy.platforms ?? [] : []}
             approvedModels={policyResult.valid ? policyResult.policy.approved_models ?? [] : []}
             vendors={policyResult.valid ? policyResult.policy.vendors ?? [] : []}
-            onSubmit={(graph) => {
+            onSubmit={async (graph) => {
               const useCaseId = crypto.randomUUID();
               // App-run vs seeded trail comparison (2026-08-17) found the
               // form path never wrote use_case_created — the submitter's
@@ -1191,7 +1191,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
               // the trail on the MOST-USED path, while the LLM path wrote
               // them. Same event, same shape, written at the same moment
               // the use case gains its id.
-              void appendAuditEvent({
+              // explore-007 D-001 fix (round 8): this was fire-and-forget
+              // (`void appendAuditEvent(...)`) — pre-existing, silent
+              // because the write used to be fast enough that the flow
+              // advancing before it landed rarely mattered. The hash chain
+              // makes every append do real work (read the trail, hash it),
+              // which was enough to expose the race. Every other
+              // appendAuditEvent call in this file already awaits before
+              // dispatching; matched that established pattern here too.
+              await appendAuditEvent({
                 event_id: crypto.randomUUID(),
                 use_case_id: useCaseId,
                 event_type: 'use_case_created',

@@ -305,6 +305,36 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         </div>
       )}
 
+      {/* explore-007 D-002 fix (round 8): Track is AIGate's own invented
+          oversight-regime category — it means nothing to a firm's actual
+          committees until the firm names the mapping. Rendered here as a
+          plain-language readout of policy.governance_mapping; editing it
+          is via the YAML disclosure below, same as everything else on
+          this screen. Absent entirely when no mapping is set, so a fresh
+          starter config doesn't invent a claim nobody made. */}
+      {livePolicy?.governance_mapping && Object.keys(livePolicy.governance_mapping).length > 0 && (
+        <div className="policy-view__panel">
+          <h3>Governance mapping — your committees, not ours</h3>
+          <p className="policy-view__panel-sub">
+            Track (I/II/III) is this app&rsquo;s own category for which oversight regime should apply.
+            It carries no authority on its own — this is where your firm names what it actually maps
+            to, so &ldquo;Track II&rdquo; on a verdict reads as your process, not an unexplained label.
+          </p>
+          <ul className="policy-view__hardlines">
+            {(['I', 'II', 'III'] as const).map((track) => {
+              const mapping = livePolicy.governance_mapping?.[track];
+              if (!mapping) return null;
+              return (
+                <li key={track}>
+                  <strong>Track {track}</strong> → {mapping.committee}
+                  {mapping.note && <span className="policy-view__panel-sub"> — {mapping.note}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {/* R11-UI-1: the knowledge lever, visually apart from the two
           deciding levers above — dashed border in CSS matches
           KnowledgeLensPanel's own advisory idiom. */}

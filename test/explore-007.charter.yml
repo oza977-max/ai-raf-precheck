@@ -1,0 +1,24 @@
+---
+schema_version: 1
+session_id: explore-007
+mission: >-
+  Persona-based cold-adoption test: a founder (Marcus) demos AIGate to a
+  skeptical bank Managing Director (Stephen, Ops/Compliance, no AI
+  background, real NPPA/Model Risk governance process) using only the
+  live About page and one real verdict screen from the published site.
+  An independent consultant (Diana) observes the full exchange and
+  produces a path-forward memo. Tests whether the product's own claims
+  match what a first-time institutional buyer actually experiences, and
+  whether the tool can self-explain without an engineer in the room.
+  Three GVM-dispatched agents ran the roleplay in two rounds (initial
+  questions, then follow-up after honest founder answers); the owner
+  classifies severity per Hard Gate 4 (ADR-205).
+timebox_minutes: 60
+target:
+  - https://oza977-max.github.io/ai-raf-precheck/
+  - src/components/AboutPanel.tsx
+  - src/components/VerdictDisplay.tsx
+  - src/store/audit.ts
+tour: feature
+runner: oza977-max
+---

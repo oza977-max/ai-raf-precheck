@@ -462,6 +462,25 @@ export interface PolicyFile {
   // policy without it samples nothing (isSampledForReview's degenerate
   // "never" case), which is what keeps every pre-R12 policy valid.
   sampling_rate?: number;
+  // explore-007 D-002 fix (round 8): Track (I/II/III) is AIGate's own
+  // invented oversight-regime category — it has no meaning to a firm's
+  // actual committee structure until someone names the mapping. Optional
+  // so every existing policy loads unchanged; a firm with no mapping set
+  // sees only AIGate's generic Track description (TRACK_MEANINGS), same as
+  // before this field existed. Keyed by Track so a firm can map some or
+  // all of I/II/III without needing entries for tracks it doesn't use.
+  governance_mapping?: Partial<Record<Track, GovernanceMappingEntry>>;
+}
+
+export interface GovernanceMappingEntry {
+  // The firm's own name for the committee/process that owns this Track —
+  // e.g. "New Product/Process Approval (NPPA)", "Model Risk Management
+  // Committee". Free text: AIGate does not know or enforce what a firm
+  // calls its own governance.
+  committee: string;
+  // Optional one-line note on why this Track routes here at this firm —
+  // e.g. "anything touching pricing, valuation or regulatory capital".
+  note?: string;
 }
 
 // R11-MG-1 (policy-schema.md §10a). `is_approved: false` entries are valid
