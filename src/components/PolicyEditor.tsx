@@ -6,6 +6,7 @@ import { getPackSources } from '../store/pack-source';
 import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
 import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
 import type { PolicyValidationError } from '../engine/types';
+import { Fold } from './Fold';
 
 interface PolicyEditorProps {
   onSaved?: () => void;
@@ -28,7 +29,6 @@ interface PolicyEditorProps {
 // there was nothing to remove — this comment records that check (G6).
 export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   const [yaml, setYaml] = useState(() => getCurrentPolicyYaml());
-  const [yamlEditorOpen, setYamlEditorOpen] = useState(false);
   const [result, setResult] = useState<
     | { status: 'idle' }
     | { status: 'validated'; warnings: string[] }
@@ -141,75 +141,71 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
 
       {/* R15-C4 (proposal §3.4): closed by default — the plain-language
           panels above are what everyone reads first; this is for the
-          people who author the rules. */}
-      <div className="policy-view__yaml-disclosure">
-        <button
-          type="button"
-          className="policy-view__yaml-toggle"
-          aria-expanded={yamlEditorOpen}
-          onClick={() => setYamlEditorOpen((v) => !v)}
-        >
-          {yamlEditorOpen ? '▾' : '▸'} Edit the rulebook as YAML — for the people who author the rules. Changing it
-          changes every future verdict.
-        </button>
+          people who author the rules.
+          design-review round 4 (Panel C/D): this used to be a hand-rolled
+          useState toggle — one of three independent reinventions of the
+          same "collapse by default" idea found across the app. Migrated to
+          the shared Fold component so there's one house convention. */}
+      <Fold
+        className="policy-view__yaml-disclosure"
+        title="Edit the rulebook as YAML"
+        summary="for the people who author the rules — changing it changes every future verdict"
+      >
+        <div className="policy-view__yaml-panel">
+          <p className="policy-view__yaml-honesty">
+            This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors.
+          </p>
+          <label htmlFor="policy-yaml-input">Policy YAML</label>
+          <textarea
+            id="policy-yaml-input"
+            className="policy-view__yaml"
+            value={yaml}
+            onChange={(e) => setYaml(e.target.value)}
+            spellCheck={false}
+          />
+          <button type="button" onClick={handleValidate}>
+            Validate
+          </button>
+          <button type="button" onClick={() => void handleSave()}>
+            Save
+          </button>
 
-        {yamlEditorOpen && (
-          <div className="policy-view__yaml-panel">
-            <p className="policy-view__yaml-honesty">
-              This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors.
-            </p>
-            <label htmlFor="policy-yaml-input">Policy YAML</label>
-            <textarea
-              id="policy-yaml-input"
-              className="policy-view__yaml"
-              value={yaml}
-              onChange={(e) => setYaml(e.target.value)}
-              spellCheck={false}
-            />
-            <button type="button" onClick={handleValidate}>
-              Validate
-            </button>
-            <button type="button" onClick={() => void handleSave()}>
-              Save
-            </button>
-
-            {result.status === 'validated' && (
-              <div role="status">
-                <p>Policy is valid.</p>
-                {result.warnings.length > 0 && (
-                  <ul>
-                    {result.warnings.map((w) => (
-                      <li key={w}>{w}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-
-            {result.status === 'saved' && (
-              <div role="status">
-                <p>
-                  Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
-                  re-evaluation.
-                </p>
-              </div>
-            )}
-
-            {result.status === 'error' && (
-              <div role="alert">
-                <p>Policy is invalid.</p>
+          {result.status === 'validated' && (
+            <div role="status">
+              <p>Policy is valid.</p>
+              {result.warnings.length > 0 && (
                 <ul>
-                  {result.errors.map((e, i) => (
-                    <li key={`${e.field}-${i}`}>
-                      <strong>{e.field}</strong>: {e.reason}
-                    </li>
+                  {result.warnings.map((w) => (
+                    <li key={w}>{w}</li>
                   ))}
                 </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              )}
+            </div>
+          )}
+
+          {result.status === 'saved' && (
+            <div role="status">
+              <p>
+                Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
+                re-evaluation.
+              </p>
+            </div>
+          )}
+
+          {result.status === 'error' && (
+            <div role="alert">
+              <p>Policy is invalid.</p>
+              <ul>
+                {result.errors.map((e, i) => (
+                  <li key={`${e.field}-${i}`}>
+                    <strong>{e.field}</strong>: {e.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </Fold>
 
       {livePolicy && (
         <div className="policy-view__panel">

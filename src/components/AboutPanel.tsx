@@ -23,6 +23,17 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         questions, and get a verdict — inside appetite, inside appetite with named controls, or outside
         appetite — with the exact rule and regulation behind every step.
       </p>
+      {/* design-review round 4 (Panel G — Rule challenges + About,
+          Minor): the primary CTA used to be the very last element on the
+          page, after ~1000 words — a skeptical-but-busy reader could
+          abandon before reaching it. Kept at the bottom too (nothing
+          deleted); this is the early affordance for anyone who wants to
+          skip straight to trying it. */}
+      <p>
+        <button type="button" className="about-panel__link about-panel__cta" onClick={() => onNavigate('intake')}>
+          Run your first pre-check →
+        </button>
+      </p>
 
       <h2>No AI is in the decision</h2>
       <p>

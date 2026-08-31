@@ -62,30 +62,33 @@ tier_workflow:
 safety_margin: 0.10
 `;
 
-// R15-C4 (proposal §3.4): the YAML editor now sits behind a closed-by-
-// default disclosure — open it before touching the textarea.
+// design-review round 4 (Panel C/D): the YAML editor's closed-by-default
+// disclosure now uses the shared Fold component (native <details>/
+// <summary>) instead of a hand-rolled button+aria-expanded toggle — open
+// it by clicking the summary text before touching the textarea.
 async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: /edit the rulebook as yaml/i }));
+  await user.click(screen.getByText(/edit the rulebook as yaml/i));
 }
 
 describe('PolicyEditor', () => {
-  it('R15-C4: the YAML editor disclosure is closed by default and the textarea is not in the document', () => {
+  it('R15-C4: the YAML editor disclosure is closed by default and the textarea is not visible', () => {
     render(<PolicyEditor />);
-    expect(screen.getByRole('button', { name: /edit the rulebook as yaml/i })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    expect(screen.queryByLabelText(/policy yaml/i)).not.toBeInTheDocument();
+    const details = screen.getByText(/edit the rulebook as yaml/i).closest('details');
+    expect(details).not.toHaveAttribute('open');
+    // design-review round 4: migrated to the shared Fold component (native
+    // <details>), which — unlike the old hand-rolled conditional render —
+    // keeps closed content in the DOM, just visually hidden. Every other
+    // Fold usage in the app works this way; the guarantee that matters is
+    // visibility, not DOM presence.
+    expect(screen.getByLabelText(/policy yaml/i)).not.toBeVisible();
   });
 
   it('R15-C4: opening the disclosure reveals the textarea and the no-sign-in honesty line', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
     await openYamlEditor(user);
-    expect(screen.getByRole('button', { name: /edit the rulebook as yaml/i })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    const details = screen.getByText(/edit the rulebook as yaml/i).closest('details');
+    expect(details).toHaveAttribute('open');
     expect(
       screen.getByText(/this build has no sign-in — anyone can open this\. a real deployment restricts it to the rule authors\./i),
     ).toBeInTheDocument();

@@ -28,8 +28,14 @@ export default function ConfirmationStep({ graph, corrections, onConfirm }: Conf
   return (
     <section aria-label="Confirm and evaluate">
       <h2>Confirm and evaluate</h2>
+      {/* design-review round 4 (Panel G — Intake: Confirmation, Important):
+          the Back button silently disappears on this step with zero
+          explanation, and "attestation" alone was asked to carry the whole
+          weight of "this is final." Now stated in plain words, in the one
+          sentence a reader can't miss on this screen. */}
       <p className="confirmation__notice">
-        This confirmation is your attestation — timestamped and permanently recorded.
+        This is your last chance to review before scoring — you won&rsquo;t be able to come back and
+        change these answers afterward. Confirming is timestamped and permanently recorded.
       </p>
 
       <div className="confirmation__grid">
