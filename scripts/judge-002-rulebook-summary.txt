@@ -1,0 +1,76 @@
+AIGate risk appetite policy v1.4 — condensed summary for a judge model.
+A use case is a small graph: one input (data_class, data_zone), one
+processing node (model_type, autonomy_level 0-4, data_zone, platform?),
+one output (action_type, exposure, decision_bindingness, output_reversibility,
+scale, decision_type?, hitl?).
+
+STEP 1 — HARD LINES (checked first; REJECT outright, no controls possible;
+first match in this order wins):
+HL-001: autonomy_level >= 4 AND output_reversibility = irreversible AND
+  exposure in [client-facing, market-facing]
+HL-002: data_class = MNPI AND data_zone != Zone C
+HL-003: autonomy_level >= 4 AND decision_type in [credit-decision,
+  lending-decision] AND hitl = false
+HL-004: autonomy_level >= 4 AND decision_type = trading
+HL-006: model_type = agentic AND autonomy_level >= 4 AND
+  decision_bindingness = binding
+If a hard line matches: status = outside. No further rules matter.
+
+STEP 2 — TIER (if not rejected). Highest matching tier wins:
+Critical: decision_type in [credit-decision, lending-decision,
+  fraud-detection, pricing] OR exposure = market-facing
+High: exposure = client-facing OR decision_type in [regulatory-reporting,
+  hiring] OR autonomy_level >= 3 OR data_class in [Client PII, MNPI] OR
+  decision_bindingness = binding
+Medium: exposure = internal-shared OR autonomy_level = 2 OR
+  decision_bindingness = material
+Low: exposure = internal-only (default if nothing else matches)
+
+STEP 3 — TRACK (governance route; first match wins):
+Track III (AI governance): model_type = agentic — ALWAYS, regardless of
+  anything else
+Track II: replaces_prior_model = true, OR autonomy_level >= 3, OR
+  model_type in [ml, deep-learning, llm, generative-ai] (unless
+  decision_bindingness = non-binding, which is Track III instead)
+Track I: model_type in [statistical, traditional-ml]
+
+STEP 4 — INVARIANTS (if not rejected by a hard line; each names required
+controls — if ALL of a matched invariant's conditions hold, the use case
+needs those controls before it is "in appetite"; if a use case needs zero
+invariants' controls, it is approved outright with nothing to do):
+- Client PII to an external model endpoint needs encryption in transit
+- A person talking to an AI must be told it's an AI (client-facing)
+- AI content leaving the firm must be marked as AI-generated
+- Model versions must be pinned and monitored (Track II)
+- Generative output on a material decision must be grounded in sources
+- Generated text shown to a human must carry citations
+- Agentic systems must log every tool call + have a stop control
+- Agentic system on SHARED infrastructure needs isolation attested
+- Agentic system with credentials beyond its task, or deploy access, needs
+  task-scoped credentials + a human deployment gate
+- Agentic instances that can coordinate need their action log held outside
+  their own reach
+- A system acting independently (autonomy >= 2, ACTING not just advising)
+  on a material/binding decision needs a human gate or a bounded authority
+  envelope
+- A system acting independently in front of a client (autonomy >= 2,
+  execute/trade/approve) needs a bounded authority envelope
+- An irreversible action at autonomy >= 2 needs a reversal window
+- Client-facing/market-facing AI needs conduct testing
+- AI deciding about a person needs fairness testing (credit, lending,
+  hiring, pricing, fraud-detection decision types)
+- Client-facing AI needs an escalation route to a human
+- A model on a material/binding decision needs drift monitoring
+- A model on a material/binding decision needs to explain a single outcome
+- A model reading untrusted text/documents needs adversarial testing
+- A third-party component not on the firm's registry needs a risk
+  assessment
+- Recommendations issued at_scale need outcome sampling
+
+If a use case is not rejected AND matches at least one invariant above:
+status = inside_with_controls.
+If a use case is not rejected AND matches NO invariant above:
+status = inside.
+If a use case IS rejected by a hard line: status = outside.
+
+You will be given ONE use case as a list of fields. Decide the status.
