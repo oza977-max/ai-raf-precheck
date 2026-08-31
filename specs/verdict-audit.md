@@ -140,7 +140,8 @@ export type AuditEventType =
   | 'classification_adopted'   // UC-2 — this record's classification came from another use case
   | 'reasoning_trace_generated' // VD-8 LLM call completed
   | 'rule_dissent_filed'       // FN-009 — a reviewer challenges a rule; advisory, never changes the verdict
-  | 'sampling_reviewed';       // R12-AB (ADR-VA-R12-1) — a 2LoD spot review of a deterministically sampled verdict actually happened
+  | 'sampling_reviewed'        // R12-AB (ADR-VA-R12-1) — a 2LoD spot review of a deterministically sampled verdict actually happened
+  | 'control_ownership_assigned'; // design-vision.md L-6 — an owner + target date assigned to an outstanding control; assignment only, no automation
 
 export interface AuditEvent {
   event_id: string;             // UUID v4
@@ -206,6 +207,21 @@ export type AuditEventPayload =
       verdict_id: string;
       reviewed_by_name: string;
       outcome_note?: string;
+    }
+  // design-vision.md L-6 / explore-007 D-003 follow-up. An OUTSTANDING
+  // control had no owner, no target date, no age, no overdue signal — a
+  // static status a human tracked by hand. This is the honestly-scoped
+  // fix: assignment tracking only, no reminders/notifications/ticketing
+  // (the app has no backend to run them from). verdict_id follows the same
+  // threaded-from-render pattern as twoloD_reviewed/rule_dissent_filed.
+  // Re-assigning is a later event for the same control_id; the UI reads
+  // the latest.
+  | {
+      type: 'control_ownership_assigned';
+      verdict_id: string;
+      control_id: string;
+      owner_name: string;
+      target_date: string;
     };
 
 **Both added by round 4 (UC-2).** The duplicate check surfaces a match and the

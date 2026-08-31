@@ -90,6 +90,8 @@ function eventDetail(event: AuditEvent): string {
       // R12-AB-1: the automation-bias countermeasure — a deterministically
       // sampled self-served verdict got its human spot review.
       return `Sampling review of verdict ${p.verdict_id.slice(0, 8)}… by ${p.reviewed_by_name} (name not verified)${p.outcome_note ? ` — ${p.outcome_note}` : ''}. Spot check of a self-served case; the verdict stands unchanged unless separately corrected.`;
+    case 'control_ownership_assigned':
+      return `Control ${p.control_id} assigned to ${p.owner_name} (name not verified) — target date ${p.target_date}.`;
   }
 }
 
@@ -203,6 +205,61 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   const [gapBusyEntryId, setGapBusyEntryId] = useState<string | null>(null);
   const [gapError, setGapError] = useState<string | null>(null);
   const gapInFlight = useRef(false);
+
+  // design-vision.md L-6 / explore-007 D-003 follow-up: same busy/error/
+  // in-flight-guard shape as the gap-filing state above.
+  const [controlOwnerBusyId, setControlOwnerBusyId] = useState<string | null>(null);
+  const [controlOwnerErrorId, setControlOwnerErrorId] = useState<string | null>(null);
+  const [controlOwnerError, setControlOwnerError] = useState<string | null>(null);
+  const controlOwnerInFlight = useRef(false);
+
+  // Latest control_ownership_assigned event per control_id for the current
+  // verdict — re-assigning is a later event, so "latest" (by occurred_at
+  // order, which is append order) is the one the UI shows.
+  const controlOwnership = useMemo(() => {
+    const result: Record<string, { owner_name: string; target_date: string }> = {};
+    for (const e of events) {
+      if (e.payload.type === 'control_ownership_assigned' && e.payload.verdict_id === latestVerdict?.id) {
+        result[e.payload.control_id] = {
+          owner_name: e.payload.owner_name,
+          target_date: e.payload.target_date,
+        };
+      }
+    }
+    return result;
+  }, [events, latestVerdict?.id]);
+
+  async function handleAssignControlOwner(controlId: string, ownerName: string, targetDate: string) {
+    if (controlOwnerInFlight.current) return;
+    controlOwnerInFlight.current = true;
+    setControlOwnerBusyId(controlId);
+    setControlOwnerErrorId(null);
+    setControlOwnerError(null);
+    try {
+      if (!latestVerdict) return;
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'control_ownership_assigned',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'control_ownership_assigned',
+          verdict_id: latestVerdict.id,
+          control_id: controlId,
+          owner_name: ownerName,
+          target_date: targetDate,
+        },
+      });
+      await load();
+    } catch (err) {
+      setControlOwnerErrorId(controlId);
+      setControlOwnerError(`Assigning an owner failed: ${err instanceof Error ? err.message : String(err)}.`);
+    } finally {
+      controlOwnerInFlight.current = false;
+      setControlOwnerBusyId(null);
+    }
+  }
 
   // R13-UI-3: gap filings already on this case's trail — the persistent
   // "Filed" state the panel renders. Derived from events (re-read after
@@ -764,6 +821,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             // who is actually deciding this case, collapsed with a plain
             // gist for anyone else viewing the same page.
             reasoningDefaultOpen={role === '2LoD'}
+            controlOwnership={controlOwnership}
+            onAssignControlOwner={(controlId, ownerName, targetDate) =>
+              void handleAssignControlOwner(controlId, ownerName, targetDate)
+            }
+            controlOwnerBusyId={controlOwnerBusyId}
+            controlOwnerErrorId={controlOwnerErrorId}
+            controlOwnerError={controlOwnerError}
           />
           {/* R15-C2: id target for VerdictDisplay's section nav / sign-off
               checklist "Risk knowledge" jump link — this panel lives outside
