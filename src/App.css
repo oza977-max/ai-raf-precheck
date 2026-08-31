@@ -2126,6 +2126,13 @@ details input {
 
   .app-header__role-select {
     max-width: 100%;
+    /* explore-010 D-004 (IT persona, mobile check): max-width alone did not
+       shrink this — flex items default to min-width: auto, which for a
+       <select> resolves to its LONGEST option's intrinsic width ("2LoD —
+       Priya · AI Risk (second line — reviewer)"), so the box overflowed the
+       viewport regardless of max-width. min-width: 0 lets it actually
+       shrink to the available space. */
+    min-width: 0;
   }
 
   /* Two-up summary grids stack. */

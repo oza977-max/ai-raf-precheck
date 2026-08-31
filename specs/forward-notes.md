@@ -350,9 +350,9 @@ than rebuilding what exists.
 
 ---
 
-## FN-011 — judge-002: reason-before-prediction rerun (R12-MISC-2, tracked)
+## FN-011 — judge-002: reason-before-prediction rerun (R12-MISC-2, RUN 2026-08-31)
 
-judge-001 (docs/reviews/judge-001.md, 2026-08-17) measured the local
+judge-001 (reviews/judge-001.md, 2026-08-17) measured the local
 model (qwen3:4b) at 1/11 concordance as a verdict judge, with the
 reasoning RIGHT in 10/11 — diagnosed as a structured-decoding artifact:
 the schema forced `prediction` to decode before `reason`, so the model
@@ -361,8 +361,20 @@ committed to an answer before working through it. The obvious follow-up
 report and never run. Panel finding B-5 (2026-08-18) flagged the stale
 null result.
 
-**Owner:** project maintainer (2LoD practitioner). **Trigger:** next
-session touching src/llm/* or any claim about local-model capability in
-docs — rerun as judge-002 with reason-first schema over the same 11
-cases before making or repeating any such claim. **Not** a release
-blocker; the runtime path never relied on the judge experiment.
+**Status: RUN.** judge-002 (reviews/judge-002.md, 2026-08-31) reran the
+same 11 cases against current policy (v1.4) with `reason` decoded before
+`prediction`. Result: 5/11 (45%), up from 1/11 — the field-order hypothesis
+was directionally confirmed and substantial, but not a full fix. A second,
+previously-undocumented failure mode appeared: on the 5 cases needing a
+full multi-step walkthrough (no hard line fires early), the model's
+`reason` field truncates to one introductory sentence regardless of token
+budget (tested at 512 and 1536), with no visible reasoning behind the
+(sometimes correct, sometimes wrong) prediction — unexplained, flagged as
+the next specific question rather than resolved. Script:
+`scripts/judge-002.mjs` + `scripts/judge-002-rulebook-summary.txt`.
+
+**Owner:** project maintainer (2LoD practitioner). **Not** a release
+blocker; the runtime path never relied on the judge experiment. Next step
+if picked up again: distinguish decoder-truncation from model-behaviour on
+the no-hard-line-match cases (judge-002 §"Bottom line" has the concrete
+next experiment), before building any panel UI on this model.

@@ -10,7 +10,106 @@ before doing anything.
 
 ---
 
-## CURRENT STATE (2026-08-26, v0.17.0 RELEASED) — supersedes everything below
+## CURRENT STATE (2026-08-31) — supersedes everything below
+
+**v0.17.0 tag unchanged in package.json, but main has moved well past it —
+no new version bump yet.** 702 tests (up from 682), working tree clean,
+CI green, live site current. This was a single long session covering both
+feature work and real infrastructure hardening; read
+`site-survey/site-survey-003.md` for the audit that drove the
+infrastructure half, and `test/explore-007.md` through `explore-010.md`
+for the four persona/exploratory rounds that drove the rest.
+
+**What shipped, in order:**
+
+1. **Verdict screen rebuilt as a 5-beat narrative** (design-review rounds
+   3-4), propagated app-wide.
+2. **explore-007/008**: a 3-persona bank roleplay test found the audit
+   trail's "not tamper-evident" caveat was fixable, not just honest. Built
+   a real SHA-256 hash chain (`src/store/audit.ts`) with live
+   `verifyChain()` — every event carries `prev_hash`/`hash`; a single
+   altered or deleted event is detectable, proven on-screen, not just
+   claimed. Found and fixed two real concurrency bugs surfaced only by the
+   hash-chain work: a race in concurrent `append()` calls, and a
+   pre-existing fire-and-forget `void appendAuditEvent(...)` in
+   `IntakeFlow.tsx`.
+3. **Completion tracking on outstanding controls** (design-vision.md L-6):
+   owner + target date + age + overdue flag per control, via a new
+   `control_ownership_assigned` audit event. Deliberately scoped to
+   assignment only — no reminders, no notifications, no ticketing
+   integration, since this app has no backend to run them from.
+4. **explore-009**: confirmed completion tracking live on the published
+   site. Zero defects.
+5. **site-survey-003**: an AI-engineering-fundamentals audit, requested
+   after the owner read an external essay on the same topic, extended with
+   an explicit "what are we not pre-detecting" lens grounded in the real
+   August 2026 OpenAI/Hugging Face agent-collective incident. Found two
+   real gaps: no CI gate between `publish-site.sh` and the live public
+   site (fixed same session — see #6), and no vocabulary in AIGate's own
+   intake form for agentic systems with broad system/infrastructure access
+   (fixed same session — see #7).
+6. **CI/publish gap closed**: `.github/workflows/deploy-pages.yml`
+   installed (runs test/tsc/build before every deploy; Pages source
+   switched from "deploy from branch" to "GitHub Actions" via the API);
+   `main` branch protection added (no force-push/delete). Found and fixed
+   a genuine pre-existing CI-only flake in the same pass —
+   `TC-R3-JU-5-01` was timing out on GitHub's shared runner in 8/8 checked
+   runs (invisible until this session made CI failures start mattering).
+7. **Policy v1.4 — agentic infrastructure-access rules**: grounded in
+   verbatim-quoted primary sources (OpenAI's own incident technical
+   report, the independent METR/Redwood investigation, Anthropic's
+   agentic-misalignment research — all cited with SHA-256 in
+   `grounding/proposed-rules/agentic-infrastructure-access.md`). Three new
+   invariants (INV-AGENT-INFRA-01/CRED-01/COORD-01) and three new controls,
+   deliberately built as controls-based invariants rather than a hard
+   line — the evidence shows this risk is controls-fixable (OpenAI's own
+   report: production guardrails cut compromise propensity >100x), and a
+   hard line would reject a legitimate, growing category of agentic
+   systems rather than gate it. Two new optional intake fields
+   (`system_access_scope`, `multi_instance_coordination`) feed it;
+   absence fires nothing, honest by construction.
+8. **explore-010**: a 7-persona roleplay sweep (Bank CEO, 2LoD, Bank IT,
+   1LoD end user, two AI-governance experts, a synthesis Consultant).
+   Confirmed and fixed a real user-reported defect: the browser Back
+   button never worked anywhere in the app — zero History API
+   involvement anywhere, so Back left the app entirely instead of
+   navigating within it. Fixed in `App.tsx` (top-level view) and
+   `RegisterView.tsx` (list<->detail), each layer pushing real history
+   entries with a popstate listener replaying them; found and fixed a
+   second real bug in the course of fixing the first (a popstate handler
+   silently no-op'ing on exactly the state Back needed to land on).
+   Verified live end-to-end and via a new regression suite that drives
+   real `window.history.back()`, not a simulated event.
+9. **FN-011 (judge-002) run**: the reason-before-prediction rerun named in
+   judge-001 but never executed. Result: 5/11 concordance, up from 1/11 —
+   the field-order hypothesis was directionally confirmed and substantial,
+   but not a full fix. A second, previously undocumented failure mode
+   surfaced (reasoning truncates to one sentence on the cases needing a
+   full multi-step walkthrough, at any token budget tested) — recorded
+   honestly as the next specific question, not resolved. Not a release
+   blocker; the runtime path never relied on this experiment.
+   `reviews/judge-002.md` has the full writeup.
+10. **Mobile CSS fix**: the "Viewing as" role selector overflowed the
+    viewport at mobile widths — a classic flexbox `min-width: auto` gotcha
+    (a `<select>` won't shrink below its longest option's intrinsic width
+    without an explicit `min-width: 0`). Found by explore-010's IT
+    persona, fixed and verified (no horizontal overflow at 375px).
+
+**Explicitly NOT started, by the owner's own instruction:** V2
+(post-deployment monitoring, `strategy/post-deployment-positioning.md`).
+Two "known gap" findings from this session's governance-expert personas
+(NIST AI RMF's continuous-monitoring function, EU AI Act Article 11
+technical documentation) both live here, not acted on.
+
+**Still open, lower priority:** judge-002's new open question (decoder
+truncation vs. model behaviour — `reviews/judge-002.md` "Bottom line");
+five discovered expert candidates (Power, Reinertsen, Fogg, Mitchell model
+cards, OWASP LLM) awaiting owner approval before persisting to GVM
+reference files.
+
+---
+
+## CURRENT STATE (2026-08-26, v0.17.0 RELEASED) — ages progressively from here
 
 **v0.17.0 live, 682 tests, working tree clean, tagged and published.**
 Read build/OPERATING-REGIME.md first (context-handover / model-router /
