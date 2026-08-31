@@ -46,6 +46,35 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // explore-010 D-001: list <-> detail was a second, nested navigation layer
+  // with the same gap as App.tsx's top-level view — no history entry for
+  // "opened a detail", so the browser Back button skipped past this level
+  // entirely too. Row selection pushes an entry; popstate un-does it,
+  // including the list refresh the explicit "back" link used to trigger.
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      // Deliberately NOT gated on the key's presence: the state we land on
+      // going back from a detail view is App.tsx's `navigate('register')`
+      // entry, which carries only `{ view: 'register' }` — no
+      // registerDetailId at all. Absence means "not a detail", same as an
+      // explicit null. Requiring the key here was the actual bug: it made
+      // this handler silently no-op on exactly the state Back needed to land on.
+      const state = e.state as { registerDetailId?: string | null } | null;
+      const next = state?.registerDetailId ?? null;
+      setSelectedId((prev) => {
+        if (prev !== null && next === null) setRefreshKey((k) => k + 1);
+        return next;
+      });
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function selectRow(id: string) {
+    window.history.pushState({ registerDetailId: id }, '');
+    setSelectedId(id);
+  }
+
   const is2LoD = role === '2LoD';
 
   useEffect(() => {
@@ -122,8 +151,11 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
         role={role}
         policy={policy}
         onBack={() => {
-          setSelectedId(null);
-          setRefreshKey((k) => k + 1);
+          // A real back-navigation, not a direct state clear — selectRow
+          // always pushed an entry to get here, so unwinding it through
+          // history keeps the in-app link and the browser Back button
+          // consistent instead of two separate paths that can disagree.
+          window.history.back();
         }}
       />
     );
@@ -345,7 +377,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               className={
                 isSelfAssessment ? 'register-view__row register-view__row--self-assessment' : 'register-view__row'
               }
-              onClick={() => setSelectedId(row.use_case_id)}
+              onClick={() => selectRow(row.use_case_id)}
             >
               <td>
                 {row.label}
