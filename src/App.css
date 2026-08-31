@@ -1623,16 +1623,6 @@ details input {
   padding-top: 1rem;
 }
 
-.policy-view__yaml-toggle {
-  background: transparent;
-  border: none;
-  color: var(--header-text);
-  font-size: 0.9rem;
-  text-align: left;
-  padding: 0;
-  cursor: pointer;
-}
-
 .policy-view__yaml-panel {
   margin-top: 0.9rem;
 }

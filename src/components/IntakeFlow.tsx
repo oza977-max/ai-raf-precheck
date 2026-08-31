@@ -1043,6 +1043,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             <button type="button" onClick={handleSubmitDescription} disabled={!state.description.trim()}>
               Read &amp; extract →
             </button>
+            {/* design-review round 4 (Panel G — Intake: Describe, Important):
+                the button never said what happens after clicking, or that
+                nothing is final yet. */}
+            <p className="field-help">
+              We&rsquo;ll turn this into a summary you can check and correct before anything is scored
+              — nothing here is final yet.
+            </p>
           </div>
         )}
 

@@ -752,7 +752,9 @@ describe('Walking Skeleton', () => {
 
     await user.click(screen.getByText('§ Appetite framework'));
     // R15-C4: the YAML editor is behind a closed-by-default disclosure.
-    await user.click(await screen.findByRole('button', { name: /edit the rulebook as yaml/i }));
+    // design-review round 4: migrated to the shared Fold component (native
+    // <details>/<summary>) — click the summary text, not a button role.
+    await user.click(await screen.findByText(/edit the rulebook as yaml/i));
     const textarea = await screen.findByLabelText(/policy yaml/i);
     const originalYaml = (textarea as HTMLTextAreaElement).value;
     // Version-agnostic: derive the current version and bump it, rather than

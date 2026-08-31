@@ -5,10 +5,15 @@ import type { IntakeState } from './intake-state';
 // real content as of P4-C04 — Describe, Duplicates, Graph, Questions,
 // Resolve (contradiction_review — only shown when active, not a normal
 // step in the happy path), Confirm, Verdict.
+// design-review round 4 (Panel G — Intake: Confirmation + journey spine,
+// Minor): labels named the tool's internal process stages ("Graph"), not
+// the user's goal of "get a fast, fair answer." Renamed where the old
+// label was jargon; left alone where it already read as a goal (Describe,
+// Confirm, Verdict).
 const STEPS: Array<{ key: string; label: string; matches: (s: IntakeState['step']) => boolean }> = [
   { key: 'describe', label: 'Describe', matches: (s) => s === 'description_entry' },
-  { key: 'duplicates', label: 'Duplicates', matches: (s) => s === 'duplicate_check' },
-  { key: 'graph', label: 'Graph', matches: (s) => s === 'graph_extraction' || s === 'graph_review' },
+  { key: 'duplicates', label: 'Check overlap', matches: (s) => s === 'duplicate_check' },
+  { key: 'graph', label: 'Review details', matches: (s) => s === 'graph_extraction' || s === 'graph_review' },
   {
     key: 'questions',
     label: 'Questions',
