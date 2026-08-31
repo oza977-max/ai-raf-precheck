@@ -1,0 +1,28 @@
+---
+schema_version: 1
+session_id: explore-010
+mission: >-
+  7-persona roleplay demo test on the live published site — the most
+  comprehensive persona sweep run yet, run because the user wants the
+  demo "perfect" before considering V2. Six personas explore independently
+  and report findings; a seventh (Consultant) stays silent until all six
+  have reported, then synthesizes a single fix recommendation. Personas:
+  Bank CEO (strategic buyer, business case), 2LoD reviewer (skeptical
+  risk/compliance sign-off, continuing the Stephen tradition from
+  explore-007/008), Bank IT (technical/security/infra/browser-storage
+  concerns), 1LoD end user (daily submitter, user-acceptance/UX lens),
+  AI Governance Expert #1 (NIST AI RMF / model risk management lens), AI
+  Governance Expert #2 (EU AI Act / regulatory-compliance lens). The user
+  pre-flagged one suspected defect for reproduction: clicking into a
+  register row then pressing the browser Back button does not return to
+  the register list. Owner classifies severity for every finding per
+  Hard Gate 4 (ADR-205).
+timebox_minutes: 90
+target:
+  - https://oza977-max.github.io/ai-raf-precheck/
+  - src/App.tsx
+  - src/components/RegisterView.tsx
+  - src/components/RegisterDetail.tsx
+tour: feature
+runner: oza977-max
+---
