@@ -73,8 +73,40 @@ export default function App() {
     // open when the role switches, fall back to intake rather than leaving
     // a 1LoD user stranded on a view whose nav item just vanished.
     if (next !== '2LoD' && view === 'ruleQueue') {
+      // replaceState, not navigate(): this is a forced fallback from a role
+      // change, not a click the user made — it must not leave a back-stack
+      // entry pointing at a queue that's no longer reachable in this role.
+      window.history.replaceState({ view: 'intake' }, '');
       setView('intake');
     }
+  }
+
+  // explore-010 D-001: every "screen" in this app was a React state flip
+  // with zero History API involvement — no pushState, no popstate listener.
+  // The browser's own Back button had nothing of this app's to act on, so
+  // it left the app entirely instead of returning to the previous screen.
+  // Each user-initiated view change now pushes a history entry; Back/Forward
+  // replays them via popstate. The base entry is REPLACED (not pushed) on
+  // mount so a Back from the very first screen still leaves the app for
+  // wherever the user was before arriving — that's correct, not a bug.
+  useEffect(() => {
+    window.history.replaceState({ view: 'intake' }, '');
+    const onPopState = (e: PopStateEvent) => {
+      const next = (e.state as { view?: typeof view } | null)?.view;
+      if (next) setView(next);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // Mount-only: this wires the browser's back-stack to React state, not a
+    // dependency-driven effect. `view` is intentionally excluded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function navigate(next: typeof view) {
+    if (next !== view) {
+      window.history.pushState({ view: next }, '');
+    }
+    setView(next);
   }
 
   useEffect(() => {
@@ -186,7 +218,7 @@ export default function App() {
           <div
             className={view === 'intake' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
             onClick={() => {
-              setView('intake');
+              navigate('intake');
               setNewPrecheckNonce((n) => n + 1);
             }}
           >
@@ -194,7 +226,7 @@ export default function App() {
           </div>
           <div
             className={view === 'register' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-            onClick={() => setView('register')}
+            onClick={() => navigate('register')}
           >
             <span>▤ Register</span>
             {registerCount !== null && registerCount > 0 && (
@@ -203,7 +235,7 @@ export default function App() {
           </div>
           <div
             className={view === 'policyEditor' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-            onClick={() => setView('policyEditor')}
+            onClick={() => navigate('policyEditor')}
           >
             § Appetite framework
           </div>
@@ -213,14 +245,14 @@ export default function App() {
           {role === '2LoD' && (
             <div
               className={view === 'ruleQueue' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-              onClick={() => setView('ruleQueue')}
+              onClick={() => navigate('ruleQueue')}
             >
               ⚑ Rule challenges
             </div>
           )}
           <div
             className={view === 'about' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
-            onClick={() => setView('about')}
+            onClick={() => navigate('about')}
           >
             ? About
           </div>
@@ -235,7 +267,7 @@ export default function App() {
               <strong>First time here?</strong> This is a pre-check gate: describe an AI use case and a
               deterministic rule engine — no AI in the decision — tells you whether it sits inside your
               firm&rsquo;s risk appetite, and what would bring it inside.{' '}
-              <button type="button" className="about-panel__link" onClick={() => setView('about')}>
+              <button type="button" className="about-panel__link" onClick={() => navigate('about')}>
                 Two-minute overview →
               </button>{' '}
               <button
@@ -251,7 +283,7 @@ export default function App() {
             </div>
           )}
           {view === 'intake' && <IntakeFlow newPrecheckNonce={newPrecheckNonce} />}
-          {view === 'about' && <AboutPanel onNavigate={setView} />}
+          {view === 'about' && <AboutPanel onNavigate={navigate} />}
           {view === 'register' && (
             <RegisterView
               role={role}
