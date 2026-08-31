@@ -46,8 +46,11 @@ exposure `internal-shared` · bindingness `advisory` · `reversible` ·
 **Predicted:** **Approved with controls · Medium · Track II** — binding
 constraint `INV-TRACK2-01` (Track II baseline: hosted models can be
 substituted without notice). Controls solved: `CTRL-CITE-01`,
-`CTRL-FINGERPRINT-01`, `CTRL-REDTEAM-01`. Lifecycle `pre_checked`
-(Medium = 2LoD-notify). Standing conditions use the low-risk band.
+`CTRL-ENC-01`, `CTRL-FINGERPRINT-01`, `CTRL-REDTEAM-01`. `CTRL-ENC-01`
+is new as of policy v1.5 (INV-CONFDATA-01 — Confidential data to Zone B
+needs encryption in transit, the same rule Client PII already had).
+Lifecycle `pre_checked` (Medium = 2LoD-notify). Standing conditions use
+the low-risk band.
 
 ---
 
@@ -214,8 +217,9 @@ exposure `internal-shared` · bindingness `material` · `reversible` ·
 
 **Predicted:** with **Decision type** left blank: **Approved with
 controls · Medium · Track II**, binding `INV-HALLUC-01`, controls
-`CTRL-CITE-01`, `CTRL-FINGERPRINT-01`, `CTRL-GROUND-01`,
-`CTRL-REDTEAM-01`. Set **Decision type = `regulatory-reporting`** and the
+`CTRL-CITE-01`, `CTRL-ENC-01`, `CTRL-FINGERPRINT-01`, `CTRL-GROUND-01`,
+`CTRL-REDTEAM-01`. `CTRL-ENC-01` is new as of policy v1.5
+(INV-CONFDATA-01). Set **Decision type = `regulatory-reporting`** and the
 same case tiers **High** — same controls, higher tier. Worth running both
 ways: it shows how much the tier depends on the submitter correctly
 declaring what the output feeds.

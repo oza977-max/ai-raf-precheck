@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.4",
+  "policy_version": "1.5",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",
@@ -9,12 +9,14 @@
       "binding_constraint": "INV-TRACK2-01",
       "controls": [
         "CTRL-CITE-01",
+        "CTRL-ENC-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-REDTEAM-01"
       ],
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-CITE-01",
+        "INV-CONFDATA-01",
         "INV-SEC-01",
         "INV-TRACK2-01"
       ],
@@ -258,6 +260,7 @@
       "binding_constraint": "INV-HALLUC-01",
       "controls": [
         "CTRL-CITE-01",
+        "CTRL-ENC-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01"
@@ -265,6 +268,7 @@
       "downstream_reviews": [],
       "tripped_invariants": [
         "INV-CITE-01",
+        "INV-CONFDATA-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
         "INV-HALLUC-01",
@@ -323,12 +327,14 @@
       "binding_constraint": "INV-AUTONOMY-01",
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
-        "CTRL-INDEP-VAL-01"
+        "CTRL-INDEP-VAL-01",
+        "CTRL-LOG-01"
       ],
       "downstream_reviews": [
         "Information security review"
       ],
       "tripped_invariants": [
+        "INV-ACT-LOG-01",
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -345,12 +351,14 @@
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-DRIFT-01",
+        "CTRL-LOG-01",
         "CTRL-REVERSAL-01"
       ],
       "downstream_reviews": [
         "Information security review"
       ],
       "tripped_invariants": [
+        "INV-ACT-LOG-01",
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
         "INV-IRREV-01"
@@ -366,12 +374,14 @@
       "controls": [
         "CTRL-AUTONOMY-BOUND-01",
         "CTRL-BIAS-01",
-        "CTRL-INDEP-VAL-01"
+        "CTRL-INDEP-VAL-01",
+        "CTRL-LOG-01"
       ],
       "downstream_reviews": [
         "Information security review"
       ],
       "tripped_invariants": [
+        "INV-ACT-LOG-01",
         "INV-AUTONOMY-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
@@ -414,6 +424,7 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
+        "CTRL-ENC-01",
         "CTRL-GROUND-01",
         "CTRL-INDEP-VAL-01",
         "CTRL-REDTEAM-01",
@@ -423,6 +434,7 @@
       "tripped_invariants": [
         "INV-CITE-01",
         "INV-CONDUCT-01",
+        "INV-CONFDATA-01",
         "INV-DRIFT-01",
         "INV-EXPLAIN-01",
         "INV-HALLUC-01",
