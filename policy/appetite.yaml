@@ -9,6 +9,27 @@
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
 # CHANGE LOG
+#   1.5 (2026-08-31) — closed two real coverage gaps found by a full
+#       enumeration sweep (4.23M field combinations checked against every
+#       hard line and invariant; 141,669 matched none, ~70K of those flagged
+#       risky by a crude heuristic — see the two adopted below). Confirmed
+#       via the full engine, not just the condition check: an LLM drafting
+#       from Confidential (not Client PII, not MNPI) data sent to Zone A
+#       came back "approved with controls" with only a citation control,
+#       nothing about the data leaving the firm — no zone rule existed for
+#       plain Confidential data at all (INV-DATA-01 only covers Client PII).
+#       An internal executor at autonomy L4, no human in the loop, came back
+#       "approved, zero controls, nothing to do" — INV-AGENT-01's logging +
+#       stop control only fires on model_type=agentic, so a traditional-ML
+#       or ML system that autonomously acts escaped it by not carrying that
+#       label, and escaped INV-AUTONOMY-01/02 too by being internal/advisory
+#       (those key on decision weight and audience, not on whether the
+#       system acts). Added INV-CONFDATA-01 (Confidential data to Zone A/B
+#       needs encryption, CTRL-ENC-01, one severity notch below Client
+#       PII's) and INV-ACT-LOG-01 (any system that executes/trades/approves
+#       at autonomy >= 2 needs action logging + a stop control, regardless
+#       of model_type — CTRL-LOG-01, reworded from "tool-call" to "action"
+#       logging since the requirement never depended on the agentic label).
 #   1.4 (2026-08-31) — agentic infrastructure-access rules, grounded in the
 #       August 2026 OpenAI/Hugging Face agent-collective incident (primary
 #       sources, verbatim-quoted: grounding/proposed-rules/
@@ -93,7 +114,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.4"
+version: "1.5"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -322,6 +343,25 @@ invariants:
     required_controls: ["CTRL-ENC-01"]
     regulatory_basis: "GDPR Art. 32(1)(a)"
 
+  # v1.5 (2026-08-31). Coverage sweep (4.23M-combination enumeration against
+  # every hard line and invariant) found this gap: MNPI outside Zone C is a
+  # hard line (HL-002) and Client PII outside Zone C needs encryption
+  # (INV-DATA-01 above), but plain Confidential business data — deal
+  # documents, board papers, unannounced strategy — had NO zone rule at all.
+  # An LLM drafting from Confidential data sent to the open internet came
+  # back "approved with controls" with the only control being citations,
+  # unrelated to the data leaving the firm's control. One notch below
+  # Client PII's severity (High), reflecting the classification difference —
+  # same control, same mechanism.
+  - id: "INV-CONFDATA-01"
+    description: "Confidential business data must not flow to an external or vendor-hosted model endpoint without encryption in transit"
+    condition:
+      data_class: { in: ["Confidential"] }
+      data_zone: { in: ["Zone A", "Zone B"] }
+    severity: "Medium"
+    required_controls: ["CTRL-ENC-01"]
+    regulatory_basis: "GDPR Art. 32(1)(a); RAF §4 — information classification"
+
   # INV-ZONE-01 is RETIRED (oracle round 002), not merely unused.
   #
   # v1.1 widened HL-002 to `data_zone: not_in [Zone C]` so it matched its own
@@ -404,6 +444,29 @@ invariants:
     description: "Agentic systems must log every tool call and expose an immediate stop control"
     condition:
       model_type: { in: ["agentic"] }
+    severity: "High"
+    required_controls: ["CTRL-LOG-01"]
+    regulatory_basis: "RAF §6 — agentic / tool-use controls"
+
+  # v1.5 (2026-08-31). Coverage sweep found this gap: INV-AGENT-01 above
+  # only fires on model_type = agentic. A traditional-ML or plain-ML system
+  # that autonomously EXECUTES actions — an auto-remediation bot, an
+  # order-management executor — escaped it entirely by not being labelled
+  # "agentic", and escaped INV-AUTONOMY-01/02 too by being internal-only and
+  # advisory-bindingness (those key on decision weight and audience, not on
+  # whether the system acts). Verified end to end: an internal executor,
+  # autonomy L4, no human in the loop, came back "approved, zero controls,
+  # nothing to do" — the exact risk shape (autonomous action, no logging, no
+  # stop control) the August 2026 agent-collective incident turned on, just
+  # not wearing the "agentic" label. This closes it on WHAT THE SYSTEM DOES
+  # (acts), not on how it is classified — same control as INV-AGENT-01,
+  # since the requirement (log every action, an immediate stop control,
+  # least privilege) does not depend on model_type.
+  - id: "INV-ACT-LOG-01"
+    description: "A system that acts with meaningful autonomy must log every action and expose an immediate stop control, regardless of model type or decision weight"
+    condition:
+      action_type: { in: ["execute", "trade", "approve"] }
+      autonomy_level: { gte: 2 }
     severity: "High"
     required_controls: ["CTRL-LOG-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls"
@@ -709,7 +772,7 @@ controls:
   - id: "CTRL-ENC-01"
     name: "Encryption in transit (TLS 1.3+)"
     description: "All data in transit to external endpoints must use TLS 1.3 or higher"
-    resolves: ["INV-DATA-01"]
+    resolves: ["INV-DATA-01", "INV-CONFDATA-01"]
     burden: 2
     verification: "Deployment manifest shows TLS 1.3 endpoint; no HTTP fallback"
     verification_evidence:
@@ -772,11 +835,16 @@ controls:
     verification: "Escalation path documented and exercised in test"
 
   - id: "CTRL-LOG-01"
-    name: "Tool-call logging + stop control"
-    description: "Every tool call is logged with its arguments; an immediate stop control exists and permissions are least-privilege"
-    resolves: ["INV-AGENT-01"]
+    name: "Action logging + stop control"
+    # v1.5: reworded from "Tool-call logging" (agentic-specific) to "Action
+    # logging" — INV-ACT-LOG-01 now resolves through this control too, for
+    # non-agentic systems that act. The actual requirement (log every
+    # action, an immediate stop control, least privilege) never depended on
+    # model_type; only the name did.
+    description: "Every action is logged with its arguments; an immediate stop control exists and permissions are least-privilege"
+    resolves: ["INV-AGENT-01", "INV-ACT-LOG-01"]
     burden: 3
-    verification: "Log sample showing tool calls and arguments; stop control exercised in test"
+    verification: "Log sample showing actions and arguments; stop control exercised in test"
 
   # --- v1.4 agentic infrastructure-access controls ---------------------------
   # One control per failure mode observed in the 2026 incident, so the verdict

@@ -200,12 +200,14 @@ does = *approve*, client-facing, binding, reversible, at scale, decision type =
 **jurisdictions = UK and EU**
 
 **Expect:** **Approved with controls**, Tier Critical, Track I, binding
-constraint **INV-AUTONOMY-01**, 6 controls, 2 downstream reviews, Provisional.
+constraint **INV-AUTONOMY-01**, 7 controls, 2 downstream reviews, Provisional.
 
 *The demo case. It exercises everything at once: a jurisdictional override, an
 envelope breach, a governance margin with three invariants resting on a single
 control, a full reasoning chain, and an information-security review triggered
-downstream. Scroll the whole verdict.*
+downstream. It also trips INV-ACT-LOG-01 (v1.5) — approving at autonomy level
+3 needs action logging + a stop control, same as an agentic system would, even
+though this is traditional ML. Scroll the whole verdict.*
 
 ---
 

@@ -154,7 +154,9 @@ describe('docs/try-these.md — every printed outcome', () => {
     expect(v.tier).toBe('Critical');
     expect(v.track).toBe('I');
     expect(v.binding_constraint).toBe('INV-AUTONOMY-01');
-    expect(v.controls).toHaveLength(6);
+    // v1.5: also trips INV-ACT-LOG-01 (approve + autonomy 3), adding
+    // CTRL-LOG-01 — 6 -> 7. See docs/try-these.md's updated prose.
+    expect(v.controls).toHaveLength(7);
     expect(v.downstream_reviews).toHaveLength(2);
     expect(v.provisional_reasons).toContain('unsigned_pack_rules');
   });
