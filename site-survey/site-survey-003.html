@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGate — Site Survey 003</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Requirement Blocks ── */
+    .req {
+      background: #f7f7f0;
+      border-left: 3px solid #999;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .req-id {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+
+    .req p { margin-bottom: 0.3rem; }
+
+    /* ── Scenario Badge ── */
+    .scenario-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.35rem 0.7rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .scenario-badge.coherent {
+      background: #2d7a3a;
+      color: #fff;
+    }
+
+    /* ── Health Scorecard Color Coding ── */
+    .score-green {
+      background: #e8f5e9;
+      color: #2d7a3a;
+      font-weight: 600;
+    }
+
+    .score-amber {
+      background: #fff3e0;
+      color: #e67e22;
+      font-weight: 600;
+    }
+
+    .score-red {
+      background: #ffebee;
+      color: #c62828;
+      font-weight: 600;
+    }
+
+    /* ── Risk Area Blocks (Important) ── */
+    .risk-block {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .risk-id {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #e67e22;
+      margin-bottom: 0.4rem;
+    }
+
+    .risk-severity {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.4rem;
+      background: #e8a850;
+      color: #fff;
+      border-radius: 2px;
+      margin-left: 0.3rem;
+    }
+
+    .risk-block h3 {
+      margin-top: 0.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .risk-block p {
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Open Questions ── */
+    .open-question {
+      background: #fff8f0;
+      border-left: 3px solid #e8a850;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      max-width: 640px;
+    }
+
+    .oq-context {
+      font-size: 0.88rem;
+      color: #888;
+      font-style: italic;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Code Block ── */
+    pre {
+      background: #f5f5f0;
+      border-left: 3px solid #ccc;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0 1.2rem;
+      overflow-x: auto;
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      max-width: 640px;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Blockquote ── */
+    blockquote {
+      border-left: 3px solid #e0e0e0;
+      padding-left: 1rem;
+      margin: 1rem 0 1.2rem;
+      font-style: italic;
+      color: #666;
+      max-width: 640px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">2026-08-31 — Living Document</p>
+    <h1>AIGate — Site Survey 003</h1>
+    <p class="subtitle">AI-Engineering-Fundamentals + "What Are We Not Pre-Detecting" Audit</p>
+
+    <blockquote>
+      Requested by the owner after reading an AI-engineering-skills essay (five pillars: full-stack, data management, system architecture, security/reliability, production readiness) alongside source material on the August 2026 Hugging Face rogue-agent incident at OpenAI. Scope: audit AIGate against the five pillars, and — the owner's explicit addition — identify what AIGate is not yet pre-detecting, at the build/dev-practice level and at the product/domain level. <strong>Diagnosis only; no code changed.</strong> Findings feed the V2 backlog the owner has deliberately not started yet.
+    </blockquote>
+
+    <!-- 1. Executive Summary -->
+    <h2 id="executive-summary">Executive Summary</h2>
+
+    <p>AIGate is a <strong>Coherent</strong> <span class="scenario-badge coherent">Coherent</span> codebase (see §4) — one architecture, applied consistently, for 254 commits by a single committer. The five-pillars audit finds the current client-side-only, no-backend, no-production shape is an <strong>appropriate simplification for what this product is today</strong> (a demo/pilot tool, not a live production system), not a corner cut. Nothing here blocks continued work at the current scope.</p>
+
+    <p>Two real gaps surfaced under the owner's explicit "what are we not pre-detecting" lens (§6), both grounded in evidence, neither hypothetical:</p>
+
+    <ul>
+      <li><strong>Build/dev-practice</strong>: <code>scripts/publish-site.sh</code> force-pushes straight to the public <code>gh-pages</code> branch with <strong>no CI gate between the decision to publish and the live public site</strong>. <code>main</code> has no branch protection. There is no secrets-scanning or dependency-audit step in CI.</li>
+      <li><strong>Product/domain</strong>: AIGate's own hard-line rules (<code>policy/appetite.yaml</code>) gate agentic systems with <em>binding decision authority</em> (HL-006), but the intake form's <code>decision_type</code> vocabulary has no category for infrastructure/system-access/deployment AI — the shape of use case the Hugging Face incident represents. A bank using AIGate to pre-check that kind of system could go through intake without ever being prompted to name it that way.</li>
+    </ul>
+
+    <p>Neither finding requires action today — the survey's job is naming them, not fixing them. <strong>Route recommendation (§10): file both as V2 backlog items, route through <code>/gvm-requirements</code> when V2 starts.</strong> Do not fix piecemeal now.</p>
+
+    <!-- 2. Codebase Profile -->
+    <h2 id="codebase-profile">Codebase Profile</h2>
+
+    <table>
+      <thead>
+        <tr><th>Dimension</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Language</td><td>TypeScript (React 19, Vite, no backend)</td></tr>
+        <tr><td>Size</td><td>31,689 lines across <code>src/*.ts</code>/<code>*.tsx</code></td></tr>
+        <tr><td>Tests</td><td>77 test files, 692 tests (per this session's own <code>npm test</code> runs)</td></tr>
+        <tr><td>Commits</td><td>254, single committer (<code>oza977-max</code>)</td></tr>
+        <tr><td>Dependencies</td><td>8 runtime (<code>@anthropic-ai/sdk</code>, <code>idb</code>, <code>js-yaml</code>, <code>react</code>, <code>react-dom</code>, <code>uuid</code>, <code>zod</code>, <code>zustand</code>), 13 dev</td></tr>
+        <tr><td><code>npm audit</code></td><td>0 vulnerabilities at any severity (checked live, this survey)</td></tr>
+        <tr><td>CI</td><td>GitHub Actions, <code>.github/workflows/ci.yml</code> — runs on push/PR to <code>main</code>: <code>npm test</code>, <code>tsc --noEmit</code>, <code>npm run build</code>, <code>scripts/spec-parity-check.py</code></td></tr>
+        <tr><td>Deployment</td><td>GitHub Pages, <code>gh-pages</code> branch, published via local <code>npm run publish-site</code> (§6.1 — not part of CI)</td></tr>
+        <tr><td>Storage</td><td>Client-side only — two IndexedDB stores (<code>aigate-audit</code>, <code>aigate-register</code>), confirmed empty <code>localStorage</code>/<code>sessionStorage</code> on the live site (checked via <code>indexedDB.databases()</code> this session)</td></tr>
+      </tbody>
+    </table>
+
+    <span class="sidenote">
+      Single committer across 254 commits means the standard "code review catches what one person misses" mechanism has never applied here by construction — worth naming plainly rather than treating as an oversight (§6.1).
+    </span>
+
+    <!-- 3. Architectural Map -->
+    <h2 id="architectural-map">Architectural Map</h2>
+
+    <p>Already self-documented in <code>specs/cross-cutting.md</code> §7 and enforced by convention (not tooling) at four boundaries, confirmed present in the code this session touched directly:</p>
+
+    <ol>
+      <li><code>src/engine/*</code> — pure island. No React, no <code>idb</code>, no SDK, no <code>Date.now()</code>, no <code>Math.random()</code>, no I/O anywhere in its call graph.</li>
+      <li><code>src/llm/*</code> — the only place the Anthropic SDK is imported.</li>
+      <li><code>src/store/*</code> — persistence-only (IndexedDB via <code>idb</code>), no evaluation logic, no React.</li>
+      <li><code>src/components/*</code> — presentation-only, calls engine/store functions, never inlines business logic.</li>
+    </ol>
+
+    <span class="sidenote">
+      This session's own work (<code>src/components/RegisterDetail.tsx</code>, <code>src/components/VerdictDisplay.tsx</code>, <code>src/store/types.ts</code>, <code>src/store/audit.ts</code>) is consistent with all four boundaries — no cross-boundary import was added while building the hash-chained audit trail or the completion-tracking feature.
+    </span>
+
+    <p><strong>Data flow</strong>: use case → <code>engine/evaluate()</code> (pure, deterministic) → <code>Verdict</code> → <code>store/audit.ts</code> (<code>append()</code>, hash-chained, <code>IndexedDB</code>) → <code>components/*</code> render. No network calls in the decision path — the About page states this as a security property ("no model in the decision path, so there is no model to jailbreak into a verdict"), and this survey's network-request check on the live site (read-only, this session) found no external calls beyond the GitHub Pages asset bundle itself.</p>
+
+    <!-- 4. Health Scorecard -->
+    <h2 id="health-scorecard">Health Scorecard</h2>
+
+    <table>
+      <caption>Table 1 — Codebase health dimensions with color-coded scoring</caption>
+      <thead>
+        <tr><th>Dimension</th><th>Score (1–5)</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Coherence</td><td class="score-green">5</td><td>Four boundaries stated in <code>specs/cross-cutting.md</code> and observed intact across every file this session touched</td></tr>
+        <tr><td>Currency</td><td class="score-green">4</td><td>React 19, Vite, modern TS; no legacy async patterns found</td></tr>
+        <tr><td>Testability</td><td class="score-green">5</td><td>692 tests, engine is pure functions (trivially testable), <code>fake-indexeddb</code> isolates store tests</td></tr>
+        <tr><td>Modularity</td><td class="score-green">5</td><td>Boundary rule enforced by convention and, per this session's own edits, held without exception</td></tr>
+        <tr><td>Documentation</td><td class="score-green">5</td><td><code>CLAUDE.md</code>, <code>specs/*</code>, inline rationale comments throughout — an unusually well-documented codebase for its size</td></tr>
+        <tr><td>Dependency Health</td><td class="score-green">5</td><td>8 runtime deps, all current, <code>npm audit</code> clean</td></tr>
+        <tr><td>Usability (UI present)</td><td class="score-green">4</td><td>Strong copy discipline (NF-2 honesty rule), but this session's own exploratory testing (explore-010, in progress) found a real navigation defect — browser Back does not return to the register list, because the app never calls the History API (§6, Risk Areas)</td></tr>
+      </tbody>
+    </table>
+
+    <span class="sidenote">
+      <strong>Scenario: Coherent.</strong> High coherence, balanced scores, one architecture applied consistently by one committer with strong documentation discipline. No drift, no bolted-on modules, no competing patterns.
+    </span>
+
+    <!-- 5. Diagnosis -->
+    <h2 id="diagnosis">Diagnosis</h2>
+
+    <p>Coherent codebases route new work straight through extension of the existing pattern (§10) — there is no remediation debt to clear first. The five-pillars audit below is organized as <strong>applies now</strong> vs <strong>would need answers before V2</strong>, per the owner's explicit framing.</p>
+
+    <h3 id="full-stack-basics">5.1 Full-stack basics</h3>
+
+    <p><strong>Applies now</strong>: React component architecture, state management (React state + <code>zustand</code> where used), form design (the 19-question guided intake, <code>src/components/IntakeFlow.tsx</code>), accessibility basics (native <code>&lt;details&gt;</code>, <code>&lt;label&gt;</code> associations — confirmed via this session's <code>read_page</code> accessibility-tree checks on the live site).</p>
+
+    <p><strong>Does not apply yet, correctly</strong>: authentication (there is none — the role selector is a stated "view preference, not a permission," and the About page says so explicitly), session management, server-side API design. These are not gaps — a client-side, no-sign-in demo has no server to design an API for.</p>
+
+    <p><strong>Would need real answers before V2</strong>: the moment V2 introduces a <code>model_version_changed</code> event with any server-side trigger (per <code>strategy/post-deployment-positioning.md</code>), authentication and API design stop being "doesn't apply" and become load-bearing decisions.</p>
+
+    <h3 id="data-management">5.2 Data management</h3>
+
+    <p><strong>Applies now</strong>: the append-only, hash-chained audit trail (<code>src/store/audit.ts</code>) is a genuinely considered data model — write-queue mutex for concurrency safety, <code>verifyChain()</code> for tamper evidence, explicit about what it cannot prove (tamper-<em>proof</em>, not just tamper-<em>evident</em>, requires an external anchor V1 does not have — stated on the live product itself, not just in docs).</p>
+
+    <p><strong>Genuine risk, not merely a simplification</strong>: all case data — including category fields like "personal details of clients" that the intake form itself asks about — lives <strong>only</strong> in the submitting user's own browser IndexedDB. Clearing browser data destroys the record permanently; nothing on the live product warns of this. For a demo this is an acceptable tradeoff. For anything closer to a real records-retention obligation (§5.4), it is a genuine gap, not a stylistic one — flagged here as new, this survey found no prior mention of it in <code>design-vision.md</code> or <code>CLAUDE.md</code>.</p>
+
+    <span class="sidenote">
+      See <code>design-vision.md</code> (local only, gitignored) for product north star and internal-adoption plan. The file is purged from history 2026-07-26.
+    </span>
+
+    <p><strong>Would need real answers before V2</strong>: any monitoring/re-evaluation feature needs a data model for "this event happened to a model already in the register" — the re-evaluation queue exists today (<code>re_evaluation_queued</code> event type) but nothing currently <em>originates</em> such an event from outside the app itself.</p>
+
+    <h3 id="system-architecture">5.3 System architecture</h3>
+
+    <p><strong>Applies now</strong>: the four-boundary convention (§3) is the whole architecture, and it is well-suited to what this product is — deterministic evaluation, append-only audit, presentation. No premature microservices, no over-engineered abstraction.</p>
+
+    <p><strong>Would need real answers before V2</strong>: "the right architecture is a moving target" (the owner's pasted essay's own words) applies directly here — a <code>model_version_changed</code> trigger implies <em>something</em> outside the browser tab knows a model changed, which the current architecture has no place for. This is exactly the kind of decision <code>/gvm-requirements</code> + <code>/gvm-tech-spec</code> exist to make deliberately, not the kind to back into.</p>
+
+    <h3 id="security-reliability">5.4 Security &amp; reliability</h3>
+
+    <p><strong>Applies now, and done well</strong>: <code>npm audit</code> clean; no secrets committed (checked via <code>git log --all</code> for <code>.env</code>/<code>secret</code>/<code>credential</code> filenames this session, found none); no external network calls beyond static asset hosting; the "no AI in the decision path" design is stated as a deliberate security property, not an accident.</p>
+
+    <p><strong>Genuine gap, not a simplification — see §6.1</strong>: no branch protection on <code>main</code>, no secrets-scanning step in CI, no CODEOWNERS, and — the sharpest finding — the publish step that puts code on the live public internet has <strong>zero automated gate</strong>, run entirely by local script invocation.</p>
+
+    <h3 id="scaling-production-readiness">5.5 Scaling &amp; production readiness</h3>
+
+    <p><strong>Does not apply yet, correctly</strong>: there are no real users, no load, no uptime commitment, no incident process — because there is no production deployment in the sense the essay means it (a static GitHub Pages site with zero backend has no server to scale). Not a gap; a fact about what this product is today.</p>
+
+    <p><strong>Would need real answers before V2</strong>: the moment V2 introduces any server-side component (even a lightweight webhook receiver for <code>model_version_changed</code>), the full SDLC list from the essay — deployment environment, release strategy, CI/CD, observability, incident handling — goes from "not applicable" to "day one requirement."</p>
+
+    <!-- 6. Risk Areas -->
+    <h2 id="risk-areas">Risk Areas — "What Are We Not Pre-Detecting" (owner's explicit lens)</h2>
+
+    <p>Kept separate from §5's general fundamentals findings per the owner's instruction — these are specifically about detection gaps, not general code quality.</p>
+
+    <h3 id="build-dev-practice">6.1 Build/dev-practice level</h3>
+
+    <div class="risk-block">
+      <div class="risk-id">
+        Finding: Build/Dev-Practice
+        <span class="risk-severity">Important</span>
+      </div>
+      <p><strong>There is no gate between an agent's (or any committer's) decision to publish and the live public site going live.</strong></p>
+
+      <p><strong>Evidence, read directly this session:</strong></p>
+
+      <ul>
+        <li><code>.github/workflows/ci.yml</code> runs <code>npm test</code>, <code>tsc --noEmit</code>, <code>npm run build</code>, and <code>scripts/spec-parity-check.py</code> — but only on <code>push</code>/<code>pull_request</code> to <code>main</code>. It does not run on, gate, or even observe a publish.</li>
+        <li><code>scripts/publish-site.sh</code> builds <code>dist/</code> locally and runs <code>git push -q -f origin gh-pages</code> — a <strong>force push</strong>, run by whoever (or whatever agent) executes <code>npm run publish-site</code> locally. Nothing between the build and this push re-checks anything.</li>
+        <li><code>gh api repos/oza977-max/ai-raf-precheck/branches/main/protection</code> returned <code>404 Branch not protected</code> (checked live, this session) — <code>main</code> itself accepts a direct push with no required review or status check.</li>
+        <li>No secrets-scanning tool (gitleaks, trufflehog, or equivalent) appears in CI or as a pre-commit hook. <code>git log --all</code> search for <code>.env</code>/<code>secret</code>/<code>credential</code> filenames found none committed — clean today, but nothing mechanically prevents a future one.</li>
+        <li>No <code>CODEOWNERS</code> file exists.</li>
+      </ul>
+
+      <span class="sidenote">
+        See <code>.github/workflows/ci.yml</code>, <code>scripts/publish-site.sh</code>, and <code>docs/github-pages-workflow.yml</code> (unused, pre-written as a proper fix).
+      </span>
+
+      <p><strong>Why this is the real parallel to the incident the owner flagged</strong>: the Hugging Face incident's structural shape (per the owner's source list — not independently verified by this survey, no article was fetched) was an autonomous agent with broad system access acting with no gate before consequence. AIGate's own dev workflow has exactly one place where that shape exists: Claude Code, in this repo, has filesystem, git-push, and publish-site execution access, and nothing <em>mechanical</em> stops a bad build from reaching the public internet — only the verification ritual in <code>CLAUDE.md</code> (<code>npm test</code> ×3, <code>tsc</code>, <code>build</code>, spec-parity, live walkthrough), which is a <strong>process</strong> followed by an agent, not a <strong>gate</strong> enforced independently of the agent.</p>
+
+      <p><strong>This is not a hypothetical dressed up as a finding</strong>: <code>docs/github-pages-workflow.yml</code> already exists in the repo, unused, as a written-down "proper fix" (an Actions workflow that would rebuild on every push instead of a local force-push) — its own comment in <code>publish-site.sh</code> says installing it "needs a token with <code>workflow</code> scope, so until then, run: <code>npm run publish-site</code>." The gap was already identified by a prior session and deliberately deferred, not missed.</p>
+    </div>
+
+    <h3 id="product-domain">6.2 Product/domain level (dogfooding self-check)</h3>
+
+    <div class="risk-block">
+      <div class="risk-id">
+        Finding: Product/Domain
+        <span class="risk-severity">Important</span>
+      </div>
+      <p><strong>AIGate's own rulebook has a hard line for agentic systems with <em>binding decision authority</em>, but no vocabulary for agentic systems with <em>broad system/infrastructure access</em> — a materially different risk shape, and the one the Hugging Face incident represents.</strong></p>
+
+      <p><strong>Evidence, read directly from <code>policy/appetite.yaml</code> this session:</strong></p>
+
+      <pre><code>- id: "HL-006"
+  description: "Agentic system holding binding decision authority at full autonomy"
+  condition:
+    model_type: { in: ["agentic"] }
+    autonomy_level: { gte: 4 }
+    decision_bindingness: { in: ["binding"] }
+  reason: "An agent that both chooses its own actions and binds the firm to
+    them has no point at which a human ratifies the decision."
+  regulatory_basis: "SR 26-2 §III.C (agentic AI); OSFI E-23 §4.3"</code></pre>
+
+      <p>HL-006 fires correctly for the business-decision shape it names — a lending, trading, or pricing agent acting fully autonomously. It does <strong>not</strong> obviously fire for a <em>coding or infrastructure</em> agent: the intake form's <code>decision_type</code> field (read from <code>src/components/IntakeFlow.tsx</code>'s guided form, confirmed live on the published site this session) offers: <code>credit-decision</code>, <code>lending-decision</code>, <code>fraud-detection</code>, <code>trading</code>, <code>pricing</code>, <code>hiring</code>, <code>regulatory-reporting</code>, <code>operational</code>, or <code>something-else — let me describe it</code>. None of these is named "infrastructure access," "deployment," or "system credentials." A bank employee pre-checking "an AI coding agent with push access to our production systems" would most naturally reach for <code>operational</code> — a generic bucket that does not itself prompt anyone to think about the autonomy/binding-authority combination HL-006 is built to catch, unless they separately, correctly classify the agent's <em>output</em> as <code>binding</code> (a business-decision term) rather than, say, <code>execute</code> (which reads more naturally for "it does the deployment").</p>
+
+      <span class="sidenote">
+        Read from <code>src/components/IntakeFlow.tsx</code> and verified live on the published site. Schema defined in the form's component state.
+      </span>
+
+      <p><strong>This is a real gap, not a fabricated one</strong>: the schema has no field capturing "scope of system/credential access" at all — not data sensitivity (already asked), not autonomy level (already asked), but literally <em>what can this thing reach and touch</em>. That is the dimension the incident's own reported shape turns on, and it is currently invisible to AIGate's own intake form.</p>
+
+      <p><strong>Scale of the gap</strong>: this is one missing vocabulary term and possibly one new hard-line condition, not an architectural rewrite. It fits cleanly into V2 scope (a new <code>decision_type</code> value plus, potentially, a new hard line analogous to HL-006 but keyed on system-access scope rather than business-decision bindingness) — flagged here, not designed here.</p>
+    </div>
+
+    <!-- 7. Diagnostic Experts Used -->
+    <h2 id="diagnostic-experts">Diagnostic Experts Used</h2>
+
+    <table>
+      <caption>Table 2 — Expert consultation and role in this survey</caption>
+      <thead>
+        <tr><th>Expert</th><th>Role</th><th>Cited in diagnosis?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Refactoring specialist</td><td>Pattern recognition</td><td>Confirmed Coherent scenario — no refactoring signal found</td></tr>
+        <tr><td>Legacy-code specialist</td><td>Legacy assessment</td><td>Confirmed high testability, no characterisation-test smell</td></tr>
+        <tr><td>Data-intensive specialist</td><td>Data layer diagnosis</td><td>Grounded §5.2's assessment of the hash-chained audit trail and the browser-storage retention gap</td></tr>
+        <tr><td>Service-boundary specialist</td><td>Boundary assessment</td><td>Grounded §3's four-boundary confirmation</td></tr>
+      </tbody>
+    </table>
+
+    <span class="sidenote">
+      Refer to <code>domain/refactoring.md</code>, <code>domain/legacy-code.md</code>, <code>domain/data-intensive.md</code>, <code>domain/service-boundaries.md</code> for detailed expert frameworks.
+    </span>
+
+    <p>This survey ran in single-context mode (§Context Window Management) — the codebase is well within the size where per-module fan-out is unnecessary, and this session already held deep, freshly-verified context on the exact files touched (<code>RegisterDetail.tsx</code>, <code>VerdictDisplay.tsx</code>, <code>store/types.ts</code>, <code>store/audit.ts</code>) from the work immediately preceding this survey.</p>
+
+    <!-- 8. Expert Coverage Assessment -->
+    <h2 id="expert-coverage">Expert Coverage Assessment</h2>
+
+    <p>No new domain gap requiring expert discovery — this survey's two novel findings (§6) are evidence-based facts about specific files (CI config, policy YAML, intake form), not judgment calls needing a named framework. The existing Tier-1/2 roster (architecture + the four domain specialists above) covers the ground this survey needed.</p>
+
+    <!-- 9. Recommended Project Experts -->
+    <h2 id="recommended-experts">Recommended Project Experts</h2>
+
+    <table>
+      <caption>Table 3 — Project expert roster (unchanged from prior surveys)</caption>
+      <thead>
+        <tr><th>Expert</th><th>Work</th><th>Tier</th><th>Classification</th><th>Reference file</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6">(unchanged from prior surveys — this survey did not add or rescore any expert)</td></tr>
+      </tbody>
+    </table>
+
+    <p>No roster change from <code>site-survey-002</code>. This survey is a diagnostic add-on, not a re-scoping of the project's expert panel.</p>
+
+    <!-- 10. Route Recommendation -->
+    <h2 id="route-recommendation">Route Recommendation</h2>
+
+    <p><strong>Work type</strong>: neither a user-facing feature nor a targeted fix — this is a <strong>diagnosis feeding a future requirements round</strong>, per the route matrix's "technical remediation" row, except there is no remediation debt (§5 found none). The two §6 findings are genuinely new information, not existing debt.</p>
+
+    <p><strong>Recommendation: do not route anywhere immediately.</strong> Per the owner's own framing this turn ("we will build [this] ongoing as version 2") — both §6 findings should be filed as V2 backlog items and routed through <code>/gvm-requirements</code> when V2 requirements work actually starts, alongside <code>strategy/post-deployment-positioning.md</code>. Fixing either piecemeal now would be exactly the kind of un-scoped, un-reviewed change the §6.1 finding itself warns against — a CI/branch-protection change and a policy-schema change both deserve the same deliberate process as any other feature, not a fast follow-up patch.</p>
+
+    <p><strong>One exception worth flagging separately, not acting on unprompted</strong>: §6.1 identifies a specific, small, well-scoped fix (enabling the pre-written <code>docs/github-pages-workflow.yml</code>, requiring a <code>workflow</code>-scope token) that is arguably NOT V2 scope — it is hygiene on the <em>existing</em> product, not a new capability. This survey names it; whether to treat it as an immediate small fix or bundle it into V2 is the owner's call, not this survey's.</p>
+
+    <!-- 11. Open Questions -->
+    <h2 id="open-questions">Open Questions</h2>
+
+    <div class="open-question">
+      <p><strong>OQ-1:</strong> Whether the Hugging Face incident's actual technical mechanism matches this survey's "broad system access, no human checkpoint" characterisation — this survey did not fetch or read any of the owner's cited source articles, per scope (a site survey is static analysis of <em>this</em> codebase, not external research). If the actual incident mechanism differs materially, §6.2's proposed new hard-line dimension should be revisited before being scoped into V2 requirements.</p>
+    </div>
+
+    <div class="open-question">
+      <p><strong>OQ-2:</strong> Whether "operational" as a <code>decision_type</code> value should simply be split, or whether a wholly new field (system/credential access scope, orthogonal to <code>decision_type</code>) is the more honest fix — this is a schema design decision for <code>/gvm-requirements</code>, not resolved here.</p>
+    </div>
+
+    <div class="open-question">
+      <p><strong>OQ-3:</strong> Whether the owner wants the GitHub Pages Actions-workflow fix treated as immediate hygiene or bundled into V2 (§10).</p>
+    </div>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
