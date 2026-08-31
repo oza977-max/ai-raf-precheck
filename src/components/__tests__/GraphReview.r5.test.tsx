@@ -74,7 +74,10 @@ describe('R5-GR-1 — every decision-bearing field explains itself', () => {
   it('TC-R5-GR-1-03: absent optional fields say "not stated" rather than defaulting', () => {
     render(<GraphView graph={makeGraph()} />);
     // decision_type and hitl are absent on the fixture output node.
-    expect(screen.getAllByText('not stated').length).toBe(2);
+    // decision_type + hitl (output node) and, since v1.4,
+    // system_access_scope + multi_instance_coordination (processing node) —
+    // all four optional, all four honestly "not stated" when unanswered.
+    expect(screen.getAllByText('not stated').length).toBe(4);
   });
 });
 

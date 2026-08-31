@@ -336,6 +336,20 @@
 
     <h2 id="main-policy-schema">Main Policy File Schema</h2>
 
+    <h3 id="canonical-vocabulary-v14">Canonical vocabulary addition (v1.4, 2026-08-31)</h3>
+    <p>Agentic infrastructure-access vocabulary, grounded in
+    <code>grounding/proposed-rules/agentic-infrastructure-access.md</code>. Optional on the
+    graph: absent means &ldquo;not stated&rdquo; and no condition fires on it.</p>
+    <pre><code>export type SystemAccessScope =
+  | 'none'
+  | 'shared_infrastructure'
+  | 'credentialed_systems'
+  | 'deployment_authority';
+
+// multi_instance_coordination: 'yes' | 'no' | 'unknown' — a string enum, not
+// boolean, because 'unknown' is a real answer distinct from unanswered and
+// deliberately fires INV-AGENT-COORD-01.</code></pre>
+
     <h3 id="top-level-structure">Top-level structure</h3>
     <pre><code># policy/appetite.yaml
 # AIGate Risk Appetite Framework — [FIRM] Bank

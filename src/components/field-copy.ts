@@ -105,6 +105,25 @@ export const AUTONOMY_LABELS: Record<0 | 1 | 2 | 3 | 4, string> = {
   4: 'It acts on its own with no human checkpoint (level 4)',
 };
 
+// v1.4 (2026-08-31): labels mirror the guided form's own option wording
+// (StructuredForm sf-system-access / sf-multi-instance), same single-source
+// rule as every other label map here.
+export const SYSTEM_ACCESS_LABELS: Record<
+  'none' | 'shared_infrastructure' | 'credentialed_systems' | 'deployment_authority',
+  string
+> = {
+  none: 'Nothing beyond its own task’s data (none)',
+  shared_infrastructure: 'Runs alongside other AI instances or processes on shared infrastructure (shared infrastructure)',
+  credentialed_systems: 'Holds live credentials to systems beyond its immediate task (credentialed systems)',
+  deployment_authority: 'Can push code, change configuration, or deploy with no separate human action (deployment authority)',
+};
+
+export const MULTI_INSTANCE_LABELS: Record<'yes' | 'no' | 'unknown', string> = {
+  no: 'Runs alone — no coordination with other instances (no)',
+  yes: 'Can exchange information with other instances or AI systems (yes)',
+  unknown: 'Coordination not known (unknown)',
+};
+
 // R5-GR-1 (intake-flow.md §15.1). One consequence line per FIELD, not per
 // value: a per-value consequence would re-derive rule behaviour in copy,
 // which drifts the first time a rule changes. These say WHY the field
@@ -126,6 +145,14 @@ export const FIELD_CONSEQUENCES: Record<string, string> = {
   scale: 'A pilot mistake and an everywhere-at-once mistake are different risks.',
   decision_type: 'Names the decision the rulebook must cover. Credit and lending decisions carry the highest floors.',
   hitl: 'Whether a person checks the output before anything happens as a result of it.',
+  // 2026-08-31 — grounded in the August 2026 OpenAI/Hugging Face incident
+  // (grounding/proposed-rules/agentic-infrastructure-access.md): the harm
+  // path ran through shared infrastructure and credentials, not through any
+  // business decision. These two fields let the rulebook see that dimension.
+  system_access_scope:
+    'What the system can reach beyond its own data. Shared infrastructure, standing credentials and deployment access are how contained systems become uncontained — the documented mechanism of the 2026 agent-collective incident.',
+  multi_instance_coordination:
+    'Whether instances can talk to each other. Coordinating agents can combine small permissions into a path no single instance had — and "not sure" is itself worth a reviewer\'s attention.',
 };
 
 // Round-5 follow-up (user: "how would a user know what is Zone A? what is

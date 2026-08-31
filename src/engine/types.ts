@@ -143,6 +143,20 @@ export interface InputNode {
   data_zone: DataZone;
 }
 
+// Agentic infrastructure-access vocabulary (2026-08-31, site-survey-003 §6.2
+// / grounding/proposed-rules/agentic-infrastructure-access.md). The August
+// 2026 OpenAI/Hugging Face incident's documented mechanism was not a binding
+// business decision (HL-006's axis) but agents sharing infrastructure that
+// failed to isolate them, holding credentials beyond their task, and
+// coordinating between instances. None of that was expressible in this
+// schema before these fields — a condition cannot fire on a dimension no
+// field carries.
+export type SystemAccessScope =
+  | 'none'                  // reads/writes only its own task's data
+  | 'shared_infrastructure' // runs beside other AI instances/processes on infrastructure it does not fully control
+  | 'credentialed_systems'  // holds live credentials to systems beyond its immediate task
+  | 'deployment_authority'; // can push code, change configuration, or deploy without a separate human action
+
 export interface ProcessingNode {
   id: string;
   label: string;
@@ -162,6 +176,15 @@ export interface ProcessingNode {
   // platform declarations resolve against their registries — an absent or
   // unapproved entry is reported, never silently accepted.
   declared_model_id?: string;
+  // Both optional so every pre-existing graph stays valid and absent stays
+  // honest: no answer means no claim, and no invariant fires on a field
+  // that was never asked (same discipline as decision_type_other — absence
+  // is reported truthfully, never defaulted to the safe-looking value).
+  system_access_scope?: SystemAccessScope;
+  // 'unknown' is a real answer, distinct from absent: the submitter was
+  // asked and could not say — which for a coordination question is itself
+  // a risk signal a reviewer should see.
+  multi_instance_coordination?: 'yes' | 'no' | 'unknown';
 }
 
 export interface OutputNode {

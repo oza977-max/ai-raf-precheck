@@ -137,6 +137,11 @@ export interface ProcessingNode {
   vendor: string;              // "internal" | vendor name
   replaces_prior_model: boolean;  // TRACK-II-REPLACE trigger (RAF §5 rule 3)
   uncertain?: boolean;         // True if LLM could not determine this with confidence
+  // v1.4 (2026-08-31): agentic infrastructure-access vocabulary, grounded in
+  // grounding/proposed-rules/agentic-infrastructure-access.md. Both optional —
+  // blank at intake means "not stated" and no rule fires on an absent field.
+  system_access_scope?: SystemAccessScope;   // 'none' | 'shared_infrastructure' | 'credentialed_systems' | 'deployment_authority'
+  multi_instance_coordination?: 'yes' | 'no' | 'unknown';  // 'unknown' is a real answer and fires INV-AGENT-COORD-01
 }
 
 export interface OutputNode {

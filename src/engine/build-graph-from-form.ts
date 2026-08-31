@@ -7,6 +7,7 @@ import type {
   DecisionType,
   Exposure,
   ModelType,
+  SystemAccessScope,
 } from './types';
 
 // UC-3a structured form output (intake-flow.md §5.3). Pure — no I/O, same
@@ -47,6 +48,11 @@ export interface StructuredFormValues {
    *  it, and pretending otherwise would silently under-classify. */
   decisionTypeOther?: string;
   hitl?: boolean;
+  // Agentic infrastructure-access questions (2026-08-31, grounded in
+  // grounding/proposed-rules/agentic-infrastructure-access.md). Optional —
+  // blank means "not stated", never a defaulted safe answer.
+  systemAccessScope?: SystemAccessScope;
+  multiInstanceCoordination?: 'yes' | 'no' | 'unknown';
   jurisdictions: string[];
 }
 
@@ -82,6 +88,12 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
             ? { declared_model_id: values.declaredModelId.trim() }
             : {}),
         replaces_prior_model: values.replacesPriorModel,
+        ...(values.systemAccessScope !== undefined
+          ? { system_access_scope: values.systemAccessScope }
+          : {}),
+        ...(values.multiInstanceCoordination !== undefined
+          ? { multi_instance_coordination: values.multiInstanceCoordination }
+          : {}),
       },
     ],
     output_nodes: [
