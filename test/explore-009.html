@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-009</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-009</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-009</li>
+<li><strong>Mission:</strong> Confirmation round for the completion-tracking build (design-vision.md L-6, originally flagged by Stephen in explore-007 as &quot;what have I gained over a checklist in our NPPA template?&quot;). Same persona (Stephen, skeptical bank MD) opens a live case with outstanding controls on the published site, tries to assign an owner and target date to a control, reassigns it, and checks whether the age/overdue signal reads honestly — no reminders, no notifications implied. Owner classifies severity for anything found per Hard Gate 4 (ADR-205).</li>
+<li><strong>Tour:</strong> feature</li>
+<li><strong>Timebox (minutes):</strong> 30</li>
+<li><strong>Runner:</strong> oza977-max</li>
+<li><strong>Target:</strong><ul>
+<li>https://oza977-max.github.io/ai-raf-precheck/</li>
+<li>src/components/VerdictDisplay.tsx</li>
+<li>src/components/RegisterDetail.tsx</li>
+<li>src/store/types.ts</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>Loaded demo data on the published site (fresh IndexedDB origin, separate from the local dev store used during the build&#x27;s own live check) — 22 use cases, including [IB] Compliance — Surveillance alert triage (2 OUTSTANDING controls, no prior ownership assignments on this origin).</li>
+<li>Opened the case as Stephen (skeptical bank MD persona), expanded the first outstanding control (Independent validation, CTRL-INDEP-VAL-01).</li>
+<li>Typed a name with no target date set — confirmed the Assign button stays disabled (native form, no partial event can be written).</li>
+<li>Set an overdue target date (2026-01-01) and submitted — control now reads &#x27;Owner: Stephen Marsh (name not verified) · target 2026-01-01 · overdue 242 days&#x27;, and the audit trail gained one control_ownership_assigned event with plain-language detail text.</li>
+<li>Clicked Reassign — the form pre-filled with the current owner&#x27;s name rather than opening blank.</li>
+<li>Changed the owner to Priya Nair and the target date to 2026-12-31, submitted — the UI now shows only the latest assignment (&#x27;Owner: Priya Nair ... 122 days to go&#x27;), while the audit trail timeline shows BOTH the original Stephen Marsh assignment and the Priya Nair reassignment as separate entries — confirms append-only: nothing was overwritten.</li>
+<li>Chain-integrity check climbed from 72 to 74 events across the two assign/reassign writes and stayed &#x27;unbroken&#x27;.</li>
+<li>Searched the full rendered page text for &#x27;remind&#x27;, &#x27;notif&#x27;, &#x27;ticket&#x27;, &#x27;escalat&#x27; — zero matches. No language on the page implies automated chasing.</li>
+<li>Checked the second outstanding control (Outcome sampling, CTRL-SAMPLE-01) — confirmed it was untouched by the first control&#x27;s assignment; still shows its own independent, empty assign form.</li>
+</ul>
+<h2>Defects</h2>
+<p><em>None recorded.</em></p>
+<h2>Observations</h2>
+<p><em>None recorded.</em></p>
+<h2>Overall Assessment</h2>
+<p>Confirmed live and working exactly as built and as scoped in design-vision.md L-6. The assign form refuses to submit with a name but no date (button disabled, not a silent no-op — there is no way to write a partial event through the UI). The overdue flag is computed honestly from today&#x27;s date against the target date, with no rounding or softening (&#x27;overdue 242 days&#x27;, not &#x27;overdue&#x27;). Reassignment writes a new control_ownership_assigned event rather than mutating the old one; the audit trail keeps both, and verifyChain() still reports the whole trail unbroken afterward — the append-only, hash-chained discipline the session&#x27;s earlier explore-007/008 rounds established for the rest of the trail holds for this new event type too. A full-page text search turned up none of &#x27;remind&#x27;, &#x27;notif&#x27;, &#x27;ticket&#x27;, or &#x27;escalat&#x27; — the feature does not imply automation it cannot deliver, which was Stephen&#x27;s original objection (&#x27;what have I gained over a checklist in our NPPA template?&#x27;). The answer: a persistent, auditable, per-control owner and deadline the checklist never had — still no chasing mechanism, and the product does not pretend otherwise. Verdict: L-6&#x27;s buildable tier is CLOSED, confirmed on the live published product, not just by reading the diff.</p>
+</body>
+</html>
