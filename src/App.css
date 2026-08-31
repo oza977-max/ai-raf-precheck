@@ -45,6 +45,14 @@ body {
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   color: var(--ink);
   background: var(--paper);
+  /* Formatting pass (2026-08-31, user report: "too much text, stuff not
+     aligned"): no baseline line-height existed anywhere in this file — every
+     paragraph fell back to the browser default (~1.15), which reads as dense
+     and cramped at any real reading length. This is the single highest-
+     leverage fix for that; the ~15 more-specific line-height rules already
+     in this file (1.4–1.6) are unaffected, since a more specific selector
+     always wins over this ancestor default. */
+  line-height: 1.5;
 }
 
 /* ── Header ── */
@@ -983,8 +991,14 @@ details input {
 .register-stage {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.7rem;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
+  /* Formatting pass (user report: "stuff not aligned"): this chip used to
+     be a 999px pill sitting next to the square graph-node__chip siblings in
+     the same row (register-detail__chips) — different shape, different
+     padding, same row. Matched to graph-node__chip's dimensions so the row
+     reads as one family; the color distinction (this chip's state-specific
+     background) still carries the "this one is live status" signal. */
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
   border: 1px solid var(--card-border);
   background: var(--paper);
   color: var(--ink-soft);
