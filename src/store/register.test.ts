@@ -389,6 +389,8 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
         occurred_at: '2026-01-01T00:00:00.000Z',
         actor: '1LoD',
         payload: { type: 'verdict_produced', verdict: first },
+        prev_hash: null,
+        hash: 'test-hash-e1',
       },
       {
         event_id: 'e2',
@@ -397,6 +399,8 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
         occurred_at: '2026-01-02T00:00:00.000Z',
         actor: '2LoD',
         payload: { type: 'twoloD_reviewed', action: 'approved', verdict_id: 'v1' },
+        prev_hash: 'test-hash-e1',
+        hash: 'test-hash-e2',
       },
       {
         event_id: 'e3',
@@ -405,6 +409,8 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
         occurred_at: '2026-01-03T00:00:00.000Z',
         actor: '1LoD',
         payload: { type: 'verdict_corrected', original_verdict_id: 'v1', new_verdict: second },
+        prev_hash: 'test-hash-e2',
+        hash: 'test-hash-e3',
       },
     ];
 

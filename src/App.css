@@ -1192,6 +1192,24 @@ details input {
   padding-top: 0.6rem;
 }
 
+/* explore-007 D-001 fix: the live, provable chain-integrity check. */
+.register-detail__chain-ok {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--low);
+}
+
+.register-detail__chain-broken {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--critical);
+  background: #fbe9e7;
+  border: 1px solid var(--critical);
+  border-radius: 4px;
+  padding: 0.5rem 0.7rem;
+}
+
 /* ── Graph view (V1.1-C01) ── */
 .graph-view {
   display: flex;

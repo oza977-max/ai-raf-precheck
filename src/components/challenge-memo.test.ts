@@ -80,6 +80,8 @@ function makeEvents(): AuditEvent[] {
         submitter_note: 'Client data stays encrypted in transit.',
         answer_contexts: ['Vendor confirmed SOC2 coverage.'],
       },
+      prev_hash: null,
+      hash: 'test-hash-e1',
     },
     {
       event_id: 'e2',
@@ -94,6 +96,8 @@ function makeEvents(): AuditEvent[] {
         attested_by_name: 'Jane Reviewer',
         notes: 'Looks fine given the controls.',
       },
+      prev_hash: 'test-hash-e1',
+      hash: 'test-hash-e2',
     },
     {
       event_id: 'e3',
@@ -108,6 +112,8 @@ function makeEvents(): AuditEvent[] {
         dissent: 'This rule seems stricter than the source text requires.',
         filed_by_name: 'Jane Reviewer',
       },
+      prev_hash: 'test-hash-e2',
+      hash: 'test-hash-e3',
     },
   ];
 }

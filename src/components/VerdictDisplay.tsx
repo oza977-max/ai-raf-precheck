@@ -909,7 +909,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <Fold
           title="How fragile is this approval?"
           defaultOpen={reasoningDefaultOpen}
-          summary={`${verdict.single_covered_invariants.length} rule${verdict.single_covered_invariants.length === 1 ? '' : 's'} held by a single control · margin of safety ${Math.round(verdict.margin_achieved * 100)}% (your firm wants at least ${Math.round(verdict.margin_target * 100)}%)`}
+          summary={`${verdict.single_covered_invariants.length} rule${verdict.single_covered_invariants.length === 1 ? '' : 's'} held by a single control · margin of safety ${Math.round(verdict.margin_achieved * 100)}% (policy target: at least ${Math.round(verdict.margin_target * 100)}%)`}
         ><div className="verdict__chain">
           
           <p className="verdict__chain-sub">
@@ -920,8 +920,19 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           <p className="verdict__chain-derived">
             Margin of safety:&ensp;
             {Math.round(verdict.margin_achieved * 100)}% of the triggered rules have more than one control
-            available; your firm&rsquo;s target is {Math.round(verdict.margin_target * 100)}%
+            available; the policy file&rsquo;s target is {Math.round(verdict.margin_target * 100)}%
             {verdict.boundary_proximity && ' — below target'}
+          </p>
+          {/* explore-007 D-004 fix (round 8): "your firm wants" implied a
+              deliberate, firm-specific calibration decision — this number is
+              read straight from the policy file's safety_margin field,
+              which is 10% in the shipped starter config until a real firm
+              sets its own. Worded as what it actually is (a policy target)
+              regardless of whether it's been calibrated, rather than trying
+              to detect "is this still the demo default" with a heuristic. */}
+          <p className="verdict__chain-basis-help">
+            Set in the policy file, not computed by the engine — a firm using the starter config as
+            shipped has not yet chosen this number for itself.
           </p>
           {verdict.single_covered_invariants.length > 0 && (
             <>
@@ -1396,7 +1407,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       </div>
 
       <p className="verdict__caveat">
-        Audit trail is append-only. V1 is client-side — proof-of-concept grade for audit purposes.
+        Audit trail is append-only and hash-chained — a single altered or deleted event is detectable
+        (see the chain-integrity check on the audit trail below). It is still client-side with no
+        external anchor, so it cannot rule out a full, consistent rewrite by someone with local access.
       </p>
     </section>
   );

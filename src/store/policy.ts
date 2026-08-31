@@ -207,6 +207,18 @@ const PolicyFileSchema = z.object({
   // R12-AB (ADR-VA-R12-1): see PolicyFile.sampling_rate in
   // src/engine/types.ts. Optional, 1-in-K semantics.
   sampling_rate: z.number().optional(),
+  // explore-007 D-002 (round 8): see PolicyFile.governance_mapping in
+  // src/engine/types.ts. Optional — a policy without it renders AIGate's
+  // generic Track description only, exactly as before this field existed.
+  governance_mapping: z
+    .record(
+      z.enum(['I', 'II', 'III']),
+      z.object({
+        committee: z.string().min(1),
+        note: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 // --- ADR-002 (policy-schema.md §8): only these operator keys are valid inside

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getUseCase, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
-import { getAll as getAuditEvents, append as appendAuditEvent } from '../store/audit';
+import { getAll as getAuditEvents, append as appendAuditEvent, verifyChain } from '../store/audit';
+import type { ChainVerification } from '../store/audit';
 import VerdictDisplay from './VerdictDisplay';
 import type { AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
@@ -95,6 +96,10 @@ function eventDetail(event: AuditEvent): string {
 export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
   const [summary, setSummary] = useState<UseCaseSummary | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  // explore-007 D-001 fix (round 8): a live, provable check — not just an
+  // assertion in copy — that the hash chain over the WHOLE audit trail
+  // (every use case, not just this one) is intact.
+  const [chainCheck, setChainCheck] = useState<ChainVerification | null>(null);
   const [notes, setNotes] = useState('');
   const [attestedByName, setAttestedByName] = useState('');
   const [actionResult, setActionResult] = useState<string | null>(null);
@@ -210,6 +215,28 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         .filter(Boolean),
     [events],
   );
+
+  // explore-007 D-003 fix (round 8): filing a coverage gap used to be the
+  // whole control — a queue entry nobody was prompted to read, no
+  // notification, no age, no visibility on this screen. The date a domain
+  // was filed, so the top-of-page notice can say how long it's been open,
+  // not just that it exists.
+  const filedRiskDomainDates = useMemo(() => {
+    const dates = new Map<string, string>();
+    for (const e of events) {
+      if (e.payload.type === 'rule_dissent_filed' && e.payload.rule_id) {
+        const existing = dates.get(e.payload.rule_id);
+        if (!existing || e.occurred_at < existing) dates.set(e.payload.rule_id, e.occurred_at);
+      }
+    }
+    return dates;
+  }, [events]);
+
+  function daysOpen(entryId: string): number | null {
+    const filedAt = filedRiskDomainDates.get(entryId);
+    if (!filedAt) return null;
+    return Math.floor((Date.now() - new Date(filedAt).getTime()) / (24 * 60 * 60 * 1000));
+  }
 
   // R13-UI-4: a verdict stored BEFORE the lens existed carries no
   // knowledge_lens_matched_entry_ids field at all — a different claim from
@@ -360,6 +387,26 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   useEffect(() => {
     void load();
   }, [load]);
+
+  // explore-007 D-001 fix (round 8): verifyChain() walks and re-hashes the
+  // WHOLE audit trail — every use case, not just this one — so it grows
+  // slower as the trail grows. Kept OFF the critical path that decides
+  // when the page stops showing "Loading…": summary/events render first,
+  // the chain-integrity line fills in a moment later. A slower trail
+  // should not make every sign-off page feel slower to open.
+  useEffect(() => {
+    let cancelled = false;
+    void verifyChain().then((result) => {
+      if (!cancelled) setChainCheck(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Re-check whenever this record's own events change (a new event was
+    // just appended) — not on every render, and not keyed to unrelated
+    // prop changes that don't affect the trail.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
 
   // LC-2/LC-3: decision event first, then the stage change it causes
   // (updateLifecycleStage itself appends lifecycle_stage_changed).
@@ -600,14 +647,44 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           )}
         </p>
       ) : null}
+      {/* explore-007 D-002 fix (round 8): Track is AIGate's own invented
+          oversight-regime category — a bank with its own committee
+          structure (e.g. NPPA + Model Risk) has no way to see how it maps
+          without this. Renders only when the firm has actually set a
+          mapping (policy.governance_mapping); says nothing invented when
+          it hasn't, same discipline as the TIER_MEANINGS/TRACK_MEANINGS
+          block just above. */}
+      {summary.track && policy?.governance_mapping?.[summary.track as 'I' | 'II' | 'III'] && (
+        <p className="register-detail__governance-mapping">
+          At your firm, Track {summary.track} routes to{' '}
+          <strong>{policy.governance_mapping[summary.track as 'I' | 'II' | 'III']!.committee}</strong>
+          {policy.governance_mapping[summary.track as 'I' | 'II' | 'III']!.note &&
+            ` — ${policy.governance_mapping[summary.track as 'I' | 'II' | 'III']!.note}`}
+          .
+        </p>
+      )}
 
       {/* R13-UI-5: a gap must not hide below the fold. Renders ONLY when an
-          uncovered risk class exists for this case; no gaps, no notice. */}
+          uncovered risk class exists for this case; no gaps, no notice.
+          explore-007 D-003 fix (round 8): filing a gap used to make it
+          LESS visible, not more — the filed marker only lived in a sidebar
+          queue nobody was prompted to check. This notice now says whether
+          each uncovered domain has been filed yet, and if so, how long
+          it's been open — the same "the paper trail is not the mitigant"
+          point the bank persona raised. */}
       {knowledgeLensMatches.some((m) => !m.covered) && (
         <p className="knowledge-lens__top-notice" role="note">
-          {knowledgeLensMatches.filter((m) => !m.covered).length} known risk class
-          {knowledgeLensMatches.filter((m) => !m.covered).length === 1 ? ' has' : 'es have'} no covering rule —
-          see the risk-knowledge panel below.
+          {knowledgeLensMatches
+            .filter((m) => !m.covered)
+            .map((m) => {
+              const open = daysOpen(m.entry.id);
+              return open === null
+                ? `${m.entry.id} has no covering rule and no gap filed yet`
+                : `${m.entry.id} has no covering rule — gap filed, open ${open} day${open === 1 ? '' : 's'}`;
+            })
+            .join('; ')}{' '}
+          — see the risk-knowledge panel below. Filing a gap does not close it or change this verdict;
+          someone still has to act on it.
         </p>
       )}
 
@@ -931,9 +1008,22 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             before any event. */}
         <p className="register-detail__caveat">
           Append-only by construction: nothing here can be edited or deleted through the application.
-          But this is V1 — the trail is held in your browser, so it is proof-of-concept grade, not
-          tamper-evident against anyone with access to this machine.
+          Every event is hash-chained to the one before it, across the whole trail — a single altered
+          or deleted event breaks the chain and is detectable, which the check below actually proves
+          rather than just asserts. This is still a client-side, browser-held store with no external
+          anchor, so it cannot rule out someone with full local access rewriting the entire chain
+          consistently — that would need an external, write-once store, which V1 does not have.
         </p>
+        {chainCheck && (
+          <p
+            className={chainCheck.ok ? 'register-detail__chain-ok' : 'register-detail__chain-broken'}
+            role={chainCheck.ok ? 'status' : 'alert'}
+          >
+            {chainCheck.ok
+              ? `Chain integrity verified — ${chainCheck.checked} event${chainCheck.checked === 1 ? '' : 's'} across the whole trail, unbroken.`
+              : `Chain integrity check FAILED — the trail no longer matches its own hash chain, starting at event ${chainCheck.brokenAtEventId} (${chainCheck.reason}). Treat this record as compromised until investigated.`}
+          </p>
+        )}
         <ul className="timeline">
           {events.map((event) => (
             <li key={event.event_id} className="timeline__row">

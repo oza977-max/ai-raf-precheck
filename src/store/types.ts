@@ -24,6 +24,20 @@ export interface AuditEvent {
   occurred_at: string;
   actor: string;
   payload: AuditEventPayload;
+  // Hash chain (explore-007 D-001 fix, round 8): every event is written with
+  // a SHA-256 hash of its own content plus the hash of the event written
+  // immediately before it, across the WHOLE trail — not per use case. Any
+  // edit, deletion, or reorder of a past event breaks the chain from that
+  // point forward, and verifyChain() (store/audit.ts) detects that on
+  // read. `prev_hash` is null only for the very first event ever written.
+  // This is tamper-EVIDENT, not tamper-PROOF: it is still a client-side
+  // store, so a sophisticated attacker with full local access could in
+  // principle recompute the entire chain consistently after an edit. What
+  // it closes is the honest gap the product used to state outright — a
+  // single altered or deleted event, the common case, is now detectable
+  // rather than invisible.
+  prev_hash: string | null;
+  hash: string;
 }
 
 export type AuditEventPayload =

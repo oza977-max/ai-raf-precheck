@@ -166,8 +166,11 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
           steps when a use case requires them.
         </li>
         <li>
-          This version runs entirely in your browser: nothing you enter leaves this machine, and the
-          audit trail is proof-of-concept grade, not tamper-evident.
+          This version runs entirely in your browser: nothing you enter leaves this machine. The audit
+          trail is hash-chained — a single altered or deleted event is detectable, and every sign-off
+          page shows a live check proving the chain is intact, not just claiming it. What it still
+          cannot do is rule out a full, consistent rewrite by someone with access to this machine —
+          that needs an external, write-once store, which this version does not have.
         </li>
       </ul>
 
