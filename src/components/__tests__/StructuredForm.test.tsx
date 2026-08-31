@@ -529,6 +529,10 @@ function markedFieldIds(container: HTMLElement): string[] {
 
 describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
   // ACCEPTANCE TEST (TDD-1, outside-in — written first).
+  // 19 full mount/unmount cycles of the whole form (1 baseline + 18 field
+  // probes) reliably exceed vitest's 5000ms default on GitHub Actions'
+  // shared ubuntu-latest runners — passes locally every time, timed out on
+  // CI in 8/8 runs checked 2026-08-30/31. Not a hang; a slower machine.
   it('TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set', () => {
     // Baseline: answering everything must open the gate, or "omitting X keeps
     // it shut" proves nothing.
@@ -565,7 +569,7 @@ describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
     // an implementation that marks every field — as unhelpful as marking none.
     expect(marked).toEqual(blocking.sort());
     expect(blocking.length).toBeGreaterThan(0);
-  });
+  }, 20000);
 
   it('TC-R3-JU-5-02: the optional platform and vendor fields carry neither signal', () => {
     const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
