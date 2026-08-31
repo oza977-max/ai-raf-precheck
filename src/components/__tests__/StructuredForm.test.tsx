@@ -514,6 +514,10 @@ const FIELD_PROBES: FieldProbe[] = [
   },
   { id: 'sf-decision-type', answer: () => {} },
   { id: 'sf-hitl', answer: () => {} },
+  // Optional infrastructure-access questions (2026-08-31) — blank means
+  // "not stated", so neither blocks progress nor carries a required marker.
+  { id: 'sf-system-access', answer: () => {} },
+  { id: 'sf-multi-instance', answer: () => {} },
 ];
 
 function answerAllExcept(omittedId: string | null): void {

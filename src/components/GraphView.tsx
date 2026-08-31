@@ -21,6 +21,8 @@ import {
   FIELD_CONSEQUENCES,
   GRAPH_FIELD_LABELS,
   MODEL_TYPE_LABELS,
+  MULTI_INSTANCE_LABELS,
+  SYSTEM_ACCESS_LABELS,
   REVERSIBILITY_LABELS,
   SCALE_LABELS,
 } from './field-copy';
@@ -90,6 +92,23 @@ const PROCESSING_FIELDS: FieldSpec[] = [
     optionLabel: (v) => AUTONOMY_LABELS[v as 0 | 1 | 2 | 3 | 4],
   },
   { field: 'data_zone', label: 'data zone', options: DATA_ZONES, meanings: DATA_ZONE_LABELS },
+  // v1.4 agentic infrastructure-access fields — optional on the engine type;
+  // absent renders "not stated", same honest-weaker-claim rule as
+  // decision_type/hitl below.
+  {
+    field: 'system_access_scope',
+    label: 'system access',
+    options: ['none', 'shared_infrastructure', 'credentialed_systems', 'deployment_authority'],
+    meanings: SYSTEM_ACCESS_LABELS,
+    optional: true,
+  },
+  {
+    field: 'multi_instance_coordination',
+    label: 'instance coordination',
+    options: ['no', 'yes', 'unknown'],
+    meanings: MULTI_INSTANCE_LABELS,
+    optional: true,
+  },
 ];
 
 const OUTPUT_FIELDS: FieldSpec[] = [

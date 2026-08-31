@@ -5,6 +5,8 @@ import {
   DATA_CLASS_LABELS,
   DATA_ZONE_LABELS,
   MODEL_TYPE_LABELS,
+  MULTI_INSTANCE_LABELS,
+  SYSTEM_ACCESS_LABELS,
   plainWithCode,
 } from './field-copy';
 
@@ -47,6 +49,24 @@ export function graphSummaryRows(graph: DataFlowGraph): Array<{ label: string; v
       label: 'Output',
       value: output ? `${output.label} · ${plainWithCode(ACTION_TYPE_LABELS[output.action_type])}` : '—',
     },
+    // v1.4: rendered only when ANSWERED — an absent optional field must not
+    // appear on the attest grid as a claim ("none"/"no") nobody made.
+    ...(processing?.system_access_scope !== undefined
+      ? [
+          {
+            label: 'System access',
+            value: plainWithCode(SYSTEM_ACCESS_LABELS[processing.system_access_scope]),
+          },
+        ]
+      : []),
+    ...(processing?.multi_instance_coordination !== undefined
+      ? [
+          {
+            label: 'Instance coordination',
+            value: plainWithCode(MULTI_INSTANCE_LABELS[processing.multi_instance_coordination]),
+          },
+        ]
+      : []),
     {
       label: 'Jurisdictions',
       value: graph.jurisdictions.length > 0 ? graph.jurisdictions.join(', ') : 'None specified',

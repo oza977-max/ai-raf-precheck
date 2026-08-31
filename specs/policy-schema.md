@@ -113,6 +113,19 @@ export type DecisionType =
   | 'hiring'
   | 'regulatory-reporting'
   | 'operational';
+
+// v1.4 (2026-08-31) — agentic infrastructure-access vocabulary, grounded in
+// grounding/proposed-rules/agentic-infrastructure-access.md. Optional on the
+// graph: absent means "not stated" and no condition fires on it.
+export type SystemAccessScope =
+  | 'none'
+  | 'shared_infrastructure'
+  | 'credentialed_systems'
+  | 'deployment_authority';
+
+// multi_instance_coordination: 'yes' | 'no' | 'unknown' — a string enum, not
+// boolean, because 'unknown' is a real answer distinct from unanswered and
+// deliberately fires INV-AGENT-COORD-01.
 ```
 
 ### 3.1 Top-level structure

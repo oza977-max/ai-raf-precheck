@@ -386,6 +386,61 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         </select>
         <WhyWeAsk field="autonomy_level" />
 
+        <label htmlFor="sf-system-access">
+          What can it reach and touch, beyond the data it processes? (optional — blank means: not stated)
+        </label>
+        <p className="field-help">
+          Not the data — the infrastructure. Shared compute, package repositories, live credentials,
+          deployment pipelines.
+        </p>
+        <WhyWeAsk field="system_access_scope" />
+        <select
+          id="sf-system-access"
+          value={values.systemAccessScope ?? ''}
+          onChange={(e) =>
+            update(
+              'systemAccessScope',
+              e.target.value === ''
+                ? undefined
+                : (e.target.value as StructuredFormValues['systemAccessScope']),
+            )
+          }
+        >
+          <option value="">Not stated</option>
+          <option value="none">Nothing beyond its own task&rsquo;s data (none)</option>
+          <option value="shared_infrastructure">
+            Runs alongside other AI instances or processes on shared infrastructure (shared infrastructure)
+          </option>
+          <option value="credentialed_systems">
+            Holds live credentials to systems beyond its immediate task (credentialed systems)
+          </option>
+          <option value="deployment_authority">
+            Can push code, change configuration, or deploy with no separate human action (deployment authority)
+          </option>
+        </select>
+
+        <label htmlFor="sf-multi-instance">
+          Can it communicate or coordinate with other AI instances? (optional — blank means: not stated)
+        </label>
+        <WhyWeAsk field="multi_instance_coordination" />
+        <select
+          id="sf-multi-instance"
+          value={values.multiInstanceCoordination ?? ''}
+          onChange={(e) =>
+            update(
+              'multiInstanceCoordination',
+              e.target.value === ''
+                ? undefined
+                : (e.target.value as StructuredFormValues['multiInstanceCoordination']),
+            )
+          }
+        >
+          <option value="">Not stated</option>
+          <option value="no">No — it runs alone</option>
+          <option value="yes">Yes — it can exchange information with other instances or AI systems</option>
+          <option value="unknown">Not sure</option>
+        </select>
+
         <label htmlFor="sf-processing-zone">Where does the AI itself run?
           <RequiredMark controlId="sf-processing-zone" />
         </label>
