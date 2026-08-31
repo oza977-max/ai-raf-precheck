@@ -102,10 +102,14 @@ Two "known gap" findings from this session's governance-expert personas
 technical documentation) both live here, not acted on.
 
 **Still open, lower priority:** judge-002's new open question (decoder
-truncation vs. model behaviour — `reviews/judge-002.md` "Bottom line");
-five discovered expert candidates (Power, Reinertsen, Fogg, Mitchell model
-cards, OWASP LLM) awaiting owner approval before persisting to GVM
-reference files.
+truncation vs. model behaviour — `reviews/judge-002.md` "Bottom line").
+
+**Corrected 2026-08-31, was stale:** the five discovered expert candidates
+(Power, Mitchell, OWASP, Fogg, Reinertsen) were previously logged here as
+"awaiting owner approval" — checked directly against
+`~/.claude/skills/gvm-design-system/references/` this session: all five
+are already fully scored and persisted, complete score tables and
+evidence, nothing pending. That note was stale, not a real open item.
 
 ---
 
