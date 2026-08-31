@@ -1,0 +1,21 @@
+---
+schema_version: 1
+session_id: explore-009
+mission: >-
+  Confirmation round for the completion-tracking build (design-vision.md
+  L-6, originally flagged by Stephen in explore-007 as "what have I gained
+  over a checklist in our NPPA template?"). Same persona (Stephen,
+  skeptical bank MD) opens a live case with outstanding controls on the
+  published site, tries to assign an owner and target date to a control,
+  reassigns it, and checks whether the age/overdue signal reads honestly —
+  no reminders, no notifications implied. Owner classifies severity for
+  anything found per Hard Gate 4 (ADR-205).
+timebox_minutes: 30
+target:
+  - https://oza977-max.github.io/ai-raf-precheck/
+  - src/components/VerdictDisplay.tsx
+  - src/components/RegisterDetail.tsx
+  - src/store/types.ts
+tour: feature
+runner: oza977-max
+---
