@@ -128,8 +128,8 @@ const ownerships = async (id: string) =>
 // controls summary further down. The todo-list copy is the first match.
 async function openOutstandingControl() {
   const user = userEvent.setup();
-  const [heading] = await screen.findAllByText('Encrypt client notes at rest');
-  await user.click(heading);
+  const headings = await screen.findAllByText('Encrypt client notes at rest');
+  await user.click(headings[0]!);
   return user;
 }
 
