@@ -1,0 +1,21 @@
+---
+schema_version: 1
+session_id: explore-008
+mission: >-
+  Confirmation round for explore-007. Same persona (Stephen, skeptical
+  bank MD) reviews the same two live artifacts (About page, Compliance
+  surveillance-triage verdict screen) cold, with no founder in the room,
+  after all four explore-007 findings were fixed and published. Checks
+  whether each original question is now answered by the product itself,
+  which findings are genuinely closed vs partially addressed, and
+  produces an updated adoption verdict. Owner classifies severity for
+  anything still open per Hard Gate 4 (ADR-205).
+timebox_minutes: 30
+target:
+  - https://oza977-max.github.io/ai-raf-precheck/
+  - src/store/audit.ts
+  - src/components/RegisterDetail.tsx
+  - src/components/PolicyEditor.tsx
+tour: feature
+runner: oza977-max
+---

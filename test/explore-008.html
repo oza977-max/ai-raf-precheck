@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exploratory Session — explore-008</title>
+</head>
+<body>
+<h1>Exploratory Session — explore-008</h1>
+<h2>Charter</h2>
+<ul>
+<li><strong>Session ID:</strong> explore-008</li>
+<li><strong>Mission:</strong> Confirmation round for explore-007. Same persona (Stephen, skeptical bank MD) reviews the same two live artifacts (About page, Compliance surveillance-triage verdict screen) cold, with no founder in the room, after all four explore-007 findings were fixed and published. Checks whether each original question is now answered by the product itself, which findings are genuinely closed vs partially addressed, and produces an updated adoption verdict. Owner classifies severity for anything still open per Hard Gate 4 (ADR-205).</li>
+<li><strong>Tour:</strong> feature</li>
+<li><strong>Timebox (minutes):</strong> 30</li>
+<li><strong>Runner:</strong> oza977-max</li>
+<li><strong>Target:</strong><ul>
+<li>https://oza977-max.github.io/ai-raf-precheck/</li>
+<li>src/store/audit.ts</li>
+<li>src/components/RegisterDetail.tsx</li>
+<li>src/components/PolicyEditor.tsx</li>
+</ul></li></ul>
+<h2>Session Log</h2>
+<ul>
+<li>Site republished with all four explore-007 fixes live (hash-chained audit trail, governance mapping, coverage-gap visibility, honest calibration labeling).</li>
+<li>Stephen persona re-reviewed the same live About page + verdict screen cold, no founder present, checking his original 8 questions against product content alone.</li>
+</ul>
+<h2>Defects</h2>
+<p><em>None recorded.</em></p>
+<h2>Observations</h2>
+<h3>O-001</h3>
+<ul>
+<li><strong>Given:</strong> A control on a verdict is marked OUTSTANDING with no completion tracking</li>
+<li><strong>When:</strong> Time passes with no automated chasing, reminder, or owner/deadline attached</li>
+<li><strong>Then:</strong> The gap is now honestly surfaced (the coverage-gap notice explicitly says &quot;someone still has to act on it&quot;) rather than silently absent, but no tracking mechanism exists — confirmed as a known, accepted V1 limitation, not a regression or a new finding</li>
+<li><strong>Stub-path:</strong> none — not a stub path</li>
+</ul>
+<h2>Overall Assessment</h2>
+<p>Three of four explore-007 findings (D-001 audit trail, D-002 governance mapping, D-004 calibration labeling) are confirmed CLOSED by direct inspection of the live, fixed product — not by trusting a description of the fix. The chain-integrity check is live-computed and visible (&quot;Chain integrity verified — 60 events, unbroken&quot;), the governance mapping names a real committee in-product, and the margin-of-safety line no longer implies false calibration. D-003 (coverage-gap visibility) is upgraded from &quot;no teeth, no visibility&quot; to &quot;visible and honestly labeled as not blocking&quot; — the underlying absence of completion-tracking workflow was a deliberate scope decision, not fixed, and the practitioner confirms this is acceptable as a stated V1 limitation rather than a silent gap. Verdict: ready for a scoped paper trial plus a parallel governance-mapping validation workstream — not a live-decision pilot.</p>
+</body>
+</html>

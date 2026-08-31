@@ -31,6 +31,8 @@ against.
 | 2 | 2026-08-31 | design | A,B,C,D,E,G (G supplementary, strict) | 6 | 8 | 3 | **Build with caveats** (verdict/sign-off screen; triggered by explore-006's 3 Critical UX findings; 4 panels independently converged on the same fix mechanism for the core finding; owner chose fix-everything) |
 | 3 | 2026-08-31 | design | A,C,D,E,G strict (no B/F — no contract/quality-attribute change) | 2 | 6 | 3 | **Build with caveats** (verdict screen information architecture and narrative flow — not another leak sweep; owner's own proposed 5-beat restructure independently stress-tested rather than rubber-stamped; both Criticals are proposal-design gaps, not pre-existing code bugs — beat 4 forced grouping [C+G converged] and binding-constraint deletion's false premise [A+D converged]; triage pending) |
 | 4 | 2026-08-31 | design | A,C,D,E, + Panel G fanned out one sub-panel per screen (9 screens) — 13 panels total (no B/F) | 10 | 14 | 8 | **Build with caveats** (app-wide narrative flow — same audience-hospitality lens applied to every screen outside the already-fixed verdict screen; owner asked "look at all screens with same lens"; strongest signal is 3-panel convergence [A+C+D] that the round-3 fix — Fold, NF-11 — was built as a one-screen patch, not a reusable house convention, and did not propagate; triage pending) |
+| 3 | 2026-08-31 | explore | persona demo (founder/skeptical-banker/consultant roleplay, grounded in live site content) | 1 | 2 | 1 | 4 findings — audit trail not tamper-evident (Critical), Track/Tier never mapped to a real bank's committees + coverage-gap queue no visibility (Important), margin-of-safety uncalibrated (Minor); owner chose fix-everything, including the item the consultant flagged as future-phase infra |
+| 4 | 2026-08-31 | explore | confirmation, same persona, no founder present | 0 | 0 | 1 obs | 3 of 4 findings confirmed CLOSED by direct inspection (live chain-integrity check, in-product governance mapping, honest calibration wording); 1 observation — completion tracking remains a stated, accepted V1 limitation, not silently missing |
 
 ## Round 1 measurements
 
@@ -572,3 +574,58 @@ Future design reviews of newly-added screens should check reusable
 patterns (Fold, NF-11's gloss discipline) as part of Panel A's
 requirements-coverage pass by default, not wait for a dedicated
 app-wide round to discover the drift.
+
+## Explore rounds 3-4 (2026-08-31) — persona demo, then confirmation
+
+**Scope note.** A different exploratory format from rounds 1-2: not a
+practitioner walking the live UI, but a three-agent roleplay (a founder
+persona, a skeptical bank persona grounded in a real institution's actual
+governance process, a consultant persona synthesizing) reacting ONLY to
+what the live, published site actually says — the About page and one
+real verdict screen, pulled fresh via the browser before the roleplay
+ran. Tests self-explanation and claim-accuracy, not UI mechanics.
+
+**Round 3 findings, ranked by the consultant persona's own blocking-ness
+scale:** audit trail not tamper-evident (Critical — vetoes any live-
+decision framing on its own); Track/Tier never mapped to a real bank's
+committee structure, coverage-gap queue with no visibility or teeth
+(both Important); margin-of-safety number rendered with unwarranted
+confidence (Minor). The consultant explicitly flagged the audit-trail
+item as "future-phase infrastructure" appropriate to defer — the owner
+overrode that recommendation and asked for it to be built now, not
+deferred.
+
+**What got built, not just labeled.** The audit-trail fix is the
+anchor example for this round: rather than softening the "not tamper-
+evident" copy, store/audit.ts now computes a real SHA-256 hash chain
+over the whole trail, verifyChain() detects tampering by actually
+recomputing it, and RegisterDetail runs that check live and renders
+its real result. Building it surfaced two genuine bugs neither the
+roleplay nor a code read would have found: a concurrency race in
+concurrent append() calls (fixed with an internal write queue) and a
+pre-existing fire-and-forget append() on the busiest intake path,
+invisible until hashing made every write slow enough to expose it.
+Both were caught by the verification ritual's 3x-consecutive-run rule
+doing exactly the job it exists to do — the flake was real, not noise.
+
+**Round 4 (confirmation) — the strongest form of verification this
+project uses.** Not "were the fixes made" but "does an independent,
+fresh-context skeptical persona reviewing the live product cold reach a
+different conclusion." Three of four findings confirmed closed by
+direct inspection: the chain-integrity line is genuinely live-computed,
+not asserted; the governance-mapping line names a real committee
+in-product; the calibration wording no longer implies false precision.
+One item (completion tracking) stayed open — correctly, since fixing it
+was never in scope this round — and the persona itself distinguished
+"made visible and honest" from "actually fixed," which is exactly the
+distinction this project's honesty requirements (NF-2, design-vision
+L-3) exist to preserve. A tool that can talk a skeptic partway to yes
+without lying about the rest is the product working as intended.
+
+**Recurring-candidate, now confirmed across explore rounds specifically
+(not just design rounds):** both explore round-2 (2026-07-27) and this
+round-4 used the same pattern — a confirmation pass with a fresh or
+independent perspective, run immediately after a fix, rather than
+trusting the fix description. Worth formalizing as a standing practice
+for any Critical-severity explore finding: fix, then re-run the same
+scenario cold before considering it closed.
