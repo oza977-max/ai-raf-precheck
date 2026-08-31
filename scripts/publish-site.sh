@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Republish dist/ to the gh-pages branch, which is what
-# https://oza977-max.github.io/ai-raf-precheck/ serves.
+# MANUAL FALLBACK — as of 2026-08-31, .github/workflows/deploy-pages.yml
+# (installed from docs/github-pages-workflow.yml, site-survey-003 finding
+# 6.1) runs the same test/tsc/build gates as CI and deploys automatically
+# on every push to main, once GitHub Pages' source is set to "GitHub
+# Actions". That is now the primary path. This script exists for the case
+# the Actions deploy is broken or Pages settings ever revert — it force-
+# pushes straight to gh-pages with NO test gate, so prefer letting main's
+# CI + the Actions deploy do this instead of running it directly.
 #
-# The live site is a SNAPSHOT: it does not track main on its own. Without
-# this, the published link silently drifts behind the code — which already
-# happened once (testers saw the old technical form after it was replaced).
-#
-# The proper fix is the Actions workflow in docs/github-pages-workflow.yml,
-# which rebuilds on every push. Installing it needs a token with `workflow`
-# scope, so until then, run: npm run publish-site
+# Republishes dist/ to the gh-pages branch, which is what
+# https://oza977-max.github.io/ai-raf-precheck/ serves when Pages' source
+# is set to "Deploy from a branch" rather than "GitHub Actions".
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
