@@ -15,7 +15,8 @@ export type AuditEventType =
   | 'twoloD_reviewed'
   | 'reasoning_trace_generated'
   | 'rule_dissent_filed'
-  | 'sampling_reviewed';
+  | 'sampling_reviewed'
+  | 'control_ownership_assigned';
 
 export interface AuditEvent {
   event_id: string;
@@ -151,6 +152,24 @@ export type AuditEventPayload =
       verdict_id: string;
       reviewed_by_name: string;
       outcome_note?: string;
+    }
+  // design-vision.md L-6 / explore-007 D-003 follow-up (2026-08-31). An
+  // OUTSTANDING control had no owner, no target date, no age, no overdue
+  // signal — a static status a human managed in email. This is the
+  // honestly-scoped fix: assignment, not automation. No reminders, no
+  // notifications, no ticketing — this app has no backend to run them
+  // from, and faking that layer would be exactly the kind of overclaim
+  // NF-2/L-3 exist to prevent. `verdict_id` follows the same threaded-
+  // from-render pattern as twoloD_reviewed/rule_dissent_filed — never
+  // re-derived at write time. Re-assigning (a later event for the same
+  // control_id) is how the owner/date changes; the append-only trail
+  // keeps every prior assignment, and the UI reads the latest.
+  | {
+      type: 'control_ownership_assigned';
+      verdict_id: string;
+      control_id: string;
+      owner_name: string;
+      target_date: string;
     };
 
 // Register types per register-lifecycle.md §4.1–4.2.

@@ -43,6 +43,17 @@ interface VerdictDisplayProps {
   // condition the action bar already renders on (2LoD role, stage awaiting
   // sign-off). VerdictDisplay never re-derives that gate itself.
   showSignOffChecklist?: boolean;
+  // design-vision.md L-6 / explore-007 D-003 follow-up: owner/target-date
+  // per outstanding control, keyed by control id — the latest
+  // control_ownership_assigned event for this verdict, computed by the
+  // caller (RegisterDetail already owns the audit-event read pattern for
+  // this, same as filedRiskDomains/filedRiskDomainDates). Absent controls
+  // are simply unassigned; no assignment is ever invented here.
+  controlOwnership?: Record<string, { owner_name: string; target_date: string }>;
+  onAssignControlOwner?: (controlId: string, ownerName: string, targetDate: string) => void;
+  controlOwnerBusyId?: string | null;
+  controlOwnerErrorId?: string | null;
+  controlOwnerError?: string | null;
   // Whether RegisterDetail is rendering a risk-knowledge section below this
   // component (KnowledgeLensPanel or the "not evaluated" note) — used only
   // to decide whether the checklist/section-nav include that jump link.
@@ -263,6 +274,11 @@ function WhatToDo({
   verdict,
   policy,
   needsSignOff,
+  controlOwnership,
+  onAssignControlOwner,
+  controlOwnerBusyId,
+  controlOwnerErrorId,
+  controlOwnerError,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
@@ -271,6 +287,11 @@ function WhatToDo({
   // future workflow change (e.g. a routing stage between pre_checked and
   // approved) risked the sites disagreeing. Computed once by the caller now.
   needsSignOff: boolean;
+  controlOwnership?: Record<string, { owner_name: string; target_date: string }>;
+  onAssignControlOwner?: (controlId: string, ownerName: string, targetDate: string) => void;
+  controlOwnerBusyId?: string | null;
+  controlOwnerErrorId?: string | null;
+  controlOwnerError?: string | null;
 }) {
   const rejected = verdict.status === 'rejected';
   const controls = verdict.controls ?? [];
@@ -391,6 +412,15 @@ function WhatToDo({
                           {control.verification}
                         </p>
                       )}
+                      {status === 'outstanding' && onAssignControlOwner && (
+                        <ControlOwnerAssign
+                          controlId={id}
+                          assignment={controlOwnership?.[id]}
+                          onAssign={onAssignControlOwner}
+                          busy={controlOwnerBusyId === id}
+                          error={controlOwnerErrorId === id ? controlOwnerError : null}
+                        />
+                      )}
                       </details>
                     </li>
                   );
@@ -439,6 +469,87 @@ function WhatToDo({
         </>
       )}
     </div>
+  );
+}
+
+// design-vision.md L-6: assignment tracking, not automation — a name, a
+// target date, an age, an overdue flag. No reminders or notifications; the
+// app has no backend to run them from. Re-assigning overwrites the shown
+// state (the caller keeps the LATEST control_ownership_assigned event).
+function ControlOwnerAssign({
+  controlId,
+  assignment,
+  onAssign,
+  busy,
+  error,
+}: {
+  controlId: string;
+  assignment?: { owner_name: string; target_date: string };
+  onAssign: (controlId: string, ownerName: string, targetDate: string) => void;
+  busy: boolean;
+  error?: string | null;
+}) {
+  const [ownerName, setOwnerName] = useState(assignment?.owner_name ?? '');
+  const [targetDate, setTargetDate] = useState(assignment?.target_date ?? '');
+  const [editing, setEditing] = useState(false);
+
+  if (assignment && !editing) {
+    const days = Math.floor((Date.now() - Date.parse(assignment.target_date)) / (24 * 60 * 60 * 1000));
+    const overdue = days > 0 && Number.isFinite(days);
+    return (
+      <p className="verdict__todo-line verdict__todo-owner">
+        <span className="verdict__todo-label">Owner:</span> {assignment.owner_name} (name not verified) · target{' '}
+        {assignment.target_date}
+        {overdue ? (
+          <span className="verdict__todo-owner-overdue"> · overdue {days} day{days === 1 ? '' : 's'}</span>
+        ) : (
+          Number.isFinite(days) && <span> · {-days} day{-days === 1 ? '' : 's'} to go</span>
+        )}
+        <button
+          type="button"
+          className="verdict__todo-owner-edit"
+          onClick={() => setEditing(true)}
+        >
+          Reassign
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <form
+      className="verdict__todo-owner-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!ownerName.trim() || !targetDate) return;
+        onAssign(controlId, ownerName.trim(), targetDate);
+        setEditing(false);
+      }}
+    >
+      <label>
+        Owner
+        <input
+          type="text"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+          placeholder="Name (not verified)"
+          disabled={busy}
+        />
+      </label>
+      <label>
+        Target date
+        <input
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <button type="submit" disabled={busy || !ownerName.trim() || !targetDate}>
+        {busy ? 'Assigning…' : 'Assign'}
+      </button>
+      {error && <span className="verdict__todo-owner-error">{error}</span>}
+    </form>
   );
 }
 
@@ -604,7 +715,7 @@ function SignOffChecklist({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
@@ -859,7 +970,16 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       {/* design-review round 3 (beat 2, "what happens next"): WhatToDo
           unchanged — Panel G confirmed this beat already answers the
           reader's second question cleanly, right after the decision. */}
-      <WhatToDo verdict={verdict} policy={policy} needsSignOff={needsSignOff} />
+      <WhatToDo
+        verdict={verdict}
+        policy={policy}
+        needsSignOff={needsSignOff}
+        controlOwnership={controlOwnership}
+        onAssignControlOwner={onAssignControlOwner}
+        controlOwnerBusyId={controlOwnerBusyId}
+        controlOwnerErrorId={controlOwnerErrorId}
+        controlOwnerError={controlOwnerError}
+      />
 
       {/* design-review round 3 (Panel A): no requirement pins the checklist
           to page-load-first; moving it here (after the reader knows the
