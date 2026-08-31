@@ -1,19 +1,12 @@
 name: Deploy to GitHub Pages
 
-# INSTALLED as .github/workflows/deploy-pages.yml as of 2026-08-31
-# (site-survey-003 finding 6.1). This copy is kept as the documented
-# source/reference; edit .github/workflows/deploy-pages.yml directly and
-# copy changes back here, since GitHub only runs the .github/workflows/
-# copy.
-#
 # Publishes the static build so testers get a URL instead of a git clone.
 # AIGate has no backend (NF-3) — the whole app is the contents of dist/ —
 # so static hosting is a complete deployment, not a demo shim.
 #
-# Repository Pages settings must be Source: "GitHub Actions" (not "Deploy
-# from a branch") for this to run — see the repo's Settings → Pages, or
-# `gh api -X PUT repos/OWNER/REPO/pages -f build_type=workflow`. Note that
-# on a private repo, GitHub Pages requires a paid plan, and enabling it
+# ONE MANUAL STEP: this workflow does nothing until Pages is enabled in the
+# repository settings (Settings → Pages → Source: "GitHub Actions"). Note
+# that on a private repo, GitHub Pages requires a paid plan, and enabling it
 # publishes the site to the open internet. See docs/tester-guide.md for the
 # alternatives if neither is acceptable.
 
