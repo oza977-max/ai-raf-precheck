@@ -1,10 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type ComponentProps } from 'react';
 import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
 import { AIGATE_USE_CASE_ID } from '../../seeds/aigate-self-assessment';
 import type { RegisterNode, RegisterNodeMetadata } from '../../store/types';
+
+// code-review-004 F1: RegisterView is a controlled component now — App owns
+// selection + history. This harness supplies the minimal controlled wiring
+// (plain state, no history) so these behavioural tests keep exercising the
+// row-click -> detail -> back flow; the HISTORY semantics live in App and
+// are covered by App.browserBack.test.tsx.
+function RegisterViewHarness(props: Omit<ComponentProps<typeof RegisterView>, 'selectedId' | 'onSelectRow' | 'onCloseDetail'>) {
+  const [sel, setSel] = useState<string | null>(null);
+  return (
+    <RegisterView {...props} selectedId={sel} onSelectRow={setSel} onCloseDetail={() => setSel(null)} />
+  );
+}
+
 
 // R15-C1 (requirements-015.md; proposal §3.3, §3.8). Register list view,
 // STAGE_LABELS, and role-switcher honesty copy — presentation only.
@@ -43,7 +57,7 @@ describe('RegisterView — R15-C1', () => {
     });
     await addNode(node);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
 
     await screen.findByText('Awaiting case');
     // Both the Stage chip and the table cell render "Awaiting 2LoD
@@ -62,7 +76,7 @@ describe('RegisterView — R15-C1', () => {
     });
     await addNode(node);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     // The default 2LoD view only shows rows awaiting sign-off; this row is
     // 'approved' ("Cleared"), so it is filtered out until Show all is
     // clicked — wait for the toggle rather than the row itself.
@@ -90,7 +104,7 @@ describe('RegisterView — R15-C1', () => {
     await addNode(waiting);
     await addNode(cleared);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
 
     // This test file's earlier tests seed their own rows into the same
     // in-memory IndexedDB (no per-test reset — consistent with the rest of
@@ -112,7 +126,7 @@ describe('RegisterView — R15-C1', () => {
     const node = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'Legend case' });
     await addNode(node);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await screen.findByText('Legend case');
 
     expect(screen.getByText(/Tier = how much could go wrong/i)).toBeInTheDocument();
@@ -125,7 +139,7 @@ describe('RegisterView — R15-C1', () => {
     const node = makeUseCaseNode({ node_id: crypto.randomUUID(), label: 'Roll-up case' });
     await addNode(node);
 
-    render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
     await screen.findByText('Roll-up case');
 
     // No decided verdicts here, so the roll-up line itself may not render;
@@ -148,7 +162,7 @@ describe('RegisterView — R15-C1', () => {
     await addNode(flaggedNode);
     await addNode(unflaggedNode);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await screen.findByText('Flagged case');
     await screen.findByText('Unflagged case');
 
@@ -166,7 +180,7 @@ describe('RegisterView — R15-C1', () => {
     });
     await addNode(aigateNode);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     const row = await screen.findByText('AIGate self-check');
     const tr = row.closest('tr');
     expect(tr?.className).toMatch(/register-view__row--self-assessment/);

@@ -1193,6 +1193,19 @@ details input {
 }
 
 /* explore-007 D-001 fix: the live, provable chain-integrity check. */
+/* code-review-004 F10: the assignments-reset-by-re-evaluation notice —
+   same honest-alert family as the chain check below, amber not red: it
+   is information, not a failure. */
+.register-detail__owner-reset-note {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--warn-text);
+  background: #fdf6e3;
+  border: 1px solid var(--warn-text);
+  border-radius: 4px;
+  padding: 0.45rem 0.7rem;
+}
+
 .register-detail__chain-ok {
   margin-top: 0.5rem;
   font-size: 0.78rem;

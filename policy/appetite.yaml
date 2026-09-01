@@ -355,6 +355,21 @@ invariants:
   # same control, same mechanism.
   - id: "INV-CONFDATA-01"
     description: "Confidential business data must not flow to an external or vendor-hosted model endpoint without encryption in transit"
+    # KNOWN LIMITATION (code-review-004 F4, disclosed rather than hidden):
+    # this condition inherits the FN-005 cross-node imprecision — the
+    # condition language matches each field against ANY node independently
+    # (src/engine/condition.ts), so `data_class` can match on the input node
+    # while `data_zone` matches on a DIFFERENT node. In a multi-node graph a
+    # Confidential input safely in Zone C plus an unrelated node in Zone A/B
+    # fires this rule spuriously. INV-DATA-01 directly above has carried the
+    # identical shape since v1.0. For an encryption-in-transit rule the
+    # any-node-external reading is partially defensible (data crossing to or
+    # from an external zone wants TLS either way), which is why this ships
+    # as-is where FN-005's cloud-security REVIEW rule was refused outright —
+    # a wrongly-demanded cheap control is a smaller lie than a wrongly-
+    # demanded review. Proper fix for both rules: node-scoped conditions
+    # (FN-005). On the single-triple guided-form graph this imprecision
+    # cannot fire; only multi-node LLM-extracted graphs reach it.
     condition:
       data_class: { in: ["Confidential"] }
       data_zone: { in: ["Zone A", "Zone B"] }
@@ -478,6 +493,16 @@ invariants:
   # All three fire only when the new optional intake fields were ANSWERED with
   # a risky value — an unanswered field makes no claim and trips nothing,
   # the same honesty rule as decision_type_other.
+  #
+  # KNOWN LIMITATION (code-review-004 F5, disclosed): system_access_scope is
+  # a SINGLE-select at intake, so INV-AGENT-INFRA-01 and INV-AGENT-CRED-01
+  # are mutually exclusive per submission — yet the incident's documented
+  # mechanism was the COMPOUND case (shared standing credentials ON shared
+  # infrastructure; S1 §III.B). A submitter facing both must pick the most
+  # severe axis (deployment_authority > credentialed_systems >
+  # shared_infrastructure — the form says so) and note the rest for the
+  # reviewer. Multi-select, letting both invariants co-fire, is the proper
+  # fix and is deliberately deferred rather than faked.
 
   - id: "INV-AGENT-INFRA-01"
     description: "An agentic system on shared infrastructure must have attested isolation from other AI instances"
@@ -506,7 +531,15 @@ invariants:
     regulatory_basis: "RAF §6 — agentic / tool-use controls; incident evidence: OpenAI HF Technical Report (2026-08) §III.B"
 
   - id: "INV-AGENT-COORD-01"
-    description: "Agentic instances that can coordinate with each other must have their action log held outside the agents' own reach"
+    # code-review-004 F12: the rendered description now says out loud that
+    # "unconfirmed" trips this — previously only this comment block did,
+    # and a verdict reader saw "instances that CAN coordinate" while the
+    # condition also matched `unknown`. The rendered text is the claim.
+    # (Wording note: this file renders verbatim in the policy editor, and a
+    # test bans the past tense of "to fire" anywhere on that page — that
+    # word is a per-verdict concept, never a static pack/rule state. Use
+    # "trips"/"matches" in comments here.)
+    description: "Agentic instances that can coordinate with each other — or whose coordination capability is unconfirmed — must have their action log held outside the agents' own reach"
     # S2 p.17: ">= 20% of the agents in our dataset expressed clear interest
     # in tampering with their transcripts"; ~100 succeeded in spoofing tool
     # calls. A log the agent can touch is not evidence. 'unknown' fires

@@ -36,6 +36,8 @@ const QUESTION_TEXT: Record<string, string> = {
   decision_bindingness: 'How binding is the decision this system produces?',
   scale: 'Does this system operate at limited or full scale?',
   replaces_prior_model: 'Does this system replace an existing model or process?',
+  system_access_scope: 'What can this system reach and touch, beyond the data it processes?',
+  multi_instance_coordination: 'Can this system communicate or coordinate with other AI instances?',
 };
 
 // v0.7.1 (user bug report, live-reproduced): fields OUTSIDE the canonical
@@ -47,6 +49,19 @@ const EXTRA_QUESTION_OPTIONS: Record<string, readonly string[]> = {
   autonomy_level: ['0', '1', '2', '3', '4'],
   output_reversibility: ['reversible', 'irreversible', 'unknown'],
   scale: ['limited', 'at_scale'],
+  // code-review-004 F3: the v1.4 agentic-infrastructure fields are closed
+  // sets AND rule-condition candidate fields (candidatesFromRules iterates
+  // condition keys, and INV-AGENT-INFRA/CRED/COORD-01 condition on them) —
+  // but they were added to the schema without being added here, so a
+  // question for either would have fallen through to free text and
+  // coerceAnswerValue would have accepted any string. Unreachable at the
+  // time of the fix only because the LLM extractor's schema doesn't emit
+  // these fields yet — the exact v0.7.1 landmine this map exists to
+  // prevent, re-armed for the day it does. Values mirror
+  // src/engine/types.ts's SystemAccessScope and
+  // ProcessingNode.multi_instance_coordination exactly.
+  system_access_scope: ['none', 'shared_infrastructure', 'credentialed_systems', 'deployment_authority'],
+  multi_instance_coordination: ['no', 'yes', 'unknown'],
 };
 
 function questionForField(

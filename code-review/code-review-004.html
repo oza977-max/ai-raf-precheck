@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGate — Code Review 004</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+tbody tr:nth-child(even){background:#faf9f3}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+.verdict.pending{border-color:#999;background:#f9f9f4}.verdict.pending .verdict-text{color:#999}
+.verdict.pass{border-color:#2d6a4f;background:#f0f7f2}.verdict.pass .verdict-text{color:#2d6a4f}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+.issue.observation{border-left-color:#95a5a6;background:#f5f5f3}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-severity{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:.3rem}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+.issue-note{font-size:.82rem;color:#666;border-top:1px solid rgba(0,0,0,.1);padding-top:.4rem;margin-top:.4rem;font-style:italic}
+blockquote{border-left:3px solid #ddd;padding-left:1rem;color:#555;margin:1rem 0;max-width:66ch;font-style:italic}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+.themes-section{background:#f9f9f4;padding:1rem 1.2rem;margin:1rem 0 1.5rem;border-left:3px solid #999}
+.theme-item{margin-bottom:1rem}
+.theme-title{font-weight:600;margin-bottom:.3rem}
+.reconciliation-table{font-size:.82rem}
+.verified-list{margin:1rem 0;max-width:68ch}
+.verified-list li{margin-bottom:.4rem;font-size:.92rem}
+.panel-row{margin-bottom:.8rem}
+.panel-name{font-weight:600;color:#333}
+.panel-finding{font-size:.88rem;color:#555}
+.annotation-note{background:#fff8f0;border-left:3px solid #e67e22;padding:.6rem .8rem;margin:.8rem 0;font-size:.82rem;color:#555}
+</style></head><body><main>
+
+<p class="date">31 August 2026 — Code Review 004</p>
+<h1>AIGate</h1>
+<p class="subtitle">Round 4, strict criterion. Range <code>f4b40d6^..HEAD</code>, 26 commits, 91 files, ~9,960 insertions. Dual review: 6 calibrated + 6 blind panels + mechanical stub scan. Chair: Fable. Panels: Sonnet.</p>
+
+<div class="verdict pass">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text">Merge</div>
+  <p class="verdict-basis">Recorded after owner triage per shared rule 28. Owner disposition (2026-08-31): "Fix all C+I+M now" — F1&ndash;F17 all fixed the same session (F5 via honest single-axis disclosure with multi-select deliberately deferred; F10 via an explicit reset notice), each with regression tests where behaviour changed; F18&ndash;F22 observations logged, F21's stale test title also fixed. Fix pass verified: 712/712 tests &times;3 consecutive (10 new regression tests added), tsc/build/spec-parity clean, and the F1 scenario that five panels independently found (detail &rarr; sidebar &rarr; Back) reproduced FIXED live in the browser, plus F14 and F2 confirmed live. One new same-class defect was caught and fixed during the pass itself: the F12 wording fix introduced the word the policy editor's own test bans from its page &mdash; the reserved-word class this review exists to police, caught by the ritual before commit.</p>
+</div>
+
+<h2>1. Summary</h2>
+<div class="tally">
+  <div><b>1</b> Critical</div>
+  <div><b>9</b> Important</div>
+  <div><b>7</b> Minor</div>
+  <div><b>5</b> Observations</div>
+  <div><b>22</b> findings</div>
+  <div><b>13</b> panels</div>
+  <div><b>56%</b> capture</div>
+</div>
+
+<p><strong>Dual-review yield.</strong> Three of the 10 Important findings were discovered only by blind panels. Lincoln-Petersen capture-recapture estimate ≈ 56% (weak signal; dual sets were not independent samples of equal method, so treat with caution). An R2 targeted at the untouched intersection is optional.</p>
+
+<h2>2. Cross-cutting themes</h2>
+
+<div class="themes-section">
+  <div class="theme-item">
+    <div class="theme-title">F1 + F14 + role-change variant — history-state family (5 independent discoveries)</div>
+    <p>Popstate consumers recognize only their own state shapes; RegisterView listener dies on unmount; navigation no-ops when detail is nested. Convergent across Calibrated B, C (role-change variant), E, Blind C, and Blind E. Unified-state fix at App level likely resolves both F1 and F14.</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">F3, F6, F7, F11, F12 — new-vocabulary propagation misses (one schema addition, four places it didn't reach)</div>
+    <p><code>system_access_scope</code> and <code>multi_instance_coordination</code> fields added to engine types but unknown to question-generator (F3), verdict-audit.html (F6), policy-schema (F7), grounding doc (F11), and policy description (F12). Pattern: core abstraction updated, edge consumers left behind.</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">F2, F9, F12 — honesty-copy precision</div>
+    <p>New rendered string uses reserved word "rejected" (F2); judge-002 header contradicts its own writeup (F9); policy description omits "unknown" cases that fire the rule (F12). Each violates the honesty-as-functional-requirement rule.</p>
+  </div>
+</div>
+
+<h2>3. All findings (F1–F22)</h2>
+
+<div class="issue critical">
+  <div class="issue-severity">F1 — Critical</div>
+  <div class="issue-title">Uncoordinated history-state shapes break Back navigation across levels</div>
+  <p class="issue-detail"><code>src/App.tsx:92-108</code> + <code>src/components/RegisterView.tsx:49-77</code>. App pushes <code>{view}</code>, RegisterView pushes <code>{registerDetailId}</code>; each popstate consumer only recognizes its own shape; RegisterView's listener dies on unmount. Repros: (a) detail → sidebar item → Back = dead press, second Back skips the detail; (b) role-change replaceState leaves buried detail entry → dead Back on intake. Test suite covers only within-register paths (TC-D001-01..04).</p>
+  <p class="issue-detail"><strong>Fix (converged across panels):</strong> one unified state shape <code>{view, registerDetailId?}</code> pushed by both producers; App-level popstate as single authority (restore view + thread registerDetailId down as prop); role-change fallback normalizes.</p>
+  <p class="issue-location">Experts: Keeling, Lamport, Fagan. Found independently by Calibrated B, C (role-change variant), E, Blind C, Blind E (5 panels).</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F2 — Important</div>
+  <div class="issue-title">&quot;rejected&quot; in new rendered Register status line</div>
+  <p class="issue-detail"><code>src/components/RegisterView.tsx:246</code> (added in-range, 205fa61). &quot;N of M need your attention — rejected or stale.&quot; violates the reserved-word rule (CLAUDE.md); found only by Blind D (calibrated D scoped to policy+components diff strings and the exemption comment).</p>
+  <p class="issue-detail"><strong>Fix:</strong> reword to &quot;declined or stale&quot; (matches ACTION_LABEL vocabulary).</p>
+  <p class="issue-location">Expert: McConnell + project rule. Blind D.</p>
+  <div class="issue-note">Chair note: Reserved word "rejected" was indeed added in-range (205fa61), rendered on RegisterView.tsx:246 by Blind D review. Confirmed Important.</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F3 — Important</div>
+  <div class="issue-title">question-generator: new closed-set fields missing from vocabulary AND write-back gate</div>
+  <p class="issue-detail"><code>src/engine/question-generator.ts</code> (<code>QUESTION_TEXT</code>, <code>EXTRA_QUESTION_OPTIONS</code>) — <code>system_access_scope</code> + <code>multi_instance_coordination</code> are rule-condition candidate fields (v1.4) but unknown to both <code>questionForField</code> (falls to answer_type 'text') and <code>coerceAnswerValue</code> (falls to open-text accept-anything). Unreachable TODAY (extractor schema lacks fields; form path never uncertain) — latent landmine armed by the next extractor-schema update; re-opens documented v0.7.1 bug class. Found only by Blind B.</p>
+  <p class="issue-detail"><strong>Fix:</strong> add both fields to <code>EXTRA_QUESTION_OPTIONS</code> + <code>QUESTION_TEXT</code>.</p>
+  <p class="issue-location">Expert: Keeling/Rainsberger. Blind B.</p>
+  <div class="issue-note">Chair note: Fields ARE rule-condition candidates (candidatesFromRules iterates condition keys of v1.4 invariants) BUT unreachable today — LLM extractor schema lacks the fields so <code>field in node</code> is always false; form path never sets uncertain. BOTH layers (question options AND coerceAnswerValue) would fail open when schema catches up. Important: latent, two-layer, cheap fix.</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F4 — Important</div>
+  <div class="issue-title">INV-CONFDATA-01 inherits the FN-005 cross-node data_zone imprecision undisclosed</div>
+  <p class="issue-detail"><code>policy/appetite.yaml:356-363</code>. New rule keys <code>data_class</code>+<code>data_zone</code> which match on DIFFERENT nodes (condition.ts any-node semantics); the file's own FN-005 comment refuses a review-rule for this exact reason. Same shape as pre-existing INV-DATA-01 (so not novel), and for encryption the any-node reading is partially defensible — but the v1.5 changelog claims clean verification without disclosing the inherited imprecision.</p>
+  <p class="issue-detail"><strong>Fix:</strong> changelog + rule comment disclosing the FN-005 limitation; proper fix (node-scoped conditions) tracked in FN-005.</p>
+  <p class="issue-location">Expert: Power/Mitchell. Calibrated G.</p>
+  <div class="issue-note">Chair note: Confirmed real; identical shape to pre-existing INV-DATA-01; sits beside FN-005 comment refusing a review-rule for the same reason. For an ENCRYPTION rule the any-node-external reading is partially defensible (data in transit either direction), but multi-node graphs can spuriously fire (Confidential in C + unrelated node in A/B). Not a withdrawal recommendation.</div>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F5 — Important</div>
+  <div class="issue-title">system_access_scope single-select cannot express the compound incident shape</div>
+  <p class="issue-detail"><code>src/engine/types.ts</code> + <code>StructuredForm</code> (single &lt;select&gt;). INV-AGENT-INFRA-01 (shared_infrastructure) and INV-AGENT-CRED-01 (credentialed/deployment) are mutually exclusive at intake — but S1's documented mechanism was BOTH at once (shared creds on shared infra). Honest submission can never co-fire the two invariants built for the compound case. Found only by Blind G.</p>
+  <p class="issue-detail"><strong>Fix options:</strong> multi-select field; or document single-axis limitation honestly in field help + grounding doc, defer multi-select.</p>
+  <p class="issue-location">Expert: OWASP. Blind G.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F6 — Important</div>
+  <div class="issue-title">specs drift: verdict-audit.html twin missing control_ownership_assigned</div>
+  <p class="issue-detail"><code>specs/verdict-audit.html</code> untouched in range while .md gained the event type (18 lines). Convergent: Calibrated D + Blind D. Parity script blind to it.</p>
+  <p class="issue-detail"><strong>Fix:</strong> port the .md addition to .html.</p>
+  <p class="issue-location">Expert: Brooks. Calibrated D and Blind D.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F7 — Important</div>
+  <div class="issue-title">specs drift: policy-schema PolicyFile block missing governance_mapping</div>
+  <p class="issue-detail"><code>specs/policy-schema.md</code> (+.html) §3 lacks <code>governance_mapping</code> + <code>GovernanceMappingEntry</code> present in <code>src/engine/types.ts</code> since the D-002 fix. Found by Calibrated B.</p>
+  <p class="issue-detail"><strong>Fix:</strong> add to both twins.</p>
+  <p class="issue-location">Expert: Keeling. Calibrated B.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F8 — Important</div>
+  <div class="issue-title">Control-owner overdue math: UTC-midnight vs local-now off-by-one</div>
+  <p class="issue-detail"><code>src/components/VerdictDisplay.tsx</code> (ControlOwnerAssign date math). <code>Date.parse('yyyy-mm-dd')=UTC</code> midnight vs <code>Date.now()</code> local instant → user west of UTC sees same-day target as overdue; "days to go" branch untested; TC-L6-02 only tests hard-overdue 2020 date. Convergent: Calibrated C + Blind C.</p>
+  <p class="issue-detail"><strong>Fix:</strong> date-only comparison in local calendar terms + tests for to-go/boundary.</p>
+  <p class="issue-location">Experts: Beck/McConnell. Calibrated C and Blind C.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F9 — Important</div>
+  <div class="issue-title">judge-002.mjs header comment falsifies its own methodology</div>
+  <p class="issue-detail"><code>scripts/judge-002.mjs:6-11</code> claims <code>num_predict</code> held constant; code uses 1536 vs judge-001's 512; <code>reviews/judge-002.md</code> itself documents the change honestly. In-code claim contradicts the writeup — honesty-as-functional-requirement violation.</p>
+  <p class="issue-detail"><strong>Fix:</strong> correct the comment.</p>
+  <p class="issue-location">Expert: Martin. Calibrated C.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F10 — Important</div>
+  <div class="issue-title">Ownership assignments silently vanish on re-evaluation</div>
+  <p class="issue-detail"><code>src/components/RegisterDetail.tsx</code> <code>controlOwnership</code> keyed on <code>latestVerdict.id</code> — new verdict after policy change hides prior assignments for identical control ids, no notice. Found by Blind C (borderline-medium, chair-promoted: consumer-visible loss of user-entered compliance data with no explanation).</p>
+  <p class="issue-detail"><strong>Fix options:</strong> carry forward by control_id across verdict transition, or render an explicit "assignments reset by re-evaluation" note. DESIGN DECISION for owner.</p>
+  <p class="issue-location">Expert: Martin. Blind C.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F11 — Minor</div>
+  <div class="issue-title">Grounding doc §3.1/3.2 stale draft enum values</div>
+  <p class="issue-detail"><code>grounding/proposed-rules/agentic-infrastructure-access.md</code> still shows hyphenated draft values + 'not-sure' while shipped enum is snake_case + yes/no/unknown; doc claims "BUILT/Shipped". Found by Blind G (Medium→Minor: doc is marked as containing a superseded draft section, but the status header invites reading it as current).</p>
+  <p class="issue-detail"><strong>Fix:</strong> normalize values or add a one-line supersession note.</p>
+  <p class="issue-location">Expert: Blind G.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F12 — Minor</div>
+  <div class="issue-title">INV-AGENT-COORD-01 rendered description omits that 'unknown' fires it</div>
+  <p class="issue-detail"><code>policy/appetite.yaml</code> — description says "instances that CAN coordinate"; condition fires on unknown too; only the non-rendered comment explains. Found by Blind G.</p>
+  <p class="issue-detail"><strong>Fix:</strong> append "or where that capability is unconfirmed" to description.</p>
+  <p class="issue-location">Expert: Blind G.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F13 — Minor</div>
+  <div class="issue-title">Silent no-op in handleAssignControlOwner when latestVerdict null</div>
+  <p class="issue-detail"><code>RegisterDetail.tsx</code> — bare return inside try, busy clears, no error. Convergent Calibrated C + Blind C.</p>
+  <p class="issue-detail"><strong>Fix:</strong> explicit error or structural precondition.</p>
+  <p class="issue-location">Calibrated C and Blind C.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F14 — Minor</div>
+  <div class="issue-title">Sidebar "Register" click dead while a detail is open</div>
+  <p class="issue-detail"><code>App.tsx</code> <code>navigate()</code> no-ops when <code>next===view</code>; detail is nested state. Found by Blind C. Related to F1 — unified-state fix likely resolves both.</p>
+  <p class="issue-location">Blind C.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F15 — Minor</div>
+  <div class="issue-title">Duplicate STATUS_LABEL in RegisterView (PRE-EXISTING, out of range)</div>
+  <p class="issue-detail"><code>RegisterView.tsx:22-26</code> vs <code>field-copy.ts:267</code> export; introduced P6-C01, missed by the later consolidation whose comment claims completeness. Found by Blind D (novelty claim corrected by chair).</p>
+  <p class="issue-detail"><strong>Fix:</strong> import shared map (1-line).</p>
+  <p class="issue-location">Blind D.</p>
+  <div class="issue-note">Chair note: Duplicate STATUS_LABEL RegisterView.tsx:22-26 introduced 453b5ac (P6-C01) — PRE-EXISTING, not in range. Recommend cheap fix but outside this review's scope.</div>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F16 — Minor</div>
+  <div class="issue-title">verifyChain edge-case tests missing (empty trail; reorder-swap)</div>
+  <p class="issue-detail"><code>src/store/audit.test.ts</code>. Found by Calibrated C.</p>
+  <p class="issue-detail"><strong>Fix:</strong> two small tests.</p>
+  <p class="issue-location">Calibrated C.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F17 — Minor</div>
+  <div class="issue-title">handleRetryExtraction lacks sibling in-flight guard (likely pre-existing)</div>
+  <p class="issue-detail"><code>IntakeFlow.tsx:444-463</code>. Found by Blind E.</p>
+  <p class="issue-detail"><strong>Fix:</strong> same <code>useRef</code> guard pattern.</p>
+  <p class="issue-location">Blind E.</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">F18 — Observation</div>
+  <div class="issue-title">approve-event + lifecycle-stage not atomic (pre-existing pattern)</div>
+  <p class="issue-detail">Blind E. Durable trail/register inconsistency if second write throws; catch reloads UI honestly. Options: ordering swap, or compensating event. Design consideration.</p>
+  <p class="issue-location">Blind E.</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">F19 — Observation</div>
+  <div class="issue-title">Control reuse (ENC-01, LOG-01) adds coverage without margin depth</div>
+  <p class="issue-detail">Blind G. Margin math unchanged by v1.5 — confirm understood.</p>
+  <p class="issue-location">Blind G.</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">F20 — Observation</div>
+  <div class="issue-title">Internal data class still has zero zone coverage — undocumented whether deliberate</div>
+  <p class="issue-detail">Blind G. Changelog practice elsewhere documents deliberate non-coverage; add a line or a rule.</p>
+  <p class="issue-location">Blind G.</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">F21 — Observation</div>
+  <div class="issue-title">Stale test title "6 controls" (try-these.test.ts:148 it() title) vs 7 asserted</div>
+  <p class="issue-detail">Calibrated A handoff.</p>
+  <p class="issue-location">Calibrated A.</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">F22 — Observation</div>
+  <div class="issue-title">1LoD default-collapsed owner-assign section; stale-owner flash during reassign</div>
+  <p class="issue-detail">Blind C borderlines, UX polish.</p>
+  <p class="issue-location">Blind C.</p>
+</div>
+
+<h2>4. Dual-review reconciliation</h2>
+
+<table class="reconciliation-table">
+  <thead>
+    <tr><th>Category</th><th>Findings</th><th>Count</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Blind-only genuine</td><td>F2, F3, F5, F10, F14, F17, F18, F19, F20 (+F15 corrected)</td><td>10</td></tr>
+    <tr><td>Calibrated-only</td><td>F4, F6 (shared), F7, F9, F16, F21</td><td>6</td></tr>
+    <tr><td>Convergent (both sets)</td><td>F1 (5 panels), F6, F8, F13</td><td>4</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Blind set earned its cost:</strong> 3 of the 10 Important findings are blind-only. Convergent findings show strong signal where both methods agree; blind-only patterns (question-generator propagation, compound shape expression, stale grounding doc) represent domain gaps the calibrated sets did not catch.</p>
+
+<h2>5. Verified safe (explicit)</h2>
+
+<ul class="verified-list">
+  <li><strong>Audit-chain:</strong> single write path, full enqueue serialization incl. rejection recovery, read isolation of <code>verifyChain</code> — verified by Calibrated E AND Blind E independently.</li>
+  <li><strong>All six RegisterDetail in-flight guards</strong> + cancelled-flag effects.</li>
+  <li><strong>verdictToAttest TOCTOU re-check.</strong></li>
+  <li><strong>IntakeFlow sequential evaluate chain.</strong></li>
+  <li><strong>Module boundaries intact</strong> (Calibrated A + Blind A).</li>
+  <li><strong>Reserved-word scan of policy strings clean.</strong></li>
+  <li><strong>0 stubs.</strong></li>
+</ul>
+
+<h2>6. Per-panel appendix</h2>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated A (References &amp; Dependencies)</div>
+  <div class="panel-finding">CLEAN. 1 handoff nit (stale test title F21).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated B (Contracts)</div>
+  <div class="panel-finding">1 Critical (F1 popstate), 1 Important (F7 spec drift governance_mapping).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated C (Logic)</div>
+  <div class="panel-finding">3 Important (F8 timezone, F9 judge methodology, F13 silent no-op), 2 Minor (F16 verifyChain tests).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated D (Naming/Spec)</div>
+  <div class="panel-finding">1 Important (F6 verdict-audit.html twin), reserved-word scan clean (47 strings).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated E (Concurrency)</div>
+  <div class="panel-finding">1 Critical (F1 popstate), audit-chain mutex + guards VERIFIED SAFE.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Calibrated G (Policy Content)</div>
+  <div class="panel-finding">1 Important (F4 INV-CONFDATA-01 zone ambiguity), v1.4 rules cleared.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind A</div>
+  <div class="panel-finding">CLEAN (concordant).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind B</div>
+  <div class="panel-finding">1 Important (F3 question-generator vocabulary NEW), 1 borderline (untyped history state), 1 informational.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind C</div>
+  <div class="panel-finding">1 Critical (F1 popstate, 5th discovery + double-Back-skips-detail articulation), 1 Important (F10 ownership vanish NEW), 1 Minor (F14 sidebar no-op), 1 Medium (timezone convergent), borderlines.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind D</div>
+  <div class="panel-finding">2 Critical claimed (1 verified real+new: F2 "rejected" rendered string; 1 real but pre-existing: F15 dup STATUS_LABEL), 1 Minor (F6 verdict-audit.html twin convergent).</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind E</div>
+  <div class="panel-finding">1 Minor (F1 popstate convergent), 1 Observation (F18 approve+lifecycle atomicity NEW), 1 Minor (F17 handleRetryExtraction guard NEW), large verified-safe list.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Blind G</div>
+  <div class="panel-finding">1 Important (F5 single-select compound shape NEW), 1 Minor (F11 grounding doc stale enums NEW, F12 policy description omits unknown NEW), borderlines.</div>
+</div>
+
+<div class="panel-row">
+  <div class="panel-name">Panel F (Stubs)</div>
+  <div class="panel-finding">0 candidates.</div>
+</div>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main></body></html>

@@ -130,6 +130,16 @@ about this incident was a "business decision") or fail to fire at all.
 ### 3.1 Proposed schema addition (engineering — safe to build without rule
 authorship, per the earlier discussion)
 
+> **SUPERSEDED VALUES (code-review-004 F11):** the draft below uses
+> hyphenated value names and `not-sure`; the SHIPPED enum
+> (`src/engine/types.ts`, `policy/appetite.yaml`) normalized these to
+> snake_case — `shared_infrastructure` / `credentialed_systems` /
+> `deployment_authority` — and coordination answers to `yes`/`no`/`unknown`.
+> A rule author must use the shipped values, never the draft ones below.
+> Additionally, `system_access_scope` shipped as a SINGLE-select — the
+> compound case (several scopes at once) cannot be expressed yet; see the
+> v1.4 KNOWN LIMITATION comment in `policy/appetite.yaml`.
+
 New question, alongside the existing "What kind of AI is it?" /
 "How much can it do without a person?" block:
 

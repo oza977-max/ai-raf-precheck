@@ -29,6 +29,7 @@ against.
 | 1 | 2026-08-25 | doc | A,B,C,D (standalone) | 2 | 15 | 10 | **Do not publish — revise first** ("After Deployment" briefing, 2nd ed.; all C+I fixed same-session per owner triage → 3rd ed. republished; R2 recommended) |
 | 2 | 2026-08-25 | doc | A,B,C,D strict | 0 | 3 | 4 | **Publish with revisions** (3rd ed. scored 8.2 — integrity 9 ↑, transparency 8 ↑, prose 6 ↓ regression from R1 fixes; all 3 Importants + prose pass fixed per owner triage → 4th ed.; stopping rule not yet met, targeted R3 optional) |
 | 2 | 2026-08-31 | design | A,B,C,D,E,G (G supplementary, strict) | 6 | 8 | 3 | **Build with caveats** (verdict/sign-off screen; triggered by explore-006's 3 Critical UX findings; 4 panels independently converged on the same fix mechanism for the core finding; owner chose fix-everything) |
+| 4 | 2026-08-31 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 1 | 9 | 7 | **Merge** (full-day range f4b40d6^..HEAD, 26 commits/91 files; owner chose fix-all C+I+M — F1–F17 fixed + verified same session, 712/712 ×3, F1 re-proven live; 5 observations logged. Dual review earned its cost: 3 of 10 Importants blind-only (F2 rendered reserved word, F3 question-generator vocabulary, F5 single-select compound gap). Capture-recapture ≈56% coverage — weak signal (sets not method-independent); optional targeted R2 on untouched intersection (src/llm, CSS, seeds) noted, not required) |
 | 3 | 2026-08-31 | design | A,C,D,E,G strict (no B/F — no contract/quality-attribute change) | 2 | 6 | 3 | **Build with caveats** (verdict screen information architecture and narrative flow — not another leak sweep; owner's own proposed 5-beat restructure independently stress-tested rather than rubber-stamped; both Criticals are proposal-design gaps, not pre-existing code bugs — beat 4 forced grouping [C+G converged] and binding-constraint deletion's false premise [A+D converged]; triage pending) |
 | 4 | 2026-08-31 | design | A,C,D,E, + Panel G fanned out one sub-panel per screen (9 screens) — 13 panels total (no B/F) | 10 | 14 | 8 | **Build with caveats** (app-wide narrative flow — same audience-hospitality lens applied to every screen outside the already-fixed verdict screen; owner asked "look at all screens with same lens"; strongest signal is 3-panel convergence [A+C+D] that the round-3 fix — Fold, NF-11 — was built as a one-screen patch, not a reusable house convention, and did not propagate; triage pending) |
 | 3 | 2026-08-31 | explore | persona demo (founder/skeptical-banker/consultant roleplay, grounded in live site content) | 1 | 2 | 1 | 4 findings — audit trail not tamper-evident (Critical), Track/Tier never mapped to a real bank's committees + coverage-gap queue no visibility (Important), margin-of-safety uncalibrated (Minor); owner chose fix-everything, including the item the consultant flagged as future-phase infra |
@@ -145,6 +146,37 @@ one day: `verdict-audit.html` missing a V2-D reword, and nine test cases
 written to `test-cases.md` and never rendered into the HTML. The parity
 script reads `.md` only, by design, so it cannot see this class at all.
 Candidate for an R8 rule.
+
+Code review 004 (2026-08-31): TWO more instances in one day's diff —
+`verdict-audit.html` again (missed `control_ownership_assigned`; both the
+calibrated and blind D panels converged on it) and `policy-schema.md/.html`
+missing `governance_mapping` entirely. Four confirmed instances now. The
+class survives because CLAUDE.md documents it as a discipline rather than a
+check; the R8 candidate rule (an automated .md-section-heads vs .html
+comparison) is overdue.
+
+**RF-3 — new-vocabulary propagation misses (named by code review 004).** A
+schema addition must reach EVERY consumer of the vocabulary, and today's
+`system_access_scope`/`multi_instance_coordination` addition missed four:
+the question-generator's closed-set maps (F3 — re-arming the documented
+v0.7.1 free-text corruption class, latent only because the LLM extractor's
+schema lags), both spec twins (F6/F7), and the grounding doc's draft values
+(F11). The rulebook additions themselves were clean — it is the SECONDARY
+consumers, the ones not on the happy path of the feature being built, that
+get missed. Standing mandate for future reviews of any schema change:
+enumerate consumers of the vocabulary FIRST (grep the field-name across
+src+specs+grounding), then check each got the update.
+
+**RF-4 — reserved-word regressions keep arriving via honest copy.** Code
+review 004: "rejected" entered a rendered register line via the R15
+propagation commit (F2, blind-panel find), and the FIX PASS itself briefly
+introduced "fired" into policy YAML that renders in the editor whose test
+bans it — caught by the ritual, pre-commit. The banned-word list is
+distributed across test assertions (/approved|rejected/i on the verdict
+screen, "immutable" on the trail copy, "fired" on the policy editor) with
+no single registry; a grep-able manifest of banned-rendered-words plus the
+surfaces they bind to would convert this class from review-catch to
+mechanical check.
 
 ## Anchor examples
 

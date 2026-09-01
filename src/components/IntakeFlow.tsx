@@ -294,6 +294,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // too late — the same lesson as P7-C01's seed guard and the 2LoD actions
   // (verified: src/components/RegisterDetail.tsx:76).
   const confirmNewInFlight = useRef(false);
+  // code-review-004 F17: fresh ref — must reset independently of the others.
+  const retryExtractionInFlight = useRef(false);
 
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;
@@ -441,15 +443,21 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   }
 
   // Code review round 3, Panel C. The only exit from a failed extraction.
+  // code-review-004 F17: guarded like every sibling handler — this was the
+  // one async handler without an in-flight ref, so a fast double-click
+  // fired two concurrent extractGraph() calls racing to dispatch, each with
+  // its own fresh useCaseId; last-to-resolve silently won.
   async function handleRetryExtraction() {
     if (state.step !== 'graph_extraction') return;
-    setExtractionError(null);
-    const extraction = await extractGraph(state.description);
-    if (!extraction.ok) {
-      setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
-      return;
-    }
-    {
+    if (retryExtractionInFlight.current) return;
+    retryExtractionInFlight.current = true;
+    try {
+      setExtractionError(null);
+      const extraction = await extractGraph(state.description);
+      if (!extraction.ok) {
+        setExtractionError(`Graph extraction failed: ${extraction.error.kind}`);
+        return;
+      }
       const parted = partitionJurisdictions(extraction.value.graph);
       dispatch({
         type: 'GRAPH_EXTRACTED',
@@ -459,6 +467,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         provenance: extraction.value.provenance,
         guessedFields: extraction.value.guessed,
       });
+    } finally {
+      retryExtractionInFlight.current = false;
     }
   }
 

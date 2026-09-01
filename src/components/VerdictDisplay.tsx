@@ -494,14 +494,33 @@ function ControlOwnerAssign({
   const [editing, setEditing] = useState(false);
 
   if (assignment && !editing) {
-    const days = Math.floor((Date.now() - Date.parse(assignment.target_date)) / (24 * 60 * 60 * 1000));
-    const overdue = days > 0 && Number.isFinite(days);
+    // code-review-004 F8: this used Date.parse('yyyy-mm-dd') — which the
+    // spec anchors to UTC MIDNIGHT — against Date.now(), a local instant.
+    // West of UTC, a target the user picked as "today" was already hours
+    // past UTC midnight and rendered overdue the moment it was saved; east
+    // of UTC the count went the other way. A false "overdue" on a
+    // compliance control is precisely the claim this product must not
+    // make. Fixed by comparing CALENDAR DAYS in the viewer's own timezone:
+    // the target parsed as a local date, against local today.
+    const [ty, tm, td] = assignment.target_date.split('-').map(Number);
+    const now = new Date();
+    const days =
+      ty && tm && td
+        ? Math.round(
+            (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+              new Date(ty, tm - 1, td).getTime()) /
+              (24 * 60 * 60 * 1000),
+          )
+        : NaN;
+    const overdue = days > 0;
     return (
       <p className="verdict__todo-line verdict__todo-owner">
         <span className="verdict__todo-label">Owner:</span> {assignment.owner_name} (name not verified) · target{' '}
         {assignment.target_date}
         {overdue ? (
           <span className="verdict__todo-owner-overdue"> · overdue {days} day{days === 1 ? '' : 's'}</span>
+        ) : days === 0 ? (
+          <span> · due today</span>
         ) : (
           Number.isFinite(days) && <span> · {-days} day{-days === 1 ? '' : 's'} to go</span>
         )}

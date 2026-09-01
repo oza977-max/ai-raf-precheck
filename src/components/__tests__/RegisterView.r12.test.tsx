@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type ComponentProps } from 'react';
 import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
 import { append } from '../../store/audit';
@@ -8,6 +9,19 @@ import { isSampledForReview } from '../../engine/temporal';
 import type { RegisterNode, RegisterNodeMetadata } from '../../store/types';
 import type { Verdict } from '../../types/verdict';
 import type { PolicyFile } from '../../engine/types';
+
+// code-review-004 F1: RegisterView is a controlled component now — App owns
+// selection + history. This harness supplies the minimal controlled wiring
+// (plain state, no history) so these behavioural tests keep exercising the
+// row-click -> detail -> back flow; the HISTORY semantics live in App and
+// are covered by App.browserBack.test.tsx.
+function RegisterViewHarness(props: Omit<ComponentProps<typeof RegisterView>, 'selectedId' | 'onSelectRow' | 'onCloseDetail'>) {
+  const [sel, setSel] = useState<string | null>(null);
+  return (
+    <RegisterView {...props} selectedId={sel} onSelectRow={setSel} onCloseDetail={() => setSel(null)} />
+  );
+}
+
 
 function makeUseCaseMetadata(
   overrides: Partial<Extract<RegisterNodeMetadata, { node_type: 'use_case' }>> = {},
@@ -127,7 +141,7 @@ describe('R12-BD-3 — pilot-mode line', () => {
     );
     await seedVerdict(clean.node_id, makeVerdict({ use_case_id: clean.node_id, provisional_reasons: [] }));
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
 
     expect(await screen.findByText(/1 of 3 verdicts here would be final once outstanding sign-offs land\./)).toBeInTheDocument();
   });
@@ -142,7 +156,7 @@ describe('R12-AB-1 — sampling queue chip', () => {
     await seedVerdict(node.node_id, verdict);
 
     const policy = { sampling_rate: SAMPLING_RATE } as unknown as PolicyFile;
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
 
     // R15-C1 renegotiation: this row is self-served Low tier ("Cleared" /
     // 'approved' stage), so it sits outside the new 2LoD default "awaiting
@@ -169,7 +183,7 @@ describe('R12-AB-1 — sampling queue chip', () => {
     });
 
     const policy = { sampling_rate: SAMPLING_RATE } as unknown as PolicyFile;
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" policy={policy} />);
 
     // R15-C1 renegotiation: same self-served Low-tier ('approved' stage)
     // row, outside the new default view — see TC-R12-AB-1-01 above.

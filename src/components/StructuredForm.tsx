@@ -391,7 +391,9 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         </label>
         <p className="field-help">
           Not the data — the infrastructure. Shared compute, package repositories, live credentials,
-          deployment pipelines.
+          deployment pipelines. One answer only in this version: if several apply, pick the most
+          severe (deployment &gt; credentials &gt; shared infrastructure) and note the rest for the
+          reviewer in the sign-off note.
         </p>
         <WhyWeAsk field="system_access_scope" />
         <select

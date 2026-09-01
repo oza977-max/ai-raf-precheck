@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
@@ -6,7 +6,7 @@ import type { UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
 import type { ProvisionalReason } from '../engine/provisional';
 import { classifyProvisionalReason } from './VerdictDisplay';
-import { STAGE_LABELS } from './field-copy';
+import { STAGE_LABELS, STATUS_LABEL } from './field-copy';
 
 // Rule 4 (cross-cutting.md §7): presentation-only, calls store functions,
 // no direct IndexedDB/audit access. register-lifecycle.md §10.
@@ -17,15 +17,21 @@ interface RegisterViewProps {
   // evidence status from TODAY's policy while the verdict itself stays
   // historical. RegisterView does not use it.
   policy?: PolicyFile;
+  // code-review-004 F1: list<->detail selection is App-owned now — App is
+  // the single history/popstate authority, this component just renders the
+  // coordinate it's given and asks App to change it. Its own pushState +
+  // popstate listener (the second, shape-blind stack writer that broke Back
+  // across view levels) are gone.
+  selectedId: string | null;
+  onSelectRow: (id: string) => void;
+  onCloseDetail: () => void;
 }
 
-const STATUS_LABEL: Record<NonNullable<UseCaseSummary['current_verdict_status']>, string> = {
-  approved: 'Approved',
-  approved_with_controls: 'Approved with controls',
-  rejected: 'Rejected',
-};
+// code-review-004 F15: this was a third, local copy of the exact map
+// field-copy.ts consolidated (its comment claims the consolidation was
+// complete — this file predated it and was missed). One source now.
 
-export default function RegisterView({ role, currentPolicyVersion, policy }: RegisterViewProps) {
+export default function RegisterView({ role, currentPolicyVersion, policy, selectedId, onSelectRow, onCloseDetail }: RegisterViewProps) {
   const [rows, setRows] = useState<UseCaseSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [policyUpdatePending, setPolicyUpdatePending] = useState(false);
@@ -41,39 +47,20 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
   // (G6). Default false = the narrowed view; true = everything this role
   // can already see.
   const [showAll, setShowAll] = useState(false);
-  // V1.2-A: row click -> detail view; refreshKey bumps on return so a
-  // 2LoD approval's stage change is immediately visible in the list.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // V1.2-A: row click -> detail view (App-owned since code-review-004 F1);
+  // refreshKey bumps on return so a 2LoD approval's stage change is
+  // immediately visible in the list.
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // explore-010 D-001: list <-> detail was a second, nested navigation layer
-  // with the same gap as App.tsx's top-level view — no history entry for
-  // "opened a detail", so the browser Back button skipped past this level
-  // entirely too. Row selection pushes an entry; popstate un-does it,
-  // including the list refresh the explicit "back" link used to trigger.
+  // F1: the list refresh the old popstate handler did on detail->list is
+  // now keyed on the PROP transition — same trigger, one authority.
+  const prevSelectedId = useRef(selectedId);
   useEffect(() => {
-    const onPopState = (e: PopStateEvent) => {
-      // Deliberately NOT gated on the key's presence: the state we land on
-      // going back from a detail view is App.tsx's `navigate('register')`
-      // entry, which carries only `{ view: 'register' }` — no
-      // registerDetailId at all. Absence means "not a detail", same as an
-      // explicit null. Requiring the key here was the actual bug: it made
-      // this handler silently no-op on exactly the state Back needed to land on.
-      const state = e.state as { registerDetailId?: string | null } | null;
-      const next = state?.registerDetailId ?? null;
-      setSelectedId((prev) => {
-        if (prev !== null && next === null) setRefreshKey((k) => k + 1);
-        return next;
-      });
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  function selectRow(id: string) {
-    window.history.pushState({ registerDetailId: id }, '');
-    setSelectedId(id);
-  }
+    if (prevSelectedId.current !== null && selectedId === null) {
+      setRefreshKey((k) => k + 1);
+    }
+    prevSelectedId.current = selectedId;
+  }, [selectedId]);
 
   const is2LoD = role === '2LoD';
 
@@ -150,13 +137,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
         useCaseId={selectedId}
         role={role}
         policy={policy}
-        onBack={() => {
-          // A real back-navigation, not a direct state clear — selectRow
-          // always pushed an entry to get here, so unwinding it through
-          // history keeps the in-app link and the browser Back button
-          // consistent instead of two separate paths that can disagree.
-          window.history.back();
-        }}
+        onBack={onCloseDetail}
       />
     );
   }
@@ -243,7 +224,12 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
           const attention = rows.filter((r) => r.current_verdict_status === 'rejected' || r.stale_assessment);
           return attention.length > 0 ? (
             <p className="register-view__showing-line" role="status">
-              {attention.length} of {rows.length} need your attention — rejected or stale.
+              {/* code-review-004 F2: "rejected" reworded to "declined" — the
+                  reserved-word gate (/approved|rejected/i, CLAUDE.md) applies
+                  to every rendered string, and this line was the one new
+                  violation today's diff introduced. Same vocabulary as
+                  field-copy.ts's ACTION_LABEL ("Sign-off declined"). */}
+              {attention.length} of {rows.length} need your attention — declined or stale.
             </p>
           ) : null;
         })()}
@@ -377,7 +363,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy }: Reg
               className={
                 isSelfAssessment ? 'register-view__row register-view__row--self-assessment' : 'register-view__row'
               }
-              onClick={() => selectRow(row.use_case_id)}
+              onClick={() => onSelectRow(row.use_case_id)}
             >
               <td>
                 {row.label}

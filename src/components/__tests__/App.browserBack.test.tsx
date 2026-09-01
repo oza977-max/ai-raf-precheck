@@ -104,6 +104,56 @@ describe('Browser Back button actually navigates within the app (explore-010 D-0
     });
   });
 
+  // code-review-004 F1: the two cross-level paths the original suite missed —
+  // exactly where five review panels independently found the Back button
+  // still broke after the first fix.
+  it('TC-CR4-F1-01: detail -> a DIFFERENT sidebar view -> Back restores the detail (no dead click, no skipped level)', async () => {
+    const label = 'Back-button fixture — TC-CR4-F1-01';
+    await addNode(makeUseCaseNode(label));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByText('▤ Register'));
+    await screen.findByText(label);
+    await user.click(screen.getByText(label));
+    expect(await screen.findByText(/← register/i)).toBeInTheDocument();
+
+    // Leave the open detail via the sidebar — the path that used to strand
+    // a {registerDetailId}-shaped entry no listener could interpret.
+    await user.click(screen.getByText('? About'));
+    expect(await screen.findByRole('heading', { name: /what this is/i })).toBeInTheDocument();
+
+    goBack();
+    // ONE Back = back ONE screen: the detail, restored — not a swallowed
+    // press, not the list, not still About.
+    await waitFor(() => {
+      expect(screen.getByText(/← register/i)).toBeInTheDocument();
+    });
+
+    goBack();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /^register$/i })).toBeInTheDocument();
+    });
+  });
+
+  it('TC-CR4-F14-01: sidebar "Register" while a detail is open returns to the list (was a dead click)', async () => {
+    const label = 'Back-button fixture — TC-CR4-F14-01';
+    await addNode(makeUseCaseNode(label));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByText('▤ Register'));
+    await screen.findByText(label);
+    await user.click(screen.getByText(label));
+    expect(await screen.findByText(/← register/i)).toBeInTheDocument();
+
+    await user.click(screen.getByText('▤ Register'));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /^register$/i })).toBeInTheDocument();
+    });
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
   it('TC-D001-04: the in-app "← register" link and the browser Back button end up in the same place', async () => {
     const label = 'Back-button fixture — TC-D001-04';
     await addNode(makeUseCaseNode(label));

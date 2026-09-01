@@ -66,6 +66,17 @@ export default function App() {
     [policyResult],
   );
 
+  // code-review-004 F1 (five panels converged on this independently): the
+  // first D-001 fix had App pushing {view} and RegisterView pushing its own
+  // {registerDetailId} shape onto the SAME browser stack, each popstate
+  // consumer blind to the other's entries and RegisterView's listener dying
+  // on unmount — so "open a detail, click a sidebar item, press Back" was a
+  // dead click and a second Back skipped the detail entirely. One authority
+  // now: App owns BOTH coordinates (view + registerDetailId) in every
+  // history entry, App's is the only popstate listener, and RegisterView is
+  // a controlled component that asks App to navigate.
+  const [detailId, setDetailId] = useState<string | null>(null);
+
   function handleRoleChange(next: string) {
     setRole(next);
     setRoleState(next);
@@ -76,8 +87,9 @@ export default function App() {
       // replaceState, not navigate(): this is a forced fallback from a role
       // change, not a click the user made — it must not leave a back-stack
       // entry pointing at a queue that's no longer reachable in this role.
-      window.history.replaceState({ view: 'intake' }, '');
+      window.history.replaceState({ view: 'intake', registerDetailId: null }, '');
       setView('intake');
+      setDetailId(null);
     }
   }
 
@@ -90,10 +102,19 @@ export default function App() {
   // mount so a Back from the very first screen still leaves the app for
   // wherever the user was before arriving — that's correct, not a bug.
   useEffect(() => {
-    window.history.replaceState({ view: 'intake' }, '');
+    window.history.replaceState({ view: 'intake', registerDetailId: null }, '');
     const onPopState = (e: PopStateEvent) => {
-      const next = (e.state as { view?: typeof view } | null)?.view;
-      if (next) setView(next);
+      const state = e.state as { view?: typeof view; registerDetailId?: string | null } | null;
+      if (state?.view) {
+        // F1: a popped ruleQueue entry is only honoured for the role that
+        // can see it — a 1LoD Back onto a 2LoD-only surface falls back the
+        // same way handleRoleChange does.
+        const popped = state.view === 'ruleQueue' && getRole() !== '2LoD' ? 'intake' : state.view;
+        setView(popped);
+        setDetailId(state.registerDetailId ?? null);
+      }
+      // A null/foreign state means the entry predates this app or belongs
+      // to something else — the boundary of what Back can restore. No-op.
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -103,10 +124,28 @@ export default function App() {
   }, []);
 
   function navigate(next: typeof view) {
-    if (next !== view) {
-      window.history.pushState({ view: next }, '');
+    // code-review-004 F14: the old guard was `next !== view`, which made the
+    // sidebar "Register" item a dead click while a DETAIL was open (top-level
+    // view already 'register'). A navigation is new if either coordinate
+    // changes.
+    if (next !== view || detailId !== null) {
+      window.history.pushState({ view: next, registerDetailId: null }, '');
     }
     setView(next);
+    setDetailId(null);
+  }
+
+  // F1: RegisterView's row-click and back-link route through these — the
+  // component no longer touches window.history itself.
+  function openRegisterDetail(id: string) {
+    window.history.pushState({ view: 'register', registerDetailId: id }, '');
+    setDetailId(id);
+  }
+
+  function closeRegisterDetail() {
+    // Unwind through history so the in-app "← register" link and the
+    // browser Back button land in the same place (D-001's original rule).
+    window.history.back();
   }
 
   useEffect(() => {
@@ -289,6 +328,9 @@ export default function App() {
               role={role}
               currentPolicyVersion={currentPolicyVersion}
               policy={policyResult.valid ? policyResult.policy : undefined}
+              selectedId={detailId}
+              onSelectRow={openRegisterDetail}
+              onCloseDetail={closeRegisterDetail}
             />
           )}
           {view === 'policyEditor' && <PolicyEditor onSaved={() => setPolicyRevision((r) => r + 1)} />}

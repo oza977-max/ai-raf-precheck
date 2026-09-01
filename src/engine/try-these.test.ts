@@ -145,7 +145,7 @@ describe('docs/try-these.md — every printed outcome', () => {
     expect(v.unclassified_decision_types).toEqual(['collections prioritisation']);
   });
 
-  it('case 10: the demo case — Critical, 6 controls, 2 reviews, bound by autonomy [TC-PE-3-01]', () => {
+  it('case 10: the demo case — Critical, 7 controls, 2 reviews, bound by autonomy [TC-PE-3-01]', () => {
     const v = run({ ...base, inputDataClass: 'Client PII', inputDataZone: 'Zone C', modelType: 'traditional-ml',
       autonomyLevel: 3, processingDataZone: 'Zone C', outputActionType: 'approve', outputExposure: 'client-facing',
       decisionBindingness: 'binding', outputReversibility: 'reversible', outputScale: 'at_scale',
