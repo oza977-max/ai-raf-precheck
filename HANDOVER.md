@@ -95,6 +95,18 @@ for the four persona/exploratory rounds that drove the rest.
     without an explicit `min-width: 0`). Found by explore-010's IT
     persona, fixed and verified (no horizontal overflow at 375px).
 
+11. **Code review 004** (2026-09-01, closing out the 08-31 range): full-day
+    dual-panel review (6 calibrated + 6 blind + mechanical stub scan) of
+    all 26 commits. 1 Critical + 9 Important + 7 Minor found; owner chose
+    fix-all; all 17 fixed and verified same session, verdict **Merge**.
+    Headline: the back-button fix had a cross-level hole (five panels
+    found it independently) — App is now the single history/popstate
+    authority and RegisterView is fully controlled. Report:
+    `code-review/code-review-004.html`; calibration gained RF-3
+    (new-vocabulary propagation misses) and RF-4 (reserved-word
+    regressions — a banned-rendered-words manifest would make the class
+    mechanical, unbuilt). Observations F18–F22 logged, not acted.
+
 **Explicitly NOT started, by the owner's own instruction:** V2
 (post-deployment monitoring, `strategy/post-deployment-positioning.md`).
 Two "known gap" findings from this session's governance-expert personas
