@@ -209,6 +209,116 @@ describe('RegisterDetail — assigning an owner to an outstanding control', () =
     expect(owner.textContent).toMatch(/marcus lee/i);
   });
 
+  // code-review-004 F8: the original math parsed 'yyyy-mm-dd' as UTC
+  // midnight against local Date.now() — west of UTC, "today" rendered
+  // overdue the moment it was saved. Fixed to local-calendar comparison;
+  // these pin the previously-untested "days to go" and "due today"
+  // branches, with dates built from the SAME local-calendar arithmetic the
+  // component now uses, so they hold in every timezone.
+  it('TC-CR4-F8-01: a future target date renders "N days to go", not overdue', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    const now = new Date();
+    const future = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10);
+    const iso = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'control_ownership_assigned',
+      occurred_at: new Date().toISOString(),
+      actor: '2LoD',
+      payload: {
+        type: 'control_ownership_assigned',
+        verdict_id: 'v-owner-1',
+        control_id: 'CTRL-ENC-01',
+        owner_name: 'Priya Nair',
+        target_date: iso,
+      },
+    });
+    renderDetail(id);
+
+    await openOutstandingControl();
+    const owner = await screen.findByText((_, el) => Boolean(el?.classList.contains('verdict__todo-owner')));
+    expect(owner.textContent).toMatch(/10 days to go/);
+    expect(owner.textContent).not.toMatch(/overdue/i);
+  });
+
+  it('TC-CR4-F8-02: a target date of today renders "due today" — not overdue in any timezone', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    const now = new Date();
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'control_ownership_assigned',
+      occurred_at: new Date().toISOString(),
+      actor: '2LoD',
+      payload: {
+        type: 'control_ownership_assigned',
+        verdict_id: 'v-owner-1',
+        control_id: 'CTRL-ENC-01',
+        owner_name: 'Priya Nair',
+        target_date: iso,
+      },
+    });
+    renderDetail(id);
+
+    await openOutstandingControl();
+    const owner = await screen.findByText((_, el) => Boolean(el?.classList.contains('verdict__todo-owner')));
+    expect(owner.textContent).toMatch(/due today/);
+    expect(owner.textContent).not.toMatch(/overdue/i);
+  });
+
+  // code-review-004 F10: assignments are per-verdict; a re-evaluation must
+  // SAY the panel reset rather than letting user-entered data silently
+  // vanish.
+  it('TC-CR4-F10-01: an assignment made against an earlier verdict surfaces the reset notice on the new verdict', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-current', use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'control_ownership_assigned',
+      occurred_at: '2026-01-03T00:00:00.000Z',
+      actor: '2LoD',
+      payload: {
+        type: 'control_ownership_assigned',
+        verdict_id: 'v-superseded',
+        control_id: 'CTRL-ENC-01',
+        owner_name: 'Priya Nair',
+        target_date: '2026-06-01',
+      },
+    });
+    renderDetail(id);
+
+    expect(await screen.findByText(/assignments from an earlier verdict/i)).toBeInTheDocument();
+    expect(screen.getByText(/reassign if still current/i)).toBeInTheDocument();
+  });
+
+  it('TC-CR4-F10-02: no reset notice when the assignment belongs to the current verdict', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-current', use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'control_ownership_assigned',
+      occurred_at: '2026-01-03T00:00:00.000Z',
+      actor: '2LoD',
+      payload: {
+        type: 'control_ownership_assigned',
+        verdict_id: 'v-current',
+        control_id: 'CTRL-ENC-01',
+        owner_name: 'Priya Nair',
+        target_date: '2026-06-01',
+      },
+    });
+    renderDetail(id);
+
+    await screen.findByRole('region', { name: /verdict/i });
+    expect(screen.queryByText(/assignments from an earlier verdict/i)).not.toBeInTheDocument();
+  });
+
   it('TC-L6-04: a double-click assigns one owner, not two (append-only discipline)', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ use_case_id: id }));

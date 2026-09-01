@@ -4,11 +4,19 @@
 // summary. Does NOT touch the app, the store, or the audit trail — same
 // scope boundary as judge-001 (reviews/judge-001.md).
 //
-// Only change from judge-001's schema: field order is reason THEN
-// prediction (judge-001 was prediction then reason). Everything else
-// (model, /no_think, think:false, temperature:0, num_predict, the 11
-// cases, the case field values) is held constant so the rerun isolates
-// the one variable FN-011 named.
+// Primary change from judge-001's schema: field order is reason THEN
+// prediction (judge-001 was prediction then reason). Model, /no_think,
+// think:false, temperature:0, the 11 cases and the case field values are
+// held constant. TWO things were NOT held constant, both documented in
+// reviews/judge-002.md's protocol section: (1) num_predict was raised
+// from judge-001's 512 to 1536 after the 512 run produced unterminated-
+// JSON failures on the two longest-reasoning cases — reason-first
+// generates far more tokens before the prediction field, so the original
+// budget could not close the JSON object; (2) the condensed rulebook
+// summary was rewritten against policy v1.4 rather than reusing
+// judge-001's text. The rerun is therefore NOT a clean single-variable
+// isolation — the writeup says so plainly; this header must not claim
+// otherwise (code-review-004 F9).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

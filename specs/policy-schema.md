@@ -585,6 +585,17 @@ export interface PolicyFile {
   // Comparators applied in order until one separates the candidates. Optional;
   // evaluate() falls back to ["severity", "control_burden", "id"].
   binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
+  // explore-007 D-002 (2026-08-31): Track (I/II/III) is AIGate's own
+  // oversight-regime category — this maps it to the firm's actual committee
+  // names. Optional; absent means no mapping is claimed and only the generic
+  // Track description renders. (Added to this spec block per code-review-004
+  // F7 — the field shipped in src/engine/types.ts without the spec edit.)
+  governance_mapping?: Partial<Record<Track, GovernanceMappingEntry>>;
+}
+
+export interface GovernanceMappingEntry {
+  committee: string;   // the firm's own name for the owning committee/process
+  note?: string;       // optional one-line rationale for the routing
 }
 
 export interface TranslationAttestation {

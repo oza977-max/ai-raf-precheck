@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { generateQuestions } from './question-generator';
+import { coerceAnswerValue, generateQuestions } from './question-generator';
 import { loadPolicy } from '../store/policy';
 import type { DataFlowGraph, PolicyFile } from './types';
 
@@ -127,5 +127,29 @@ describe('generateQuestions', () => {
     for (let i = 0; i < 5; i++) {
       expect(JSON.stringify(generateQuestions(g, policy, []))).toBe(first);
     }
+  });
+});
+
+// code-review-004 F3: the v1.4 agentic-infrastructure fields are closed
+// sets and rule-condition candidates, but were absent from both the
+// question-options map and the write-back gate — a question for either
+// would have rendered free text and coerceAnswerValue would have accepted
+// any string (the documented v0.7.1 bug class, re-armed). These pin the
+// closed-set contract for both fields.
+describe('closed-set write-back gate covers the v1.4 agentic fields (code-review-004 F3)', () => {
+  it('system_access_scope accepts only its four legal values', () => {
+    expect(coerceAnswerValue('system_access_scope', 'deployment_authority')).toEqual({
+      ok: true,
+      value: 'deployment_authority',
+    });
+    expect(coerceAnswerValue('system_access_scope', 'root access to everything').ok).toBe(false);
+  });
+
+  it('multi_instance_coordination accepts only yes/no/unknown', () => {
+    expect(coerceAnswerValue('multi_instance_coordination', 'unknown')).toEqual({
+      ok: true,
+      value: 'unknown',
+    });
+    expect(coerceAnswerValue('multi_instance_coordination', 'probably').ok).toBe(false);
   });
 });

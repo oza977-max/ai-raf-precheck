@@ -2,6 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { append, getAll, getAllForExport, verifyChain } from './audit';
 import { openAuditDb } from './db';
 
+// code-review-004 F16: MUST run before any append in this file — the suite
+// shares one fake-indexeddb instance, so "empty trail" only exists here,
+// before the first write. A future refactor that special-cases empty arrays
+// would otherwise break this silently, with nothing asserting it.
+describe('verifyChain on an empty trail (must be this file\'s first test)', () => {
+  it('reports ok with zero events checked — an empty trail is intact, not an error', async () => {
+    const result = await verifyChain();
+    expect(result.ok).toBe(true);
+    expect(result.checked).toBe(0);
+  });
+});
+
 describe('audit store', () => {
   it('append() writes a real row, getAll() reads it back', async () => {
     const event = {
@@ -284,6 +296,48 @@ describe('audit store', () => {
       // EARLIER break, not this test's own tampered event. What this test
       // still proves: a *fresh* alteration, on top of an already-broken
       // chain, does not somehow make verifyChain() report ok:true again.
+      const result = await verifyChain();
+      expect(result.ok).toBe(false);
+      expect(result.brokenAtEventId).toBeTruthy();
+    });
+
+    // code-review-004 F16: reorder-tamper was only ever caught IMPLICITLY
+    // (occurred_at is part of eventContent()'s hash input) — nothing
+    // asserted it directly, so a refactor dropping occurred_at from the
+    // hashed content would have silently un-detected reordering. Same
+    // shared-chain caveat as the test above: the chain is already poisoned
+    // by earlier tests, so the assertion is that a swap on top of it still
+    // reports broken — never ok:true.
+    it('verifyChain() detects two events whose occurred_at timestamps were swapped in place', async () => {
+      const useCaseId = 'uc-reorder';
+      await append({
+        event_id: 'evt-reorder-1',
+        use_case_id: useCaseId,
+        event_type: 'use_case_created' as const,
+        occurred_at: new Date().toISOString(),
+        actor: 'user-1',
+        payload: { type: 'use_case_created' as const, description: 'Reorder check', intake_method: 'llm' as const },
+      });
+      await append({
+        event_id: 'evt-reorder-2',
+        use_case_id: useCaseId,
+        event_type: 'lifecycle_stage_changed' as const,
+        occurred_at: new Date().toISOString(),
+        actor: 'system',
+        payload: { type: 'lifecycle_stage_changed' as const, from_stage: 'idea' as const, to_stage: 'exploring' as const },
+      });
+
+      const db = await openAuditDb();
+      const tx = db.transaction('audit_events', 'readwrite');
+      const a = await tx.store.get('evt-reorder-1');
+      const b = await tx.store.get('evt-reorder-2');
+      if (!a || !b) throw new Error('setup fixture missing');
+      // Swap ONLY the timestamps — every other field untouched. If
+      // occurred_at were not hashed, both events would still verify.
+      await tx.store.put({ ...a, occurred_at: b.occurred_at });
+      await tx.store.put({ ...b, occurred_at: a.occurred_at });
+      await tx.done;
+
       const result = await verifyChain();
       expect(result.ok).toBe(false);
       expect(result.brokenAtEventId).toBeTruthy();

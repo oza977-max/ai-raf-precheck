@@ -708,7 +708,13 @@ export interface PolicyFile {
   // every pre-R11 policy still loads unchanged. Sorted by model_id before
   // iteration, same determinism discipline as every other collection here.
   approved_models?: ApprovedModel[];
+  // explore-007 D-002 (2026-08-31): maps AIGate's Track (I/II/III) to the
+  // firm's actual committee names. Optional; absent = no mapping claimed.
+  // (Added per code-review-004 F7.)
+  governance_mapping?: Partial<Record<Track, GovernanceMappingEntry>>;
 }
+
+// code-review-004 F7. GovernanceMappingEntry: { committee: string; note?: string }
 
 // R11-MG-1 (requirements-011.md, ADR-PS-R11-1). is_approved: false entries
 // are valid and expected — provenance class is an attribute the firm's

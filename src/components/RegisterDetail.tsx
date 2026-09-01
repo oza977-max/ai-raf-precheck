@@ -229,6 +229,32 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     return result;
   }, [events, latestVerdict?.id]);
 
+  // code-review-004 F10: assignments are keyed to the verdict they were made
+  // against, so a re-evaluation (new verdict id) makes prior assignments
+  // vanish from the panel with no explanation — user-entered compliance data
+  // silently disappearing. Carrying them forward automatically would claim
+  // an assignment against a verdict nobody made it on, so instead the reset
+  // is SAID out loud: if any earlier verdict of this case carries an
+  // assignment for a control the current verdict still names but has no
+  // current assignment for, a notice renders. The trail keeps everything;
+  // this just points at it.
+  const priorVerdictAssignments = useMemo(() => {
+    if (!latestVerdict) return [];
+    const currentControls = new Set(latestVerdict.controls ?? []);
+    const orphaned = new Map<string, string>();
+    for (const e of events) {
+      if (
+        e.payload.type === 'control_ownership_assigned' &&
+        e.payload.verdict_id !== latestVerdict.id &&
+        currentControls.has(e.payload.control_id) &&
+        !(e.payload.control_id in controlOwnership)
+      ) {
+        orphaned.set(e.payload.control_id, e.payload.owner_name);
+      }
+    }
+    return [...orphaned.entries()];
+  }, [events, latestVerdict, controlOwnership]);
+
   async function handleAssignControlOwner(controlId: string, ownerName: string, targetDate: string) {
     if (controlOwnerInFlight.current) return;
     controlOwnerInFlight.current = true;
@@ -236,7 +262,15 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     setControlOwnerErrorId(null);
     setControlOwnerError(null);
     try {
-      if (!latestVerdict) return;
+      if (!latestVerdict) {
+        // code-review-004 F13: this was a bare `return` — busy cleared via
+        // finally, nothing recorded, no message: a swallowed failure. The
+        // branch should be unreachable (the assign form only renders under
+        // a verdict), which is exactly why it must SAY something if reached.
+        setControlOwnerErrorId(controlId);
+        setControlOwnerError('No verdict is loaded for this case, so the assignment was not recorded. Reload and try again.');
+        return;
+      }
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
         use_case_id: useCaseId,
@@ -804,6 +838,17 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               </div>
             ) : null;
           })()}
+          {/* code-review-004 F10: name the reset instead of letting it look
+              like data loss. The prior assignments are still on the audit
+              trail below — this panel just reads per-verdict. */}
+          {priorVerdictAssignments.length > 0 && (
+            <p className="register-detail__owner-reset-note" role="note">
+              Owner assignments from an earlier verdict of this case (
+              {priorVerdictAssignments.map(([cid, name]) => `${cid}: ${name}`).join(', ')}) are not
+              shown here — a re-evaluation resets the panel to the current verdict. The audit trail
+              below keeps every prior assignment; reassign if still current.
+            </p>
+          )}
           <VerdictDisplay
             verdict={latestVerdict}
             auditEvents={events}

@@ -264,11 +264,19 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
 </code></pre>
 
     <h3 id="auditevent">4.3 AuditEvent</h3>
-    <p><em>Drift notice (2026-08-15): this block predates the built schema and
-    has drifted from <code>verdict-audit.md</code> §4.3, which is authoritative
-    — snake_case fields, discriminated payload union, and the
-    <code>rule_dissent_filed</code> event (FN-009: a reviewer challenges a rule;
-    advisory, never changes the verdict). The built type is
+    <p><em>Drift notice (2026-08-15, extended 2026-08-31 per code-review-004
+    F6): this block predates the built schema and has drifted from
+    <code>verdict-audit.md</code> §4.3, which is authoritative — snake_case
+    fields, discriminated payload union, the <code>rule_dissent_filed</code>
+    event (FN-009: a reviewer challenges a rule; advisory, never changes the
+    verdict), the <code>sampling_reviewed</code> event (R12-AB), and — added
+    2026-08-31 — the <code>control_ownership_assigned</code> event
+    (design-vision L-6: owner + target date assigned to an outstanding
+    control; payload carries <code>verdict_id</code>, <code>control_id</code>,
+    <code>owner_name</code>, <code>target_date</code>; re-assignment is a
+    later event, the UI reads the latest) plus the tamper-evidence fields
+    <code>prev_hash</code>/<code>hash</code> on every event (explore-007
+    D-001: SHA-256 hash chain across the whole trail). The built type is
     <code>src/store/types.ts</code>.</em></p>
     <pre><code>interface AuditEvent {
   eventId: string;                     // UUID

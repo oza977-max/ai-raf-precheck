@@ -1,11 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type ComponentProps } from 'react';
 import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
 import { append } from '../../store/audit';
 import type { RegisterNode, RegisterNodeMetadata } from '../../store/types';
 import type { Verdict } from '../../types/verdict';
+
+// code-review-004 F1: RegisterView is a controlled component now — App owns
+// selection + history. This harness supplies the minimal controlled wiring
+// (plain state, no history) so these behavioural tests keep exercising the
+// row-click -> detail -> back flow; the HISTORY semantics live in App and
+// are covered by App.browserBack.test.tsx.
+function RegisterViewHarness(props: Omit<ComponentProps<typeof RegisterView>, 'selectedId' | 'onSelectRow' | 'onCloseDetail'>) {
+  const [sel, setSel] = useState<string | null>(null);
+  return (
+    <RegisterView {...props} selectedId={sel} onSelectRow={setSel} onCloseDetail={() => setSel(null)} />
+  );
+}
+
 
 function makeUseCaseMetadata(
   overrides: Partial<Extract<RegisterNodeMetadata, { node_type: 'use_case' }>> = {},
@@ -47,7 +61,7 @@ describe('RegisterView', () => {
     await addNode(own);
     await addNode(other);
 
-    render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
 
     expect(await screen.findByText('Mine')).toBeInTheDocument();
     expect(screen.queryByText('Not mine')).not.toBeInTheDocument();
@@ -70,7 +84,7 @@ describe('RegisterView', () => {
     await addNode(a);
     await addNode(b);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
 
     expect(await screen.findByText('From A')).toBeInTheDocument();
     expect(screen.getByText('From B')).toBeInTheDocument();
@@ -93,7 +107,7 @@ describe('RegisterView', () => {
     await addNode(high);
     await addNode(low);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await screen.findByText('High tier case');
     expect(screen.getByText('Low tier case')).toBeInTheDocument();
 
@@ -153,14 +167,14 @@ describe('RegisterView', () => {
       },
     });
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="2.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="2.0" />);
 
     await screen.findByText('Stale case');
     expect(screen.getByText('Stale', { selector: '.register-view__stale-badge' })).toBeInTheDocument();
   });
 
   it('shows "No use cases submitted yet" for an empty 1LoD register', async () => {
-    render(<RegisterView role="never-used-actor-id" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="never-used-actor-id" currentPolicyVersion="1.0" />);
     expect(await screen.findByText(/no use cases submitted yet/i)).toBeInTheDocument();
   });
 
@@ -186,12 +200,12 @@ describe('RegisterView', () => {
 
     try {
       // 1LoD view has no Export button at all (§10.3: 2LoD only).
-      const oneLoD = render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+      const oneLoD = render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
       await oneLoD.findByText('Export target case');
       expect(oneLoD.queryByRole('button', { name: /export json/i })).not.toBeInTheDocument();
       oneLoD.unmount();
 
-      render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+      render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
       await screen.findByText('Export target case');
 
       await user.click(screen.getByRole('button', { name: /export json/i }));
@@ -277,7 +291,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Timeline probe case'));
 
     expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
@@ -301,7 +315,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id, { tier: 'Critical' });
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Approval probe case'));
 
     expect(await screen.findByText(/awaiting 2LoD action/i)).toBeInTheDocument();
@@ -339,7 +353,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Correction request probe'));
 
     await user.type(await screen.findByLabelText(/notes/i), 'Zone looks wrong');
@@ -373,7 +387,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Double click probe'));
 
     // Round 4 close-out: an attestation now names who signed.
@@ -399,7 +413,7 @@ describe('RegisterDetail (V1.2-A)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id);
 
-    render(<RegisterView role="1LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
     expect(await screen.findByText(/viewing as 1LoD/i)).toBeInTheDocument();
 
     await user.click(screen.getByText('Role gate probe'));
@@ -420,7 +434,7 @@ describe('RegisterDetail — audit trail honesty (explore-002)', () => {
     await addNode(node);
     await seedVerdictEvent(node.node_id);
 
-    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" />);
+    render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
     await user.click(await screen.findByText('Honesty probe case'));
 
     expect(await screen.findByText(/audit trail/i, { selector: 'h3' })).toBeInTheDocument();
