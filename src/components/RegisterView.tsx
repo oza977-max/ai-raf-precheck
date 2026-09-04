@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
+import { exportBundle, importBundle, type ImportOutcome } from '../store/handoff';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
@@ -51,6 +52,53 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   // refreshKey bumps on return so a 2LoD approval's stage change is
   // immediately visible in the list.
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // RG-6 hand-off bundle: export the register + audit trail to move it to
+  // another machine (a real reviewer on a real second laptop), and import a
+  // bundle sent back. Available to BOTH roles — a submitter hands off to a
+  // reviewer and the reviewer hands the signed case back.
+  const [handoffMsg, setHandoffMsg] = useState<{ tone: 'ok' | 'error' | 'info'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  async function handleExportBundle() {
+    try {
+      const version = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0-dev';
+      const bundle = await exportBundle(version);
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `aigate-handoff-${bundle.exported_at.replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setHandoffMsg({
+        tone: 'ok',
+        text: `Exported ${bundle.audit_events.length} audit events and ${bundle.register.nodes.length} register entries, sealed. Hand this file to the other reviewer.`,
+      });
+    } catch (err) {
+      setHandoffMsg({ tone: 'error', text: `Export failed: ${err instanceof Error ? err.message : String(err)}` });
+    }
+  }
+
+  async function handleImportBundleFile(file: File) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an AIGate hand-off bundle.' });
+      return;
+    }
+    const result = await importBundle(parsed);
+    const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered', 'diverged'];
+    const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead'];
+    const tone = errorOutcomes.includes(result.outcome) ? 'error' : neutralOutcomes.includes(result.outcome) ? 'info' : 'ok';
+    setHandoffMsg({ tone, text: result.message });
+    if (result.outcome === 'adopted' || result.outcome === 'merged') {
+      setRefreshKey((k) => k + 1); // reflect the newly imported cases in the list
+    }
+  }
 
   // F1: the list refresh the old popstate handler did on detail->list is
   // now keyed on the PROP transition — same trigger, one authority.
@@ -185,6 +233,43 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
           You&apos;re viewing as 1LoD — a view preference, not a permission; this build has no sign-in.
         </p>
       )}
+
+      {/* RG-6: the submitter/reviewer hand-off. Both roles see it. */}
+      <div className="register-view__handoff">
+        <div className="register-view__handoff-actions">
+          <button type="button" onClick={() => void handleExportBundle()}>
+            Export hand-off bundle
+          </button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}>
+            Import hand-off bundle
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            style={{ display: 'none' }}
+            aria-label="Import hand-off bundle file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImportBundleFile(file);
+              e.target.value = ''; // allow re-importing the same file
+            }}
+          />
+        </div>
+        <p className="register-view__handoff-hint">
+          Move this register and its audit trail to another reviewer&apos;s machine. The bundle is sealed:
+          any change in transit is detected on import, and two copies merge only when one continues the
+          other&apos;s history — a genuine fork is refused, never silently overwritten.
+        </p>
+        {handoffMsg && (
+          <p
+            className={`register-view__handoff-msg register-view__handoff-msg--${handoffMsg.tone}`}
+            role={handoffMsg.tone === 'error' ? 'alert' : 'status'}
+          >
+            {handoffMsg.text}
+          </p>
+        )}
+      </div>
 
       {/* register-lifecycle.md §9 (LC-6) — firm-wide governance concerns,
           shown regardless of 1LoD/2LoD role (only render-able when the

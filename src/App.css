@@ -988,6 +988,60 @@ details input {
   margin: 0 0 0.9rem;
 }
 
+/* RG-6 hand-off bundle panel. */
+.register-view__handoff {
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  margin: 0 0 1.1rem;
+  background: var(--card-bg, #fff);
+}
+.register-view__handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.register-view__handoff-actions button {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--navy);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+.register-view__handoff-actions button:hover {
+  background: var(--navy);
+  color: #fff;
+}
+.register-view__handoff-hint {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin: 0.55rem 0 0;
+  max-width: 70ch;
+}
+.register-view__handoff-msg {
+  font-size: 0.82rem;
+  margin: 0.55rem 0 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+}
+.register-view__handoff-msg--ok {
+  color: var(--green);
+  background: #f0f7f2;
+  border: 1px solid var(--green);
+}
+.register-view__handoff-msg--info {
+  color: var(--navy);
+  background: #eef2f7;
+  border: 1px solid var(--navy);
+}
+.register-view__handoff-msg--error {
+  color: var(--critical);
+  background: #fbe9e7;
+  border: 1px solid var(--critical);
+}
+
 .register-stage {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.7rem;

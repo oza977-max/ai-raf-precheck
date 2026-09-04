@@ -1,10 +1,19 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
+
+// The real package version, stamped into the bundle at build time so the
+// hand-off bundle's provenance field (RG-6) is accurate rather than a
+// hardcoded string that goes stale. Provenance only — never used in logic.
+const pkgVersion = JSON.parse(readFileSync('./package.json', 'utf-8')).version as string;
 
 // base: './' — relative paths, required for file:// compatibility (NF-4)
 export default defineConfig({
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(pkgVersion),
+  },
   plugins: [react()],
   build: {
     outDir: 'dist',

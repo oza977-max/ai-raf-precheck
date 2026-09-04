@@ -56,3 +56,34 @@ export function openRegisterDb(): Promise<IDBPDatabase<RegisterDbSchema>> {
   }
   return registerDbPromise;
 }
+
+// TEST-ONLY (RG-6 hand-off tests). Simulating a hand-off between two machines
+// in one process requires wiping both IndexedDB databases and dropping the
+// cached connections so the next open() rebuilds a fresh, empty store — the
+// stand-in for "a different laptop". Not part of any runtime path; named to
+// make that obvious. Closes live connections first so fake-indexeddb's delete
+// is not racing an open handle.
+export async function __resetDbsForTests(): Promise<void> {
+  const closeAndDelete = async (
+    promise: Promise<IDBPDatabase<AuditDbSchema>> | Promise<IDBPDatabase<RegisterDbSchema>> | undefined,
+    name: string,
+  ) => {
+    if (promise) {
+      try {
+        (await promise).close();
+      } catch {
+        /* already closed */
+      }
+    }
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(name);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => resolve();
+    });
+  };
+  await closeAndDelete(dbPromise, 'aigate-audit');
+  await closeAndDelete(registerDbPromise, 'aigate-register');
+  dbPromise = undefined;
+  registerDbPromise = undefined;
+}

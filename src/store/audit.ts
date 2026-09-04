@@ -29,7 +29,10 @@ function monotonicOccurredAt(requested: string): string {
 // chain survives reloads.
 let cachedLastHash: string | null | undefined; // undefined = not yet loaded this session
 
-async function sha256Hex(input: string): Promise<string> {
+// Exported for store/handoff.ts's bundle seal (a hash over the register +
+// audit tip). The chain's own hashing stays internal; this is the one
+// primitive the seal reuses so both live in one place.
+export async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest))
@@ -102,11 +105,56 @@ export async function getAll(useCaseId: string): Promise<AuditEvent[]> {
   return events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
 }
 
+// TEST-ONLY (RG-6 hand-off tests). The chain's live state — the cached tip
+// hash, the monotonic-timestamp counter, the write queue — is module-global
+// so it survives page reloads within a tab. To simulate a SECOND machine in
+// one test process this state must be reset to genesis alongside wiping the
+// DBs (__resetDbsForTests). Not a runtime path.
+export function __resetChainStateForTests(): void {
+  cachedLastHash = undefined;
+  lastOccurredAtMs = 0;
+  writeQueue = Promise.resolve();
+}
+
 // Full export — no index filter. Consumed by 2LoD export (RG-4/RG-5).
 export async function getAllForExport(): Promise<AuditEvent[]> {
   const db = await openAuditDb();
   const events = await db.getAll('audit_events');
   return events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+}
+
+// HAND-OFF IMPORT ONLY (RG-6, store/handoff.ts). append() recomputes
+// prev_hash/hash from the LOCAL chain — correct for locally-authored events,
+// wrong for imported ones: recomputing would destroy the exact chain that
+// was verified at the source, so a hand-off must transplant events with
+// their original prev_hash/hash byte-for-byte. This is the ONLY writer that
+// does that, and it is deliberately NOT the general append path — handoff.ts
+// establishes the prefix-safety invariant (an imported chain must extend the
+// local one, never diverge) BEFORE calling this. The events are inserted in
+// their given order; the caller passes them chain-ordered. Routed through
+// the same write queue as append() so an import cannot interleave with a
+// concurrent local write and fork the chain. After insertion the module's
+// cached chain tip is invalidated (set to undefined) so the next append()
+// re-derives it from the DB — the imported tail may now be the newest event.
+export function importRawEvents(events: readonly AuditEvent[]): Promise<void> {
+  return enqueue(async () => {
+    if (events.length === 0) return;
+    const db = await openAuditDb();
+    const tx = db.transaction('audit_events', 'readwrite');
+    for (const e of events) {
+      // db.add() (not put()): a duplicate event_id here means the caller's
+      // prefix check was wrong — fail loudly rather than overwrite.
+      await tx.store.add(e);
+    }
+    await tx.done;
+    cachedLastHash = undefined;
+    // A transplanted event may carry an occurred_at ahead of this session's
+    // monotonic counter; reset it so a later local append() does not collide
+    // backwards. Recomputed lazily from the DB on next append via
+    // lastChainHash()'s cache miss; the counter itself we bump conservatively.
+    const maxMs = Math.max(lastOccurredAtMs, ...events.map((e) => new Date(e.occurred_at).getTime()));
+    lastOccurredAtMs = maxMs;
+  });
 }
 
 export interface ChainVerification {
@@ -125,7 +173,17 @@ export interface ChainVerification {
 // requires an external anchor this client-side store does not have (see
 // the type comment on AuditEvent.hash).
 export async function verifyChain(): Promise<ChainVerification> {
-  const events = await getAllForExport();
+  return verifyChainOf(await getAllForExport());
+}
+
+// The same full walk over an ARBITRARY, already-ordered event array — used
+// by verifyChain (over the live DB) and by hand-off import (over an incoming
+// bundle's events, before any of them touch the local store). One chain-walk
+// implementation, two callers (Brooks: conceptual integrity). Verifies BOTH
+// the prev_hash linkage AND each event's stored hash against its recomputed
+// content, so a payload edited in transit without recomputing the tip is
+// still caught here even though it leaves the linkage intact.
+export async function verifyChainOf(events: readonly AuditEvent[]): Promise<ChainVerification> {
   let expectedPrev: string | null = null;
   for (const e of events) {
     if (e.prev_hash !== expectedPrev) {
