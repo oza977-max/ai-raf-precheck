@@ -329,3 +329,21 @@ export async function exportAll(): Promise<{ nodes: RegisterNode[]; edges: Regis
   const edges = await db.getAll('register_edges');
   return { nodes, edges };
 }
+
+// HAND-OFF IMPORT (RG-6, store/handoff.ts). Upsert (db.put): for a use case
+// present in an incoming bundle, the bundle's node/edge state WINS. This is
+// safe because the register is DERIVED presentation state (verdict summary,
+// lifecycle stage) — the tamper-evident source of truth is the audit trail,
+// whose prefix-safety handoff.ts has already established before this runs.
+// If the reviewer advanced a lifecycle stage or recorded a verdict summary,
+// their bundle carries the newer node, and adopting it is exactly right.
+export async function importRegister(
+  nodes: readonly RegisterNode[],
+  edges: readonly RegisterEdge[],
+): Promise<void> {
+  const db = await openRegisterDb();
+  const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
+  for (const n of nodes) await tx.objectStore('register_nodes').put(n);
+  for (const e of edges) await tx.objectStore('register_edges').put(e);
+  await tx.done;
+}
