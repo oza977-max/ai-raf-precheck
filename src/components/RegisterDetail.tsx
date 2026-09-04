@@ -92,6 +92,8 @@ function eventDetail(event: AuditEvent): string {
       return `Sampling review of verdict ${p.verdict_id.slice(0, 8)}… by ${p.reviewed_by_name} (name not verified)${p.outcome_note ? ` — ${p.outcome_note}` : ''}. Spot check of a self-served case; the verdict stands unchanged unless separately corrected.`;
     case 'control_ownership_assigned':
       return `Control ${p.control_id} assigned to ${p.owner_name} (name not verified) — target date ${p.target_date}.`;
+    case 'control_evidence_attested':
+      return `Control ${p.control_id} attested in place by ${p.attested_by_name} (name not verified) — evidence: “${p.evidence_note}”. A reviewer’s attestation on the record, not a machine check.`;
   }
 }
 
@@ -254,6 +256,64 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     }
     return [...orphaned.entries()];
   }, [events, latestVerdict, controlOwnership]);
+
+  // RG-7 control-evidence attestation state — same per-verdict shape as
+  // ownership above.
+  const [controlEvidenceBusyId, setControlEvidenceBusyId] = useState<string | null>(null);
+  const [controlEvidenceErrorId, setControlEvidenceErrorId] = useState<string | null>(null);
+  const [controlEvidenceError, setControlEvidenceError] = useState<string | null>(null);
+  const controlEvidenceInFlight = useRef(false);
+
+  // Latest control_evidence_attested event per control_id for the current
+  // verdict. Re-attesting is a later event; the UI reads the latest.
+  const controlAttestations = useMemo(() => {
+    const result: Record<string, { attested_by_name: string; evidence_note: string }> = {};
+    for (const e of events) {
+      if (e.payload.type === 'control_evidence_attested' && e.payload.verdict_id === latestVerdict?.id) {
+        result[e.payload.control_id] = {
+          attested_by_name: e.payload.attested_by_name,
+          evidence_note: e.payload.evidence_note,
+        };
+      }
+    }
+    return result;
+  }, [events, latestVerdict?.id]);
+
+  async function handleAttestControlEvidence(controlId: string, attestedByName: string, evidenceNote: string) {
+    if (controlEvidenceInFlight.current) return;
+    controlEvidenceInFlight.current = true;
+    setControlEvidenceBusyId(controlId);
+    setControlEvidenceErrorId(null);
+    setControlEvidenceError(null);
+    try {
+      if (!latestVerdict) {
+        setControlEvidenceErrorId(controlId);
+        setControlEvidenceError('No verdict is loaded for this case, so the attestation was not recorded. Reload and try again.');
+        return;
+      }
+      await appendAuditEvent({
+        event_id: crypto.randomUUID(),
+        use_case_id: useCaseId,
+        event_type: 'control_evidence_attested',
+        occurred_at: new Date().toISOString(),
+        actor: role,
+        payload: {
+          type: 'control_evidence_attested',
+          verdict_id: latestVerdict.id,
+          control_id: controlId,
+          attested_by_name: attestedByName,
+          evidence_note: evidenceNote,
+        },
+      });
+      await load();
+    } catch (err) {
+      setControlEvidenceErrorId(controlId);
+      setControlEvidenceError(`Recording the attestation failed: ${err instanceof Error ? err.message : String(err)}.`);
+    } finally {
+      controlEvidenceInFlight.current = false;
+      setControlEvidenceBusyId(null);
+    }
+  }
 
   async function handleAssignControlOwner(controlId: string, ownerName: string, targetDate: string) {
     if (controlOwnerInFlight.current) return;
@@ -873,6 +933,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             controlOwnerBusyId={controlOwnerBusyId}
             controlOwnerErrorId={controlOwnerErrorId}
             controlOwnerError={controlOwnerError}
+            controlAttestations={controlAttestations}
+            onAttestControlEvidence={(controlId, name, note) =>
+              void handleAttestControlEvidence(controlId, name, note)
+            }
+            controlEvidenceBusyId={controlEvidenceBusyId}
+            controlEvidenceErrorId={controlEvidenceErrorId}
+            controlEvidenceError={controlEvidenceError}
           />
           {/* R15-C2: id target for VerdictDisplay's section nav / sign-off
               checklist "Risk knowledge" jump link — this panel lives outside

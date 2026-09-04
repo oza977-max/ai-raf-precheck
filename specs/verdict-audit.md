@@ -141,7 +141,8 @@ export type AuditEventType =
   | 'reasoning_trace_generated' // VD-8 LLM call completed
   | 'rule_dissent_filed'       // FN-009 — a reviewer challenges a rule; advisory, never changes the verdict
   | 'sampling_reviewed'        // R12-AB (ADR-VA-R12-1) — a 2LoD spot review of a deterministically sampled verdict actually happened
-  | 'control_ownership_assigned'; // design-vision.md L-6 — an owner + target date assigned to an outstanding control; assignment only, no automation
+  | 'control_ownership_assigned' // design-vision.md L-6 — an owner + target date assigned to an outstanding control; assignment only, no automation
+  | 'control_evidence_attested'; // RG-7 — a named reviewer attests a control is in place, with an evidence note; a human claim on the record, NOT machine-verified
 
 export interface AuditEvent {
   event_id: string;             // UUID v4
@@ -222,6 +223,21 @@ export type AuditEventPayload =
       control_id: string;
       owner_name: string;
       target_date: string;
+    }
+  // RG-7 (2026-09-01). A named reviewer's attestation, on the register, that
+  // a control is in place, with a free-text evidence pointer. Distinct from
+  // the policy's machine/hand-edited verification_evidence.status: this is a
+  // self-asserted human claim ("name not verified", no sign-in) rendered as
+  // "attested (not verified)", NEVER as machine-verified. No file upload — a
+  // client-side store holds the claim and the pointer, not the evidence, and
+  // must not pretend otherwise (NF-2/L-3). Re-attesting is a later event; the
+  // UI reads the latest per control_id per verdict.
+  | {
+      type: 'control_evidence_attested';
+      verdict_id: string;
+      control_id: string;
+      attested_by_name: string;
+      evidence_note: string;
     };
 
 **Both added by round 4 (UC-2).** The duplicate check surfaces a match and the

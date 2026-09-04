@@ -16,7 +16,8 @@ export type AuditEventType =
   | 'reasoning_trace_generated'
   | 'rule_dissent_filed'
   | 'sampling_reviewed'
-  | 'control_ownership_assigned';
+  | 'control_ownership_assigned'
+  | 'control_evidence_attested';
 
 export interface AuditEvent {
   event_id: string;
@@ -170,6 +171,28 @@ export type AuditEventPayload =
       control_id: string;
       owner_name: string;
       target_date: string;
+    }
+  // RG-7 (2026-09-01). Closes the second core-loop gap: a verdict names
+  // controls to put in place, but nothing in the app let a human record
+  // that one WAS put in place — the "in place" status came only from a
+  // hand-edited field in the policy YAML (verification_evidence.status),
+  // which no reviewer working a case can touch. This event is a named
+  // reviewer's attestation, ON THE REGISTER, that a control is in place,
+  // with a free-text pointer to the evidence (a ticket, a config export,
+  // a report). Deliberately DISTINCT from the policy's machine/hand-edited
+  // `verified` status: the UI renders this as "attested (not verified)"
+  // with the name, never as machine-verified — same honesty posture as
+  // every other self-asserted name in this app (no sign-in, so no name is
+  // authenticated). No file upload: a client-side store cannot hold
+  // evidence files, and pretending to would be exactly the NF-2/L-3
+  // overclaim this product refuses. `verdict_id` threaded from render like
+  // the others; re-attesting is a later event and the UI reads the latest.
+  | {
+      type: 'control_evidence_attested';
+      verdict_id: string;
+      control_id: string;
+      attested_by_name: string;
+      evidence_note: string;
     };
 
 // Register types per register-lifecycle.md §4.1–4.2.
