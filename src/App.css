@@ -2335,6 +2335,16 @@ details input {
 .verdict__todo-chip--in { color: var(--green); }
 .verdict__todo-chip--evidence { color: var(--ink-faint); }
 .verdict__todo-chip--review { color: var(--navy); }
+/* RG-7: attested = a reviewer's on-record claim, honestly weaker than the
+   machine-verified green of "in place" — navy, distinct, not a success tick. */
+.verdict__todo-chip--attested { color: var(--navy); }
+.verdict__todo-attested {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--navy);
+}
 
 .verdict__provisional-owners {
   margin: 0.35rem 0 0;

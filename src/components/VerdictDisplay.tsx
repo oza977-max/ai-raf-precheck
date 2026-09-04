@@ -54,6 +54,14 @@ interface VerdictDisplayProps {
   controlOwnerBusyId?: string | null;
   controlOwnerErrorId?: string | null;
   controlOwnerError?: string | null;
+  // RG-7 control-evidence attestation — a reviewer records that a control is
+  // in place, with an evidence note. Distinct from the policy's machine
+  // `verified` status; rendered as "attested (not verified)".
+  controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
+  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => void;
+  controlEvidenceBusyId?: string | null;
+  controlEvidenceErrorId?: string | null;
+  controlEvidenceError?: string | null;
   // Whether RegisterDetail is rendering a risk-knowledge section below this
   // component (KnowledgeLensPanel or the "not evaluated" note) — used only
   // to decide whether the checklist/section-nav include that jump link.
@@ -279,6 +287,11 @@ function WhatToDo({
   controlOwnerBusyId,
   controlOwnerErrorId,
   controlOwnerError,
+  controlAttestations,
+  onAttestControlEvidence,
+  controlEvidenceBusyId,
+  controlEvidenceErrorId,
+  controlEvidenceError,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
@@ -292,6 +305,11 @@ function WhatToDo({
   controlOwnerBusyId?: string | null;
   controlOwnerErrorId?: string | null;
   controlOwnerError?: string | null;
+  controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
+  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => void;
+  controlEvidenceBusyId?: string | null;
+  controlEvidenceErrorId?: string | null;
+  controlEvidenceError?: string | null;
 }) {
   const rejected = verdict.status === 'rejected';
   const controls = verdict.controls ?? [];
@@ -360,15 +378,21 @@ function WhatToDo({
               <ol className="verdict__todo-list">
                 {controls.map((id) => {
                   const control = policy?.controls.find((c) => c.id === id);
-                  // Three states, not two. Without a policy loaded we cannot
-                  // know whether evidence exists, and saying "no evidence
-                  // recorded yet" would be a fabricated claim about a control
-                  // nobody looked at — the exact defect BC-V13-03 pins.
+                  const attestation = controlAttestations?.[id];
+                  // Four states now (RG-7). Precedence: the policy's machine/
+                  // hand-edited `verified` is the strongest ("in place"); a
+                  // reviewer's on-the-record attestation is the next
+                  // ("attested" — a human claim, not machine-verified, shown
+                  // as such); otherwise "outstanding"; and without a policy
+                  // loaded, "evidence unknown" (never a fabricated claim about
+                  // a control nobody looked at — BC-V13-03).
                   const status = !policy
                     ? 'evidence unknown'
                     : control?.verification_evidence?.status === 'verified'
                       ? 'in place'
-                      : 'outstanding';
+                      : attestation
+                        ? 'attested'
+                        : 'outstanding';
                   // Which of this verdict's tripped rules demanded this control
                   // — read from the explanation the engine already produced.
                   const demandedBy = (verdict.explanation?.tripped_invariants ?? []).filter((t) =>
@@ -419,6 +443,20 @@ function WhatToDo({
                           onAssign={onAssignControlOwner}
                           busy={controlOwnerBusyId === id}
                           error={controlOwnerErrorId === id ? controlOwnerError : null}
+                        />
+                      )}
+                      {/* RG-7: the attest form shows while a control is still
+                          outstanding (the action that moves it to "attested");
+                          the attester + evidence show once it's attested. Not
+                          shown once the policy marks it machine-"in place" —
+                          a human attestation adds nothing over a machine check. */}
+                      {(status === 'outstanding' || status === 'attested') && onAttestControlEvidence && (
+                        <ControlEvidenceAttest
+                          controlId={id}
+                          attestation={attestation}
+                          onAttest={onAttestControlEvidence}
+                          busy={controlEvidenceBusyId === id}
+                          error={controlEvidenceErrorId === id ? controlEvidenceError : null}
                         />
                       )}
                       </details>
@@ -572,6 +610,79 @@ function ControlOwnerAssign({
   );
 }
 
+// RG-7: a reviewer's on-the-record attestation that a control is in place,
+// with a free-text evidence pointer. Mirrors ControlOwnerAssign's shape (a
+// display+re-attest branch and a form branch). The honesty is load-bearing:
+// this is a self-asserted human claim, rendered "attested (not verified)",
+// NEVER shown as machine-verified — a client-side store can hold the claim
+// and its evidence pointer, not the evidence itself, and must not pretend to.
+function ControlEvidenceAttest({
+  controlId,
+  attestation,
+  onAttest,
+  busy,
+  error,
+}: {
+  controlId: string;
+  attestation?: { attested_by_name: string; evidence_note: string };
+  onAttest: (controlId: string, attestedByName: string, evidenceNote: string) => void;
+  busy: boolean;
+  error?: string | null;
+}) {
+  const [name, setName] = useState(attestation?.attested_by_name ?? '');
+  const [note, setNote] = useState(attestation?.evidence_note ?? '');
+  const [editing, setEditing] = useState(false);
+
+  if (attestation && !editing) {
+    return (
+      <p className="verdict__todo-line verdict__todo-attested">
+        <span className="verdict__todo-label">Attested in place:</span> {attestation.attested_by_name} (name not
+        verified) — evidence: &ldquo;{attestation.evidence_note}&rdquo;
+        <button type="button" className="verdict__todo-owner-edit" onClick={() => setEditing(true)}>
+          Re-attest
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <form
+      className="verdict__todo-owner-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim() || !note.trim()) return;
+        onAttest(controlId, name.trim(), note.trim());
+        setEditing(false);
+      }}
+    >
+      <label>
+        Attested by
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Reviewer (not verified)"
+          disabled={busy}
+        />
+      </label>
+      <label>
+        Evidence
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. TLS config export, ticket ref"
+          disabled={busy}
+        />
+      </label>
+      <button type="submit" disabled={busy || !name.trim() || !note.trim()}>
+        {busy ? 'Recording…' : 'Attest in place'}
+      </button>
+      {error && <span className="verdict__todo-owner-error">{error}</span>}
+    </form>
+  );
+}
+
 function findReasoningTrace(verdict: Verdict, auditEvents: AuditEvent[]): string | null {
   // Most recent verdict_produced/verdict_corrected event for this verdict.
   const match = [...auditEvents].reverse().find((e) => {
@@ -661,10 +772,12 @@ function SignOffChecklist({
   verdict,
   policy,
   hasRiskKnowledgeSection,
+  controlAttestations,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
   hasRiskKnowledgeSection?: boolean;
+  controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
 }) {
   const reasons = verdict.provisional_reasons ?? [];
   const controls = verdict.controls ?? [];
@@ -676,14 +789,22 @@ function SignOffChecklist({
   const bindingDescription = verdict.binding_constraint
     ? findRuleDescription(policy, verdict.binding_constraint)
     : undefined;
-  const outstanding = controls.filter((id) => {
-    const c = policy?.controls.find((c) => c.id === id);
-    return !(c?.verification_evidence?.status === 'verified');
-  }).length;
-  const inPlace = controls.length - outstanding;
+  // RG-7: three evidence tiers, counted separately so the checklist stays
+  // honest — a reviewer's attestation is NOT folded into machine-verified.
   const verified = controls.filter(
     (id) => policy?.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified',
   ).length;
+  const attested = controls.filter(
+    (id) =>
+      policy?.controls.find((c) => c.id === id)?.verification_evidence?.status !== 'verified' &&
+      controlAttestations?.[id] !== undefined,
+  ).length;
+  // "Addressed" = verified OR attested; only these leave the outstanding
+  // pile. This is what lets the list reach zero-outstanding once a reviewer
+  // has attested each control — the RG-7 goal — without claiming any of them
+  // are machine-verified.
+  const outstanding = controls.length - verified - attested;
+  const inPlace = verified + attested;
 
   return (
     <div className="verdict__signoff-checklist">
@@ -701,7 +822,10 @@ function SignOffChecklist({
           <li>
             <a href="#verdict-controls-section">
               {controls.length} control{controls.length === 1 ? '' : 's'} named · {outstanding} outstanding ·{' '}
-              {inPlace} in place{policy ? ` · evidence: ${verified} verified, ${controls.length - verified} unverified` : ''}
+              {inPlace} in place
+              {policy
+                ? ` · evidence: ${verified} machine-verified, ${attested} attested by a reviewer (not verified), ${outstanding} outstanding`
+                : ''}
             </a>
           </li>
         )}
@@ -734,7 +858,7 @@ function SignOffChecklist({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyId, controlEvidenceErrorId, controlEvidenceError }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
@@ -998,6 +1122,11 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         controlOwnerBusyId={controlOwnerBusyId}
         controlOwnerErrorId={controlOwnerErrorId}
         controlOwnerError={controlOwnerError}
+        controlAttestations={controlAttestations}
+        onAttestControlEvidence={onAttestControlEvidence}
+        controlEvidenceBusyId={controlEvidenceBusyId}
+        controlEvidenceErrorId={controlEvidenceErrorId}
+        controlEvidenceError={controlEvidenceError}
       />
 
       {/* design-review round 3 (Panel A): no requirement pins the checklist
@@ -1011,6 +1140,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           verdict={verdict}
           policy={policy}
           hasRiskKnowledgeSection={hasRiskKnowledgeSection}
+          controlAttestations={controlAttestations}
         />
       )}
 

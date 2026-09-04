@@ -274,7 +274,12 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
     (design-vision L-6: owner + target date assigned to an outstanding
     control; payload carries <code>verdict_id</code>, <code>control_id</code>,
     <code>owner_name</code>, <code>target_date</code>; re-assignment is a
-    later event, the UI reads the latest) plus the tamper-evidence fields
+    later event, the UI reads the latest), the <code>control_evidence_attested</code>
+    event (RG-7, 2026-09-01: a named reviewer attests a control is in place
+    with an evidence note; payload <code>verdict_id</code>, <code>control_id</code>,
+    <code>attested_by_name</code>, <code>evidence_note</code>; a self-asserted
+    human claim rendered &ldquo;attested (not verified)&rdquo;, never
+    machine-verified), plus the tamper-evidence fields
     <code>prev_hash</code>/<code>hash</code> on every event (explore-007
     D-001: SHA-256 hash chain across the whole trail). The built type is
     <code>src/store/types.ts</code>.</em></p>
