@@ -130,8 +130,16 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     });
     await user.click(screen.getByRole('button', { name: /file the challenge/i }));
 
-    const [filed] = (await dissents(id)) as [import("../../store/types").AuditEvent];
-    expect(filed).toBeDefined();
+    // "File the challenge" is fire-and-forget (`() => void handleFileDissent()`),
+    // so `user.click` resolves once the synchronous dispatch is done, not once
+    // the async write lands. Reading the trail immediately after the click
+    // races the write under load (intermittent full-suite-only failure — CI
+    // flake fix, 2026-09-01).
+    const filed = await waitFor(async () => {
+      const [found] = await dissents(id);
+      expect(found).toBeDefined();
+      return found!;
+    });
     const p = filed.payload as Extract<typeof filed.payload, { type: 'rule_dissent_filed' }>;
     expect(p.rule_id).toBe('INV-DATA-01');
     expect(p.rule_label).toBe('Client PII may not cross into an unapproved zone.');
@@ -187,7 +195,12 @@ describe('RegisterDetail — filing a rule dissent (FN-009)', () => {
     await user.type(screen.getByLabelText(/rule reference/i), '  INV-MISSING-9  ');
     await user.click(screen.getByRole('button', { name: /file the challenge/i }));
 
-    const [filed] = (await dissents(id)) as [import("../../store/types").AuditEvent];
+    // Same fire-and-forget race as TC-R4-RC-1-01 above (CI flake fix, 2026-09-01).
+    const filed = await waitFor(async () => {
+      const [found] = await dissents(id);
+      expect(found).toBeDefined();
+      return found!;
+    });
     const p = filed.payload as Extract<typeof filed.payload, { type: 'rule_dissent_filed' }>;
     expect(p.rule_id).toBe('INV-MISSING-9');
     // A typed reference was never resolved against the rulebook, so carrying

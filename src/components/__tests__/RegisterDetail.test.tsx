@@ -407,9 +407,18 @@ describe('RegisterDetail — the sign-off names the verdict it attests to (P8-C0
     await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
-    const events = await getAll(id);
-    const signOff = events.find((e) => e.payload.type === 'twoloD_reviewed');
-    expect(signOff).toBeDefined();
+    // The approve button's onClick is `() => void handleApprove()` —
+    // deliberately fire-and-forget, so `user.click` resolves once the
+    // synchronous dispatch is done, not once the async write lands. Reading
+    // the trail immediately after the click races the write under load
+    // (this was an intermittent full-suite-only failure, never reproducible
+    // in isolation — CI flake fix, 2026-09-01). waitFor closes the race.
+    const signOff = await waitFor(async () => {
+      const events = await getAll(id);
+      const found = events.find((e) => e.payload.type === 'twoloD_reviewed');
+      expect(found).toBeDefined();
+      return found;
+    });
     // Not merely present — the id of the verdict actually rendered. An empty
     // string, or an id re-derived at write time, would both satisfy a weaker
     // assertion while leaving the race open.
@@ -625,8 +634,16 @@ describe('RegisterDetail — the sign-off records who signed (round 4 close-out)
     await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
-    const signOff = (await getAll(id)).find((e) => e.payload.type === 'twoloD_reviewed');
-    expect(signOff).toBeDefined();
+    // The approve button's onClick is fire-and-forget (`() => void
+    // handleApprove()`), so `user.click` resolves once the synchronous
+    // dispatch is done, not once the async write lands. Reading the trail
+    // immediately after the click races the write under load (intermittent
+    // full-suite-only failure — CI flake fix, 2026-09-01).
+    const signOff = await waitFor(async () => {
+      const found = (await getAll(id)).find((e) => e.payload.type === 'twoloD_reviewed');
+      expect(found).toBeDefined();
+      return found;
+    });
     expect(signOff && 'attested_by_name' in signOff.payload && signOff.payload.attested_by_name).toBe('Priya Nair');
     // The role is still recorded — this adds identity, it does not replace the
     // role dimension the register's visibility rules depend on.
