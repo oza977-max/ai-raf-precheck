@@ -19,6 +19,12 @@ async function confirmAllNodes(user: { click: (el: Element) => Promise<void> }) 
   }
 }
 
+// Every caller of confirmAllNodes goes on to click "Proceed" — always via
+// findByRole, never getByRole. The last node's "Confirm" click re-renders
+// the graph view, and "Proceed" appearing is that re-render's effect; a
+// synchronous getByRole right after the loop returns can race it under load
+// (intermittent full-suite-only failure — CI flake fix, 2026-09-01).
+
 const MOCK_GRAPH_INPUT = {
   input_nodes: [],
   processing_nodes: [
@@ -86,7 +92,7 @@ describe('Walking Skeleton', () => {
     // flow lands directly on the real confirmation/attestation screen
     // (P4-C04, no more silent pass-through).
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
 
     expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -152,7 +158,7 @@ describe('Walking Skeleton', () => {
     expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
     expect(screen.getAllByText(/email drafting tool/i).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
 
     expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -219,7 +225,7 @@ describe('Walking Skeleton', () => {
 
     expect((await screen.findAllByText(/risk scoring model/i)).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
 
     // A real targeted question renders — not a skipped/fake step. V1.2-B:
     // the progress line now carries the budget + provisional tier.
@@ -302,7 +308,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -384,7 +390,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
 
     const confirm = await screen.findByRole('button', { name: /confirm and evaluate/i });
     // Two clicks with NO await between them — the real double-click, where
@@ -462,7 +468,7 @@ describe('Walking Skeleton', () => {
     expect(zoneSelect).toHaveValue('Zone B');
 
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -523,7 +529,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -546,7 +552,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
     await user.selectOptions(await screen.findByLabelText(`${uniqueLabel} — data zone`), 'Zone B');
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -629,7 +635,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     // Must NOT hang on "Evaluating..." — a real error renders and the
@@ -671,7 +677,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -707,7 +713,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
@@ -730,15 +736,22 @@ describe('Walking Skeleton', () => {
   });
 
   it('P7-C03 Part A: AIGate self-assessment seeds exactly once across a genuine app re-mount, not just within one mount (extends P7-C01\'s single-mount race test)', async () => {
+    const { selfAssessmentSeeded } = await import('../../seeds/aigate-self-assessment');
+
     const first = render(<App />);
     await first.findByText('▤ Register');
-    // Give the mount-effect's seed a tick to complete before unmounting.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Wait for the ACTUAL seed completion signal the module exports for
+    // exactly this purpose, not a guessed tick count. runSeed is a multi-hop
+    // async chain (a DB read, then two sequential IndexedDB writes through
+    // audit.ts's write queue); a single setTimeout(0) macrotask does not
+    // reliably outlast that chain under CPU load from parallel test files —
+    // this was the CI flake (2026-09-01).
+    await selfAssessmentSeeded();
     first.unmount();
 
     const second = render(<App />);
     await second.findByText('▤ Register');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await selfAssessmentSeeded();
 
     const { exportAll } = await import('../../store/register');
     const { nodes } = await exportAll();
@@ -908,7 +921,7 @@ describe('Register row naming (charter 004 D-004)', () => {
 
     await screen.findByText(/confirm what we understood/i);
     await confirmAllNodes(user);
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /proceed/i }));
     await screen.findByRole('heading', { name: /confirm and evaluate/i });
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });

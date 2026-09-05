@@ -174,15 +174,24 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     // for seeding, and the label matched a same-named use case created by a
     // different test file in a full-suite run. The record that was adopted is
     // the one carrying a classification_adopted event — that is its identity.
-    const rows = await getUseCases('all');
-    const withAdoption = await Promise.all(
-      rows.map(async (r) => ({
-        row: r,
-        adoption: (await getAll(r.use_case_id)).find((e) => e.payload.type === 'classification_adopted'),
-      })),
-    );
-    const match = withAdoption.find((x) => x.adoption !== undefined);
-    expect(match, `no adopted record; rows: ${rows.map((r) => r.label).join(' | ')}`).toBeDefined();
+    // handleAdoptClassification's onClick is `() => void handleAdoptClassification()`
+    // — deliberately fire-and-forget, so `user.click` resolves once the
+    // synchronous dispatch is done, not once the async write lands. Scanning
+    // the register immediately after the click races that write under load
+    // (this was an intermittent full-suite-only failure, never reproducible
+    // in isolation — CI flake fix, 2026-09-01). waitFor closes the race.
+    const match = await waitFor(async () => {
+      const rows = await getUseCases('all');
+      const withAdoption = await Promise.all(
+        rows.map(async (r) => ({
+          row: r,
+          adoption: (await getAll(r.use_case_id)).find((e) => e.payload.type === 'classification_adopted'),
+        })),
+      );
+      const found = withAdoption.find((x) => x.adoption !== undefined);
+      expect(found, `no adopted record; rows: ${rows.map((r) => r.label).join(' | ')}`).toBeDefined();
+      return found;
+    });
     const adopted = match!.row;
     const adoption = match!.adoption;
     expect(adopted!.tier).toBe('High');
