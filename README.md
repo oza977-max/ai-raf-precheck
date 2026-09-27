@@ -481,7 +481,7 @@ explains how to open it up later if that becomes the right call.
 **V1 build complete, verified Demo-ready.** Engine, intake, register,
 lifecycle, jurisdiction packs, audit trail, model governance and the
 risk-knowledge lens, control ownership and attestation, and the verified
-hand-off between machines — 724 tests at v0.17.0, passing 20 consecutive
+hand-off between machines — 726 tests at v0.17.0, passing 20 consecutive
 full-suite runs, with the V1 acceptance suite of 158 cases walked with
 evidence in [`test/test-004.html`](test/test-004.html).
 
