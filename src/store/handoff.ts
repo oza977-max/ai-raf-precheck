@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { AuditEvent, RegisterNode, RegisterEdge } from './types';
-import { getAllForExport, importRawEvents, verifyChain, verifyChainOf, sha256Hex } from './audit';
-import { exportAll, importRegister } from './register';
+import { getAllForExport, importRawEvents, replaceAllRawEvents, verifyChain, verifyChainOf, sha256Hex } from './audit';
+import { exportAll, importRegister, replaceRegister } from './register';
 
 // RG-6 — verified hand-off bundle (2026-09-01). The core end-to-end gap:
 // AIGate's whole value is a SUBMITTER and a REVIEWER who are different
@@ -152,6 +152,7 @@ export type ImportOutcome =
   | 'local_ahead' // local already extends the bundle, nothing to do
   | 'merged' // bundle extended local; events/register absorbed
   | 'adopted' // local was empty; whole bundle absorbed
+  | 'replaced' // user-confirmed: local discarded (backup taken), bundle installed
   | 'diverged'; // genuine fork — rejected, no writes
 
 export interface ImportResult {
@@ -175,11 +176,12 @@ function chainPrefixMatch(a: readonly AuditEvent[], b: readonly AuditEvent[]): b
   return true;
 }
 
-export async function importBundle(raw: unknown): Promise<ImportResult> {
+// Steps 1–3, shared by import and replace so neither can skip a check.
+async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } | { failure: ImportResult }> {
   // 1. Shape.
   const parsed = handoffBundleSchema.safeParse(raw);
   if (!parsed.success) {
-    return { outcome: 'invalid_format', message: 'This file is not an AIGate hand-off bundle.', eventsAdded: 0 };
+    return { failure: { outcome: 'invalid_format', message: 'This file is not an AIGate hand-off bundle.', eventsAdded: 0 } };
   }
   const bundle = parsed.data as HandoffBundle;
 
@@ -187,9 +189,11 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
   const expectedSeal = await computeSeal(bundle.register, bundle.audit_events);
   if (expectedSeal !== bundle.seal) {
     return {
-      outcome: 'tampered',
-      message: 'This bundle was altered after it was exported — its seal does not match its contents. Nothing was imported.',
-      eventsAdded: 0,
+      failure: {
+        outcome: 'tampered',
+        message: 'This bundle was altered after it was exported — its seal does not match its contents. Nothing was imported.',
+        eventsAdded: 0,
+      },
     };
   }
 
@@ -200,11 +204,39 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
   const incoming = await verifyChainOf(bundle.audit_events);
   if (!incoming.ok) {
     return {
-      outcome: 'tampered',
-      message: `The bundle's audit chain is broken at event ${incoming.brokenAtEventId} (${incoming.reason}). Nothing was imported.`,
-      eventsAdded: 0,
+      failure: {
+        outcome: 'tampered',
+        message: `The bundle's audit chain is broken at event ${incoming.brokenAtEventId} (${incoming.reason}). Nothing was imported.`,
+        eventsAdded: 0,
+      },
     };
   }
+  return { bundle };
+}
+
+// The explicit, user-confirmed way out of 'diverged'. Found by a live dry run
+// (2026-09-27): every browser seeds its own demo cases on first load, so a
+// reviewer's register is never empty and never a prefix of the submitter's —
+// plain import refused EVERY real two-machine hand-off. Replacing is honest
+// only because the caller (a) asks the user and (b) hands them a backup of
+// the register being discarded first. Same seal + chain checks as import.
+export async function replaceWithBundle(raw: unknown): Promise<ImportResult> {
+  const v = await validateBundle(raw);
+  if ('failure' in v) return v.failure;
+  const { bundle } = v;
+  await replaceRegister(bundle.register.nodes, bundle.register.edges);
+  await replaceAllRawEvents(bundle.audit_events);
+  return {
+    outcome: 'replaced',
+    message: `Your register was replaced with this bundle (${bundle.audit_events.length} events). A backup of your previous register was downloaded first.`,
+    eventsAdded: bundle.audit_events.length,
+  };
+}
+
+export async function importBundle(raw: unknown): Promise<ImportResult> {
+  const v = await validateBundle(raw);
+  if ('failure' in v) return v.failure;
+  const { bundle } = v;
 
   // 4. Prefix relationship against the LOCAL chain.
   const local = await getAllForExport();
@@ -219,7 +251,7 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
     return {
       outcome: 'diverged',
       message:
-        'This bundle and your copy have both changed since they were last in sync — their histories have diverged and cannot be merged. Export a fresh bundle from one side and import it into an empty register on the other.',
+        'This bundle and your copy have different histories, so they cannot be merged. This is expected the first time you receive a case — your browser seeded its own demo cases. You can replace your register with this bundle; your current register is downloaded as a backup first.',
       eventsAdded: 0,
     };
   }

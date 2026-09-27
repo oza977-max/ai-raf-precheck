@@ -337,6 +337,20 @@ export async function exportAll(): Promise<{ nodes: RegisterNode[]; edges: Regis
 // whose prefix-safety handoff.ts has already established before this runs.
 // If the reviewer advanced a lifecycle stage or recorded a verdict summary,
 // their bundle carries the newer node, and adopting it is exactly right.
+// HAND-OFF REPLACE ONLY — see audit.replaceAllRawEvents.
+export async function replaceRegister(
+  nodes: readonly RegisterNode[],
+  edges: readonly RegisterEdge[],
+): Promise<void> {
+  const db = await openRegisterDb();
+  const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
+  await tx.objectStore('register_nodes').clear();
+  await tx.objectStore('register_edges').clear();
+  for (const n of nodes) await tx.objectStore('register_nodes').put(n);
+  for (const e of edges) await tx.objectStore('register_edges').put(e);
+  await tx.done;
+}
+
 export async function importRegister(
   nodes: readonly RegisterNode[],
   edges: readonly RegisterEdge[],

@@ -136,6 +136,23 @@ export async function getAllForExport(): Promise<AuditEvent[]> {
 // concurrent local write and fork the chain. After insertion the module's
 // cached chain tip is invalidated (set to undefined) so the next append()
 // re-derives it from the DB — the imported tail may now be the newest event.
+// HAND-OFF REPLACE ONLY (store/handoff.ts replaceWithBundle). Wipes the local
+// trail and installs the bundle's, hashes preserved byte-for-byte. Runs in the
+// write queue so no append can interleave and fork the new chain. The caller
+// must have verified the bundle's seal and chain, and must have given the user
+// a backup of what is about to be discarded — this discards evidence.
+export function replaceAllRawEvents(events: readonly AuditEvent[]): Promise<void> {
+  return enqueue(async () => {
+    const db = await openAuditDb();
+    const tx = db.transaction('audit_events', 'readwrite');
+    await tx.store.clear();
+    for (const e of events) await tx.store.add(e);
+    await tx.done;
+    cachedLastHash = undefined;
+    lastOccurredAtMs = events.reduce((m, e) => Math.max(m, new Date(e.occurred_at).getTime()), 0);
+  });
+}
+
 export function importRawEvents(events: readonly AuditEvent[]): Promise<void> {
   return enqueue(async () => {
     if (events.length === 0) return;

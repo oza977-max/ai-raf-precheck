@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { append, getAllForExport, verifyChain, __resetChainStateForTests } from './audit';
 import { addNode } from './register';
 import { __resetDbsForTests } from './db';
-import { exportBundle, importBundle, type HandoffBundle } from './handoff';
+import { exportBundle, importBundle, replaceWithBundle, type HandoffBundle } from './handoff';
 import type { RegisterNode } from './types';
 
 // RG-6 — verified hand-off bundle. These tests are the specification: a
@@ -254,6 +254,70 @@ describe('RG-6 hand-off bundle — prefix merge and divergence (the ping-pong)',
     expect((await verifyChain()).ok).toBe(true);
   });
 });
+
+// Found by the live dry run (2026-09-27): every real browser seeds its own
+// demo cases on first load, so the receiver is NEVER empty and never a prefix
+// of the sender. The tests above all started the receiver empty — the one
+// condition real use never has. These start both machines with their own
+// independent history, as a browser does.
+describe('RG-6 hand-off bundle — realistic receiver with its own seeded history', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('plain import of the first receipt diverges; replace installs the bundle; the return trip then merges', async () => {
+    // Machine A (submitter): own seeds + the case.
+    await seedSubmitterCase('uc-a-seed');
+    await seedSubmitterCase('uc-real');
+    const fromA = await exportBundle(APP_VERSION);
+
+    // Machine B (reviewer): its OWN independently seeded history.
+    await freshMachine();
+    await seedSubmitterCase('uc-b-seed');
+    expect((await importBundle(fromA)).outcome).toBe('diverged');
+    expect(await getAllForExport()).toHaveLength(2); // refused = untouched
+
+    const replaced = await replaceWithBundle(fromA);
+    expect(replaced.outcome).toBe('replaced');
+    expect((await getAllForExport()).map((e) => e.event_id)).toEqual(fromA.audit_events.map((e) => e.event_id));
+    expect((await verifyChain()).ok).toBe(true);
+
+    // B signs off — a normal append on top of the adopted chain.
+    await append({
+      event_id: 'uc-real-signoff',
+      use_case_id: 'uc-real',
+      event_type: 'twoloD_reviewed',
+      occurred_at: '2026-01-05T00:00:00.000Z',
+      actor: '2LoD',
+      payload: { type: 'twoloD_reviewed', action: 'approved', verdict_id: 'uc-real-v1', attested_by_name: 'Priya Nair' },
+    });
+    const fromB = await exportBundle(APP_VERSION);
+
+    // Back on A, unchanged since export: A is a prefix of B -> clean merge.
+    await freshMachine();
+    await importRawEventsForTest(fromA);
+    const back = await importBundle(fromB);
+    expect(back.outcome).toBe('merged');
+    expect(back.eventsAdded).toBe(1);
+    expect((await verifyChain()).ok).toBe(true);
+  });
+
+  it('replace refuses a tampered bundle with no writes', async () => {
+    await seedSubmitterCase('uc-t');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-own');
+    const tampered = { ...bundle, register: { ...bundle.register, nodes: bundle.register.nodes.map((n) => ({ ...n, label: 'X' })) } };
+    expect((await replaceWithBundle(tampered)).outcome).toBe('tampered');
+    expect((await getAllForExport()).map((e) => e.event_id)).toEqual(['uc-own-created', 'uc-own-verdict']);
+  });
+});
+
+// Restores machine A's exact pre-export state (same hashes) — what A's
+// IndexedDB still holds when B's bundle comes back.
+async function importRawEventsForTest(b: HandoffBundle): Promise<void> {
+  expect((await importBundle(b)).outcome).toBe('adopted');
+}
 
 // Helper: recompute a bundle's seal over its (possibly tampered) current
 // contents, so a test can isolate the chain-walk check from the seal check.

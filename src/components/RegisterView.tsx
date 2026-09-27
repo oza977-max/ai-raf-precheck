@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
-import { exportBundle, importBundle, type ImportOutcome } from '../store/handoff';
+import { exportBundle, importBundle, replaceWithBundle, type ImportOutcome } from '../store/handoff';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
@@ -59,6 +59,8 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   // reviewer and the reviewer hands the signed case back.
   const [handoffMsg, setHandoffMsg] = useState<{ tone: 'ok' | 'error' | 'info'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingReplace, setPendingReplace] = useState<unknown>(null);
+  const replaceInFlight = useRef(false);
 
   async function handleExportBundle() {
     try {
@@ -91,12 +93,31 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
       return;
     }
     const result = await importBundle(parsed);
-    const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered', 'diverged'];
-    const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead'];
+    const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered'];
+    const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead', 'diverged'];
     const tone = errorOutcomes.includes(result.outcome) ? 'error' : neutralOutcomes.includes(result.outcome) ? 'info' : 'ok';
     setHandoffMsg({ tone, text: result.message });
+    // Diverged is the normal first receipt (each browser seeds its own demo
+    // cases) — hold the verified bundle so the user can choose to replace.
+    setPendingReplace(result.outcome === 'diverged' ? parsed : null);
     if (result.outcome === 'adopted' || result.outcome === 'merged') {
       setRefreshKey((k) => k + 1); // reflect the newly imported cases in the list
+    }
+  }
+
+  async function handleReplaceWithBundle() {
+    if (!pendingReplace || replaceInFlight.current) return;
+    replaceInFlight.current = true;
+    try {
+      // Backup FIRST — replacing discards this register's evidence, so the
+      // user must hold a copy before anything is deleted.
+      await handleExportBundle();
+      const result = await replaceWithBundle(pendingReplace);
+      setHandoffMsg({ tone: result.outcome === 'replaced' ? 'ok' : 'error', text: result.message });
+      setPendingReplace(null);
+      if (result.outcome === 'replaced') setRefreshKey((k) => k + 1);
+    } finally {
+      replaceInFlight.current = false;
     }
   }
 
@@ -268,6 +289,16 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
           >
             {handoffMsg.text}
           </p>
+        )}
+        {pendingReplace !== null && (
+          <div className="register-view__handoff-actions">
+            <button type="button" onClick={() => void handleReplaceWithBundle()}>
+              Back up mine, then replace with this bundle
+            </button>
+            <button type="button" onClick={() => { setPendingReplace(null); setHandoffMsg(null); }}>
+              Keep my register
+            </button>
+          </div>
         )}
       </div>
 

@@ -34,6 +34,31 @@ The industry's answer so far is heavier pre-approval process — longer question
 > [the research](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)
 > this project publishes alongside the code.
 
+## The whole loop, two people, two machines
+
+Approval in a bank is never one person. Someone proposes; someone
+independent checks. AIGate runs that loop end to end:
+
+1. **The submitter describes the use case** (guided form or plain words)
+   and confirms what the tool understood.
+2. **The engine returns a verdict** — approved, approved with these
+   controls, or rejected — with the rule and regulation behind every step.
+3. **The controls get owners and get done.** Each required control can be
+   assigned to a named person with a target date, then attested *in place*
+   with a pointer to the evidence (a ticket, a config export). An
+   attestation is shown as exactly what it is — a named person's claim,
+   *not verified* — never dressed up as a machine check.
+4. **The case is handed to the reviewer** as a sealed file. The reviewer
+   imports it on their own machine; if anything was altered on the way,
+   the import refuses and says so. Nothing on the receiving side is ever
+   overwritten without the reviewer confirming it and getting a backup.
+5. **The second line signs off** — or challenges the rule — with their
+   name on the record, and hands the case back the same way.
+
+Every step lands on an append-only audit trail in which each entry is
+chained to the one before it, so an edited, deleted or reordered record
+shows up as a break.
+
 ## Two ways to describe a use case
 
 You choose one, every time you start a pre-check:
@@ -122,7 +147,7 @@ decide, dashed arrows only inform:*
 flowchart LR
     subgraph firm["THE FIRM'S OWN APPETITE — decides"]
         RAF["Board-approved<br/>Risk Appetite Framework<br/><i>(prose)</i>"] --> EX["Translated to rules<br/><i>grounding/raf-extraction.md</i>"]
-        EX --> POL["policy/appetite.yaml<br/><i>5 hard lines · 18 invariants<br/>tiers · tracks · 19 controls<br/>+ approved-model registry</i>"]
+        EX --> POL["policy/appetite.yaml<br/><i>5 hard lines · 23 invariants<br/>tiers · tracks · 22 controls<br/>+ approved-model registry</i>"]
     end
 
     subgraph reg["REGULATION — decides, where it applies"]
@@ -216,7 +241,7 @@ flowchart TD
 
     F --> G{"Hard lines first<br/><i>5 absolute rules</i>"}
     G -->|"one crossed"| H["✗ REJECTED<br/><i>no control set can fix it —<br/>change the case, or go to<br/>committee as an exception</i>"]
-    G -->|"none crossed"| I["18 appetite invariants<br/><i>+ tier, track, jurisdiction floors</i>"]
+    G -->|"none crossed"| I["23 appetite invariants<br/><i>+ tier, track, jurisdiction floors</i>"]
     I --> J["Minimal control set<br/><i>solved, not suggested —<br/>smallest set that brings it<br/>inside appetite</i>"]
     J --> K["✓ Verdict<br/><i>with the rule, the regulation and<br/>the sign-off behind every step</i>"]
     K --> L["Register + 2LoD sign-off<br/><i>append-only audit trail</i>"]
@@ -235,7 +260,20 @@ The full gate, end to end: intake (LLM or form) → duplicate check against the 
 
 Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who believes a *rule* is wrong (not the case in front of them) files a **rule challenge** from the sign-off page — permanent, attributable, and advisory by construction: the verdict stands, and the challenge lands in a per-rule **rule-improvement queue** for the humans who author the rulebook. Dissent never overrides; it accumulates as evidence.
 
-**Honest limits, stated in the UI itself**: verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules; the audit trail is client-side (proof-of-concept grade — the system-of-record store is V1.5); artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
+Since v0.17.0 the loop closes after the verdict too:
+
+- **Controls get owners** — each outstanding control can be assigned to a named person with a target date; the page counts down, and flags it overdue.
+- **Controls get attested** — a reviewer records a control as in place with an evidence note. The sign-off checklist counts three tiers separately — *machine-verified*, *attested by a reviewer (not verified)*, *outstanding* — so a claim is never counted as a check.
+- **Cases move between machines** — **Export hand-off bundle** writes the register and the full audit trail into one sealed file; **Import hand-off bundle** on another machine checks the seal and re-walks the audit chain before writing anything.
+- **The audit trail is tamper-evident** — each entry carries a hash of the one before it, and the sign-off page shows whether the chain is intact.
+
+**Honest limits, stated in the UI itself**:
+
+- Verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules.
+- The audit trail lives in the browser — proof-of-concept grade, not a system of record (that is V1.5). Tamper-*evident*, not tamper-*proof*: someone able to rewrite every entry consistently would not be caught without an external anchor.
+- Names are typed, not authenticated — there is no sign-in, and every name on the record says "not verified".
+- **Hand-off merges only a continuation, never a fork.** The first time a reviewer receives a case, their browser already holds its own demo history, so the import offers an explicit **replace** — which downloads a backup of their register before anything is deleted. After that, each return trip merges cleanly. But if the submitter *also* keeps working while the reviewer has the case, the histories have diverged, and the import refuses rather than guessing which to keep. The safe pattern: one side works at a time. Giving each case its own history (so unrelated work never forks) is next.
+- Artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
 
 ## Try it (no install)
 
@@ -401,7 +439,8 @@ wired into it:
   and becomes a standing hypothesis that expires itself the moment the
   system drifts outside what was approved. The `amber` and `breached` states
   already exist in every verdict record, waiting.
-- Every control renders **evidence: outstanding** until someone attests it.
+- Today a reviewer can **attest** a control is in place — a named claim
+  with an evidence pointer, clearly marked not verified.
   **V1.5 reads the evidence itself** — deployment configs, access policies,
   model registries — so "the control exists" becomes something checked, not
   claimed. The same machinery turns attestation around: instead of trusting
@@ -441,9 +480,10 @@ explains how to open it up later if that becomes the right call.
 
 **V1 build complete, verified Demo-ready.** Engine, intake, register,
 lifecycle, jurisdiction packs, audit trail, model governance and the
-risk-knowledge lens — 597 tests at v0.13.0, and the full acceptance suite
-of 158 cases walked with evidence in
-[`test/test-004.html`](test/test-004.html).
+risk-knowledge lens, control ownership and attestation, and the verified
+hand-off between machines — 724 tests at v0.17.0, passing 20 consecutive
+full-suite runs, with the V1 acceptance suite of 158 cases walked with
+evidence in [`test/test-004.html`](test/test-004.html).
 
 *Demo-ready* rather than *ship-ready* is the honest verdict, and the reason is
 worth stating plainly: 76 of those 158 acceptance criteria do not carry a

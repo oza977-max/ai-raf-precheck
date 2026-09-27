@@ -113,6 +113,32 @@ approve it or send it back. Check the audit trail on the detail view
 afterwards — every step should be there, in order, including the things
 you'd rather it didn't record.
 
+### 3b. Do it as two people, if there are two of you (the best test)
+
+This is the loop a real bank runs, and the newest part of the product.
+
+1. **Submitter** (1LoD, your browser): run a use case that comes back
+   *approved with controls*. On the verdict, open a control, **assign an
+   owner** with a target date, and **attest** one control in place with an
+   evidence note (a made-up ticket number is fine).
+2. Register → **Export hand-off bundle**. Send the file to the other tester.
+3. **Reviewer** (2LoD, *their* browser): Register → **Import hand-off
+   bundle**. The first time, it will say the two histories differ — every
+   browser seeds its own demo cases, so that's expected. Click **Back up
+   mine, then replace with this bundle**: your old register downloads as a
+   backup, then the submitter's arrives with its full history. Check the
+   attested control reads *attested (not verified)*, not *in place*. Sign
+   it off with your name. Export a bundle and send it back.
+4. **Submitter**: import the reviewer's bundle. It should merge cleanly —
+   two new events, the sign-off and the stage change — with no replace
+   prompt.
+
+Things worth trying to break: open the bundle in a text editor, change one
+word, and import it — it must refuse. Or have the submitter keep working on
+the case while the reviewer has it — the return import must refuse to merge
+two diverged histories rather than quietly picking one (deliberate; see
+Known gaps).
+
 ### 4. Look at the rules
 
 **Appetite framework** in the sidebar shows the rules in force. If a verdict
@@ -133,8 +159,9 @@ would have said Medium, that's the single most useful thing you can tell us.
 Please say *why* — it usually means a rule is written wrong, and that's
 fixable.
 
-Also hit **Export** in the register and send the JSON alongside it. There's
-no import yet, so the JSON is for us to read, not for you to reload.
+Also hit **Export hand-off bundle** in the register and send the file
+alongside it — it carries your whole register and audit trail, so we can
+import it and see exactly what you saw.
 
 ---
 
@@ -144,16 +171,21 @@ These are deliberate for this stage. Flag them only if you think one makes
 testing impossible.
 
 - **No accounts or identity.** The role switch is a dropdown.
-- **No sharing.** Two testers have two separate registers. There's no way to
-  see each other's work, and no import to combine them.
-- **The audit trail is append-only but not tamper-proof.** It's evidence-
-  grade in structure, not yet in guarantees — it lives in your browser and
-  a determined person with devtools could edit it. A real deployment needs
-  a server-held store.
-- **Nothing is verified.** If you say a control is in place, AIGate believes
-  you. Controls carrying real evidence show as VERIFIED; everything else
-  reads UNVERIFIED, which is honest but means a confident-looking verdict
-  can rest on a wrong self-assessment.
+- **Sharing is by file, one side at a time.** Testers swap registers with
+  the hand-off bundle — no live shared copy. If *both* of you change the
+  case between swaps, the histories have forked and the import refuses to
+  merge them. That is deliberate — it will not guess which one to keep. The
+  way out is the explicit **replace** button, which backs up your register
+  first; nothing is ever overwritten silently.
+- **The audit trail is tamper-evident, not tamper-proof.** Each entry is
+  chained to the one before it, so an edited or deleted entry shows as a
+  break. But it lives in your browser, and someone who rewrote *every*
+  entry consistently would not be caught. A real deployment needs a
+  server-held store.
+- **Attested is not verified.** When someone attests a control is in place,
+  AIGate records their claim and their evidence note — it does not check
+  the evidence. That's why it reads *attested (not verified)*, and is
+  counted separately from machine-verified controls.
 - **Jurisdiction packs are unadopted.** The EU AI Act and SS1/23 rules
   haven't been signed off by Legal or Compliance, so verdicts that depend on
   them are marked provisional. That labelling is intentional.
@@ -178,6 +210,9 @@ first if you want to keep anything.
 
 Worth deliberately exercising, newest first:
 
+- **Hand-off between machines, control owners, control attestation
+  (v0.17.0).** See step 3b above — the two-person run-through exercises all
+  three.
 - **Challenge a rule (v0.4.0).** As 2LoD, on any case with a verdict, file a
   challenge against a rule you think is wrong — then check the **Rule
   challenges** screen and the case's audit trail. The property to try to
