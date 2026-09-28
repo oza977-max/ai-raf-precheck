@@ -109,7 +109,7 @@ describe('R9-SC-3/-4 — one alarm per card, visible next step', () => {
     };
   }
 
-  it('TC-R9-SC-3-01: uncertainty + guesses + a warning yield exactly one warn-styled alarm', () => {
+  it('TC-R15-C5-04 / TC-R9-SC-3-01: uncertainty + guesses + a warning yield exactly one warn-styled alarm', () => {
     const { container } = render(
       <GraphView
         graph={guessedGraph()}

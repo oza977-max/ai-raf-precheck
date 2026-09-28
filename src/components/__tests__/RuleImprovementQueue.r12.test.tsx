@@ -134,7 +134,7 @@ async function seedUseCaseWithVerdict(id: string, label: string) {
 }
 
 describe('RuleImprovementQueue — challenge-rate instrument (R12-AB-2)', () => {
-  it('TC-R12-AB-2-01: renders "challenged N times · has applied to M decided cases" per rule', async () => {
+  it('TC-R15-C5-09 / TC-R12-AB-2-01: renders "challenged N times · has applied to M decided cases" per rule', async () => {
     const id = crypto.randomUUID();
     await seedUseCaseWithVerdict(id, 'Client email drafter');
     render(<RuleImprovementQueue />);

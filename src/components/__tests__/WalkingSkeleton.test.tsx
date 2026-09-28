@@ -759,6 +759,10 @@ describe('Walking Skeleton', () => {
     expect(aigateNodes).toHaveLength(1);
   });
 
+  // TC-R15-C4-04: this test opens the R15-C4 YAML-editor disclosure (via the
+  // shared Fold component's summary text) before finding the textarea; the
+  // real-save assertions below (queued count, header policy version bump)
+  // are otherwise unchanged.
   it('P7-C03 Part B: saving a valid policy via the Appetite framework editor is a real save — queues re-evaluation for existing active use cases and updates the header\'s policy version', async () => {
     const user = userEvent.setup();
     render(<App />);

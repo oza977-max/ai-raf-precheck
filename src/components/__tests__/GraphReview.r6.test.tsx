@@ -139,7 +139,7 @@ describe('R6-PV-3/-4 — provenance on the review screen (GraphView)', () => {
     };
   }
 
-  it('TC-R6-PV-3-01: a quoted field shows its basis; a guessed field says the model guessed', () => {
+  it('TC-R15-C5-04 / TC-R6-PV-3-01: a quoted field shows its basis; a guessed field says the model guessed', () => {
     render(
       <GraphView
         graph={makeGraph()}

@@ -257,7 +257,7 @@ describe('VerdictDisplay — verdict completeness (V1.2-B)', () => {
     expect(screen.queryByText(/standing conditions/i)).not.toBeInTheDocument();
   });
 
-  it('renders the record & provenance panel from the graph prop, and the appetite summary line with counts', () => {
+  it('TC-R15-C3-01, TC-R15-C3-02: renders the record & provenance panel from the graph prop, and the appetite summary line with counts', () => {
     const graph = {
       id: 'g1',
       version: 1,

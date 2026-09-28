@@ -35,7 +35,7 @@ describe('R12-BD-1 — badge recalibration', () => {
     expect(basis).toHaveAttribute('title', expect.stringMatching(/found word-for-word.*check it supports the value/i));
   });
 
-  it('TC-R12-BD-1-02: a field with no quote and not guessed (model not marked uncertain) renders the combined marker', () => {
+  it('TC-R15-C5-02 / TC-R12-BD-1-02: a field with no quote and not guessed (model not marked uncertain) renders the combined marker', () => {
     render(
       <GraphView
         graph={makeGraph()}
@@ -48,7 +48,7 @@ describe('R12-BD-1 — badge recalibration', () => {
     expect(screen.getAllByText(/not found in your text — worth a second look/i).length).toBeGreaterThan(0);
   });
 
-  it('TC-R12-BD-1-03: a quoted field does not also render the combined marker', () => {
+  it('TC-R15-C5-02 / TC-R12-BD-1-03: a quoted field does not also render the combined marker', () => {
     render(
       <GraphView
         graph={makeGraph()}

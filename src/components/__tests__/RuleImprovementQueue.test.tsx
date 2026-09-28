@@ -57,6 +57,9 @@ const renderQueue = () =>
     </StrictMode>,
   );
 
+// TC-R15-C5-11: this whole describe block (TC-R4-RC-5-01 through -05 below,
+// plus TC-R4-NF-2-01) passes unchanged after the R15-C5 relabel — the
+// advisory paragraph and the append-only caveat were not edited this chunk.
 describe('RuleImprovementQueue', () => {
   it('TC-R4-RC-5-01: with no dissents, says so and points at where one is filed from', async () => {
     renderQueue();
@@ -64,7 +67,7 @@ describe('RuleImprovementQueue', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/sign-off page/i);
   });
 
-  it('TC-R4-RC-5-02: groups dissents by rule, newest first within a rule, and names the challenger and use case', async () => {
+  it('TC-R15-C5-08 / TC-R4-RC-5-02: groups dissents by rule, newest first within a rule, and names the challenger and use case', async () => {
     const ucA = crypto.randomUUID();
     const ucB = crypto.randomUUID();
     await seedUseCase(ucA, 'Client email drafter');

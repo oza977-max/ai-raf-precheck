@@ -4,6 +4,11 @@ import PolicyEditor from '../PolicyEditor';
 
 // R12-ST-2: the pack list shows each pack's age and an overdue state,
 // styled like the existing invalid-pack state.
+// TC-R15-C4-03: this pack age/overdue coverage never touches the YAML
+// textarea, so it needed no change for the R15-C4 disclosure and passes
+// unchanged — included in TC-R15-C4-03's "all pre-existing PolicyEditor.
+// test.tsx and PolicyEditor.r12.test.tsx coverage ... unchanged" scope
+// (test-cases-015.md).
 describe('R12-ST-2 — pack age on the Appetite framework screen', () => {
   it('TC-R12-ST-2-01: a real loaded pack shows retrieved-N-days-ago / review-window text', () => {
     render(<PolicyEditor />);

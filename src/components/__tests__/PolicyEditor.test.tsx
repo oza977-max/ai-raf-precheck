@@ -70,8 +70,12 @@ async function openYamlEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByText(/edit the rulebook as yaml/i));
 }
 
+// TC-R15-C4-03: pre-existing coverage in this describe block (pre-fill,
+// validate, save success/failure) is unchanged in behaviour by the R15-C4
+// disclosure change below — only renegotiated to open the YAML-editor
+// disclosure before querying the textarea (see openYamlEditor() above).
 describe('PolicyEditor', () => {
-  it('R15-C4: the YAML editor disclosure is closed by default and the textarea is not visible', () => {
+  it('TC-R15-C4-01: the YAML editor disclosure is closed by default and the textarea is not visible', () => {
     render(<PolicyEditor />);
     const details = screen.getByText(/edit the rulebook as yaml/i).closest('details');
     expect(details).not.toHaveAttribute('open');
@@ -83,7 +87,7 @@ describe('PolicyEditor', () => {
     expect(screen.getByLabelText(/policy yaml/i)).not.toBeVisible();
   });
 
-  it('R15-C4: opening the disclosure reveals the textarea and the no-sign-in honesty line', async () => {
+  it('TC-R15-C4-02: opening the disclosure reveals the textarea and the no-sign-in honesty line', async () => {
     const user = userEvent.setup();
     render(<PolicyEditor />);
     await openYamlEditor(user);
@@ -150,6 +154,11 @@ describe('PolicyEditor', () => {
   });
 });
 
+// TC-R15-C4-03: pre-existing coverage in this describe block (ACTION
+// REQUIRED banner, jurisdiction pack list, hard lines, invalid-YAML panel
+// suppression) is unchanged in behaviour by the R15-C4 disclosure change —
+// renegotiated only where a test touches the textarea (D4, invalid-YAML),
+// via openYamlEditor().
 describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
   beforeEach(() => {
     // Earlier tests in this file SAVE a minimal policy into localStorage;

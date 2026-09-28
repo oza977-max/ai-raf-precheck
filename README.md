@@ -4,6 +4,38 @@
 
 A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
+## What it does that governance platforms don't
+
+Most AI governance platforms are built around an intake questionnaire, a
+risk score and an approval workflow — increasingly with an AI assistant
+that recommends the classification. That produces a *score* someone still
+has to interpret. AIGate produces a *decision*, and shows its working:
+
+- **It computes the verdict; nothing recommends it.** Your appetite is
+  loaded as rules, the use case becomes a data-flow graph, and the verdict
+  is what the rules say about that graph. Same inputs, same verdict, byte
+  for byte — asserted by test. There is no model in the decision path, so
+  there is nothing there to steer, drift or explain away.
+- **It solves the fix, not just the finding.** When a case is out of
+  appetite, AIGate computes the *smallest set of controls* from your
+  library that brings it back inside — or says plainly that none can,
+  because a hard line was crossed.
+- **Every step cites its source, and its signer.** Verdict → the rule that
+  applied → the verbatim regulatory text behind it → the named person who
+  signed that reading off. A rule nobody has signed makes the verdict
+  *provisional*, and the verdict says so.
+- **It never claims more than it can prove.** An attested control reads
+  *attested (not verified)*; a control with no evidence reads
+  *outstanding*; the audit trail calls itself tamper-evident, not
+  tamper-proof. These are requirements pinned by tests, not tone.
+- **Every obligation is traceable.** Each requirement-level test case
+  names the automated test that proves it, checked mechanically by
+  [`scripts/trace-check.py`](scripts/trace-check.py) rather than asserted
+  in a document.
+- **Decisions accumulate.** Every verdict lands in a register the next
+  pre-check consults — duplicate detection and similar decided cases turn
+  it into precedent, while the rules, not the precedent, decide.
+
 ## The problem, in four numbers
 
 This project publishes its own research base. From **[After Deployment](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)** — our expert-reviewed briefing computed directly from the MIT AI Risk Repository V4 and 20+ verification-graded sources ([source file in this repo](public/research/after-deployment.html)):
@@ -96,13 +128,6 @@ business product info ──▶  LLM on a cloud vendor  ──▶  answers shown
 ```
 
 The engine walks that graph: no hard line crossed; client-facing generative output trips the disclosure and reliability rules; the smallest fix is a named control set (tell clients it's AI, ground the answers, keep the human escalation route). Verdict: **in appetite with those controls, tier High** — and because a UK jurisdiction rule fired that nobody at the firm has signed off yet, the verdict is stamped **provisional and says so**. This exact case ships as one of the six in-app samples, scored by the real engine.
-
-## Why it's different
-
-- **Deterministic, not generative.** Same inputs, same verdict, byte for byte — asserted by test. No LLM in the decision path; the optional model only reads descriptions in and explains verdicts out.
-- **It refuses to fabricate.** Unsigned rules make the verdict PROVISIONAL and say so; controls without evidence render UNVERIFIED; genuine legal ambiguity is routed to humans, not papered over.
-- **Everything is traceable.** Verdict → rule → verbatim regulatory text → the named human who signed it, on an append-only audit trail.
-- **Decisions accumulate.** Every verdict lands in a register the next pre-check consults — duplicate detection and similar-decided-cases turn the register into precedent, while the rules, not the precedent, decide.
 
 ## What's the tool, and what's yours
 

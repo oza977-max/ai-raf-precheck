@@ -71,7 +71,7 @@ describe('R5-GR-1 — every decision-bearing field explains itself', () => {
     expect(screen.queryByText(/inside the firm only.*zone c.*inside the firm/i)).toBeNull();
   });
 
-  it('TC-R5-GR-1-03: absent optional fields say "not stated" rather than defaulting', () => {
+  it('TC-R15-C5-05 / TC-R5-GR-1-03: absent optional fields say "not stated" rather than defaulting', () => {
     render(<GraphView graph={makeGraph()} />);
     // decision_type and hitl are absent on the fixture output node.
     // decision_type + hitl (output node) and, since v1.4,

@@ -15,13 +15,13 @@ up from one function.
 | ID | Asserts |
 |---|---|
 | TC-R15-C3-01 | `graphSummaryRows()` routes Input data / Model / Autonomy / Data zone / Output through `field-copy.ts`'s `plainWithCode()` — the rendered value is `"<short plain phrase> · <code>"`, not the raw enum alone (S1b) |
-| TC-R15-C3-02 | The same fixed row shape appears at BOTH call sites from one function: ConfirmationStep's attest grid (`ConfirmationStep.test.tsx`, pre-existing coverage, unaffected by this change) and VerdictDisplay's "What you told us" fold (`VerdictDisplay.test.tsx`, renegotiated in this round — see below) |
+| TC-R15-C3-02 | The same fixed row shape appears at BOTH call sites from one function: ConfirmationStep's attest grid (`ConfirmationStep.test.tsx`, pre-existing coverage, unaffected by this change) and VerdictDisplay's "What you told us" fold (`VerdictDisplay.test.tsx`, renegotiated in this round — see below) **[Amended 2026-09-28: the "pre-existing coverage" claim for ConfirmationStep.test.tsx was inaccurate — that file had no assertion on the attest grid's rows. A new test there now proves the ConfirmationStep call site.]** |
 | TC-R15-C3-03 | The `UC-6 · CONFIRM & ATTEST` internal-id tag no longer renders on the Confirm & attest screen |
 | TC-R15-C3-04 | The `UC-4 · TARGETED QUESTIONS` internal-id tag no longer renders on the targeted-questions screen |
-| TC-R15-C3-05 | `StructuredForm` renders five `<fieldset>`/`<legend>` sections ("About it", "What it uses", "What the AI is and how it runs", "What comes out and who it reaches", "Where it applies") — verified live; no automated DOM-structure assertion added (out of scope for this pass) |
+| TC-R15-C3-05 | `StructuredForm` renders five `<fieldset>`/`<legend>` sections ("About it", "What it uses", "What the AI is and how it runs", "What comes out and who it reaches", "Where it applies") — verified live; no automated DOM-structure assertion added (out of scope for this pass) **[Amended 2026-09-28: an automated fieldset/legend test now exists in StructuredForm.test.tsx.]** |
 | TC-R15-C3-06 | No form field is hidden behind an "advanced" toggle — all pre-existing `getByLabelText` queries in `StructuredForm.test.tsx` still resolve unchanged, proving every field stayed on the single scroll |
 | TC-R15-C3-07 | The load-bearing zone-crossing sentence ("not where the data is stored — where it gets sent...") and the load-bearing bindingness sentence ("be honest about what happens in practice...") stay visible outside their "Why we ask" `<details>` — pre-existing `StructuredForm.test.tsx` assertions on both sentences continue to pass unchanged |
-| TC-R15-C3-08 | Optional fields (platform, vendor, decision type, human-in-the-loop) state the consequence of leaving them blank in the field label itself ("optional — blank means: …") |
+| TC-R15-C3-08 | Optional fields (platform, vendor, decision type, human-in-the-loop) state the consequence of leaving them blank in the field label itself ("optional — blank means: …") **[Amended 2026-09-28: true for platform, vendor and human-in-the-loop, which use "optional — blank means: …" verbatim. The decision-type label instead reads "optional — leave blank only if it feeds no decision at all" — guidance on when blank is allowed, not the consequence of blank. The test pins each label's real text; the wording inconsistency is recorded here, not hidden.]** |
 | TC-R15-C3-09 | `FIELD_CONSEQUENCES` (field-copy.ts, R5-GR-1) — computed since that round and never rendered anywhere — is now consumed by `StructuredForm`'s "Why we ask" disclosures, closing a computed-but-never-consumed gap |
 
 ### Renegotiated
@@ -62,8 +62,8 @@ for a visible warning + an `aria-expanded` disclosure carrying the same
 
 | ID | Asserts |
 |---|---|
-| TC-R15-C4-01 | `PolicyEditor`'s YAML-editor disclosure button renders `aria-expanded="false"` on first render and the `#policy-yaml-input` textarea is not in the document until it is opened — the readable panels above it (levers, jurisdiction packs, hard lines, risk knowledge) render regardless, satisfying "readable rulebook is the default view" |
-| TC-R15-C4-02 | Opening the disclosure flips `aria-expanded` to `true`, reveals the textarea, Validate/Save and the verbatim honesty sentence "This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors." |
+| TC-R15-C4-01 | `PolicyEditor`'s YAML-editor disclosure button renders `aria-expanded="false"` on first render and the `#policy-yaml-input` textarea is not in the document until it is opened — the readable panels above it (levers, jurisdiction packs, hard lines, risk knowledge) render regardless, satisfying "readable rulebook is the default view" **[Amended 2026-09-28: the mechanism has since changed — design-review round 4 migrated this disclosure to the shared native <details>/<summary> Fold, so it carries an open attribute, not aria-expanded. The substance (closed by default, readable panels render regardless) is what the test proves.]** |
+| TC-R15-C4-02 | Opening the disclosure flips `aria-expanded` to `true`, reveals the textarea, Validate/Save and the verbatim honesty sentence "This build has no sign-in — anyone can open this. A real deployment restricts it to the rule authors." **[Amended 2026-09-28: same mechanism change as C4-01 — opening the <details> reveals the textarea and the honesty sentence.]** |
 | TC-R15-C4-03 | All pre-existing `PolicyEditor.test.tsx` and `PolicyEditor.r12.test.tsx` coverage (pre-fill, validate, save success/failure, ACTION REQUIRED banner, jurisdiction pack list, hard lines, pack age/overdue, invalid-YAML panel suppression) is unchanged in behaviour — only renegotiated to open the disclosure first before querying the textarea |
 | TC-R15-C4-04 | `WalkingSkeleton.test.tsx`'s P7-C03 Part B save-flow integration test opens the disclosure before finding the textarea; the real-save assertion (queued count, header policy version bump) is otherwise unchanged |
 | TC-R15-C4-05 | No role prop is read by `PolicyEditor`, and none was before this chunk — confirmed by reading the component and its call site in `App.tsx` (`<PolicyEditor onSaved={...} />`, unconditional). The "NOT role-gated" requirement (§3.4) was already true structurally; this chunk adds a code comment recording the check rather than removing gating that did not exist. This is the documented exception to G6 (§7 gates), not a violation of it |
@@ -153,6 +153,18 @@ pass did not have that tooling available; verified instead by reading the
 rendered JSX, the full test suite, and TypeScript's structural checks.
 This is the last of R15's five chunks; requirements-015.md's Changelog
 notes the build status (not a release) in the same pass.
+
+
+### Traceability closed — 2026-09-28
+
+Every case in this file is now proved by an automated test that names it,
+checked mechanically by `python3 scripts/trace-check.py` (247/247 across all
+test-case files at the time of writing). Rows that R15 had verified only "by
+reading the JSX" or "by diff" (C3-03, C3-04, C3-05, C3-08, C3-09, C4-05,
+C4-06, C4-07, C5-01, C5-03, C5-06, C5-07, C5-10, C5-12) now have their own
+tests; the rest were already proved by existing tests, which now carry the
+id. Three rows overstated what had been verified — amended in place above,
+each marked with its date.
 
 ---
 

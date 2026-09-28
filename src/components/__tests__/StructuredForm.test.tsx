@@ -74,6 +74,28 @@ describe('StructuredForm', () => {
   });
 });
 
+// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-05. The row records
+// this as "verified live; no automated DOM-structure assertion added (out of
+// scope for this pass)" — confirmed true by reading StructuredForm.test.tsx
+// before this chunk: no test asserted the fieldset/legend structure at all.
+// This closes that gap.
+describe('StructuredForm — five-section structure (TC-R15-C3-05)', () => {
+  it('TC-R15-C3-05: renders exactly five fieldset/legend sections with the documented legend text', () => {
+    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    const legends = [...container.querySelectorAll('fieldset > legend')].map((l) => l.textContent ?? '');
+    expect(legends).toHaveLength(5);
+    [
+      'About it',
+      'What it uses',
+      'What the AI is and how it runs',
+      'What comes out and who it reaches',
+      'Where it applies',
+    ].forEach((text, i) => {
+      expect(legends[i]).toContain(text);
+    });
+  });
+});
+
 describe('StructuredForm — business-friendly wording (V2-E)', () => {
   // The user feedback that drove this: the form asked for "input data
   // class", "output reversibility" and so on — the engine's own field
@@ -104,7 +126,7 @@ describe('StructuredForm — business-friendly wording (V2-E)', () => {
     expect(screen.getAllByRole('option', { name: /with an outside supplier.*\(Zone B\)/i })).toHaveLength(2);
   });
 
-  it('explains the traps a first-time submitter falls into', () => {
+  it('TC-R15-C3-07: explains the traps a first-time submitter falls into', () => {
     render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
     // Storage location vs processing location is the distinction people get
     // wrong, and it is the one the zone-crossing rules turn on.
@@ -531,6 +553,11 @@ function markedFieldIds(container: HTMLElement): string[] {
   return [...container.querySelectorAll('[aria-required="true"]')].map((el) => el.id).sort();
 }
 
+// TC-R15-C3-06: every field probe below resolves its own control via
+// getByLabelText/fireEvent on a single un-toggled render — FIELD_PROBES spans
+// every field the form has (matching StructuredForm.tsx's own totalFieldCount
+// = 19) — proving no form field is hidden behind an "advanced" toggle; every
+// field stays reachable on the one continuous scroll.
 describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
   // ACCEPTANCE TEST (TDD-1, outside-in — written first).
   // 19 full mount/unmount cycles of the whole form (1 baseline + 18 field
@@ -664,5 +691,50 @@ describe('StructuredForm — an untouched vendor field does not read as a declar
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit.mock.calls[0]?.[0].processing_nodes[0].vendor).toBe('internal');
     sessionStorage.clear();
+  });
+});
+
+// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-08. The row names four
+// optional fields (platform, vendor, decision type, human-in-the-loop) as
+// stating the consequence of leaving them blank in the label itself. Three of
+// the four use the literal "optional — blank means: …" template; the
+// decision-type label instead reads "optional — leave blank only if it feeds
+// no decision at all" — a precondition for choosing blank rather than the
+// same "blank means:" wording, though it conveys the same information (see
+// agent report for this round's traceability pass for the finding writeup).
+// All four are asserted here against their real, current copy.
+describe('StructuredForm — optional fields state what leaving them blank means (TC-R15-C3-08)', () => {
+  it('TC-R15-C3-08: platform, vendor, decision-type and human-in-the-loop labels state the consequence of leaving them blank', () => {
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    expect(screen.getByText(/blank means: not on an approved platform/i)).toBeInTheDocument();
+    expect(screen.getByText(/blank means: assessed as built in-house/i)).toBeInTheDocument();
+    expect(screen.getByText(/blank means: not specified/i)).toBeInTheDocument();
+    expect(screen.getByText(/leave blank only if it feeds no decision at all/i)).toBeInTheDocument();
+  });
+});
+
+// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-09. FIELD_CONSEQUENCES
+// (field-copy.ts, R5-GR-1) was computed since that round and rendered nowhere
+// — the exact "computed but never consumed" defect class CLAUDE.md names.
+// This proves several of its entries now reach the DOM through the "Why we
+// ask" disclosures WhyWeAsk() renders, closing that gap. No pre-existing test
+// asserted any FIELD_CONSEQUENCES text before this chunk.
+describe('StructuredForm — FIELD_CONSEQUENCES reaches the disclosures (TC-R15-C3-09)', () => {
+  it('TC-R15-C3-09: FIELD_CONSEQUENCES text now renders inside "Why we ask" disclosures', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+    for (const summary of screen.getAllByText('Why we ask')) {
+      await user.click(summary);
+    }
+    expect(
+      await screen.findByText(
+        /how sensitive the data is\. the strictest rules key off personal client data and price-sensitive information\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/what kind of ai this is\. generative and agentic models attract extra oversight rules\./i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/how much happens without a person/i)).toBeInTheDocument();
+    expect(screen.getByText(/trigger the strictest oversight/i)).toBeInTheDocument();
   });
 });

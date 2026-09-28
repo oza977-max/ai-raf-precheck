@@ -110,5 +110,7 @@ Load these when the task needs them, not upfront.
   and the history-rewrite record.
 - Plain language over jargon in anything user-facing.
 - Verification ritual before commit: `npm test` ×3, `npx tsc --noEmit`,
-  `npm run build`, `python3 scripts/spec-parity-check.py`, and a live
-  browser walkthrough of the affected screen.
+  `npm run build`, `python3 scripts/spec-parity-check.py`,
+  `python3 scripts/trace-check.py` (every TC id in `test-cases/` must be
+  named by a test — new cases get their id in the test name at birth), and a
+  live browser walkthrough of the affected screen.
