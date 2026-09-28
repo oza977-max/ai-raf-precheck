@@ -172,7 +172,7 @@ export type AuditEventPayload =
       owner_name: string;
       target_date: string;
     }
-  // RG-7 (2026-09-01). Closes the second core-loop gap: a verdict names
+  // RG-9 (2026-09-01). Closes the second core-loop gap: a verdict names
   // controls to put in place, but nothing in the app let a human record
   // that one WAS put in place — the "in place" status came only from a
   // hand-edited field in the policy YAML (verification_evidence.status),

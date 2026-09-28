@@ -151,6 +151,22 @@
     <!-- Design Decisions -->
     <h2 id="design-decisions">Design Decisions</h2>
 
+    <p><em>Drift notice (2026-09-28 per code-review-005 F7): ADR-006 below
+    predates the shipped design and describes a server-backed Postgres event
+    store that was never built — <code>verdict-audit.md</code> §3 ADR-006 is
+    authoritative (IndexedDB via <code>idb</code>, no server, browser-only).
+    The current decision, precisely: every write path used day to day is
+    append-only (<code>append()</code> only ever adds an event, using
+    <code>db.add()</code>, never <code>put()</code> — a duplicate
+    <code>event_id</code> throws rather than overwriting). There is exactly
+    ONE bounded exception, added for the RG-8 hand-off feature (§16 below):
+    <code>backupAndReplaceAllRawEvents</code>, reachable only from a
+    user-confirmed replace of a bundle that has already passed full import
+    verification, only after a two-step UI confirmation ("Save a backup of
+    mine first", then "I have my backup — replace my register"), and which
+    captures what it discards inside the same queued step that replaces it.
+    See §4.4 and §16 below.</em></p>
+
     <details class="adr">
       <summary>
         <span class="adr-id">ADR-006</span>
@@ -265,7 +281,8 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
 
     <h3 id="auditevent">4.3 AuditEvent</h3>
     <p><em>Drift notice (2026-08-15, extended 2026-08-31 per code-review-004
-    F6): this block predates the built schema and has drifted from
+    F6; RG-7&rarr;RG-9 relabelled 2026-09-28 per code-review-005 F9): this
+    block predates the built schema and has drifted from
     <code>verdict-audit.md</code> §4.3, which is authoritative — snake_case
     fields, discriminated payload union, the <code>rule_dissent_filed</code>
     event (FN-009: a reviewer challenges a rule; advisory, never changes the
@@ -275,7 +292,9 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
     control; payload carries <code>verdict_id</code>, <code>control_id</code>,
     <code>owner_name</code>, <code>target_date</code>; re-assignment is a
     later event, the UI reads the latest), the <code>control_evidence_attested</code>
-    event (RG-7, 2026-09-01: a named reviewer attests a control is in place
+    event (RG-9 — relabelled 2026-09-28 from RG-7, which collided with this
+    product's own unrelated RG-7 (periodic sampling cadence, V2+, unbuilt);
+    2026-09-01: a named reviewer attests a control is in place
     with an evidence note; payload <code>verdict_id</code>, <code>control_id</code>,
     <code>attested_by_name</code>, <code>evidence_note</code>; a self-asserted
     human claim rendered &ldquo;attested (not verified)&rdquo;, never
@@ -310,6 +329,24 @@ const CAVEAT_TEMPLATES: Record&lt;string, string&gt; = {
 </code></pre>
 
     <h3 id="auditstoreinterface">4.4 AuditStore Interface</h3>
+    <p><em>Drift notice (2026-09-28 per code-review-005 F7): the interface
+    below predates the shipped module and does not match
+    <code>src/store/audit.ts</code>'s real exports. The real surface is:
+    <code>append</code>, <code>getAll</code>, <code>getAllForExport</code>
+    (all append-only — a duplicate <code>event_id</code> throws via
+    <code>db.add()</code>, never <code>put()</code>), <code>importTailIfContinues</code>
+    (the hand-off MERGE path, RG-8 §16.5 — appends a verified continuation,
+    never rewrites), <code>verifyChain</code>/<code>verifyChainOf</code>,
+    <code>sha256Hex</code>, and the ONE bounded exception,
+    <code>backupAndReplaceAllRawEvents</code> (RG-8 hand-off replace, §16.8 —
+    reachable only from a verified, user-confirmed replace). The guard test
+    (TC-NF-2-01/TC-VD-4-01, <code>src/store/register.test.ts</code>) is an
+    explicit ALLOWLIST of this export list, not a keyword search — before
+    code-review-005 (F7) it blocklisted words like &ldquo;delete&rdquo;/
+    &ldquo;clear&rdquo;, which <code>backupAndReplaceAllRawEvents</code>
+    evaded by name alone. Any new write path, whatever it is named, now
+    fails this test until added to the allowlist on purpose. See
+    <code>verdict-audit.md</code> §4.4 and §16.</em></p>
     <pre><code>interface AuditStore {
   // Append: insert new audit event (auto-compute eventHash)
   append(event: Omit&lt;AuditEvent, 'eventId' | 'eventHash'&gt;): Promise&lt;AuditEvent&gt;;
@@ -823,8 +860,95 @@ const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&g
 
     <p><strong>ADR-VA-R12-3 — the memo carries a policy content hash the CALLER computes.</strong> <code>buildChallengeMemo</code> stays synchronous and pure; it accepts an optional <code>policyHash</code> string the caller derives (SHA-256 over the active policy YAML via WebCrypto) and prints it in the header. Absent = legacy call sites, line reads "not computed". The memo is thereby tied to the enforced ruleset, not a paraphrase (Power's audit-ritual risk, A-5).</p>
 
-    <h2 id="changelog-r3">16. Changelog</h2>
+    <h2 id="handoff-bundle">16. Hand-off Bundle &mdash; Submitter/Reviewer Transfer (RG-8)</h2>
+    <p>AIGate&rsquo;s whole value depends on a SUBMITTER and a REVIEWER being different people, but V1 runs entirely in one browser with no server and no shared database &mdash; &ldquo;1LoD&rdquo; and &ldquo;2LoD&rdquo; were, until this feature, just a role toggle on one machine. The hand-off bundle (<code>src/store/handoff.ts</code>) lets the register and its append-only audit trail move from one machine to another as a single file, with the hash chain (&sect;4.3) used exactly as intended: an accidentally damaged file, or one edited without recomputing the chain downstream of the edit, is caught on arrival.</p>
+
+    <h3 id="handoff-bundle-shape">16.1 Bundle shape</h3>
+    <pre><code>export const HANDOFF_FORMAT_VERSION = 1;
+
+export interface HandoffBundle {
+  format: 'aigate-handoff';
+  format_version: typeof HANDOFF_FORMAT_VERSION;
+  exported_at: string;          // ISO 8601
+  app_version: string;
+  register: { nodes: RegisterNode[]; edges: RegisterEdge[] };
+  audit_events: AuditEvent[];   // chain-ordered
+  seal: string;                 // &sect;16.2
+}
+</code></pre>
+    <p><code>exportBundle(appVersion)</code> builds this by calling <code>register.exportAll()</code> and <code>audit.getAllForExport()</code> &mdash; both already queued against every other writer to their own store (&sect;16.6) &mdash; and computing the seal over the result.</p>
+
+    <h3 id="handoff-seal">16.2 The seal &mdash; what it proves, and what it does not</h3>
+    <p><code>computeSeal(register, events)</code> is a SHA-256 hash (<code>sha256Hex</code>) over a canonical JSON serialisation of:</p>
+    <ul>
+      <li><code>register.nodes</code>, sorted by <code>node_id</code></li>
+      <li><code>register.edges</code>, sorted by <code>edge_id</code></li>
+      <li><code>audit_tip</code> &mdash; the last event&rsquo;s <code>hash</code>, or the literal string <code>'EMPTY'</code> when there are no events</li>
+      <li><code>audit_count</code> &mdash; the number of audit events</li>
+    </ul>
+    <p>This is an <strong>unkeyed</strong> hash &mdash; no secret, no external anchor. What it catches: accidental damage to the file in transit, and an edit that was made without recomputing the chain and the seal downstream of it &mdash; the common case, and the one this product used to leave open. What it does <strong>not</strong> prove: who made the file. Anyone holding the bundle can edit it, recompute every downstream hash and the seal, and a fresh import will accept the result &mdash; proved in code by <code>handoff.test.ts</code>&rsquo;s F2 test, which builds exactly that forgery with <code>audit.ts</code>&rsquo;s own <code>__recomputeChainForTests</code> and asserts <code>importBundle</code> accepts it. This is the same tamper-evident-not-tamper-proof limit <code>AuditEvent.hash</code> already states for the local trail (&sect;4.3) &mdash; a hand-off file just makes the file itself the thing an attacker could hold. The product&rsquo;s stated position, shown to the user on import: only import a bundle from someone you trust, sent by a route you trust.</p>
+
+    <h3 id="handoff-validation">16.3 Import validation, before any write</h3>
+    <p><code>importBundle</code> and <code>replaceWithBundle</code> share one <code>validateBundle</code> step that runs, in order, before either function touches a store:</p>
+    <ol>
+      <li><strong>Envelope check first.</strong> <code>format</code>/<code>format_version</code> are checked before the full schema, so an unsupported version gets its own honest message &mdash; &ldquo;This hand-off file was made by a different version of AIGate and can&rsquo;t be imported here.&rdquo; &mdash; distinct from &ldquo;This file is not an AIGate hand-off bundle.&rdquo; for a file that is not a bundle at all.</li>
+      <li><strong>Full shape and semantic validation</strong> (<code>zod</code>): every timestamp must be a real ISO datetime, not merely a string that looks like one &mdash; an unparseable <code>occurred_at</code> would otherwise poison the monotonic clock <code>audit.ts</code> uses to keep timestamps strictly increasing across a tab session, breaking every later local write until reload (code-review-005 F4); every audit event&rsquo;s <code>event_type</code> is one of the known values (&sect;4.3) <strong>and</strong> matches <code>payload.type</code>; each payload variant&rsquo;s own required fields are checked, not just &ldquo;some object with the right <code>type</code>&rdquo;; every register node&rsquo;s <code>node_type</code> matches its <code>metadata.node_type</code>, and each metadata variant&rsquo;s own required fields are checked.</li>
+      <li><strong>Duplicate <code>event_id</code> values inside one bundle</strong> are rejected by name: &ldquo;This bundle has more than one event with the id &ldquo;X&rdquo; and cannot be imported.&rdquo;</li>
+      <li><strong>The seal is recomputed and compared</strong> (&sect;16.2) &mdash; a mismatch is reported as <code>tampered</code>, not <code>invalid_format</code>.</li>
+      <li><strong>The incoming chain&rsquo;s own internal integrity is walked in full</strong> (<code>verifyChainOf</code> &mdash; linkage and every event&rsquo;s content hash), independently of the local store, so a payload edited in transit is caught even in a case the seal alone would not cover (the seal binds only the tip).</li>
+    </ol>
+
+    <h3 id="handoff-outcomes">16.4 Outcomes</h3>
+    <p><code>ImportOutcome</code> is exactly these eight values:</p>
+    <table><thead><tr><th>Outcome</th><th>Meaning</th></tr></thead><tbody>
+      <tr><td><code>invalid_format</code></td><td>Not a bundle, or the schema failed &mdash; includes an unsupported <code>format_version</code></td></tr>
+      <tr><td><code>tampered</code></td><td>The seal or the incoming chain&rsquo;s own internal linkage/hash is broken</td></tr>
+      <tr><td><code>up_to_date</code></td><td>The bundle equals the local trail; nothing to do</td></tr>
+      <tr><td><code>local_ahead</code></td><td>The local trail already extends the bundle; nothing to do</td></tr>
+      <tr><td><code>merged</code></td><td>The bundle&rsquo;s tail extended a non-empty local trail; the tail was absorbed</td></tr>
+      <tr><td><code>imported_into_empty</code></td><td>The local trail was empty; the whole bundle was absorbed (named to avoid colliding with the unrelated <code>classification_adopted</code> audit event &mdash; code-review-005 F27)</td></tr>
+      <tr><td><code>replaced</code></td><td>User-confirmed: the local trail was discarded (backup already taken) and the bundle installed</td></tr>
+      <tr><td><code>diverged</code></td><td>The two histories cannot be merged; rejected, no writes</td></tr>
+    </tbody></table>
+
+    <h3 id="handoff-merge">16.5 The merge rule &mdash; prefix or nothing</h3>
+    <p>Two chains merge only when one is a byte-for-byte prefix of the other over their shared span &mdash; the same <code>event_id</code>, <code>prev_hash</code>, and <code>hash</code> for every event in that span (<code>chainPrefixMatch</code>). The hash chain is global across the whole trail, not per use case, so two chains grown independently on two machines share no common suffix and cannot be honestly concatenated; anything short of a clean prefix relationship is <code>diverged</code> and rejected outright, with no writes.</p>
+    <p>The read, the compare, and the write are not three separate calls. <code>importTailIfContinues</code> performs &ldquo;read the local chain, check the prefix, write the tail&rdquo; as <strong>one</strong> step inside the audit write queue (&sect;16.6), re-verifying the tail still joins the current tip immediately before inserting it. This closes a race a three-step version had: a second import, a local <code>append()</code>, or another tab&rsquo;s write landing between the check and the write could otherwise attach the new tail to a tip that had already moved. The merge path never rewrites, reorders, or removes an existing event &mdash; it only appends the verified tail, using <code>db.add()</code>, never <code>put()</code>.</p>
+
+    <h3 id="handoff-concurrency">16.6 Concurrency &mdash; per-store write queues</h3>
+    <p>Both <code>audit.ts</code> and <code>register.ts</code> serialise every write &mdash; and every read that must not observe a torn mid-write state, such as export &mdash; through a queue (<code>createWriteQueue</code>, <code>src/store/db.ts</code>). Each IndexedDB database gets its own named queue (<code>aigate-audit-write</code>, <code>aigate-register-write</code>), so a lock on one store never blocks the other. Same-tab calls are always serialised; where the browser supports <code>navigator.locks</code>, the same named lock is also taken across tabs, so a second tab performing the same kind of operation is locked out too. This is feature-detected: this project&rsquo;s test environment (jsdom) has no <code>navigator.locks</code> and silently falls back to same-tab-only queuing, which is why cross-tab behaviour is exercised by design but not asserted by the automated suite.</p>
+
+    <h3 id="handoff-different-histories">16.7 &ldquo;Different histories&rdquo; &mdash; first receipt vs. a warning</h3>
+    <p>When the outcome is <code>diverged</code>, the message shown depends on whether this browser has ever synced successfully before. A per-browser marker (<code>localStorage</code>, key <code>aigate-handoff-last-synced-tip</code>) records the last bundle tip absorbed by any successful <code>up_to_date</code>, <code>local_ahead</code>, <code>merged</code>, <code>imported_into_empty</code>, or <code>replaced</code> outcome; it is best-effort (private browsing can block <code>localStorage</code>) and never load-bearing &mdash; it decides only which message is shown, never whether an import is accepted.</p>
+    <ul>
+      <li><strong>First time</strong> (no prior successful sync recorded): &ldquo;This bundle and your copy have different histories, so they can&rsquo;t be merged. The first time you receive a case this is normal &mdash; your browser starts with its own demo cases. You can save a backup of yours and replace it with this bundle.&rdquo;</li>
+      <li><strong>After a previous successful sync:</strong> &ldquo;Warning: this bundle doesn&rsquo;t continue the history you last synced. That shouldn&rsquo;t happen at this stage &mdash; it can mean the wrong file, both of you changing the case at once, or a file that was altered. Check with the sender before replacing anything.&rdquo;</li>
+    </ul>
+    <p>The user-facing term for this state is always &ldquo;different histories&rdquo;. The internal <code>ImportOutcome</code> value is named <code>diverged</code>; &ldquo;fork&rdquo; is not used in any user-facing copy.</p>
+
+    <h3 id="handoff-two-step-replace">16.8 The two-step replace</h3>
+    <p><code>replaceWithBundle</code> is reachable only after (1) the bundle has passed every check in &sect;16.3, and (2) the user has completed a two-step, UI-enforced confirmation in <code>RegisterView.tsx</code>: &ldquo;Save a backup of mine first&rdquo; &mdash; which must itself succeed, since a browser can silently block or cancel a download &mdash; before &ldquo;I have my backup &mdash; replace my register&rdquo; becomes available. Only the second step calls <code>replaceWithBundle</code>.</p>
+    <p><code>replaceWithBundle</code> then, in order:</p>
+    <ol>
+      <li>Calls <code>audit.backupAndReplaceAllRawEvents(bundle.audit_events)</code> &mdash; reads what is about to be discarded and replaces it with the bundle&rsquo;s events in <strong>one</strong> queued step, so nothing else can write in the gap between &ldquo;read the backup&rdquo; and &ldquo;clear and rewrite&rdquo; (code-review-005 F16) &mdash; and returns the discarded events.</li>
+      <li>Calls <code>register.backupAndReplaceRegister(bundle.register.nodes, bundle.register.edges)</code>, the same way, for the register.</li>
+    </ol>
+    <p>The audit trail (source of truth) is replaced <strong>first</strong>; the register (a derived view) <strong>second</strong> (code-review-005 F6): a failure between the two steps leaves the source of truth already correct and only the presentation layer stale, never the reverse &mdash; a register showing a stage or verdict its own trail cannot justify. If the register step throws, the caller sees: &ldquo;Your audit trail was replaced, but the register view could not be updated: &lt;error&gt;. Reload to see the latest state.&rdquo; The merge path (<code>importBundle</code>) applies the same write order and the same honest failure wording for its own register step (&ldquo;The audit trail was updated (N events), but the register view could not be refreshed: &lt;error&gt;. Reload to see the latest state.&rdquo;).</p>
+
+    <h3 id="handoff-limits">16.9 Honest limits</h3>
+    <ul>
+      <li><strong>No cross-database atomicity.</strong> <code>aigate-audit</code> and <code>aigate-register</code> are two separate IndexedDB databases; nothing in <code>idb</code>/IndexedDB can wrap a write to both in one transaction. &sect;16.6&rsquo;s write queues make each store internally consistent on its own; they cannot make the pair atomic. &sect;16.8&rsquo;s write-order rule (audit first) is the mitigation, not a substitute for atomicity.</li>
+      <li><strong>The pause between the two replace steps is a UI control, not a cryptographic or server-enforced one.</strong> This build has no backend at all; the two-step confirmation sequences the destructive write behind an explicit human acknowledgement, and nothing more.</li>
+    </ul>
+
+    <h3 id="handoff-traceability">16.10 Traceability</h3>
+    <table><thead><tr><th>Requirement</th><th>Section</th><th>Test coverage</th></tr></thead><tbody>
+      <tr><td>RG-8</td><td>&sect;16</td><td><code>src/store/handoff.test.ts</code>, <code>src/store/audit.test.ts</code>, <code>src/store/register.test.ts</code> (TC-NF-2-01/TC-VD-4-01 export allowlist), <code>src/components/__tests__/RegisterView.handoff.test.tsx</code>. No requirement/test-case ids of its own existed as of code-review-005 (F9) &mdash; this row records the gap rather than a coverage claim this spec cannot back up.</td></tr>
+    </tbody></table>
+
+    <h2 id="changelog-r3">17. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
+      <tr><td>2026-09-28</td><td>&sect;16 added — code review 005 (F10). Hand-off bundle spec (RG-8): bundle shape, seal limits, import validation, outcome vocabulary, merge rule, two-step replace, concurrency, honest limits. &sect;4.3/&sect;4.4 rewritten (F7): the append-only guarantee now states its one bounded exception (<code>backupAndReplaceAllRawEvents</code>) precisely, and the guard test is documented as an explicit export allowlist, not a keyword search. <code>control_evidence_attested</code> relabelled RG-7 &rarr; RG-9 throughout (collided with the existing RG-7, periodic sampling cadence).</td></tr>
       <tr><td>2026-08-18</td><td>&sect;15 added — round 12. ADR-VA-R12-1 (stateless deterministic sampling queue), ADR-VA-R12-2 (provisional cause families in presentation), ADR-VA-R12-3 (caller-computed policy hash on the memo).</td></tr>
       <tr><td>2026-07-29</td><td>&sect;13 added — round 3. The verdict states both the consequence (prose, for the submitter) and the cause (labelled reason, for the record); separate assertions because they serve separate readers.</td></tr>
     </tbody></table>

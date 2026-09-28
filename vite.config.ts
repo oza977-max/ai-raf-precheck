@@ -4,8 +4,11 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 
 // The real package version, stamped into the bundle at build time so the
-// hand-off bundle's provenance field (RG-6) is accurate rather than a
+// hand-off bundle's provenance field (RG-8) is accurate rather than a
 // hardcoded string that goes stale. Provenance only — never used in logic.
+// This `define` block is shared by the `test` config below (Vitest reads
+// this same file), so __APP_VERSION__ is a real string under `npm test`
+// too, not just in dev/build — see src/vite-env.d.ts (code-review-005 F24).
 const pkgVersion = JSON.parse(readFileSync('./package.json', 'utf-8')).version as string;
 
 // base: './' — relative paths, required for file:// compatibility (NF-4)

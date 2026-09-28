@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   addNode,
   addEdge,
@@ -491,19 +491,82 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
   });
 
   it('TC-NF-2-01: the audit trail exposes no update or delete path [TC-VD-4-01]', async () => {
-    // The store is the whole surface. If it offers no way to change or remove
-    // an event, no UI can offer one either — which is a stronger guarantee
-    // than checking that today's screens happen not to render a button.
+    // code-review-005 F7: this used to be a keyword blocklist ('update',
+    // 'delete', 'remove', 'edit', 'clear', 'put'), and the hand-off replace
+    // primitive evaded it by name alone — `replaceAllRawEvents` (and its
+    // successor, `backupAndReplaceAllRawEvents`) contains none of those
+    // words, so the blocklist would have passed even though a UI-reachable
+    // path can now clear and rewrite the whole trail (a bounded, documented
+    // exception: a verified bundle, user-confirmed, backup taken first — see
+    // handoff.ts's replaceWithBundle). A blocklist can only catch names
+    // someone thought to list; an ALLOWLIST inverts the failure mode — every
+    // export must be named here on purpose, so ANY new write path, whatever
+    // it is called, fails this test until someone consciously adds it.
     const auditModule = await import('./audit');
-    const names = Object.keys(auditModule);
+    const names = Object.keys(auditModule).sort();
 
-    expect(names).toContain('append');
-    for (const forbidden of ['update', 'delete', 'remove', 'edit', 'clear', 'put']) {
-      expect(
-        names.some((n) => n.toLowerCase().includes(forbidden)),
-        `store/audit.ts exports "${names.find((n) => n.toLowerCase().includes(forbidden))}" — the trail is append-only`,
-      ).toBe(false);
+    const ALLOWED_AUDIT_EXPORTS = [
+      '__resetChainStateForTests',
+      '__recomputeChainForTests',
+      'append',
+      'backupAndReplaceAllRawEvents',
+      'getAll',
+      'getAllForExport',
+      'importTailIfContinues',
+      'sha256Hex',
+      'verifyChain',
+      'verifyChainOf',
+    ].sort();
+
+    expect(names).toEqual(ALLOWED_AUDIT_EXPORTS);
+  });
+
+  it('TC-RG-8-26: code-review-005 F3: getUseCases() skips an unreadable register row instead of throwing and freezing the whole list', async () => {
+    // Realistic bad-file shape: a node the OUTER register_nodes.by_type index
+    // finds as 'use_case' (so getUseCases()'s own filter includes it), but
+    // whose metadata disagrees (node_type: 'ai_model') — exactly the
+    // register-node/metadata mismatch code-review-005's import validation
+    // now rejects at the hand-off boundary (handoff.ts), kept here as
+    // defence in depth for any OTHER way a row like this could exist (a
+    // write from before that validation existed, or a future writer that
+    // forgets it). toSummary() throws on exactly this mismatch (register.ts's
+    // own explicit guard) — before F3, that throw propagated out of
+    // Promise.all and took every OTHER row down with it.
+    const goodId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: goodId, label: 'Readable row' }));
+
+    const badId = crypto.randomUUID();
+    const badNode = {
+      node_id: badId,
+      node_type: 'use_case',
+      label: 'Corrupt row',
+      created_at: new Date().toISOString(),
+      metadata: {
+        node_type: 'ai_model',
+        model_id: 'whatever',
+        vendor: 'unknown',
+        is_approved: false,
+      },
+    } as unknown as RegisterNode;
+    await addNode(badNode);
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let summaries: Awaited<ReturnType<typeof getUseCases>>;
+    let wasLogged: boolean;
+    try {
+      summaries = await getUseCases('all');
+      // Read the spy's call history BEFORE restoring — mockRestore() also
+      // clears .mock.calls (it does what mockReset()/mockClear() do first),
+      // so asserting on it afterwards would always see zero regardless of
+      // what actually happened.
+      wasLogged = consoleErrorSpy.mock.calls.length > 0;
+    } finally {
+      consoleErrorSpy.mockRestore();
     }
+
+    expect(summaries.some((s) => s.use_case_id === goodId)).toBe(true);
+    expect(summaries.some((s) => s.use_case_id === badId)).toBe(false);
+    expect(wasLogged).toBe(true);
   });
 
   it('TC-RG-1-02: a blast-radius query returns exactly the referencing use cases at scale [TC-RG-1-01]', async () => {

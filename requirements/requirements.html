@@ -933,6 +933,23 @@ file from the markdown — as <code>requirements-003.html</code> already is — 
                         <p class="requirement-text">The register shall be exportable in a machine-readable format (CSV or JSON) for import into external risk reporting tools.</p>
                         <div class="fit-criterion">Export produces a complete snapshot of the register at the time of export, with all fields included.</div>
                     </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-8</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">The register and its audit trail shall be transferable between two installations as a single file. Import shall re-verify every audit entry and the file's seal, shall merge only when one history continues the other, shall otherwise offer a user-confirmed replace that requires a saved backup first, and shall never overwrite silently. The product shall state that these checks detect damage and simple edits but cannot prove who made the file.</p>
+                    </div>
+
+                    <div class="requirement">
+                        <div class="requirement-header">
+                            <span class="req-id">RG-9</span>
+                            <span class="priority-chip priority-should">Should</span>
+                        </div>
+                        <p class="requirement-text">A reviewer shall be able to record, against the current verdict, that a required control is in place, with their name and an evidence note. The attestation shall be shown as a human claim — "attested — not verified" — never as machine-verified, and shall be counted separately from machine-verified evidence.</p>
+                        <div class="fit-criterion"><strong>Amended 2026-09-28 (code review 005).</strong> RG-8 (hand-off bundle) and RG-9 (control-evidence attestation) were first built and committed under the labels "RG-6" and "RG-7" (commits <code>b484d83</code> and <code>6023103</code>). Those labels collided with the existing, unrelated RG-6 (blast-radius queries, V2+) and RG-7 (periodic sampling cadence, V2+) requirements in the markdown source. The code has been relabelled to RG-8/RG-9 to match this entry; the two commit messages are permanent history and keep the old labels.</div>
+                    </div>
                 </section>
 
                 <!-- CF — Configuration -->
@@ -1398,6 +1415,18 @@ file from the markdown — as <code>requirements-003.html</code> already is — 
                             <td>Register</td>
                             <td>Export to CSV/JSON</td>
                             <td><span class="priority-chip priority-could">Could</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RG-8</span></td>
+                            <td>Register</td>
+                            <td>Hand-off bundle (import/export)</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
+                        </tr>
+                        <tr class="should">
+                            <td><span class="req-id">RG-9</span></td>
+                            <td>Register</td>
+                            <td>Control-evidence attestation</td>
+                            <td><span class="priority-chip priority-should">Should</span></td>
                         </tr>
                         <tr class="must">
                             <td><span class="req-id">CF-1</span></td>

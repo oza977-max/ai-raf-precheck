@@ -9,7 +9,7 @@ import type { RegisterNode, LifecycleStage } from '../../store/types';
 import type { Verdict } from '../../types/verdict';
 import type { PolicyFile } from '../../engine/types';
 
-// RG-7 — control-evidence attestation. The invariant every test defends: a
+// RG-9 — control-evidence attestation. The invariant every test defends: a
 // reviewer can attest a control is IN PLACE on the record, with an evidence
 // note, and it is rendered as a human claim ("not verified"), never as
 // machine-verified. This is what lets "approved with controls" reach "all
@@ -112,12 +112,42 @@ async function seed(useCaseId: string, verdict: Verdict | null, stage: Lifecycle
   }
 }
 
-function renderDetail(useCaseId: string, role: '1LoD' | '2LoD' = '2LoD') {
+function renderDetail(useCaseId: string, role: '1LoD' | '2LoD' = '2LoD', policy: PolicyFile = makePolicy()) {
   return render(
     <StrictMode>
-      <RegisterDetail useCaseId={useCaseId} role={role} onBack={vi.fn()} policy={makePolicy()} />
+      <RegisterDetail useCaseId={useCaseId} role={role} onBack={vi.fn()} policy={policy} />
     </StrictMode>,
   );
+}
+
+// Two controls, so a test can attest one while the other is still saving
+// (F19) — makePolicy() above only has one.
+function makePolicyTwoControls(): PolicyFile {
+  return {
+    version: '1.3',
+    hard_lines: [],
+    invariants: [],
+    tracks: [],
+    tiers: [],
+    controls: [
+      {
+        id: 'CTRL-ENC-01',
+        name: 'Encrypt client notes at rest',
+        description: 'Client notes must be encrypted at rest using firm-approved keys.',
+        resolves: ['INV-DATA-01'],
+        burden: 2,
+        verification: 'Storage config shows encryption enabled.',
+      },
+      {
+        id: 'CTRL-LOG-01',
+        name: 'Log all access to client notes',
+        description: 'Every access to client notes must be logged.',
+        resolves: ['INV-DATA-01'],
+        burden: 1,
+        verification: 'Log export shows access records.',
+      },
+    ],
+  } as unknown as PolicyFile;
 }
 
 const attestations = async (id: string) =>
@@ -130,8 +160,8 @@ async function openOutstandingControl() {
   return user;
 }
 
-describe('RegisterDetail — attesting a control is in place (RG-7)', () => {
-  it('records the attester and evidence note against the current verdict', async () => {
+describe('RegisterDetail — attesting a control is in place (RG-9)', () => {
+  it('TC-RG-9-01: records the attester and evidence note against the current verdict', async () => {
     const id = crypto.randomUUID();
     await seed(id, makeVerdict({ id: 'v-seen', use_case_id: id }));
     renderDetail(id);
@@ -200,8 +230,11 @@ describe('RegisterDetail — attesting a control is in place (RG-7)', () => {
     renderDetail(id, '2LoD'); // 2LoD sees the sign-off checklist
 
     // "0 outstanding" — the one control is addressed; and the evidence line
-    // names it as reviewer-attested, not machine-verified.
-    expect(await screen.findByText(/0 outstanding · 1 in place/i)).toBeInTheDocument();
+    // names it as reviewer-attested, not machine-verified. code-review-005
+    // F11: the aggregate is "addressed", never "in place" — that word is
+    // reserved for machine-verified only (the chip a line below still says
+    // "attested").
+    expect(await screen.findByText(/0 outstanding · 1 addressed/i)).toBeInTheDocument();
     expect(screen.getByText(/1 attested by a reviewer \(not verified\)/i)).toBeInTheDocument();
     expect(screen.getByText(/0 machine-verified/i)).toBeInTheDocument();
   });
@@ -220,5 +253,46 @@ describe('RegisterDetail — attesting a control is in place (RG-7)', () => {
 
     await waitFor(async () => expect((await attestations(id)).length).toBeGreaterThan(0));
     expect(await attestations(id)).toHaveLength(1);
+  });
+
+  // code-review-005 F19: the in-flight guard used to be one shared boolean
+  // ref for every control, so attesting CTRL-LOG-01 while CTRL-ENC-01's
+  // write was still in flight was silently refused — the guard saw "busy"
+  // (left true by CTRL-ENC-01) and returned early, and the form closed
+  // anyway as if it had saved. The guard is now per control id: a write for
+  // one control must never block a write for a different control.
+  it('TC-RG-9-07: attesting a second control while the first is still saving records both, not just one (F19)', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-two', use_case_id: id, controls: ['CTRL-ENC-01', 'CTRL-LOG-01'] }));
+    renderDetail(id, '2LoD', makePolicyTwoControls());
+    const user = userEvent.setup();
+
+    await user.click((await screen.findAllByText('Encrypt client notes at rest'))[0]!);
+    await user.click(screen.getAllByText('Log all access to client notes')[0]!);
+
+    const [nameA, nameB] = screen.getAllByLabelText(/attested by/i);
+    const [noteA, noteB] = screen.getAllByLabelText(/^evidence$/i);
+    await user.type(nameA!, 'Priya Nair');
+    await user.type(noteA!, 'evidence A');
+    await user.type(nameB!, 'Sam Oduya');
+    await user.type(noteB!, 'evidence B');
+
+    const [btnA, btnB] = screen.getAllByRole('button', { name: /^attest in place$/i });
+    // Deliberately not awaited between the two clicks: control B's submit
+    // fires while control A's write (a real, async appendAuditEvent call) is
+    // still in flight — the exact interleaving F19 found dropped.
+    await user.click(btnA!);
+    await user.click(btnB!);
+
+    await waitFor(async () => expect((await attestations(id)).length).toBe(2));
+    const recorded = await attestations(id);
+    const byControl = new Map(
+      recorded.map((e) => {
+        const p = e.payload as Extract<typeof e.payload, { type: 'control_evidence_attested' }>;
+        return [p.control_id, p] as const;
+      }),
+    );
+    expect(byControl.get('CTRL-ENC-01')?.attested_by_name).toBe('Priya Nair');
+    expect(byControl.get('CTRL-LOG-01')?.attested_by_name).toBe('Sam Oduya');
   });
 });

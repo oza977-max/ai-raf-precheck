@@ -624,7 +624,7 @@ describe('RegisterDetail — the sign-off records who signed (round 4 close-out)
     await verdictRegion();
 
     // The page must not imply the name is authenticated — it is typed by
-    // whoever is at the keyboard. (getAllByText, >= 1: since RG-7 the
+    // whoever is at the keyboard. (getAllByText, >= 1: since RG-9 the
     // control-evidence checklist honestly says "attested by a reviewer (not
     // verified)" too, so "not verified" now appears in more than one honest
     // place; the assertion is that the disclosure exists, not that it is

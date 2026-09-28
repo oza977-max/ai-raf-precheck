@@ -701,7 +701,7 @@ describe('StructuredForm — an untouched vendor field does not read as a declar
 // decision-type label instead reads "optional — leave blank only if it feeds
 // no decision at all" — a precondition for choosing blank rather than the
 // same "blank means:" wording, though it conveys the same information (see
-// agent report for this round's traceability pass for the finding writeup).
+// test-cases-015.md's TC-R15-C3-08 amendment for the finding writeup).
 // All four are asserted here against their real, current copy.
 describe('StructuredForm — optional fields state what leaving them blank means (TC-R15-C3-08)', () => {
   it('TC-R15-C3-08: platform, vendor, decision-type and human-in-the-loop labels state the consequence of leaving them blank', () => {

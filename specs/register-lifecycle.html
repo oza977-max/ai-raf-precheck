@@ -359,6 +359,25 @@ interface BlastRadiusResult {
 }</code></pre>
 
     <h2 id="registerstore-interface">RegisterStore Interface</h2>
+    <p><em>Drift notice (2026-09-28 per code-review-005 F10): the interface
+    below predates the shipped module and describes a generic graph store
+    (<code>GraphNode</code>, <code>blastRadius()</code>, <code>sync()</code>)
+    that does not match <code>src/store/register.ts</code> &mdash;
+    <code>register-lifecycle.md</code> &sect;5 is authoritative. The real
+    surface: <code>addNode</code>, <code>addEdge</code>,
+    <code>updateUseCaseVerdictSummary</code>, <code>updateLifecycleStage</code>,
+    <code>getUseCases</code>(role, currentPolicyVersion?, samplingRate?)
+    &mdash; per-row resilient, skipping an unreadable row rather than failing
+    the whole list (code-review-005 F3), <code>getUseCase</code>,
+    <code>getGraph</code>, <code>getBlastRadius</code>, the queued
+    <code>exportAll</code>, and two functions added for the RG-8 hand-off
+    feature: <code>importRegister</code> (upsert &mdash; the bundle&rsquo;s
+    node/edge state wins for a use case it names) and
+    <code>backupAndReplaceRegister</code> (hand-off replace only &mdash;
+    reads the current register, then clears and installs the bundle&rsquo;s,
+    in one queued step, returning what was discarded). See
+    <code>verdict-audit.md</code> &sect;16 for the full hand-off bundle
+    spec.</em></p>
     <pre><code>// Public interface for register operations
 interface RegisterStore {
   // Node operations
@@ -1156,6 +1175,7 @@ async function runSelfAssessment(
 
     <h2 id="changelog-r3">17. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
+      <tr><td>2026-09-28</td><td>&sect;5 amended &mdash; code review 005 (F10). <code>RegisterStore</code> gains <code>importRegister</code> and <code>backupAndReplaceRegister</code> (RG-8 hand-off); <code>getUseCases</code>/<code>getUseCase</code> gain their real optional parameters; <code>updateUseCaseVerdictSummary</code>&rsquo;s signature corrected to <code>Partial&lt;UseCaseSummary&gt;</code>; noted that <code>getUseCases</code> skips an unreadable row rather than failing the whole list. &sect;13 gains an RG-8 traceability row. Full hand-off bundle spec added at <code>verdict-audit.md</code> &sect;16.</td></tr>
       <tr><td>2026-07-29</td><td>&sect;15 added &mdash; round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today&rsquo;s policy.</td></tr>
       <tr><td>2026-08-17</td><td>&sect;17 added &mdash; round 11. ADR-RL-R11-1 consumes the dormant <code>ai_model</code>/<code>uses_model</code> schema (deduped by <code>model_id</code>); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path.</td></tr>
       <tr><td>2026-08-25</td><td>R15-C1/S4 &mdash; the Register View 2LoD column set (&sect;10.2 of <code>register-lifecycle.md</code>) is amended: Stale and Sampling merge into one &ldquo;Flags&rdquo; column, carrying a badge per true condition and a stable, accessible empty-state name (e.g. &ldquo;not flagged&rdquo;) when neither applies; Stage joins the visible columns. TC-RG-2-02 updated to assert the amended set.</td></tr>

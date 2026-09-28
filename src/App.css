@@ -988,7 +988,7 @@ details input {
   margin: 0 0 0.9rem;
 }
 
-/* RG-6 hand-off bundle panel. */
+/* RG-8 hand-off bundle panel. */
 .register-view__handoff {
   border: 1px solid var(--card-border);
   border-radius: 6px;
@@ -1668,6 +1668,15 @@ details input {
   background: var(--warn-bg);
 }
 
+/* code-review-005 F8: third evidence state — a reviewer's attestation on
+   record, but no machine-verified evidence. Distinct modifier class in the
+   same chip family (never reuses --verified or --unverified), navy to match
+   the equivalent "attested" state in the todo-chip family below. */
+.verdict__vchip--attested {
+  color: var(--navy);
+  background: #eaeef4;
+}
+
 .verdict__control-patches {
   margin: 0.2rem 0 0;
   font-family: 'IBM Plex Mono', monospace;
@@ -1679,6 +1688,10 @@ details input {
   margin: 0.2rem 0 0;
   font-size: 0.8rem;
   color: var(--ink-soft);
+}
+
+.verdict__control-evidence--attested {
+  color: var(--navy);
 }
 
 /* ── Appetite framework view (V1.2-C) ── */
@@ -2335,7 +2348,7 @@ details input {
 .verdict__todo-chip--in { color: var(--green); }
 .verdict__todo-chip--evidence { color: var(--ink-faint); }
 .verdict__todo-chip--review { color: var(--navy); }
-/* RG-7: attested = a reviewer's on-record claim, honestly weaker than the
+/* RG-9: attested = a reviewer's on-record claim, honestly weaker than the
    machine-verified green of "in place" — navy, distinct, not a success tick. */
 .verdict__todo-chip--attested { color: var(--navy); }
 .verdict__todo-attested {
@@ -2344,6 +2357,15 @@ details input {
   align-items: center;
   gap: 0.3rem;
   color: var(--navy);
+}
+
+/* code-review-005 (usability testing): the note that a control also
+   satisfies a separately-named jurisdiction-pack review — an aside, not a
+   description of the control itself, so it reads quieter than the lines
+   above it. */
+.verdict__todo-also-satisfies {
+  color: var(--ink-faint);
+  font-style: italic;
 }
 
 .verdict__provisional-owners {

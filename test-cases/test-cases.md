@@ -1604,6 +1604,8 @@ And the output MUST NOT contain: a verdict displaying as fully authoritative whe
 | RG-5 | Could | V1 | TC-RG-5-01 |
 | RG-6 | Should | V2+ | — (V2+ scope, out of MVP) |
 | RG-7 | Should | V2+ | — (V2+ scope, out of MVP) |
+| RG-8 | Should | V1 | TC-RG-8-01, TC-RG-8-02, TC-RG-8-03, TC-RG-8-04, TC-RG-8-05, TC-RG-8-06, TC-RG-8-07, TC-RG-8-08, TC-RG-8-09, TC-RG-8-10, TC-RG-8-11, TC-RG-8-12, TC-RG-8-13, TC-RG-8-14, TC-RG-8-15, TC-RG-8-16, TC-RG-8-17, TC-RG-8-18, TC-RG-8-19, TC-RG-8-20, TC-RG-8-21, TC-RG-8-22, TC-RG-8-23, TC-RG-8-24, TC-RG-8-25, TC-RG-8-26, TC-RG-8-27 (see test-cases-016.md; also TC-NF-2-01/TC-VD-4-01, cross-traced) |
+| RG-9 | Should | V1 | TC-RG-9-01, TC-RG-9-02, TC-RG-9-03, TC-RG-9-04, TC-RG-9-05, TC-RG-9-06, TC-RG-9-07, TC-RG-9-08, TC-RG-9-09, TC-RG-9-10 (see test-cases-016.md) |
 | CF-1 | Must | V1 | TC-CF-1-01 |
 | CF-2 | Must | V1 | TC-PE-8-01 (cross-traced) |
 | CF-3 | Must | V1 | TC-CF-3-01 |

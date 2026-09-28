@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { append, getAll, getAllForExport, verifyChain } from './audit';
+import { append, getAll, getAllForExport, verifyChain, __resetChainStateForTests, __recomputeChainForTests } from './audit';
 import { openAuditDb } from './db';
 
 // code-review-004 F16: MUST run before any append in this file — the suite
@@ -126,6 +126,163 @@ describe('audit store', () => {
     const rows = await getAll(useCaseId);
     expect(rows.map((r) => r.event_id)).toEqual([first.event_id, second.event_id]);
     expect(rows[0]!.occurred_at).not.toBe(rows[1]!.occurred_at); // ties are broken, not just tolerated
+  });
+
+  // code-review-005 F4/F15. Placed BEFORE the "hash chain" describe below,
+  // same reason as that block's own internal ordering comment: several of
+  // these assert verifyChain().ok === true over the WHOLE shared trail, and
+  // the delete/tamper/reorder tests later in this file permanently poison it
+  // from their point onward.
+  describe('clock floor, clock skew, and feature-detection (code-review-005 F4/F15)', () => {
+    it('TC-RG-8-24: F15: restores the monotonic clock floor from the stored trail after a reset, instead of restarting at zero', async () => {
+      const useCaseId = 'uc-floor-restore';
+      const farFuture = '2030-01-01T00:00:00.000Z'; // deliberately far ahead of "now"
+      await append({
+        event_id: 'evt-floor-1',
+        use_case_id: useCaseId,
+        event_type: 'use_case_created',
+        occurred_at: farFuture,
+        actor: '1LoD',
+        payload: { type: 'use_case_created', description: 'Far-future event', intake_method: 'llm' },
+      });
+
+      // Simulate a page reload: the module's in-memory floor is gone, but
+      // the DB still has the far-future event.
+      __resetChainStateForTests();
+
+      await append({
+        event_id: 'evt-floor-2',
+        use_case_id: useCaseId,
+        event_type: 'lifecycle_stage_changed',
+        occurred_at: new Date().toISOString(), // "now" — genuinely EARLIER than farFuture
+        actor: 'system',
+        payload: { type: 'lifecycle_stage_changed', from_stage: 'idea', to_stage: 'exploring' },
+      });
+
+      const rows = await getAll(useCaseId);
+      expect(rows.map((r) => r.event_id)).toEqual(['evt-floor-1', 'evt-floor-2']);
+      // The floor was restored from evt-floor-1's far-future timestamp, so
+      // evt-floor-2 was pushed past it — proof the old "restart at zero" bug
+      // (which would have let evt-floor-2 keep its earlier real-world "now"
+      // timestamp, ahead of nothing) is fixed.
+      expect(new Date(rows[1]!.occurred_at).getTime()).toBeGreaterThan(new Date(farFuture).getTime());
+      expect((await verifyChain()).ok).toBe(true);
+    });
+
+    it('TC-RG-8-25: F15: chain verification and export order follow hash links, not occurred_at — a clock-skewed (out-of-time-order) pair still verifies ok and exports in true chain order', async () => {
+      const useCaseId = 'uc-clock-skew';
+      // e2's occurred_at is EARLIER than e1's — exactly what a receiving
+      // machine whose clock trails the sender's would produce — but e2 is
+      // still e1's TRUE successor in the hash chain: __recomputeChainForTests
+      // computes hashes in the order given (e1 then e2), matching how a real
+      // sender would have produced them regardless of what either machine's
+      // clock said. Extends the REAL current tip (not a fresh genesis) —
+      // this suite's chain is already non-empty by the time this test runs,
+      // and minting a second null-prev_hash event would itself be a break.
+      // Inserted directly via db.add() (bypassing append()'s own monotonic
+      // clamping, which would prevent constructing this scenario from a
+      // single module instance) — this is the shape an IMPORTED chain from
+      // another machine actually has.
+      const before = await getAllForExport();
+      const currentTip = before.length > 0 ? before.at(-1)!.hash : null;
+      const [e1, e2] = await __recomputeChainForTests(
+        [
+          {
+            event_id: 'evt-skew-1',
+            use_case_id: useCaseId,
+            event_type: 'use_case_created',
+            occurred_at: '2026-06-01T12:00:00.000Z',
+            actor: '1LoD',
+            payload: { type: 'use_case_created', description: 'First (sender clock ahead)', intake_method: 'llm' },
+          },
+          {
+            event_id: 'evt-skew-2',
+            use_case_id: useCaseId,
+            event_type: 'lifecycle_stage_changed',
+            occurred_at: '2026-06-01T11:00:00.000Z',
+            actor: 'system',
+            payload: { type: 'lifecycle_stage_changed', from_stage: 'idea', to_stage: 'exploring' },
+          },
+        ],
+        currentTip,
+      );
+
+      const db = await openAuditDb();
+      await db.add('audit_events', e1!);
+      await db.add('audit_events', e2!);
+      // The module's cached tip/floor do not know about this direct insert —
+      // resync them from the DB exactly as a real page reload would, so a
+      // LATER test's append() does not compute a prev_hash against a stale
+      // cached tip and manufacture a real break.
+      __resetChainStateForTests();
+
+      // A naive time-sort would place e2 (11:00) before e1 (12:00) — the
+      // wrong order relative to the real chain (e2.prev_hash === e1.hash).
+      // Chain-walk verification and export must not be fooled by that.
+      const result = await verifyChain();
+      expect(result.ok).toBe(true);
+
+      const exported = await getAllForExport();
+      const ids = exported.filter((e) => e.use_case_id === useCaseId).map((e) => e.event_id);
+      expect(ids).toEqual(['evt-skew-1', 'evt-skew-2']); // true (hash-chain) order, not time order
+
+      // Cleanup: these two events are deliberately dated MONTHS before every
+      // other test in this file's real "now" timestamps, specifically to
+      // prove the hash-chain-order fix. Left in place, they would become the
+      // earliest-by-time events in the WHOLE shared table, which would
+      // distort the FALLBACK time-sort every later test's OWN (unrelated)
+      // deliberately-broken-chain scenarios fall back to once the chain is
+      // genuinely poisoned — scrambling which event those tests see as the
+      // break point. Removing them (and re-syncing the cache) restores
+      // exactly the state before this test ran; nothing after this point
+      // depended on them existing.
+      await db.delete('audit_events', 'evt-skew-1');
+      await db.delete('audit_events', 'evt-skew-2');
+      __resetChainStateForTests(); // leave a clean cache for whatever runs next
+    });
+
+    it('F4: an unparseable occurred_at does not poison the monotonic clock — the write succeeds and the NEXT append still succeeds too', async () => {
+      const useCaseId = 'uc-bad-clock';
+      await append({
+        event_id: 'evt-bad-clock-1',
+        use_case_id: useCaseId,
+        event_type: 'use_case_created',
+        occurred_at: 'not-a-real-timestamp',
+        actor: '1LoD',
+        payload: { type: 'use_case_created', description: 'Garbage timestamp', intake_method: 'llm' },
+      });
+
+      // Must not throw, and must not have poisoned the clock with NaN — the
+      // actual F4 failure mode was "every later local write fails until
+      // reload" (new Date(NaN).toISOString() throws).
+      await expect(
+        append({
+          event_id: 'evt-bad-clock-2',
+          use_case_id: useCaseId,
+          event_type: 'lifecycle_stage_changed',
+          occurred_at: new Date().toISOString(),
+          actor: 'system',
+          payload: { type: 'lifecycle_stage_changed', from_stage: 'idea', to_stage: 'exploring' },
+        }),
+      ).resolves.toBeUndefined();
+
+      const rows = await getAll(useCaseId);
+      expect(rows).toHaveLength(2);
+      expect(rows.every((r) => Number.isFinite(new Date(r.occurred_at).getTime()))).toBe(true);
+    });
+
+    it('feature-detects navigator.locks — jsdom (this test environment) has none, and every operation still works without it', async () => {
+      expect('locks' in navigator).toBe(false); // documents the jsdom gap this file's queue-based tests silently rely on
+      await append({
+        event_id: 'evt-no-locks',
+        use_case_id: 'uc-no-locks',
+        event_type: 'use_case_created',
+        occurred_at: new Date().toISOString(),
+        actor: '1LoD',
+        payload: { type: 'use_case_created', description: 'No Web Locks here', intake_method: 'llm' },
+      });
+      expect(await getAll('uc-no-locks')).toHaveLength(1);
+    });
   });
 
   // explore-007 D-001 (round 8): hash chain — every event's hash commits to

@@ -33,9 +33,13 @@ interface RegisterDetailProps {
 }
 
 // Per-type detail lines derived from the real payload union — never a
-// generic JSON dump (build/prompts/V1.2-A.md scope decision 6).
-function eventDetail(event: AuditEvent): string {
-  const p = event.payload;
+// generic JSON dump (build/prompts/V1.2-A.md scope decision 6). Exported for
+// the fallback test only (code-review-005 F13).
+export function eventDetail(event: AuditEvent): string {
+  const p = event.payload as AuditEvent['payload'] | undefined | null;
+  // code-review-005 F13: a damaged record can lack its payload entirely —
+  // reading `.type` off it would crash the whole case page, not just one line.
+  if (!p || typeof p !== 'object') return unrecognisedEventLine(event.event_type);
   switch (p.type) {
     case 'use_case_created':
       return `${p.description} (intake: ${p.intake_method})`;
@@ -94,7 +98,17 @@ function eventDetail(event: AuditEvent): string {
       return `Control ${p.control_id} assigned to ${p.owner_name} (name not verified) — target date ${p.target_date}.`;
     case 'control_evidence_attested':
       return `Control ${p.control_id} attested in place by ${p.attested_by_name} (name not verified) — evidence: “${p.evidence_note}”. A reviewer’s attestation on the record, not a machine check.`;
+    default:
+      // code-review-005 F13: the switch covers every type this version knows,
+      // but stored events are data, not types — an event written by another
+      // version of AIGate, or a damaged record, must still show as a line that
+      // says what it is, never as a blank row in the evidence trail.
+      return unrecognisedEventLine((p as { type?: unknown }).type ?? event.event_type);
   }
+}
+
+function unrecognisedEventLine(type: unknown): string {
+  return `Unrecognised event type “${String(type)}” — it is on the record, but this version of AIGate can’t display it.`;
 }
 
 export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
@@ -257,12 +271,15 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     return [...orphaned.entries()];
   }, [events, latestVerdict, controlOwnership]);
 
-  // RG-7 control-evidence attestation state — same per-verdict shape as
-  // ownership above.
-  const [controlEvidenceBusyId, setControlEvidenceBusyId] = useState<string | null>(null);
-  const [controlEvidenceErrorId, setControlEvidenceErrorId] = useState<string | null>(null);
-  const [controlEvidenceError, setControlEvidenceError] = useState<string | null>(null);
-  const controlEvidenceInFlight = useRef(false);
+  // RG-9 control-evidence attestation state — tracked PER CONTROL, not as one
+  // shared value. code-review-005 F19: a single shared ref/state meant
+  // attesting control B while control A's write was still in flight was
+  // either silently dropped (the ref guard) or clobbered A's busy/error
+  // display (the state) — both are now keyed by control id, so two controls
+  // can be mid-save (or mid-error) at once without stepping on each other.
+  const [controlEvidenceBusyIds, setControlEvidenceBusyIds] = useState<Set<string>>(new Set());
+  const [controlEvidenceErrors, setControlEvidenceErrors] = useState<Map<string, string>>(new Map());
+  const controlEvidenceInFlight = useRef<Set<string>>(new Set());
 
   // Latest control_evidence_attested event per control_id for the current
   // verdict. Re-attesting is a later event; the UI reads the latest.
@@ -279,17 +296,28 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     return result;
   }, [events, latestVerdict?.id]);
 
-  async function handleAttestControlEvidence(controlId: string, attestedByName: string, evidenceNote: string) {
-    if (controlEvidenceInFlight.current) return;
-    controlEvidenceInFlight.current = true;
-    setControlEvidenceBusyId(controlId);
-    setControlEvidenceErrorId(null);
-    setControlEvidenceError(null);
+  // code-review-005 F19. Returns whether the attestation was actually
+  // recorded, so the caller (ControlEvidenceAttest, via VerdictDisplay) knows
+  // whether to close its form or keep it open with the error visible — it
+  // must not close on a dropped or failed write as if the write had
+  // succeeded. Guarded and tracked per controlId (a Set/Map, not one shared
+  // ref/state): attesting control B while control A is still saving must
+  // proceed and be recorded, not be silently refused because the file-wide
+  // guard was still held by A.
+  async function handleAttestControlEvidence(controlId: string, attestedByName: string, evidenceNote: string): Promise<boolean> {
+    if (controlEvidenceInFlight.current.has(controlId)) return false;
+    controlEvidenceInFlight.current.add(controlId);
+    setControlEvidenceBusyIds((prev) => new Set(prev).add(controlId));
+    setControlEvidenceErrors((prev) => {
+      if (!prev.has(controlId)) return prev;
+      const next = new Map(prev);
+      next.delete(controlId);
+      return next;
+    });
     try {
       if (!latestVerdict) {
-        setControlEvidenceErrorId(controlId);
-        setControlEvidenceError('No verdict is loaded for this case, so the attestation was not recorded. Reload and try again.');
-        return;
+        setControlEvidenceErrors((prev) => new Map(prev).set(controlId, 'No verdict is loaded for this case, so the attestation was not recorded. Reload and try again.'));
+        return false;
       }
       await appendAuditEvent({
         event_id: crypto.randomUUID(),
@@ -306,12 +334,17 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         },
       });
       await load();
+      return true;
     } catch (err) {
-      setControlEvidenceErrorId(controlId);
-      setControlEvidenceError(`Recording the attestation failed: ${err instanceof Error ? err.message : String(err)}.`);
+      setControlEvidenceErrors((prev) => new Map(prev).set(controlId, `Recording the attestation failed: ${err instanceof Error ? err.message : String(err)}.`));
+      return false;
     } finally {
-      controlEvidenceInFlight.current = false;
-      setControlEvidenceBusyId(null);
+      controlEvidenceInFlight.current.delete(controlId);
+      setControlEvidenceBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(controlId);
+        return next;
+      });
     }
   }
 
@@ -935,11 +968,10 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             controlOwnerError={controlOwnerError}
             controlAttestations={controlAttestations}
             onAttestControlEvidence={(controlId, name, note) =>
-              void handleAttestControlEvidence(controlId, name, note)
+              handleAttestControlEvidence(controlId, name, note)
             }
-            controlEvidenceBusyId={controlEvidenceBusyId}
-            controlEvidenceErrorId={controlEvidenceErrorId}
-            controlEvidenceError={controlEvidenceError}
+            controlEvidenceBusyIds={controlEvidenceBusyIds}
+            controlEvidenceErrors={controlEvidenceErrors}
           />
           {/* R15-C2: id target for VerdictDisplay's section nav / sign-off
               checklist "Risk knowledge" jump link — this panel lives outside

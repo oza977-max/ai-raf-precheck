@@ -53,72 +53,151 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   // immediately visible in the list.
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // RG-6 hand-off bundle: export the register + audit trail to move it to
+  // RG-8 hand-off bundle: export the register + audit trail to move it to
   // another machine (a real reviewer on a real second laptop), and import a
   // bundle sent back. Available to BOTH roles — a submitter hands off to a
   // reviewer and the reviewer hands the signed case back.
   const [handoffMsg, setHandoffMsg] = useState<{ tone: 'ok' | 'error' | 'info'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingReplace, setPendingReplace] = useState<unknown>(null);
+  // code-review-005 F1: replace is now two explicit steps — a backup must
+  // succeed and be acknowledged before the destructive step is even offered.
+  // backupReady holds the filename shown to the user in step 2's message;
+  // it is reset whenever pendingReplace changes or is cleared, so a stale
+  // "I already backed up" state from a DIFFERENT bundle's decision can never
+  // carry over into a new one.
+  const [backupReady, setBackupReady] = useState<{ filename: string } | null>(null);
   const replaceInFlight = useRef(false);
+  const importInFlight = useRef(false); // F5: synchronous guard — a state update lands too late to stop a second concurrent import
 
-  async function handleExportBundle() {
+  type ExportResult = { ok: true; bundle: Awaited<ReturnType<typeof exportBundle>>; filename: string } | { ok: false; error: string };
+
+  // The reusable core: builds the bundle, triggers the download, and reports
+  // success/failure to its caller — it never swallows an error itself (F1).
+  // Two callers use it: the plain "Export hand-off bundle" button, and step 1
+  // of the replace flow ("Save a backup of mine first").
+  async function performExportBundle(): Promise<ExportResult> {
     try {
-      const version = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0-dev';
-      const bundle = await exportBundle(version);
+      const bundle = await exportBundle(__APP_VERSION__);
+      const filename = `aigate-handoff-${bundle.exported_at.replace(/[:.]/g, '-')}.json`;
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `aigate-handoff-${bundle.exported_at.replace(/[:.]/g, '-')}.json`;
+      anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
+      return { ok: true, bundle, filename };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async function handleExportBundle() {
+    const result = await performExportBundle();
+    if (result.ok) {
       setHandoffMsg({
         tone: 'ok',
-        text: `Exported ${bundle.audit_events.length} audit events and ${bundle.register.nodes.length} register entries, sealed. Hand this file to the other reviewer.`,
+        text: `Exported ${result.bundle.audit_events.length} audit events and ${result.bundle.register.nodes.length} register entries to a hand-off file. Send it to the other reviewer directly.`,
       });
-    } catch (err) {
-      setHandoffMsg({ tone: 'error', text: `Export failed: ${err instanceof Error ? err.message : String(err)}` });
+    } else {
+      setHandoffMsg({ tone: 'error', text: `Export failed: ${result.error}` });
     }
   }
 
   async function handleImportBundleFile(file: File) {
-    let parsed: unknown;
+    if (importInFlight.current) return;
+    importInFlight.current = true;
     try {
-      parsed = JSON.parse(await file.text());
-    } catch {
-      setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an AIGate hand-off bundle.' });
-      return;
-    }
-    const result = await importBundle(parsed);
-    const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered'];
-    const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead', 'diverged'];
-    const tone = errorOutcomes.includes(result.outcome) ? 'error' : neutralOutcomes.includes(result.outcome) ? 'info' : 'ok';
-    setHandoffMsg({ tone, text: result.message });
-    // Diverged is the normal first receipt (each browser seeds its own demo
-    // cases) — hold the verified bundle so the user can choose to replace.
-    setPendingReplace(result.outcome === 'diverged' ? parsed : null);
-    if (result.outcome === 'adopted' || result.outcome === 'merged') {
-      setRefreshKey((k) => k + 1); // reflect the newly imported cases in the list
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an AIGate hand-off bundle.' });
+        return;
+      }
+      try {
+        const result = await importBundle(parsed);
+        const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered'];
+        const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead', 'diverged'];
+        const tone = errorOutcomes.includes(result.outcome) ? 'error' : neutralOutcomes.includes(result.outcome) ? 'info' : 'ok';
+        setHandoffMsg({ tone, text: result.message });
+        if (result.outcome === 'diverged') {
+          // The normal first receipt (each browser seeds its own demo cases)
+          // — hold the verified bundle so the user can choose to replace. A
+          // NEW diverged bundle is the one case that should supersede an
+          // earlier pending one; restart the two-step confirmation for it.
+          setPendingReplace(parsed);
+          setBackupReady(null);
+        }
+        // code-review-005 F28: every OTHER outcome — including
+        // invalid_format/tampered for an unrelated file — leaves an existing
+        // pendingReplace untouched. It belongs to a different bundle and is
+        // still awaiting the user's own decision; only a fresh diverged
+        // bundle (above) or the user's own replace/keep choice may clear it.
+        if (result.outcome === 'imported_into_empty' || result.outcome === 'merged') {
+          setRefreshKey((k) => k + 1); // reflect the newly imported cases in the list
+        }
+      } catch (err) {
+        // F6: a partial failure (e.g. the audit trail updated but the
+        // register view could not be refreshed) must be shown, not silent —
+        // and must not disturb an unrelated pending replace (F28).
+        setHandoffMsg({ tone: 'error', text: `Import failed: ${err instanceof Error ? err.message : String(err)}` });
+      }
+    } finally {
+      importInFlight.current = false;
     }
   }
 
-  async function handleReplaceWithBundle() {
-    if (!pendingReplace || replaceInFlight.current) return;
+  // Step 1: "Save a backup of mine first". Only on success does step 2
+  // become available — a browser can block or cancel a download silently,
+  // so the user is asked to confirm they actually have the file before
+  // anything is replaced (F1).
+  async function handleBackupBeforeReplace() {
+    const result = await performExportBundle();
+    if (!result.ok) {
+      setHandoffMsg({ tone: 'error', text: "Couldn't create a backup, so nothing was replaced." });
+      return;
+    }
+    setBackupReady({ filename: result.filename });
+    setHandoffMsg({
+      tone: 'info',
+      text: `A backup file named ${result.filename} was created. Check it's in your downloads folder before you replace anything.`,
+    });
+  }
+
+  // Step 2: "I have my backup — replace my register". Only this button
+  // performs the replace.
+  async function handleConfirmReplace() {
+    if (!pendingReplace || !backupReady || replaceInFlight.current) return;
     replaceInFlight.current = true;
     try {
-      // Backup FIRST — replacing discards this register's evidence, so the
-      // user must hold a copy before anything is deleted.
-      await handleExportBundle();
       const result = await replaceWithBundle(pendingReplace);
       setHandoffMsg({ tone: result.outcome === 'replaced' ? 'ok' : 'error', text: result.message });
-      setPendingReplace(null);
-      if (result.outcome === 'replaced') setRefreshKey((k) => k + 1);
+      if (result.outcome === 'replaced') {
+        setPendingReplace(null);
+        setBackupReady(null);
+        setRefreshKey((k) => k + 1);
+      }
+      // F6: on any other outcome, keep the pending replace (and the backup
+      // already taken) available so the user can retry rather than losing
+      // their place.
+    } catch (err) {
+      setHandoffMsg({
+        tone: 'error',
+        text: `Replace failed: ${err instanceof Error ? err.message : String(err)}. Your register was not changed — your pending replace is still available.`,
+      });
     } finally {
       replaceInFlight.current = false;
     }
+  }
+
+  function handleKeepRegister() {
+    setPendingReplace(null);
+    setBackupReady(null);
+    setHandoffMsg(null);
   }
 
   // F1: the list refresh the old popstate handler did on detail->list is
@@ -133,16 +212,29 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
 
   const is2LoD = role === '2LoD';
 
+  // code-review-005 F3/F20: getUseCases() is now per-row resilient (it skips
+  // and logs an unreadable node rather than throwing), but the CALL itself
+  // can still fail outright (e.g. IndexedDB unavailable) — that must show an
+  // error instead of leaving the screen on "Loading…" forever.
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const summaries = await getUseCases(is2LoD ? 'all' : role, currentPolicyVersion, policy?.sampling_rate);
-      if (cancelled) return;
-      setRows(summaries);
-      setLoaded(true);
-      if (is2LoD) {
-        const pending = await hasPendingPolicyUpdate(summaries.map((s) => s.use_case_id));
-        if (!cancelled) setPolicyUpdatePending(pending);
+      try {
+        const summaries = await getUseCases(is2LoD ? 'all' : role, currentPolicyVersion, policy?.sampling_rate);
+        if (cancelled) return;
+        setRows(summaries);
+        setLoaded(true);
+        setLoadError(null);
+        if (is2LoD) {
+          const pending = await hasPendingPolicyUpdate(summaries.map((s) => s.use_case_id));
+          if (!cancelled) setPolicyUpdatePending(pending);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setLoadError(err instanceof Error ? err.message : String(err));
+        setLoaded(true); // stop showing "Loading…" — the error replaces it
       }
     }
     void load();
@@ -220,6 +312,17 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
     );
   }
 
+  if (loadError) {
+    return (
+      <section className="card register-view">
+        <h2>Register</h2>
+        <p role="alert" className="register-view__load-error">
+          The register couldn&apos;t be loaded: {loadError}
+        </p>
+      </section>
+    );
+  }
+
   const aigateRow = rows.find((r) => r.use_case_id === AIGATE_USE_CASE_ID);
 
   // R12-BD-3 (ADR-VA-R12-2): "N of M verdicts here would be final once
@@ -255,7 +358,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
         </p>
       )}
 
-      {/* RG-6: the submitter/reviewer hand-off. Both roles see it. */}
+      {/* RG-8: the submitter/reviewer hand-off. Both roles see it. */}
       <div className="register-view__handoff">
         <div className="register-view__handoff-actions">
           <button type="button" onClick={() => void handleExportBundle()}>
@@ -277,10 +380,16 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             }}
           />
         </div>
+        {/* code-review-005 F2: says exactly what the seal/chain catch (damage,
+            or an edit not followed by recomputing the chain) and what they
+            cannot prove (who made the file) — never "any change is detected". */}
         <p className="register-view__handoff-hint">
-          Move this register and its audit trail to another reviewer&apos;s machine. The bundle is sealed:
-          any change in transit is detected on import, and two copies merge only when one continues the
-          other&apos;s history — a genuine fork is refused, never silently overwritten.
+          Move this register and its audit trail to another reviewer&apos;s machine as a file. On import the
+          app re-checks every entry: accidental damage or a simple edit is caught and the import refuses.
+          What this can&apos;t prove is who made the file — anyone holding it could rebuild it to pass these
+          checks — so only import a bundle from someone you trust, sent by a route you trust. Two copies
+          merge only when one continues the other&apos;s history; otherwise you can choose to replace yours,
+          after saving a backup.
         </p>
         {handoffMsg && (
           <p
@@ -290,12 +399,25 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             {handoffMsg.text}
           </p>
         )}
-        {pendingReplace !== null && (
+        {/* code-review-005 F1: two explicit steps. Step 1 must succeed (and
+            the user must confirm they have the file) before step 2 — the
+            actual destructive replace — is even offered. */}
+        {pendingReplace !== null && !backupReady && (
           <div className="register-view__handoff-actions">
-            <button type="button" onClick={() => void handleReplaceWithBundle()}>
-              Back up mine, then replace with this bundle
+            <button type="button" onClick={() => void handleBackupBeforeReplace()}>
+              Save a backup of mine first
             </button>
-            <button type="button" onClick={() => { setPendingReplace(null); setHandoffMsg(null); }}>
+            <button type="button" onClick={handleKeepRegister}>
+              Keep my register
+            </button>
+          </div>
+        )}
+        {pendingReplace !== null && backupReady && (
+          <div className="register-view__handoff-actions">
+            <button type="button" onClick={() => void handleConfirmReplace()}>
+              I have my backup — replace my register
+            </button>
+            <button type="button" onClick={handleKeepRegister}>
               Keep my register
             </button>
           </div>

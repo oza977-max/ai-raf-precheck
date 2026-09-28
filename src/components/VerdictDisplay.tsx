@@ -54,14 +54,18 @@ interface VerdictDisplayProps {
   controlOwnerBusyId?: string | null;
   controlOwnerErrorId?: string | null;
   controlOwnerError?: string | null;
-  // RG-7 control-evidence attestation — a reviewer records that a control is
+  // RG-9 control-evidence attestation — a reviewer records that a control is
   // in place, with an evidence note. Distinct from the policy's machine
   // `verified` status; rendered as "attested (not verified)".
   controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
-  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => void;
-  controlEvidenceBusyId?: string | null;
-  controlEvidenceErrorId?: string | null;
-  controlEvidenceError?: string | null;
+  // code-review-005 F19: the write is async and can fail, and two controls
+  // can be saving at once — the caller resolves true/false so the form
+  // (ControlEvidenceAttest) knows whether to close or stay open, and busy/
+  // error state is now keyed per control id rather than a single shared
+  // value that a second in-flight control would clobber.
+  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => Promise<boolean>;
+  controlEvidenceBusyIds?: ReadonlySet<string>;
+  controlEvidenceErrors?: ReadonlyMap<string, string>;
   // Whether RegisterDetail is rendering a risk-knowledge section below this
   // component (KnowledgeLensPanel or the "not evaluated" note) — used only
   // to decide whether the checklist/section-nav include that jump link.
@@ -272,6 +276,55 @@ function WhyThisVerdict({
   );
 }
 
+// code-review-005 F25: the WhatToDo chip renders the short internal status
+// word ("attested") plus the reader-facing qualifier — kept as a separate
+// display label so the internal `status` string (compared elsewhere, e.g.
+// `status === 'attested'`, and used to derive the CSS modifier class) never
+// has to change shape just because the label grows a word. Lower-case, like
+// every other chip on this list ("in place", "outstanding") — the CS-1
+// evidence panel's ALL-CAPS "ATTESTED — NOT VERIFIED" is a different chip
+// family (verdict__vchip) with its own convention; the two are not meant to
+// match.
+const TODO_CHIP_LABEL: Record<string, string> = {
+  'in place': 'in place',
+  attested: 'attested — not verified',
+  outstanding: 'outstanding',
+  'evidence unknown': 'evidence unknown',
+};
+
+// code-review-005 (usability testing): a jurisdiction-pack review sometimes
+// restates a firm control's own obligation under a slightly different name —
+// e.g. this pack's "Independent model validation (2LoD)" review and the
+// firm's own "Independent validation (2LoD)" control are the same real-world
+// review, worded differently by two different authors (a pack rule vs. the
+// firm's policy). Showing both told a reader to do the same thing twice.
+// Matched on the SIGNIFICANT words the two names share — every one of the
+// control's significant words must appear in the review's — so this cannot
+// misfire on two obligations that merely share a common, generic term (e.g.
+// two different "… risk assessment" reviews). A control name with fewer than
+// two significant words never matches: a firm can author a one-word control
+// ("Validation"), and one shared word is not evidence of one obligation.
+// Presentation-only (Rule 4: a text-normalization lookup, not business logic,
+// same posture as rationaleLine's prefix-stripping above); it never changes
+// what the engine decided or named — only how two names for the same thing
+// are displayed. An explicit, firm-authored control→review mapping in the
+// policy would remove the guesswork; that belongs with the plain-language
+// policy fields, not this fix.
+const GENERIC_OBLIGATION_WORDS = new Set(['model', 'review', 'the', 'a', 'an', 'of', 'for', 'and']);
+function significantWords(s: string): Set<string> {
+  return new Set(
+    (s.toLowerCase().replace(/\([^)]*\)/g, ' ').match(/[a-z]+/g) ?? []).filter(
+      (w) => !GENERIC_OBLIGATION_WORDS.has(w),
+    ),
+  );
+}
+function describesSameObligation(controlName: string, reviewName: string): boolean {
+  const controlWords = significantWords(controlName);
+  if (controlWords.size < 2) return false;
+  const reviewWords = significantWords(reviewName);
+  return [...controlWords].every((w) => reviewWords.has(w));
+}
+
 /** The plain-language answer to "so what do I actually have to do?".
  *
  *  Deliberately NOT a new computation — every item here is read from the
@@ -289,9 +342,8 @@ function WhatToDo({
   controlOwnerError,
   controlAttestations,
   onAttestControlEvidence,
-  controlEvidenceBusyId,
-  controlEvidenceErrorId,
-  controlEvidenceError,
+  controlEvidenceBusyIds,
+  controlEvidenceErrors,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
@@ -306,14 +358,26 @@ function WhatToDo({
   controlOwnerErrorId?: string | null;
   controlOwnerError?: string | null;
   controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
-  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => void;
-  controlEvidenceBusyId?: string | null;
-  controlEvidenceErrorId?: string | null;
-  controlEvidenceError?: string | null;
+  onAttestControlEvidence?: (controlId: string, attestedByName: string, evidenceNote: string) => Promise<boolean>;
+  controlEvidenceBusyIds?: ReadonlySet<string>;
+  controlEvidenceErrors?: ReadonlyMap<string, string>;
 }) {
   const rejected = verdict.status === 'rejected';
   const controls = verdict.controls ?? [];
-  const reviews = verdict.downstream_reviews ?? [];
+  const allReviews = verdict.downstream_reviews ?? [];
+  // code-review-005 (usability testing): a review folded into a control's
+  // "Also satisfies" note below (describesSameObligation) is no longer a
+  // SEPARATE ask — it is the same real-world obligation under another name —
+  // so it drops out of both the "separate reviews" list and its count.
+  // `allReviews` (the untouched engine output) still drives the per-control
+  // note; `reviews` (this filtered list) drives everything a reader counts.
+  const reviews = allReviews.filter(
+    (r) =>
+      !controls.some((id) => {
+        const c = policy?.controls.find((pc) => pc.id === id);
+        return c ? describesSameObligation(c.name, r) : false;
+      }),
+  );
   // R15-C2 (proposal §3.1): "summary-then-detail; default collapsed per
   // item, Expand all". Status chip stays on the always-visible summary line
   // (Governance's clarification of Layout F8 — items move to "addressed",
@@ -379,15 +443,23 @@ function WhatToDo({
                 {controls.map((id) => {
                   const control = policy?.controls.find((c) => c.id === id);
                   const attestation = controlAttestations?.[id];
-                  // Four states now (RG-7). Precedence: the policy's machine/
+                  // Four states now (RG-9). Precedence: the policy's machine/
                   // hand-edited `verified` is the strongest ("in place"); a
                   // reviewer's on-the-record attestation is the next
                   // ("attested" — a human claim, not machine-verified, shown
-                  // as such); otherwise "outstanding"; and without a policy
-                  // loaded, "evidence unknown" (never a fabricated claim about
-                  // a control nobody looked at — BC-V13-03).
+                  // as such); otherwise "outstanding". Without a policy loaded
+                  // we cannot tell verified from not, but an attestation does
+                  // NOT come from the policy — it is known either way — so it
+                  // still surfaces as "attested" rather than being swallowed
+                  // into "evidence unknown" (code-review-005 F12: a recorded
+                  // attestation must always show for its control). Only a
+                  // control with neither a policy verdict nor an attestation
+                  // falls back to "evidence unknown" (never a fabricated claim
+                  // about a control nobody looked at — BC-V13-03).
                   const status = !policy
-                    ? 'evidence unknown'
+                    ? attestation
+                      ? 'attested'
+                      : 'evidence unknown'
                     : control?.verification_evidence?.status === 'verified'
                       ? 'in place'
                       : attestation
@@ -398,6 +470,13 @@ function WhatToDo({
                   const demandedBy = (verdict.explanation?.tripped_invariants ?? []).filter((t) =>
                     t.required_controls.includes(id),
                   );
+                  // code-review-005 (usability testing): reviews this control's
+                  // own name already covers, read from the RAW review list
+                  // (not the filtered `reviews`) so the note names exactly what
+                  // it is folding in.
+                  const matchingReviews = control
+                    ? allReviews.filter((r) => describesSameObligation(control.name, r))
+                    : [];
                   return (
                     <li key={id} className="verdict__todo-item">
                       <details
@@ -416,7 +495,7 @@ function WhatToDo({
                           <strong>{control?.name ?? id}</strong>
                           {control?.name && <code className="verdict__id-quiet">{id}</code>}
                           <span className={`verdict__todo-chip verdict__todo-chip--${status.split(' ')[0]}`}>
-                            {status}
+                            {TODO_CHIP_LABEL[status] ?? status}
                           </span>
                         </summary>
                       {control?.description && (
@@ -436,6 +515,17 @@ function WhatToDo({
                           {control.verification}
                         </p>
                       )}
+                      {/* code-review-005 (usability testing): this control's own
+                          obligation is the same real-world review a jurisdiction
+                          pack separately names — shown once, here, rather than
+                          twice under two different labels. */}
+                      {matchingReviews.length > 0 && (
+                        <p className="verdict__todo-line verdict__todo-also-satisfies">
+                          <span className="verdict__todo-label">Also covers:</span>{' '}
+                          {matchingReviews.join(', ')} — the same check under another name, so it is not listed
+                          again below.
+                        </p>
+                      )}
                       {status === 'outstanding' && onAssignControlOwner && (
                         <ControlOwnerAssign
                           controlId={id}
@@ -445,18 +535,21 @@ function WhatToDo({
                           error={controlOwnerErrorId === id ? controlOwnerError : null}
                         />
                       )}
-                      {/* RG-7: the attest form shows while a control is still
+                      {/* RG-9: the attest form shows while a control is still
                           outstanding (the action that moves it to "attested");
-                          the attester + evidence show once it's attested. Not
-                          shown once the policy marks it machine-"in place" —
-                          a human attestation adds nothing over a machine check. */}
+                          the attester + evidence show once it's attested — and
+                          that display does not depend on a policy being loaded
+                          (F12: a recorded attestation is not the policy's to
+                          hide). Not shown once the policy marks it machine-"in
+                          place" — a human attestation adds nothing over a
+                          machine check. */}
                       {(status === 'outstanding' || status === 'attested') && onAttestControlEvidence && (
                         <ControlEvidenceAttest
                           controlId={id}
                           attestation={attestation}
                           onAttest={onAttestControlEvidence}
-                          busy={controlEvidenceBusyId === id}
-                          error={controlEvidenceErrorId === id ? controlEvidenceError : null}
+                          busy={controlEvidenceBusyIds?.has(id) ?? false}
+                          error={controlEvidenceErrors?.get(id) ?? null}
                         />
                       )}
                       </details>
@@ -610,12 +703,19 @@ function ControlOwnerAssign({
   );
 }
 
-// RG-7: a reviewer's on-the-record attestation that a control is in place,
+// RG-9: a reviewer's on-the-record attestation that a control is in place,
 // with a free-text evidence pointer. Mirrors ControlOwnerAssign's shape (a
 // display+re-attest branch and a form branch). The honesty is load-bearing:
 // this is a self-asserted human claim, rendered "attested (not verified)",
 // NEVER shown as machine-verified — a client-side store can hold the claim
 // and its evidence pointer, not the evidence itself, and must not pretend to.
+//
+// code-review-005 F19: onAttest resolves true/false rather than firing and
+// forgetting — attesting control B while control A's write is still in
+// flight must not look like a silent no-op, and a failed write must not
+// look like a saved one. The form closes only once the write is CONFIRMED;
+// on failure it stays open (with `error`, from the caller, rendered inline)
+// so the reviewer can see the failure and retry without re-typing.
 function ControlEvidenceAttest({
   controlId,
   attestation,
@@ -625,7 +725,7 @@ function ControlEvidenceAttest({
 }: {
   controlId: string;
   attestation?: { attested_by_name: string; evidence_note: string };
-  onAttest: (controlId: string, attestedByName: string, evidenceNote: string) => void;
+  onAttest: (controlId: string, attestedByName: string, evidenceNote: string) => Promise<boolean>;
   busy: boolean;
   error?: string | null;
 }) {
@@ -651,8 +751,17 @@ function ControlEvidenceAttest({
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim() || !note.trim()) return;
-        onAttest(controlId, name.trim(), note.trim());
-        setEditing(false);
+        const attestedByName = name.trim();
+        const evidenceNote = note.trim();
+        // Not awaited inline in the handler itself (onSubmit must stay
+        // synchronous for preventDefault to matter) — the async work is the
+        // IIFE below. Close only on confirmed success; on failure, stay open
+        // so the typed values and the caller's `error` prop both remain
+        // visible rather than the form silently resetting as if it saved.
+        void (async () => {
+          const ok = await onAttest(controlId, attestedByName, evidenceNote);
+          if (ok) setEditing(false);
+        })();
       }}
     >
       <label>
@@ -789,8 +898,13 @@ function SignOffChecklist({
   const bindingDescription = verdict.binding_constraint
     ? findRuleDescription(policy, verdict.binding_constraint)
     : undefined;
-  // RG-7: three evidence tiers, counted separately so the checklist stays
+  // RG-9: three evidence tiers, counted separately so the checklist stays
   // honest — a reviewer's attestation is NOT folded into machine-verified.
+  // Both counts are well-defined even with no policy loaded: `verified`
+  // reads `undefined?.status === 'verified'` (always false), and `attested`
+  // reads controlAttestations directly, which does not come from the policy
+  // at all (F12) — only the DISPLAY below hides the verified/outstanding
+  // split when there is no policy to have read it from.
   const verified = controls.filter(
     (id) => policy?.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified',
   ).length;
@@ -801,10 +915,10 @@ function SignOffChecklist({
   ).length;
   // "Addressed" = verified OR attested; only these leave the outstanding
   // pile. This is what lets the list reach zero-outstanding once a reviewer
-  // has attested each control — the RG-7 goal — without claiming any of them
+  // has attested each control — the RG-9 goal — without claiming any of them
   // are machine-verified.
   const outstanding = controls.length - verified - attested;
-  const inPlace = verified + attested;
+  const addressed = verified + attested;
 
   return (
     <div className="verdict__signoff-checklist">
@@ -821,11 +935,27 @@ function SignOffChecklist({
         {controls.length > 0 && (
           <li>
             <a href="#verdict-controls-section">
-              {controls.length} control{controls.length === 1 ? '' : 's'} named · {outstanding} outstanding ·{' '}
-              {inPlace} in place
-              {policy
-                ? ` · evidence: ${verified} machine-verified, ${attested} attested by a reviewer (not verified), ${outstanding} outstanding`
-                : ''}
+              {/* code-review-005 F12: without a policy we cannot tell verified
+                  from outstanding — printing those counts anyway is a
+                  confident claim about evidence nobody checked, the same
+                  overclaim BC-V13-03 already rules out for the per-control
+                  chip (WhatToDo's `!policy` branch). An attestation is the
+                  one thing still knowable regardless — it does not come from
+                  the policy — so it is named here even in this branch. */}
+              {!policy ? (
+                <>
+                  {controls.length} control{controls.length === 1 ? '' : 's'} named · evidence unknown — the
+                  policy isn&rsquo;t loaded
+                  {attested > 0 &&
+                    `; ${attested} already attested by a reviewer (not verified)`}
+                </>
+              ) : (
+                <>
+                  {controls.length} control{controls.length === 1 ? '' : 's'} named · {outstanding} outstanding ·{' '}
+                  {addressed} addressed · evidence: {verified} machine-verified, {attested} attested by a
+                  reviewer (not verified), {outstanding} outstanding
+                </>
+              )}
             </a>
           </li>
         )}
@@ -858,7 +988,7 @@ function SignOffChecklist({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyId, controlEvidenceErrorId, controlEvidenceError }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
@@ -928,6 +1058,24 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   const explanation: VerdictExplanation | undefined = verdict.explanation ?? undefined;
 
   const staleSources = verdict.stale_sources ?? [];
+
+  // code-review-005 F8: computed once, here, so the CS-1 evidence panel's
+  // Fold summary, its collapse condition, and its per-control chip all agree
+  // — the exact self-contradiction the finding closes was a control shown
+  // UNVERIFIED in this panel while an "attested" chip and the checklist's own
+  // count, elsewhere on the SAME screen, said otherwise. Same precedence as
+  // WhatToDo: machine-verified beats attested beats outstanding. Only
+  // meaningful with a policy loaded (the no-policy branch below is its own,
+  // separate BC-V13-03 "evidence unknown" case, untouched by this fix).
+  const controlEvidenceStates = policy
+    ? verdict.controls.map((id) => {
+        const control = policy.controls.find((c) => c.id === id);
+        const evidence = control?.verification_evidence;
+        const verified = evidence?.status === 'verified';
+        const attestation = !verified ? controlAttestations?.[id] : undefined;
+        return { id, control, evidence, verified, attested: attestation !== undefined, attestation };
+      })
+    : [];
 
   return (
     <section className={`verdict verdict--${verdict.status}`} aria-label="Verdict">
@@ -1124,9 +1272,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         controlOwnerError={controlOwnerError}
         controlAttestations={controlAttestations}
         onAttestControlEvidence={onAttestControlEvidence}
-        controlEvidenceBusyId={controlEvidenceBusyId}
-        controlEvidenceErrorId={controlEvidenceErrorId}
-        controlEvidenceError={controlEvidenceError}
+        controlEvidenceBusyIds={controlEvidenceBusyIds}
+        controlEvidenceErrors={controlEvidenceErrors}
       />
 
       {/* design-review round 3 (Panel A): no requirement pins the checklist
@@ -1296,13 +1443,21 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // V1.3 (design-vision decision #3): proof-carrying controls —
           // MINIMAL CONTROL SET (CS-1) panel with per-control verification
           // status. BC-V13-02: absent evidence renders UNVERIFIED, never a
-          // blank or implied pass.
+          // blank or implied pass. code-review-005 F8: a third state — a
+          // reviewer's attestation on record, but no machine-verified
+          // evidence — so this panel never again shows UNVERIFIED next to a
+          // control the checklist and the to-do list both already call
+          // "attested" elsewhere on the same screen.
           <Fold
             id="verdict-controls-section"
             title="The control set, with evidence status"
             defaultOpen={reasoningDefaultOpen}
-            summary={`${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all VERIFIED`}
-            when={verdict.controls.every((id) => policy.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified')}
+            summary={
+              controlEvidenceStates.every((s) => s.verified)
+                ? `${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all VERIFIED`
+                : `${verdict.controls.length} control${verdict.controls.length === 1 ? '' : 's'} — all addressed (verified or attested)`
+            }
+            when={controlEvidenceStates.every((s) => s.verified || s.attested)}
             headingInSummary={false}
           ><div className="verdict__controlset">
             <h3>The control set, with evidence status</h3>
@@ -1323,10 +1478,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               {new Date(verdict.attested_at).toLocaleDateString()}.
             </p>
             <ul>
-              {verdict.controls.map((id) => {
-                const control = policy.controls.find((c) => c.id === id);
-                const evidence = control?.verification_evidence;
-                const verified = evidence?.status === 'verified';
+              {controlEvidenceStates.map(({ id, control, evidence, verified, attested, attestation }) => {
                 return (
                   <li key={id}>
                     <div className="verdict__control-head">
@@ -1336,10 +1488,14 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                       {control?.name && <code className="verdict__id-quiet">{id}</code>}
                       <span
                         className={
-                          verified ? 'verdict__vchip verdict__vchip--verified' : 'verdict__vchip verdict__vchip--unverified'
+                          verified
+                            ? 'verdict__vchip verdict__vchip--verified'
+                            : attested
+                              ? 'verdict__vchip verdict__vchip--attested'
+                              : 'verdict__vchip verdict__vchip--unverified'
                         }
                       >
-                        {verified ? 'VERIFIED' : 'UNVERIFIED'}
+                        {verified ? 'VERIFIED' : attested ? 'ATTESTED — NOT VERIFIED' : 'UNVERIFIED'}
                       </span>
                     </div>
                     {control && control.resolves.length > 0 && (
@@ -1367,6 +1523,19 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                         {evidence.detail}
                         {evidence.attested_by ? ` — attested by ${evidence.attested_by}` : ''}
                         {evidence.attested_at ? ` (${evidence.attested_at})` : ''}
+                      </p>
+                    )}
+                    {/* F8: the reviewer's on-the-record claim, shown beside the
+                        chip — never merged with the machine-VERIFIED evidence
+                        line above, and never rendered once verified is true
+                        (machine-verified beats attested, same precedence as
+                        WhatToDo). "(name not verified)" for the same reason
+                        every other self-asserted name in this app carries it:
+                        there is no sign-in to check it against. */}
+                    {attested && attestation && (
+                      <p className="verdict__control-evidence verdict__control-evidence--attested">
+                        Attested by {attestation.attested_by_name} (name not verified) — evidence: &ldquo;
+                        {attestation.evidence_note}&rdquo;
                       </p>
                     )}
                   </li>

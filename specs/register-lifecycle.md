@@ -170,19 +170,42 @@ export interface RegisterStore {
   // Write
   addNode(node: RegisterNode): Promise<void>;
   addEdge(edge: RegisterEdge): Promise<void>;
-  updateUseCaseVerdictSummary(useCaseId: string, summary: UseCaseSummary): Promise<void>;
+  updateUseCaseVerdictSummary(
+    useCaseId: string,
+    summary: Partial<UseCaseSummary> & { currentVerdictId?: string },
+  ): Promise<void>;
   updateLifecycleStage(useCaseId: string, stage: LifecycleStage, actor: string): Promise<void>;
 
   // Read — role-filtered
-  getUseCases(role: 'all' | string): Promise<UseCaseSummary[]>;
-  // role='all' → 2LoD; role=actorId → 1LoD, filtered by submitted_by
+  getUseCases(role: 'all' | string, currentPolicyVersion?: string, samplingRate?: number): Promise<UseCaseSummary[]>;
+  // role='all' → 2LoD; role=actorId → 1LoD, filtered by submitted_by.
+  // Per-row resilient (code-review-005 F3): a row whose metadata cannot be
+  // read is skipped and logged, not thrown — one corrupt entry no longer
+  // freezes the whole list behind "Loading…".
 
-  getUseCase(useCaseId: string): Promise<UseCaseSummary | undefined>;
+  getUseCase(useCaseId: string, currentPolicyVersion?: string, samplingRate?: number): Promise<UseCaseSummary | undefined>;
   getGraph(useCaseId: string): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }>;
   getBlastRadius(componentNodeId: string): Promise<RegisterNode[]>;
 
-  // Export (RG-5)
+  // Export (RG-5). Queued against every writer below (code-review-005 F18),
+  // so a concurrent write cannot be observed half-applied.
   exportAll(): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }>;
+
+  // Hand-off (RG-8 — see verdict-audit.md §16 for the full bundle spec).
+  // Upsert: for a use case present in the incoming bundle, the bundle's
+  // node/edge state wins. Safe because the register is a derived view; the
+  // tamper-evident source of truth is the audit trail, whose prefix-safety
+  // is already established before this runs.
+  importRegister(nodes: readonly RegisterNode[], edges: readonly RegisterEdge[]): Promise<void>;
+
+  // Hand-off replace ONLY (RG-8, verdict-audit.md §16.8). Reads the current
+  // register — the backup a caller must hand the user before calling this
+  // — then clears and installs `nodes`/`edges`, in one queued step. Returns
+  // what was discarded.
+  backupAndReplaceRegister(
+    nodes: readonly RegisterNode[],
+    edges: readonly RegisterEdge[],
+  ): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }>;
 }
 
 export interface UseCaseSummary {
@@ -199,6 +222,16 @@ export interface UseCaseSummary {
   stale_assessment: boolean;  // True if active pack versions differ from evaluation-time versions
 }
 ```
+
+**Amended 2026-09-28 (code review 005, F10).** `importRegister` and
+`backupAndReplaceRegister` were added for the RG-8 hand-off feature
+(previously undocumented here); `getUseCases`/`getUseCase` gained the
+optional `currentPolicyVersion`/`samplingRate` parameters they already took
+in code; `updateUseCaseVerdictSummary`'s signature is corrected to match
+`register.ts` (`Partial<UseCaseSummary> & { currentVerdictId?: string }`,
+not a full `UseCaseSummary`). See `verdict-audit.md` §16 for the full
+hand-off bundle spec — bundle format, the seal, import validation, the
+outcome vocabulary, and the merge rule.
 
 ---
 
@@ -457,6 +490,7 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | RG-3 | §10.2 filter chips and search bar |
 | RG-4 | §8 — `onPolicyUpdated()` queues re-evaluation for all active cases |
 | RG-5 | §10.3 — `exportAll()` → JSON download |
+| RG-8 | §5 — `importRegister`/`backupAndReplaceRegister`; full bundle spec in `verdict-audit.md` §16 |
 | LC-1 | §6 — lifecycle stage machine and transitions |
 | LC-2 | §7 — `workflow-router.ts`; policy-configurable `tier_workflows` |
 | LC-4 | §8 — policy update re-evaluation trigger |
@@ -673,6 +707,7 @@ gatekeeper" framing.
 
 | Date | Change |
 |---|---|
+| 2026-09-28 | §5 amended — code review 005 (F10). `RegisterStore` gains `importRegister` and `backupAndReplaceRegister` (RG-8 hand-off); `getUseCases`/`getUseCase` gain their real optional parameters; `updateUseCaseVerdictSummary`'s signature corrected to `Partial<UseCaseSummary>`; noted that `getUseCases` skips an unreadable row rather than failing the whole list. §13 gains an RG-8 traceability row. Full hand-off bundle spec added at `verdict-audit.md` §16. |
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |
 | 2026-08-17 | §17 added — round 11. ADR-RL-R11-1 consumes the dormant `ai_model`/`uses_model` schema (deduped by `model_id`); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path. |
 | 2026-08-25 | R15-C1/S4 — §10.2's Must-level column set amended: Stale and Sampling merge into one "Flags" column (badge per true condition; accessible empty-state name when neither applies), and Stage joins the visible columns. TC-RG-2-02 updated to assert the amended set. |

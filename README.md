@@ -25,7 +25,7 @@ has to interpret. AIGate produces a *decision*, and shows its working:
   signed that reading off. A rule nobody has signed makes the verdict
   *provisional*, and the verdict says so.
 - **It never claims more than it can prove.** An attested control reads
-  *attested (not verified)*; a control with no evidence reads
+  *attested — not verified*; a control with no evidence reads
   *outstanding*; the audit trail calls itself tamper-evident, not
   tamper-proof. These are requirements pinned by tests, not tone.
 - **Every obligation is traceable.** Each requirement-level test case
@@ -80,10 +80,14 @@ independent checks. AIGate runs that loop end to end:
    with a pointer to the evidence (a ticket, a config export). An
    attestation is shown as exactly what it is — a named person's claim,
    *not verified* — never dressed up as a machine check.
-4. **The case is handed to the reviewer** as a sealed file. The reviewer
-   imports it on their own machine; if anything was altered on the way,
-   the import refuses and says so. Nothing on the receiving side is ever
-   overwritten without the reviewer confirming it and getting a backup.
+4. **The case is handed to the reviewer** as a hand-off file. On import the
+   app re-checks every entry: accidental damage or a simple edit is caught
+   and the import refuses. It can't prove who made the file — anyone
+   holding it could rebuild it to pass these checks — so exchange bundles
+   only with people you trust, by a route you trust. (The same limit the
+   audit trail states for itself: tamper-evident, not tamper-proof.)
+   Nothing on the receiving side is ever overwritten without the reviewer
+   saving a backup first and confirming they have it.
 5. **The second line signs off** — or challenges the rule — with their
    name on the record, and hands the case back the same way.
 
@@ -289,7 +293,7 @@ Since v0.17.0 the loop closes after the verdict too:
 
 - **Controls get owners** — each outstanding control can be assigned to a named person with a target date; the page counts down, and flags it overdue.
 - **Controls get attested** — a reviewer records a control as in place with an evidence note. The sign-off checklist counts three tiers separately — *machine-verified*, *attested by a reviewer (not verified)*, *outstanding* — so a claim is never counted as a check.
-- **Cases move between machines** — **Export hand-off bundle** writes the register and the full audit trail into one sealed file; **Import hand-off bundle** on another machine checks the seal and re-walks the audit chain before writing anything.
+- **Cases move between machines** — **Export hand-off bundle** writes the register and the full audit trail into one hand-off file; **Import hand-off bundle** on another machine re-verifies every audit entry and re-walks the chain before writing anything (see honest limits below for what that check can and can't prove).
 - **The audit trail is tamper-evident** — each entry carries a hash of the one before it, and the sign-off page shows whether the chain is intact.
 
 **Honest limits, stated in the UI itself**:
@@ -297,7 +301,7 @@ Since v0.17.0 the loop closes after the verdict too:
 - Verdicts are provisional until the firm's CRO adopts the framework and signs the pack rules.
 - The audit trail lives in the browser — proof-of-concept grade, not a system of record (that is V1.5). Tamper-*evident*, not tamper-*proof*: someone able to rewrite every entry consistently would not be caught without an external anchor.
 - Names are typed, not authenticated — there is no sign-in, and every name on the record says "not verified".
-- **Hand-off merges only a continuation, never a fork.** The first time a reviewer receives a case, their browser already holds its own demo history, so the import offers an explicit **replace** — which downloads a backup of their register before anything is deleted. After that, each return trip merges cleanly. But if the submitter *also* keeps working while the reviewer has the case, the histories have diverged, and the import refuses rather than guessing which to keep. The safe pattern: one side works at a time. Giving each case its own history (so unrelated work never forks) is next.
+- **Hand-off merges only a continuation.** The first time a reviewer receives a case, their browser already holds its own demo history, so the import reports different histories — normal here, since every browser seeds its own demo cases — and offers **Save a backup of mine first** (a backup file downloads; browsers can sometimes block this, so it asks you to confirm it saved), then **I have my backup — replace my register**. After that, each return trip merges cleanly. On import the app re-checks every entry: accidental damage or a simple edit is caught and the import refuses. It can't prove who made the file — anyone holding it could rebuild it to pass these checks — so exchange bundles only with people you trust, by a route you trust. (The same limit the audit trail states for itself: tamper-evident, not tamper-proof.) If the submitter *also* keeps working while the reviewer has the case, a later import reporting different histories is shown as a warning, not treated as routine — check with the sender before replacing — and it still refuses to merge rather than guessing which to keep. The safe pattern: one side works at a time. Giving each case its own history (so unrelated work never collides) is next.
 - Artifact binding (reading deployment configs instead of trusting descriptions) and live post-approval monitoring are V1.5/V2.
 
 ## Try it (no install)

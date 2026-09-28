@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGate — Code Review 005</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+tbody tr:nth-child(even){background:#faf9f3}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+.verdict.pending{border-color:#999;background:#f9f9f4}.verdict.pending .verdict-text{color:#999}
+.verdict.pass{border-color:#2d6a4f;background:#f0f7f2}.verdict.pass .verdict-text{color:#2d6a4f}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+.issue.observation{border-left-color:#95a5a6;background:#f5f5f3}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-severity{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:.3rem}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+.issue-note{font-size:.82rem;color:#666;border-top:1px solid rgba(0,0,0,.1);padding-top:.4rem;margin-top:.4rem;font-style:italic}
+blockquote{border-left:3px solid #ddd;padding-left:1rem;color:#555;margin:1rem 0;max-width:66ch;font-style:italic}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+.themes-section{background:#f9f9f4;padding:1rem 1.2rem;margin:1rem 0 1.5rem;border-left:3px solid #999}
+.theme-item{margin-bottom:1rem}
+.theme-title{font-weight:600;margin-bottom:.3rem}
+.reconciliation-table{font-size:.82rem}
+.verified-list{margin:1rem 0;max-width:68ch}
+.verified-list li{margin-bottom:.4rem;font-size:.92rem}
+.panel-row{margin-bottom:.8rem}
+.panel-name{font-weight:600;color:#333}
+.panel-finding{font-size:.88rem;color:#555}
+.annotation-note{background:#fff8f0;border-left:3px solid #e67e22;padding:.6rem .8rem;margin:.8rem 0;font-size:.82rem;color:#555}
+</style></head><body><main>
+
+<p class="date">28 September 2026 — Code Review 005</p>
+<h1>AIGate</h1>
+<p class="subtitle">Round 5 (strict), pre-release gate for v1.0.0. Commit range <code>7a82346..HEAD</code>, 6 commits, 41 files. Dual review: 6 calibrated + 6 blind panels + mechanical stub scan. Chair: Fable. Panels: Sonnet.</p>
+
+<div class="verdict pending">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text">Pending owner triage</div>
+  <p class="verdict-basis">Findings are presented to the owner before any disposition or verdict (shared rule 28). The verdict is recorded after triage.</p>
+</div>
+
+<h2>1. Summary</h2>
+<div class="tally">
+  <div><b>8</b> Critical</div>
+  <div><b>14</b> Important</div>
+  <div><b>7</b> Minor</div>
+  <div><b>3</b> Observations</div>
+  <div><b>32</b> findings</div>
+  <div><b>13</b> panels</div>
+</div>
+
+<p><strong>Scope and pre-checks.</strong> This round reviews the verified hand-off bundle (src/store/handoff.ts, audit.ts, register.ts, db.ts, RegisterView.tsx), control-evidence attestation (types.ts, RegisterDetail.tsx, VerdictDisplay.tsx), __APP_VERSION__ (vite.config.ts, vite-env.d.ts), scripts/trace-check.py; tests; specs/verdict-audit.md/.html; README, tester guide, test-cases-015.md. EBT contract/collaboration/mock-budget linter over all 23 changed test files — 0 violations. Panel F stub detection — 0 candidates. All 13 panels returned.</p>
+
+<p><strong>Dual-review verification.</strong> 9 of the 22 Critical+Important findings were reported by at least one blind panel; 3 were blind-only (F7 spec/test contradiction, F17 cross-tab register writes, F19 dropped attestation). Chair verification: every Critical finding and every multi-panel Important finding was re-read against the code on disk before inclusion (file:line checked); the range-row traceability claim was additionally checked by grepping for the individual case ids (they are tested — the gap is in the checker's counting, not in coverage).</p>
+
+<h2>2. Cross-cutting themes</h2>
+
+<div class="themes-section">
+  <div class="theme-item">
+    <div class="theme-title">1. The hand-off import trusts the file too much</div>
+    <p>A file that travels between people is untrusted input, but import validates only its outer shape: timestamps, register metadata, event types and payload fields pass unchecked, and one bad value can freeze the register list or break every later write (F3, F4, F13, F20).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">2. The hand-off's safety promises are stronger than the mechanism</div>
+    <p>"Any change in transit is detected" and "a backup was downloaded first" are both stated unconditionally; the seal is an unkeyed hash anyone can recompute, and the backup is never checked (F1, F2, F14).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">3. Multi-step writes are not atomic and not serialised</div>
+    <p>Import checks the chain outside the write queue, writes two databases without rollback, and swallows failures (F5, F6, F15, F16, F17, F18).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">4. The new "attested" tier did not reach every surface</div>
+    <p>The evidence panel still says UNVERIFIED, the checklist reuses "in place", and the policy-not-loaded case disagrees with itself (F8, F11, F12, F19).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">5. Traceability of the new features themselves</div>
+    <p>Both features were labelled with requirement ids that already mean something else, have no requirement or test-case entry, and (hand-off) no spec; the audit spec and its guard test still claim nothing can clear the trail (F7, F9, F10, F21, F22).</p>
+  </div>
+</div>
+
+<h2>3. Critical findings (F1–F8)</h2>
+
+<div class="issue critical">
+  <div class="issue-severity">F1 — Critical</div>
+  <div class="issue-title">Replace proceeds even when the backup failed; the message says a backup was downloaded</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/RegisterView.tsx:65-122 (handleExportBundle / handleReplaceWithBundle); src/store/handoff.ts:229-233</p>
+  <p class="issue-detail"><strong>Panels:</strong> B calibrated, B blind, C calibrated, C blind, G calibrated, G blind (6)</p>
+  <p class="issue-detail"><strong>Issue:</strong> handleExportBundle catches its own errors and always resolves; handleReplaceWithBundle awaits it and then unconditionally wipes and replaces the register and audit trail. A browser can also block or cancel a programmatic download silently, which JavaScript cannot observe.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A reviewer whose backup fails loses their register and audit trail for good, while the screen, README and tester guide say a backup was taken first.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Make the backup step return success/failure and abort the replace on failure; because download completion is unobservable, word it honestly ("a backup file was created — make sure it saved") and ask the user to confirm they have it before anything is deleted.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F2 — Critical</div>
+  <div class="issue-title">"Sealed: any change in transit is detected" overclaims what an unkeyed hash proves</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/RegisterView.tsx:280-284; src/store/handoff.ts:6-28, 122-126; README.md (loop step 4, honest limits); docs/tester-guide.md</p>
+  <p class="issue-detail"><strong>Panels:</strong> G calibrated, G blind (2)</p>
+  <p class="issue-detail"><strong>Issue:</strong> The seal and the chain are plain SHA-256 over public, open-source logic — no key, no secret. They catch accidental corruption and naive edits; anyone holding the file can edit it and recompute every hash, and import will accept it.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A reviewer would treat a clean import as proof the history is authentic and sign off on a fabricated audit trail.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Say exactly what it catches everywhere it is claimed (UI hint, export message, README, tester guide, code comments), matching the app's existing "tamper-evident, not tamper-proof" language for the local trail, and tell users to confirm the sender directly. Add a test showing a fully re-hashed forgery is accepted, so the limit is pinned, not hidden.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F3 — Critical</div>
+  <div class="issue-title">One malformed register entry in a bundle freezes the whole register list, permanently</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:53-59 (metadata passthrough); src/store/register.ts:99-101, 250-255; src/components/RegisterView.tsx:136-152</p>
+  <p class="issue-detail"><strong>Panels:</strong> B blind, C calibrated, G blind (3)</p>
+  <p class="issue-detail"><strong>Issue:</strong> Register-node metadata is accepted with no shape check; toSummary throws on a mismatched node inside Promise.all, and the register's load() has no catch, so the list stays on "Loading…" — and the bad node stays in IndexedDB.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> After importing a corrupt or version-skewed bundle, a user sees every case disappear behind a permanent spinner, with no error and no in-app recovery.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Validate register nodes against the real metadata schema at import and reject before writing; make the list load per-row resilient and show an error instead of spinning.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F4 — Critical</div>
+  <div class="issue-title">One malformed timestamp in a bundle breaks every later write in the session</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:46; src/store/audit.ts:17-22, 152, 172</p>
+  <p class="issue-detail"><strong>Panels:</strong> C calibrated, C blind (2)</p>
+  <p class="issue-detail"><strong>Issue:</strong> occurred_at is accepted as any string; an unparseable value makes the monotonic clock NaN, and the next local append throws "Invalid time value".</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> After such an import, every sign-off, attestation or new submission fails until the page is reloaded.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Require a valid ISO timestamp at import; guard the clock against non-finite values.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F5 — Critical</div>
+  <div class="issue-title">Import checks the chain outside the write queue, so a write in between can fork it</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:242, 269-271; src/store/audit.ts:156-175</p>
+  <p class="issue-detail"><strong>Panels:</strong> E calibrated, E blind (2)</p>
+  <p class="issue-detail"><strong>Issue:</strong> importBundle reads the local chain and computes the tail outside the serialised write queue, then writes that tail without re-checking the current tip; the import button has no in-flight guard, and the queue does not coordinate across tabs.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A second quick import, a local action, or a second tab can leave two events claiming the same predecessor — and the case then shows "chain integrity check FAILED" for a record nobody tampered with.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Do read + check + write as one queued step, re-verify the tail joins the current tip immediately before inserting, add an import in-flight guard, and take a cross-tab lock (navigator.locks) around import/replace/append.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F6 — Critical</div>
+  <div class="issue-title">Register and audit trail are written in two steps with no rollback, and failures are silent</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:227-228, 244-247, 269-272; src/components/RegisterView.tsx:95, 108-122</p>
+  <p class="issue-detail"><strong>Panels:</strong> C calibrated, C blind, E calibrated, E blind (4)</p>
+  <p class="issue-detail"><strong>Issue:</strong> The register (derived view) is written first, then the audit trail (source of truth), as separate databases with no compensation; neither UI handler catches a failure.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A mid-way failure leaves a case showing a stage or verdict its own audit trail cannot justify, and the user sees nothing at all.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Write the audit trail first, then the register; catch failures in both handlers and show them; keep the pending replace available after a failure.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F7 — Critical</div>
+  <div class="issue-title">The audit spec and its guard test still say nothing can clear the trail</div>
+  <p class="issue-detail"><strong>File:</strong> specs/verdict-audit.md:63, 257-263 (and .html twin); src/store/register.test.ts:493-507; src/store/audit.ts:144-154</p>
+  <p class="issue-detail"><strong>Panels:</strong> A blind, D blind, G blind (3 — blind-only)</p>
+  <p class="issue-detail"><strong>Issue:</strong> The spec says the audit store has no delete/update/clear; replaceAllRawEvents now clears and rewrites it, and the guard test ("no update or delete path") uses a keyword blocklist the new name evades.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> Anyone trusting the spec or the passing test believes the append-only guarantee is unconditional, when a UI-reachable path now replaces the whole trail.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Document the bounded exception in the spec (both twins) — verified bundle, user-confirmed, backup first — and replace the keyword test with an explicit allowlist of audit.ts exports, so any new write path must be added on purpose.</p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">F8 — Critical</div>
+  <div class="issue-title">The "control set, with evidence status" panel ignores attestations</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/VerdictDisplay.tsx:1300-1376 (lines 1329, 1342)</p>
+  <p class="issue-detail"><strong>Panels:</strong> B calibrated (Critical), D calibrated (Important), G blind (Minor) — elevated: 3 independent panels</p>
+  <p class="issue-detail"><strong>Issue:</strong> This older panel still renders only VERIFIED/UNVERIFIED, so an attested control shows UNVERIFIED next to the "attested" chip and the checklist's count on the same screen.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A reviewer sees two answers to "is this control done?" on one verdict — the direct self-contradiction the product rules out.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Add the third state ("attested — not verified") to this panel, with the same precedence as the to-do list.</p>
+</div>
+
+<h2>4. Important findings (F9–F22)</h2>
+
+<div class="issue important">
+  <div class="issue-severity">F9 — Important</div>
+  <div class="issue-title">"RG-6"/"RG-7" labels collide with existing, unrelated requirements; the features have no requirement or test-case entries</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:6; src/store/types.ts:175; ~30 references across 15 files; requirements/requirements.md:304, 308; test-cases/test-cases.md:1605-1606</p>
+  <p class="issue-detail"><strong>Panels:</strong> A calibrated, A blind, D calibrated (Critical), D blind, G blind (5)</p>
+  <p class="issue-detail"><strong>Issue:</strong> RG-6 already means blast-radius queries and RG-7 periodic sampling (both V2+, unbuilt); the hand-off bundle and control attestation were built under those ids with no requirement or TC entry, so trace-check cannot see them.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> An auditor tracing "RG-7" from the code lands on the wrong requirement and finds no record of the shipped feature — in a product that sells traceability.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Give both features new ids with real requirement entries and TC rows traced to their existing tests; rename every reference; note the two permanent commit messages in the changelog.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F10 — Important</div>
+  <div class="issue-title">The hand-off format and the new store functions are not specified</div>
+  <p class="issue-detail"><strong>File:</strong> specs/register-lifecycle.md:6, 169-186; specs/verdict-audit.md (no bundle section)</p>
+  <p class="issue-detail"><strong>Panels:</strong> A blind, B calibrated, D blind (3)</p>
+  <p class="issue-detail"><strong>Issue:</strong> No spec describes the bundle fields, the seal, the outcome vocabulary or the merge rule; the RegisterStore interface omits importRegister/replaceRegister (the latter wipes the register).</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> The next person to change the format or the register has no source of truth, and cannot know a destructive write path exists.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Add a hand-off section to the specs (both twins) and list the new functions with their semantics.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F11 — Important</div>
+  <div class="issue-title">The checklist's "N in place" counts attested controls; the chip reserves "in place" for machine-verified</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/VerdictDisplay.tsx:389-395, 802-828</p>
+  <p class="issue-detail"><strong>Panels:</strong> D calibrated, D blind (2)</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A reviewer reads "1 in place" as verified, then finds the chip says "attested".</p>
+  <p class="issue-detail"><strong>Fix:</strong> Call the aggregate "addressed" (verified or attested) and keep "in place" for machine-verified only.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F12 — Important</div>
+  <div class="issue-title">With no policy loaded, the checklist still prints confident counts, and recorded attestations vanish</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/VerdictDisplay.tsx:389-395, 453-461, 794-828</p>
+  <p class="issue-detail"><strong>Panels:</strong> B calibrated, C calibrated (×2), C blind (3)</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A reviewer sees "1 in place" beside controls marked "evidence unknown", and their own attestation disappears from the page.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Apply the same "evidence unknown" rule to the checklist; always show a recorded attestation, which does not depend on the policy.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F13 — Important</div>
+  <div class="issue-title">Unknown event types and incomplete payloads render as blank or "undefined" lines in the audit trail</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:44-48; src/components/RegisterDetail.tsx:37-98</p>
+  <p class="issue-detail"><strong>Panels:</strong> B calibrated, B blind, G calibrated (3)</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> The evidence trail — the product's core artefact — silently shows a blank or "attested by undefined" line.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Accept only known event types with their required fields at import; give the timeline a visible fallback for anything unrecognised.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F14 — Important</div>
+  <div class="issue-title">The "diverged" message always says it is expected</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:250-256</p>
+  <p class="issue-detail"><strong>Panels:</strong> G calibrated (1)</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> On a return trip — where divergence signals a wrong file, concurrent edits or a forgery — the user is reassured and steered to the destructive replace.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Remember successful syncs; after the first, word divergence as a warning and ask the user to confirm the sender before replacing.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F15 — Important</div>
+  <div class="issue-title">Clock differences between machines plus a reload can raise a false "chain integrity FAILED" alarm</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/audit.ts:15, 51-62, 120-124, 156-174, 203-216</p>
+  <p class="issue-detail"><strong>Panels:</strong> C calibrated, C blind, E calibrated (Critical), E blind (4)</p>
+  <p class="issue-detail"><strong>Issue:</strong> Chain order is taken from sorting timestamps; after a reload the monotonic clock restarts at zero instead of the stored maximum, so on a machine whose clock is behind the sender's a new event can sort before events it follows.</p>
+  <p class="issue-detail"><strong>Consumer impact:</strong> A legitimate record is flagged "treat as compromised". Likelihood is low (needs clock skew larger than the time between the two machines' actions) but the harm is a false tamper alarm.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Restore the clock floor from the stored trail on first write after load; verify by following hash links rather than time order.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F16 — Important</div>
+  <div class="issue-title">A local event written between the backup snapshot and the replace is lost</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/RegisterView.tsx:112-115; src/store/audit.ts:144-150</p>
+  <p class="issue-detail"><strong>Panels:</strong> E blind (1)</p>
+  <p class="issue-detail"><strong>Fix:</strong> Take the snapshot and do the replace as one queued step.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F17 — Important</div>
+  <div class="issue-title">Whole-register replace/import is not serialised against other register writers (cross-tab lost update)</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/register.ts:191-226, 341-364</p>
+  <p class="issue-detail"><strong>Panels:</strong> E blind (1 — blind-only)</p>
+  <p class="issue-detail"><strong>Fix:</strong> Serialise register writes through a queue, and make read-modify-write updates single-transaction.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F18 — Important</div>
+  <div class="issue-title">Export reads the register and trail separately, so a concurrent write yields a torn but "sealed" bundle</div>
+  <p class="issue-detail"><strong>File:</strong> src/store/handoff.ts:131-134</p>
+  <p class="issue-detail"><strong>Panels:</strong> E calibrated (1)</p>
+  <p class="issue-detail"><strong>Fix:</strong> Read both inside the write queue.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F19 — Important</div>
+  <div class="issue-title">Attesting a second control while the first is saving is silently dropped; the form closes as if saved</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/RegisterDetail.tsx:265, 282-316; src/components/VerdictDisplay.tsx:648-657</p>
+  <p class="issue-detail"><strong>Panels:</strong> G blind (Important), E blind (Observation) — blind-only</p>
+  <p class="issue-detail"><strong>Fix:</strong> Track saving per control, and keep the form open until the write is confirmed.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F20 — Important</div>
+  <div class="issue-title">The hand-off UI has no tests; realistic bad-file variants are untested</div>
+  <p class="issue-detail"><strong>File:</strong> src/components/RegisterView.tsx (no handoff test at any layer); src/store/handoff.test.ts</p>
+  <p class="issue-detail"><strong>Panels:</strong> B calibrated, C calibrated, C blind (3)</p>
+  <p class="issue-detail"><strong>Issue:</strong> Missing: backup-failure path, outcome messages, duplicate event ids inside one bundle, wrong or newer format_version, missing fields, bad timestamps, large bundle.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Add a RegisterView hand-off test through the real buttons, the missing fixtures, a duplicate-id check at import, and a distinct message for an unsupported format version.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F21 — Important</div>
+  <div class="issue-title">CI does not run the traceability check the ritual now requires</div>
+  <p class="issue-detail"><strong>File:</strong> .github/workflows/ci.yml</p>
+  <p class="issue-detail"><strong>Panels:</strong> A calibrated (1)</p>
+  <p class="issue-detail"><strong>Fix:</strong> Add <code>python3 scripts/trace-check.py</code> after the spec-parity step.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">F22 — Important</div>
+  <div class="issue-title">trace-check skips range-notation rows and checks only the first file on multi-file trace lines</div>
+  <p class="issue-detail"><strong>File:</strong> scripts/trace-check.py:29-32, 43-46, 59</p>
+  <p class="issue-detail"><strong>Panels:</strong> C calibrated (Important), A blind (Minor), C blind (Observation)</p>
+  <p class="issue-detail"><strong>Issue:</strong> 5 rows written as ranges (e.g. TC-R11-MG-1..5) are never counted (chair-verified: the individual cases are tested — the gap is in the count); 9 multi-file [Trace:] lines have unchecked second/third paths; no left word boundary.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Expand ranges, validate every path, add the left boundary, and restate the traced count.</p>
+</div>
+
+<h2>5. Minor findings (F23–F29)</h2>
+
+<div class="issue minor">
+  <div class="issue-severity">F23 — Minor</div>
+  <div class="issue-title">Dead verifyChain re-export in handoff.ts with a false "single import surface" comment</div>
+  <p class="issue-detail"><strong>Panels:</strong> A calibrated, B calibrated, B blind</p>
+  <p class="issue-detail"><strong>Fix:</strong> Delete it.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F24 — Minor</div>
+  <div class="issue-title">src/vite-env.d.ts says __APP_VERSION__ is undefined under vitest; the shared config defines it there too, and the fallback is untested</div>
+  <p class="issue-detail"><strong>Panels:</strong> A calibrated, A blind</p>
+  <p class="issue-detail"><strong>Fix:</strong> Correct the comment and remove or test the fallback.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F25 — Minor</div>
+  <div class="issue-title">Docs and comments say the UI shows "attested (not verified)"; the chip shows "attested" and the "(name not verified)" sits on the name</div>
+  <p class="issue-detail"><strong>Panels:</strong> D blind</p>
+  <p class="issue-detail"><strong>Fix:</strong> Align the docs with what renders, or render the phrase.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F26 — Minor</div>
+  <div class="issue-title">One import outcome has three names: "diverged" (code), "fork" (comments, hint, README, tester guide), "different histories" (the message)</div>
+  <p class="issue-detail"><strong>Panels:</strong> D calibrated</p>
+  <p class="issue-detail"><strong>Fix:</strong> Use one word.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F27 — Minor</div>
+  <div class="issue-title">"adopted" means both "bundle absorbed into an empty register" and the existing classification-adoption event</div>
+  <p class="issue-detail"><strong>Panels:</strong> D calibrated</p>
+  <p class="issue-detail"><strong>Fix:</strong> Rename the hand-off outcome.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F28 — Minor</div>
+  <div class="issue-title">An unrelated failed import clears a valid pending replace</div>
+  <p class="issue-detail"><strong>Panels:</strong> C calibrated</p>
+  <p class="issue-detail"><strong>Fix:</strong> Only clear it for the bundle it belongs to.</p>
+</div>
+
+<div class="issue minor">
+  <div class="issue-severity">F29 — Minor</div>
+  <div class="issue-title">StructuredForm.test.tsx:703-705 points at an "agent report" that does not exist</div>
+  <p class="issue-detail"><strong>Panels:</strong> A blind; introduced by this round's traceability pass</p>
+  <p class="issue-detail"><strong>Fix:</strong> Point at TC-R15-C3-08's amendment in test-cases-015.md.</p>
+</div>
+
+<h2>6. Observations</h2>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 1</div>
+  <div class="issue-title">Import outcome → message tone uses two hand-kept arrays rather than an exhaustive switch</div>
+  <p class="issue-detail">Correct today, silent if a new outcome is added. (B calibrated)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 2</div>
+  <div class="issue-title">The word "attest" now covers four different things across the codebase</div>
+  <p class="issue-detail">No on-screen collision today. (D calibrated)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 3</div>
+  <div class="issue-title">handoff.test.ts re-implements the private seal algorithm instead of importing it</div>
+  <p class="issue-detail">(A blind)</p>
+</div>
+
+<h2>7. What held up</h2>
+
+<ul>
+  <li><strong>The attestation write path itself:</strong> synchronous in-flight guard before any await, honest "name not verified" labels, spec twins updated in parity (E calibrated, G calibrated, B blind).</li>
+  <li><strong>The post-import clock re-anchoring within a session,</strong> and the test-only reset helpers (E calibrated, E blind).</li>
+  <li><strong>All round-15 traceability cross-references</strong> and all new imports resolve (A calibrated, A blind, D blind).</li>
+  <li><strong>No placeholder/stub code</strong> (Panel F: 0 candidates); no test-design violations (EBT linter: 0).</li>
+</ul>
+
+<h2>8. Owner disposition</h2>
+
+<p><strong>Owner disposition (2026-09-28): "Fix all 29"</strong> — every Critical, Important and Minor finding (F1–F29) to be fixed before v1.0.0 is tagged. None deferred, none dismissed. Observations are recorded for judgement only.</p>
+<p><em>Verdict: recorded after the fix pass, once the changed code has been re-reviewed by the affected panels (review step 8).</em></p>
+
+<h2>9. Fix pass, round 1 — re-review (2026-09-28)</h2>
+
+<p>Three implementation agents fixed F1–F29 with disjoint file ownership (hand-off/store; verdict and attestation screens; requirements, docs, CI and the trace checker), then the specs (F7, F10), the audit timeline fallback (F13) and 37 traced test cases for RG-8/RG-9 were added. Checks after the round: 785 tests passing on 3 consecutive full runs, type-check and build clean, spec parity clean, trace check 312/312.</p>
+
+<p>Four panels re-checked the changed code (B Contracts, C Logic, E Concurrency &amp; Ordering, G Audit-evidence integrity &amp; honesty), strict criterion. <strong>27 of the 29 findings are verified fixed.</strong> F6 and F16 are fixed at the mechanism the finding named but are only partly closed — see N1 and N2. F24's type fix holds, but its comment cites a test that does not exist (N9).</p>
+
+<p><strong>New findings in the round-1 fix code (9):</strong></p>
+<ul>
+  <li><strong>N1 — Critical (B, C).</strong> <code>RegisterView.tsx:187-191</code> + <code>handoff.ts:556-568</code>: when the audit trail is replaced but the register update fails, the message says both "your audit trail was replaced" and "your register was not changed". No test drives this path (the F6 gap).</li>
+  <li><strong>N2 — Critical (G, E).</strong> <code>handoff.ts:556,558</code>: local changes made between "Save a backup of mine first" and the confirm step (reachable in one tab — open a case and sign it off, then return) are discarded by the replace and are not in the backup file; the snapshot the replace captures is thrown away, and the success message says the previous register is in the backup.</li>
+  <li><strong>N3 — Critical (E).</strong> <code>register.ts:227-266</code>: <code>updateLifecycleStage</code> waits on the audit queue while holding the register queue, so an approval overlapping a replace deterministically leaves the audit trail recording a change the register no longer shows (reproduced in a standalone harness).</li>
+  <li><strong>N4 — Critical (B).</strong> <code>handoff.ts:83-92</code>: the imported verdict schema does not require <code>confidence_caveats</code>, which <code>isVerdictProvisional</code> reads; such a bundle passes import, then the case drops out of the register list and its page never finishes loading (<code>getUseCase</code> and <code>RegisterDetail</code> have no error path).</li>
+  <li><strong>N5 — Important (G).</strong> <code>VerdictDisplay.tsx:1546-1568</code>: with no policy loaded, the evidence panel shows EVIDENCE UNKNOWN for a control the other two sections show as attested.</li>
+  <li><strong>N6 — Important (G).</strong> <code>VerdictDisplay.tsx:313-326</code>: the review-folding match can join different obligations whose names share generic words (e.g. a firm's "Model risk assessment" would absorb "Vendor risk assessment").</li>
+  <li><strong>N7 — Minor (G).</strong> <code>RegisterView.tsx:98-108</code>: the plain export message states the file was saved as fact; browsers can block downloads.</li>
+  <li><strong>N8 — Minor (E).</strong> <code>RegisterView.tsx:158-172</code>: the backup button has no double-click guard.</li>
+  <li><strong>N9 — Minor (B).</strong> <code>vite-env.d.ts</code>: the comment cites an assertion in <code>handoff.test.ts</code> that does not exist; <code>register.ts:185</code> names a function that was renamed.</li>
+</ul>
+<p>Test gaps noted alongside: the import double-click guard (<code>importInFlight</code>) and the register-write-failure path have no test.</p>
+
+<p><strong>Owner disposition (2026-09-28): "Fix all 9".</strong> Fix round 2 of the review's maximum 3 follow; each fix lands with a test that reproduces the problem first, then a final re-check of the changed code.</p>
+<p><em>Verdict: recorded after fix round 2 and its re-check.</em></p>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main></body></html>

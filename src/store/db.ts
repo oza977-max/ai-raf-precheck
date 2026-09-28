@@ -3,6 +3,51 @@ import type { AuditEvent, RegisterNode, RegisterEdge } from './types';
 
 // Rule 3 (cross-cutting.md §7): persistence-only, no evaluation logic, no LLM, no React.
 
+// code-review-005 F5/F16/F17/F18. Both audit.ts and register.ts need the
+// same shape of protection around their own store's writes: same-tab calls
+// serialised (so a read-then-write, or a backup-then-replace, cannot have
+// another write from the SAME store land in the middle of it), and, where
+// the browser supports it, a second TAB doing the same kind of operation
+// locked out too. db.ts is the one module both already depend on, so the
+// factory lives here rather than being copy-pasted into each — one
+// implementation, two independently-named locks (audit and register are
+// different IndexedDB databases; a lock over one must never block the
+// other). Feature-detected: jsdom (this project's test environment) has no
+// navigator.locks, so it silently falls back to same-tab-only queuing there
+// — every test still passes, just without the cross-tab guarantee jsdom
+// cannot exercise anyway.
+type Enqueue = <T>(fn: () => Promise<T>) => Promise<T>;
+
+export function createWriteQueue(lockName: string): Enqueue {
+  let queue: Promise<unknown> = Promise.resolve();
+
+  function withCrossTabLock<T>(fn: () => Promise<T>): Promise<T> {
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    if (locks) {
+      // lib.dom.d.ts types LockGrantedCallback<T> as `(lock) => T`, not
+      // `T | PromiseLike<T>` — it does not model the real API's behaviour of
+      // awaiting a thenable return value before resolving request()'s own
+      // promise. Without this cast TS infers T as `Promise<Inner>` and
+      // double-wraps the return type as `Promise<Promise<Inner>>`; the cast
+      // is compile-time only; the runtime value is still fn()'s promise,
+      // which every implementation of this API does await.
+      return locks.request(lockName, () => fn() as unknown as T);
+    }
+    return fn();
+  }
+
+  const enqueue: Enqueue = (fn) => {
+    const result = queue.then(() => withCrossTabLock(fn), () => withCrossTabLock(fn));
+    queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
+
+  return enqueue;
+}
+
 interface AuditDbSchema extends DBSchema {
   audit_events: {
     key: string;
@@ -57,7 +102,7 @@ export function openRegisterDb(): Promise<IDBPDatabase<RegisterDbSchema>> {
   return registerDbPromise;
 }
 
-// TEST-ONLY (RG-6 hand-off tests). Simulating a hand-off between two machines
+// TEST-ONLY (RG-8 hand-off tests). Simulating a hand-off between two machines
 // in one process requires wiping both IndexedDB databases and dropping the
 // cached connections so the next open() rebuilds a fresh, empty store — the
 // stand-in for "a different laptop". Not part of any runtime path; named to

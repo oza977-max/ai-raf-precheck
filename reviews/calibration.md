@@ -34,6 +34,7 @@ against.
 | 4 | 2026-08-31 | design | A,C,D,E, + Panel G fanned out one sub-panel per screen (9 screens) — 13 panels total (no B/F) | 10 | 14 | 8 | **Build with caveats** (app-wide narrative flow — same audience-hospitality lens applied to every screen outside the already-fixed verdict screen; owner asked "look at all screens with same lens"; strongest signal is 3-panel convergence [A+C+D] that the round-3 fix — Fold, NF-11 — was built as a one-screen patch, not a reusable house convention, and did not propagate; triage pending) |
 | 3 | 2026-08-31 | explore | persona demo (founder/skeptical-banker/consultant roleplay, grounded in live site content) | 1 | 2 | 1 | 4 findings — audit trail not tamper-evident (Critical), Track/Tier never mapped to a real bank's committees + coverage-gap queue no visibility (Important), margin-of-safety uncalibrated (Minor); owner chose fix-everything, including the item the consultant flagged as future-phase infra |
 | 4 | 2026-08-31 | explore | confirmation, same persona, no founder present | 0 | 0 | 1 obs | 3 of 4 findings confirmed CLOSED by direct inspection (live chain-integrity check, in-product governance mapping, honest calibration wording); 1 observation — completion tracking remains a stated, accepted V1 limitation, not silently missing |
+| 5 | 2026-09-28 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 8 | 14 | 7 | **Pending — owner chose fix-all (29/29); fix round 1 re-review: 27/29 verified, 9 new (4C/2I/3M), owner fix-all again** (pre-release gate for v1.0.0, range 7a82346..HEAD, 6 commits/41 files: hand-off bundle + control attestation + traceability tests. 72 raw → 29 de-duplicated + 3 observations. Dual review: 9 of 22 C+I reported by ≥1 blind panel, 3 blind-only (F7 spec/guard-test contradiction, F17 cross-tab register writes, F19 dropped attestation). Verdict recorded after the fix pass is re-reviewed) |
 
 ## Round 1 measurements
 
@@ -606,6 +607,69 @@ Future design reviews of newly-added screens should check reusable
 patterns (Fold, NF-11's gloss discipline) as part of Panel A's
 requirements-coverage pass by default, not wait for a dedicated
 app-wide round to discover the drift.
+
+## Code review round 5 (2026-09-28) — hand-off bundle + control attestation, pre-v1.0.0 gate
+
+**Scope and shape.** 6 commits / 41 files since code-review-004. 13 panels (A–E, G, each
+calibrated + blind; F mechanical). Strict criterion. EBT linter 0; stub detection 0.
+72 raw findings → 29 after de-duplication (8 C / 14 I / 7 M) + 3 observations. Owner
+disposition: fix all 29 before tagging v1.0.0.
+
+**Where the defects clustered.** 20 of 22 C+I findings sit in the hand-off import — code
+built in one session, tested only through its store API with well-formed synthetic
+bundles, and never through its UI. The attestation write path itself came through clean.
+Lesson: a feature that reads a FILE FROM ANOTHER PERSON is an input boundary, and was
+built as if it were an internal call (outer-shape zod check, `.passthrough()` inside).
+
+**Anchor examples:**
+- Worst, honesty (G, both twins): "The bundle is sealed: any change in transit is detected"
+  over an unkeyed SHA-256 anyone can recompute — the product's own NF-2 "tamper-evident,
+  not tamper-proof" discipline was applied to the local trail and forgotten for the new
+  surface. Same class: "a backup was downloaded first", asserted whether or not it was.
+- Worst, logic (C both, B both, G both — 6 panels): replace proceeds after a swallowed
+  backup failure. Highest-convergence finding of any code round so far.
+- Worst, traceability (A both, D both, G blind): features labelled with requirement ids
+  that already mean something else (RG-6/RG-7) — invisible to trace-check, which only
+  reads TC ids. A mechanical check covers only the id namespace it was written for.
+- Best, blind-only: F7 — the audit spec and its guard test still assert "no clear"; the
+  guard is a keyword blocklist the new `replaceAllRawEvents` name evades. A blocklist
+  test cannot guard an allowlist invariant.
+- Best, concurrency (E calibrated): the prefix check reads outside the write queue it
+  feeds — the write-queue docstring guaranteed append-vs-append only, and the new
+  read-then-write path silently fell outside that guarantee.
+
+**Recurring:**
+- **RF-3 (new-vocabulary propagation) — second consecutive round.** The new "attested"
+  tier reached WhatToDo and SignOffChecklist but not the evidence-status panel (F8), and
+  "in place" was reused for a different aggregate (F11). One more round → build check.
+- **NEW candidate RF-5 — a claim about a safety mechanism stated unconditionally in copy.**
+  F1, F2, F14 (and the diverged message). Watch next round.
+- **NEW candidate RF-6 — an import/file boundary validated at the outer shape only.**
+  F3, F4, F13, F20.
+
+**Self-caught this session, recorded for honesty:** the chair's own trace-check (written
+the same day) under-counted range-notation rows — found by Panel C (F22); the individual
+cases were verified tested by grep before inclusion.
+
+**Fix round 1 re-review (same day, panels B, C, E, G, strict).** 27 of 29 verified fixed;
+F6 and F16 partly closed. 9 NEW findings in the fix code itself (4 C / 2 I / 3 M), all
+around the hand-off replace and the review-folding helper. Owner: "Fix all 9" (round 2 of 3).
+- **RF-5 confirmed (second sighting within one round):** the round-1 fix added a new
+  unconditional safety claim — "Your previous register is in the backup file you saved" —
+  while the two-step flow it introduced opened a window (sign off a case between backup and
+  replace, same tab) in which that claim is false (N2), and a catch-all suffix "your
+  register was not changed" after the audit trail had in fact been replaced (N1, 2 panels).
+  Lesson: every message on a destructive path must be derived from what actually happened,
+  never appended as a fixed sentence.
+- **New anchor, concurrency (E):** a queue added to fix one race (F17) made a second
+  ordering DETERMINISTIC — a register-queued step awaiting the audit queue — reproduced in a
+  standalone harness (N3). Lesson: never wait on another store's queue while holding one.
+- **RF-6 recurs inside its own fix:** import validation tightened every event field except
+  the nested verdict's `confidence_caveats`, which a downstream reader dereferences (N4).
+  Validate what consumers read, not what the schema author thought of.
+- **Chair's own addition caught by a panel:** the "same check under another name" helper,
+  tightened by the chair to ≥2 significant words, is still a subset match (N6) — equality of
+  word sets is the defensible rule.
 
 ## Explore rounds 3-4 (2026-08-31) — persona demo, then confirmation
 

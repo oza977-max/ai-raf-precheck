@@ -123,12 +123,14 @@ This is the loop a real bank runs, and the newest part of the product.
    evidence note (a made-up ticket number is fine).
 2. Register → **Export hand-off bundle**. Send the file to the other tester.
 3. **Reviewer** (2LoD, *their* browser): Register → **Import hand-off
-   bundle**. The first time, it will say the two histories differ — every
-   browser seeds its own demo cases, so that's expected. Click **Back up
-   mine, then replace with this bundle**: your old register downloads as a
-   backup, then the submitter's arrives with its full history. Check the
-   attested control reads *attested (not verified)*, not *in place*. Sign
-   it off with your name. Export a bundle and send it back.
+   bundle**. The first time, it will say the two histories are different —
+   every browser seeds its own demo cases, so that's expected here. Click
+   **Save a backup of mine first** (a backup file downloads — browsers can
+   sometimes block this, so it asks you to confirm it saved), then click
+   **I have my backup — replace my register**: the submitter's register
+   arrives with its full history. Check the attested control reads
+   *attested — not verified*, not *in place*. Sign it off with your name.
+   Export a bundle and send it back.
 4. **Submitter**: import the reviewer's bundle. It should merge cleanly —
    two new events, the sign-off and the stage change — with no replace
    prompt.
@@ -136,7 +138,7 @@ This is the loop a real bank runs, and the newest part of the product.
 Things worth trying to break: open the bundle in a text editor, change one
 word, and import it — it must refuse. Or have the submitter keep working on
 the case while the reviewer has it — the return import must refuse to merge
-two diverged histories rather than quietly picking one (deliberate; see
+two different histories rather than quietly picking one (deliberate; see
 Known gaps).
 
 ### 4. Look at the rules
@@ -172,11 +174,20 @@ testing impossible.
 
 - **No accounts or identity.** The role switch is a dropdown.
 - **Sharing is by file, one side at a time.** Testers swap registers with
-  the hand-off bundle — no live shared copy. If *both* of you change the
-  case between swaps, the histories have forked and the import refuses to
-  merge them. That is deliberate — it will not guess which one to keep. The
-  way out is the explicit **replace** button, which backs up your register
-  first; nothing is ever overwritten silently.
+  the hand-off bundle — no live shared copy. On import the app re-checks
+  every entry: accidental damage or a simple edit is caught and the import
+  refuses. It can't prove who made the file — anyone holding it could
+  rebuild it to pass these checks — so exchange bundles only with people
+  you trust, by a route you trust. (The same limit the audit trail states
+  for itself: tamper-evident, not tamper-proof.) If *both* of you change
+  the case between swaps, the histories are now different and the import
+  refuses to merge them — a first-time difference is normal (every browser
+  seeds its own demo cases), but a later one is shown as a warning to check
+  with the sender. That is deliberate — it will not guess which one to
+  keep. The way out is the two-step **replace**: **Save a backup of mine
+  first** (a backup file downloads — browsers can block this, so it asks
+  you to confirm it saved), then **I have my backup — replace my
+  register**; nothing is ever overwritten without that confirmation.
 - **The audit trail is tamper-evident, not tamper-proof.** Each entry is
   chained to the one before it, so an edited or deleted entry shows as a
   break. But it lives in your browser, and someone who rewrote *every*
@@ -184,7 +195,7 @@ testing impossible.
   server-held store.
 - **Attested is not verified.** When someone attests a control is in place,
   AIGate records their claim and their evidence note — it does not check
-  the evidence. That's why it reads *attested (not verified)*, and is
+  the evidence. That's why it reads *attested — not verified*, and is
   counted separately from machine-verified controls.
 - **Jurisdiction packs are unadopted.** The EU AI Act and SS1/23 rules
   haven't been signed off by Legal or Compliance, so verdicts that depend on

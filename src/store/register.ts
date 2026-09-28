@@ -1,4 +1,4 @@
-import { openRegisterDb } from './db';
+import { openRegisterDb, createWriteQueue } from './db';
 import { append, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
 import { isVerdictProvisional } from '../engine/provisional';
@@ -9,14 +9,30 @@ import type { PolicyFile, ProcessingNode } from '../engine/types';
 // Repository pattern (Fowler) — this is the only module that reaches into
 // aigate-register's IndexedDB stores directly.
 
-export async function addNode(node: RegisterNode): Promise<void> {
-  const db = await openRegisterDb();
-  await db.add('register_nodes', node);
+// code-review-005 F17. A whole-register replace/import (the hand-off path)
+// was not serialised against the OTHER functions in this file that also
+// write register_nodes/register_edges — two independently-created IndexedDB
+// transactions on the same store race on their RELATIVE order, so e.g. a
+// plain addNode() mid-replace could either be silently wiped by the
+// replace's clear() or land after it and survive, depending on timing.
+// Every write below (and exportAll's read, for F18) goes through this one
+// queue; db.ts's factory also takes a named cross-tab lock where the
+// browser supports it, so a second TAB writing the register is serialised
+// too — not just this tab's own concurrent calls.
+const enqueueRegister = createWriteQueue('aigate-register-write');
+
+export function addNode(node: RegisterNode): Promise<void> {
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    await db.add('register_nodes', node);
+  });
 }
 
-export async function addEdge(edge: RegisterEdge): Promise<void> {
-  const db = await openRegisterDb();
-  await db.add('register_edges', edge);
+export function addEdge(edge: RegisterEdge): Promise<void> {
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    await db.add('register_edges', edge);
+  });
 }
 
 // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md §16). Consumes the
@@ -28,40 +44,42 @@ export async function addEdge(edge: RegisterEdge): Promise<void> {
 // the dormancy-repeat guard the fit criteria name. `vendor`/`is_approved`
 // are a snapshot of the policy registry AT WRITE TIME, not a live join —
 // consistent with the append-only discipline elsewhere in the register.
-export async function addUseCaseModelLink(
+export function addUseCaseModelLink(
   useCaseId: string,
   processingNode: ProcessingNode,
   policy: PolicyFile,
 ): Promise<void> {
   const modelId = processingNode.declared_model_id;
-  if (!modelId) return;
+  if (!modelId) return Promise.resolve();
 
-  const db = await openRegisterDb();
-  const modelNodeId = `ai-model-${modelId}`;
-  const existing = await db.get('register_nodes', modelNodeId);
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const modelNodeId = `ai-model-${modelId}`;
+    const existing = await db.get('register_nodes', modelNodeId);
 
-  if (!existing) {
-    const entry = (policy.approved_models ?? []).find((m) => m.model_id === modelId);
-    await db.add('register_nodes', {
-      node_id: modelNodeId,
-      node_type: 'ai_model',
-      label: modelId,
-      created_at: new Date().toISOString(),
-      metadata: {
+    if (!existing) {
+      const entry = (policy.approved_models ?? []).find((m) => m.model_id === modelId);
+      await db.add('register_nodes', {
+        node_id: modelNodeId,
         node_type: 'ai_model',
-        model_id: modelId,
-        vendor: entry?.vendor ?? 'unknown',
-        is_approved: entry?.is_approved ?? false,
-      },
-    });
-  }
+        label: modelId,
+        created_at: new Date().toISOString(),
+        metadata: {
+          node_type: 'ai_model',
+          model_id: modelId,
+          vendor: entry?.vendor ?? 'unknown',
+          is_approved: entry?.is_approved ?? false,
+        },
+      });
+    }
 
-  await db.add('register_edges', {
-    edge_id: crypto.randomUUID(),
-    from_node_id: useCaseId,
-    to_node_id: modelNodeId,
-    edge_type: 'uses_model',
-    created_at: new Date().toISOString(),
+    await db.add('register_edges', {
+      edge_id: crypto.randomUUID(),
+      from_node_id: useCaseId,
+      to_node_id: modelNodeId,
+      edge_type: 'uses_model',
+      created_at: new Date().toISOString(),
+    });
   });
 }
 
@@ -160,68 +178,90 @@ function toSummary(
   };
 }
 
-export async function updateUseCaseVerdictSummary(
+// code-review-005 F17: get-then-put used to be two separate implicit
+// transactions, which let another writer's transaction land in between them
+// — invisible in a single tab (nothing else runs between two `await`s on the
+// same microtask queue... except another async caller of THIS SAME function,
+// or of replaceRegister/importRegister, genuinely can), and a real lost
+// update across two tabs (IndexedDB serialises transactions against the same
+// store even across tabs, so making this ONE transaction closes that gap
+// there too). Also routed through enqueueRegister so it cannot interleave
+// with a whole-register replace/import.
+export function updateUseCaseVerdictSummary(
   useCaseId: string,
   summary: Partial<UseCaseSummary> & { currentVerdictId?: string }
 ): Promise<void> {
-  const db = await openRegisterDb();
-  const node = await db.get('register_nodes', useCaseId);
-  if (!node || node.metadata.node_type !== 'use_case') {
-    throw new Error(`updateUseCaseVerdictSummary(): no use_case node found for ${useCaseId}`);
-  }
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const tx = db.transaction('register_nodes', 'readwrite');
+    const node = await tx.store.get(useCaseId);
+    if (!node || node.metadata.node_type !== 'use_case') {
+      throw new Error(`updateUseCaseVerdictSummary(): no use_case node found for ${useCaseId}`);
+    }
 
-  const updatedNode: RegisterNode = {
-    ...node,
-    metadata: {
-      ...node.metadata,
-      tier: summary.tier ?? node.metadata.tier,
-      track: summary.track ?? node.metadata.track,
-      // currentVerdictId (P5-C01, verdict-audit.md §6.2) — a correction
-      // must point the register at the NEW verdict, not the original.
-      current_verdict_id: summary.currentVerdictId ?? node.metadata.current_verdict_id,
-    },
-  };
+    const updatedNode: RegisterNode = {
+      ...node,
+      metadata: {
+        ...node.metadata,
+        tier: summary.tier ?? node.metadata.tier,
+        track: summary.track ?? node.metadata.track,
+        // currentVerdictId (P5-C01, verdict-audit.md §6.2) — a correction
+        // must point the register at the NEW verdict, not the original.
+        current_verdict_id: summary.currentVerdictId ?? node.metadata.current_verdict_id,
+      },
+    };
 
-  await db.put('register_nodes', updatedNode);
+    await tx.store.put(updatedNode);
+    await tx.done;
+  });
 }
 
 // register-lifecycle.md §6: both writes (node update + audit append) happen in
-// the same async call. They are not wrapped in a transaction — partial write
-// risk is an acknowledged V1 limitation.
-export async function updateLifecycleStage(
+// the same async call. They are not wrapped in a transaction TOGETHER —
+// partial write risk between the register and the audit trail is an
+// acknowledged V1 limitation (unchanged by this round; see code-review-005
+// F6, which is scoped to the hand-off import/replace path only). What DID
+// change here (F17): the register's own get-then-put is now one transaction,
+// queued against every other register writer, so a concurrent replace/import
+// or another lifecycle change cannot land between the read and the write.
+export function updateLifecycleStage(
   useCaseId: string,
   stage: LifecycleStage,
   actor: string
 ): Promise<void> {
-  const db = await openRegisterDb();
-  const node = await db.get('register_nodes', useCaseId);
-  if (!node || node.metadata.node_type !== 'use_case') {
-    throw new Error(`updateLifecycleStage(): no use_case node found for ${useCaseId}`);
-  }
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const tx = db.transaction('register_nodes', 'readwrite');
+    const node = await tx.store.get(useCaseId);
+    if (!node || node.metadata.node_type !== 'use_case') {
+      throw new Error(`updateLifecycleStage(): no use_case node found for ${useCaseId}`);
+    }
 
-  const fromStage = node.metadata.lifecycle_stage;
+    const fromStage = node.metadata.lifecycle_stage;
 
-  const updatedNode: RegisterNode = {
-    ...node,
-    metadata: {
-      ...node.metadata,
-      lifecycle_stage: stage,
-    },
-  };
+    const updatedNode: RegisterNode = {
+      ...node,
+      metadata: {
+        ...node.metadata,
+        lifecycle_stage: stage,
+      },
+    };
 
-  await db.put('register_nodes', updatedNode);
+    await tx.store.put(updatedNode);
+    await tx.done;
 
-  await append({
-    event_id: crypto.randomUUID(),
-    use_case_id: useCaseId,
-    event_type: 'lifecycle_stage_changed',
-    occurred_at: new Date().toISOString(),
-    actor,
-    payload: {
-      type: 'lifecycle_stage_changed',
-      from_stage: fromStage,
-      to_stage: stage,
-    },
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'lifecycle_stage_changed',
+      occurred_at: new Date().toISOString(),
+      actor,
+      payload: {
+        type: 'lifecycle_stage_changed',
+        from_stage: fromStage,
+        to_stage: stage,
+      },
+    });
   });
 }
 
@@ -247,12 +287,32 @@ export async function getUseCases(
     (node): node is RegisterNode & { metadata: { node_type: 'use_case' } } => node.node_type === 'use_case'
   );
 
-  return Promise.all(
+  // code-review-005 F3: one malformed row (pre-dating this round's import
+  // validation, or written by some other path) used to throw inside
+  // Promise.all and freeze the ENTIRE list on "Loading…" forever, with the
+  // bad row left in IndexedDB and no in-app recovery. Promise.allSettled +
+  // a per-row catch means a single unreadable node is skipped and logged,
+  // not fatal to every other row a user needs to see.
+  const settled = await Promise.allSettled(
     useCaseNodes.map(async (node) => {
       const auditEvents = await getAuditEvents(node.node_id);
       return toSummary(node, auditEvents, currentPolicyVersion, samplingRate);
     })
   );
+
+  const summaries: UseCaseSummary[] = [];
+  for (let i = 0; i < settled.length; i++) {
+    const result = settled[i]!;
+    if (result.status === 'fulfilled') {
+      summaries.push(result.value);
+    } else {
+      console.error(
+        `getUseCases(): skipping unreadable register row ${useCaseNodes[i]!.node_id} —`,
+        result.reason,
+      );
+    }
+  }
+  return summaries;
 }
 
 export async function getUseCase(
@@ -323,41 +383,63 @@ export async function getBlastRadius(componentNodeId: string): Promise<RegisterN
   return nodes;
 }
 
-export async function exportAll(): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }> {
-  const db = await openRegisterDb();
-  const nodes = await db.getAll('register_nodes');
-  const edges = await db.getAll('register_edges');
-  return { nodes, edges };
+// code-review-005 F18: routed through the SAME queue as every writer above,
+// so exportAll() cannot observe a torn mid-write state (e.g. a replace's
+// clear() having run on register_nodes but not yet on register_edges).
+// handoff.ts's exportBundle() calls this and audit.getAllForExport()
+// separately — each is now clean WITHIN its own store, which is the
+// strongest guarantee possible without a single transaction spanning two
+// separate IndexedDB databases (not something idb/IndexedDB supports).
+export function exportAll(): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }> {
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const nodes = await db.getAll('register_nodes');
+    const edges = await db.getAll('register_edges');
+    return { nodes, edges };
+  });
 }
 
-// HAND-OFF IMPORT (RG-6, store/handoff.ts). Upsert (db.put): for a use case
+// HAND-OFF IMPORT (RG-8, store/handoff.ts). Upsert (db.put): for a use case
 // present in an incoming bundle, the bundle's node/edge state WINS. This is
 // safe because the register is DERIVED presentation state (verdict summary,
 // lifecycle stage) — the tamper-evident source of truth is the audit trail,
 // whose prefix-safety handoff.ts has already established before this runs.
 // If the reviewer advanced a lifecycle stage or recorded a verdict summary,
 // their bundle carries the newer node, and adopting it is exactly right.
-// HAND-OFF REPLACE ONLY — see audit.replaceAllRawEvents.
-export async function replaceRegister(
+export function importRegister(
   nodes: readonly RegisterNode[],
   edges: readonly RegisterEdge[],
 ): Promise<void> {
-  const db = await openRegisterDb();
-  const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
-  await tx.objectStore('register_nodes').clear();
-  await tx.objectStore('register_edges').clear();
-  for (const n of nodes) await tx.objectStore('register_nodes').put(n);
-  for (const e of edges) await tx.objectStore('register_edges').put(e);
-  await tx.done;
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
+    for (const n of nodes) await tx.objectStore('register_nodes').put(n);
+    for (const e of edges) await tx.objectStore('register_edges').put(e);
+    await tx.done;
+  });
 }
 
-export async function importRegister(
+// HAND-OFF REPLACE ONLY (store/handoff.ts replaceWithBundle; see
+// audit.backupAndReplaceAllRawEvents for the matching audit-side primitive
+// and the F16 rationale). Reads the current register (the backup a caller
+// must hand the user before this destroys it), then clears and installs
+// `nodes`/`edges`, in ONE transaction inside ONE queued turn — so a
+// concurrent addNode/addEdge/updateLifecycleStage/etc. cannot land between
+// "read what's about to be discarded" and "discard it".
+export function backupAndReplaceRegister(
   nodes: readonly RegisterNode[],
   edges: readonly RegisterEdge[],
-): Promise<void> {
-  const db = await openRegisterDb();
-  const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
-  for (const n of nodes) await tx.objectStore('register_nodes').put(n);
-  for (const e of edges) await tx.objectStore('register_edges').put(e);
-  await tx.done;
+): Promise<{ nodes: RegisterNode[]; edges: RegisterEdge[] }> {
+  return enqueueRegister(async () => {
+    const db = await openRegisterDb();
+    const tx = db.transaction(['register_nodes', 'register_edges'], 'readwrite');
+    const discardedNodes = await tx.objectStore('register_nodes').getAll();
+    const discardedEdges = await tx.objectStore('register_edges').getAll();
+    await tx.objectStore('register_nodes').clear();
+    await tx.objectStore('register_edges').clear();
+    for (const n of nodes) await tx.objectStore('register_nodes').put(n);
+    for (const e of edges) await tx.objectStore('register_edges').put(e);
+    await tx.done;
+    return { nodes: discardedNodes, edges: discardedEdges };
+  });
 }

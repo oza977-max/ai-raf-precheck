@@ -311,6 +311,12 @@ requirement and a schema change, not a bug fix.
 
 > Fit criterion: Export produces a complete snapshot of the register at the time of export, with all fields included.
 
+**RG-8 (Should):** The register and its audit trail shall be transferable between two installations as a single file. Import shall re-verify every audit entry and the file's seal, shall merge only when one history continues the other, shall otherwise offer a user-confirmed replace that requires a saved backup first, and shall never overwrite silently. The product shall state that these checks detect damage and simple edits but cannot prove who made the file.
+
+**RG-9 (Should):** A reviewer shall be able to record, against the current verdict, that a required control is in place, with their name and an evidence note. The attestation shall be shown as a human claim — "attested — not verified" — never as machine-verified, and shall be counted separately from machine-verified evidence.
+
+**Amended 2026-09-28 (code review 005).** RG-8 (hand-off bundle) and RG-9 (control-evidence attestation) were first built and committed under the labels "RG-6" and "RG-7" (commits `b484d83` and `6023103`). Those labels collided with the existing, unrelated RG-6 (blast-radius queries) and RG-7 (periodic sampling cadence) defined above — both V2+, neither built. The code has been relabelled to RG-8/RG-9 to match this entry; the two commit messages are permanent history and keep the old labels.
+
 ---
 
 ### OB — Observed Reality Binding
@@ -656,6 +662,8 @@ against its own quote. **Do not reinstate the confidence score.**
 | RG-5 | Register | Export CSV/JSON | Could | **V1** |
 | RG-6 | Register | Blast-radius queries | Should | V2+ |
 | RG-7 | Register | Periodic sampling cadence | Should | V2+ |
+| RG-8 | Register | Hand-off bundle (import/export) | Should | **V1** |
+| RG-9 | Register | Control-evidence attestation | Should | **V1** |
 | CF-1 | Configuration | YAML policy file | Must | **V1** |
 | CF-2 | Configuration | Starter config pre-loaded | Must | **V1** |
 | CF-3 | Configuration | Policy file versioning | Must | **V1** |
