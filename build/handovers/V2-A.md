@@ -45,7 +45,7 @@ compat; noted in code; pack authors must check names at authoring).
 ## Confidentiality scrub + history rewrite (same push)
 
 User flagged internal figures in the repo. Actions taken:
-- Verified "the employer" appears NOWHERE (tree, full history, memory).
+- Verified the employer's name appears NOWHERE (tree, full history, memory).
 - Replaced all question-count figures (the 250/300 family) with
   street-generic wording ("hundreds of questions",
   "multi-hundred-question") in README + requirements (.md and .html),

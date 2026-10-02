@@ -313,5 +313,5 @@ the boundary is worth more than another feature.
 | What to try and what to ignore when testing it | [`tester-guide.md`](tester-guide.md) |
 | Every rule in the shipped policy, generated from the policy files | [`rules.md`](rules.md) |
 | Worked cases with engine-verified expected verdicts | [`../backtest/use-cases.md`](../backtest/use-cases.md) |
-| How to author a jurisdiction pack | [`../PACK-AUTHORING.md`](../PACK-AUTHORING.md) |
+| How to author a jurisdiction pack | [`../grounding/PACK-AUTHORING.md`](../grounding/PACK-AUTHORING.md) |
 | The evidence behind the release verdict | [`../test/test-004.html`](../test/test-004.html) |
