@@ -84,7 +84,7 @@ autonomy-level alone:**
 > when using the production ChatGPT harness and system prompt." — S1, p.19
 
 **Independent confirmation the agents attacked their own oversight
-mechanism** (directly relevant — this is the exact failure class AIGate's
+mechanism** (directly relevant — this is the exact failure class Counterpoise's
 own hash-chained audit trail, built earlier this session, is designed to
 make detectable rather than invisible):
 
@@ -103,7 +103,7 @@ incident) mitigation recommendations, corroborating the shape of fix:**
 
 ---
 
-## 3. What this means for AIGate's schema — the actual gap
+## 3. What this means for Counterpoise's schema — the actual gap
 
 HL-006 (`policy/appetite.yaml`) requires `model_type: agentic`,
 `autonomy_level: {gte: 4}`, `decision_bindingness: binding`. The incident's
@@ -111,14 +111,14 @@ risk shape does not cleanly satisfy this condition even though it is
 obviously the kind of thing a bank's AI risk appetite should catch:
 
 - There was no single "binding decision" — the harm was **infrastructure
-  compromise via inter-agent coordination**, a dimension AIGate's schema
+  compromise via inter-agent coordination**, a dimension Counterpoise's schema
   does not currently have a field for at all (not `decision_type`, not
   `autonomy_level` — a wholly separate axis).
-- AIGate's intake form (`src/components/IntakeFlow.tsx`) asks about a single
+- Counterpoise's intake form (`src/components/IntakeFlow.tsx`) asks about a single
   AI system in isolation. It has no question about whether the system is
   one of several instances that can communicate with each other or share
   infrastructure — which S1 and S2 both identify as the actual mechanism.
-- AIGate's intake form has no question about **scope of system/credential
+- Counterpoise's intake form has no question about **scope of system/credential
   access** (what can this AI reach and touch), distinct from data
   sensitivity (already asked) and autonomy level (already asked).
 
@@ -196,7 +196,7 @@ would be over-broad. This is a genuine design decision, not a details gap.
 ## 4. What is NOT proposed here
 
 - No change to `policy/appetite.yaml`. Nothing in this document is in force.
-- No claim that AIGate's engine currently under- or over-approves any real
+- No claim that Counterpoise's engine currently under- or over-approves any real
   use case — the schema simply cannot express this risk shape yet.
 - No independent verification of S4–S10 from the owner's original source
   list (Dwarkesh, HF's own timeline, Recorded Future, Simon Willison, Ajeya

@@ -8,7 +8,7 @@ import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
-// register-lifecycle.md §9 (LC-6). AIGate must appear in its own register
+// register-lifecycle.md §9 (LC-6). Counterpoise must appear in its own register
 // with a real, self-produced verdict — not a fixture.
 export const AIGATE_USE_CASE_ID = 'aigate-self-assessment';
 const AIGATE_VENDOR_NODE_ID = 'aigate-vendor-anthropic';
@@ -32,7 +32,7 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
   processing_nodes: [
     {
       id: 'proc-1',
-      label: 'AIGate evaluation engine + LLM graph extraction (Anthropic Claude)',
+      label: 'Counterpoise evaluation engine + LLM graph extraction (Anthropic Claude)',
       model_type: 'llm',
       autonomy_level: 1,
       data_zone: 'Zone B',
@@ -62,7 +62,7 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
   ],
 };
 
-// BC-P7C01-02: idempotent — a no-op if AIGate's own node already exists,
+// BC-P7C01-02: idempotent — a no-op if Counterpoise's own node already exists,
 // regardless of what else is in the register or how many times this is
 // called (drift fix #2, build/prompts/P7-C01.md).
 //
@@ -77,7 +77,7 @@ let inFlight: Promise<void> | null = null;
 
 // O-002 (charter 005). The duplicate check reads the register while this
 // seeding is still in flight, and can report "checked 0 register entries"
-// moments before the AIGate self-assessment appears — stating a count the
+// moments before the Counterpoise self-assessment appears — stating a count the
 // product has not established, which is an NF-2 honesty problem rather than a
 // timing nit.
 //
@@ -123,14 +123,14 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
   if (existing) return;
 
   // P8-C04, review pass 2. This evaluated with NO packs while the graph
-  // declares jurisdictions: ['UK'] — so AIGate's own self-assessment was
+  // declares jurisdictions: ['UK'] — so Counterpoise's own self-assessment was
   // scored without the UK pack it says applies to it. Harmless-looking until
   // this chunk made the consequence visible: the row would read Provisional
   // for "no regulatory basis", which is a false statement about a use case
   // that named its jurisdiction. Pre-existing gap from P7-C01.
   const evalResult = evaluate(AIGATE_USE_CASE_GRAPH, policy, packs);
   if (!evalResult.ok) {
-    throw new Error(`AIGate self-assessment failed: ${evalResult.error.kind}`);
+    throw new Error(`Counterpoise self-assessment failed: ${evalResult.error.kind}`);
   }
   const result = evalResult.value;
 
@@ -184,7 +184,7 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
   await addNode({
     node_id: AIGATE_USE_CASE_ID,
     node_type: 'use_case',
-    label: 'AIGate (self-assessment)',
+    label: 'Counterpoise (self-assessment)',
     created_at: now,
     metadata: {
       node_type: 'use_case',

@@ -337,8 +337,8 @@ describe('RG-8 hand-off bundle — import validation at the boundary (code-revie
     const fromTheFuture = { ...bundle, format_version: 999 };
     const result = await importBundle(fromTheFuture);
     expect(result.outcome).toBe('invalid_format');
-    expect(result.message).toMatch(/different version of AIGate/i);
-    expect(result.message).not.toBe('This file is not an AIGate hand-off bundle.');
+    expect(result.message).toMatch(/different version of Counterpoise/i);
+    expect(result.message).not.toBe('This file is not an Counterpoise hand-off bundle.');
   });
 
   it('replaceWithBundle applies the same validation as importBundle (a malformed bundle cannot be replaced in either)', async () => {

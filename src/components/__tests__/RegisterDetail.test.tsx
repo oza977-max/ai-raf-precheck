@@ -284,7 +284,7 @@ describe('RegisterDetail — the two states where no verdict can be shown (R3-RD
     await seed(id, null);
     renderDetail(id);
 
-    // The seeded AIGate self-assessment is the real case on every install.
+    // The seeded Counterpoise self-assessment is the real case on every install.
     expect(await screen.findByText(/no verdict is recorded/i)).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: /verdict/i })).not.toBeInTheDocument();
   });
@@ -297,7 +297,7 @@ describe('RegisterDetail — the two states where no verdict can be shown (R3-RD
     await seed(id, null);
     renderDetail(id);
 
-    // The seeded AIGate self-assessment is the real case on every install.
+    // The seeded Counterpoise self-assessment is the real case on every install.
     // Blocking sign-off would strand it; the honest position is to let the
     // reviewer act while telling them plainly what the record contains.
     expect(await screen.findByText(/no verdict is recorded/i)).toBeInTheDocument();

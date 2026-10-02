@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -16.5 68 68">
+  <title>Counterpoise</title>
+  <style>
+    .ink { fill: #1c1b18; }
+    .gold { fill: #b8934a; }
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #f5f0e8; }
+      .gold { fill: #d3b271; }
+    }
+  </style>
+  <rect class="gold" x="1.8" y="7.1" width="8.4" height="6.6" />
+  <circle class="ink" cx="57" cy="7.3" r="7.1" />
+  <rect class="ink" x="0.6" y="13.7" width="64.8" height="2.4" />
+  <polygon class="ink" points="46.2,16.6 40.2,30.6 52.2,30.6" />
+  <rect class="ink" x="35.4" y="32.3" width="21.6" height="1.8" />
+</svg>

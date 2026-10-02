@@ -1,4 +1,4 @@
-# AIGate — Verdict & Audit Specification
+# Counterpoise — Verdict & Audit Specification
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -672,7 +672,7 @@ changed while they were reading, rather than silently attesting to the new one.
 ## 14. Round 10 — Speaking the Reviewer's Language (R10)
 
 Spec for `requirements/requirements-010.md`. Standard 2LoD concepts in
-AIGate's own design language; no engine decision change anywhere.
+Counterpoise's own design language; no engine decision change anywhere.
 
 **ADR-VA-R10-1 — the memo is presentation, generated from persisted
 data, writing nothing.** `src/components/challenge-memo.ts` (Rule 4:
@@ -731,7 +731,7 @@ the enforced ruleset, not a paraphrase (Power's audit-ritual risk, A-5).
 
 ## 16. Hand-off Bundle — Submitter/Reviewer Transfer (RG-8)
 
-AIGate's whole value depends on a SUBMITTER and a REVIEWER being different
+Counterpoise's whole value depends on a SUBMITTER and a REVIEWER being different
 people, but V1 runs entirely in one browser with no server and no shared
 database — "1LoD" and "2LoD" were, until this feature, just a role toggle on
 one machine. The hand-off bundle (`src/store/handoff.ts`) lets the register
@@ -773,7 +773,7 @@ This is an **unkeyed** hash — no secret, no external anchor. What it catches: 
 
 `importBundle` and `replaceWithBundle` share one `validateBundle` step that runs, in order, before either function touches a store:
 
-1. **Envelope check first.** `format`/`format_version` are checked before the full schema, so an unsupported version gets its own honest message — "This hand-off file was made by a different version of AIGate and can't be imported here." — distinct from "This file is not an AIGate hand-off bundle." for a file that is not a bundle at all.
+1. **Envelope check first.** `format`/`format_version` are checked before the full schema, so an unsupported version gets its own honest message — "This hand-off file was made by a different version of Counterpoise and can't be imported here." — distinct from "This file is not an Counterpoise hand-off bundle." for a file that is not a bundle at all.
 2. **Full shape and semantic validation** (`zod`): every timestamp must be a real ISO datetime, not merely a string that looks like one — an unparseable `occurred_at` would otherwise poison the monotonic clock `audit.ts` uses to keep timestamps strictly increasing across a tab session, breaking every later local write until reload (code-review-005 F4); every audit event's `event_type` is one of the known values (§4.3) **and** matches `payload.type`; each payload variant's own required fields are checked, not just "some object with the right `type`"; every register node's `node_type` matches its `metadata.node_type`, and each metadata variant's own required fields are checked. Round 2 (N4) broadened the load-bearing `Verdict` subset this schema checks: `confidence_caveats`, `controls`, `downstream_reviews`, `conditions`, `margin_achieved`, `margin_target`, `single_covered_invariants`, `boundary_proximity`, non-null `tier`/`track`, `attested_at`, and `living_status` are now all required (and, where present, `explanation`'s own nested shape) — every field `register.ts`'s `toSummary`/`isVerdictProvisional` or `VerdictDisplay`/`RegisterDetail` dereference without a `??`/`?.` guard. A bundle missing `confidence_caveats` used to pass this step, then throw the first time anything read the verdict back — dropping the case from the register list (`getUseCases`'s per-row `Promise.allSettled` skips it) and hanging its own page on "Loading…" forever (`getUseCase`/`RegisterDetail` had no error path). Both now do: `getUseCase`'s rejection is caught by `RegisterDetail`'s `load()` and shown as "This case couldn't be loaded: …", with the way back — defence in depth for a corrupt row from any source, not only a hand-off bundle.
 3. **Duplicate `event_id` values inside one bundle** are rejected by name: "This bundle has more than one event with the id "X" and cannot be imported."
 4. **The seal is recomputed and compared** (§16.2) — a mismatch is reported as `tampered`, not `invalid_format`.

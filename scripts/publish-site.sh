@@ -9,7 +9,7 @@
 # CI + the Actions deploy do this instead of running it directly.
 #
 # Republishes dist/ to the gh-pages branch, which is what
-# https://oza977-max.github.io/ai-raf-precheck/ serves when Pages' source
+# https://oza977-max.github.io/counterpoise/ serves when Pages' source
 # is set to "Deploy from a branch" rather than "GitHub Actions".
 set -euo pipefail
 
@@ -31,4 +31,4 @@ git commit -q -m "build: publish static site
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 git push -q -f origin gh-pages
-echo "Published → https://oza977-max.github.io/ai-raf-precheck/"
+echo "Published → https://oza977-max.github.io/counterpoise/"

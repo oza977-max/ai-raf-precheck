@@ -1,4 +1,4 @@
-# Back-test corpus — AIGate
+# Back-test corpus — Counterpoise
 
 **Purpose.** Establish whether the engine reaches the decisions your governance
 would actually reach. This is the kill-or-continue test from the design
@@ -25,13 +25,13 @@ score.
 
 ## What "historical outcome" means, and what is needed from you
 
-For each case, three columns must be filled **before** you run it in AIGate:
+For each case, three columns must be filled **before** you run it in Counterpoise:
 
 | Column | Meaning | Who supplies it |
 |---|---|---|
-| **Predicted** | What you expect AIGate to say, written before you look | You |
+| **Predicted** | What you expect Counterpoise to say, written before you look | You |
 | **Historical outcome** | What your governance *actually decided* when a use case of this shape went through — approved / approved with conditions / rejected; the tier or model-risk rating assigned; the controls required; any reviews triggered | **You. This cannot be researched.** |
-| **AIGate said** | The verdict the tool produced | The tool |
+| **Counterpoise said** | The verdict the tool produced | The tool |
 
 **"Historical outcome" is the ground truth.** A published article saying a bank
 uses AI for fraud detection tells you the use case exists; it tells you nothing
@@ -299,7 +299,7 @@ Tests: **PV-5** unapproved-component routing.
 
 ## Scoring
 
-For each case record: **Predicted**, **Historical outcome**, **AIGate said**,
+For each case record: **Predicted**, **Historical outcome**, **Counterpoise said**,
 and **Agree?**
 
 Then the only question that matters, for every disagreement:

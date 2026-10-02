@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIGate — Implementation Guide</title>
+  <title>Counterpoise — Implementation Guide</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; -webkit-font-smoothing: antialiased; }
@@ -45,7 +45,7 @@
   </nav>
 
   <main>
-    <h1>AIGate — Implementation Guide</h1>
+    <h1>Counterpoise — Implementation Guide</h1>
     <p class="subtitle">Phase-chunk decomposition, dependency network, wiring matrix, and build phases P1–P7 (16 chunks total)</p>
     <p class="date">June 2026</p>
 
@@ -202,7 +202,7 @@
         </tr>
         <tr>
           <td>P7-C01</td>
-          <td>AIGate self-assessment seed</td>
+          <td>Counterpoise self-assessment seed</td>
           <td>P6-C01, P3-C01, P3-C02, P2-C02</td>
           <td>P7-C02</td>
           <td>—</td>
@@ -322,7 +322,7 @@ REGISTER TRACK
           <td><code>RegisterView.tsx</code> (export)</td>
           <td><code>RegisterStore.exportAll()</code></td>
           <td>P7-C02</td>
-          <td>P7-C01 (AIGate self-assessment test: AIGate entry present in export)</td>
+          <td>P7-C01 (Counterpoise self-assessment test: Counterpoise entry present in export)</td>
         </tr>
         <tr>
           <td><code>onPolicyUpdated()</code></td>
@@ -340,7 +340,7 @@ REGISTER TRACK
           <td><code>aigate-self-assessment.ts</code> (seed)</td>
           <td><code>AIGATE_USE_CASE_GRAPH</code>, <code>evaluate()</code>, <code>AuditStore.append()</code>, <code>RegisterStore.addNode()</code></td>
           <td>P7-C01</td>
-          <td>P7-C01 (self-assessment test: AIGate appears in register with valid verdict)</td>
+          <td>P7-C01 (self-assessment test: Counterpoise appears in register with valid verdict)</td>
         </tr>
         <tr>
           <td><code>PolicyEditor.tsx</code></td>
@@ -773,11 +773,11 @@ REGISTER TRACK
 
     <!-- Phase 7 -->
     <h3 id="phase-7-integration">Phase 7 — Integration &amp; Closure</h3>
-    <p><strong>Goal:</strong> AIGate self-assessment. Export. Spec parity script. Full product startup verification.</p>
+    <p><strong>Goal:</strong> Counterpoise self-assessment. Export. Spec parity script. Full product startup verification.</p>
 
     <div class="chunk">
       <div class="chunk-id">P7-C01</div>
-      <h4>AIGate self-assessment seed (LC-6)</h4>
+      <h4>Counterpoise self-assessment seed (LC-6)</h4>
       <p><strong>Spec reference:</strong> <code>register-lifecycle.md</code> §9<br/>
       <strong>Estimated time:</strong> 2–3 hours<br/>
       <strong>Parallel with:</strong> nothing — depends on P6-C01</p>
@@ -787,13 +787,13 @@ REGISTER TRACK
         <li>Called once on first launch (empty register check)</li>
         <li>Runs real <code>evaluate()</code> against loaded policy</li>
         <li>Inserts use case node, Anthropic vendor node, edges, and verdict event into IndexedDB</li>
-        <li>If AIGate's own verdict is Rejected: UI shows "AIGate does not satisfy its own controls — policy review required" governance alert</li>
+        <li>If Counterpoise's own verdict is Rejected: UI shows "Counterpoise does not satisfy its own controls — policy review required" governance alert</li>
       </ul>
       <h4>Tests</h4>
       <ul>
-        <li><code>TC-LC-4-02</code> — AIGate appears in register with a real verdict</li>
-        <li>AIGate verdict contains policy_version from the current loaded policy</li>
-        <li>Re-evaluation is triggered when policy updates (LC-4 applies to AIGate's use case record)</li>
+        <li><code>TC-LC-4-02</code> — Counterpoise appears in register with a real verdict</li>
+        <li>Counterpoise verdict contains policy_version from the current loaded policy</li>
+        <li>Re-evaluation is triggered when policy updates (LC-4 applies to Counterpoise's use case record)</li>
       </ul>
     </div>
 
@@ -836,7 +836,7 @@ REGISTER TRACK
         <li>Verify <code>workflow-router.ts</code> output drives lifecycle stage update in <code>IntakeFlow.tsx</code> after verdict (P6-C02 deferred to P7)</li>
         <li>Verify <code>stale_assessment</code> badge in <code>RegisterView.tsx</code> correctly computes from audit events (P6-C01 deferred to P7)</li>
         <li>Verify <code>PolicyEditor.tsx</code> triggers <code>onPolicyUpdated()</code> on save (P6-C02 deferred to P7)</li>
-        <li>Verify AIGate self-assessment runs on every first launch (P7-C01 integration check)</li>
+        <li>Verify Counterpoise self-assessment runs on every first launch (P7-C01 integration check)</li>
       </ul>
       <h4>Product startup verification</h4>
       <ol>
@@ -844,7 +844,7 @@ REGISTER TRACK
         <li><code>npm run dev</code> — Vite dev server starts on localhost:5173</li>
         <li>Load default policy (starter config from CF-2)</li>
         <li>Submit the example use case from the requirements walkthrough scenario</li>
-        <li>Verify: verdict produced, reasoning trace generated, use case appears in register, AIGate self-assessment entry present, export produces valid JSON</li>
+        <li>Verify: verdict produced, reasoning trace generated, use case appears in register, Counterpoise self-assessment entry present, export produces valid JSON</li>
         <li><code>python3 scripts/spec-parity-check.py</code> — exits 0</li>
       </ol>
       <p>All smoke tests in this chunk are manual verification steps — they supplement (not replace) the automated test suite.</p>

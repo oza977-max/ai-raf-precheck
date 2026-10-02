@@ -21,7 +21,7 @@ beforeAll(() => {
 });
 
 describe('seedAigateSelfAssessment (TC-LC-4-02)', () => {
-  it('AIGate appears in the register with a real, non-null verdict', async () => {
+  it('Counterpoise appears in the register with a real, non-null verdict', async () => {
     await seedAigateSelfAssessment(policy);
 
     const summary = await getUseCase(AIGATE_USE_CASE_ID);
@@ -94,7 +94,7 @@ describe('seedAigateSelfAssessment (TC-LC-4-02)', () => {
 
 // P8-C04, review pass 3. Every other test here calls the seed with no packs
 // and so relies on the default — meaning the App.tsx wiring could be dropped,
-// or getPackSources() could start returning nothing, and AIGate's own row
+// or getPackSources() could start returning nothing, and Counterpoise's own row
 // would quietly go back to claiming no regulatory basis applied to it while
 // its graph declares a jurisdiction. This asserts the packs actually reach
 // the evaluation.

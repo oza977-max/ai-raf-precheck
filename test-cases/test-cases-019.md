@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 19
+# Counterpoise — Test Cases, Round 19
 
 *Written 2026-10-02. R16 chunks B and C — the plain-language guided form
 (UC-8, UC-10, UC-11) and "Here's what we understood" (UC-9, UC-12),

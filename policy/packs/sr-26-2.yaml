@@ -7,7 +7,7 @@
 # The change that matters for AI: generative and agentic AI are carved OUT of
 # the model definition, so they fall outside formal MRM — but the agencies are
 # explicit that general risk management still applies. That gap is exactly what
-# a firm's own AI appetite has to fill, and it is why AIGate routes generative
+# a firm's own AI appetite has to fill, and it is why Counterpoise routes generative
 # and agentic systems to a separate AI Governance track rather than treating
 # "not a model" as "not governed".
 #

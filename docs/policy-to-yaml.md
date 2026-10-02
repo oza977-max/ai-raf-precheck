@@ -18,7 +18,7 @@ own discipline.
 
 ## First, know which part is yours
 
-AIGate is three different kinds of thing, and confusion between them is the
+Counterpoise is three different kinds of thing, and confusion between them is the
 most common first-reader mistake:
 
 | Layer | What it is | Who owns it | Changes how often |

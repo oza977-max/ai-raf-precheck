@@ -1,4 +1,4 @@
-# AIGate — a brief for a supervisory reader
+# Counterpoise — a brief for a supervisory reader
 
 One page on what this tool is, where a human is accountable at every step,
 and what it deliberately does not do. Every claim here is implemented and

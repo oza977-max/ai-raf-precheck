@@ -1,22 +1,25 @@
-# AIGate — Requirements
+# Counterpoise — Requirements
 
 **Version:** 1.0  
 **Date:** May 2026  
-**Project:** ai-raf-precheck  
+**Project:** counterpoise  
 **Status:** Draft — awaiting approval  
 **Owner:** Kshitij Oza
+
+**Renamed 2026-10-02.** The product formerly called AIGate is now Counterpoise
+(the old name was taken). Requirement ids and content are unchanged.
 
 ---
 
 ## Version Guide
 
-This document contains requirements for all stages of AIGate. Each requirement in the index is tagged:
+This document contains requirements for all stages of Counterpoise. Each requirement in the index is tagged:
 
 - **V1** — Build this. The core product: intake, policy engine, verdict, basic register, YAML config.
 - **V1.5** — First credible deployment (adds append-only store, artifact binding, basic 2LoD workflow). Not a new product — V1 + the minimum to be a system of record.
 - **V2+** — Documented and safe but not built yet. Continuous monitoring, estate graph queries, CI/CD enforcement, full PV platform registry.
 
-**If you are reading this to understand what AIGate V1 does:** read only the V1 rows in the Requirements Index. Everything else is future work, not current scope.
+**If you are reading this to understand what Counterpoise V1 does:** read only the V1 rows in the Requirements Index. Everything else is future work, not current scope.
 
 ---
 
@@ -317,9 +320,9 @@ requirement and a schema change, not a bug fix.
 
 > Fit criterion: A major regulatory pack update does not dump the entire inventory onto the 2LoD team's review queue. The system determines which use cases are affected by the specific provisions that changed, surfaces Critical/High tier affected use cases for immediate review, and auto-carries Low tier unaffected use cases. The triage decision is recorded in the audit trail. Untriaged queue items are flagged as a risk, not silently accumulating. *(V1 behaviour: all active cases are queued with a `re_evaluation_queued` event; triage is manual.)*
 
-**LC-6 (Must):** AIGate shall be submitted as a use case under its own pre-check. The resulting verdict — including tier, track, required controls, and reasoning chain — shall be stored in the inventory register and kept current.
+**LC-6 (Must):** Counterpoise shall be submitted as a use case under its own pre-check. The resulting verdict — including tier, track, required controls, and reasoning chain — shall be stored in the inventory register and kept current.
 
-> Fit criterion: The AIGate system appears in the AI inventory register with a verdict produced by AIGate's own evaluation engine. If AIGate cannot satisfy its own gates, the gates are reconsidered. This is not a formality — it is a live test of whether the rules are honest and complete.
+> Fit criterion: The Counterpoise system appears in the AI inventory register with a verdict produced by Counterpoise's own evaluation engine. If Counterpoise cannot satisfy its own gates, the gates are reconsidered. This is not a formality — it is a live test of whether the rules are honest and complete.
 
 ---
 
@@ -705,7 +708,7 @@ against its own quote. **Do not reinstate the confidence score.**
 | LC-3 | Lifecycle | 2LoD review step | Should | V1.5 |
 | LC-4 | Lifecycle | Re-evaluation triggers | Must | **V1** |
 | LC-5 | Lifecycle | Re-evaluation triage | Must | V2+ |
-| LC-6 | Lifecycle | AIGate passes its own pre-check | Must | **V1** |
+| LC-6 | Lifecycle | Counterpoise passes its own pre-check | Must | **V1** |
 | OB-1 | Observed Reality | Artifact attributes authoritative | Must | V1.5 |
 | OB-2 | Observed Reality | Artifact contradiction detection | Must | V1.5 |
 | OB-3 | Observed Reality | Read deployment manifests | Should | V2+ |

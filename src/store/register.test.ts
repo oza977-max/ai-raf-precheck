@@ -422,7 +422,7 @@ describe('findLatestVerdictEvent (exported for P8-C07)', () => {
   });
 
   it('returns undefined when the trail carries no verdict at all', () => {
-    // The seeded AIGate self-assessment is the real case on every install, so
+    // The seeded Counterpoise self-assessment is the real case on every install, so
     // P8-C07's no-verdict branch depends on this being undefined, not a throw.
     expect(findLatestVerdictEvent([])).toBeUndefined();
   });

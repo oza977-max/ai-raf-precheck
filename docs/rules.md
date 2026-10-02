@@ -1,4 +1,4 @@
-# Every rule in AIGate
+# Every rule in Counterpoise
 
 > **Generated from `policy/appetite.yaml` and `policy/packs/*.yaml` by
 > `npm run docs:rules`. Do not edit by hand — regenerate after any policy

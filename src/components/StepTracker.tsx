@@ -1,6 +1,6 @@
 import type { IntakeState } from './intake-state';
 
-// Visual step tracker (Claude Design export "AIGate Demo.dc.html").
+// Visual step tracker (Claude Design export "Counterpoise Demo.dc.html").
 // Maps our real states onto the design's step labels. All 6 steps are now
 // real content as of P4-C04 — Describe, Duplicates, Graph, Questions,
 // Resolve (contradiction_review — only shown when active, not a normal

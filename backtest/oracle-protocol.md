@@ -2,7 +2,7 @@
 
 ## Why this replaced committee-outcome grounding
 
-The original plan was to compare AIGate's verdicts against what risk
+The original plan was to compare Counterpoise's verdicts against what risk
 committees actually decided. That plan had a defect the practitioner named
 before it cost anything:
 

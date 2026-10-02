@@ -45,7 +45,7 @@ for the four persona/exploratory rounds that drove the rest.
    an explicit "what are we not pre-detecting" lens grounded in the real
    August 2026 OpenAI/Hugging Face agent-collective incident. Found two
    real gaps: no CI gate between `publish-site.sh` and the live public
-   site (fixed same session — see #6), and no vocabulary in AIGate's own
+   site (fixed same session — see #6), and no vocabulary in Counterpoise's own
    intake form for agentic systems with broad system/infrastructure access
    (fixed same session — see #7).
 6. **CI/publish gap closed**: `.github/workflows/deploy-pages.yml`
@@ -228,7 +228,7 @@ Since the sections below were written, five releases shipped in two days:
 
 ## What this product is
 
-**AIGate — AI risk appetite as code, for banks.** An AI use case is described
+**Counterpoise — AI risk appetite as code, for banks.** An AI use case is described
 as a data-flow graph; the firm's risk appetite is a set of executable rules
 over that graph; a **deterministic engine** (no LLM in the decision path,
 ever) returns a verdict — inside appetite / inside with a named minimal
@@ -249,8 +249,8 @@ provisional stamp. And the three sign-offs: pack sign-off (once per
 regulation), translation attestation (once), 2LoD (per case — the only
 recurring one). First two = one afternoon, once.
 
-- Repo: https://github.com/oza977-max/ai-raf-precheck — **PUBLIC**
-- Live: https://oza977-max.github.io/ai-raf-precheck/ (gh-pages;
+- Repo: https://github.com/oza977-max/counterpoise — **PUBLIC**
+- Live: https://oza977-max.github.io/counterpoise/ (gh-pages;
   `npm run publish-site` republishes; **the browser caches index.html — always
   hard-reload after publishing before concluding anything is broken**)
 - Engine island rules, twins discipline, gotchas: `CLAUDE.md` (still accurate)
@@ -392,7 +392,7 @@ user's question first thing.
   judge/governance gap; MRM as the missing institution) — local file, NOT in
   repo. One agreed sharpening: SS1/23's tech-agnostic definition already
   captures learned simulators (PRA already asks; the field doesn't know) —
-  verified against the engine. Do NOT force-fit AIGate↔essay links; the user
+  verified against the engine. Do NOT force-fit Counterpoise↔essay links; the user
   called that out once already.
 
 ## Open items (all recorded, none blocking)

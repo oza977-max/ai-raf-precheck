@@ -1,15 +1,21 @@
-# AIGate
+<p align="center">
+  <img src="docs/assets/counterpoise-banner.png" alt="Counterpoise — AI use-case pre-approval for banks" width="600">
+</p>
 
-**AI risk appetite as code, for banks.**
+# Counterpoise
 
-A bank's board approves a Risk Appetite Framework as prose. AIGate turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
+**AI use-case pre-approval for banks — AI risk appetite as code.**
+
+*Formerly called AIGate; renamed on 2 October 2026.*
+
+A bank's board approves a Risk Appetite Framework as prose. Counterpoise turns it into executable rules — and turns AI use-case approval from a months-long, multi-hundred-question committee process into a deterministic pre-check that returns a verdict in minutes: **approved / approved with these controls / rejected**, with the exact regulatory reasoning on record.
 
 ## What it does that governance platforms don't
 
 Most AI governance platforms are built around an intake questionnaire, a
 risk score and an approval workflow — increasingly with an AI assistant
 that recommends the classification. That produces a *score* someone still
-has to interpret. AIGate produces a *decision*, and shows its working:
+has to interpret. Counterpoise produces a *decision*, and shows its working:
 
 - **It computes the verdict; nothing recommends it.** Your appetite is
   loaded as rules, the use case becomes a data-flow graph, and the verdict
@@ -17,7 +23,7 @@ has to interpret. AIGate produces a *decision*, and shows its working:
   for byte — asserted by test. There is no model in the decision path, so
   there is nothing there to steer, drift or explain away.
 - **It solves the fix, not just the finding.** When a case is out of
-  appetite, AIGate computes the *smallest set of controls* from your
+  appetite, Counterpoise computes the *smallest set of controls* from your
   library that brings it back inside — or says plainly that none can,
   because a hard line was crossed.
 - **Every step cites its source, and its signer.** Verdict → the rule that
@@ -38,7 +44,7 @@ has to interpret. AIGate produces a *decision*, and shows its working:
 
 ## The problem, in four numbers
 
-This project publishes its own research base. From **[After Deployment](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)** — our expert-reviewed briefing computed directly from the MIT AI Risk Repository V4 and 20+ verification-graded sources ([source file in this repo](public/research/after-deployment.html)):
+This project publishes its own research base. From **[After Deployment](https://oza977-max.github.io/counterpoise/research/after-deployment.html)** — our expert-reviewed briefing computed directly from the MIT AI Risk Repository V4 and 20+ verification-graded sources ([source file in this repo](public/research/after-deployment.html)):
 
 | | |
 |---|---|
@@ -47,11 +53,11 @@ This project publishes its own research base. From **[After Deployment](https://
 | **72%** | of US bankers name either model kill-switches (34%) or regulatory failure-reporting (38%) as their bank's *least-prepared* area — the two capabilities that only matter after launch *(Wolters Kluwer, n=230, 2026)* |
 | **+127%** | one-year growth in US financial-sector AI adoption — the exposure is compounding faster than the governance *(Federal Reserve, Apr 2026)* |
 
-The industry's answer so far is heavier pre-approval process — longer questionnaires, more committees. The evidence says that effort is aimed at roughly a sixth of the catalogued risk. **AIGate's answer is different: automate the pre-check so it stops being the bottleneck, and let it produce the one thing post-deployment governance cannot exist without — a register that knows exactly what was approved, under which rules, with which controls, and what would make that approval stale.** You cannot monitor "AI risk". You can only monitor a named thing against a named rule. That's what this build creates.
+The industry's answer so far is heavier pre-approval process — longer questionnaires, more committees. The evidence says that effort is aimed at roughly a sixth of the catalogued risk. **Counterpoise's answer is different: automate the pre-check so it stops being the bottleneck, and let it produce the one thing post-deployment governance cannot exist without — a register that knows exactly what was approved, under which rules, with which controls, and what would make that approval stale.** You cannot monitor "AI risk". You can only monitor a named thing against a named rule. That's what this build creates.
 
 > **New here? The 90-second version.** Someone in a bank wants to build or
 > buy an AI tool. Today, finding out whether that's allowed takes weeks of
-> committee email. AIGate answers it in minutes: describe the use case,
+> committee email. Counterpoise answers it in minutes: describe the use case,
 > confirm what the tool understood, and get a verdict computed by fixed,
 > citable rules — **no AI makes the decision**, ever. Three levers sit
 > behind every verdict: **your firm's appetite decides, regulation decides
@@ -60,16 +66,16 @@ The industry's answer so far is heavier pre-approval process — longer question
 > never decides.** It's built and run by
 > a practitioner who does this review work for a living, as a working
 > proof that a risk appetite can be executable instead of a PDF.
-> **Fastest way in:** open the [live demo](https://oza977-max.github.io/ai-raf-precheck/),
+> **Fastest way in:** open the [live demo](https://oza977-max.github.io/counterpoise/),
 > click **About** for the plain-words tour, then **Register** to read a few
 > decided cases — no setup, nothing to install. For the *why*, read
-> [the research](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)
+> [the research](https://oza977-max.github.io/counterpoise/research/after-deployment.html)
 > this project publishes alongside the code.
 
 ## The whole loop, two people, two machines
 
 Approval in a bank is never one person. Someone proposes; someone
-independent checks. AIGate runs that loop end to end:
+independent checks. Counterpoise runs that loop end to end:
 
 1. **The submitter describes the use case** (guided form or plain words)
    and confirms what the tool understood.
@@ -102,7 +108,7 @@ You choose one, every time you start a pre-check:
 - **Guided form** — short, structured questions. No AI involved. This is the most-verified path.
 - **Plain language** — write a sentence or two about what the AI does; an optional local model reads it into the same structured graph for you to check and correct on the next screen. Nothing it proposes is used until a person confirms it — see [How regulatory grounding works — and its limits](#how-regulatory-grounding-works--and-its-limits) for what that model does and doesn't get right.
 
-Either way, AIGate maps the use case to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
+Either way, Counterpoise maps the use case to a data-flow graph, evaluates it against the firm's machine-readable appetite plus jurisdiction packs (SS1/23, EU AI Act, SR 26-2, DORA), and returns:
 
 - a **verdict with its "why"** — which rule set the **tier** (how much harm the case could do), which appetite rule (**"invariant"**) it tripped, each with its regulatory citation;
 - the **minimal control set** that brings the use case inside appetite (solved, not suggested), each control carrying a VERIFIED/UNVERIFIED evidence status;
@@ -112,7 +118,7 @@ Either way, AIGate maps the use case to a data-flow graph, evaluates it against 
 
 Same inputs, same verdict, every time — no LLM in the decision path.
 
-## What AIGate is not
+## What Counterpoise is not
 
 - **It does not tell you a use case is "compliant".** The output is "inside your stated appetite, with these controls" — a claim a firm can actually defend. "Compliant" is not something a tool can compute from a config file, and one that claims to is a liability.
 - It does not write your risk appetite. It enforces the one you give it.
@@ -158,7 +164,7 @@ sources, and the verdict shows which — with the verbatim text and the
 human sign-off behind it. Only the first two can move a verdict; the third
 cannot, by construction of its own schema, not by convention:
 
-**The third lever, in plain words.** AIGate checks every use case against a
+**The third lever, in plain words.** Counterpoise checks every use case against a
 risk-knowledge lens built from the [MIT AI Risk Repository](https://airisk.mit.edu/)'s
 public taxonomy of AI harms. The lens flags known risk classes that match
 your use case's shape — and, more importantly, tells you when none of your
@@ -224,7 +230,7 @@ scarce second-line people, one meeting at a time. Interpretation doesn't
 scale. Rules do.
 
 And the effort is pointed at the wrong end of the lifecycle. Our own
-research ([After Deployment](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html) —
+research ([After Deployment](https://oza977-max.github.io/counterpoise/research/after-deployment.html) —
 two rounds of adversarial expert review, every statistic graded by how it
 survived verification) found that 84% of catalogued AI risks materialise
 after a system goes live: vendors silently swap models under approved use
@@ -234,7 +240,7 @@ into two families needing opposite controls — deliberate misuse and quiet
 malfunction — and most governance programmes run standing controls for
 neither.
 
-AIGate is a working test of one idea: **if the appetite were code, the first
+Counterpoise is a working test of one idea: **if the appetite were code, the first
 pass of that process would take minutes, not months** — and the answer would
 be the same for everyone, for stated reasons, on the record. And because
 every verdict lands on a register carrying its rules, controls and expiry
@@ -285,7 +291,7 @@ flowchart TD
 
 ## What works today (V1 proof-of-concept)
 
-The full gate, end to end: intake (LLM or form) → duplicate check against the register → graph review with corrections → targeted questions with contradiction detection → attestation → deterministic verdict → register with lifecycle governance (Low self-serves; Medium/High/Critical await 2LoD sign-off) → policy editing with automatic re-evaluation queuing → JSON export. AIGate submits itself through its own gate on first launch.
+The full gate, end to end: intake (LLM or form) → duplicate check against the register → graph review with corrections → targeted questions with contradiction detection → attestation → deterministic verdict → register with lifecycle governance (Low self-serves; Medium/High/Critical await 2LoD sign-off) → policy editing with automatic re-evaluation queuing → JSON export. Counterpoise submits itself through its own gate on first launch.
 
 Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who believes a *rule* is wrong (not the case in front of them) files a **rule challenge** from the sign-off page — permanent, attributable, and advisory by construction: the verdict stands, and the challenge lands in a per-rule **rule-improvement queue** for the humans who author the rulebook. Dissent never overrides; it accumulates as evidence.
 
@@ -306,7 +312,7 @@ Since v0.17.0 the loop closes after the verdict too:
 
 ## Try it (no install)
 
-**Live now:** <https://oza977-max.github.io/ai-raf-precheck/> — open it, then
+**Live now:** <https://oza977-max.github.io/counterpoise/> — open it, then
 **Demo data → Load sample use cases**, and open any verdict. Six worked
 examples span Low→Critical, in and out of appetite, all scored by the real
 engine. The page makes **no external requests at all** — fonts are served
@@ -351,20 +357,20 @@ approach honestly cannot do.
 
 ## Adopt it — the rules are yours to own
 
-AIGate works by checking AI use cases against a **Risk Appetite Framework (RAF)** — a set of rules that defines what AI risk the bank will and won't accept. Every verdict, every control requirement, every jurisdiction override traces back to a rule in that framework.
+Counterpoise works by checking AI use cases against a **Risk Appetite Framework (RAF)** — a set of rules that defines what AI risk the bank will and won't accept. Every verdict, every control requirement, every jurisdiction override traces back to a rule in that framework.
 
-**This means AIGate is only as good as the rules you give it** — though it is
+**This means Counterpoise is only as good as the rules you give it** — though it is
 never rule-less: a complete starter ruleset works out of the box, and what
 adoption adds is *authority*, not function. Same rules, same verdicts; the
 provisional stamp is the only thing a CRO's signature removes.
 
 ### If your bank has a formal AI Risk Appetite Framework
 
-You are in the best position. You translate your existing RAF into AIGate's policy file format (YAML). The engine enforces your rules consistently. Verdicts are traceable to your own documented policy.
+You are in the best position. You translate your existing RAF into Counterpoise's policy file format (YAML). The engine enforces your rules consistently. Verdicts are traceable to your own documented policy.
 
 ### If your bank has some AI governance, but it's scattered
 
-Most banks are here — a model risk policy, an AI ethics statement, some vendor guidelines, nothing unified. AIGate ships with a starter policy file derived from a regulator-grounded AI Risk Appetite template. Use it as your starting point. Customise it to reflect your actual committees, thresholds, and appetite. You are not starting from nothing.
+Most banks are here — a model risk policy, an AI ethics statement, some vendor guidelines, nothing unified. Counterpoise ships with a starter policy file derived from a regulator-grounded AI Risk Appetite template. Use it as your starting point. Customise it to reflect your actual committees, thresholds, and appetite. You are not starting from nothing.
 
 ### If your bank has no AI-specific governance yet
 
@@ -378,13 +384,13 @@ Using the starter config verbatim without review is an implicit governance decis
 
 ## How regulatory grounding works — and its limits
 
-AIGate evaluates use cases against **regulatory override packs** — structured rule files for SR 26-2, SS1/23, EU AI Act and DORA. These drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers with credit-scoring characteristics triggers EU AI Act Annex III's forced-Critical classification.
+Counterpoise evaluates use cases against **regulatory override packs** — structured rule files for SR 26-2, SS1/23, EU AI Act and DORA. These drive jurisdiction-aware verdicts: a use case touching UK entities is evaluated against SS1/23's technology-agnostic MRM standard; one touching EU borrowers with credit-scoring characteristics triggers EU AI Act Annex III's forced-Critical classification.
 
 **Regulations evolve. This is the hardest problem in the product.**
 
 Positions move: the US recently carved generative and agentic AI out of its model definition; the EU delayed some obligations while others became live law. A product that encodes a snapshot of today's regulations and never updates is not a governance tool — it is a liability. (The current per-pack states and dates live in [`docs/approach.md`](docs/approach.md), where they are maintained.)
 
-### How AIGate approaches this
+### How Counterpoise approaches this
 
 **Every rule cites its primary source — the verbatim regulatory text it derives from.**
 
@@ -397,13 +403,13 @@ This means:
 - When a regulation changes, only the rules citing the changed sections need review — not the whole pack.
 - Every rule declares its **basis** — whether it restates the quoted text, infers from it, or rests on legal judgement. That is something a reviewer can check by reading the rule against its own citation, rather than a confidence score somebody had to invent.
 
-**Every pack requires a human reviewer sign-off** — name, role, date — against the primary source text. Sign-off is per regulation, not per rule: Legal issues a position on SS1/23, they do not countersign each line of a config file. (A single rule can carry its own sign-off where a firm deviates from the central reading.) AIGate does not interpret regulations autonomously. A bank that tells the PRA "our AI interpreted SS1/23" does not have a defensible answer. A qualified person must stand behind every regulatory determination. AIGate makes that accountability traceable and minimal in effort: reviewers sign off only on rules citing changed text, not the whole pack every time.
+**Every pack requires a human reviewer sign-off** — name, role, date — against the primary source text. Sign-off is per regulation, not per rule: Legal issues a position on SS1/23, they do not countersign each line of a config file. (A single rule can carry its own sign-off where a firm deviates from the central reading.) Counterpoise does not interpret regulations autonomously. A bank that tells the PRA "our AI interpreted SS1/23" does not have a defensible answer. A qualified person must stand behind every regulatory determination. Counterpoise makes that accountability traceable and minimal in effort: reviewers sign off only on rules citing changed text, not the whole pack every time.
 
 **Verdicts show the full reasoning chain:** regulatory text → derived rule → verdict, with the basis of each step stated. A regulator asking "why was this Track II?" sees the SS1/23 section, the rule, and who reviewed it — not just a version number.
 
 **When a bank disagrees with the central interpretation**, they can override locally — but they must cite the competing text and record their reasoning. Silent overrides are not permitted.
 
-**What this does not solve:** genuine legal ambiguity. When regulatory text is contested, AIGate marks the rule `judgement`, renders the verdict provisional, and routes to the bank's legal team. It does not pretend to resolve what qualified lawyers disagree about. That is the honest boundary of what a tool can do.
+**What this does not solve:** genuine legal ambiguity. When regulatory text is contested, Counterpoise marks the rule `judgement`, renders the verdict provisional, and routes to the bank's legal team. It does not pretend to resolve what qualified lawyers disagree about. That is the honest boundary of what a tool can do.
 
 ---
 
@@ -428,7 +434,7 @@ This means:
 **Making it a habit, not a demo:** the pre-check only compounds if people
 come back. Two zero-build triggers that work today — bookmark the live
 site's **New pre-check** page in the team's AI/tooling request template
-("attach your AIGate verdict id to the ticket"), or add a checklist line to
+("attach your Counterpoise verdict id to the ticket"), or add a checklist line to
 your PR/change template ("AI in this change? Link the pre-check verdict").
 The register then becomes the firm's memory of every AI decision without
 anyone maintaining a separate log.
@@ -440,7 +446,7 @@ can a decision be evidenced, how does the encoding stay honest, what happens
 when the tool doesn't know. [`docs/glossary.md`](docs/glossary.md) is every
 term in plain words. The app itself now has an **About** screen answering the
 first-timer's three questions, and points at the fastest explainer it has:
-AIGate's own self-assessment, sitting in the register.
+Counterpoise's own self-assessment, sitting in the register.
 
 **Want to poke at it?** [`docs/try-these.md`](docs/try-these.md) — eleven cases
 that each make the engine do something different: a clean approval, four
@@ -484,7 +490,7 @@ were told (V1.5), then monitor what you approved (V2). Each stage keeps the
 rule this whole product is built on — never claim more than you can prove.
 
 V2's shape now has an evidence base, not just an intention. The
-[After Deployment research](https://oza977-max.github.io/ai-raf-precheck/research/after-deployment.html)
+[After Deployment research](https://oza977-max.github.io/counterpoise/research/after-deployment.html)
 shows post-deployment risk is two different problems — **misuse** (people
 weaponising deployed systems; an adversarial-testing problem) and
 **malfunction** (systems failing without malice; a detection problem) — so

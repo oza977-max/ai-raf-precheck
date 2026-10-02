@@ -1,4 +1,4 @@
-// V2-D: "start over" for testers. Everything AIGate stores lives in this
+// V2-D: "start over" for testers. Everything Counterpoise stores lives in this
 // browser (NF-3, no backend), so a reset is genuinely local and total —
 // there is no server copy to fall back on, which is exactly why the UI
 // wraps this in a confirmation.

@@ -14,11 +14,11 @@ interface AboutPanelProps {
 
 export default function AboutPanel({ onNavigate }: AboutPanelProps) {
   return (
-    <section aria-label="About AIGate" className="about-panel">
+    <section aria-label="About Counterpoise" className="about-panel">
       <h1>What this is</h1>
       <p>
         A bank writes down what AI risk it will and will not accept — its <strong>risk appetite</strong>.
-        AIGate turns that document into executable rules, so that asking &ldquo;can we build this AI
+        Counterpoise turns that document into executable rules, so that asking &ldquo;can we build this AI
         tool?&rdquo; takes minutes instead of months: describe the use case, answer a short set of
         questions, and get a verdict — inside appetite, inside appetite with named controls, or outside
         appetite — with the exact rule and regulation behind every step.
@@ -147,13 +147,13 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
 
       <h2>The fastest way to understand it</h2>
       <p>
-        On first launch, AIGate submitted itself through its own gate — the tool judged the tool. Its
+        On first launch, Counterpoise submitted itself through its own gate — the tool judged the tool. Its
         verdict sits in the register alongside every other use case, with the same citations and the
         same audit trail. Open it, and you have seen the whole product.
       </p>
       <p>
         <button type="button" className="about-panel__link" onClick={() => onNavigate('register')}>
-          See AIGate&rsquo;s own self-assessment →
+          See Counterpoise&rsquo;s own self-assessment →
         </button>
       </p>
 

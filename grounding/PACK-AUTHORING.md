@@ -1,4 +1,4 @@
-# AIGate — Pack Authoring Playbook
+# Counterpoise — Pack Authoring Playbook
 
 **Location in repo:** `grounding/PACK-AUTHORING.md`
 **Status:** Operating procedure — this is the P2-C03 chunk. Human-led; Claude scaffolds structure only.

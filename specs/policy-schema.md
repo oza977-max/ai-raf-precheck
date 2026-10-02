@@ -1,4 +1,4 @@
-# AIGate — Policy Schema Specification
+# Counterpoise — Policy Schema Specification
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -132,7 +132,7 @@ export type SystemAccessScope =
 
 ```yaml
 # policy/appetite.yaml
-# AIGate Risk Appetite Framework — [FIRM] Bank
+# Counterpoise Risk Appetite Framework — [FIRM] Bank
 # Edit this file to configure your organisation's AI risk appetite.
 # Fields marked [FIRM] must be replaced before use in production.
 
@@ -585,7 +585,7 @@ export interface PolicyFile {
   // Comparators applied in order until one separates the candidates. Optional;
   // evaluate() falls back to ["severity", "control_burden", "id"].
   binding_constraint_order?: Array<'severity' | 'control_burden' | 'id'>;
-  // explore-007 D-002 (2026-08-31): Track (I/II/III) is AIGate's own
+  // explore-007 D-002 (2026-08-31): Track (I/II/III) is Counterpoise's own
   // oversight-regime category — this maps it to the firm's actual committee
   // names. Optional; absent means no mapping is claimed and only the generic
   // Track description renders. (Added to this spec block per code-review-004
@@ -738,7 +738,7 @@ export interface PolicyValidationError {
 
 ### Policy file versioning
 - `version` field is a semver string (`"1.0"`, `"1.1"`, `"2.0"`)
-- **Banks increment manually** — AIGate does not auto-increment on save (MVP)
+- **Banks increment manually** — Counterpoise does not auto-increment on save (MVP)
 - Every verdict stores the `version` at time of evaluation; historical verdicts are immutable
 
 ### Pack file versioning
@@ -762,7 +762,7 @@ export interface PolicyValidationError {
 **Context:** Conditions need to express things like "autonomy ≥ 4 AND exposure is client-facing." The alternatives are: (a) a rich expression language (Rego/OPA, CEL, JSONLogic); (b) a minimal operator set; (c) code-evaluated conditions (JavaScript functions in YAML).
 
 **Options considered:**
-1. **OPA/Rego** — powerful, auditable, but requires a Rego runtime in the browser. Significant bundle size. Overkill for the bounded condition set AIGate needs.
+1. **OPA/Rego** — powerful, auditable, but requires a Rego runtime in the browser. Significant bundle size. Overkill for the bounded condition set Counterpoise needs.
 2. **JSONLogic** — compact JSON-encoded logic; browser-native; operator set is richer than needed. Less human-readable in YAML context.
 3. **Minimal operator set** (`gte`, `lte`, `in`, `not_in`, bare equality, `and`) — sufficient for all current requirements. Human-readable. Easy to validate. No external runtime.
 
@@ -823,7 +823,7 @@ The starter `policy/appetite.yaml` ships pre-populated with:
 | `tier_workflow` | Default mappings |
 | `translation_attestation` | Placeholder with `[FIRM]` markers |
 
-The starter config is derived directly from `grounding/raf-extraction.md` (sections A through H). A bank installing AIGate can evaluate its first use case without modifying the file — the `[FIRM]` markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).
+The starter config is derived directly from `grounding/raf-extraction.md` (sections A through H). A bank installing Counterpoise can evaluate its first use case without modifying the file — the `[FIRM]` markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).
 
 ---
 

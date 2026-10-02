@@ -2,7 +2,7 @@
 """Traceability check: every test case ID in test-cases/*.md must be proved
 by a test that names it.
 
-AIGate sells auditability, so "every obligation is traceable" is a product
+Counterpoise sells auditability, so "every obligation is traceable" is a product
 claim, not a bookkeeping nicety. This makes the claim mechanical:
 
   1. Collect every TC-* id defined in test-cases/test-cases*.md, whether as a

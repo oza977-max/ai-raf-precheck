@@ -259,7 +259,7 @@ const PolicyFileSchema = z.object({
   // src/engine/types.ts. Optional, 1-in-K semantics.
   sampling_rate: z.number().optional(),
   // explore-007 D-002 (round 8): see PolicyFile.governance_mapping in
-  // src/engine/types.ts. Optional — a policy without it renders AIGate's
+  // src/engine/types.ts. Optional — a policy without it renders Counterpoise's
   // generic Track description only, exactly as before this field existed.
   governance_mapping: z
     .record(

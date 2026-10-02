@@ -1,4 +1,4 @@
-# AIGate — Implementation Guide
+# Counterpoise — Implementation Guide
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -38,7 +38,7 @@ Each chunk is tagged: **depends on** / **enables** / **parallel with**.
 | P5-C02 | Plain-English reasoning trace (VD-8) | P5-C01 | P6-C01 | — |
 | P6-C01 | Register view — 1LoD + 2LoD + role access | P2-C02, P4-C04 | P6-C02 | P6-C02 (after API) |
 | P6-C02 | Lifecycle stage + tier routing + policy re-eval trigger | P6-C01, P3-C01 | P7-C01 | — |
-| P7-C01 | AIGate self-assessment seed | P6-C01, P3-C01, P3-C02, P2-C02 | P7-C02 | — |
+| P7-C01 | Counterpoise self-assessment seed | P6-C01, P3-C01, P3-C02, P2-C02 | P7-C02 | — |
 | P7-C02 | Export (RG-5) + parity check script | P6-C01, P7-C01 | P7-C03 | — |
 | P7-C03 | Integration closure + product startup verification | All chunks | — | — |
 
@@ -101,10 +101,10 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 | `AuditStore.append()` | `idb` library, `aigate-audit` database | P2-C02 | P4-C04 (audit acceptance test: verdict_produced event written after evaluation) |
 | `RegisterStore.addNode()` / `addEdge()` | `idb` library, `aigate-register` database | P2-C02 | P6-C01 (register acceptance test: use case appears in register after intake) |
 | `RegisterView.tsx` (2LoD) | `RegisterStore.getUseCases('all')`, `getBlastRadius()` | P6-C01 | P6-C02 (lifecycle test: stage badge visible in register) |
-| `RegisterView.tsx` (export) | `RegisterStore.exportAll()` | P7-C02 | P7-C01 (AIGate self-assessment test: AIGate entry present in export) |
+| `RegisterView.tsx` (export) | `RegisterStore.exportAll()` | P7-C02 | P7-C01 (Counterpoise self-assessment test: Counterpoise entry present in export) |
 | `onPolicyUpdated()` | `RegisterStore.getUseCases('all')`, `AuditStore.append()`, `RegisterStore.updateLifecycleStage()` | P6-C02 | P6-C02 (re-evaluation test: all active cases queued on policy update) |
 | `workflow-router.ts` | Policy `tier_workflows` config | P6-C02 | P6-C01 (register test: Low-tier verdict shows self-service final) |
-| `aigate-self-assessment.ts` (seed) | `AIGATE_USE_CASE_GRAPH`, `evaluate()`, `AuditStore.append()`, `RegisterStore.addNode()` | P7-C01 | P7-C01 (self-assessment test: AIGate appears in register with valid verdict) |
+| `aigate-self-assessment.ts` (seed) | `AIGATE_USE_CASE_GRAPH`, `evaluate()`, `AuditStore.append()`, `RegisterStore.addNode()` | P7-C01 | P7-C01 (self-assessment test: Counterpoise appears in register with valid verdict) |
 | `PolicyEditor.tsx` | `src/store/policy.ts`, js-yaml, Zod schema | P2-C01 | P3-C01 (engine test: evaluate() receives a loaded PolicyFile) |
 | `src/engine/question-generator.ts` | `DataFlowGraph`, `PolicyFile`, `JurisdictionPack[]` — internal engine module | P4-C03 | P4-C03 (question generation test: uncertain nodes generate targeted questions) |
 | `src/engine/contradiction.ts` | `DataFlowGraph`, `QuestionAnswer[]` — internal engine module | P4-C03 | P4-C03 (contradiction test: conflicting answers transition to contradiction_review) |
@@ -479,11 +479,11 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 
 ### Phase 7 — Integration & Closure
 
-**Goal:** AIGate self-assessment. Export. Spec parity script. Full product startup verification.
+**Goal:** Counterpoise self-assessment. Export. Spec parity script. Full product startup verification.
 
 ---
 
-#### P7-C01 — AIGate self-assessment seed (LC-6)
+#### P7-C01 — Counterpoise self-assessment seed (LC-6)
 
 **Spec reference:** `register-lifecycle.md §9`  
 **Estimated time:** 2–3 hours  
@@ -494,12 +494,12 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 - Called once on first launch (empty register check)
 - Runs real `evaluate()` against loaded policy
 - Inserts use case node, Anthropic vendor node, edges, and verdict event into IndexedDB
-- If AIGate's own verdict is Rejected: UI shows "AIGate does not satisfy its own controls — policy review required" governance alert
+- If Counterpoise's own verdict is Rejected: UI shows "Counterpoise does not satisfy its own controls — policy review required" governance alert
 
 **Tests:**
-- `TC-LC-4-02` — AIGate appears in register with a real verdict
-- AIGate verdict contains policy_version from the current loaded policy
-- Re-evaluation is triggered when policy updates (LC-4 applies to AIGate's use case record)
+- `TC-LC-4-02` — Counterpoise appears in register with a real verdict
+- Counterpoise verdict contains policy_version from the current loaded policy
+- Re-evaluation is triggered when policy updates (LC-4 applies to Counterpoise's use case record)
 
 ---
 
@@ -536,14 +536,14 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 - Verify `workflow-router.ts` output drives lifecycle stage update in `IntakeFlow.tsx` after verdict (P6-C02 deferred to P7)
 - Verify `stale_assessment` badge in `RegisterView.tsx` correctly computes from audit events (P6-C01 deferred to P7)
 - Verify `PolicyEditor.tsx` triggers `onPolicyUpdated()` on save (P6-C02 deferred to P7)
-- Verify AIGate self-assessment runs on every first launch (P7-C01 integration check)
+- Verify Counterpoise self-assessment runs on every first launch (P7-C01 integration check)
 
 **Product startup verification:**
 1. `npm run build` — TypeScript compilation passes with zero errors
 2. `npm run dev` — Vite dev server starts on localhost:5173
 3. Load default policy (starter config from CF-2)
 4. Submit the example use case from the requirements walkthrough scenario
-5. Verify: verdict produced, reasoning trace generated, use case appears in register, AIGate self-assessment entry present, export produces valid JSON
+5. Verify: verdict produced, reasoning trace generated, use case appears in register, Counterpoise self-assessment entry present, export produces valid JSON
 6. `python3 scripts/spec-parity-check.py` — exits 0
 
 All smoke tests in this chunk are manual verification steps — they supplement (not replace) the automated test suite.

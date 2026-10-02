@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 7
+# Counterpoise — Test Cases, Round 7
 
 *Written 2026-08-17 alongside the build (v0.8.0) from
 `requirements/requirements-007.md`. Every case exists in the suite and

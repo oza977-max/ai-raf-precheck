@@ -1,4 +1,4 @@
-# AIGate — Intake Flow Specification
+# Counterpoise — Intake Flow Specification
 
 **Version:** 1.0  
 **Date:** June 2026  

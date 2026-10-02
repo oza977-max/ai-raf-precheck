@@ -14,7 +14,7 @@ import { exportAll, importRegister, backupAndReplaceRegister } from './register'
 // RG-8 — verified hand-off bundle (2026-09-01; relabelled from RG-6 in
 // code-review-005 F9/F27 — RG-6 already meant blast-radius queries in this
 // product's requirement set, and this feature had never had a requirement
-// id of its own). The core end-to-end gap: AIGate's whole value is a
+// id of its own). The core end-to-end gap: Counterpoise's whole value is a
 // SUBMITTER and a REVIEWER who are different people, but the app runs
 // entirely in one browser, so "1LoD" and "2LoD" were a role toggle on one
 // machine. This module lets a bundle of the register + the append-only
@@ -585,13 +585,13 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   //    "not a bundle at all" and "a bundle from a different app version".
   const envelope = bundleEnvelopeSchema.safeParse(raw);
   if (!envelope.success || envelope.data.format !== 'aigate-handoff') {
-    return { failure: { outcome: 'invalid_format', message: 'This file is not an AIGate hand-off bundle.', eventsAdded: 0 } };
+    return { failure: { outcome: 'invalid_format', message: 'This file is not an Counterpoise hand-off bundle.', eventsAdded: 0 } };
   }
   if (envelope.data.format_version !== HANDOFF_FORMAT_VERSION) {
     return {
       failure: {
         outcome: 'invalid_format',
-        message: "This hand-off file was made by a different version of AIGate and can't be imported here.",
+        message: "This hand-off file was made by a different version of Counterpoise and can't be imported here.",
         eventsAdded: 0,
       },
     };
@@ -602,7 +602,7 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   //    the known type sets, with each variant's own required fields checked.
   const parsed = handoffBundleSchema.safeParse(raw);
   if (!parsed.success) {
-    return { failure: { outcome: 'invalid_format', message: 'This file is not an AIGate hand-off bundle.', eventsAdded: 0 } };
+    return { failure: { outcome: 'invalid_format', message: 'This file is not an Counterpoise hand-off bundle.', eventsAdded: 0 } };
   }
   const bundle = parsed.data as HandoffBundle;
 

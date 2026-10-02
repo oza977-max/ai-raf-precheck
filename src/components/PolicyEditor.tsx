@@ -330,7 +330,7 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         </div>
       )}
 
-      {/* explore-007 D-002 fix (round 8): Track is AIGate's own invented
+      {/* explore-007 D-002 fix (round 8): Track is Counterpoise's own invented
           oversight-regime category — it means nothing to a firm's actual
           committees until the firm names the mapping. Rendered here as a
           plain-language readout of policy.governance_mapping; editing it

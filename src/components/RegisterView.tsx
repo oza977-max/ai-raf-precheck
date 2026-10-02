@@ -96,7 +96,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   async function performExportBundle(): Promise<ExportResult> {
     try {
       const bundle = await exportBundle(__APP_VERSION__);
-      const filename = `aigate-handoff-${bundle.exported_at.replace(/[:.]/g, '-')}.json`;
+      const filename = `counterpoise-handoff-${bundle.exported_at.replace(/[:.]/g, '-')}.json`;
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
@@ -144,7 +144,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
       try {
         parsed = JSON.parse(await file.text());
       } catch {
-        setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an AIGate hand-off bundle.' });
+        setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an Counterpoise hand-off bundle.' });
         return;
       }
       try {
@@ -399,7 +399,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `aigate-register-export-${payload.exported_at}.json`;
+    anchor.download = `counterpoise-register-export-${payload.exported_at}.json`;
     // Some browsers only fire a download reliably when the anchor is
     // attached to the DOM at click time (review finding, pass 1).
     document.body.appendChild(anchor);
@@ -572,15 +572,15 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
 
       {/* register-lifecycle.md §9 (LC-6) — firm-wide governance concerns,
           shown regardless of 1LoD/2LoD role (only render-able when the
-          AIGate row is present in this role's fetched scope at all). */}
+          Counterpoise row is present in this role's fetched scope at all). */}
       {aigateRow?.current_verdict_status === 'rejected' && (
         <div className="register-view__banner register-view__banner--alert" role="alert">
-          AIGate does not satisfy its own controls — policy review required
+          Counterpoise does not satisfy its own controls — policy review required
         </div>
       )}
       {aigateRow?.current_verdict_status !== 'rejected' && aigateRow?.lifecycle_stage === 'pre_checked' && (
         <div className="register-view__banner" role="status">
-          AIGate self-assessment pending 2LoD approval — verdicts are provisional until cleared.
+          Counterpoise self-assessment pending 2LoD approval — verdicts are provisional until cleared.
         </div>
       )}
 

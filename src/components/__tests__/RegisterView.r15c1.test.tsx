@@ -172,16 +172,16 @@ describe('RegisterView — R15-C1', () => {
     expect(notFlaggedCells.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('TC-R15-C1-07: the AIGate self-assessment row gets a distinct class and a visible tag', async () => {
+  it('TC-R15-C1-07: the Counterpoise self-assessment row gets a distinct class and a visible tag', async () => {
     const aigateNode = makeUseCaseNode({
       node_id: AIGATE_USE_CASE_ID,
-      label: 'AIGate self-check',
+      label: 'Counterpoise self-check',
       metadata: makeUseCaseMetadata({ submitted_by: 'system', lifecycle_stage: 'pre_checked' }),
     });
     await addNode(aigateNode);
 
     render(<RegisterViewHarness role="2LoD" currentPolicyVersion="1.0" />);
-    const row = await screen.findByText('AIGate self-check');
+    const row = await screen.findByText('Counterpoise self-check');
     const tr = row.closest('tr');
     expect(tr?.className).toMatch(/register-view__row--self-assessment/);
     expect(screen.getByText(/self-assessment/i, { selector: '.register-view__self-assessment-tag' })).toBeInTheDocument();

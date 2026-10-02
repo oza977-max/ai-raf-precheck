@@ -52,7 +52,7 @@ const esc = (s) => String(s ?? '').replace(/\|/g, '\\|');
 const out = [];
 const p = (s = '') => out.push(s);
 
-p('# Every rule in AIGate');
+p('# Every rule in Counterpoise');
 p();
 p('> **Generated from `policy/appetite.yaml` and `policy/packs/*.yaml` by');
 p('> `npm run docs:rules`. Do not edit by hand — regenerate after any policy');

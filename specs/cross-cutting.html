@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIGate — Cross-Cutting Specification</title>
+  <title>Counterpoise — Cross-Cutting Specification</title>
   <style>
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -319,7 +319,7 @@
 
   <main>
     <p class="date">June 2026 — Living Document</p>
-    <h1>AIGate — Cross-Cutting Specification</h1>
+    <h1>Counterpoise — Cross-Cutting Specification</h1>
     <p class="subtitle">Tech stack, project structure, module conventions, error handling, TypeScript standards, testing approach, and build configuration.</p>
 
     <h2 id="expert-panel">Expert Panel</h2>
@@ -417,7 +417,7 @@
       </summary>
       <div class="adr-body">
         <h4>Context</h4>
-        <p>AIGate is a browser-only governance tool (NF-3, NF-4). No backend. Must run from a <code>dist/</code> folder served by any static server or opened via <code>file://</code> with a local web server. The intake flow, graph editing UI, and register view are sufficiently complex to benefit from a component model. No server-side rendering — all components are client components.</p>
+        <p>Counterpoise is a browser-only governance tool (NF-3, NF-4). No backend. Must run from a <code>dist/</code> folder served by any static server or opened via <code>file://</code> with a local web server. The intake flow, graph editing UI, and register view are sufficiently complex to benefit from a component model. No server-side rendering — all components are client components.</p>
 
         <h4>Options Considered</h4>
         <ol>
@@ -498,7 +498,7 @@
       </tbody>
     </table>
 
-    <p><strong>No UI component library.</strong> AIGate uses custom components styled with plain CSS. The Tufte/Few design system (from the requirements + health report HTML) sets the visual language. No Tailwind, no MUI, no Radix — keeps the bundle lean and the styling deterministic.</p>
+    <p><strong>No UI component library.</strong> Counterpoise uses custom components styled with plain CSS. The Tufte/Few design system (from the requirements + health report HTML) sets the visual language. No Tailwind, no MUI, no Radix — keeps the bundle lean and the styling deterministic.</p>
 
     <h2 id="project-structure">Project Structure</h2>
 

@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 4
+# Counterpoise — Test Cases, Round 4
 
 *Written 2026-08-15 alongside the build itself (v0.4.0) from
 `requirements/requirements-004.md`.*

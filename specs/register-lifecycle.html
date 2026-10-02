@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIGate — Register &amp; Lifecycle Specification</title>
+  <title>Counterpoise — Register &amp; Lifecycle Specification</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; -webkit-font-smoothing: antialiased; }
@@ -51,8 +51,8 @@
   </nav>
 
   <main>
-    <h1>AIGate — Register &amp; Lifecycle Specification</h1>
-    <div class="subtitle">Graph-based AI inventory register, lifecycle stage machine, tier-to-workflow routing, and AIGate self-assessment (RG-1–5, LC-1–4, LC-6)</div>
+    <h1>Counterpoise — Register &amp; Lifecycle Specification</h1>
+    <div class="subtitle">Graph-based AI inventory register, lifecycle stage machine, tier-to-workflow routing, and Counterpoise self-assessment (RG-1–5, LC-1–4, LC-6)</div>
     <div class="date">June 2026</div>
 
     <h2 id="expert-panel">Expert Panel</h2>
@@ -93,7 +93,7 @@
       <li><strong>Inventory:</strong> Maintain a queryable graph of AI systems, their properties, relationships, and data flows within a bank.</li>
       <li><strong>Lifecycle:</strong> Track each AI system through defined stages (draft, active, deprecated, archived) with automatic and manual transitions.</li>
       <li><strong>Tier Routing:</strong> Map systems to risk tiers (1–4) and route them to appropriate approval workflows based on appetite.</li>
-      <li><strong>Self-Assessment:</strong> Allow banks to input their own AIGate appetite and receive deterministic, auditable in/out verdicts.</li>
+      <li><strong>Self-Assessment:</strong> Allow banks to input their own Counterpoise appetite and receive deterministic, auditable in/out verdicts.</li>
       <li><strong>Traceability:</strong> Link every register entry to source data, appetite rules, and control decisions for regulatory reporting.</li>
     </ul>
 
@@ -155,7 +155,7 @@
         <tr>
           <td>LC-6</td>
           <td>Bank must be able to configure appetite rules and see deterministic verdicts.</td>
-          <td>Policy engine, AIGate self-assessment UI</td>
+          <td>Policy engine, Counterpoise self-assessment UI</td>
         </tr>
       </tbody>
     </table>
@@ -672,10 +672,10 @@ function setupReEvalListener(store: RegisterStore): void {
   }, 6 * 60 * 60 * 1000); // 6 hours
 }</code></pre>
 
-    <h2 id="aigate-self-assessment">AIGate Self-Assessment</h2>
-    <p>Banks upload their risk appetite rules (a policy document); AIGate checks the register against those rules and returns deterministic verdicts. Self-assessment is the bridge between the register and the evaluation engine.</p>
+    <h2 id="aigate-self-assessment">Counterpoise Self-Assessment</h2>
+    <p>Banks upload their risk appetite rules (a policy document); Counterpoise checks the register against those rules and returns deterministic verdicts. Self-assessment is the bridge between the register and the evaluation engine.</p>
 
-    <pre><code>// Bank uploads appetite rules; AIGate evaluates register
+    <pre><code>// Bank uploads appetite rules; Counterpoise evaluates register
 interface BankAppetite {
   bank_id: string;
   max_tier_1_systems: number;
@@ -989,7 +989,7 @@ async function runSelfAssessment(
         </tr>
         <tr>
           <td>LC-6: Bank appetite config &amp; verdicts</td>
-          <td>AIGate Self-Assessment; BankAppetite; SelfAssessmentVerdict</td>
+          <td>Counterpoise Self-Assessment; BankAppetite; SelfAssessmentVerdict</td>
           <td>Bank uploads appetite rules; engine returns deterministic compliant/violations verdict</td>
         </tr>
       </tbody>
@@ -1072,7 +1072,7 @@ async function runSelfAssessment(
         </tr>
         <tr>
           <td>RG-008</td>
-          <td>Run AIGate self-assessment against bank appetite</td>
+          <td>Run Counterpoise self-assessment against bank appetite</td>
           <td>runSelfAssessment; SelfAssessmentVerdict</td>
         </tr>
         <tr>
@@ -1143,7 +1143,7 @@ async function runSelfAssessment(
     <p><strong>Design review round 1, I-4.</strong> <code>findLatestVerdictEvent</code> already exists in <code>store/register.ts</code> but is not exported. P8-C06 exports and reuses it rather than writing a third copy of the same scan — the duplication ADR-EE-R3-1 was written to close.</p>
 
     <h3>15.2 No verdict recorded (R3-RD-2)</h3>
-    <p>Where no verdict-bearing event exists &mdash; the seeded AIGate self-assessment is the real case on every install &mdash; the page states plainly that no verdict is recorded and leaves sign-off available. An empty panel presented as a verdict is the same class of defect as the missing panel it replaces.</p>
+    <p>Where no verdict-bearing event exists &mdash; the seeded Counterpoise self-assessment is the real case on every install &mdash; the page states plainly that no verdict is recorded and leaves sign-off available. An empty panel presented as a verdict is the same class of defect as the missing panel it replaces.</p>
 
         <p>**Design review round 1, I-10.** A second legacy state exists and is distinct: a verdict persisted before V1.1-C01 has no `explanation`, so elements 2 and 3 (binding constraint, triggered invariants with citations) have no source. The page states that the recorded verdict predates explanation capture and shows the elements it does have, rather than rendering an empty invariant list. An empty list would read as "nothing was triggered", which is a stronger and false claim. It does not render an empty panel, and it does not hide the section. An empty panel presented as a verdict is the same class of defect as the missing panel it replaces.</p>
 
@@ -1176,7 +1176,7 @@ async function runSelfAssessment(
 
     <p><strong>ADR-RL-R11-1 &mdash; an <code>ai_model</code> node is written once per distinct declared model, keyed by <code>model_id</code>, and reused across use cases.</strong> At graph confirmation (the same write already producing the <code>use_case</code> node), <code>addUseCaseModelLink(processingNode)</code> checks the register for an existing <code>ai_model</code> node with that <code>model_id</code>; if absent, it writes one (<code>vendor</code>, <code>is_approved</code> read from the policy registry at write time &mdash; a snapshot, not a live join, consistent with the append-only discipline elsewhere) before writing the <code>uses_model</code> edge. A regression test (<code>register.model-nodes.test.ts</code>) asserts that submitting two use cases on the same model produces exactly one <code>ai_model</code> node and two edges &mdash; the dormancy-repeat guard named in the fit criteria.</p>
 
-    <p><strong>ADR-RL-R11-2 &mdash; the self-assessment declares its own model through the same path.</strong> AIGate&rsquo;s self-assessment use case (LC-6, &sect;9) names its runtime model (<code>qwen3:4b</code> when the local provider is active, else &ldquo;none declared&rdquo;) on its processing node exactly as any other use case would &mdash; no special-cased write path, per the existing &ldquo;the gate gates its gatekeeper&rdquo; framing.</p>
+    <p><strong>ADR-RL-R11-2 &mdash; the self-assessment declares its own model through the same path.</strong> Counterpoise&rsquo;s self-assessment use case (LC-6, &sect;9) names its runtime model (<code>qwen3:4b</code> when the local provider is active, else &ldquo;none declared&rdquo;) on its processing node exactly as any other use case would &mdash; no special-cased write path, per the existing &ldquo;the gate gates its gatekeeper&rdquo; framing.</p>
 
     <h2 id="changelog-r3">17. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>

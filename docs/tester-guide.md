@@ -1,6 +1,6 @@
-# AIGate — guide for testers
+# Counterpoise — guide for testers
 
-You've been asked to try AIGate against some real AI use cases. This page
+You've been asked to try Counterpoise against some real AI use cases. This page
 tells you what it is, what to do, and — just as importantly — what it
 deliberately doesn't do yet.
 
@@ -9,10 +9,10 @@ use cases.
 
 ---
 
-## What AIGate is
+## What Counterpoise is
 
 A **pre-check** for AI risk appetite. You describe an AI system you want to
-build; AIGate tells you whether the firm's risk appetite allows it, and if
+build; Counterpoise tells you whether the firm's risk appetite allows it, and if
 not, the smallest set of controls that would.
 
 The point of it is not the answer. It's that the answer is **the same every
@@ -59,7 +59,7 @@ Then open the URL it prints (usually http://localhost:5173).
 
 ## Before you start: two things to know
 
-**Your data is yours alone, and only in this browser.** AIGate has no
+**Your data is yours alone, and only in this browser.** Counterpoise has no
 server. Everything you enter is stored in the browser you're using. Nobody
 else can see it, it doesn't sync between your laptop and your phone, and
 clearing your browser data deletes it. Use **Export** when you want to send
@@ -153,10 +153,10 @@ re-evaluation.
 ## What to send back
 
 Fill in a copy of [`backtest/capture-template.md`](../backtest/capture-template.md)
-— it's a short table, one row per use case: what you expected, what AIGate
+— it's a short table, one row per use case: what you expected, what Counterpoise
 said, and who you think was right.
 
-**The disagreements are the point.** If AIGate said High and your committee
+**The disagreements are the point.** If Counterpoise said High and your committee
 would have said Medium, that's the single most useful thing you can tell us.
 Please say *why* — it usually means a rule is written wrong, and that's
 fixable.
@@ -194,7 +194,7 @@ testing impossible.
   entry consistently would not be caught. A real deployment needs a
   server-held store.
 - **Attested is not verified.** When someone attests a control is in place,
-  AIGate records their claim and their evidence note — it does not check
+  Counterpoise records their claim and their evidence note — it does not check
   the evidence. That's why it reads *attested — not verified*, and is
   counted separately from machine-verified controls.
 - **Jurisdiction packs are unadopted.** The EU AI Act and SS1/23 rules

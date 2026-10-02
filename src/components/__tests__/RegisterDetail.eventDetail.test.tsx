@@ -4,7 +4,7 @@ import type { AuditEvent } from '../../store/types';
 
 // code-review-005 F13: the audit timeline's per-type switch covers every type
 // this version knows, but a stored event is data, not a type — one written by
-// another version of AIGate, or a damaged record, used to render as a blank
+// another version of Counterpoise, or a damaged record, used to render as a blank
 // line in the evidence trail.
 describe('RegisterDetail eventDetail — unrecognised events stay visible', () => {
   const base = {

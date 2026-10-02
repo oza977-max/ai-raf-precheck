@@ -90,7 +90,7 @@ def render(md: str) -> str:
             close_section()
             title = line[3:].strip()
             anchor = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40]
-            if title != "AIGate — Requirements":
+            if title != "Counterpoise — Requirements":
                 toc.append(f'                <li><a href="#{anchor}">{inline(title)}</a></li>')
                 body.append(f'            <section id="{anchor}">\n                <h2>{inline(title)}</h2>')
                 in_section = True
@@ -166,7 +166,7 @@ def render(md: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Round 3 &middot; AIGate &mdash; Requirements</title>
+    <title>Round 3 &middot; Counterpoise &mdash; Requirements</title>
 {css}
 </head>
 <body>
@@ -179,7 +179,7 @@ def render(md: str) -> str:
         </nav>
         <main>
             <header>
-                <h1>AIGate &mdash; Requirements, Round 3</h1>
+                <h1>Counterpoise &mdash; Requirements, Round 3</h1>
                 <p class="subtitle">Reachable Reasoning</p>
                 <p class="meta">Round 3 &middot; 29 July 2026 &middot; Generated from requirements-003.md &mdash; do not hand-edit</p>
             </header>

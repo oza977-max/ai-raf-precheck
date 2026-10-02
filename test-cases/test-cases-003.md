@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 3
+# Counterpoise — Test Cases, Round 3
 
 *Generated 2026-07-29 from `requirements/requirements-003.md` (commit 88ffd40).*
 
@@ -389,10 +389,10 @@ And the output MUST NOT contain: an empty verdict panel presented as though it w
 [Trace: src/components/__tests__/RegisterDetail.test.tsx]
 ```
 
-### TC-R3-RD-2-02: The AIGate self-assessment entry renders without error
+### TC-R3-RD-2-02: The Counterpoise self-assessment entry renders without error
 
 ```
-Given the seeded AIGate self-assessment register entry
+Given the seeded Counterpoise self-assessment register entry
 When it is opened from the register
 Then the page renders without error
 And it either shows a verdict or states that none is recorded

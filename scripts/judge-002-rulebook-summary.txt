@@ -1,4 +1,4 @@
-AIGate risk appetite policy v1.4 — condensed summary for a judge model.
+Counterpoise risk appetite policy v1.4 — condensed summary for a judge model.
 A use case is a small graph: one input (data_class, data_zone), one
 processing node (model_type, autonomy_level 0-4, data_zone, platform?),
 one output (action_type, exposure, decision_bindingness, output_reversibility,

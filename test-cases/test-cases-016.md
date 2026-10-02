@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 16
+# Counterpoise — Test Cases, Round 16
 
 *Written 2026-09-28 — a traceability backfill, not a new build. RG-8
 (hand-off bundle) and RG-9 (control-evidence attestation) shipped several
@@ -51,7 +51,7 @@ simple edits but cannot prove who made the file."
 | TC-RG-8-08 | An unknown `event_type` is refused — `handoff.test.ts` |
 | TC-RG-8-09 | A payload missing a field required for its type is refused — `handoff.test.ts` |
 | TC-RG-8-10 | Two different events sharing the same `event_id` inside one bundle are refused, with a message naming the duplicate — `handoff.test.ts` |
-| TC-RG-8-11 | An unsupported `format_version` gets its own distinct "different version of AIGate" message, not the generic "not a bundle" one — `handoff.test.ts` |
+| TC-RG-8-11 | An unsupported `format_version` gets its own distinct "different version of Counterpoise" message, not the generic "not a bundle" one — `handoff.test.ts` |
 
 ### Import — sync outcomes
 

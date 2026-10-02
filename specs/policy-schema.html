@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIGate — Policy Schema Specification</title>
+  <title>Counterpoise — Policy Schema Specification</title>
   <style>
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -276,7 +276,7 @@
 
   <main>
     <p class="date">June 2026 — Living Document</p>
-    <h1>AIGate — Policy Schema Specification</h1>
+    <h1>Counterpoise — Policy Schema Specification</h1>
     <p class="subtitle">Exact schema definitions for policy files, jurisdiction packs, and validation rules.</p>
 
     <h2 id="overview">Overview</h2>
@@ -352,7 +352,7 @@
 
     <h3 id="top-level-structure">Top-level structure</h3>
     <pre><code># policy/appetite.yaml
-# AIGate Risk Appetite Framework — [FIRM] Bank
+# Counterpoise Risk Appetite Framework — [FIRM] Bank
 # Edit this file to configure your organisation's AI risk appetite.
 # Fields marked [FIRM] must be replaced before use in production.
 
@@ -708,7 +708,7 @@ export interface PolicyFile {
   // every pre-R11 policy still loads unchanged. Sorted by model_id before
   // iteration, same determinism discipline as every other collection here.
   approved_models?: ApprovedModel[];
-  // explore-007 D-002 (2026-08-31): maps AIGate's Track (I/II/III) to the
+  // explore-007 D-002 (2026-08-31): maps Counterpoise's Track (I/II/III) to the
   // firm's actual committee names. Optional; absent = no mapping claimed.
   // (Added per code-review-004 F7.)
   governance_mapping?: Partial<Record<Track, GovernanceMappingEntry>>;
@@ -878,7 +878,7 @@ export interface PolicyValidationError {
     <h3 id="policy-versioning">Policy file versioning</h3>
     <ul>
       <li><code>version</code> field is a semver string (<code>"1.0"</code>, <code>"1.1"</code>, <code>"2.0"</code>)</li>
-      <li><strong>Banks increment manually</strong> — AIGate does not auto-increment on save (MVP)</li>
+      <li><strong>Banks increment manually</strong> — Counterpoise does not auto-increment on save (MVP)</li>
       <li>Every verdict stores the <code>version</code> at time of evaluation; historical verdicts are immutable</li>
     </ul>
 
@@ -913,7 +913,7 @@ export interface PolicyValidationError {
 
         <h4>Options considered</h4>
         <ol style="max-width: none;">
-          <li><strong>OPA/Rego</strong> — powerful, auditable, but requires a Rego runtime in the browser. Significant bundle size. Overkill for the bounded condition set AIGate needs.</li>
+          <li><strong>OPA/Rego</strong> — powerful, auditable, but requires a Rego runtime in the browser. Significant bundle size. Overkill for the bounded condition set Counterpoise needs.</li>
           <li><strong>JSONLogic</strong> — compact JSON-encoded logic; browser-native; operator set is richer than needed. Less human-readable in YAML context.</li>
           <li><strong>Minimal operator set</strong> (<code>gte</code>, <code>lte</code>, <code>in</code>, <code>not_in</code>, bare equality, <code>and</code>) — sufficient for all current requirements. Human-readable. Easy to validate. No external runtime.</li>
         </ol>
@@ -1023,7 +1023,7 @@ platforms:
       </tbody>
     </table>
 
-    <p>The starter config is derived directly from <code>grounding/raf-extraction.md</code> (sections A through H). A bank installing AIGate can evaluate its first use case without modifying the file — the <code>[FIRM]</code> markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).</p>
+    <p>The starter config is derived directly from <code>grounding/raf-extraction.md</code> (sections A through H). A bank installing Counterpoise can evaluate its first use case without modifying the file — the <code>[FIRM]</code> markers produce verdicts labelled "Translation fidelity unattested" until they are filled in (NF-10).</p>
 
     <h2 id="round-12-staleness">10c. Round 12 — Staleness, Re-attestation, Sampling Fields</h2>
 

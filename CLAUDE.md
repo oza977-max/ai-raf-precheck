@@ -1,4 +1,4 @@
-# AIGate — AI risk appetite as code
+# Counterpoise — AI risk appetite as code
 
 A pre-check gate for banks: AI use cases are data-flow graphs, the firm's
 risk appetite is a set of invariants over those graphs, and the engine
@@ -7,13 +7,23 @@ minimal control set that fixes it, and the regulatory citation behind every
 step. Source-of-truth rulebook: `grounding/raf-extraction.md` (derived from
 `grounding/ai-raf-template.html`). Built via the GVM pipeline.
 
-GitHub: https://github.com/oza977-max/ai-raf-precheck — **PUBLIC**. Live at
-https://oza977-max.github.io/ai-raf-precheck/ (served from the `gh-pages`
+GitHub: https://github.com/oza977-max/counterpoise — **PUBLIC**. Live at
+https://oza977-max.github.io/counterpoise/ (served from the `gh-pages`
 branch). Every push is world-readable the moment it lands, so the
 confidentiality rule below has no margin for a quiet fix-up.
 
 The product's value is determinism + auditability + minimal-fix solving. It
 is deliberately *not* a chatbot and not a Big-4 deliverable generator.
+
+**Renamed from AIGate to Counterpoise on 2026-10-02** (the old name was
+taken). Everything a person reads says Counterpoise. Internal identifiers keep
+the old `aigate` prefix on purpose — browser storage keys (`aigate:*`), the
+IndexedDB names (`aigate-register`, `aigate-audit`), the hand-off file format
+id (`aigate-handoff`), the self-assessment ids and the `AIGATE_*` constants —
+because renaming them would orphan everyone's saved cases and refuse files
+already exported. Historical records (past reviews, test reports, handovers,
+earlier requirement rounds, past release notes) keep the name they were
+written under.
 
 ---
 
@@ -61,7 +71,7 @@ this file worth reading twice.
 - **The audit trail is append-only evidence, so any path that can fire a
   write twice is a data-integrity bug, not a UX nit.** Duplicate events
   cannot be cleaned up afterwards, by design. React StrictMode double-invokes
-  mount effects (the AIGate self-assessment seeding race) and users
+  mount effects (the Counterpoise self-assessment seeding race) and users
   double-click buttons (2LoD approve/request-correction) — both were closed
   with a synchronous `useRef` in-flight guard, because a state update lands
   too late to prevent the second call.

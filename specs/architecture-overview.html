@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AIGate — Architecture Overview</title>
+  <title>Counterpoise — Architecture Overview</title>
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; -webkit-font-smoothing: antialiased; }
@@ -41,7 +41,7 @@ pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
   </nav>
 
   <main>
-    <h1>AIGate — Architecture Overview</h1>
+    <h1>Counterpoise — Architecture Overview</h1>
     <p class="subtitle">System context, container diagram, key decisions (ADR-001–009), quality attributes, domain spec index, and conceptual integrity review</p>
     <p class="date">June 2026</p>
 
@@ -84,10 +84,10 @@ pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
     </table>
 
     <h2 id="system-context">System Context (C4 Level 1)</h2>
-    <p>AIGate is a browser-only single-page application. There is no server, no database server, and no backend API. All state lives in IndexedDB inside the user's browser. The Anthropic API is the only external system.</p>
+    <p>Counterpoise is a browser-only single-page application. There is no server, no database server, and no backend API. All state lives in IndexedDB inside the user's browser. The Anthropic API is the only external system.</p>
 
     <pre><code>┌─────────────────────────────────────────────────────────────────┐
-│                        AIGate System                            │
+│                        Counterpoise System                            │
 │                                                                 │
 │  [1LoD Developer / AI Submitter]                                │
 │    → Describes AI use case in plain language                    │
@@ -116,7 +116,7 @@ pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
     <h3>External dependencies</h3>
     <ul>
       <li><strong>Anthropic API</strong> — called only at two points: graph extraction (<code>src/llm/graph-extractor.ts</code>) and reasoning trace generation (<code>src/llm/reasoning-trace.ts</code>). The evaluation engine never calls the LLM. Both calls require an API key configured by the user; the system degrades gracefully (structured form fallback, template reasoning trace) when no key is present.</li>
-      <li><strong>Bank's policy YAML</strong> — the source of truth for all risk appetite rules. Not served by AIGate; the bank loads it as a file upload or paste. Version-stamped in every verdict record.</li>
+      <li><strong>Bank's policy YAML</strong> — the source of truth for all risk appetite rules. Not served by Counterpoise; the bank loads it as a file upload or paste. Version-stamped in every verdict record.</li>
     </ul>
 
     <h2 id="container-diagram">Container Diagram (C4 Level 2)</h2>
@@ -325,7 +325,7 @@ pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
         <tr>
           <td>Register & Lifecycle</td>
           <td><code>register-lifecycle.md</code></td>
-          <td>Graph-based AI inventory (RG-1, non-retrofittable), role-based access (RG-2), lifecycle stage machine (LC-1), tier-to-workflow routing (LC-2), policy update re-evaluation trigger (LC-4), AIGate self-assessment (LC-6).</td>
+          <td>Graph-based AI inventory (RG-1, non-retrofittable), role-based access (RG-2), lifecycle stage machine (LC-1), tier-to-workflow routing (LC-2), policy update re-evaluation trigger (LC-4), Counterpoise self-assessment (LC-6).</td>
         </tr>
       </tbody>
     </table>

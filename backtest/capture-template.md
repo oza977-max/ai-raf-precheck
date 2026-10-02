@@ -2,7 +2,7 @@
 
 Copy this file, fill it in, send it back. One row per use case.
 
-This is the test that decides whether AIGate is worth continuing with. The
+This is the test that decides whether Counterpoise is worth continuing with. The
 question is not "does the software run" — it's **does it reach the answers
 an experienced risk person would reach, and where it doesn't, is it because
 a rule is written wrong (fixable) or because the whole approach is too crude
@@ -21,7 +21,7 @@ is worthless.
 
 ## Summary table
 
-| # | Use case (one line) | You expected | AIGate said | Agree? | If not, who was right? |
+| # | Use case (one line) | You expected | Counterpoise said | Agree? | If not, who was right? |
 |---|---|---|---|---|---|
 | 1 |  | tier: <br>outcome: | tier: <br>outcome: | Y / N |  |
 | 2 |  | tier: <br>outcome: | tier: <br>outcome: | Y / N |  |
@@ -42,7 +42,7 @@ matter — everything else is confirmation.
 
 **Use case:**
 
-**AIGate's verdict, and the rule it named as the binding constraint:**
+**Counterpoise's verdict, and the rule it named as the binding constraint:**
 > (the verdict screen shows this under "Why this verdict" — copy the rule ID
 > and the regulatory basis)
 
@@ -50,7 +50,7 @@ matter — everything else is confirmation.
 
 **Which is right, in your judgement:**
 
-**If AIGate was wrong — is the rule wrong, or is the question it asked
+**If Counterpoise was wrong — is the rule wrong, or is the question it asked
 wrong?**
 > "The rule should have said X" is fixable in an afternoon. "It never asked
 > the thing that actually determines this" is a design problem. Please say
@@ -60,7 +60,7 @@ wrong?**
 
 ## The controls it asked for
 
-For the cases where AIGate required controls: were they the right controls,
+For the cases where Counterpoise required controls: were they the right controls,
 and were they proportionate?
 
 **Anything required that you'd consider unnecessary:**

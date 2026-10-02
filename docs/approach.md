@@ -1,4 +1,4 @@
-# How AIGate works — the approach, for firms evaluating it
+# How Counterpoise works — the approach, for firms evaluating it
 
 This explains the thinking, not the buttons. It is written for a risk or
 compliance leader deciding whether this is worth piloting, and it is

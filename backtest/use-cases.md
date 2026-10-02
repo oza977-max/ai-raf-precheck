@@ -1,6 +1,6 @@
 # Phase C Back-Test Pack — Risk Management Use Cases
 
-Eight realistic risk-management use cases for back-testing AIGate's
+Eight realistic risk-management use cases for back-testing Counterpoise's
 verdicts against practitioner judgment (deployment strategy Phase C:
 "verdicts vs actual committee outcomes is the pass/fail test of the
 appetite-as-code thesis").

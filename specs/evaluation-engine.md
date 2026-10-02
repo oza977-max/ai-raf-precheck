@@ -1,4 +1,4 @@
-# AIGate — Evaluation Engine Specification
+# Counterpoise — Evaluation Engine Specification
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -24,7 +24,7 @@
 
 ## 1. Purpose
 
-This spec defines the evaluation engine — the pure-function core of AIGate. It takes a confirmed data-flow graph and a loaded policy (main file + active packs) and returns a deterministic verdict. No LLM calls. No randomness. No external state.
+This spec defines the evaluation engine — the pure-function core of Counterpoise. It takes a confirmed data-flow graph and a loaded policy (main file + active packs) and returns a deterministic verdict. No LLM calls. No randomness. No external state.
 
 **Files:**
 - `src/engine/evaluate.ts` — main pipeline

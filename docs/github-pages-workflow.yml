@@ -7,7 +7,7 @@ name: Deploy to GitHub Pages
 # copy.
 #
 # Publishes the static build so testers get a URL instead of a git clone.
-# AIGate has no backend (NF-3) — the whole app is the contents of dist/ —
+# Counterpoise has no backend (NF-3) — the whole app is the contents of dist/ —
 # so static hosting is a complete deployment, not a demo shim.
 #
 # Repository Pages settings must be Source: "GitHub Actions" (not "Deploy

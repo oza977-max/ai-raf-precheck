@@ -762,7 +762,7 @@ describe('Walking Skeleton', () => {
     ).toBeInTheDocument();
   });
 
-  it('TC-LC-4-02 (P7-C01): AIGate evaluates itself on first launch and appears in the register with a real verdict, without any user action', async () => {
+  it('TC-LC-4-02 (P7-C01): Counterpoise evaluates itself on first launch and appears in the register with a real verdict, without any user action', async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -771,10 +771,10 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByText('▤ Register'));
     await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
 
-    expect(await screen.findByText('AIGate (self-assessment)')).toBeInTheDocument();
+    expect(await screen.findByText('Counterpoise (self-assessment)')).toBeInTheDocument();
   });
 
-  it('P7-C03 Part A: AIGate self-assessment seeds exactly once across a genuine app re-mount, not just within one mount (extends P7-C01\'s single-mount race test)', async () => {
+  it('P7-C03 Part A: Counterpoise self-assessment seeds exactly once across a genuine app re-mount, not just within one mount (extends P7-C01\'s single-mount race test)', async () => {
     const { selfAssessmentSeeded } = await import('../../seeds/aigate-self-assessment');
 
     const first = render(<App />);

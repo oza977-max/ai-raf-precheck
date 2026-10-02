@@ -1,4 +1,4 @@
-# AIGate — Cross-Cutting Specification
+# Counterpoise — Cross-Cutting Specification
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -42,7 +42,7 @@
 
 **Status:** Accepted
 
-**Context:** AIGate is a browser-only governance tool (NF-3, NF-4). No backend. Must run from a `dist/` folder served by any static server or opened via `file://` with a local web server. The intake flow, graph editing UI, and register view are sufficiently complex to benefit from a component model. No server components — all components are client components.
+**Context:** Counterpoise is a browser-only governance tool (NF-3, NF-4). No backend. Must run from a `dist/` folder served by any static server or opened via `file://` with a local web server. The intake flow, graph editing UI, and register view are sufficiently complex to benefit from a component model. No server components — all components are client components.
 
 **Options considered:**
 1. **Vanilla TypeScript + Vite** — zero framework overhead, but complex multi-step flows (intake wizard, graph editor, register) require significant hand-rolled UI plumbing. Increases build time substantially.
@@ -69,7 +69,7 @@
 | Testing | `vitest` + `@testing-library/react` | latest | Vite-native test runner; Testing Library for behaviour-first tests |
 | YAML diff (for pack updates) | `deep-diff` | ^1.0 | For RA-10 diff mechanics (V1.5) — include schema now |
 
-**No UI component library.** AIGate uses custom components styled with plain CSS. The Tufte/Few design system (from the requirements + health report HTML) sets the visual language. No Tailwind, no MUI, no Radix — keeps the bundle lean and the styling deterministic.
+**No UI component library.** Counterpoise uses custom components styled with plain CSS. The Tufte/Few design system (from the requirements + health report HTML) sets the visual language. No Tailwind, no MUI, no Radix — keeps the bundle lean and the styling deterministic.
 
 ---
 

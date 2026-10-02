@@ -1,5 +1,5 @@
 # ==============================================================================
-# AIGate — Starter Policy File
+# Counterpoise — Starter Policy File
 # AI Risk Appetite Framework Configuration
 # ==============================================================================
 #
@@ -1273,7 +1273,7 @@ sampling_rate: 5
 # structure until the firm says what it maps to. This is an ILLUSTRATIVE
 # example, following the same [FIRM]-placeholder convention as the rest of
 # this starter file — a real firm replaces these with its own committee
-# names, or removes tracks it doesn't use. Absent entirely = AIGate shows
+# names, or removes tracks it doesn't use. Absent entirely = Counterpoise shows
 # only its own generic Track description, never an invented firm process.
 governance_mapping:
   I:
@@ -1363,7 +1363,7 @@ vendors:
 # open-weights self-hosted with strong finance-domain benchmark evidence may
 # sit inside appetite where a vendor-hosted model without evidence does not.
 approved_models:
-  # AIGate's own local runtime model (src/llm/local-provider.ts
+  # Counterpoise's own local runtime model (src/llm/local-provider.ts
   # DEFAULT_LOCAL_LLM_MODEL) — declared honestly as unadopted-policy
   # provisional, not benchmarked: is_approved: false is the truthful demo
   # posture, not a placeholder to fix later (NF-7).

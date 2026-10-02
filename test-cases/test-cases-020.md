@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 20
+# Counterpoise — Test Cases, Round 20
 
 *Written 2026-10-02. R16 chunk D1 (`build/prompts/R16.md` v2.1, §4): the
 verdict's first screen (VD-9, VD-10) — the view-model behind it

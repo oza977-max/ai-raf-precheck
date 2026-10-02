@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 5
+# Counterpoise — Test Cases, Round 5
 
 *Written 2026-08-16 alongside the build (v0.6.0) from
 `requirements/requirements-005.md`. As in round 4, every case already exists

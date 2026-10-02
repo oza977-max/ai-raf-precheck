@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 18
+# Counterpoise — Test Cases, Round 18
 
 *Written 2026-10-02. R16 chunk A1 — the schema, engine and loader-check work
 behind the plain-language redesign (`build/prompts/R16.md` v2.1, §1.1–§1.5):

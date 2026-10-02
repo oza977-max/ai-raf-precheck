@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 17
+# Counterpoise — Test Cases, Round 17
 
 *Written 2026-09-28. Two independent, owner-directed engine/policy changes,
 bundled into one traceability round because both were built and verified in

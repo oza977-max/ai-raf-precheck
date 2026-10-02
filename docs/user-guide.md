@@ -1,4 +1,4 @@
-# AIGate user guide
+# Counterpoise user guide
 
 *For the person who has to sign the thing.*
 
@@ -10,7 +10,7 @@ Each section stands on its own. Skip to the one you need.
 
 ---
 
-## What AIGate actually answers
+## What Counterpoise actually answers
 
 **One question: is this AI use case inside the firm's stated risk appetite,
 and if not, what is the smallest set of controls that would bring it inside?**
@@ -21,7 +21,7 @@ temperature. An optional LLM sits at the edges only: it can read a
 plain-English description into a structured graph, and it can retell a verdict
 in prose. Neither touches the decision. The intake screen says so.
 
-**What it does not answer:** whether the framework itself is right. AIGate
+**What it does not answer:** whether the framework itself is right. Counterpoise
 enforces the appetite you give it. If your rules are wrong, the verdicts are
 consistently wrong, which is at least a solvable problem.
 
@@ -42,7 +42,7 @@ You need nothing installed and no API key.
    a field or two on the review screen). Frontier models draft better; the
    demo ships the free local option. The form remains the most-verified
    path.
-4. Answer the duplicate check. AIGate searches the register for a use case with
+4. Answer the duplicate check. Counterpoise searches the register for a use case with
    overlapping characteristics and tells you how many entries it checked.
 5. Fill the guided form. Every field is a business question with plain-English
    options — *"Personal details of clients"*, not `data_class: Client PII`.
@@ -138,7 +138,7 @@ says so.
 
 ## What the honesty markers mean
 
-AIGate is built not to claim more than it can prove. These markers are the
+Counterpoise is built not to claim more than it can prove. These markers are the
 mechanism, and none of them is a bug.
 
 | Marker | Where you see it | What it means |
@@ -167,7 +167,7 @@ adoption removes only the stamp.
 A verdict is provisional when it relied on a rule your firm has not adopted.
 
 Every shipped jurisdiction pack carries `[FIRM]` sign-off placeholders, because
-AIGate does not interpret regulations on your behalf. A bank that tells its
+Counterpoise does not interpret regulations on your behalf. A bank that tells its
 supervisor "our AI interpreted SS1/23" does not have a defensible answer. A
 qualified person has to stand behind every regulatory determination.
 
@@ -281,7 +281,7 @@ is where most of the difference between the template and your framework lives.
 
 ---
 
-## What AIGate will not tell you
+## What Counterpoise will not tell you
 
 Have this list ready before you demo it to anyone. Being able to hand someone
 the boundary is worth more than another feature.
@@ -296,7 +296,7 @@ the boundary is worth more than another feature.
 - **That an AI system exists at all, if it never came through intake.**
   Shadow-AI discovery is V2.
 - **How to resolve genuine legal ambiguity.** When regulatory text is
-  contested, AIGate marks the rule as resting on judgement, renders the verdict
+  contested, Counterpoise marks the rule as resting on judgement, renders the verdict
   provisional, and routes it to Legal. It does not pretend to settle what
   qualified lawyers disagree about.
 - **Anything about InfoSec, vendor risk, cloud security or FinOps.** It

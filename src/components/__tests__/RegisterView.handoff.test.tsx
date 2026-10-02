@@ -327,7 +327,7 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     // before any `await`, so there is no async gap to wait out here.
     fireFileChange(await getImportInput(), makeFile({ not: 'a bundle' }));
 
-    expect(screen.queryByText('This file is not an AIGate hand-off bundle.')).not.toBeInTheDocument();
+    expect(screen.queryByText('This file is not an Counterpoise hand-off bundle.')).not.toBeInTheDocument();
     expect(screen.getByText(/different histories, so they can't be merged/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^save a backup of mine first$/i })).toBeInTheDocument();
   });
@@ -879,7 +879,7 @@ describe('RegisterView hand-off — bad-file fixtures through the real file inpu
   it('an unsupported format_version gets its own distinct message', async () => {
     const foreign = await buildForeignBundle(crypto.randomUUID());
     await userEvent.upload(await getImportInput(), makeFile({ ...foreign, format_version: 42 }));
-    expect(await screen.findByText(/different version of AIGate/i)).toBeInTheDocument();
+    expect(await screen.findByText(/different version of Counterpoise/i)).toBeInTheDocument();
   });
 
   it('duplicate event ids inside one bundle', async () => {

@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 21
+# Counterpoise — Test Cases, Round 21
 
 *Written 2026-10-02. R16-W (`build/prompts/R16-W.md`) — walkthrough fixes
 found on a live, owner-side run of the committed B+C + D1 build (commit

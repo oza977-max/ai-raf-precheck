@@ -1,4 +1,4 @@
-# AIGate — Requirements Health Report
+# Counterpoise — Requirements Health Report
 
 **Generated:** June 2026  
 **Requirements version:** 1.0  
@@ -144,15 +144,15 @@ RG-1 requires the data model to be a graph and states that queries like "which u
 
 ---
 
-### Issue HR-10 — Missing requirement: behaviour when AIGate fails its own pre-check (LC-6)
+### Issue HR-10 — Missing requirement: behaviour when Counterpoise fails its own pre-check (LC-6)
 
 **Requirement:** LC-6  
 **Type:** Missing — edge case  
 **Severity:** Medium  
 
-LC-6 requires AIGate to submit itself as a use case under its own pre-check. The fit criterion says: "If AIGate cannot satisfy its own gates, the gates are reconsidered." This is a policy statement, not a testable behaviour. No requirement covers the process for what "reconsidering the gates" means — who is notified, what the action is, what is recorded.
+LC-6 requires Counterpoise to submit itself as a use case under its own pre-check. The fit criterion says: "If Counterpoise cannot satisfy its own gates, the gates are reconsidered." This is a policy statement, not a testable behaviour. No requirement covers the process for what "reconsidering the gates" means — who is notified, what the action is, what is recorded.
 
-**Suggestion:** Add to LC-6 fit criterion: "If AIGate's self-assessment produces a Rejected verdict, the system shall display a prominent warning to the 2LoD role: 'AIGate self-assessment: REJECTED — [invariant]. This system is operating outside its own appetite. The 2LoD owner must review and either resolve the invariant or formally accept the deviation.' The warning is shown on first login each session until resolved."
+**Suggestion:** Add to LC-6 fit criterion: "If Counterpoise's self-assessment produces a Rejected verdict, the system shall display a prominent warning to the 2LoD role: 'Counterpoise self-assessment: REJECTED — [invariant]. This system is operating outside its own appetite. The 2LoD owner must review and either resolve the invariant or formally accept the deviation.' The warning is shown on first login each session until resolved."
 
 ---
 

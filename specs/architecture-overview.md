@@ -1,4 +1,4 @@
-# AIGate — Architecture Overview
+# Counterpoise — Architecture Overview
 
 **Version:** 1.0  
 **Date:** June 2026  
@@ -21,11 +21,11 @@
 
 ## 1. System Context (C4 Level 1)
 
-AIGate is a browser-only single-page application. There is no server, no database server, and no backend API. All state lives in IndexedDB inside the user's browser. The Anthropic API is the only external system.
+Counterpoise is a browser-only single-page application. There is no server, no database server, and no backend API. All state lives in IndexedDB inside the user's browser. The Anthropic API is the only external system.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        AIGate System                            │
+│                        Counterpoise System                            │
 │                                                                 │
 │  [1LoD Developer / AI Submitter]                                │
 │    → Describes AI use case in plain language                    │
@@ -52,7 +52,7 @@ AIGate is a browser-only single-page application. There is no server, no databas
 
 **External dependencies:**
 - **Anthropic API** — called only at two points: graph extraction (`src/llm/graph-extractor.ts`) and reasoning trace generation (`src/llm/reasoning-trace.ts`). The evaluation engine never calls the LLM. Both calls require an API key configured by the user; the system degrades gracefully (structured form fallback, template reasoning trace) when no key is present.
-- **Bank's policy YAML** — the source of truth for all risk appetite rules. Not served by AIGate; the bank loads it as a file upload or paste. Version-stamped in every verdict record.
+- **Bank's policy YAML** — the source of truth for all risk appetite rules. Not served by Counterpoise; the bank loads it as a file upload or paste. Version-stamped in every verdict record.
 
 ---
 
@@ -138,7 +138,7 @@ Browser (localhost / served from dist/)
 | Evaluation Engine | `evaluation-engine.md` | 8-step deterministic pipeline from `DataFlowGraph` to `Verdict`. Greedy set-cover control solver (ADR-004). Sequential pipeline architecture (ADR-005). The engine is a pure function — no LLM, no I/O. |
 | Intake Flow | `intake-flow.md` | 9-state intake wizard from free-text description to confirmed graph. LLM graph extraction (UC-3) with structured form fallback (UC-3a). Question generation, contradiction detection, attestation. |
 | Verdict & Audit | `verdict-audit.md` | Verdict display (VD-1–8), append-only audit store (NF-2), correction flow (VD-3), confidence caveats (RA-11), LLM reasoning trace (VD-8). ADR-006 (append-only store) and ADR-007 (post-evaluation trace). |
-| Register & Lifecycle | `register-lifecycle.md` | Graph-based AI inventory (RG-1, non-retrofittable), role-based access (RG-2), lifecycle stage machine (LC-1), tier-to-workflow routing (LC-2), policy update re-evaluation trigger (LC-4), AIGate self-assessment (LC-6). |
+| Register & Lifecycle | `register-lifecycle.md` | Graph-based AI inventory (RG-1, non-retrofittable), role-based access (RG-2), lifecycle stage machine (LC-1), tier-to-workflow routing (LC-2), policy update re-evaluation trigger (LC-4), Counterpoise self-assessment (LC-6). |
 
 ---
 
@@ -146,7 +146,7 @@ Browser (localhost / served from dist/)
 
 Brooks' criterion: "I will contend that conceptual integrity is the most important consideration in system design. It is better to have a system omit certain anomalous features and improvements, but to reflect one set of design ideas, than to have one that contains many good but independent and uncoordinated ideas."
 
-**The central design idea in AIGate:** A use case is a data-flow graph. The bank's appetite is a set of typed conditions on that graph. The engine is a deterministic function that maps (graph, policy) → verdict. Everything else — the intake wizard, the audit trail, the register, the reasoning trace — is scaffolding for this core function.
+**The central design idea in Counterpoise:** A use case is a data-flow graph. The bank's appetite is a set of typed conditions on that graph. The engine is a deterministic function that maps (graph, policy) → verdict. Everything else — the intake wizard, the audit trail, the register, the reasoning trace — is scaffolding for this core function.
 
 **Coherence assessment across specs:**
 

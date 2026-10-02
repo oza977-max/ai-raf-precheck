@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 8
+# Counterpoise — Test Cases, Round 8
 
 *Written 2026-08-17 alongside the build (v0.9.0) from
 `requirements/requirements-008.md`. Traceability 100% at birth.*

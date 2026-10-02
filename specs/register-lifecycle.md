@@ -1,9 +1,9 @@
-# AIGate — Register & Lifecycle Specification
+# Counterpoise — Register & Lifecycle Specification
 
 **Version:** 1.0  
 **Date:** June 2026  
 **Status:** Draft  
-**Covers:** RG-1 through RG-5, LC-1 through LC-4, LC-6 — graph-based inventory register, role-based access, tier-to-workflow routing, re-evaluation triggers, AIGate self-assessment
+**Covers:** RG-1 through RG-5, LC-1 through LC-4, LC-6 — graph-based inventory register, role-based access, tier-to-workflow routing, re-evaluation triggers, Counterpoise self-assessment
 
 ---
 
@@ -30,7 +30,7 @@ This spec defines:
 - Policy-update re-evaluation trigger: queues all active use cases (LC-4, RG-4)
 - Lifecycle stage machine: Idea → Retired (LC-1)
 - Tier-to-workflow routing: Low=self-service, Medium=2LoD-notify, High/Critical=2LoD-approve (LC-2)
-- AIGate self-assessment: AIGate appears in its own register (LC-6)
+- Counterpoise self-assessment: Counterpoise appears in its own register (LC-6)
 
 Verdict storage is handled by `src/store/audit.ts` (see `verdict-audit.md`). This spec covers the register store (`src/store/register.ts`) — the live state of use cases and their derived summaries.
 
@@ -44,7 +44,7 @@ Verdict storage is handled by `src/store/audit.ts` (see `verdict-audit.md`). Thi
 | Role access must filter at query layer | RG-2 | `getAll()` accepts `role` parameter; never loads all records then filters in-memory |
 | Re-evaluation trigger queues all active cases | LC-4 | Policy version change writes a `re_evaluation_queued` event to every active use case |
 | Lifecycle stage is the governance source of truth | LC-1 | Stage transitions are the primary audit events that drive 2LoD queues |
-| AIGate self-assessment must be a real evaluation | LC-6 | Not a stub — AIGate must run its own engine on its own graph and store the result |
+| Counterpoise self-assessment must be a real evaluation | LC-6 | Not a stub — Counterpoise must run its own engine on its own graph and store the result |
 | Tier-to-workflow routing is policy-configurable | LC-2 | The routing table lives in the policy file, not hardcoded in the UI |
 
 ---
@@ -367,9 +367,9 @@ This follows the policy: re-evaluation is triggered for all active cases; triage
 
 ---
 
-## 9. AIGate Self-Assessment (LC-6)
+## 9. Counterpoise Self-Assessment (LC-6)
 
-AIGate must appear in its own register as a submitted use case with a verdict produced by its own evaluation engine. This is not a stub or a fixture — it is a real evaluation.
+Counterpoise must appear in its own register as a submitted use case with a verdict produced by its own evaluation engine. This is not a stub or a fixture — it is a real evaluation.
 
 **Seeded use case record (canonical vocabulary — honest values):**
 
@@ -389,7 +389,7 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
   }],
   processing_nodes: [{
     id: 'proc-1',
-    label: 'AIGate evaluation engine + LLM graph extraction (Anthropic claude-sonnet-4-6)',
+    label: 'Counterpoise evaluation engine + LLM graph extraction (Anthropic claude-sonnet-4-6)',
     model_type: 'llm',          // Canonical: LLM for graph extraction
     autonomy_level: 1,          // Human confirms graph before evaluation fires
     data_zone: 'Zone B',
@@ -413,13 +413,13 @@ export const AIGATE_USE_CASE_GRAPH: DataFlowGraph = {
 ```
 
 On first launch (when the register is empty), `src/seeds/aigate-self-assessment.ts` is called to:
-1. Insert the AIGate use case as a `RegisterNode` with `node_type: 'use_case'`
+1. Insert the Counterpoise use case as a `RegisterNode` with `node_type: 'use_case'`
 2. Insert the Anthropic vendor node and `provided_by_vendor` edge
 3. Run `evaluate(AIGATE_USE_CASE_GRAPH, policy)` against the loaded policy
 4. Store the resulting `Verdict` in the audit trail via `audit.append()`
-5. Route the result through `workflow-router.ts` like any other use case — **no auto-approve**. If the engine assigns High or Critical, the use case sits at `pre_checked` until the 2LoD role approves. The register view shows a prominent warning: **"AIGate self-assessment pending 2LoD approval — verdicts are provisional until cleared."**
+5. Route the result through `workflow-router.ts` like any other use case — **no auto-approve**. If the engine assigns High or Critical, the use case sits at `pre_checked` until the 2LoD role approves. The register view shows a prominent warning: **"Counterpoise self-assessment pending 2LoD approval — verdicts are provisional until cleared."**
 
-If the policy changes after this initial seeding, the AIGate use case is queued for re-evaluation along with all other active use cases (LC-4 trigger applies).
+If the policy changes after this initial seeding, the Counterpoise use case is queued for re-evaluation along with all other active use cases (LC-4 trigger applies).
 
 ---
 
@@ -479,7 +479,7 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | `addNode()` with duplicate `node_id` | IndexedDB `add()` throws; caller catches and logs — idempotent seed calls must check before inserting |
 | `onPolicyUpdated()` fails mid-loop (e.g. quota exceeded) | Partial re-evaluation queue written; next app launch detects uncompleted queue via audit event scan |
 | Graph traversal on empty register | `getBlastRadius()` returns `[]`; UI shows "No use cases found using this component" |
-| AIGate self-assessment graph violates own gates | `evaluate()` returns `rejected`; the seed stores this result; the UI flags it as a governance alert: "AIGate does not satisfy its own controls — policy review required" |
+| Counterpoise self-assessment graph violates own gates | `evaluate()` returns `rejected`; the seed stores this result; the UI flags it as a governance alert: "Counterpoise does not satisfy its own controls — policy review required" |
 | 1LoD user has no submitted use cases | `getUseCases(actorId)` returns `[]`; RegisterView shows "No use cases submitted yet" with a link to start intake |
 | IndexedDB `register` database missing (first launch) | `openDB()` creates it with the schema migration; seeding runs immediately after |
 
@@ -498,7 +498,7 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | LC-1 | §6 — lifecycle stage machine and transitions |
 | LC-2 | §7 — `workflow-router.ts`; policy-configurable `tier_workflows` |
 | LC-4 | §8 — policy update re-evaluation trigger |
-| LC-6 | §9 — AIGate self-assessment seeding |
+| LC-6 | §9 — Counterpoise self-assessment seeding |
 
 ---
 
@@ -513,8 +513,8 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | TC-LC-1-01, TC-LC-1-02 | §6 lifecycle stage machine |
 | TC-LC-2-01, TC-LC-2-02, TC-LC-2-03 | §7 tier-to-workflow routing |
 | TC-LC-4-01 | §8 policy update trigger |
-| TC-LC-6-01 | §9 AIGate self-assessment — normal evaluation path (renamed from TC-LC-4-02) |
-| TC-LC-6-02 | §9 AIGate self-assessment — forced-Reject test policy produces prominent 2LoD warning |
+| TC-LC-6-01 | §9 Counterpoise self-assessment — normal evaluation path (renamed from TC-LC-4-02) |
+| TC-LC-6-02 | §9 Counterpoise self-assessment — forced-Reject test policy produces prominent 2LoD warning |
 
 ---
 
@@ -638,7 +638,7 @@ written to close.
 
 ### 15.2 No verdict recorded, and verdicts without explanation (R3-RD-2)
 
-Where no verdict-bearing event exists — the seeded AIGate self-assessment is the
+Where no verdict-bearing event exists — the seeded Counterpoise self-assessment is the
 real case on every install — the page states plainly that no verdict is
 recorded and leaves sign-off available.
 
@@ -732,7 +732,7 @@ the same model produces exactly one `ai_model` node and two edges — the
 dormancy-repeat guard named in the fit criteria.
 
 **ADR-RL-R11-2 — the self-assessment declares its own model through the
-same path.** AIGate's self-assessment use case (LC-6, §9) names its
+same path.** Counterpoise's self-assessment use case (LC-6, §9) names its
 runtime model (`qwen3:4b` when the local provider is active, else "none
 declared") on its processing node exactly as any other use case would —
 no special-cased write path, per the existing "the gate gates its

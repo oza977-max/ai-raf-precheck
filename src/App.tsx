@@ -14,12 +14,13 @@ import { translationAttestationStatus } from './engine/attestation';
 import { loadPacks } from './store/packs';
 import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
+import BrandMark from './components/BrandMark';
 import { seedIbPortfolio } from './seeds/ib-portfolio';
 import './fonts.css';
 import './App.css';
 
 // App shell visual language taken from a Claude Design export
-// ("AIGate Demo.dc.html") — dark header, warm-paper workspace, IBM Plex
+// ("Counterpoise Demo.dc.html") — dark header, warm-paper workspace, IBM Plex
 // Sans/Mono. Sidebar "Register" nav item switches the main view to
 // RegisterView.tsx (P6-C01). "Appetite framework" now routes to
 // PolicyEditor.tsx (P7-C03) — a real Save flow, no longer a disabled
@@ -161,12 +162,12 @@ export default function App() {
     };
   }, [view, policyRevision]);
 
-  // register-lifecycle.md §9 (LC-6): AIGate evaluates itself through its
+  // register-lifecycle.md §9 (LC-6): Counterpoise evaluates itself through its
   // own engine on first launch. Best-effort — a failure here (e.g.
   // invalid policy) must not block the app from rendering (same pattern
   // as VD-8's reasoning-trace generation). Runs once per app lifetime —
   // seedAigateSelfAssessment() is idempotent and race-safe (P7-C01).
-  // P8-C04: seeded WITHOUT packs until now, so AIGate's own self-assessment
+  // P8-C04: seeded WITHOUT packs until now, so Counterpoise's own self-assessment
   // was scored ignoring the UK pack its graph declares.
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
 
@@ -200,9 +201,9 @@ export default function App() {
   if (!seedStarted.current && policyResult.valid) {
     seedStarted.current = true;
     seedAigateSelfAssessment(policyResult.policy, loadedPacks).catch((err) => {
-      console.warn('AIGate self-assessment seeding failed:', err);
+      console.warn('Counterpoise self-assessment seeding failed:', err);
     });
-    // A first-time visitor's register was otherwise empty but for AIGate's
+    // A first-time visitor's register was otherwise empty but for Counterpoise's
     // own self-assessment — nothing to show the risk-knowledge lens, the
     // 2LoD sign-off queue or a filed rule challenge actually doing
     // something. seedIbPortfolio() is idempotent and race-safe the same
@@ -217,11 +218,9 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header__brand">
-          <span className="app-header__logo" aria-hidden="true">
-            ◈
-          </span>
-          <span className="app-header__name">AIGate</span>
-          <span className="app-header__badge">PRE-CHECK ENGINE</span>
+          <BrandMark className="app-header__logo" tone="on-dark" />
+          <span className="app-header__name">Counterpoise</span>
+          <span className="app-header__badge">AI USE-CASE PRE-APPROVAL FOR BANKS</span>
         </div>
         <div className="app-header__status">
           <span className="app-header__dot" aria-hidden="true" />

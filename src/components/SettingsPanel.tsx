@@ -108,7 +108,7 @@ export default function SettingsPanel() {
         setBusy('none');
         setMessage(
           `Not everything could be deleted: ${result.incomplete.join(', ')}. ` +
-            'This usually means AIGate is open in another tab — close the others and try again.'
+            'This usually means Counterpoise is open in another tab — close the others and try again.'
         );
         return;
       }
@@ -158,7 +158,7 @@ export default function SettingsPanel() {
             <div role="alert">
               <p>
                 This permanently deletes every use case, verdict and audit event in this browser.
-                AIGate has no server, so there is no copy to restore from. Export anything you want
+                Counterpoise has no server, so there is no copy to restore from. Export anything you want
                 to keep first. Your model settings are not affected.
               </p>
               <button type="button" onClick={handleClearAll} disabled={busy !== 'none'}>
@@ -179,7 +179,7 @@ export default function SettingsPanel() {
         <div>
           <label htmlFor="local-llm-url">Model for plain-language intake (demo)</label>
           <p>
-            One model slot, optional. AIGate scores use cases without it — the model only enables
+            One model slot, optional. Counterpoise scores use cases without it — the model only enables
             plain-language intake; the guided questions are the deterministic path either way.
             Point it at a model server on this machine (Ollama): your description goes to a local
             process, never to the internet, the model proposes, and you confirm every field before

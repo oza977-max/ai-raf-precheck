@@ -101,14 +101,14 @@ export function eventDetail(event: AuditEvent): string {
     default:
       // code-review-005 F13: the switch covers every type this version knows,
       // but stored events are data, not types — an event written by another
-      // version of AIGate, or a damaged record, must still show as a line that
+      // version of Counterpoise, or a damaged record, must still show as a line that
       // says what it is, never as a blank row in the evidence trail.
       return unrecognisedEventLine((p as { type?: unknown }).type ?? event.event_type);
   }
 }
 
 function unrecognisedEventLine(type: unknown): string {
-  return `Unrecognised event type “${String(type)}” — it is on the record, but this version of AIGate can’t display it.`;
+  return `Unrecognised event type “${String(type)}” — it is on the record, but this version of Counterpoise can’t display it.`;
 }
 
 export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
@@ -860,7 +860,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
           )}
         </p>
       ) : null}
-      {/* explore-007 D-002 fix (round 8): Track is AIGate's own invented
+      {/* explore-007 D-002 fix (round 8): Track is Counterpoise's own invented
           oversight-regime category — a bank with its own committee
           structure (e.g. NPPA + Model Risk) has no way to see how it maps
           without this. Renders only when the firm has actually set a

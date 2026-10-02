@@ -1,4 +1,4 @@
-# AIGate — Test Cases, Round 15
+# Counterpoise — Test Cases, Round 15
 
 *Written 2026-08-25 alongside the R15 build (targeted UI redesign,
 `requirements/requirements-015.md`, `reviews/design-deliberation-001/proposal.md`).

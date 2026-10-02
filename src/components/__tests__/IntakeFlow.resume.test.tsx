@@ -179,11 +179,11 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     // classification came from.
     // Identify the adopted record by what it IS, not by "the other row" —
     // once O-002's fix made the register wait for the self-assessment seeding,
-    // "the other row" could be the AIGate seed. An assertion that can match
+    // "the other row" could be the Counterpoise seed. An assertion that can match
     // the wrong record passes for the wrong reason.
     // Identify the adopted record by WHAT HAPPENED TO IT, not by name and not
     // by "the other row". Both of those matched the wrong record: "the other
-    // row" picked up the AIGate seed once O-002's fix made the register wait
+    // row" picked up the Counterpoise seed once O-002's fix made the register wait
     // for seeding, and the label matched a same-named use case created by a
     // different test file in a full-suite run. The record that was adopted is
     // the one carrying a classification_adopted event — that is its identity.
