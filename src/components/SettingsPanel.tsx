@@ -12,6 +12,7 @@ import {
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
 import { loadPolicy } from '../store/policy';
+import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { clearAllLocalData } from '../store/reset';
 import { sampleCount, seedSampleRegister } from '../seeds/sample-register';
@@ -39,10 +40,21 @@ export default function SettingsPanel() {
 
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), []);
   const packs = useMemo(() => loadPacks(getPackSources()).packs, []);
+  // R16-A1 (§1.4): computed once, reused by both seed actions below — an
+  // honest, specific message beats letting the seed function silently
+  // refuse and report "nothing added" for the wrong reason (NF-2).
+  const policyReferenceErrors = useMemo(
+    () => (policyResult.valid ? checkPolicyReferences(policyResult.policy, packs).errors : []),
+    [policyResult, packs],
+  );
 
   async function handleSeed() {
     if (!policyResult.valid) {
       setMessage('Cannot load samples — the current policy is invalid.');
+      return;
+    }
+    if (policyReferenceErrors.length > 0) {
+      setMessage(`Cannot load samples — the policy has an unresolved reference error: ${policyReferenceErrors[0]}`);
       return;
     }
     setBusy('seeding');
@@ -64,6 +76,10 @@ export default function SettingsPanel() {
   async function handleSeedIb() {
     if (!policyResult.valid) {
       setMessage('Cannot load the portfolio — the current policy is invalid.');
+      return;
+    }
+    if (policyReferenceErrors.length > 0) {
+      setMessage(`Cannot load the portfolio — the policy has an unresolved reference error: ${policyReferenceErrors[0]}`);
       return;
     }
     setBusy('seeding-ib');

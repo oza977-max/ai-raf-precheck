@@ -41,6 +41,10 @@ const HardLineSchema = z.object({
   condition: ConditionRecordSchema,
   reason: z.string(),
   regulatory_basis: z.string(),
+  // R16-A1 (CF-6 §1.2): optional plain-language text (VD-10). Absent falls
+  // back to `reason` + the formal wording (chunk D1 renders the fallback).
+  plain_reason: z.string().optional(),
+  plain_change: z.string().optional(),
 });
 
 const TrackConditionSchema = z.object({
@@ -78,6 +82,10 @@ const InvariantSchema = z.object({
   severity: z.string(),
   // V1.1-C01: optional citation, surfaced in the verdict explanation.
   regulatory_basis: z.string().optional(),
+  // R16-A1 (CF-6 §1.2): optional plain-language reason, written from the
+  // condition — may use the {audience}/{destination} placeholders (chunk D1
+  // resolves them). Absent falls back to `description`.
+  plain_reason: z.string().optional(),
 });
 
 // R10-CE (ADR-VA-R10-3): one axis of control effectiveness.
@@ -106,6 +114,19 @@ const ControlSchema = z.object({
       operating: EffectivenessAxisSchema.optional(),
     })
     .optional(),
+  // R16-A1 (CF-6 §1.2): optional plain-language fields (VD-9). All absent
+  // falls back to the formal name/description + `@`-token-free owner text
+  // (chunk D1 renders the fallback); this schema only makes them exist.
+  plain_action: z.string().optional(),
+  plain_owner: z.string().optional(),
+  plain_owner_with: z.string().optional(),
+  // Review base ids this control's own action also satisfies — a firm
+  // review id, a pack review rule id, or the sentinels PV-UNREGISTERED /
+  // MODEL-REGISTRY. checkPolicyReferences (src/store/policy-references.ts)
+  // checks each entry refers to something real; it is a referential check
+  // only (grounding/PACK-AUTHORING.md's reviewer checklist covers whether
+  // the control truly covers the review).
+  covers_reviews: z.array(z.string().min(1)).optional(),
 });
 
 const JurisdictionEntrySchema = z.object({
@@ -140,6 +161,17 @@ const RegistryEntrySchema = z.object({
   approved_envelope: EnvelopeSchema,
   satisfies_controls: z.array(z.string().min(1)),
   coupled_clusters: z.array(z.array(z.string().min(1))).optional(),
+  // R16-A1 (CF-6 §1.2). Shared by both `platforms` and `vendors` entries —
+  // see the RegistryEntry interface comment in src/engine/types.ts for why
+  // `vendor_id` and `kind` are declared here even though each means
+  // something on only one of the two registries. All optional; existing
+  // registries load unchanged. `checkPolicyReferences` warns (never
+  // blocks) on a platform/vendor with no `plain_name`.
+  plain_name: z.string().min(1).optional(),
+  vendor_id: z.string().min(1).optional(),
+  // Default 'supplier' when absent — applied by the view-model that renders
+  // it (chunk D1), not by this loader.
+  kind: z.enum(['company_assistant', 'supplier']).optional(),
 });
 
 // R11-MG-1 (policy-schema.md §10a, ADR-PS-R11-1). Unknown provenance_class
@@ -190,6 +222,11 @@ const PolicyFileSchema = z.object({
         review: z.string().min(1),
         condition: ConditionRecordSchema,
         regulatory_basis: z.string().optional(),
+        // R16-A1 (CF-6 §1.2): the check and the team that runs it, in plain
+        // words. Both optional; absent falls back to `review` + the formal
+        // wording (chunk D1 renders the fallback).
+        plain_name: z.string().optional(),
+        plain_owner: z.string().optional(),
       }),
     )
     .optional(),
@@ -249,6 +286,38 @@ function operatorErrors(field: string, value: unknown): PolicyValidationError[] 
   }));
 }
 
+// R16-A1 (PE-9 §1.1): fields whose graph value may be a LIST (today, only
+// system_access_scope — condition.ts's collectFieldValues expands an array
+// into one candidate per element). Any OTHER operator is meaningless on
+// such a field (there is no well-defined "greater than" or "excludes a
+// list" over a set of ticked values), so only `in` is permitted. Declared
+// here, next to CANONICAL_VOCABULARY, for the same reason that lives beside
+// it: one place a reader checks to see every special-cased field name.
+// Exported for src/store/policy-references.ts: checkPolicyReferences() does
+// its own defense-in-depth sweep over every condition in the policy AND the
+// packs passed to it (including policy.downstream_reviews[], which this
+// file's own runSemanticChecks does not walk — see that function's
+// docstring), so it needs the same field set and the same in-only
+// predicate used here.
+export const LIST_VALUED_FIELDS = new Set<string>(['system_access_scope']);
+
+export function isInOnlyCondition(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const keys = Object.keys(value as Record<string, unknown>);
+  return keys.length === 1 && keys[0] === 'in';
+}
+
+function listValuedFieldErrors(field: string, value: unknown): PolicyValidationError[] {
+  if (!LIST_VALUED_FIELDS.has(field) || isInOnlyCondition(value)) return [];
+  return [
+    {
+      kind: 'policy-invalid',
+      field,
+      reason: `"${field}" is a list-valued field and supports only the "in" operator — bare equality, gte, lte and not_in are not well-defined over a set of ticked values`,
+    },
+  ];
+}
+
 function vocabularyErrors(field: string, value: unknown): PolicyValidationError[] {
   const allowed = CANONICAL_VOCABULARY[field];
   if (!allowed) return [];
@@ -279,7 +348,7 @@ function vocabularyErrors(field: string, value: unknown): PolicyValidationError[
 // main policy — a typo'd field or malformed operator would otherwise
 // produce a regulatory rule that silently never fires (CF-5/RA-7).
 export function validateConditionFieldValue(field: string, value: unknown): PolicyValidationError[] {
-  return [...operatorErrors(field, value), ...vocabularyErrors(field, value)];
+  return [...operatorErrors(field, value), ...vocabularyErrors(field, value), ...listValuedFieldErrors(field, value)];
 }
 
 function validateConditionRecord(record: Record<string, unknown>): PolicyValidationError[] {

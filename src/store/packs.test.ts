@@ -82,6 +82,70 @@ rules:
     expect(packs).toEqual([]);
     expect(errors[0]?.reason).toMatch(/BC-1.*includes/);
   });
+
+  it('TC-R16-A1-41: a required_review effect accepts optional plain_name and plain_owner', () => {
+    const withPlainFields = `
+pack_id: "PLAIN-PACK"
+version: "1.0"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+rules:
+  - id: "PP-1"
+    title: "T"
+    source: { document: "Doc", section: "S1", text: "verbatim text" }
+    effect:
+      type: "required_review"
+      review: "Formal review name"
+      plain_name: "an independent check of the model"
+      plain_owner: "your firm's model validation team"
+    condition: {}
+    basis: "verbatim"
+    reviewer_name: "X"
+    reviewer_role: "Y"
+    sign_off_date: "2026-01-01"
+`;
+    const { packs, errors } = loadPacks({ 'plain.yaml': withPlainFields });
+    expect(errors).toEqual([]);
+    const rule = packs[0]?.rules[0];
+    expect(rule?.effect).toMatchObject({
+      type: 'required_review',
+      plain_name: 'an independent check of the model',
+      plain_owner: "your firm's model validation team",
+    });
+  });
+
+  it('TC-R16-A1-34: a rule whose condition uses not_in on the list-valued system_access_scope field rejects the WHOLE pack', () => {
+    const badListCondition = `
+pack_id: "BAD-LIST-COND"
+version: "1.0"
+jurisdiction: "UK"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+rules:
+  - id: "BL-1"
+    title: "not_in on a list-valued field"
+    source: { document: "Doc", section: "S1", text: "T" }
+    effect: { type: "required_review", review: "R" }
+    condition:
+      system_access_scope: { not_in: ["none"] }
+    basis: "verbatim"
+    reviewer_name: "X"
+    reviewer_role: "Y"
+    sign_off_date: "2026-01-01"
+`;
+    const { packs, errors } = loadPacks({ 'bad-list-cond.yaml': badListCondition });
+    expect(packs).toEqual([]);
+    expect(errors[0]?.reason).toMatch(/BL-1.*system_access_scope/);
+  });
 });
 
 // Traceability close-out (2026-08-15).

@@ -21,6 +21,7 @@ import type {
   ApprovedModel,
   Control,
   DataFlowGraph,
+  DownstreamReviewSource,
   InheritanceChain,
   RegistryEntry,
   EngineError,
@@ -90,6 +91,19 @@ export function evaluate(
   // the coverage just happened to be.
   const inheritance = resolveInheritance(graph, policy);
 
+  // R16-A1 (§1.3, D-58): shared by BOTH hard-line return sites below — a
+  // hard-line trip (base or pack) returns before jurisdiction overrides are
+  // resolved (§3.1 step order, unchanged), so pack-required reviews are
+  // never available here; firm rules, the unregistered-component path and
+  // the model-governance path are. Computing this once keeps the pack
+  // hard-line branch an exact mirror of the base one, which is the fix for
+  // the documented bug (the pack branch used to set neither field at all).
+  const baseHardLineSources = combineReviewSources(
+    firmRequiredReviews(graph, policy),
+    unapprovedComponentReviews(inheritance),
+    modelGovernanceReviews(graph, policy),
+  );
+
   // Step 2: hard lines — first trip is immediate rejection, no further steps.
   const hardLineResult = evaluateHardLines(graph, hardLines);
   if (hardLineResult.tripped) {
@@ -116,16 +130,12 @@ export function evaluate(
         // reading (user decision, 2026-08-05).
         //
         // Pack overrides are not available here: a hard line returns before
-        // jurisdiction resolution, by design (§3.1 step order). Firm rules and
-        // the unregistered-component path are.
-        downstream_reviews: [
-          ...new Set([
-            ...firmRequiredReviews(graph, policy).map((r) => r.review),
-            ...unapprovedComponentReviews(inheritance),
-            ...modelGovernanceReviews(graph, policy),
-          ]),
-        ].sort(),
-        downstream_review_sources: firmRequiredReviews(graph, policy),
+        // jurisdiction resolution, by design (§3.1 step order). Firm rules,
+        // the unregistered-component path and the model-governance path are
+        // (R16-A1 §1.3 — all three merged into one sources list, with
+        // downstream_reviews derived from it, the single source of truth).
+        downstream_reviews: reviewStringsFrom(baseHardLineSources),
+        downstream_review_sources: baseHardLineSources,
         policy_version: policy.version,
         ...(inheritance ? { inheritance } : {}),
         // Review finding, pass 1: the audit trail must record which pack
@@ -162,6 +172,12 @@ export function evaluate(
         track: 'I',
         binding_constraint: rule.id,
         binding_path: packHardLine.graphPath,
+        // R16-A1 (§1.3, D-58): the documented bug fix — this branch used to
+        // set neither field at all. Mirrors the base hard-line branch
+        // exactly (same three producers, pack overrides unavailable here
+        // for the same reason).
+        downstream_reviews: reviewStringsFrom(baseHardLineSources),
+        downstream_review_sources: baseHardLineSources,
         policy_version: policy.version,
         pack_versions: packVersions,
         ...(inheritance ? { inheritance } : {}),
@@ -190,6 +206,17 @@ export function evaluate(
   // Step 5 (V2-A, real): tier floors raise (never lower), obligations
   // supplement; every fired rule lands in the regulatory chain + caveats.
   const overrides = applyJurisdictionOverrides(graph, tierAssignment.tier, trackResult.value.track, activePacks);
+
+  // R16-A1 (§1.3): the two FORWARD return sites below (unsatisfiable-
+  // invariant rejection and the final assembly) both reach this point with
+  // jurisdiction overrides already resolved, so all FOUR producers apply —
+  // computed once here rather than re-derived at each site.
+  const forwardSources = combineReviewSources(
+    firmRequiredReviews(graph, policy),
+    overrides.addedReviews,
+    unapprovedComponentReviews(inheritance),
+    modelGovernanceReviews(graph, policy),
+  );
 
   // Step 6: invariant evaluation (no short-circuit — solver needs the full set).
   const tripped = evaluateInvariants(graph, invariants);
@@ -233,18 +260,8 @@ export function evaluate(
         track: overrides.finalTrack,
         binding_constraint: solverResult.unsatisfiableInvariant,
         binding_path: bindingTripped?.graphPath ?? '',
-        // CS-3, round 4 — the forward path, as above. Jurisdiction overrides
-        // ARE resolved by this point, so a pack's required_review is included
-        // too.
-        downstream_reviews: [
-          ...new Set([
-            ...firmRequiredReviews(graph, policy).map((r) => r.review),
-            ...overrides.addedReviews,
-            ...unapprovedComponentReviews(inheritance),
-            ...modelGovernanceReviews(graph, policy),
-          ]),
-        ].sort(),
-        downstream_review_sources: firmRequiredReviews(graph, policy),
+        downstream_reviews: reviewStringsFrom(forwardSources),
+        downstream_review_sources: forwardSources,
         policy_version: policy.version,
         pack_versions: packVersions,
         applied_overrides: overrides.appliedOverrides,
@@ -300,19 +317,13 @@ export function evaluate(
       // Pack-required controls supplement the solver's minimal set
       // (BC-V2A-01: obligations only ever add).
       controls: [...new Set([...solverResult.controls, ...overrides.addedControls])].sort(),
-      // CS-3: three sources, all additive — the firm's own configured
-      // processes, a jurisdiction pack's required_review, and the
-      // unregistered-component path. Deduped and sorted, like every other
-      // verdict collection (NF-1).
-      downstream_reviews: [
-        ...new Set([
-          ...firmRequiredReviews(graph, policy).map((r) => r.review),
-          ...overrides.addedReviews,
-          ...unapprovedComponentReviews(inheritance),
-          ...modelGovernanceReviews(graph, policy),
-        ]),
-      ].sort(),
-      downstream_review_sources: firmRequiredReviews(graph, policy),
+      // CS-3 / R16-A1 (§1.3): four sources, all additive — the firm's own
+      // configured processes, a jurisdiction pack's required_review, the
+      // unregistered-component path and the model-governance path.
+      // downstream_reviews is DERIVED from downstream_review_sources (their
+      // review strings, de-duplicated) — one source of truth.
+      downstream_reviews: reviewStringsFrom(forwardSources),
+      downstream_review_sources: forwardSources,
       ...(inheritance ? { inheritance } : {}),
       // VD-7 (V1.2-B): the hypothesis this approval is conditional on —
       // statically populated from kri_thresholds + graph pins. Rejection
@@ -406,18 +417,26 @@ function resolveInheritance(graph: DataFlowGraph, policy: PolicyFile): Inheritan
 
 // PV-5: name every unapproved component, not merely report that something
 // was unapproved.
-function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): string[] {
+//
+// R16-A1 (§1.3): returns a structured DownstreamReviewSource per component
+// instead of a bare string, so this producer's output merges with the other
+// three the same way. rule_id is the PV-UNREGISTERED sentinel plus the
+// component name, joined by ":" — the base id (the part before ":") is what
+// a control's covers_reviews entry matches (it names the bare sentinel
+// once; it cannot know every component name in advance).
+function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): DownstreamReviewSource[] {
   if (!inheritance || inheritance.unresolved_components.length === 0) return [];
-  return inheritance.unresolved_components.map(
-    (name) =>
-      // The guided form's sentinel for "not on the list"
-      // (StructuredForm.tsx:453,478) was printing verbatim into verdict prose
-      // a banker reads. Naming it in words says the same thing without
-      // exposing an implementation detail as though it were a vendor.
+  return inheritance.unresolved_components.map((name) => ({
+    rule_id: `PV-UNREGISTERED:${name}`,
+    // The guided form's sentinel for "not on the list"
+    // (StructuredForm.tsx:453,478) was printing verbatim into verdict prose
+    // a banker reads. Naming it in words says the same thing without
+    // exposing an implementation detail as though it were a vendor.
+    review:
       name === '__other__'
         ? 'Full vendor/platform risk assessment required — the declared component is not on the approved list'
         : `Full vendor/platform risk assessment required — ${name} is not on the approved list`,
-  );
+  }));
 }
 
 // R11-MG-2 (ADR-IF-R11-MG-1, evaluation-engine.md/policy-schema.md §10a).
@@ -426,7 +445,11 @@ function unapprovedComponentReviews(inheritance: InheritanceChain | undefined): 
 // `unapprovedComponentReviews` above, reused rather than reinvented.
 // Deterministic (NF-1): pure function of sorted policy.approved_models and
 // the graph's declared_model_id values, no I/O.
-function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): string[] {
+//
+// R16-A1 (§1.3): structured DownstreamReviewSource per model, same reason as
+// unapprovedComponentReviews above — rule_id is "MODEL-REGISTRY:<model id>",
+// and the base id before ":" is what covers_reviews matches.
+function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): DownstreamReviewSource[] {
   const declared = [
     ...new Set(
       graph.processing_nodes
@@ -457,17 +480,31 @@ function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): strin
       const entry = resolveApprovedModel(id);
       return entry === undefined || entry.is_approved === false;
     })
-    .map(
-      (id) =>
-        // Reserved-word discipline (CLAUDE.md gotcha, /approved|rejected/i):
-        // "on the firm's registry within appetite" says the same thing as
-        // "approved" without the banned word reaching a rendered string.
-        `Model governance review required — ${id} is not on the firm's model registry within appetite`,
-    );
+    .map((id) => ({
+      rule_id: `MODEL-REGISTRY:${id}`,
+      // Reserved-word discipline (CLAUDE.md gotcha, /approved|rejected/i):
+      // "on the firm's registry within appetite" says the same thing as
+      // "approved" without the banned word reaching a rendered string.
+      review: `Model governance review required — ${id} is not on the firm's model registry within appetite`,
+    }));
 }
 
 function sortedByModelId(items: ApprovedModel[]): ApprovedModel[] {
   return [...items].sort((a, b) => a.model_id.localeCompare(b.model_id));
+}
+
+// R16-A1 (§1.3, D-04, D-57). One place that combines whichever producers
+// apply at a given return site into the deterministic sources list every
+// verdict carries, and derives the de-duplicated prose list from it — so
+// `downstream_reviews` has exactly one source of truth
+// (`downstream_review_sources`) at every one of evaluate()'s four return
+// sites, not four independent re-derivations that could drift.
+function combineReviewSources(...producers: DownstreamReviewSource[][]): DownstreamReviewSource[] {
+  return producers.flat().sort((a, b) => a.rule_id.localeCompare(b.rule_id));
+}
+
+function reviewStringsFrom(sources: DownstreamReviewSource[]): string[] {
+  return [...new Set(sources.map((s) => s.review))].sort();
 }
 
 function tierRationale(assignment: TierAssignment): RuleRationale {

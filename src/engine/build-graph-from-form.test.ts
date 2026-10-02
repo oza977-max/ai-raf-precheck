@@ -20,6 +20,42 @@ const VALID_VALUES: StructuredFormValues = {
 };
 
 describe('buildGraphFromForm', () => {
+  // R16-A1 (PE-9 §1.1): buildGraphFromForm accepts a list for
+  // systemAccessScope and runs it through normaliseAccessScope — the single
+  // implementation of the validate/canonicalise rule.
+  it('TC-R16-A1-18: a single systemAccessScope value is stored unchanged (shape preserved)', () => {
+    const graph = buildGraphFromForm({ ...VALID_VALUES, systemAccessScope: 'shared_infrastructure' });
+    expect(graph.processing_nodes[0]?.system_access_scope).toBe('shared_infrastructure');
+  });
+
+  it('TC-R16-A1-19: a list of systemAccessScope values is stored in canonical order, regardless of tick order', () => {
+    const a = buildGraphFromForm({
+      ...VALID_VALUES,
+      systemAccessScope: ['deployment_authority', 'shared_infrastructure'],
+    });
+    const b = buildGraphFromForm({
+      ...VALID_VALUES,
+      systemAccessScope: ['shared_infrastructure', 'deployment_authority'],
+    });
+    expect(a.processing_nodes[0]?.system_access_scope).toEqual(['shared_infrastructure', 'deployment_authority']);
+    // Shuffled ticks produce a byte-identical graph on every field OTHER
+    // than the random id/timestamp fields buildGraphFromForm itself mints.
+    expect(a.processing_nodes[0]?.system_access_scope).toEqual(b.processing_nodes[0]?.system_access_scope);
+  });
+
+  it('TC-R16-A1-20: an invalid systemAccessScope (e.g. "none" combined with another value) is omitted, not fabricated', () => {
+    const graph = buildGraphFromForm({
+      ...VALID_VALUES,
+      systemAccessScope: ['none', 'shared_infrastructure'],
+    });
+    expect(graph.processing_nodes[0]?.system_access_scope).toBeUndefined();
+  });
+
+  it('omits systemAccessScope entirely when not stated (absence is not a claim)', () => {
+    const graph = buildGraphFromForm(VALID_VALUES);
+    expect('system_access_scope' in graph.processing_nodes[0]!).toBe(false);
+  });
+
   it('TC-UC-3a-01: produces a valid DataFlowGraph with one node per category', () => {
     const graph = buildGraphFromForm(VALID_VALUES);
 

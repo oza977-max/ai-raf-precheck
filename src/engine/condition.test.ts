@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchesCondition } from './condition';
+import { matchesCondition, describeGraphPath } from './condition';
 import type { DataFlowGraph } from './types';
 
 function graph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
@@ -102,5 +102,91 @@ describe('matchesCondition', () => {
   it('returns false when field is absent from every node', () => {
     const g = graph();
     expect(matchesCondition({ autonomy_level: { gte: 1 } }, g)).toBe(false);
+  });
+
+  // R16-A1 (PE-9 §1.1): an array-valued field (system_access_scope) must
+  // contribute EACH element as its own candidate, so a condition naming any
+  // one of several ticked values still matches.
+  it('TC-R16-A1-11: an array-valued field contributes each element to the candidate set', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'agent',
+          model_type: 'agentic',
+          autonomy_level: 3,
+          data_zone: 'Zone C',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          system_access_scope: ['shared_infrastructure', 'credentialed_systems'],
+        },
+      ],
+    });
+    expect(matchesCondition({ system_access_scope: { in: ['credentialed_systems'] } }, g)).toBe(true);
+    expect(matchesCondition({ system_access_scope: { in: ['shared_infrastructure'] } }, g)).toBe(true);
+    expect(matchesCondition({ system_access_scope: { in: ['deployment_authority'] } }, g)).toBe(false);
+  });
+
+  it('TC-R16-A1-12: a single (non-array) value on a list-valued field still matches as before', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          id: 'p1',
+          label: 'agent',
+          model_type: 'agentic',
+          autonomy_level: 3,
+          data_zone: 'Zone C',
+          vendor: 'internal',
+          replaces_prior_model: false,
+          system_access_scope: 'shared_infrastructure',
+        },
+      ],
+    });
+    expect(matchesCondition({ system_access_scope: { in: ['shared_infrastructure'] } }, g)).toBe(true);
+  });
+});
+
+describe('describeGraphPath', () => {
+  function g2(input_nodes: DataFlowGraph['input_nodes'], output_label = 'out'): DataFlowGraph {
+    return graph({
+      input_nodes,
+      processing_nodes: [
+        { id: 'p1', label: 'model', model_type: 'llm', autonomy_level: 1, data_zone: 'Zone B', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: output_label, action_type: 'draft', exposure: 'internal-only', decision_bindingness: 'non-binding', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+  }
+
+  it('TC-R16-A1-13: names every input, not just the first, with two inputs', () => {
+    const path = describeGraphPath(
+      g2([
+        { id: 'i1', label: 'A', data_class: 'Internal', data_zone: 'Zone B' },
+        { id: 'i2', label: 'B', data_class: 'Internal', data_zone: 'Zone B' },
+      ]),
+    );
+    expect(path).toBe('A + B → model → out');
+  });
+
+  it('TC-R16-A1-14: names every input, not just the first, with three inputs', () => {
+    const path = describeGraphPath(
+      g2([
+        { id: 'i1', label: 'A', data_class: 'Internal', data_zone: 'Zone B' },
+        { id: 'i2', label: 'B', data_class: 'Internal', data_zone: 'Zone B' },
+        { id: 'i3', label: 'C', data_class: 'Internal', data_zone: 'Zone B' },
+      ]),
+    );
+    expect(path).toBe('A + B + C → model → out');
+  });
+
+  it('TC-R16-A1-15: a single input keeps the existing input → model → output shape', () => {
+    const path = describeGraphPath(g2([{ id: 'i1', label: 'A', data_class: 'Internal', data_zone: 'Zone B' }]));
+    expect(path).toBe('A → model → out');
+  });
+
+  it('TC-R16-A1-16: falls back to the processing node when there are no input nodes at all', () => {
+    const path = describeGraphPath(g2([]));
+    expect(path).toBe('model → out');
   });
 });

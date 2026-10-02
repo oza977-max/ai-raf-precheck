@@ -6,6 +6,7 @@ import type {
   DecisionType,
   Exposure,
   ModelType,
+  SystemAccessScope,
 } from '../engine/types';
 import type { LifecycleStage } from '../store/types';
 import type { Verdict } from '../types/verdict';
@@ -117,6 +118,20 @@ export const SYSTEM_ACCESS_LABELS: Record<
   credentialed_systems: 'Holds live credentials to systems beyond its immediate task (credentialed systems)',
   deployment_authority: 'Can push code, change configuration, or deploy with no separate human action (deployment authority)',
 };
+
+// R16-A1 (PE-9 §1.1): system_access_scope may now hold several ticked values
+// at once. graph-summary.ts and GraphView.tsx both render this field — this
+// is the one place that turns either shape into display text, so they
+// cannot drift on how a list reads. A single value renders byte-identical
+// to before this change (`plainWithCode(SYSTEM_ACCESS_LABELS[value])`); a
+// list renders every value's own "plain · code" phrase, joined — never a
+// raw comma-joined lookup miss, which is what `SYSTEM_ACCESS_LABELS[list]`
+// produced before this helper existed (undefined — a renderer crash
+// waiting to happen, not a display difference).
+export function systemAccessScopeLabel(value: SystemAccessScope | SystemAccessScope[]): string {
+  const values = Array.isArray(value) ? value : [value];
+  return values.map((v) => plainWithCode(SYSTEM_ACCESS_LABELS[v])).join('; ');
+}
 
 export const MULTI_INSTANCE_LABELS: Record<'yes' | 'no' | 'unknown', string> = {
   no: 'Runs alone — no coordination with other instances (no)',

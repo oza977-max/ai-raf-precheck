@@ -2,6 +2,7 @@ import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
 import { addNode, addEdge, addUseCaseModelLink, getUseCase } from '../store/register';
 import { append } from '../store/audit';
+import { checkPolicyReferences } from '../store/policy-references';
 import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
@@ -114,6 +115,10 @@ export function seedAigateSelfAssessment(policy: PolicyFile, packs: Jurisdiction
 }
 
 async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<void> {
+  // R16-A1 (§1.4): refuse to seed on a policy reference error — same rule
+  // as the other two seed scripts.
+  if (checkPolicyReferences(policy, packs).errors.length > 0) return;
+
   const existing = await getUseCase(AIGATE_USE_CASE_ID);
   if (existing) return;
 

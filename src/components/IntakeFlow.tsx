@@ -6,6 +6,7 @@ import { localLlmEnabled } from '../llm/local-provider';
 import { evaluate } from '../engine/evaluate';
 import { findPossibleDuplicates, matchCorpus } from '../engine/duplicate';
 import { loadPolicy } from '../store/policy';
+import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
@@ -532,6 +533,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
     }
+    // R16-A1 (§1.4, CF-5): a reference error (e.g. a covers_reviews id that
+    // doesn't resolve) is surfaced through the gentler reviewGateError path,
+    // not a thrown exception — unlike a malformed policy file, this is an
+    // expected-to-happen-during-editing condition, and the submitter should
+    // see why evaluation stopped rather than the app breaking.
+    const referenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
+    if (referenceCheck.errors.length > 0) {
+      setReviewGateError(
+        `Policy file invalid — ${referenceCheck.errors.join(' ')} Evaluation is disabled until this is resolved.`,
+      );
+      return;
+    }
     // R6-QN-1: guessed-field questions ride with the budget-driven ones,
     // deduplicated by id (a field can be both uncertain-budgeted and
     // guessed; one question is enough).
@@ -734,6 +747,16 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       throw new Error(
         `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
       );
+    }
+    // R16-A1 (§1.4, CF-5): same reference-error gate as the first evaluation
+    // gate above, repeated here because this is the second (description-
+    // first / correction-flow) path that reaches evaluate().
+    const confirmReferenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
+    if (confirmReferenceCheck.errors.length > 0) {
+      setReviewGateError(
+        `Policy file invalid — ${confirmReferenceCheck.errors.join(' ')} Evaluation is disabled until this is resolved.`,
+      );
+      return;
     }
     // R12-ST-1 (ADR-EE-R12-1): pure pre-transform, run BEFORE evaluate() so
     // an expired family entry is simply unapproved by the time evaluate()

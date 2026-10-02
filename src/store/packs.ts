@@ -11,7 +11,16 @@ import type { JurisdictionPack } from '../engine/types';
 const PackRuleEffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('tier_floor'), minimum_tier: z.enum(['Critical', 'High', 'Medium', 'Low']) }),
   z.object({ type: z.literal('required_control'), control_id: z.string().min(1) }),
-  z.object({ type: z.literal('required_review'), review: z.string().min(1) }),
+  // R16-A1 (CF-6 §1.2): optional plain-language fields, same shape as a
+  // firm downstream_reviews rule's — the check and the team that runs it.
+  // Absent falls back to `review` + the formal wording (chunk D1 renders
+  // the fallback).
+  z.object({
+    type: z.literal('required_review'),
+    review: z.string().min(1),
+    plain_name: z.string().optional(),
+    plain_owner: z.string().optional(),
+  }),
   z.object({ type: z.literal('hard_line'), reason: z.string().min(1) }),
 ]);
 

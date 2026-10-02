@@ -7,6 +7,7 @@ import type {
   Exposure,
   ModelType,
 } from './types';
+import { ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
 
 // Canonical attribute vocabulary (policy-schema.md §3.0) — single runtime
 // source of truth shared by src/store/policy.ts (condition-value validation)
@@ -48,6 +49,12 @@ export const DECISION_TYPES = [
   'operational',
 ] satisfies DecisionType[];
 
+// R16-A1 (PE-9): system_access_scope is both a closed-enum field (so a typo'd
+// value in a condition fails loud at load, same as every field above) AND
+// the one LIST-VALUED field (src/store/policy.ts's `LIST_VALUED_FIELDS`) —
+// the two checks are independent and both apply to it.
+export const SYSTEM_ACCESS_SCOPES = ACCESS_SCOPE_CANONICAL_ORDER;
+
 export const CANONICAL_VOCABULARY: Record<string, readonly string[]> = {
   data_class: DATA_CLASSES,
   data_zone: DATA_ZONES,
@@ -56,4 +63,5 @@ export const CANONICAL_VOCABULARY: Record<string, readonly string[]> = {
   decision_bindingness: DECISION_BINDINGNESS,
   action_type: ACTION_TYPES,
   decision_type: DECISION_TYPES,
+  system_access_scope: SYSTEM_ACCESS_SCOPES,
 };

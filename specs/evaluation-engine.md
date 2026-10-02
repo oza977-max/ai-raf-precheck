@@ -500,6 +500,8 @@ The engine guarantees determinism through:
 | RA-2 | §3.6 most-demanding-standard implementation |
 | RA-9 | §6 trace grounded in structured verdict data |
 | RA-11 | §3.9 confidence_caveats field; verdict assembly |
+| PE-9 | §15a list-valued attributes |
+| CS-3 | §15a per-instance review sources (refines the existing §3.9 coverage) |
 
 ## 12. Test Case References
 
@@ -518,6 +520,7 @@ The engine guarantees determinism through:
 | TC-VD-8-01 | §6 reasoning trace |
 | TC-RA-2-01 | §3.6 jurisdiction override |
 | TC-RA-11-01, TC-RA-11-02 | §3.9 confidence_caveats |
+| TC-R16-A1-11..27, TC-R16-A1-42..49 | §15a list-valued attributes, review sources (`test-cases/test-cases-018.md`) |
 
 ---
 
@@ -707,10 +710,76 @@ Both are deterministic given their inputs; tests pass fixed dates. The
 only clock reads remain at the component layer, where `attested_at` is
 already produced.
 
+## 15a. Round 16 — list-valued attributes and per-instance review sources
+(PE-9, §1.1/§1.3, chunk A1)
+
+Spec for `requirements/requirements.md` round 16.
+
+**PE-9 — a node attribute may hold several values at once.**
+`collectFieldValues` (condition.ts §3.7) now treats an array value on a
+node exactly as it already treats several nodes carrying the same field:
+each element of the array contributes its own candidate, so `{ in: [...] }`
+still matches when any one of several ticked values satisfies it — no
+change to `matchesCondition`'s operator semantics, only to how candidates
+are collected. `describeGraphPath` names **every** input node, joined with
+" + ", not just the first, so a tripped invariant's `graph_path` (and the
+hard-line/pack-hard-line `binding_path` that reuses the same function)
+never silently drops a node. Both changes are pure and have no effect on
+any single-input, single-value graph — which is every graph before this
+round, hence TC-PE-1-01's determinism guarantee holds unchanged (no
+existing pinned graph_path/binding_path string is asserted anywhere; this
+was verified, not assumed, before the change).
+
+**Per-instance review sources (D-04, D-57, D-58).** `EvaluationResult`'s
+existing optional `downstream_review_sources?: DownstreamReviewSource[]`
+field (added when regulatory citations were restored to the verdict) is
+now populated at **every** return site, from **all** producers that apply
+at that point in the pipeline:
+
+| Producer | `rule_id` shape | Available at |
+|---|---|---|
+| Firm `downstream_reviews` rule | the rule's own id (e.g. `DR-VENDOR-01`) | every return site |
+| Pack `required_review` effect | the pack rule's own id (e.g. `SS1-UK-REV-01`) | only after jurisdiction overrides resolve (§3.6) — the two FORWARD return sites (unsatisfiable-invariant rejection, final assembly), never a hard-line rejection |
+| Unregistered platform/vendor (PV-5) | `PV-UNREGISTERED:<component name>` | every return site |
+| Unregistered/unapproved model (R11-MG-2) | `MODEL-REGISTRY:<model id>` | every return site |
+
+The **base id** — the part of `rule_id` before the first `:`, or the whole
+string where there is none — is what a control's `covers_reviews` entry
+(policy-schema.md §10d) matches against: a firm author writes the bare
+sentinel `PV-UNREGISTERED` once, not a specific component name they cannot
+know in advance.
+
+`downstream_reviews` is **derived** from `downstream_review_sources` — the
+sources' `review` strings, de-duplicated and sorted — so there is one
+source of truth instead of two independent derivations that could drift.
+Sources themselves are never deduplicated against each other (two
+producers naming the literal same review text both still appear as
+separate, independently-traceable sources); they are sorted by `rule_id`
+for determinism (NF-1), the same discipline every other policy collection
+in this pipeline already follows.
+
+**The pack hard-line fix (D-58).** Before this round, a pack-level hard
+line (§3.3's pack variant) returned neither `downstream_reviews` nor
+`downstream_review_sources` at all — the one return site in `evaluate()`
+that set neither field. It now mirrors the BASE hard-line branch exactly:
+both hard-line sites expose sources from the firm, unregistered-component
+and model-governance producers (pack obligations are honestly unavailable
+at either, since tier/track assignment — and therefore jurisdiction
+overrides — is skipped entirely on a hard-line trip, §3.1 step order,
+unchanged by this round).
+
+**Export (D-03).** `envelope.ts` exports its data-class ranking
+(`DATA_CLASS_RANK`) and the generic `maxBy` helper it is used with, so the
+plain-language summary and the verdict view-model (later chunks) rank the
+most-sensitive data class the same way the engine's own envelope-fit
+calculation does, rather than each re-deriving a ranking that could
+silently disagree.
+
 ## 16. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-02 | §15a added — round 16 chunk A1. PE-9: `collectFieldValues` expands an array value into per-element candidates; `describeGraphPath` names every input. Per-instance `downstream_review_sources` populated from all applicable producers at every `evaluate()` return site, with `downstream_reviews` derived from it; the pack hard-line branch (previously set neither field) now mirrors the base hard-line branch. `envelope.ts` exports `DATA_CLASS_RANK`/`maxBy`. |
 | 2026-09-28 | §3.4 amended and §7 point 2 clarified — track assignment uses the policy file's own declared order, not sorted by id (the one deliberate exception among policy collections). Fixes a defect where `evaluate()` sorted `policy.tracks` by id before calling `assignTrack()`, silently defeating the ordering `policy/appetite.yaml` already declares deliberately (oracle rounds 001/002). See `src/engine/track.test.ts` TC-R17-TO-01..05. |
 | 2026-08-18 | §15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction. |
 | 2026-07-29 | §13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations in `VerdictDisplay.tsx` and `store/register.ts` that round 3 would otherwise have required editing in parallel. |

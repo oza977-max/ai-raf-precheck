@@ -20,7 +20,7 @@ beforeAll(() => {
 });
 
 function agenticGraph(extra: {
-  system_access_scope?: SystemAccessScope;
+  system_access_scope?: SystemAccessScope | SystemAccessScope[];
   multi_instance_coordination?: 'yes' | 'no' | 'unknown';
 }): DataFlowGraph {
   return {
@@ -78,6 +78,14 @@ describe('v1.4 agentic infrastructure-access invariants', () => {
     const g = agenticGraph({ system_access_scope: 'shared_infrastructure' });
     expect(trippedIds(g)).toContain('INV-AGENT-INFRA-01');
     expect(controls(g)).toContain('CTRL-AGENT-ISO-01');
+  });
+
+  it('TC-R16-A1-17: a two-kind agent (shared infrastructure + credentialed systems ticked at once) trips both INV-AGENT-INFRA-01 and INV-AGENT-CRED-01', () => {
+    const g = agenticGraph({ system_access_scope: ['shared_infrastructure', 'credentialed_systems'] });
+    expect(trippedIds(g)).toContain('INV-AGENT-INFRA-01');
+    expect(trippedIds(g)).toContain('INV-AGENT-CRED-01');
+    expect(controls(g)).toContain('CTRL-AGENT-ISO-01');
+    expect(controls(g)).toContain('CTRL-AGENT-CRED-01');
   });
 
   it('INV-AGENT-CRED-01 fires on credentialed systems and on deployment authority', () => {

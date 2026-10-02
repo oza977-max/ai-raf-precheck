@@ -9,6 +9,7 @@ import type {
   ModelType,
   SystemAccessScope,
 } from './types';
+import { normaliseAccessScope } from './access-scope';
 
 // UC-3a structured form output (intake-flow.md §5.3). Pure — no I/O, same
 // rule as the rest of src/engine/*. Produces the same DataFlowGraph shape
@@ -51,7 +52,10 @@ export interface StructuredFormValues {
   // Agentic infrastructure-access questions (2026-08-31, grounded in
   // grounding/proposed-rules/agentic-infrastructure-access.md). Optional —
   // blank means "not stated", never a defaulted safe answer.
-  systemAccessScope?: SystemAccessScope;
+  // R16-A1 (PE-9): widened to accept a tick-all list; run through
+  // normaliseAccessScope (src/engine/access-scope.ts) before it reaches the
+  // graph.
+  systemAccessScope?: SystemAccessScope | SystemAccessScope[];
   multiInstanceCoordination?: 'yes' | 'no' | 'unknown';
   jurisdictions: string[];
 }
@@ -88,8 +92,16 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
             ? { declared_model_id: values.declaredModelId.trim() }
             : {}),
         replaces_prior_model: values.replacesPriorModel,
+        // R16-A1 (PE-9): normaliseAccessScope is the single implementation
+        // of the validate/canonicalise rule — an invalid answer (should not
+        // happen from a closed-option UI, but defensively) is OMITTED, same
+        // as never having been answered, rather than carrying a claim the
+        // engine never checked (the decision_type_other/hitl discipline).
         ...(values.systemAccessScope !== undefined
-          ? { system_access_scope: values.systemAccessScope }
+          ? (() => {
+              const normalised = normaliseAccessScope(values.systemAccessScope);
+              return normalised.ok ? { system_access_scope: normalised.value } : {};
+            })()
           : {}),
         ...(values.multiInstanceCoordination !== undefined
           ? { multi_instance_coordination: values.multiInstanceCoordination }

@@ -6,7 +6,7 @@ import { loadPolicy } from '../store/policy';
 import { getUseCases } from '../store/register';
 import { getAllForExport } from '../store/audit';
 import { seedSampleRegister, sampleCount, SAMPLE_PREFIX } from './sample-register';
-import type { PolicyFile } from '../engine/types';
+import type { Control, PolicyFile } from '../engine/types';
 
 let policy: PolicyFile;
 
@@ -104,5 +104,30 @@ describe('C-5 — concurrent seeding writes each sample exactly once', () => {
     const ids = events.filter((e) => e.use_case_id.startsWith(prefixFresh)).map((e) => e.event_id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toHaveLength(countFresh() * 2);
+  });
+});
+
+// R16-A1 (§1.4): refuse to seed on a policy reference error. Run against a
+// genuinely fresh database (same technique as the C-5 block above) — a
+// shared DB already seeded by an earlier test in this file would make
+// "seeded === 0" true regardless of whether this check actually fired.
+describe('seedSampleRegister refuses to seed on a policy reference error (R16-A1)', () => {
+  it('TC-R16-A1-69: a policy with an unresolved covers_reviews reference seeds nothing at all', async () => {
+    globalThis.indexedDB = new IDBFactory();
+    vi.resetModules();
+    const { seedSampleRegister: seedFresh } = await import('./sample-register');
+    const { getUseCases: getRowsFresh } = await import('../store/register');
+
+    const badPolicy: PolicyFile = {
+      ...policy,
+      controls: [
+        { ...(policy.controls[0] as Control), covers_reviews: ['DR-DOES-NOT-EXIST'] },
+        ...policy.controls.slice(1),
+      ],
+    };
+
+    const seeded = await seedFresh(badPolicy);
+    expect(seeded).toBe(0);
+    expect((await getRowsFresh('all')).filter((r) => r.use_case_id.startsWith(SAMPLE_PREFIX))).toHaveLength(0);
   });
 });

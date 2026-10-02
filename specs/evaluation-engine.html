@@ -719,6 +719,8 @@ interface VerdictTraceData {
         <tr><td>RA-2</td><td>§3.6 most-demanding-standard implementation</td></tr>
         <tr><td>RA-9</td><td>§6 trace grounded in structured verdict data</td></tr>
         <tr><td>RA-11</td><td>§3.9 confidence_caveats field; verdict assembly</td></tr>
+        <tr><td>PE-9</td><td>§15a list-valued attributes</td></tr>
+        <tr><td>CS-3</td><td>§15a per-instance review sources (refines the existing §3.9 coverage)</td></tr>
       </tbody>
     </table>
 
@@ -742,6 +744,7 @@ interface VerdictTraceData {
         <tr><td>TC-VD-8-01</td><td>§6 reasoning trace</td></tr>
         <tr><td>TC-RA-2-01</td><td>§3.6 jurisdiction override</td></tr>
         <tr><td>TC-RA-11-01, TC-RA-11-02</td><td>§3.9 confidence_caveats</td></tr>
+        <tr><td>TC-R16-A1-11..27, TC-R16-A1-42..49</td><td>§15a list-valued attributes, review sources (<code>test-cases/test-cases-018.md</code>)</td></tr>
       </tbody>
     </table>
 
@@ -833,10 +836,40 @@ interface VerdictTraceData {
 
     <p>Both are deterministic given their inputs; tests pass fixed dates. The only clock reads remain at the component layer, where <code>attested_at</code> is already produced.</p>
 
+    <h2 id="round-16-review-sources">15a. Round 16 — List-valued attributes and per-instance review sources (PE-9, &sect;1.1/&sect;1.3, chunk A1)</h2>
+
+    <p>Spec for <code>requirements/requirements.md</code> round 16.</p>
+
+    <p><strong>PE-9 — a node attribute may hold several values at once.</strong> <code>collectFieldValues</code> (condition.ts &sect;3.7) now treats an array value on a node exactly as it already treats several nodes carrying the same field: each element of the array contributes its own candidate, so <code>{ in: [...] }</code> still matches when any one of several ticked values satisfies it — no change to <code>matchesCondition</code>'s operator semantics, only to how candidates are collected. <code>describeGraphPath</code> names <strong>every</strong> input node, joined with " + ", not just the first, so a tripped invariant's <code>graph_path</code> (and the hard-line/pack-hard-line <code>binding_path</code> that reuses the same function) never silently drops a node. Both changes are pure and have no effect on any single-input, single-value graph — which is every graph before this round, hence TC-PE-1-01's determinism guarantee holds unchanged (no existing pinned graph_path/binding_path string is asserted anywhere; this was verified, not assumed, before the change).</p>
+
+    <p><strong>Per-instance review sources (D-04, D-57, D-58).</strong> <code>EvaluationResult</code>'s existing optional <code>downstream_review_sources?: DownstreamReviewSource[]</code> field (added when regulatory citations were restored to the verdict) is now populated at <strong>every</strong> return site, from <strong>all</strong> producers that apply at that point in the pipeline:</p>
+
+    <table>
+      <caption>Table — Review source producers and where each applies</caption>
+      <thead>
+        <tr><th>Producer</th><th><code>rule_id</code> shape</th><th>Available at</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Firm <code>downstream_reviews</code> rule</td><td>the rule's own id (e.g. <code>DR-VENDOR-01</code>)</td><td>every return site</td></tr>
+        <tr><td>Pack <code>required_review</code> effect</td><td>the pack rule's own id (e.g. <code>SS1-UK-REV-01</code>)</td><td>only after jurisdiction overrides resolve (&sect;3.6) — the two FORWARD return sites (unsatisfiable-invariant rejection, final assembly), never a hard-line rejection</td></tr>
+        <tr><td>Unregistered platform/vendor (PV-5)</td><td><code>PV-UNREGISTERED:&lt;component name&gt;</code></td><td>every return site</td></tr>
+        <tr><td>Unregistered/unapproved model (R11-MG-2)</td><td><code>MODEL-REGISTRY:&lt;model id&gt;</code></td><td>every return site</td></tr>
+      </tbody>
+    </table>
+
+    <p>The <strong>base id</strong> — the part of <code>rule_id</code> before the first <code>:</code>, or the whole string where there is none — is what a control's <code>covers_reviews</code> entry (policy-schema.md &sect;10d) matches against: a firm author writes the bare sentinel <code>PV-UNREGISTERED</code> once, not a specific component name they cannot know in advance.</p>
+
+    <p><code>downstream_reviews</code> is <strong>derived</strong> from <code>downstream_review_sources</code> — the sources' <code>review</code> strings, de-duplicated and sorted — so there is one source of truth instead of two independent derivations that could drift. Sources themselves are never deduplicated against each other (two producers naming the literal same review text both still appear as separate, independently-traceable sources); they are sorted by <code>rule_id</code> for determinism (NF-1), the same discipline every other policy collection in this pipeline already follows.</p>
+
+    <p><strong>The pack hard-line fix (D-58).</strong> Before this round, a pack-level hard line (&sect;3.3's pack variant) returned neither <code>downstream_reviews</code> nor <code>downstream_review_sources</code> at all — the one return site in <code>evaluate()</code> that set neither field. It now mirrors the BASE hard-line branch exactly: both hard-line sites expose sources from the firm, unregistered-component and model-governance producers (pack obligations are honestly unavailable at either, since tier/track assignment — and therefore jurisdiction overrides — is skipped entirely on a hard-line trip, &sect;3.1 step order, unchanged by this round).</p>
+
+    <p><strong>Export (D-03).</strong> <code>envelope.ts</code> exports its data-class ranking (<code>DATA_CLASS_RANK</code>) and the generic <code>maxBy</code> helper it is used with, so the plain-language summary and the verdict view-model (later chunks) rank the most-sensitive data class the same way the engine's own envelope-fit calculation does, rather than each re-deriving a ranking that could silently disagree.</p>
+
     <h2 id="changelog-r3">16. Changelog</h2>
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
+        <tr><td>2026-10-02</td><td>&sect;15a added — round 16 chunk A1. PE-9: <code>collectFieldValues</code> expands an array value into per-element candidates; <code>describeGraphPath</code> names every input. Per-instance <code>downstream_review_sources</code> populated from all applicable producers at every <code>evaluate()</code> return site, with <code>downstream_reviews</code> derived from it; the pack hard-line branch (previously set neither field) now mirrors the base hard-line branch. <code>envelope.ts</code> exports <code>DATA_CLASS_RANK</code>/<code>maxBy</code>.</td></tr>
         <tr><td>2026-09-28</td><td>&sect;3.4 amended and &sect;7 point 2 clarified — track assignment uses the policy file's own declared order, not sorted by id (the one deliberate exception among policy collections). Fixes a defect where <code>evaluate()</code> sorted <code>policy.tracks</code> by id before calling <code>assignTrack()</code>, silently defeating the ordering <code>policy/appetite.yaml</code> already declares deliberately (oracle rounds 001/002). See <code>src/engine/track.test.ts</code> TC-R17-TO-01..05.</td></tr>
         <tr><td>2026-08-18</td><td>&sect;15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction.</td></tr>
         <tr><td>2026-07-29</td><td>&sect;13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>

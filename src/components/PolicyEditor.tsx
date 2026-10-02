@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { loadPolicy, onPolicyUpdated } from '../store/policy';
+import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml, setCurrentPolicyYaml } from '../store/policy-source';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
@@ -64,13 +65,29 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
     .join('\n')
     .includes('[FIRM]');
 
+  // R16-A1 (§1.4, D-60): a PolicyValidationError-shaped wrapper around a
+  // checkPolicyReferences() string, so Validate/Save's existing error list
+  // (field + reason) renders a reference error the same way it already
+  // renders a structural one — one render path, not two.
+  function asPolicyValidationError(reason: string): PolicyValidationError {
+    return { kind: 'policy-invalid', field: 'references', reason };
+  }
+
   function handleValidate() {
     const outcome = loadPolicy(yaml);
-    if (outcome.valid) {
-      setResult({ status: 'validated', warnings: outcome.warnings });
-    } else {
+    if (!outcome.valid) {
       setResult({ status: 'error', errors: outcome.errors });
+      return;
     }
+    // R16-A1 (§1.4): PolicyEditor already has the loaded packs in scope
+    // (packLoad, above) — the same "validate first, gate the save" rule
+    // BC-P7C03-02 established now also covers reference errors.
+    const referenceCheck = checkPolicyReferences(outcome.policy, packLoad.packs);
+    if (referenceCheck.errors.length > 0) {
+      setResult({ status: 'error', errors: referenceCheck.errors.map(asPolicyValidationError) });
+      return;
+    }
+    setResult({ status: 'validated', warnings: [...outcome.warnings, ...referenceCheck.warnings] });
   }
 
   async function handleSave() {
@@ -79,6 +96,14 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
     const outcome = loadPolicy(yaml);
     if (!outcome.valid) {
       setResult({ status: 'error', errors: outcome.errors });
+      return;
+    }
+    // R16-A1 (§1.4): Save is refused on a reference error too — the same
+    // rule as a structural one, not a softer one just because the shape is
+    // valid YAML.
+    const referenceCheck = checkPolicyReferences(outcome.policy, packLoad.packs);
+    if (referenceCheck.errors.length > 0) {
+      setResult({ status: 'error', errors: referenceCheck.errors.map(asPolicyValidationError) });
       return;
     }
 

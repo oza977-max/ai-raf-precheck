@@ -4,6 +4,7 @@ import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
 import { addNode, getUseCase } from '../store/register';
 import { append } from '../store/audit';
+import { checkPolicyReferences } from '../store/policy-references';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
@@ -167,6 +168,12 @@ export function seedSampleRegister(policy: PolicyFile, packs: JurisdictionPack[]
 }
 
 async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Promise<number> {
+  // R16-A1 (§1.4): refuse to seed on a policy reference error — scoring
+  // samples against a policy whose covers_reviews claims don't resolve
+  // would seed real register entries from a policy that should not have
+  // been evaluable at all.
+  if (checkPolicyReferences(policy, packs).errors.length > 0) return 0;
+
   let seeded = 0;
 
   for (const sample of SAMPLES) {

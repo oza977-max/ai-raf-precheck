@@ -13,7 +13,12 @@ import type { DataClass, DataFlowGraph, Envelope, EnvelopeDimensionFit, Exposure
 // a ranking — reordering one for readability would silently redefine every
 // envelope ceiling. Severity ordering elsewhere in the engine learned the
 // same lesson.
-const DATA_CLASS_RANK: Record<DataClass, number> = {
+//
+// R16-A1 (§1.5): exported so the plain-language summary (graph-summary.ts,
+// chunk C) and the verdict view-model (chunk D1) rank the most-sensitive
+// data class the SAME way this module does — one ranking, not two that
+// could silently disagree about which class is "worse".
+export const DATA_CLASS_RANK: Record<DataClass, number> = {
   Public: 0,
   Internal: 1,
   Confidential: 2,
@@ -28,7 +33,7 @@ const EXPOSURE_RANK: Record<Exposure, number> = {
   'market-facing': 3,
 };
 
-function maxBy<T>(values: T[], rank: Record<string, number>): T | undefined {
+export function maxBy<T>(values: T[], rank: Record<string, number>): T | undefined {
   if (values.length === 0) return undefined;
   return [...values].sort((a, b) => (rank[String(b)] ?? 0) - (rank[String(a)] ?? 0))[0];
 }

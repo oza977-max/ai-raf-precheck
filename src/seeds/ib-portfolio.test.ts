@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { IDBFactory } from 'fake-indexeddb';
 import { seedIbPortfolio, ibCaseCount, IB_PREFIX } from './ib-portfolio';
 import { loadPolicy } from '../store/policy';
 import { loadPacks } from '../store/packs';
@@ -6,6 +7,7 @@ import { getPackSources } from '../store/pack-source';
 import { getUseCases } from '../store/register';
 import { getAllForExport } from '../store/audit';
 import appetiteYaml from '../../policy/appetite.yaml?raw';
+import type { Control } from '../engine/types';
 
 // IB portfolio seed (2026-08-17): real engine, real audit shapes, a
 // deliberate lifecycle mix. These assertions are about the CONTRACT the
@@ -53,5 +55,33 @@ describe('seedIbPortfolio', () => {
 
     // Idempotent: a second call adds nothing (append-only trail protected).
     expect(await seedIbPortfolio(policyResult.policy, packs)).toBe(0);
+  });
+});
+
+// R16-A1 (§1.4): refuse to seed on a policy reference error. A genuinely
+// fresh database (not the one the test above already populated) is what
+// makes "seeded === 0" mean the check fired, rather than meaning nothing
+// because every id already existed.
+describe('seedIbPortfolio refuses to seed on a policy reference error (R16-A1)', () => {
+  it('TC-R16-A1-70: a policy with an unresolved covers_reviews reference seeds nothing at all', async () => {
+    globalThis.indexedDB = new IDBFactory();
+    vi.resetModules();
+    const { seedIbPortfolio: seedFresh } = await import('./ib-portfolio');
+    const { getUseCases: getRowsFresh } = await import('../store/register');
+
+    const policyResult = loadPolicy(appetiteYaml);
+    expect(policyResult.valid).toBe(true);
+    if (!policyResult.valid) return;
+    const badPolicy = {
+      ...policyResult.policy,
+      controls: [
+        { ...(policyResult.policy.controls[0] as Control), covers_reviews: ['DR-DOES-NOT-EXIST'] },
+        ...policyResult.policy.controls.slice(1),
+      ],
+    };
+
+    const seeded = await seedFresh(badPolicy);
+    expect(seeded).toBe(0);
+    expect((await getRowsFresh('all')).filter((r) => r.use_case_id.startsWith(IB_PREFIX))).toHaveLength(0);
   });
 });

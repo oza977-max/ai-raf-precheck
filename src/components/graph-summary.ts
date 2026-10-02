@@ -6,7 +6,7 @@ import {
   DATA_ZONE_LABELS,
   MODEL_TYPE_LABELS,
   MULTI_INSTANCE_LABELS,
-  SYSTEM_ACCESS_LABELS,
+  systemAccessScopeLabel,
   plainWithCode,
 } from './field-copy';
 
@@ -51,11 +51,14 @@ export function graphSummaryRows(graph: DataFlowGraph): Array<{ label: string; v
     },
     // v1.4: rendered only when ANSWERED — an absent optional field must not
     // appear on the attest grid as a claim ("none"/"no") nobody made.
+    // R16-A1 (PE-9 §1.1): system_access_scope may be a single value or a
+    // list (several kinds ticked at once) — systemAccessScopeLabel handles
+    // both without crashing.
     ...(processing?.system_access_scope !== undefined
       ? [
           {
             label: 'System access',
-            value: plainWithCode(SYSTEM_ACCESS_LABELS[processing.system_access_scope]),
+            value: systemAccessScopeLabel(processing.system_access_scope),
           },
         ]
       : []),

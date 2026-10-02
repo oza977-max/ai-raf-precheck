@@ -1029,6 +1029,84 @@ platforms:
 
     <p>All date comparisons happen against an <code>evaluated_at</code>/<code>now</code> value the CALLER passes in — determinism (NF-1) is preserved because the date is an explicit input, never <code>Date.now()</code> inside <code>src/engine/*</code>.</p>
 
+    <h2 id="round-16-plain-language-schema">10d. Round 16 — Plain-language schema additions, list-valued attributes, loader checks (PE-9, CF-6, chunk A1)</h2>
+
+    <p>Spec for <code>requirements/requirements.md</code> round 16 (UC-8..UC-12, PE-9, CF-6, VD-9, VD-10). This chunk ships the schema, the engine helper and the loader check only — the plain-language TEXT itself (chunk A2) and the rendering that turns it into the verdict's first screen (chunk D1) are separate.</p>
+
+    <p><strong>PE-9 — list-valued node attributes.</strong> <code>ProcessingNode.system_access_scope</code> widens from <code>SystemAccessScope</code> to <code>SystemAccessScope | SystemAccessScope[]</code> — a submitter can tick several kinds of infrastructure access at once (e.g. an agent that both runs on shared infrastructure AND holds live credentials), and every rule that used to match a single value still matches when any one of several ticked values satisfies it.</p>
+
+    <pre><code>// src/engine/access-scope.ts
+export function normaliseAccessScope(input: unknown):
+  | { ok: true; value: SystemAccessScope | SystemAccessScope[] }
+  | { ok: false; reason: string };</code></pre>
+
+    <p><code>normaliseAccessScope</code> is the single implementation of the validation rule — non-empty, every element one of the four canonical values, no duplicates, <code>none</code> never combined with another value, canonical order (<code>none</code>, <code>shared_infrastructure</code>, <code>credentialed_systems</code>, <code>deployment_authority</code>) applied whenever more than one value survives. It preserves the shape it is given: a bare value in, a bare value out; a list in, a canonically-ordered deduplicated list out. Every caller that accepts a tick-all answer for this field — the extraction tool schema, the guided form, <code>GraphView</code>'s correction control, the questionnaire's multi-select, <code>coerceAnswerValue</code>, and <code>buildGraphFromForm</code> — calls this rather than re-deriving the rule.</p>
+
+    <p><code>condition.ts#collectFieldValues</code> treats an array value on a node the same way it already treats several nodes carrying the same field: each element becomes its own candidate, so <code>{ in: [...] }</code> matches on any one of them. <strong>List-valued fields support the <code>in</code> operator only</strong> — <code>gte</code>, <code>lte</code>, <code>not_in</code> and bare equality are not well-defined over a set of ticked values. <code>src/store/policy.ts</code> exports <code>LIST_VALUED_FIELDS</code> (today: just <code>system_access_scope</code>) and rejects any other operator on one with a CF-5 error, for both the main policy (hard lines, tracks, tiers, invariants) and every loaded pack (the same <code>validateConditionFieldValue</code> function both call). <code>condition.ts#describeGraphPath</code> now names <strong>every</strong> input node, joined with " + ", not just the first — <code>"A + B → model → output"</code> — so the reviewer section's graph path never drops a ticked kind of information.</p>
+
+    <p><strong>CF-6 — optional plain-language fields.</strong> All new fields below are optional; an existing policy file with none of them loads completely unchanged, and a reader who removes one falls back to the formal wording (VD-9/VD-10 own that fallback; this schema only makes the fields exist and validates their references).</p>
+
+    <pre><code>// Added to src/engine/types.ts
+interface Control {
+  // ...existing fields unchanged...
+  plain_action?: string;       // what must be in place
+  plain_owner?: string;        // free text, or the namespaced tokens
+                                // @submitter / @model_owner
+  plain_owner_with?: string;   // optional named partner
+  covers_reviews?: string[];   // review BASE ids this control's action
+                                // also satisfies — see DownstreamReviewSource
+}
+
+interface Invariant {
+  // ...existing fields unchanged...
+  plain_reason?: string;       // why it applies; may use {audience}/{destination}
+}
+
+interface HardLine {
+  // ...existing fields unchanged...
+  plain_reason?: string;       // why the answer is no
+  plain_change?: string;       // what would change the answer
+}
+
+interface DownstreamReviewRule {
+  // ...existing fields unchanged...
+  plain_name?: string;         // the check, in plain words
+  plain_owner?: string;        // the team that runs it
+}
+
+// The required_review variant of PackRuleEffect gains the same pair:
+type PackRuleEffect =
+  | ...
+  | { type: 'required_review'; review: string; plain_name?: string; plain_owner?: string }
+  | ...;
+
+// RegistryEntry backs BOTH platforms[] and vendors[]:
+interface RegistryEntry {
+  // ...existing fields unchanged...
+  plain_name?: string;
+  vendor_id?: string;          // platform only: the supplier behind the
+                                // service; absent = built in-house
+  kind?: 'company_assistant' | 'supplier'; // vendor only; default 'supplier'
+}</code></pre>
+
+    <p>Token rendering (<code>@submitter</code>, <code>@model_owner</code>) and placeholder resolution (<code>{audience}</code>, <code>{destination}</code>) are chunk D1's view-model, not this schema — this round only defines which tokens and placeholders are <em>legal</em>, so the loader check below can tell a real one from a typo.</p>
+
+    <p><strong>The loader check — <code>checkPolicyReferences</code>.</strong> A new pure, store-side function (<code>src/store/policy-references.ts</code>), called at every site that loads policy and packs together or evaluates:</p>
+
+    <pre><code>// src/store/policy-references.ts
+export function checkPolicyReferences(
+  policy: PolicyFile,
+  packs: JurisdictionPack[],
+): { errors: string[]; warnings: string[] };</code></pre>
+
+    <p>This is deliberately <strong>not</strong> a re-run of what <code>loadPolicy</code>/<code>loadPacks</code> already check at parse time — those are per-file checks that run before a <code>PolicyFile</code> object exists. <code>checkPolicyReferences</code> is <strong>referential</strong>: it only makes sense once the whole policy and the packs loaded beside it both exist, because a <code>covers_reviews</code> entry has to resolve against the UNION of the firm's own <code>downstream_reviews</code> ids and every loaded pack's <code>required_review</code> rule ids (plus the two sentinels below) — knowledge no single file's own validation can have.</p>
+
+    <p>Errors (CF-5-style, refuse evaluation): a <code>covers_reviews</code> id that is not a firm review id, a pack <code>required_review</code> rule id, or one of the sentinels <code>PV-UNREGISTERED</code> / <code>MODEL-REGISTRY</code>; or a condition using a non-<code>in</code> operator on a list-valued field (a defense-in-depth re-check of the PE-9 rule above, reusing the same field set and predicate, so it is correct standing alone and also covers <code>policy.downstream_reviews[]</code> conditions, which <code>loadPolicy</code>'s own structural check does not walk).</p>
+
+    <p>Warnings (shown to the reviewer, never blocking): an unknown placeholder — anything in <code>{…}</code> other than <code>{audience}</code>/<code>{destination}</code>; an unknown <code>@</code> token in a <code>plain_owner</code> field other than <code>@submitter</code>/<code>@model_owner</code>; a platform or vendor registry entry with no <code>plain_name</code>.</p>
+
+    <p>The check is referential only — a <code>covers_reviews</code> id that resolves to a real review is not itself proof the control's action satisfies that review; that is a rule-review judgement a human makes (<code>grounding/PACK-AUTHORING.md</code>'s reviewer checklist gains a line for it).</p>
+
     <h2 id="integration-points">Integration Points</h2>
 
     <table>
@@ -1065,6 +1143,8 @@ platforms:
         <tr><td>NF-7</td><td>§4 reviewer sign-off fields</td></tr>
         <tr><td>NF-10</td><td>§3.1 translation_attestation block</td></tr>
         <tr><td>OQ-PV-1</td><td>§9 ADR-003 envelope semantics</td></tr>
+        <tr><td>PE-9</td><td>§10d list-valued attributes</td></tr>
+        <tr><td>CF-6</td><td>§10d optional plain-language fields</td></tr>
       </tbody>
     </table>
 
@@ -1084,6 +1164,8 @@ platforms:
         <tr><td>TC-RA-8-01</td><td>§4 confidence field</td></tr>
         <tr><td>TC-NF-7-01</td><td>§4 reviewer sign-off</td></tr>
         <tr><td>TC-NF-10-01</td><td>§3.1 translation_attestation</td></tr>
+        <tr><td>TC-R16-A1-01..10, TC-R16-A1-28..41</td><td>§10d list-valued attributes, CF-6 fields (<code>test-cases/test-cases-018.md</code>)</td></tr>
+        <tr><td>TC-R16-A1-50..71</td><td>§10d loader check (<code>test-cases/test-cases-018.md</code>)</td></tr>
       </tbody>
     </table>
 

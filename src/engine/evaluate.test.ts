@@ -784,3 +784,173 @@ describe('evaluate — policy v1.6 (2026-09-28)', () => {
     expect(policy.version).toBe('1.6');
   });
 });
+
+// R16-A1 (§1.3, D-04, D-57, D-58). Every evaluate() return site now carries
+// downstream_review_sources built from all FOUR producers that apply at
+// that point in the pipeline (firm rules, pack required_review effects,
+// unregistered components, unregistered models) — pack obligations are
+// only available on the two FORWARD paths (unsatisfiable-invariant
+// rejection and the final assembly), since tier/track — and therefore
+// jurisdiction overrides — are honestly skipped on a hard-line rejection
+// (§3.1 step order, unchanged by this round). downstream_reviews is
+// DERIVED from the sources (their review strings, de-duplicated).
+describe('evaluate — R16-A1 review sources (§1.3)', () => {
+  const mnpiGraph = () =>
+    graph({
+      input_nodes: [{ id: 'i1', label: 'deal notes', data_class: 'MNPI', data_zone: 'Zone C' }],
+      processing_nodes: [
+        { id: 'p1', label: 'summariser', model_type: 'llm', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'summary', action_type: 'recommend', exposure: 'internal-only', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+
+  const hardLinePack = (effect: { type: 'hard_line'; reason: string }) => [{
+    pack_id: 'TEST-PACK',
+    version: '0.1',
+    jurisdiction: 'UK',
+    regulator: 'Test Regulator',
+    document: 'Test Doc',
+    effective_date: '2026-01-01',
+    reviewer_name: '[FIRM]',
+    reviewer_role: '[FIRM]',
+    sign_off_date: '[DATE]',
+    rules: [{
+      id: 'TEST-HL-01',
+      title: 'Test hard line',
+      source: { document: 'Test Doc', section: 'S1', text: 'test' },
+      effect,
+      condition: { data_class: { in: ['MNPI'] } },
+      basis: 'verbatim' as const,
+    }],
+  }];
+
+  it('TC-R16-A1-42: the pack hard-line rejection carries downstream_reviews and downstream_review_sources, mirroring the base hard-line branch (the documented bug fix)', () => {
+    const g = { ...mnpiGraph(), jurisdictions: ['UK'] };
+    const result = evaluate(g, policy, hardLinePack({ type: 'hard_line', reason: 'test reason' }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('rejected');
+    expect(result.value.binding_constraint).toBe('TEST-HL-01');
+    // Before this fix, a pack hard-line rejection set neither field at all.
+    expect(result.value.downstream_reviews.length).toBeGreaterThan(0);
+    expect(result.value.downstream_review_sources?.length).toBeGreaterThan(0);
+    expect(result.value.downstream_review_sources?.every((s) => s.rule_id.startsWith('DR-'))).toBe(true);
+    expect(result.value.downstream_reviews).toEqual(
+      [...new Set(result.value.downstream_review_sources?.map((s) => s.review))].sort(),
+    );
+  });
+
+  it('TC-R16-A1-43: a BASE hard-line rejection carries sources from the firm, unregistered-component and model-governance producers (never pack obligations, since tier/track are skipped on a hard-line trip)', () => {
+    const g = graph({
+      input_nodes: [{ id: 'i1', label: 'deal notes', data_class: 'MNPI', data_zone: 'Zone B' }], // HL-002: MNPI outside Zone C
+      processing_nodes: [
+        {
+          id: 'p1', label: 'summariser', model_type: 'llm', autonomy_level: 1, data_zone: 'Zone B',
+          vendor: 'NeverHeardOfCo', replaces_prior_model: false, declared_model_id: 'totally-unlisted-model-xyz',
+        },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'summary', action_type: 'recommend', exposure: 'internal-only', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('rejected');
+    expect(result.value.binding_constraint).toBe('HL-002');
+    const sources = result.value.downstream_review_sources ?? [];
+    expect(sources.some((s) => s.rule_id.startsWith('DR-'))).toBe(true);
+    expect(sources.some((s) => s.rule_id === 'PV-UNREGISTERED:NeverHeardOfCo')).toBe(true);
+    expect(sources.some((s) => s.rule_id === 'MODEL-REGISTRY:totally-unlisted-model-xyz')).toBe(true);
+    // Deterministic order: sorted by rule_id across all producers together.
+    const ids = sources.map((s) => s.rule_id);
+    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it('TC-R16-A1-44: downstream_reviews is DERIVED from downstream_review_sources, de-duplicated by review text — two firm rules sharing the same review text produce two sources but one review string', () => {
+    // DR-INFOSEC-01 (MNPI) and DR-INFOSEC-02 (Client PII) both read
+    // "Information security review" in the shipped policy — a use case
+    // carrying BOTH kinds of information fires both rules.
+    const g = graph({
+      input_nodes: [
+        { id: 'i1', label: 'deal notes', data_class: 'MNPI', data_zone: 'Zone C' },
+        { id: 'i2', label: 'client notes', data_class: 'Client PII', data_zone: 'Zone C' },
+      ],
+      processing_nodes: [
+        { id: 'p1', label: 'summariser', model_type: 'llm', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'summary', action_type: 'recommend', exposure: 'internal-only', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const result = evaluate(g, policy);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const sources = result.value.downstream_review_sources ?? [];
+    const infosecSources = sources.filter((s) => s.review === 'Information security review');
+    expect(infosecSources.map((s) => s.rule_id).sort()).toEqual(['DR-INFOSEC-01', 'DR-INFOSEC-02']);
+    expect(result.value.downstream_reviews.filter((r) => r === 'Information security review')).toHaveLength(1);
+  });
+
+  // A pack with a required_review effect, reused by the next two tests —
+  // one hitting the unsatisfiable-invariant rejection branch, one hitting
+  // the final (approved_with_controls) assembly branch. Same fixture, same
+  // condition, different graphs, so the only variable is which evaluate()
+  // return site is exercised.
+  const reviewPack = [{
+    pack_id: 'TEST-REVIEW-PACK',
+    version: '0.1',
+    jurisdiction: 'UK',
+    regulator: 'Test Regulator',
+    document: 'Test Doc',
+    effective_date: '2026-01-01',
+    reviewer_name: '[FIRM]',
+    reviewer_role: '[FIRM]',
+    sign_off_date: '[DATE]',
+    rules: [{
+      id: 'TEST-REV-01',
+      title: 'Test required review',
+      source: { document: 'Test Doc', section: 'S1', text: 'test' },
+      effect: { type: 'required_review' as const, review: 'Test pack review' },
+      condition: { data_zone: { in: ['Zone C'] } },
+      basis: 'verbatim' as const,
+    }],
+  }];
+
+  it('TC-R16-A1-45: the FINAL assembly branch includes a pack-sourced review, keyed by the pack rule\'s own id', () => {
+    const result = evaluate({ ...mnpiGraph(), jurisdictions: ['UK'] }, policy, reviewPack);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).not.toBe('rejected');
+    const sources = result.value.downstream_review_sources ?? [];
+    expect(sources).toContainEqual({ review: 'Test pack review', rule_id: 'TEST-REV-01' });
+    expect(result.value.downstream_reviews).toContain('Test pack review');
+  });
+
+  it('TC-R16-A1-46: the UNSATISFIABLE-INVARIANT rejection branch also includes the pack-sourced review, from all four producers', () => {
+    const unsatisfiablePolicy: PolicyFile = {
+      ...policy,
+      invariants: [
+        ...policy.invariants,
+        {
+          id: 'INV-TEST-UNSAT-01',
+          description: 'test invariant with no resolving control in the library',
+          condition: { data_zone: { in: ['Zone C'] } },
+          required_controls: [],
+          severity: 'High',
+        },
+      ],
+    };
+    const result = evaluate({ ...mnpiGraph(), jurisdictions: ['UK'] }, unsatisfiablePolicy, reviewPack);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe('rejected');
+    expect(result.value.binding_constraint).toBe('INV-TEST-UNSAT-01');
+    const sources = result.value.downstream_review_sources ?? [];
+    expect(sources).toContainEqual({ review: 'Test pack review', rule_id: 'TEST-REV-01' });
+    expect(sources.some((s) => s.rule_id.startsWith('DR-'))).toBe(true);
+    expect(result.value.downstream_reviews).toContain('Test pack review');
+  });
+});

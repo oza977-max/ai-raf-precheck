@@ -88,7 +88,11 @@ describe('applyJurisdictionOverrides (V2-A)', () => {
     const r2 = rule({ id: 'A-2', effect: { type: 'required_control', control_id: 'CTRL-LOG-01' } });
     const result = applyJurisdictionOverrides(graph(), 'Medium', 'III', [pack([r2, r1])]);
     expect(result.finalTrack).toBe('III');
-    expect(result.addedReviews).toEqual(['Independent model validation (2LoD)']);
+    // Pinned expectation changed by R16-A1 (review sources), 2026-10-02:
+    // addedReviews is now structured `{ review, rule_id }`, not a bare
+    // string — the rule_id is what lets a control's covers_reviews match
+    // this specific pack rule.
+    expect(result.addedReviews).toEqual([{ review: 'Independent model validation (2LoD)', rule_id: 'A-1' }]);
     expect(result.addedControls).toEqual(['CTRL-LOG-01']);
     // rules applied in id order regardless of array order
     expect(result.chain.map((c) => c.rule_id)).toEqual(['A-1', 'A-2']);
@@ -278,8 +282,23 @@ describe('TC-PE-6-01 / TC-RA-2-01 — most demanding governs across jurisdiction
     // The US control survives alongside the UK review. Dropping either would
     // be the failure mode the old "governing standard" wording invited.
     expect(result.addedControls).toContain('CTRL-DOC-01');
-    expect(result.addedReviews).toContain('Independent model validation (2LoD)');
+    // Pinned expectation changed by R16-A1 (review sources), 2026-10-02:
+    // addedReviews entries are now structured, keyed by rule_id.
+    expect(result.addedReviews).toContainEqual({
+      review: 'Independent model validation (2LoD)',
+      rule_id: 'SS1-UK-REV-01',
+    });
     expect(result.chain.map((c) => c.rule_id).sort()).toEqual(['SR26-US-CTRL-01', 'SS1-UK-REV-01', 'SS1-UK-TIER-01']);
+  });
+
+  it('TC-R16-A1-47: addedReviews is sorted by rule_id, deterministically, across multiple firing review rules', () => {
+    const r1 = rule({ id: 'Z-1', effect: { type: 'required_review', review: 'Review Z' } });
+    const r2 = rule({ id: 'A-1', effect: { type: 'required_review', review: 'Review A' } });
+    const result = applyJurisdictionOverrides(graph(), 'Medium', 'III', [pack([r1, r2])]);
+    expect(result.addedReviews).toEqual([
+      { review: 'Review A', rule_id: 'A-1' },
+      { review: 'Review Z', rule_id: 'Z-1' },
+    ]);
   });
 
   it('takes the highest tier floor across packs, and never lowers the tier', () => {

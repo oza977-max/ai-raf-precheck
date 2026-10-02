@@ -18,16 +18,15 @@
 // tracks and invariants. A firm that can write an invariant can write one of
 // these without learning anything new, which is CF-1's whole point.
 import { matchesCondition } from './condition';
-import type { DataFlowGraph, PolicyFile } from './types';
+import type { DataFlowGraph, DownstreamReviewSource, PolicyFile } from './types';
 
-export interface TriggeredReview {
-  /** The policy rule that triggered it — CS-3's fit criterion asks for this by
-   *  name. A required review with no traceable cause is an instruction with no
-   *  author, and nobody can argue with it or check it. */
-  rule_id: string;
-  review: string;
-  regulatory_basis?: string;
-}
+// R16-A1 (§1.3): identical shape to DownstreamReviewSource (review, rule_id,
+// regulatory_basis?) — aliased, not redeclared, so this producer and the
+// other three (pack required_review, unregistered component, unregistered
+// model) can never drift apart on what a "review source" carries. The name
+// stays: CS-3's fit criterion asks for "the policy rule that triggered it"
+// by name, which rule_id already is.
+export type TriggeredReview = DownstreamReviewSource;
 
 /** Pure. Sorted by rule id so the collection is deterministic (NF-1), like
  *  every other policy collection this engine iterates. */

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { IDBFactory } from 'fake-indexeddb';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadPolicy } from '../store/policy';
@@ -8,7 +9,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import { seedAigateSelfAssessment, AIGATE_USE_CASE_ID, AIGATE_USE_CASE_GRAPH } from './aigate-self-assessment';
 import { loadPacks } from '../store/packs';
 import { evaluate } from '../engine/evaluate';
-import type { PolicyFile } from '../engine/types';
+import type { Control, PolicyFile } from '../engine/types';
 
 let policy: PolicyFile;
 
@@ -116,5 +117,32 @@ describe('seedAigateSelfAssessment — the declared jurisdiction is actually app
     const withoutPacks = evaluate(AIGATE_USE_CASE_GRAPH, policy);
     if (!withoutPacks.ok) return;
     expect(withoutPacks.value.provisional_reasons).toContain('no_regulatory_basis');
+  });
+});
+
+// R16-A1 (§1.4): refuse to seed on a policy reference error. A genuinely
+// fresh database — AIGATE_USE_CASE_ID is a single fixed id that every test
+// above already seeds with the GOOD policy, so re-using that shared DB
+// would make "nothing added" ambiguous between "the check fired" and
+// "the id already existed".
+describe('seedAigateSelfAssessment refuses to seed on a policy reference error (R16-A1)', () => {
+  it('TC-R16-A1-71: a policy with an unresolved covers_reviews reference seeds nothing at all', async () => {
+    globalThis.indexedDB = new IDBFactory();
+    vi.resetModules();
+    const { seedAigateSelfAssessment: seedFresh, AIGATE_USE_CASE_ID: idFresh } = await import(
+      './aigate-self-assessment'
+    );
+    const { getUseCase: getUseCaseFresh } = await import('../store/register');
+
+    const badPolicy: PolicyFile = {
+      ...policy,
+      controls: [
+        { ...(policy.controls[0] as Control), covers_reviews: ['DR-DOES-NOT-EXIST'] },
+        ...policy.controls.slice(1),
+      ],
+    };
+
+    await seedFresh(badPolicy);
+    expect(await getUseCaseFresh(idFresh)).toBeUndefined();
   });
 });

@@ -264,7 +264,16 @@ function NodeCard({
           {fields.map((spec) => {
             const raw = record[spec.field];
             const has = raw !== undefined && raw !== null;
-            const meaning = has ? spec.meanings?.[String(raw)] ?? String(raw) : null;
+            // R16-A1 (PE-9 §1.1): a field may hold a LIST of values (today,
+            // only system_access_scope) — look up each element's own
+            // meaning and join them, rather than stringifying the array
+            // (which would print "a,b" and miss every meaning lookup, since
+            // no meanings map is keyed by a comma-joined value).
+            const meaning = has
+              ? Array.isArray(raw)
+                ? raw.map((v) => spec.meanings?.[String(v)] ?? String(v)).join(', ')
+                : spec.meanings?.[String(raw)] ?? String(raw)
+              : null;
             const fieldWarnings = warnings.filter((w) => w.field === spec.field);
             // R15-C5 (proposal §3.6): the label reuses the guided form's
             // question words; the engine field name stays as quiet code

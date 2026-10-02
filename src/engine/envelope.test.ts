@@ -5,8 +5,26 @@ import { load } from 'js-yaml';
 import { dump } from 'js-yaml';
 import { loadPolicy } from '../store/policy';
 import { evaluate } from './evaluate';
-import { fitsEnvelope, inheritableControls } from './envelope';
+import { fitsEnvelope, inheritableControls, DATA_CLASS_RANK, maxBy } from './envelope';
 import type { DataFlowGraph, PolicyFile } from './types';
+
+// R16-A1 (§1.5): exported so graph-summary.ts and the verdict view-model
+// (chunk D1) rank the most-sensitive data class the same way this module
+// does, rather than each re-deriving its own ranking.
+describe('DATA_CLASS_RANK / maxBy exports (R16-A1 §1.5)', () => {
+  it('TC-R16-A1-48: ranks MNPI above Client PII above Confidential above Internal above Public', () => {
+    expect(DATA_CLASS_RANK.MNPI).toBeGreaterThan(DATA_CLASS_RANK['Client PII']);
+    expect(DATA_CLASS_RANK['Client PII']).toBeGreaterThan(DATA_CLASS_RANK.Confidential);
+    expect(DATA_CLASS_RANK.Confidential).toBeGreaterThan(DATA_CLASS_RANK.Internal);
+    expect(DATA_CLASS_RANK.Internal).toBeGreaterThan(DATA_CLASS_RANK.Public);
+  });
+
+  it('TC-R16-A1-49: maxBy picks the most-sensitive class regardless of input order', () => {
+    expect(maxBy(['Internal', 'MNPI', 'Confidential'], DATA_CLASS_RANK)).toBe('MNPI');
+    expect(maxBy(['Public'], DATA_CLASS_RANK)).toBe('Public');
+    expect(maxBy([], DATA_CLASS_RANK)).toBeUndefined();
+  });
+});
 
 // PV-A. Requirements PV-1, PV-2, PV-3, PV-5, PV-6 (requirements.md §PV).
 //

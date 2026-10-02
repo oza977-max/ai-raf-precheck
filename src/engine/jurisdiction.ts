@@ -3,6 +3,7 @@ import type {
   AppliedOverride,
   ConfidenceCaveat,
   DataFlowGraph,
+  DownstreamReviewSource,
   JurisdictionEntry,
   JurisdictionPack,
   PackRule,
@@ -176,7 +177,12 @@ export interface JurisdictionOverrideResult {
   finalTier: Tier;
   appliedOverrides: AppliedOverride[];
   addedControls: string[];
-  addedReviews: string[];
+  // R16-A1 (§1.3): structured `{ review, rule_id }` instances, not bare
+  // strings — one of the four producers evaluate() merges into
+  // downstream_review_sources, keyed by the firing pack rule's own id so a
+  // control's covers_reviews can match it (same shape, same reason, as
+  // unapprovedComponentReviews/modelGovernanceReviews in evaluate.ts).
+  addedReviews: DownstreamReviewSource[];
   chain: RegulatoryChainEntry[];
   caveats: ConfidenceCaveat[];
 }
@@ -190,7 +196,7 @@ export function applyJurisdictionOverrides(
   let finalTier = baseTier;
   const appliedOverrides: AppliedOverride[] = [];
   const addedControls: string[] = [];
-  const addedReviews: string[] = [];
+  const addedReviews: DownstreamReviewSource[] = [];
   const chain: RegulatoryChainEntry[] = [];
   const caveats: ConfidenceCaveat[] = [];
 
@@ -214,7 +220,11 @@ export function applyJurisdictionOverrides(
         addedControls.push(rule.effect.control_id);
         derived = `Added required control ${rule.effect.control_id}.`;
       } else {
-        addedReviews.push(rule.effect.review);
+        // R16-A1 (§1.3): the rule's own id is the source's rule_id — this
+        // IS the pack review rule id named in a control's covers_reviews
+        // (e.g. "SS1-UK-REV-01"), so no translation happens between here
+        // and the loader check / view-model that matches against it.
+        addedReviews.push({ review: rule.effect.review, rule_id: rule.id });
         derived = `Added downstream review "${rule.effect.review}".`;
       }
 
@@ -232,7 +242,10 @@ export function applyJurisdictionOverrides(
     finalTier,
     appliedOverrides,
     addedControls: [...new Set(addedControls)].sort(),
-    addedReviews: [...new Set(addedReviews)].sort(),
+    // Each entry's rule_id is already unique by construction (one push per
+    // (pack, rule) visited, each rule id visited once) — no Set-based dedup
+    // needed, only the same deterministic rule_id sort every producer uses.
+    addedReviews: [...addedReviews].sort((a, b) => a.rule_id.localeCompare(b.rule_id)),
     chain,
     caveats,
   };

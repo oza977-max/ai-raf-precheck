@@ -8,6 +8,7 @@ import RuleImprovementQueue from './components/RuleImprovementQueue';
 import { getRole, setRole } from './store/role';
 import { getUseCases } from './store/register';
 import { loadPolicy } from './store/policy';
+import { checkPolicyReferences } from './store/policy-references';
 import { getCurrentPolicyYaml } from './store/policy-source';
 import { translationAttestationStatus } from './engine/attestation';
 import { loadPacks } from './store/packs';
@@ -169,6 +170,21 @@ export default function App() {
   // was scored ignoring the UK pack its graph declares.
   const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
 
+  // R16-A1 (§1.4, CF-5-style). The app start-up gate: checkPolicyReferences
+  // catches what loadPolicy()/loadPacks() structurally cannot — a
+  // covers_reviews id that doesn't resolve against the firm's OWN reviews
+  // plus whatever packs are loaded alongside it. Errors here are shown on
+  // the main screen and disable evaluation, the same CF-5 contract as a
+  // malformed policy file; a base-invalid policy (!policyResult.valid)
+  // reaches the same banner via its own error list.
+  const policyReferenceErrors = useMemo(
+    () => (policyResult.valid ? checkPolicyReferences(policyResult.policy, loadedPacks).errors : []),
+    [policyResult, loadedPacks],
+  );
+  const startupPolicyErrors: string[] = policyResult.valid
+    ? policyReferenceErrors
+    : policyResult.errors.map((e) => `${e.field}: ${e.reason}`);
+
   // O-002 (charter 005). Started during the FIRST RENDER, not in an effect.
   // React runs a child's effect before its parent's, so IntakeFlow's register
   // read always beat this — the duplicate check could report "checked 0
@@ -301,6 +317,20 @@ export default function App() {
         </nav>
 
         <main className="app-main">
+          {/* R16-A1 (§1.4, CF-5): the app start-up gate. Shown on every
+              screen — additive, not a replacement for the view underneath
+              — because the fix for most of these errors is in the Appetite
+              framework screen, which must stay reachable. */}
+          {startupPolicyErrors.length > 0 && (
+            <div className="app-policy-invalid" role="alert">
+              <strong>Policy file invalid</strong> — evaluation is disabled until this is resolved.
+              <ul>
+                {startupPolicyErrors.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {view === 'intake' && !welcomeDismissed && (
             <div className="app-welcome" role="note">
               <strong>First time here?</strong> This is a pre-check gate: describe an AI use case and a

@@ -3,6 +3,13 @@ import type { Condition, ConditionValue, DataFlowGraph } from './types';
 // Multi-node field lookup (evaluation-engine.md §3.7): a condition on a
 // field matches if ANY node in the graph carries that field and it
 // satisfies the operator. Flatten every node's own fields into one lookup.
+//
+// R16-A1 (PE-9 §1.1): a field may now hold an ARRAY of values on one node
+// (system_access_scope, when several kinds were ticked at once) — an array
+// value contributes EACH element as its own candidate, the same way several
+// NODES carrying the field already contribute one candidate each. This is
+// what lets `{ in: [...] }` match on any one of several ticked values
+// without the operator itself needing to know about lists.
 function collectFieldValues(graph: DataFlowGraph, field: string): unknown[] {
   const values: unknown[] = [];
   const nodes = [...graph.input_nodes, ...graph.processing_nodes, ...graph.output_nodes] as unknown as Array<
@@ -10,7 +17,12 @@ function collectFieldValues(graph: DataFlowGraph, field: string): unknown[] {
   >;
   for (const node of nodes) {
     if (field in node) {
-      values.push(node[field]);
+      const value = node[field];
+      if (Array.isArray(value)) {
+        values.push(...value);
+      } else {
+        values.push(value);
+      }
     }
   }
   if (field === 'jurisdictions') {
@@ -40,11 +52,23 @@ export function matchesCondition(condition: Condition, graph: DataFlowGraph): bo
 }
 
 // Shared graph-path description (VD-2 binding_path) used by hard-line and
-// invariant evaluation. Best-effort — names the first input/output node
-// pair on the graph, since the condition language doesn't track which
-// specific node satisfied a multi-node match.
+// invariant evaluation. Best-effort — names every node on the graph, since
+// the condition language doesn't track which specific node satisfied a
+// multi-node match.
+//
+// R16-A1 (§1.1, D-03): names EVERY input, not just the first ("A + B →
+// model → output"), so the reviewer section's "graph path it matched" never
+// drops a ticked kind of information when more than one input node is
+// present. The no-input-nodes fallback (a processing node standing in as
+// "the input") is unchanged — in that one case there is nothing to join and
+// no separate processing label to add, since the processing node already
+// occupies the first slot.
 export function describeGraphPath(graph: DataFlowGraph): string {
-  const input = graph.input_nodes[0]?.label ?? graph.processing_nodes[0]?.label ?? 'unknown-input';
+  const hasInputs = graph.input_nodes.length > 0;
+  const inputPart = hasInputs
+    ? graph.input_nodes.map((n) => n.label).join(' + ')
+    : graph.processing_nodes[0]?.label ?? 'unknown-input';
+  const processingPart = hasInputs ? graph.processing_nodes.map((n) => n.label) : [];
   const output = graph.output_nodes[0]?.label ?? 'unknown-output';
-  return `${input} → ${output}`;
+  return [inputPart, ...processingPart, output].join(' → ');
 }

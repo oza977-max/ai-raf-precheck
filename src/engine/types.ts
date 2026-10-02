@@ -180,7 +180,12 @@ export interface ProcessingNode {
   // honest: no answer means no claim, and no invariant fires on a field
   // that was never asked (same discipline as decision_type_other — absence
   // is reported truthfully, never defaulted to the safe-looking value).
-  system_access_scope?: SystemAccessScope;
+  // R16-A1 (PE-9): widened to accept several ticked values at once (e.g. an
+  // agent that both runs on shared infrastructure AND holds live
+  // credentials). `normaliseAccessScope` (src/engine/access-scope.ts) is the
+  // single place that validates and canonically orders either shape; every
+  // reader that matches or renders this field must handle a list.
+  system_access_scope?: SystemAccessScope | SystemAccessScope[];
   // 'unknown' is a real answer, distinct from absent: the submitter was
   // asked and could not say — which for a coordination question is itself
   // a risk signal a reviewer should see.
@@ -296,6 +301,16 @@ export interface RegistryEntry {
   // PV-3: controls whose justification stands or falls together. Exceeding
   // any dimension named in a cluster drops every control in it.
   coupled_clusters?: string[][];
+  // R16-A1 (CF-6 §1.2). This interface backs BOTH `PolicyFile.platforms` and
+  // `PolicyFile.vendors` — so all three fields below are declared here even
+  // though `vendor_id` only means something on a platform entry (the
+  // supplier behind the service; absent = built in-house) and `kind` only on
+  // a vendor entry. All optional; existing registries load unchanged.
+  plain_name?: string;
+  vendor_id?: string;
+  // Default 'supplier' when absent — applied by the view-model that renders
+  // it (chunk D1), not here; this schema only makes the field exist.
+  kind?: 'company_assistant' | 'supplier';
 }
 
 // PV-3: one per dimension the envelope constrains. Never collapsed to a
@@ -338,7 +353,11 @@ export interface PackRuleSource {
 export type PackRuleEffect =
   | { type: 'tier_floor'; minimum_tier: Tier }
   | { type: 'required_control'; control_id: string }
-  | { type: 'required_review'; review: string }
+  // R16-A1 (CF-6 §1.2): plain_name/plain_owner mirror DownstreamReviewRule's
+  // — the check and the team that runs it, in the submitter's own words.
+  // Both optional; absent falls back to the formal `review` text (chunk D1
+  // renders the fallback — this schema only makes the fields exist).
+  | { type: 'required_review'; review: string; plain_name?: string; plain_owner?: string }
   | { type: 'hard_line'; reason: string };
 
 export interface PackRule {
@@ -548,6 +567,11 @@ export interface HardLine {
   condition: Condition;
   reason: string;
   regulatory_basis: string;
+  // R16-A1 (CF-6 §1.2): why the answer is no, and what would change it, in
+  // the submitter's own words (VD-10). Both optional; absent falls back to
+  // `reason` + the formal wording (chunk D1 renders the fallback).
+  plain_reason?: string;
+  plain_change?: string;
 }
 
 export interface TrackRule {
@@ -576,6 +600,11 @@ export interface Invariant {
   // invariants may not have one; the UI shows nothing rather than a
   // fabricated citation (BC-V11C01-02).
   regulatory_basis?: string;
+  // R16-A1 (CF-6 §1.2): why it applies, written from its condition, in the
+  // submitter's own words — may use the `{audience}`/`{destination}`
+  // placeholders (chunk D1 resolves them). Optional; absent falls back to
+  // `description` (chunk D1 renders the fallback).
+  plain_reason?: string;
 }
 
 /** CS-3 (round 4). A firm-configured downstream process — information
@@ -588,6 +617,15 @@ export interface Invariant {
  *  on trust. */
 export interface DownstreamReviewSource {
   review: string;
+  // R16-A1 (§1.3): the rule that required it. For a firm rule or a pack
+  // rule this IS the rule's own id (e.g. "DR-VENDOR-01", "SS1-UK-REV-01").
+  // For the two non-rule producers it is the sentinel plus the specific
+  // thing that was unregistered, joined by ":" — "PV-UNREGISTERED:<component
+  // name>", "MODEL-REGISTRY:<model id>". The BASE id (the part before the
+  // first ":", or the whole string where there is none) is what a control's
+  // `covers_reviews` entry matches against — a firm author writes the bare
+  // sentinel once, not a specific component name they cannot know in
+  // advance.
   rule_id: string;
   regulatory_basis?: string;
 }
@@ -599,6 +637,11 @@ export interface DownstreamReviewRule {
   /** Optional, like an invariant's: shown where it exists, never fabricated
    *  where it does not (BC-V11C01-02). */
   regulatory_basis?: string;
+  // R16-A1 (CF-6 §1.2): the check and the team that runs it, in plain words.
+  // Both optional; absent falls back to `review` + the formal wording
+  // (chunk D1 renders the fallback).
+  plain_name?: string;
+  plain_owner?: string;
 }
 
 export interface Control {
@@ -613,6 +656,23 @@ export interface Control {
   // honest default (BC-V13-02). V1 statuses are attested by hand in the
   // policy file; machine-checked evidence binding is V1.5.
   verification_evidence?: ControlVerificationEvidence;
+  // R16-A1 (CF-6 §1.2). All optional; existing controls load unchanged, and
+  // chunk D1 falls back to the formal name/description where absent.
+  /** What must be in place, in the submitter's own words. */
+  plain_action?: string;
+  /** Who usually arranges it: free text, or the namespaced tokens
+   *  `@submitter` / `@model_owner` (so no real team name collides with one
+   *  — chunk D1 resolves these; this schema only makes the field exist). */
+  plain_owner?: string;
+  /** Optional partner named alongside `plain_owner` — ", with {x}". */
+  plain_owner_with?: string;
+  /** Review BASE ids (the part before `:` — see DownstreamReviewSource)
+   *  this control's own action also satisfies: a firm review id, a pack
+   *  review rule id, or the sentinels `PV-UNREGISTERED` / `MODEL-REGISTRY`.
+   *  Referential only — `checkPolicyReferences` (src/store/policy-
+   *  references.ts) checks the id exists, never whether the control truly
+   *  covers it (grounding/PACK-AUTHORING.md's reviewer checklist). */
+  covers_reviews?: string[];
 }
 
 export interface ControlVerificationEvidence {

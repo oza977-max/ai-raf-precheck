@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { loadPolicy, onPolicyUpdated } from './policy';
+import { loadPolicy, onPolicyUpdated, validateConditionFieldValue } from './policy';
 import { addNode } from './register';
 import { getAll } from './audit';
 import type { RegisterNode, LifecycleStage } from './types';
@@ -172,6 +172,199 @@ describe('loadPolicy', () => {
     if (!result.valid) {
       expect(result.errors.some((e) => /Very Low/.test(e.reason))).toBe(true);
     }
+  });
+});
+
+// R16-A1 (PE-9 §1.1): list-valued fields (today, only system_access_scope)
+// support the "in" operator only — every other shape is a CF-5 error, both
+// via the exported validator directly and end-to-end through loadPolicy.
+// CF-6 (R16-A1 §1.2): plain-language fields are optional everywhere they're
+// added. Each test loads a policy WITH the field, confirms it round-trips,
+// and the existing VALID_YAML fixture (with none of these fields) already
+// proves "existing policy files load unchanged" across every other test in
+// this file.
+describe('CF-6 optional plain-language fields (R16-A1)', () => {
+  it('TC-R16-A1-35: a control accepts plain_action, plain_owner, plain_owner_with and covers_reviews', () => {
+    const yaml = VALID_YAML.replace(
+      'verification: "manual check"',
+      [
+        'verification: "manual check"',
+        '    plain_action: "The connection is encrypted."',
+        '    plain_owner: "@submitter"',
+        '    plain_owner_with: "compliance"',
+        '    covers_reviews: ["PV-UNREGISTERED"]',
+      ].join('\n'),
+    );
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      const ctrl = result.policy.controls[0]!;
+      expect(ctrl.plain_action).toBe('The connection is encrypted.');
+      expect(ctrl.plain_owner).toBe('@submitter');
+      expect(ctrl.plain_owner_with).toBe('compliance');
+      expect(ctrl.covers_reviews).toEqual(['PV-UNREGISTERED']);
+    }
+  });
+
+  it('TC-R16-A1-36: an invariant accepts plain_reason', () => {
+    const yaml = VALID_YAML.replace(
+      'invariants: []',
+      `invariants:
+  - id: "INV-TEST-01"
+    description: "test"
+    plain_reason: "it sends personal details about people to {destination}"
+    condition:
+      exposure: "client-facing"
+    required_controls: []
+    severity: "High"`,
+    );
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.policy.invariants[0]?.plain_reason).toBe(
+        'it sends personal details about people to {destination}',
+      );
+    }
+  });
+
+  it('TC-R16-A1-37: a hard line accepts plain_reason and plain_change', () => {
+    const yaml = VALID_YAML.replace(
+      'hard_lines: []',
+      `hard_lines:
+  - id: "HL-TEST-01"
+    description: "test"
+    condition:
+      exposure: "client-facing"
+    reason: "formal reason"
+    regulatory_basis: "Test Reg"
+    plain_reason: "plain reason text"
+    plain_change: "plain change text"`,
+    );
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.policy.hard_lines[0]?.plain_reason).toBe('plain reason text');
+      expect(result.policy.hard_lines[0]?.plain_change).toBe('plain change text');
+    }
+  });
+
+  it('TC-R16-A1-38: a downstream_reviews rule accepts plain_name and plain_owner', () => {
+    const yaml =
+      VALID_YAML +
+      `
+downstream_reviews:
+  - id: "DR-TEST-01"
+    review: "Formal review name"
+    plain_name: "a plain review name"
+    plain_owner: "your information-security team"
+    condition: {}
+`;
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.policy.downstream_reviews?.[0]?.plain_name).toBe('a plain review name');
+      expect(result.policy.downstream_reviews?.[0]?.plain_owner).toBe('your information-security team');
+    }
+  });
+
+  it('TC-R16-A1-39: a platform/vendor registry entry accepts plain_name, vendor_id and kind', () => {
+    const yaml =
+      VALID_YAML +
+      `
+platforms:
+  - id: "PLAT-TEST-01"
+    name: "Formal platform name"
+    plain_name: "Your firm's cloud AI assistant"
+    vendor_id: "VENDOR-TEST-01"
+    approved_envelope: {}
+    satisfies_controls: []
+vendors:
+  - id: "VENDOR-TEST-01"
+    name: "Formal vendor name"
+    plain_name: "Your firm's company AI assistant account"
+    kind: "company_assistant"
+    approved_envelope: {}
+    satisfies_controls: []
+`;
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.policy.platforms?.[0]?.plain_name).toBe("Your firm's cloud AI assistant");
+      expect(result.policy.platforms?.[0]?.vendor_id).toBe('VENDOR-TEST-01');
+      expect(result.policy.vendors?.[0]?.plain_name).toBe("Your firm's company AI assistant account");
+      expect(result.policy.vendors?.[0]?.kind).toBe('company_assistant');
+    }
+  });
+
+  it('TC-R16-A1-40: rejects an invalid kind value on a vendor entry', () => {
+    const yaml =
+      VALID_YAML +
+      `
+vendors:
+  - id: "VENDOR-TEST-01"
+    name: "Formal vendor name"
+    kind: "not-a-real-kind"
+    approved_envelope: {}
+    satisfies_controls: []
+`;
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(false);
+  });
+
+  it('the shipped starter policy still loads with none of the new plain-language fields present', () => {
+    const raw = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(raw);
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('list-valued field condition validation (R16-A1)', () => {
+  it('TC-R16-A1-28: accepts the "in" operator on system_access_scope', () => {
+    expect(validateConditionFieldValue('system_access_scope', { in: ['shared_infrastructure'] })).toEqual([]);
+  });
+
+  it('TC-R16-A1-29: rejects not_in on system_access_scope', () => {
+    const errors = validateConditionFieldValue('system_access_scope', { not_in: ['shared_infrastructure'] });
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]?.reason).toMatch(/system_access_scope/);
+    expect(errors[0]?.reason).toMatch(/"in"/);
+  });
+
+  it('TC-R16-A1-30: rejects gte/lte on system_access_scope', () => {
+    expect(validateConditionFieldValue('system_access_scope', { gte: 1 }).length).toBeGreaterThan(0);
+    expect(validateConditionFieldValue('system_access_scope', { lte: 1 }).length).toBeGreaterThan(0);
+  });
+
+  it('TC-R16-A1-31: rejects bare equality on system_access_scope', () => {
+    expect(validateConditionFieldValue('system_access_scope', 'shared_infrastructure').length).toBeGreaterThan(0);
+  });
+
+  it('TC-R16-A1-32: rejects an unknown value inside an "in" list on system_access_scope (canonical vocabulary)', () => {
+    const errors = validateConditionFieldValue('system_access_scope', { in: ['root-access'] });
+    expect(errors.some((e) => /root-access/.test(e.reason))).toBe(true);
+  });
+
+  it('TC-R16-A1-33: a policy whose invariant condition uses not_in on system_access_scope is rejected end-to-end', () => {
+    const yaml = VALID_YAML.replace(
+      'invariants: []',
+      `invariants:
+  - id: "INV-TEST-01"
+    description: "test"
+    condition:
+      system_access_scope: { not_in: ["none"] }
+    required_controls: []
+    severity: "High"`,
+    );
+    const result = loadPolicy(yaml);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.errors.some((e) => /system_access_scope/.test(e.reason))).toBe(true);
+    }
+  });
+
+  it('does not flag other fields that are not list-valued', () => {
+    expect(validateConditionFieldValue('autonomy_level', { gte: 1 })).toEqual([]);
+    expect(validateConditionFieldValue('exposure', 'client-facing')).toEqual([]);
   });
 });
 
