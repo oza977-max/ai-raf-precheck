@@ -303,7 +303,7 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     expect(screen.queryByRole('button', { name: /^save a backup of mine first$/i })).not.toBeInTheDocument();
   });
 
-  it('TC-RG-8-21: F28: an unrelated failed import does not clear a valid pending replace', async () => {
+  it('TC-RG-8-21: an unrelated second import attempt does not clear a valid pending replace (code-review-005 F28, strengthened by round 3 R3-2)', async () => {
     const foreign = await buildForeignBundle(crypto.randomUUID());
     await seedLocalDemoCase(crypto.randomUUID());
 
@@ -313,11 +313,22 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     await userEvent.upload(await getImportInput(), makeFile(foreign));
     await screen.findByRole('button', { name: /^save a backup of mine first$/i });
 
-    // A completely unrelated, broken file — must not touch the pending
-    // replace decision above, which belongs to a different bundle.
-    await userEvent.upload(await getImportInput(), makeFile({ not: 'a bundle' }));
+    // round 3, R3-2: F28's original guarantee (an unrelated file's own
+    // invalid_format outcome leaves pendingReplace untouched) is now
+    // strengthened — "Import hand-off bundle" is disabled for as long as a
+    // replace is pending (a REAL user, via userEvent, could not reach the
+    // input at all), AND the handler itself refuses ANY second file before
+    // even parsing it, as defence in depth. fireFileChange (direct
+    // dispatch, bypassing the disabled attribute, same technique TC-RG-8-41
+    // uses) proves that second, handler-level guard directly: even a
+    // completely broken, unrelated file produces no new message at all —
+    // not even its own "not a bundle" error — and the pending replace
+    // decision above is left exactly as it was. The early return happens
+    // before any `await`, so there is no async gap to wait out here.
+    fireFileChange(await getImportInput(), makeFile({ not: 'a bundle' }));
 
-    expect(await screen.findByText('This file is not an AIGate hand-off bundle.')).toBeInTheDocument();
+    expect(screen.queryByText('This file is not an AIGate hand-off bundle.')).not.toBeInTheDocument();
+    expect(screen.getByText(/different histories, so they can't be merged/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^save a backup of mine first$/i })).toBeInTheDocument();
   });
 });
@@ -391,6 +402,295 @@ describe('RegisterView hand-off — partial replace and finishing it (code-revie
         const events = await getAllForExport();
         expect(events.some((e) => e.use_case_id === foreignId)).toBe(true);
       });
+    } finally {
+      spy.mockRestore();
+      restore();
+    }
+  });
+});
+
+// code-review-005 round 3, R3-1. partially_replaced's only record that the
+// register still needs finishing was this component's own React state
+// (awaitingFinish/pendingReplace/backupReady) — gone the moment the user
+// switches view (App.tsx unmounts RegisterView) or reloads, with nothing
+// left in the UI to reach finishRegisterReplace. Proves the recovery path
+// through a REAL unmount + fresh mount (the component-level stand-in for a
+// view switch/reload) and the real file input + buttons.
+describe('RegisterView hand-off — recovering a lost partially_replaced via re-import (code-review-005 round 3, R3-1)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  function mockSuccessfulDownload() {
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        /* no-op — content not inspected in these tests */
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+    return () => {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    };
+  }
+
+  it('TC-RG-8-44: unmounting after a partial replace, then re-importing the same file in a fresh mount, offers "Finish updating the register" and completes it', async () => {
+    const user = userEvent.setup();
+    const foreignId = crypto.randomUUID();
+    const foreign = await buildForeignBundle(foreignId);
+    const localId = crypto.randomUUID();
+    await seedLocalDemoCase(localId);
+
+    let restore = mockSuccessfulDownload();
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      const { unmount } = render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+      await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+      await user.click(screen.getByRole('button', { name: /^save a backup of mine first$/i }));
+      await screen.findByText(/a backup file named .* was created/i);
+      await user.click(screen.getByRole('button', { name: /i have my backup — replace my register/i }));
+
+      // partially_replaced reached — "Finish updating the register" is the
+      // only action on screen right now.
+      await screen.findByText(/audit trail was replaced/i);
+      expect(screen.getByRole('button', { name: /finish updating the register/i })).toBeInTheDocument();
+
+      // The ONE thing R3-1 is about: every piece of in-memory state this
+      // component held (awaitingFinish/pendingReplace/backupReady) is gone
+      // — a view switch or a reload, stood in for by a real unmount.
+      unmount();
+    } finally {
+      spy.mockRestore(); // consumed after its one call either way; tidy regardless
+      restore();
+    }
+
+    // A genuinely fresh component instance — same as a reload. A fresh
+    // download mock too (the first was torn down above).
+    restore = mockSuccessfulDownload();
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case'); // the register step never ran — still there
+
+      // Re-import the EXACT SAME file.
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+
+      expect(await screen.findByText(/audit trail already matches this bundle/i)).toBeInTheDocument();
+      // No backup step this time — the audit side isn't being touched
+      // again, so ONLY "Finish updating the register" is offered.
+      expect(screen.queryByRole('button', { name: /^save a backup of mine first$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^keep my register$/i })).not.toBeInTheDocument();
+      const finishButton = await screen.findByRole('button', { name: /finish updating the register/i });
+
+      await user.click(finishButton);
+
+      expect(await screen.findByText(/your previous register is in the backup file you saved/i)).toBeInTheDocument();
+      await waitFor(async () => {
+        const { nodes } = await registerStore.exportAll();
+        expect(nodes.some((n) => n.node_id === foreignId)).toBe(true);
+      });
+    } finally {
+      restore();
+    }
+  });
+});
+
+// code-review-005 round 3, R3-2. RegisterView's diverged branch set
+// pendingReplace/backupReady but not awaitingFinish, so importing a second,
+// diverging file while an earlier finish was still pending could show BOTH
+// "Keep my register" (for the new bundle) and "Finish updating the
+// register" (for the old one) — and "Keep" silently abandoned the finish.
+// Proves the fix: the "Import hand-off bundle" control is disabled with a
+// visible reason whenever a replace/finish is pending, and a second file
+// landing on the handler anyway (bypassing the disabled control) is ignored.
+describe('RegisterView hand-off — import disabled while a replace/finish is pending (code-review-005 round 3, R3-2)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  function mockSuccessfulDownload() {
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        /* no-op */
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+    return () => {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    };
+  }
+
+  it('TC-RG-8-45: while "Finish updating the register" is pending, Import is disabled and a second, different bundle landing on the handler anyway is ignored', async () => {
+    const user = userEvent.setup();
+    const foreignAId = crypto.randomUUID();
+    const foreignA = await buildForeignBundle(foreignAId);
+    const foreignBId = crypto.randomUUID();
+    const foreignB = await buildForeignBundle(foreignBId);
+    await seedLocalDemoCase(crypto.randomUUID());
+
+    const restore = mockSuccessfulDownload();
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreignA));
+      await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+      await user.click(screen.getByRole('button', { name: /^save a backup of mine first$/i }));
+      await screen.findByText(/a backup file named .* was created/i);
+      await user.click(screen.getByRole('button', { name: /i have my backup — replace my register/i }));
+      await screen.findByText(/audit trail was replaced/i);
+
+      // A finish is now pending for bundle A. The control is disabled, with
+      // a visible reason, and a second file (bundle B — different content)
+      // landing directly on the (disabled) input must be ignored, not
+      // start processing bundle B or disturb the pending finish.
+      expect(screen.getByRole('button', { name: /^import hand-off bundle$/i })).toBeDisabled();
+      expect(await screen.findByText(/finish or cancel the pending replace first/i)).toBeInTheDocument();
+
+      fireFileChange(await getImportInput(), makeFile(foreignB));
+
+      // Still exactly the bundle-A finish state — never both pending
+      // decisions on screen, and "Keep my register" never reappears.
+      expect(screen.getByRole('button', { name: /finish updating the register/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^save a backup of mine first$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^keep my register$/i })).not.toBeInTheDocument();
+
+      // The mocked failure only fired once — finishing now calls through to
+      // the real implementation and completes bundle A's register step.
+      await user.click(screen.getByRole('button', { name: /finish updating the register/i }));
+      expect(await screen.findByText(/your previous register is in the backup file you saved/i)).toBeInTheDocument();
+
+      await waitFor(async () => {
+        const { nodes } = await registerStore.exportAll();
+        expect(nodes.some((n) => n.node_id === foreignAId)).toBe(true);
+      });
+      // Bundle B was never absorbed — ignored outright, not merged or queued.
+      const { nodes } = await registerStore.exportAll();
+      expect(nodes.some((n) => n.node_id === foreignBId)).toBe(false);
+    } finally {
+      spy.mockRestore();
+      restore();
+    }
+  });
+
+  // Companion to the test above: a REAL user cannot even reach the file
+  // picker while a replace is pending — the control itself is disabled,
+  // with a visible reason, so TC-RG-8-21's fireFileChange-based guard is
+  // defence in depth, not the primary protection.
+  it('TC-RG-8-49: the Import control is disabled (not just the file ignored) for as long as a replace is pending, and re-enables once it is abandoned', async () => {
+    const foreign = await buildForeignBundle(crypto.randomUUID());
+    await seedLocalDemoCase(crypto.randomUUID());
+
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+    await screen.findByText('Local demo case');
+
+    expect(screen.getByRole('button', { name: /^import hand-off bundle$/i })).toBeEnabled();
+    expect(screen.queryByText(/finish or cancel the pending replace first/i)).not.toBeInTheDocument();
+
+    await userEvent.upload(await getImportInput(), makeFile(foreign));
+    await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+
+    expect(screen.getByRole('button', { name: /^import hand-off bundle$/i })).toBeDisabled();
+    expect(await getImportInput()).toBeDisabled();
+    expect(screen.getByText(/finish or cancel the pending replace first/i)).toBeInTheDocument();
+
+    // Abandoning the pending replace re-enables it.
+    await userEvent.click(screen.getByRole('button', { name: /^keep my register$/i }));
+    expect(screen.getByRole('button', { name: /^import hand-off bundle$/i })).toBeEnabled();
+  });
+});
+
+// code-review-005 round 3, R3-4 (Minor). finish_out_of_date already had a
+// store-level test (TC-RG-8-30); this is the matching component-level test
+// through the real "Finish updating the register" button, the one gap the
+// R3 brief named explicitly.
+describe('RegisterView hand-off — finish_out_of_date through the real button (code-review-005 round 3, R3-4)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  function mockSuccessfulDownload() {
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        /* no-op */
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+    return () => {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    };
+  }
+
+  it('TC-RG-8-46: when the audit trail moves on before Finish is clicked, the button reports finish_out_of_date and the register is left untouched', async () => {
+    const user = userEvent.setup();
+    const foreignId = crypto.randomUUID();
+    const foreign = await buildForeignBundle(foreignId);
+    const localId = crypto.randomUUID();
+    await seedLocalDemoCase(localId);
+
+    const restore = mockSuccessfulDownload();
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+      await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+      await user.click(screen.getByRole('button', { name: /^save a backup of mine first$/i }));
+      await screen.findByText(/a backup file named .* was created/i);
+      await user.click(screen.getByRole('button', { name: /i have my backup — replace my register/i }));
+      const finishButton = await screen.findByRole('button', { name: /finish updating the register/i });
+
+      // Something else writes to the (already-replaced) audit trail before
+      // the user gets to click Finish — the same shape of write a
+      // concurrent 2LoD approval's audit event would be.
+      await append({
+        event_id: 'uc-ui-finish-stale-extra',
+        use_case_id: foreignId,
+        event_type: 'lifecycle_stage_changed',
+        occurred_at: new Date().toISOString(),
+        actor: 'system',
+        payload: { type: 'lifecycle_stage_changed', from_stage: 'idea', to_stage: 'exploring' },
+      });
+
+      await user.click(finishButton);
+
+      expect(await screen.findByText(/reload the page to see the current state/i)).toBeInTheDocument();
+      // finish_out_of_date is a dead end for this pending bundle (same as
+      // handleFinishRegisterReplace's own 'replaced' handling) — neither
+      // action renders any more.
+      expect(screen.queryByRole('button', { name: /finish updating the register/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^save a backup of mine first$/i })).not.toBeInTheDocument();
+      // The register step never ran — still the pre-replace local data.
+      expect(screen.getByText('Local demo case')).toBeInTheDocument();
+      const { nodes } = await registerStore.exportAll();
+      expect(nodes.some((n) => n.node_id === foreignId)).toBe(false);
     } finally {
       spy.mockRestore();
       restore();

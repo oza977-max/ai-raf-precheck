@@ -780,6 +780,80 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
   });
 });
 
+// code-review-005 round 3, R3-1. partially_replaced's only record that the
+// register still needs finishing was React state in RegisterView
+// (awaitingFinish/pendingReplace/backupReady) — gone the moment the user
+// switches view or reloads. Re-importing the SAME bundle used to land in the
+// plain up_to_date branch (the audit trail genuinely does already match) and
+// never look at the register, leaving it silently wrong with no way back to
+// finishRegisterReplace. This block proves the recovery path: up_to_date now
+// also compares the register, and a mismatch there is register_needs_finishing.
+describe('RG-8 hand-off bundle — recovering a lost partially_replaced via re-import (code-review-005 round 3, R3-1)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('TC-RG-8-42: re-importing the same bundle after a partial replace reports register_needs_finishing, and finishing it makes the register match', async () => {
+    await seedSubmitterCase('uc-lost-a');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-lost-own');
+
+    // Reach partially_replaced exactly like TC-RG-8-28/29/30 do — the audit
+    // trail is replaced with the bundle's events, but the register step
+    // fails, so the register still shows 'uc-lost-own'.
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // Simulate the in-memory record of "a finish is pending" being lost
+    // entirely (RegisterView unmounted on a view switch, or the page
+    // reloaded) — nothing left but the stores themselves. The user re-opens
+    // the SAME bundle file and imports it again.
+    const recovered = await importBundle(bundle);
+    expect(recovered.outcome).toBe('register_needs_finishing');
+    expect(recovered.eventsAdded).toBe(0);
+    // Honest on both halves: the audit trail already matches (nothing to
+    // import), the register does not (something to finish) — and names the
+    // way out.
+    expect(recovered.message).toMatch(/audit trail already matches/i);
+    expect(recovered.message).toMatch(/finish updating the register/i);
+    // Never the reserved words (CLAUDE.md), and never claims the import
+    // itself replaced anything (it is read-only on the audit side here).
+    expect(recovered.message).not.toMatch(/approved|rejected/i);
+
+    // The register is still the pre-replace seed data — recovery has not
+    // happened yet, only been offered.
+    expect((await registerStore.exportAll()).nodes.some((n) => n.node_id === 'uc-lost-own')).toBe(true);
+
+    // Finishing re-uses finishRegisterReplace exactly as a still-pending
+    // finish would — same tip re-check, same effect.
+    const finished = await finishRegisterReplace(bundle);
+    expect(finished.outcome).toBe('replaced');
+
+    const { nodes } = await registerStore.exportAll();
+    expect(nodes.some((n) => n.node_id === 'uc-lost-a')).toBe(true);
+    expect(nodes.some((n) => n.node_id === 'uc-lost-own')).toBe(false);
+  });
+
+  it('TC-RG-8-43: up_to_date still reports plainly when the register genuinely does match (no false register_needs_finishing)', async () => {
+    // Guards the other side of the same branch: a bundle that is simply
+    // already fully absorbed (register included) must not start claiming
+    // the register needs finishing.
+    await seedSubmitterCase('uc-plain-uptodate');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    expect((await importBundle(bundle)).outcome).toBe('imported_into_empty');
+    const second = await importBundle(bundle);
+    expect(second.outcome).toBe('up_to_date');
+    expect(second.message).toBe('Your copy is already up to date with this bundle. Nothing to import.');
+  });
+});
+
 // code-review-005 round 2, N2. Local changes made between "Save a backup of
 // mine first" and confirming the replace are reachable in ONE tab (the case
 // page renders inside RegisterView, so a user can open a case and sign it

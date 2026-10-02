@@ -54,6 +54,13 @@ function heading(level: number, text: string): string {
 export function buildChallengeMemo(input: ChallengeMemoInput): string {
   const { label, useCaseId, description, verdict, events, knowledgeLensMatches, policyHash } = input;
   const lines: string[] = [];
+  // code-review-005, R3-3 (round 3): verdicts persisted before V1.1-C01
+  // legitimately lack `explanation` (BC-V11C01-04) — every other reader of
+  // it (VerdictDisplay, RegisterDetail, IntakeFlow) guards with this exact
+  // shape (`const ex = verdict.explanation; if (ex) {...}`) before touching
+  // a nested field; this file read `verdict.explanation.*` three times below
+  // with no guard at all, so the download threw instead of rendering.
+  const ex = verdict.explanation;
 
   lines.push(heading(1, `Effective challenge memo — ${label}`));
   lines.push('');
@@ -81,8 +88,13 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
 
   // INHERENT POSITION.
   lines.push(heading(2, 'Inherent position'));
-  if (verdict.explanation.tripped_invariants.length > 0) {
-    for (const inv of verdict.explanation.tripped_invariants) {
+  if (!ex) {
+    // Echoes RegisterDetail's own legacy note verbatim in substance — an
+    // empty list here would read as "nothing was triggered", a stronger
+    // claim than an unrecorded explanation supports.
+    lines.push('Explanation not recorded for this verdict — it predates explanation capture.');
+  } else if (ex.tripped_invariants.length > 0) {
+    for (const inv of ex.tripped_invariants) {
       lines.push(`- **${inv.id}** (${inv.severity}) — ${inv.description}`);
       lines.push(`  Regulatory basis: ${inv.regulatory_basis ?? 'none recorded'}`);
     }
@@ -91,7 +103,7 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
   }
   lines.push('');
   lines.push(`Binding constraint: ${verdict.binding_constraint}`);
-  lines.push(`Reason: ${verdict.explanation.binding_reason ?? 'none recorded'}`);
+  lines.push(`Reason: ${ex?.binding_reason ?? 'none recorded'}`);
   lines.push('');
 
   // RESIDUAL POSITION.
@@ -105,9 +117,9 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
     lines.push('Minimal control set: none recorded');
   }
   lines.push('');
-  if (verdict.explanation.tripped_invariants.length > 0) {
+  if (ex && ex.tripped_invariants.length > 0) {
     lines.push('Required controls per invariant:');
-    for (const inv of verdict.explanation.tripped_invariants) {
+    for (const inv of ex.tripped_invariants) {
       const required = inv.required_controls.length > 0 ? inv.required_controls.join(', ') : 'none recorded';
       lines.push(`- ${inv.id}: ${required}`);
     }
@@ -118,7 +130,7 @@ export function buildChallengeMemo(input: ChallengeMemoInput): string {
 
   // THE REGULATORY CHAIN.
   lines.push(heading(2, 'The regulatory chain'));
-  const chain = verdict.explanation.regulatory_chain ?? [];
+  const chain = ex?.regulatory_chain ?? [];
   if (chain.length > 0) {
     for (const entry of chain) {
       lines.push(`- **${entry.rule_id}** — ${entry.document} §${entry.section}`);

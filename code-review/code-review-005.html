@@ -411,7 +411,17 @@ blockquote{border-left:3px solid #ddd;padding-left:1rem;color:#555;margin:1rem 0
 <p>Test gaps noted alongside: the import double-click guard (<code>importInFlight</code>) and the register-write-failure path have no test.</p>
 
 <p><strong>Owner disposition (2026-09-28): "Fix all 9".</strong> Fix round 2 of the review's maximum 3 follow; each fix lands with a test that reproduces the problem first, then a final re-check of the changed code.</p>
-<p><em>Verdict: recorded after fix round 2 and its re-check.</em></p>
+<h2>10. Fix round 2 re-check, round 3 fixes, verdict (2026-10-02)</h2>
+<p>Round 2 (commit bd25a13) fixed N1–N9, each with a test written first. Three panels re-checked it (round 3 of 3, strict): B Contracts (also checking N4's stricter import schema against the project's whole history — no genuine bundle from any released version is refused), E Concurrency &amp; Ordering (the audit-outer/register-inner lock order verified by grepping every cross-queue call site; reverting it reproduces a deadlock), and C+G Logic &amp; honesty. All of N1–N9 verified. Five new findings:</p>
+<ul>
+  <li><strong>R3-1 — Critical (C+G).</strong> A half-finished replace (audit trail replaced, register step failed) was recoverable only while the Register view stayed open; after a reload or view switch, re-importing the same file said "up to date" and the register stayed wrong. Fixed: re-importing now detects the register mismatch (new outcome <code>register_needs_finishing</code>) and offers "Finish updating the register"; the partial-replace message says how to recover after leaving the page.</li>
+  <li><strong>R3-2 — Critical (E), Important (C+G).</strong> Importing a second, diverging file while a finish was pending showed "Keep my register" beside "Finish", and Keep abandoned the finish. Fixed: import is disabled, with a visible reason, while a replace or finish is pending; the handler refuses too.</li>
+  <li><strong>R3-3 — Important (B), pre-existing.</strong> The effective-challenge memo failed silently for verdicts that predate explanation capture. Fixed: guarded like every other reader, with a line saying the explanation wasn't recorded; a failed memo now shows a visible error.</li>
+  <li><strong>R3-4 — Minor.</strong> <code>finish_out_of_date</code> had no test through the real button. Added.</li>
+  <li><strong>R3-5 — Minor.</strong> A stale code comment about the tester guide. Corrected.</li>
+</ul>
+<p><strong>Owner disposition (2026-10-02): "Fix all 5 with tests, no 4th round."</strong> All five fixed, each reproduced by a test that failed first; 885 tests green on three consecutive runs; type-check, build, spec parity and trace check (343/343) clean.</p>
+<p class="verdict-label"><strong>Verdict: Merge with caveats.</strong> Caveat: the round-3 fixes are covered by their tests but were not independently re-reviewed — the review's stopping rule (three fix rounds) ended the loop by the owner's standing instruction. Process note: the round-3 fix agent briefly used <code>git stash</code> and <code>git checkout</code> on its own files to prove its tests failed before the fix, against its instructions; the working tree was checked afterwards (no stash left, no conflict markers) and the concurrently-running build agent re-verified its own files.</p>
 
 <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
 

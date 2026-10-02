@@ -264,6 +264,44 @@ describe('buildChallengeMemo', () => {
     expect(memo).not.toMatch(/approved|rejected/i);
   });
 
+  // code-review-005, R3-3 (round 3). BC-V11C01-04: verdicts persisted before
+  // V1.1-C01 legitimately lack `explanation` entirely — a different case from
+  // TC-R10-CM-1-09 above, where explanation IS present but its own fields are
+  // empty. Before this fix, buildChallengeMemo dereferenced
+  // `verdict.explanation.*` three times (tripped_invariants twice,
+  // binding_reason, regulatory_chain) with no guard, so this fixture threw
+  // instead of rendering — exactly what VerdictDisplay.tsx's downloadMemo
+  // handler (R3-3's second half) was swallowing silently.
+  it('TC-RG-8-47: a verdict with no explanation at all renders the legacy note instead of throwing', () => {
+    const legacy = { ...makeVerdict(), explanation: undefined } as unknown as Verdict;
+
+    expect(() =>
+      buildChallengeMemo({
+        label: 'Legacy case',
+        useCaseId: 'uc-legacy',
+        verdict: legacy,
+        events: [],
+      }),
+    ).not.toThrow();
+
+    const memo = buildChallengeMemo({
+      label: 'Legacy case',
+      useCaseId: 'uc-legacy',
+      verdict: legacy,
+      events: [],
+    });
+    // Echoes RegisterDetail's own wording for the same absent-explanation
+    // case (register-detail.tsx's legacy note) — same substance, restated.
+    expect(memo).toContain('Explanation not recorded for this verdict — it predates explanation capture.');
+    // Every OTHER explanation-derived field falls back to the same honest
+    // "none recorded" the rest of this memo already uses for absent data —
+    // never a silently empty list, which would read as "nothing triggered".
+    expect(memo).toContain('Reason: none recorded');
+    expect(memo).toContain('Required controls per invariant: none recorded');
+    expect(memo).toContain('## The regulatory chain\nnone recorded');
+    expect(memo).not.toMatch(/approved|rejected/i);
+  });
+
   it('TC-R12-CM-HASH-01: prints "not computed" when policyHash is absent', () => {
     const memo = buildChallengeMemo({
       label: 'Client email drafter',

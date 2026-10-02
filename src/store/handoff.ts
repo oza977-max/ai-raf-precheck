@@ -494,7 +494,19 @@ export type ImportOutcome =
   // tip has moved on since the partial replace it is trying to finish —
   // finishing now would install a register that no longer matches what the
   // audit trail (the source of truth) actually says. Refused; reload.
-  | 'finish_out_of_date';
+  | 'finish_out_of_date'
+  // round 3, R3-1: partially_replaced's ONLY record that the register still
+  // needs finishing used to be React state in RegisterView
+  // (awaitingFinish/pendingReplace/backupReady) — gone the moment the user
+  // switches view (App.tsx unmounts RegisterView) or reloads. Re-importing
+  // the SAME bundle after that used to walk straight into the plain
+  // up_to_date branch (the audit trail really does already match) and never
+  // look at the register at all, leaving it silently wrong with no UI path
+  // back to finishRegisterReplace. The up_to_date check now also compares
+  // the register (registersMatch, below); a mismatch there returns this
+  // outcome instead, so RegisterView can offer "Finish updating the
+  // register" again for a bundle whose audit side already landed.
+  | 'register_needs_finishing';
 
 export interface ImportResult {
   outcome: ImportOutcome;
@@ -650,12 +662,47 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
 function partiallyReplacedResult(auditEventCount: number, err: unknown): ImportResult {
   return {
     outcome: 'partially_replaced',
+    // round 3, R3-1: the old closing sentence ("...or reload to see the
+    // latest audit trail") was a dead end dressed as a neutral option —
+    // reloading loses the only record that the register still needs
+    // finishing (RegisterView's own React state) and left no UI path back
+    // to finishRegisterReplace. Now true either way: leaving the page is
+    // recoverable, because re-importing the same file is offered a finish
+    // step (register_needs_finishing, the up_to_date branch below).
     message: `Your audit trail was replaced with this bundle's (${auditEventCount} events) — that part is done and cannot be undone. The register view could not be updated to match: ${
       err instanceof Error ? err.message : String(err)
-    }. Use "Finish updating the register" to try again, or reload to see the latest audit trail.`,
+    }. Use "Finish updating the register" to try again. If you leave this page before finishing, import the same file again and you'll be offered the finish step.`,
     eventsAdded: auditEventCount,
   };
 }
+
+// round 3, R3-1. Deterministic, field-precise comparison between the local
+// register and a bundle's register: the same node/edge SETS (by id) and, for
+// every id present on both sides, the exact fields the bundle carries.
+// Reuses canonicalJson — the same serialisation the seal itself hashes — over
+// each side sorted by id first (the same sort sealInput uses), so storage
+// order never matters and "matches" means byte-identical content, never
+// merely the same ids.
+function registersMatch(
+  local: { nodes: readonly RegisterNode[]; edges: readonly RegisterEdge[] },
+  bundleRegister: { nodes: readonly RegisterNode[]; edges: readonly RegisterEdge[] },
+): boolean {
+  const sortedNodes = (ns: readonly RegisterNode[]) => [...ns].sort((a, b) => a.node_id.localeCompare(b.node_id));
+  const sortedEdges = (es: readonly RegisterEdge[]) => [...es].sort((a, b) => a.edge_id.localeCompare(b.edge_id));
+  return (
+    canonicalJson(sortedNodes(local.nodes)) === canonicalJson(sortedNodes(bundleRegister.nodes)) &&
+    canonicalJson(sortedEdges(local.edges)) === canonicalJson(sortedEdges(bundleRegister.edges))
+  );
+}
+
+// round 3, R3-1. The honest wording for register_needs_finishing: the audit
+// trail (source of truth) genuinely has nothing left to absorb from this
+// bundle — this is NOT a tampered or stale bundle — but the register (a
+// derived view) never caught up, almost always because an earlier replace
+// reached partially_replaced and the finish step was never completed before
+// this component's state was lost.
+const REGISTER_NEEDS_FINISHING_MESSAGE =
+  'Your audit trail already matches this bundle\'s — there\'s nothing new to import there. Your register hasn\'t caught up to it yet, most likely because an earlier replace was interrupted before the register step finished. Use "Finish updating the register" to bring it up to date.';
 
 const REPLACED_MESSAGE = (auditEventCount: number) =>
   `Your register was replaced with this bundle (${auditEventCount} events). Your previous register is in the backup file you saved.`;
@@ -789,6 +836,17 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
     }
     if (tailResult.kind === 'up_to_date') {
       recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+      // round 3, R3-1: the audit trail matching is not the whole story — a
+      // replace that reached partially_replaced leaves the audit trail
+      // looking EXACTLY like this (local already equals the bundle) while
+      // the register never followed. This is the one path that can detect
+      // that honestly, whether the partial replace happened in this same
+      // session or was lost entirely (a view switch, a reload) before it
+      // could be finished.
+      const localRegister = await exportAll();
+      if (!registersMatch(localRegister, bundle.register)) {
+        return { outcome: 'register_needs_finishing', message: REGISTER_NEEDS_FINISHING_MESSAGE, eventsAdded: 0 };
+      }
       return { outcome: 'up_to_date', message: 'Your copy is already up to date with this bundle. Nothing to import.', eventsAdded: 0 };
     }
 

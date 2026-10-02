@@ -129,6 +129,33 @@ N7 (the plain export success message overclaiming that the file was saved)
 changes existing copy rather than adding a behaviour — `TC-RG-8-01`'s own
 test was updated to assert the corrected wording in place, not re-numbered.
 
+### Round 3 fixes (code-review-005 round 3, R3-1 through R3-5)
+
+*Same discipline as round 2: every row below names a genuinely NEW test,
+written before its fix (reproduce first, confirm it fails, then fix).
+`register_needs_finishing` is a new `ImportOutcome` value
+(`verdict-audit.md` §16.4/§16.8, amended). R3-3 and R3-5 touch
+`src/components/challenge-memo.ts`/`VerdictDisplay.tsx` and a test-file
+comment respectively, not the hand-off bundle itself — numbered into this
+same sequence because, like round 2's N5/N6/N7/N9, they are this round's fix
+pass, not a separate feature.*
+
+| ID | Asserts |
+|---|---|
+| TC-RG-8-42 | R3-1: after a partial replace, re-importing the SAME bundle (standing in for the in-memory record of a pending finish being lost — a view switch or a reload) reports `register_needs_finishing`, naming both that the audit trail already matches and that the register does not; `finishRegisterReplace` then completes it and the register matches — `handoff.test.ts` |
+| TC-RG-8-43 | R3-1 regression guard: a bundle that is genuinely fully absorbed, register included, still reports plain `up_to_date` — the new register check never fires a false positive — `handoff.test.ts` |
+| TC-RG-8-44 | R3-1 (UI): the same recovery through the real file input and buttons — unmounting after a partial replace and re-importing the same file in a fresh mount offers "Finish updating the register" (no backup step) and completes it — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-45 | R3-2: while "Finish updating the register" is pending, "Import hand-off bundle" is disabled with a visible reason, and a second, different bundle landing on the import handler anyway is ignored outright — never both a Keep/Save-backup pair and a Finish pending together, and the ignored bundle's content never reaches the register — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-46 | R3-4 (Minor): `finish_out_of_date` through the real "Finish updating the register" button (previously only a store-level test, `TC-RG-8-30`, covered this) — the audit trail moving on before the click is reported, and the register step never runs — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-47 | R3-3: `buildChallengeMemo` on a verdict with no `explanation` at all (BC-V11C01-04 legacy verdicts) renders the same legacy note `RegisterDetail` shows, with every explanation-derived field falling back to "none recorded", instead of throwing — `challenge-memo.test.ts` |
+| TC-RG-8-48 | R3-3: clicking "Download effective-challenge memo" shows a visible error instead of failing silently when memo generation throws — `VerdictDisplay.memo-download.test.tsx` |
+| TC-RG-8-48b | R3-3: a later, successful download clears the earlier error — `VerdictDisplay.memo-download.test.tsx` |
+
+R3-5 (a stale code comment in `src/engine/try-these.test.ts` claiming
+`docs/try-these.md` was left unedited, when the same commit had already
+updated it) is a comment-only correction — no behaviour changed, so no new
+test applies.
+
 ## RG-9 — Control-evidence attestation
 
 `requirements/requirements.md`, RG-9: "A reviewer shall be able to record,
@@ -155,7 +182,10 @@ counted separately from machine-verified evidence."
 None. Every behaviour on the original backfill's brief had an existing test
 that already proved it — that pass only added the id. The round-2 fix pass
 added genuinely new tests (TC-RG-8-28 through -41, table above) — each one
-written first, confirmed to fail, then fixed, per that round's brief.
+written first, confirmed to fail, then fixed, per that round's brief. The
+round-3 fix pass (R3-1 through R3-5) adds TC-RG-8-42 through -48b, same
+discipline — the one exception is R3-5's comment-only correction, which has
+no behaviour to test.
 
 ### Verification
 
@@ -169,12 +199,14 @@ behaviour changed there — only `it()` title strings gained a `TC-RG-8-NN:` /
 pass. The round-2 fix pass is different in kind (real behaviour changed) and
 was verified accordingly: every touched test file 3x, the full suite 3x
 consecutively, `npx tsc --noEmit`, `python3 scripts/spec-parity-check.py`,
-and `python3 scripts/trace-check.py`, all clean.
+and `python3 scripts/trace-check.py`, all clean. The round-3 fix pass
+(R3-1 through R3-5) was verified the same way as round 2.
 
 | Date | Change |
 |---|---|
 | 2026-09-28 | Written to close the RG-8/RG-9 traceability gap. |
 | 2026-09-28 | Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41. |
+| 2026-10-02 | Round 3 fix pass (code-review-005 round 3, R3-1 through R3-5): 8 new tests added, TC-RG-8-42 through TC-RG-8-48b. |
 
 ---
 

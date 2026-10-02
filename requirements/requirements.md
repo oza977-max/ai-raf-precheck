@@ -125,6 +125,8 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Health report: Added via HR-05 resolution (June 2026). Surfaced during /gvm-test-cases Phase 1 — the fallback path was referenced in CLAUDE.md and NF-3 but had no requirement.
 
+**Amended 2026-10-02 (design review 006).** UC-8 replaces the form's "labelled field with permitted values" with questions about the submitter's situation, so that clause of the fit criterion is superseded. What survives: the form works with no API key, produces the same `DataFlowGraph` shape as extraction, and is recorded as structured-form intake in the audit trail.
+
 **UC-4 (Must):** The system shall ask targeted follow-up questions based on the risk signals detected in the extracted graph. The number of questions shall be proportionate to the risk profile of the use case.
 
 > Fit criterion: A Low-tier use case shall require no more than 5 follow-up questions. A Critical-tier use case shall require no more than 15. The system shall never present a fixed list of all possible questions regardless of use case type.
@@ -254,6 +256,8 @@ requirement and a schema change, not a bug fix.
 **VD-2 (Must):** The verdict shall show the exact invariant that was the binding constraint — the specific rule in the policy file that determined the outcome — and the specific path in the data-flow graph that triggered it.
 
 > Fit criterion: The submitter can read the verdict and understand precisely why the outcome is what it is, without asking a risk manager to interpret it. Example: *"Client email data (classified as potential MNPI) flows to an external model in Zone A. Policy rule PE-DATA-3 prohibits MNPI from flowing outside Zone C."*
+
+**Amended 2026-10-02 (design review 006, alongside VD-1).** The binding rule's plain reason now leads the first screen (VD-9); the rule's formal text and the graph path it matched stay on the same page in the reviewer section.
 
 **VD-3 (Must):** The verdict shall allow the submitter to contest the reasoning by correcting graph nodes they believe were misclassified. A correction triggers a re-evaluation. Both the original verdict and the corrected verdict are permanently recorded.
 

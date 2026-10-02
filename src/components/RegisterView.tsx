@@ -77,6 +77,11 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   // updating the register" instead of the normal confirm-replace button;
   // cleared on success, on a hard refusal to finish (finish_out_of_date), or
   // when the user abandons this pending bundle entirely.
+  // round 3, R3-1: also set (with no backup step) when a re-import reports
+  // 'register_needs_finishing' — the same "only Finish is honest" state,
+  // reached after that in-memory record was lost rather than within one
+  // session. Reset wherever pendingReplace is replaced (R3-2), so a stale
+  // true from an earlier bundle's decision can never leak into a new one.
   const [awaitingFinish, setAwaitingFinish] = useState(false);
   const replaceInFlight = useRef(false);
   const backupInFlight = useRef(false); // N8: synchronous guard — a double-click on "Save a backup of mine first" must not download the file twice
@@ -126,6 +131,13 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
 
   async function handleImportBundleFile(file: File) {
     if (importInFlight.current) return;
+    // round 3, R3-2: the "Import hand-off bundle" control is already
+    // disabled (below) whenever a replace or finish is pending — this is
+    // defence in depth for a call that reaches this handler some other way.
+    // A second bundle landing here while one is pending must never silently
+    // supersede or race the first; the only honest way out is to finish or
+    // cancel the one already in progress.
+    if (pendingReplace !== null) return;
     importInFlight.current = true;
     try {
       let parsed: unknown;
@@ -138,7 +150,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
       try {
         const result = await importBundle(parsed);
         const errorOutcomes: ImportOutcome[] = ['invalid_format', 'tampered'];
-        const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead', 'diverged'];
+        const neutralOutcomes: ImportOutcome[] = ['up_to_date', 'local_ahead', 'diverged', 'register_needs_finishing'];
         const tone = errorOutcomes.includes(result.outcome) ? 'error' : neutralOutcomes.includes(result.outcome) ? 'info' : 'ok';
         setHandoffMsg({ tone, text: result.message });
         if (result.outcome === 'diverged') {
@@ -146,8 +158,30 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
           // — hold the verified bundle so the user can choose to replace. A
           // NEW diverged bundle is the one case that should supersede an
           // earlier pending one; restart the two-step confirmation for it.
+          // round 3, R3-2: awaitingFinish must be reset here too — without
+          // this, a diverging import that arrived while an earlier
+          // partially_replaced finish was still pending left BOTH "Keep my
+          // register" (for this new bundle) and "Finish updating the
+          // register" (for the old one) on screen together, and "Keep"
+          // silently abandoned the finish. The Import control below is now
+          // also disabled while any replace/finish is pending, which closes
+          // the race at its source; this reset is defence in depth for
+          // whatever still calls setPendingReplace directly.
           setPendingReplace(parsed);
           setBackupReady(null);
+          setAwaitingFinish(false);
+        }
+        if (result.outcome === 'register_needs_finishing') {
+          // round 3, R3-1: the audit trail already matches this bundle —
+          // nothing to import there — but the register never caught up,
+          // almost always because an earlier partially_replaced finish was
+          // lost (a view switch, a reload) before it completed. No backup
+          // step: nothing is being discarded here, so "Finish updating the
+          // register" is offered directly, re-using the exact same action
+          // (and its tip re-check) a still-pending finish would.
+          setPendingReplace(parsed);
+          setBackupReady(null);
+          setAwaitingFinish(true);
         }
         // code-review-005 F28: every OTHER outcome — including
         // invalid_format/tampered for an unrelated file — leaves an existing
@@ -446,7 +480,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
           <button type="button" onClick={() => void handleExportBundle()}>
             Export hand-off bundle
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={pendingReplace !== null}>
             Import hand-off bundle
           </button>
           <input
@@ -455,6 +489,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             accept="application/json,.json"
             style={{ display: 'none' }}
             aria-label="Import hand-off bundle file"
+            disabled={pendingReplace !== null}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleImportBundleFile(file);
@@ -462,6 +497,19 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             }}
           />
         </div>
+        {/* round 3, R3-2: a second import while a replace or finish is still
+            pending used to be able to land mid-decision and leave two
+            unrelated pending actions on screen together (e.g. a NEW
+            diverging bundle's "Keep my register" alongside an OLDER
+            bundle's "Finish updating the register" — "Keep" then silently
+            abandoned the finish). Disabling the control while
+            pendingReplace !== null closes the race at the one place a
+            second bundle could ever enter. */}
+        {pendingReplace !== null && (
+          <p className="register-view__handoff-import-disabled-reason" role="status">
+            Finish or cancel the pending replace first.
+          </p>
+        )}
         {/* code-review-005 F2: says exactly what the seal/chain catch (damage,
             or an edit not followed by recomputing the chain) and what they
             cannot prove (who made the file) — never "any change is detected". */}
@@ -488,7 +536,12 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             succeeded, "Keep my register" is no longer an honest option (that
             part cannot be undone from here) — only "Finish updating the
             register" is offered. */}
-        {pendingReplace !== null && !backupReady && (
+        {/* round 3, R3-1/R3-2: guarded with !awaitingFinish too — a pending
+            bundle whose audit side already landed (awaitingFinish true, no
+            backup needed: register_needs_finishing, or a still-pending
+            partially_replaced finish) must offer ONLY "Finish updating the
+            register" below, never this step-1 pair as well. */}
+        {pendingReplace !== null && !backupReady && !awaitingFinish && (
           <div className="register-view__handoff-actions">
             <button type="button" onClick={() => void handleBackupBeforeReplace()}>
               Save a backup of mine first

@@ -665,6 +665,8 @@ file from the markdown — as <code>requirements-003.html</code> already is — 
                         <div class="fit-criterion">If a submitter corrects a node (e.g., changes data class from "Internal" to "MNPI"), the correction is recorded alongside the original extraction. The audit trail shows both the original LLM-extracted value and the human-corrected value.</div>
                     </div>
 
+                    <p><strong>UC-3a amended 2026-10-02 (design review 006).</strong> UC-8 replaces the form's "labelled field with permitted values" with questions about the submitter's situation, so that clause of UC-3a's fit criterion is superseded. What survives: the form works with no API key, produces the same <code>DataFlowGraph</code> shape as extraction, and is recorded as structured-form intake in the audit trail.</p>
+
                     <p><strong>Round 16 — plain-language intake (added 2026-09-28).</strong> Six rounds of rewording the guided form's labels did not make it answerable by a newcomer: the form asked people to classify their tool in the engine's own categories (data class, zone, model type, autonomy level, how "binding" the output is). A newcomer test — simulated first-time users with everyday jobs, each given a real use case and only the screen text — found 23% of answers to today's form were "I don't understand this question" and 4 of 6 testers answered in ways that made their verdict less strict than it should have been. A redesign that asks about the submitter's situation instead scored 0% "didn't understand" and 0 of 9 less-strict answers across two rounds (NF-12). UC-8 to UC-12 record what that redesign must do.</p>
 
                     <div class="requirement">
@@ -866,6 +868,8 @@ file from the markdown — as <code>requirements-003.html</code> already is — 
                         <p class="requirement-text">The verdict shall show the exact invariant that was the binding constraint — the specific rule in the policy file that determined the outcome — and the specific path in the data-flow graph that triggered it.</p>
                         <div class="fit-criterion">The submitter can read the verdict and understand precisely why the outcome is what it is, without asking a risk manager to interpret it. Example: <em>"Client email data (classified as potential MNPI) flows to an external model in Zone A. Policy rule PE-DATA-3 prohibits MNPI from flowing outside Zone C."</em></div>
                     </div>
+
+                    <p><strong>Amended 2026-10-02 (design review 006, alongside VD-1).</strong> The binding rule's plain reason now leads the first screen (VD-9); the rule's formal text and the graph path it matched stay on the same page in the reviewer section.</p>
 
                     <div class="requirement">
                         <div class="requirement-header">

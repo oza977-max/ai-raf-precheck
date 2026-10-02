@@ -34,7 +34,8 @@ against.
 | 4 | 2026-08-31 | design | A,C,D,E, + Panel G fanned out one sub-panel per screen (9 screens) — 13 panels total (no B/F) | 10 | 14 | 8 | **Build with caveats** (app-wide narrative flow — same audience-hospitality lens applied to every screen outside the already-fixed verdict screen; owner asked "look at all screens with same lens"; strongest signal is 3-panel convergence [A+C+D] that the round-3 fix — Fold, NF-11 — was built as a one-screen patch, not a reusable house convention, and did not propagate; triage pending) |
 | 3 | 2026-08-31 | explore | persona demo (founder/skeptical-banker/consultant roleplay, grounded in live site content) | 1 | 2 | 1 | 4 findings — audit trail not tamper-evident (Critical), Track/Tier never mapped to a real bank's committees + coverage-gap queue no visibility (Important), margin-of-safety uncalibrated (Minor); owner chose fix-everything, including the item the consultant flagged as future-phase infra |
 | 4 | 2026-08-31 | explore | confirmation, same persona, no founder present | 0 | 0 | 1 obs | 3 of 4 findings confirmed CLOSED by direct inspection (live chain-integrity check, in-product governance mapping, honest calibration wording); 1 observation — completion tracking remains a stated, accepted V1 limitation, not silently missing |
-| 5 | 2026-09-28 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 8 | 14 | 7 | **Pending — owner chose fix-all (29/29); fix round 1 re-review: 27/29 verified, 9 new (4C/2I/3M), owner fix-all again** (pre-release gate for v1.0.0, range 7a82346..HEAD, 6 commits/41 files: hand-off bundle + control attestation + traceability tests. 72 raw → 29 de-duplicated + 3 observations. Dual review: 9 of 22 C+I reported by ≥1 blind panel, 3 blind-only (F7 spec/guard-test contradiction, F17 cross-tab register writes, F19 dropped attestation). Verdict recorded after the fix pass is re-reviewed) |
+| 5 | 2026-09-28 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 8 | 14 | 7 | **Merge with caveats** (owner fix-all ×3: round 1 27/29 verified + 9 new; round 2 all 9 verified + 5 new (2C/1I/2M) fixed with tests, not re-reviewed — stopping rule) (pre-release gate for v1.0.0, range 7a82346..HEAD, 6 commits/41 files: hand-off bundle + control attestation + traceability tests. 72 raw → 29 de-duplicated + 3 observations. Dual review: 9 of 22 C+I reported by ≥1 blind panel, 3 blind-only (F7 spec/guard-test contradiction, F17 cross-tab register writes, F19 dropped attestation). Verdict recorded after the fix pass is re-reviewed) |
+| 1 | 2026-10-02 | design | A,B,C,D,E + F (comprehension sub-panel, utility-tree H/H leaf NF-12), liberal | 15 | 19 | 13 | **Build with caveats** (round 2 strict: 42/47 closed, 5 partly, 19 new incl. 4 C — all written into v2.1, not re-reviewed; owner: start building) (build contract R16 for the plain-language intake + verdict, before any code; 3 owner decisions: two team names, review plain names approved, Q6/Q7 'Not sure' → strictest) |
 
 ## Round 1 measurements
 
@@ -670,6 +671,44 @@ around the hand-off replace and the review-folding helper. Owner: "Fix all 9" (r
 - **Chair's own addition caught by a panel:** the "same check under another name" helper,
   tightened by the chair to ≥2 significant words, is still a subset match (N6) — equality of
   word sets is the defensible rule.
+
+**Fix round 2 re-check (round 3 of 3, panels B, E, C+G, strict).** N1–N9 all verified; 5 new
+(2 C / 1 I / 2 M), owner: fix all 5 with tests, no 4th round → verdict Merge with caveats.
+- **NEW candidate RF-8 — recovery state for a destructive multi-step flow lived only in React
+  memory.** The half-finished replace could be finished only while one component stayed mounted;
+  a reload or view switch lost it, and re-importing said "up to date" (R3-1). Same root: a second
+  import could overwrite the pending decision (R3-2). Lesson: any state that means "the stores
+  disagree until the user acts" must be re-derivable from the stores themselves.
+- **Pre-existing defect surfaced by a contract sweep:** the challenge memo was the one reader of
+  `verdict.explanation` (of eight) without a guard (R3-3) — found by Panel B grepping every reader
+  while verifying N4. Sweeping all consumers of a field is cheap and keeps finding these.
+
+## Design review 006 round 1 (2026-10-02) — plain-language intake + verdict contract (R16)
+
+**Scope and shape.** A build contract (build/prompts/R16.md v1), reviewed before any code by six
+panels (A–E always-on + F comprehension, the one high-importance/high-risk utility-tree leaf).
+Liberal criterion. 47 findings after de-duplication (15 C / 19 I / 13 M), all in the contract.
+
+**Anchor examples:**
+- Worst, security (E): free-text supplier names "matched to the firm's list" would let a submitter
+  type an assessed supplier's name and inherit its approved limits — the exact adversary the
+  review was told to look for, missed by the author because the design was written for the
+  honest submitter. Same class: "Not sure" on reversibility mapped to a value no hard line matches.
+- Worst, structure (C): the first screen would have become the FOURTH independent computation of
+  "is this control outstanding?" on one page — the class that produced code review 005's F8.
+- Best, requirements (A): moving all existing content into a fold "for your AI risk team" would
+  have hidden the submitter's own correction button and the medium-confidence caveat.
+- Best, implementability (D): a required engine input (processing zone) had no source at all.
+
+**Recurring / new patterns:**
+- **RF-6 (boundary validated at the outer shape only) recurs at design time:** identity of
+  reviews, suppliers and platforms was specified for the happy path only.
+- **NEW candidate RF-7 — a design written for the honest user.** Every new free-text, "Not sure"
+  and firm-edited surface needs a named adversary before it is specified (threat model now
+  mandatory in R16 v2 §0.1).
+
+**Self-caught, recorded for honesty:** the chair wrote the contract and its worked example used a
+description where its own definition required an id (CTRL-INDEP-VAL-01 → SS1-UK-REV-01).
 
 ## Explore rounds 3-4 (2026-08-31) — persona demo, then confirmation
 

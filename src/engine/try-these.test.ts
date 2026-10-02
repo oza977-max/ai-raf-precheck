@@ -124,9 +124,10 @@ describe('docs/try-these.md — every printed outcome', () => {
     // message" shape v1.6 narrowed INV-DISCLOSE-01/INV-ESCALATE-01 for) — so
     // neither invariant's new action_type: {in: [inform, execute, trade,
     // approve]} condition matches any more, and both controls drop out.
-    // See docs/try-these.md's "8 controls" / "Eight controls is the cost of
-    // leaving the envelope" line, now stale (out of this agent's file
-    // ownership — reported, not edited).
+    // docs/try-these.md's "8 controls" / "Eight controls is the cost of
+    // leaving the envelope" line was updated to 6 in this same commit, so it
+    // already matches this test — nothing stale to report (code-review-005,
+    // R3-5: an earlier version of this comment claimed otherwise).
     expect(v.controls).toEqual(['CTRL-CITE-01', 'CTRL-CONDUCT-01', 'CTRL-ENC-01', 'CTRL-FINGERPRINT-01', 'CTRL-REDTEAM-01', 'CTRL-SYNTHMARK-01']);
   });
 

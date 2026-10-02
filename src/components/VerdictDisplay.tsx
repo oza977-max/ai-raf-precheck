@@ -1002,27 +1002,39 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
   const needsSignOff = registerStage === 'pre_checked';
+  // code-review-005, R3-3 (round 3): downloadMemo is wired to its button as
+  // `onClick={() => void downloadMemo()}` — a void-ed promise. A throw
+  // anywhere in here (buildChallengeMemo on a verdict missing `explanation`
+  // was the reproducing case; a WebCrypto/Blob failure would hit the same
+  // path) used to reject that promise with nothing downloaded and nothing
+  // shown. memoError makes that visible instead of silent.
+  const [memoError, setMemoError] = useState<string | null>(null);
   // R10-CM (ADR-VA-R10-1): the memo is generated from what is already on
   // this screen and downloaded client-side. Nothing is written anywhere.
   // R12-MISC-1: async so the policy hash (WebCrypto) can be computed before
   // the memo is built and stamped into its header.
   const downloadMemo = async () => {
-    const policyHash = await hashPolicyYaml(getCurrentPolicyYaml());
-    const memo = buildChallengeMemo({
-      label: memoLabel ?? 'AI use case',
-      useCaseId: verdict.use_case_id,
-      description: memoDescription,
-      verdict,
-      events: auditEvents,
-      knowledgeLensMatches,
-      policyHash,
-    });
-    const url = URL.createObjectURL(new Blob([memo], { type: 'text/markdown' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `challenge-memo-${verdict.use_case_id.slice(0, 8)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const policyHash = await hashPolicyYaml(getCurrentPolicyYaml());
+      const memo = buildChallengeMemo({
+        label: memoLabel ?? 'AI use case',
+        useCaseId: verdict.use_case_id,
+        description: memoDescription,
+        verdict,
+        events: auditEvents,
+        knowledgeLensMatches,
+        policyHash,
+      });
+      const url = URL.createObjectURL(new Blob([memo], { type: 'text/markdown' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `challenge-memo-${verdict.use_case_id.slice(0, 8)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMemoError(null);
+    } catch (err) {
+      setMemoError(err instanceof Error ? err.message : String(err));
+    }
   };
   // §13.1a: the caveats remain the per-rule DETAIL rendered underneath the
   // banner — which rule is unadopted. They are no longer what determines
@@ -1875,6 +1887,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <p className="verdict__memo-export-note">
           A 2LoD-style memo generated from this record. It restates the record; it does not strengthen it.
         </p>
+        {/* code-review-005, R3-3: a throw in downloadMemo used to vanish
+            inside a void-ed promise — nothing downloaded, nothing shown. */}
+        {memoError && (
+          <p className="verdict__memo-export-error" role="alert">
+            Couldn&apos;t generate the memo: {memoError}
+          </p>
+        )}
       </div>
 
       <p className="verdict__caveat">
