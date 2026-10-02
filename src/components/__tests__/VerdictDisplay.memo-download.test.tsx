@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VerdictDisplay from '../VerdictDisplay';
 import * as challengeMemoModule from '../challenge-memo';
@@ -105,9 +105,12 @@ describe('VerdictDisplay memo download — visible error on failure (code-review
       expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't generate the memo/i);
 
       // The mocked failure only fires once — this click calls through to
-      // the real buildChallengeMemo and succeeds.
+      // the real buildChallengeMemo and succeeds. The success path awaits
+      // the policy hash (crypto.subtle) before clearing the error, so the
+      // assertion waits for it: a bare check right after the click raced the
+      // hash and failed on a slower CI machine (2026-10-03, commit 52b2edf).
       await user.click(button);
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
     } finally {
       spy.mockRestore();
       globalThis.Blob = OriginalBlob;
