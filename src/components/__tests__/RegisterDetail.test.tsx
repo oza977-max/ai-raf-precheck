@@ -716,6 +716,129 @@ describe('RegisterDetail — the submitter note reaches the reviewer', () => {
   });
 });
 
+// F-4 (DR7-12, DR7-16). A correction used to drop the submitter's note,
+// contradiction explanations and answer contexts entirely — only the
+// FIRST attestation (graph_confirmed) ever wrote them, and this page read
+// them only from that same event. `currentVerdictAttestationFields`
+// (RegisterDetail.tsx) is the one helper that now reads whichever event
+// recorded the CURRENT verdict.
+describe('RegisterDetail — a correction keeps what the person typed (F-4, DR7-12/DR7-16)', () => {
+  it('TC-R16-F-26: reads the note, contradiction explanations and answer contexts from the CORRECTION, not the original confirmation', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-original', use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: 'g1',
+        graph_version: 1,
+        corrections_count: 0,
+        submitter_note: 'Original note — must not show once corrected.',
+        contradiction_resolutions: ['Original explanation — must not show.'],
+        answer_contexts: ['Original context — must not show.'],
+      },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-original',
+        new_verdict: makeVerdict({ id: 'v-corrected', use_case_id: id }),
+        submitter_note: 'Corrected note.',
+        contradiction_resolutions: ['Corrected explanation.'],
+        answer_contexts: ['Corrected context.'],
+      },
+    });
+
+    renderDetail(id);
+    await verdictRegion();
+
+    expect(await screen.findByText('Corrected note.')).toBeInTheDocument();
+    expect(screen.getByText('Corrected explanation.')).toBeInTheDocument();
+    expect(screen.getByText('Corrected context.')).toBeInTheDocument();
+    // Scoped to the current-verdict summary panels specifically: the
+    // chronological timeline below legitimately still shows the ORIGINAL
+    // confirmation's own resolution text (it genuinely happened, as part
+    // of history) — only these three panels, which read "whichever event
+    // recorded the CURRENT verdict", must show the correction's values
+    // only, never a mix.
+    const notePanel = screen.getByText('Note from the submitter').closest('div')!;
+    const contextPanel = screen.getByText("Context from the submitter’s answers").closest('div')!;
+    const explanationPanel = screen.getByText('Explanations the submitter gave').closest('div')!;
+    expect(notePanel.textContent).not.toMatch(/Original note/);
+    expect(contextPanel.textContent).not.toMatch(/Original context/);
+    expect(explanationPanel.textContent).not.toMatch(/Original explanation/);
+  });
+
+  it('TC-R16-F-27: a correction with no note/explanations/contexts of its own shows none at all — it supersedes, never merges with the original confirmation', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-original', use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: 'g1',
+        graph_version: 1,
+        corrections_count: 0,
+        submitter_note: 'Original note.',
+      },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-original',
+        new_verdict: makeVerdict({ id: 'v-corrected', use_case_id: id }),
+      },
+    });
+
+    renderDetail(id);
+    await verdictRegion();
+
+    expect(screen.queryByText(/note from the submitter/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Original note.')).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-F-28: with no correction at all, still falls back to the case\'s graph_confirmed — unaffected by F-4', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: 'g1',
+        graph_version: 1,
+        corrections_count: 0,
+        submitter_note: 'The only note there is.',
+      },
+    });
+
+    renderDetail(id);
+    await verdictRegion();
+    expect(await screen.findByText('The only note there is.')).toBeInTheDocument();
+  });
+});
+
 // code-review-005 round 2, N4. handoff.ts's import validation now rejects a
 // bundle whose verdict is missing confidence_caveats (see
 // src/store/handoff.test.ts's TC-RG-8-33), but a stored row can be corrupt

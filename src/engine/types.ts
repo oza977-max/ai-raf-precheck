@@ -189,7 +189,7 @@ export interface ProcessingNode {
   // 'unknown' is a real answer, distinct from absent: the submitter was
   // asked and could not say — which for a coordination question is itself
   // a risk signal a reviewer should see.
-  multi_instance_coordination?: 'yes' | 'no' | 'unknown';
+  multi_instance_coordination?: MultiInstanceCoordination;
 }
 
 export interface OutputNode {
@@ -198,7 +198,7 @@ export interface OutputNode {
   action_type: ActionType;
   exposure: Exposure;
   decision_bindingness: DecisionBindingness;
-  output_reversibility: 'reversible' | 'irreversible' | 'unknown';
+  output_reversibility: OutputReversibility;
   scale: 'limited' | 'at_scale';
   decision_type?: DecisionType;
   // User report (2026-08-09): the decision-type list is a closed vocabulary
@@ -471,6 +471,13 @@ export type DecisionType =
   | 'hiring'
   | 'regulatory-reporting'
   | 'operational';
+// R16-F §6 (DR7-14): named exports for the two inline unions below
+// (OutputNode.output_reversibility, ProcessingNode.multi_instance_coordination)
+// so plain-copy.ts's SUMMARY_REVERSIBILITY/SUMMARY_MULTI_INSTANCE key off
+// the real engine vocabulary instead of a second, separately-typed copy of
+// the same three/three literal strings.
+export type OutputReversibility = 'reversible' | 'irreversible' | 'unknown';
+export type MultiInstanceCoordination = 'yes' | 'no' | 'unknown';
 
 // Real PolicyFile schema (policy-schema.md §5) — replaces the P1-C01 3-field stub.
 export interface PolicyFile {

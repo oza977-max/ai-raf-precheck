@@ -111,6 +111,45 @@ function unrecognisedEventLine(type: unknown): string {
   return `Unrecognised event type “${String(type)}” — it is on the record, but this version of Counterpoise can’t display it.`;
 }
 
+// F-4 (DR7-12, DR7-16). Before this, only the first attestation
+// (graph_confirmed) ever wrote submitter_note/contradiction_resolutions/
+// answer_contexts, and this page read them only from that same event — so
+// a correction (verdict_corrected) silently dropped whatever the person
+// typed, even once the payload could carry it. This is the one place that
+// decides which event recorded whatever the CURRENT verdict is: the
+// latest verdict_corrected when the current verdict came from a
+// correction, else the case's graph_confirmed — mirroring
+// register.ts's findLatestVerdictEvent's own
+// verdict_produced-vs-verdict_corrected precedence. One helper, used for
+// all three fields (a future "No" screen can add `assumptions` through
+// the same helper).
+export function currentVerdictAttestationFields(events: AuditEvent[]): {
+  submitter_note?: string;
+  contradiction_resolutions?: string[];
+  answer_contexts?: string[];
+} {
+  const reversed = [...events].reverse();
+  const latestCorrection = reversed.find((e) => e.payload.type === 'verdict_corrected');
+  if (latestCorrection && latestCorrection.payload.type === 'verdict_corrected') {
+    const p = latestCorrection.payload;
+    return {
+      submitter_note: p.submitter_note,
+      contradiction_resolutions: p.contradiction_resolutions,
+      answer_contexts: p.answer_contexts,
+    };
+  }
+  const confirmed = reversed.find((e) => e.payload.type === 'graph_confirmed');
+  if (confirmed && confirmed.payload.type === 'graph_confirmed') {
+    const p = confirmed.payload;
+    return {
+      submitter_note: p.submitter_note,
+      contradiction_resolutions: p.contradiction_resolutions,
+      answer_contexts: p.answer_contexts,
+    };
+  }
+  return {};
+}
+
 export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
   const [summary, setSummary] = useState<UseCaseSummary | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -924,13 +963,14 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               graph_confirmed wins: a re-attestation supersedes. */}
           {/* R6-CX-1: contexts the submitter typed on question answers —
               rendered with the note, same rules: human-read, never engine
-              input, most recent attestation wins. */}
+              input, most recent attestation wins.
+              F-4 (DR7-12, DR7-16): now read via currentVerdictAttestationFields,
+              which checks the latest verdict_corrected FIRST — a correction's
+              own answer_contexts, when there is one, rather than only ever
+              reading the original graph_confirmed. */}
           {(() => {
-            const contexts = [...events]
-              .reverse()
-              .map((ev) => (ev.payload.type === 'graph_confirmed' ? ev.payload.answer_contexts : undefined))
-              .find((c) => c && c.length > 0);
-            return contexts ? (
+            const contexts = currentVerdictAttestationFields(events).answer_contexts;
+            return contexts && contexts.length > 0 ? (
               <div className="register-detail__submitter-note">
                 <h3>Context from the submitter&rsquo;s answers</h3>
                 <ul className="register-detail__submitter-note-body">
@@ -945,10 +985,24 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             ) : null;
           })()}
           {(() => {
-            const note = [...events]
-              .reverse()
-              .map((ev) => (ev.payload.type === 'graph_confirmed' ? ev.payload.submitter_note : undefined))
-              .find((n) => Boolean(n));
+            const resolutions = currentVerdictAttestationFields(events).contradiction_resolutions;
+            return resolutions && resolutions.length > 0 ? (
+              <div className="register-detail__submitter-note">
+                <h3>Explanations the submitter gave</h3>
+                <ul className="register-detail__submitter-note-body">
+                  {resolutions.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+                <p className="register-detail__submitter-note-caveat">
+                  Typed when an answer seemed to disagree with the description, for you. The rules did
+                  not read it.
+                </p>
+              </div>
+            ) : null;
+          })()}
+          {(() => {
+            const note = currentVerdictAttestationFields(events).submitter_note;
             return note ? (
               <div className="register-detail__submitter-note">
                 <h3>Note from the submitter</h3>

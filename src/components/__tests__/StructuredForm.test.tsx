@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StructuredForm from '../StructuredForm';
 import type { PolicyFile } from '../../engine/types';
+import type { PlainAnswers } from '../plain-copy';
 
 // Several questions share a short option word ("Yes"/"No"/"Not sure") on
 // this continuous-scroll form, where every question is in the DOM at once
@@ -231,6 +232,52 @@ describe('StructuredForm — conditional follow-ups (§2.2 Details)', () => {
     await user.click(credentialed);
     expect(credentialed).toBeChecked();
     expect(none).not.toBeChecked();
+  });
+
+  // F-8 (DR7-08). The real UI's own exclusivity (above) never lets a
+  // submitter construct "none" + another kind — this is the "mismatched
+  // SAVED answer" DR7-08 describes: a draft restored from a point before
+  // this exclusivity existed, or otherwise hand-edited. Before this fix,
+  // the required check counted raw ticks and this would have silently
+  // read as "answered"; now it is routed through the same single checker
+  // (resolveAccessScopeAnswer / normaliseAccessScope) the mapping itself
+  // uses, and refused.
+  it('TC-R16-F-39: a mismatched saved Q13 answer ("none" + another kind) is refused as a validation message, never silently read as answered', () => {
+    const BASE_ANSWERS: PlainAnswers = {
+      '1': 'Test tool', '2': 'A test description.', '3': 'firm-built', '4': 'agentic',
+      '5': ['everyday'], '6': 'read', '7': 'me-or-team', '8': 'operational', '9': 'yes',
+      '10': 'small', '11': ['elsewhere-not-sure'], '12': 'no', '14': 'no',
+    };
+    render(
+      <StructuredForm
+        policy={policy()}
+        initialAnswers={{ ...BASE_ANSWERS, '13': ['none', 'shared'] }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/goes on its own/i);
+    // Plain words — never the engine's reason, which names the internal field.
+    expect(alert).not.toHaveTextContent(/system_access_scope/);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  // Found verifying R16-F: ticking then unticking every Q13 box showed the
+  // engine's "system_access_scope must have at least one value" as an alert.
+  // Nothing ticked is just "not answered yet" — the required marker says so.
+  it('TC-R16-F-62: unticking every Q13 box shows no alert — it is simply not answered yet', async () => {
+    const BASE_ANSWERS: PlainAnswers = {
+      '1': 'Test tool', '2': 'A test description.', '3': 'firm-built', '4': 'agentic',
+      '5': ['everyday'], '6': 'read', '7': 'me-or-team', '8': 'operational', '9': 'yes',
+      '10': 'small', '11': ['elsewhere-not-sure'], '12': 'no', '14': 'no',
+    };
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} initialAnswers={{ ...BASE_ANSWERS, '13': ['credentialed'] }} onSubmit={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+
+    await user.click(screen.getByRole('checkbox', { name: /its own logins, passwords or access tokens/i }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
   });
 
   it('TC-R16-B-15: Q8 "Something else" requires the free-text description before Continue enables', async () => {

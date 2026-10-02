@@ -26,11 +26,21 @@ interface SignalPair {
   collect: (graph: DataFlowGraph) => PlausibilityWarning[];
 }
 
+// F-9 (DR7-09). Every message below is plain words: no zone letters, no
+// field names, no "graph" — a submitter who never saw the engine's
+// vocabulary must still understand what to double-check and where. Each
+// message names the question that actually drives the field in question
+// (the guided form's own wording, src/components/plain-copy.ts), so the
+// form-path submitter who never saw a GraphView card knows exactly where
+// to look. These are "engine data strings" in the sense cross-cutting.md
+// §7 means by the term — plain text the engine returns, not business logic
+// — so holding them here does not reach across the engine/screen boundary
+// (contrast §5 below, which is about engine code reading UI code/words).
 const SIGNAL_PAIRS: SignalPair[] = [
   // 2026-08-16 local-model session: "approved internal platform" — the
   // submitter described an internal system but the extracted graph placed
-  // the node in Zone A (outside the firm). Zone drives several rules, so
-  // this is worth a second look even though it isn't a contradiction.
+  // the node outside the firm. Worth a second look even though it isn't a
+  // contradiction.
   {
     descriptionPattern:
       /internal platform|on[- ]prem|in[- ]house|our own (system|platform|infrastructure)|firm'?s (own |internal )?(system|platform|data|infrastructure)/i,
@@ -45,7 +55,8 @@ const SIGNAL_PAIRS: SignalPair[] = [
           warnings.push({
             node_id: n.id,
             field: 'data_zone',
-            message: `Your description sounds like internal systems, but this is marked ${n.data_zone} (outside the firm). Check it — the zone drives several rules.`,
+            message:
+              'Your description sounds like the AI runs on your firm’s own systems, but your answers say your information goes outside the firm. Check “Where does the AI come from?” — it affects several rules.',
           });
         }
       }
@@ -53,9 +64,9 @@ const SIGNAL_PAIRS: SignalPair[] = [
     },
   },
   // 2026-08-16 local-model session: "train an open source model" — the
-  // description described a training activity, but action_type is a closed
-  // vocabulary with no 'train' value, so it got forced to 'trade'. The
-  // vocabulary gap is the point, regardless of which action_type landed.
+  // description described a training activity, which has no field of its
+  // own, so it got read as something it is not. The gap is the point,
+  // regardless of which value landed.
   {
     descriptionPattern: /train(ing|s|ed)?|fine[- ]tun/i,
     collect: (graph) =>
@@ -63,29 +74,23 @@ const SIGNAL_PAIRS: SignalPair[] = [
         node_id: n.id,
         field: 'action_type',
         message:
-          "Training is not an action type the rulebook knows; check the action type reflects what the output does, not the training activity.",
+          'Your description mentions training or fine-tuning, which isn’t something we ask about directly. Check “What happens with what it produces?” — pick the option that describes what the finished tool does, not the training itself.',
       })),
   },
   {
     descriptionPattern: /human (approves|reviews|checks) every|reviewed by a (human|person)|manager reviews|analyst reviews/i,
     collect: (graph) => {
       const warnings: PlausibilityWarning[] = [];
+      const message =
+        'Your description says a person reviews this, but your answers say it acts without that review. Check “What happens with what it produces?” — pick the option that matches whether someone reviews it.';
       for (const n of graph.output_nodes) {
         if (n.hitl === false) {
-          warnings.push({
-            node_id: n.id,
-            field: 'hitl',
-            message: 'Description says a person reviews, but the graph says otherwise.',
-          });
+          warnings.push({ node_id: n.id, field: 'hitl', message });
         }
       }
       for (const n of graph.processing_nodes) {
         if (n.autonomy_level >= 3) {
-          warnings.push({
-            node_id: n.id,
-            field: 'autonomy_level',
-            message: 'Description says a person reviews, but the graph says otherwise.',
-          });
+          warnings.push({ node_id: n.id, field: 'autonomy_level', message });
         }
       }
       return warnings;
@@ -100,7 +105,8 @@ const SIGNAL_PAIRS: SignalPair[] = [
           warnings.push({
             node_id: n.id,
             field: 'autonomy_level',
-            message: 'Description sounds autonomous but the graph says a human approves each action.',
+            message:
+              'Your description sounds like it acts without a person involved, but your answers say a person is involved. Check “What happens with what it produces?” — pick the option that matches how much it does on its own.',
           });
         }
       }

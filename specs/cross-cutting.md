@@ -225,6 +225,8 @@ src/engine/evaluate.test.ts   ← same directory
 
 **Dependency direction:** `ui → store`, `ui → engine`, `ui → llm`. Never: `engine → ui`, `store → engine`, `llm → store`.
 
+**R16-F §5 (DR7-06).** `src/engine/plain-intake.ts` imported question-text helpers and types (`findQuestion`, `makeAssumption`, `QuestionId`, `PlainAnswers`) straight from `src/components/plain-copy.ts` — a live `engine → ui` violation with no lint rule to catch it. Fixed by moving the ids/keys the mapping needs (`QuestionId`, `PlainAnswers`, and a new `AssumptionRef` type) into `src/engine/plain-questions.ts`; `plain-copy.ts` (which keeps every WORD — question text, option text, assumption sentences) imports them back and re-exports them, so existing component imports are unaffected. The engine now returns assumption *references* instead of worded assumptions; `plain-copy.ts`'s `describeAssumptions()` is the one place a reference becomes a worded `Assumption`. A guard test (`src/engine/engine-boundary.test.ts`) scans every import line in every non-test file under `src/engine/` and fails if any resolves into `src/components/` — mechanical enforcement of Rule 1, where a review previously had to catch this by reading every import by hand. Test files under `src/engine/` are deliberately out of scope for the guard: `backtest-parity.test.ts`/`backtest-parity-nonblind.test.ts` legitimately resolve a worked case's plain-English answers back to engine keys via `plain-copy.ts`'s word→key lookups, which exist only component-side — a test-layer integration concern (§6's table above already allows an "Integration" layer spanning boundaries), not a production purity violation.
+
 ---
 
 ## 8. Vite Configuration

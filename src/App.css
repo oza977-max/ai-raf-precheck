@@ -200,6 +200,14 @@ body {
 }
 
 .app-sidebar__item {
+  /* §3 (DR7-10): these are now real <button>s — reset the browser's own
+     button chrome back to how the <div> version looked. */
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
   padding: 0.5rem 0.6rem;
   border-radius: 6px;
   font-size: 0.88rem;
@@ -361,6 +369,21 @@ body {
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+/* R16-F §3 (DR7-10): visually hidden, but reachable by assistive tech —
+   the step-change live-region announcement. Standard clip technique
+   (never display:none/visibility:hidden, which screen readers also skip). */
+.intake-flow__step-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .register-view h2 {
@@ -1413,6 +1436,42 @@ details input {
   margin: 0;
 }
 
+/* R16-F §4 (DR7-11): the system-access tick-all editor — a fieldset (so
+   each option can be its own label) styled like the other field rows; the
+   legend matches `.graph-node__field > span:first-child` above. */
+.graph-node__access-scope-editor {
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.graph-node__access-scope-editor > legend {
+  padding: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  margin-bottom: 0.15rem;
+}
+
+/* Each option row — a checkbox beside its (plain, Q13-sourced) text,
+   stacked. */
+.graph-node__access-scope-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--ink);
+  margin: 0.3rem 0;
+}
+
+.graph-node__access-scope-option input[type='checkbox'] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
 .graph-node__label-edit {
   display: flex;
   gap: 0.35rem;
@@ -1431,6 +1490,13 @@ details input {
   color: var(--ink-faint);
   margin: 0.25rem 0 0.75rem;
   line-height: 1.45;
+}
+
+/* R16-F F-8 (DR7-08): a validation refusal, same warn tokens the existing
+   intake-flow__gate-error alert uses — not a second colour language. */
+.field-help--error {
+  color: var(--warn-text);
+  font-weight: 600;
 }
 
 /* ── Required-field marker (P8-C02, R3-JU-5) ──
@@ -3599,7 +3665,8 @@ details input {
   margin-bottom: 0.3rem;
 }
 
-.understood-summary__assumptions {
+.understood-summary__assumptions,
+.understood-summary__double-check {
   background: var(--amber-bg, #fff6e5);
   border-left: 3px solid var(--amber-border, #e0b84d);
   padding: 0.6rem 0.8rem;

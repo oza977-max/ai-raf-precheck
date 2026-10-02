@@ -119,6 +119,24 @@ function appliesToErrors(
   ];
 }
 
+// R16-F §6 (DR7-14). A review's plain_name must be a noun phrase
+// (grounding/PACK-AUTHORING.md's R16-W §5 checklist line) — the exact
+// mistake W-6 found and fixed by hand: "the supplier is assessed" breaks
+// "Doing this also completes {list} — one piece of work." grammatically,
+// the way "Doing this also completes the supplier is assessed" reads.
+// Grammar is not a condition a loader can prove right, so this is a
+// best-effort WARNING, never an error — it catches the SHAPE of the
+// mistake (an article followed by a finite verb two words later), not
+// every ungrammatical name.
+const CLAUSE_LIKE_RE = /^(the|a|an)\s+[\w-]+\s+(is|are|was|were|has|have)\b/i;
+
+function clauseLikePlainNameWarning(context: string, plainName: string | undefined): string[] {
+  if (!plainName || !CLAUSE_LIKE_RE.test(plainName)) return [];
+  return [
+    `${context}: "${plainName}" reads as a clause, not a noun phrase — it is rendered inside "Doing this also completes {list}", which needs a noun phrase (grounding/PACK-AUTHORING.md)`,
+  ];
+}
+
 function registryPlainNameWarnings(kind: 'platform' | 'vendor', entries: RegistryEntry[] | undefined): string[] {
   return sortedById(entries ?? [])
     .filter((e) => !e.plain_name)
@@ -146,6 +164,7 @@ function downstreamReviewRuleWarnings(dr: DownstreamReviewRule): string[] {
     ...placeholderWarnings(`${dr.id} plain_name`, dr.plain_name),
     ...placeholderWarnings(`${dr.id} plain_owner`, dr.plain_owner),
     ...ownerTokenWarnings(`${dr.id} plain_owner`, dr.plain_owner),
+    ...clauseLikePlainNameWarning(`${dr.id} plain_name`, dr.plain_name),
   ];
 }
 
@@ -215,6 +234,7 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
         warnings.push(...placeholderWarnings(`${rule.id} plain_name`, rule.effect.plain_name));
         warnings.push(...placeholderWarnings(`${rule.id} plain_owner`, rule.effect.plain_owner));
         warnings.push(...ownerTokenWarnings(`${rule.id} plain_owner`, rule.effect.plain_owner));
+        warnings.push(...clauseLikePlainNameWarning(`${rule.id} plain_name`, rule.effect.plain_name));
       }
     }
   }

@@ -111,6 +111,9 @@ describe('intakeReducer', () => {
       corrections: [correction],
       useCaseId: 'uc-1',
       originalVerdictId: undefined,
+      // F-7 (DR7-07): captured from graph_review's own guessedFields —
+      // empty here since the fixture above never sets any.
+      uncertainNodeIds: [],
     });
   });
 
@@ -346,6 +349,11 @@ describe('intakeReducer', () => {
       // editable) after a failed evaluation — the failure most likely to
       // land here is jurisdiction/track-driven.
       jurisdictionsConfirmed: true,
+      // F-2 (DR7-04): a description-path re-entry after a genuine failure —
+      // STEP_BACK must not walk out of it (mirrors the correction-pass
+      // rule); see the dedicated describe block below for the form-path
+      // branch and the STEP_BACK refusal.
+      afterFailedEvaluation: true,
     });
   });
 
@@ -544,6 +552,173 @@ describe('intakeReducer — a correction pass cannot step backwards out of itsel
       step: 'duplicate_check',
       description: 'a described thing',
     });
+  });
+});
+
+// R16-F F-2 (DR7-04). A re-entry into graph_review after a genuine
+// evaluation failure cannot be walked out of, for the identical reason a
+// correction pass cannot (above): the case already has a graph_confirmed
+// attestation on the trail, and "Back" must not route the next Continue
+// into minting a second, orphaned case.
+describe('intakeReducer — a re-entry after a failed evaluation cannot step backwards out of itself (F-2, DR7-04)', () => {
+  it('TC-R16-F-52: STEP_BACK is a no-op on graph_review when afterFailedEvaluation is set', () => {
+    const state: IntakeState = {
+      step: 'graph_review',
+      description: 'a described thing',
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+      afterFailedEvaluation: true,
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toBe(state);
+  });
+
+  it('a fresh submission (afterFailedEvaluation absent) still steps back from graph_review as before', () => {
+    const state: IntakeState = {
+      step: 'graph_review',
+      description: 'a described thing',
+      graph: graph(),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toEqual({
+      step: 'duplicate_check',
+      description: 'a described thing',
+    });
+  });
+});
+
+describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-04)', () => {
+  it('TC-R16-F-53: a form-path graph (intake_method structured_form) returns to graph_extraction, filled in, with the case id reused', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const state: IntakeState = {
+      step: 'evaluation_pending',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'A form-built tool.',
+      plainAnswers: { '1': 'Tool name', '2': 'A form-built tool.' },
+      assumptions: [{ questionId: '9', question: 'q?', assumption: 'a' }],
+    };
+    expect(intakeReducer(state, { type: 'EVALUATION_FAILED' })).toEqual({
+      step: 'graph_extraction',
+      description: 'A form-built tool.',
+      method: 'form',
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'Tool name', '2': 'A form-built tool.' },
+      assumptions: [{ questionId: '9', question: 'q?', assumption: 'a' }],
+    });
+  });
+
+  it('TC-R16-F-54: a description-path graph (intake_method llm) still returns to graph_review, now with afterFailedEvaluation: true', () => {
+    const g = graph({ intake_method: 'llm', version: 2 });
+    const state: IntakeState = {
+      step: 'evaluation_pending',
+      graph: g,
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-abc',
+      description: 'A described tool.',
+    };
+    expect(intakeReducer(state, { type: 'EVALUATION_FAILED' })).toEqual({
+      step: 'graph_review',
+      description: 'A described tool.',
+      graph: g,
+      graphVersion: 2,
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-abc',
+      jurisdictionsConfirmed: true,
+      afterFailedEvaluation: true,
+    });
+  });
+
+  it('CONFIRMED carries plainAnswers/assumptions forward onto evaluation_pending, so EVALUATION_FAILED can hand them to the form', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const state: IntakeState = {
+      step: 'confirmation',
+      description: 'x',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'carried' },
+      assumptions: [],
+    };
+    const pending = intakeReducer(state, { type: 'CONFIRMED' });
+    expect(pending).toMatchObject({ step: 'evaluation_pending', plainAnswers: { '1': 'carried' } });
+  });
+});
+
+// R16-F F-6 (DR7-13). nextReviewStep is the ONE routing rule, used by the
+// FORM_SUBMITTED case below AND by IntakeFlow.tsx's
+// handleProceedFromGraphReview — tested directly here so the priority is
+// pinned once, not re-derived from FORM_SUBMITTED's own behaviour alone.
+// R16-F F-7 (DR7-07). uncertainNodeIds is captured ONCE, at
+// QUESTIONS_GENERATED, from graph_review's own guessedFields, then
+// threaded forward unchanged through every later transition — never
+// re-derived (graph_review's guessedFields field does not exist past that
+// step). A non-empty value proves the thread actually carries the real
+// ids, not just the empty-array default case the QUESTIONS_GENERATED test
+// above already covers.
+describe('intakeReducer — uncertainNodeIds threads forward unchanged from QUESTIONS_GENERATED to confirmation (F-7, DR7-07)', () => {
+  it('TC-R16-F-58: survives QUESTIONS_GENERATED -> CONTRADICTIONS_DETECTED -> CONTRADICTION_RESOLVED -> PROCEED_TO_CONFIRMATION', () => {
+    const g = graph();
+    const reviewState: IntakeState = {
+      step: 'graph_review',
+      description: 'x',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+      guessedFields: { n1: ['vendor'], n2: ['label'] },
+    };
+    const questionnaire = intakeReducer(reviewState, {
+      type: 'QUESTIONS_GENERATED',
+      questions: [{ id: 'Q1', text: 'x?', field: 'vendor', triggered_by: [], answer_type: 'text' }],
+    });
+    expect(questionnaire).toMatchObject({ step: 'questionnaire', uncertainNodeIds: ['n1', 'n2'] });
+    if (questionnaire.step !== 'questionnaire') throw new Error('unreachable');
+
+    const contradictionReview = intakeReducer(questionnaire, {
+      type: 'CONTRADICTIONS_DETECTED',
+      contradictions: [{ field: 'f', description_says: 'a', graph_says: 'b' } as never],
+    });
+    expect(contradictionReview).toMatchObject({ uncertainNodeIds: ['n1', 'n2'] });
+    if (contradictionReview.step !== 'contradiction_review') throw new Error('unreachable');
+
+    const backToQuestionnaire = intakeReducer(contradictionReview, {
+      type: 'CONTRADICTION_RESOLVED',
+      explanation: 'Explained.',
+    });
+    expect(backToQuestionnaire).toMatchObject({ uncertainNodeIds: ['n1', 'n2'] });
+    if (backToQuestionnaire.step !== 'questionnaire') throw new Error('unreachable');
+
+    const confirmation = intakeReducer(backToQuestionnaire, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect(confirmation).toMatchObject({ step: 'confirmation', uncertainNodeIds: ['n1', 'n2'] });
+  });
+});
+
+describe('nextReviewStep (F-6, DR7-13)', () => {
+  it('TC-R16-F-55: questions present wins regardless of contradictions', async () => {
+    const { nextReviewStep } = await import('./intake-state');
+    const q = [{ id: 'Q1', text: 'x?', field: 'f', triggered_by: [], answer_type: 'text' as const }];
+    expect(nextReviewStep(q, [])).toBe('questionnaire');
+    expect(nextReviewStep(q, [{ field: 'f', description_says: 'a', graph_says: 'b' } as never])).toBe('questionnaire');
+  });
+
+  it('TC-R16-F-56: no questions, a contradiction present -> contradiction_review', async () => {
+    const { nextReviewStep } = await import('./intake-state');
+    expect(nextReviewStep([], [{ field: 'f', description_says: 'a', graph_says: 'b' } as never])).toBe(
+      'contradiction_review',
+    );
+  });
+
+  it('TC-R16-F-57: neither present -> confirmation', async () => {
+    const { nextReviewStep } = await import('./intake-state');
+    expect(nextReviewStep([], [])).toBe('confirmation');
   });
 });
 

@@ -338,6 +338,86 @@ describe('UnderstoodSummary — assumptions (form path) vs uncertain nodes (desc
   });
 });
 
+// R16-F F-9 (DR7-09). The description-vs-answers plausibility check used to
+// run only on the field-card screen (graph_review) — a screen the form
+// path never visits. UnderstoodSummary is the one screen BOTH paths reach
+// before attestation, so this is where the check now runs, under "Please
+// double-check", computed purely at render from the description and the
+// graph already in hand.
+describe('UnderstoodSummary — plausibility cross-check, "Please double-check" (F-9, DR7-09)', () => {
+  it('TC-R16-F-48: a description that contradicts the graph renders "Please double-check" with the plain-worded message', () => {
+    const g = graph({
+      // The default fixture's own input node is already Zone B (matches
+      // the same signal) — pin it to Zone C so only the processing node
+      // below fires, keeping this a single, unambiguous assertion.
+      input_nodes: [{ ...graph().input_nodes[0]!, data_zone: 'Zone C' }],
+      processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone A' }],
+    });
+    render(
+      <UnderstoodSummary
+        graph={g}
+        description="This runs on our firm's own internal platform."
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/please double-check/i)).toBeInTheDocument();
+    expect(screen.getByText(/Check “Where does the AI come from\?”/)).toBeInTheDocument();
+    // Plain words only — no zone letter, no field name, no "graph".
+    const section = sectionFor(/please double-check/i);
+    expect(section.textContent).not.toMatch(/Zone [ABC]|\bdata_zone\b|\bgraph\b/);
+  });
+
+  // Found in the R16-F walkthrough: the check flags each part of the case
+  // separately, so a description at odds with BOTH the information and the
+  // AI's location showed the identical sentence twice.
+  it('TC-R16-F-65: a warning that applies to several parts of the case is shown once, not once per part', () => {
+    const g = graph({
+      input_nodes: [{ ...graph().input_nodes[0]!, data_zone: 'Zone A' }],
+      processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone A' }],
+    });
+    render(
+      <UnderstoodSummary graph={g} description="This runs on our firm's own internal platform." onChangeAnswer={vi.fn()} />,
+    );
+    const section = sectionFor(/please double-check/i);
+    expect(within(section).getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('TC-R16-F-49: a description with no plausibility signal renders no "Please double-check" section', () => {
+    render(<UnderstoodSummary graph={graph()} description="Drafts client emails for review." onChangeAnswer={vi.fn()} />);
+    expect(screen.queryByText(/please double-check/i)).not.toBeInTheDocument();
+  });
+
+  it('a missing description (the default) never fires a warning — not a crash, not a false positive', () => {
+    expect(() => render(<UnderstoodSummary graph={graph()} onChangeAnswer={vi.fn()} />)).not.toThrow();
+    expect(screen.queryByText(/please double-check/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('UnderstoodSummary — destination zone attribution (F-9, DR7-09)', () => {
+  it('TC-R16-F-50: an explicit 3platformZone answer attributes the destination line to what the submitter told it', () => {
+    const g = graph({ processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone C' }] });
+    render(
+      <UnderstoodSummary graph={g} plainAnswers={{ '3platformZone': 'firm-systems' }} onChangeAnswer={vi.fn()} />,
+    );
+    expect(
+      screen.getByText(/Your firm’s own systems \(you told us your information stays on them\)\./),
+    ).toBeInTheDocument();
+  });
+
+  it('TC-R16-F-51: no plainAnswers (the description path) never attributes the destination line', () => {
+    const g = graph({ processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone C' }] });
+    render(<UnderstoodSummary graph={g} onChangeAnswer={vi.fn()} />);
+    expect(screen.getByText(/your firm’s own systems/i)).toBeInTheDocument();
+    expect(screen.queryByText(/you told us/i)).not.toBeInTheDocument();
+  });
+
+  it('a "Not sure" 3platformZone answer does not attribute — it is an assumption, not a stated fact', () => {
+    const g = graph({ processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone B' }] });
+    render(<UnderstoodSummary graph={g} plainAnswers={{ '3platformZone': 'not-sure' }} onChangeAnswer={vi.fn()} />);
+    expect(screen.queryByText(/you told us/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('UnderstoodSummary — "Change an answer" navigates only, no write (§3)', () => {
   it('TC-R16-C-09: calls onChangeAnswer and performs no write of its own', async () => {
     const user = userEvent.setup();

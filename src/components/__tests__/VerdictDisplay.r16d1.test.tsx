@@ -193,6 +193,26 @@ describe('VerdictDisplay — R16-D1: "Go to this safeguard" (D-26/D-63)', () => 
     expect(document.getElementById('verdict-todo-control-CTRL-X')?.querySelector('details')).toHaveAttribute('open');
   });
 
+  // R16-F §3 (DR7-10). scrollIntoView alone never moved focus — a keyboard
+  // or screen-reader user following this link landed nowhere, only a
+  // sighted mouse user following the visual scroll found the target. jsdom
+  // (this project's test environment) does not implement scrollIntoView at
+  // all (GraphView's own comment on the identical gap), so this asserts
+  // the part jsdom CAN prove: the target itself receives focus.
+  it('TC-R16-F-47: clicking it moves focus to the safeguard\'s own container, not only scrolling to it', async () => {
+    const user = userEvent.setup();
+    render(
+      <VerdictDisplay verdict={makeVerdict({ controls: ['CTRL-X'] })} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />,
+    );
+    const target = document.getElementById('verdict-todo-control-CTRL-X')!;
+    expect(target).toHaveAttribute('tabindex', '-1');
+    expect(target).not.toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: /go to this safeguard/i }));
+
+    expect(target).toHaveFocus();
+  });
+
   it('TC-R16-D1-19: the link only appears for a safeguard marked "yours"', () => {
     const notYoursPolicy = makePolicy([
       { id: 'CTRL-Y', name: 'Another control', description: 'd', resolves: [], burden: 1, verification: 'v', plain_owner: 'your IT team' },

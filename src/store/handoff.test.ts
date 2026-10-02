@@ -358,6 +358,223 @@ describe('RG-8 hand-off bundle — import validation at the boundary (code-revie
   });
 });
 
+// R16-F F-5 (DR7-01). Every record schema strips unknown keys by default,
+// and the seal + chain are recomputed over the STRIPPED copy — so a field
+// a NEWER app version writes (D2's `assumptions` was the motivating real
+// case) makes an UNTOUCHED file fail import as "altered after it was
+// exported" the moment an older version receives it. `.passthrough()` on
+// every schema fixes this: an unknown field rides through unchanged and
+// is hashed exactly as sent. These tests simulate "a newer sender" the
+// same way TC-RG-8-05 (F2) simulates a forger: edit the content, then
+// rebuild a fully self-consistent chain from it with this module's own
+// public functions — the honest way to construct "what a real newer
+// version would have produced", since this test file has no actual
+// newer schema to export from.
+describe('RG-8 hand-off bundle — unknown-field passthrough (R16-F F-5, DR7-01)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  async function rebuildChainWithEdit(
+    bundle: HandoffBundle,
+    edit: (e: AuditEvent) => AuditEvent,
+  ): Promise<HandoffBundle> {
+    const edited = bundle.audit_events.map(edit);
+    const stripped = edited.map(({ prev_hash: _prevHash, hash: _hash, ...rest }) => rest as Omit<AuditEvent, 'prev_hash' | 'hash'>);
+    const rehashed = await __recomputeChainForTests(stripped);
+    const seal = await computeSeal(bundle.register, rehashed);
+    return { ...bundle, audit_events: rehashed, seal };
+  }
+
+  it('TC-R16-F-29: a bundle whose graph_confirmed event carries an unknown field imports successfully, and the field is still present on the imported event', async () => {
+    const useCaseId = 'uc-r16f-passthrough-gc';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-confirmed`,
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const withUnknownField = await rebuildChainWithEdit(bundle, (e) =>
+      e.event_type === 'graph_confirmed'
+        ? ({ ...e, payload: { ...e.payload, a_field_this_schema_has_never_heard_of: ['x', 'y'] } } as unknown as AuditEvent)
+        : e,
+    );
+
+    const result = await importBundle(withUnknownField);
+    expect(result.outcome).toBe('imported_into_empty');
+
+    const imported = await getAllForExport();
+    const confirmedEvent = imported.find((e) => e.event_type === 'graph_confirmed');
+    expect((confirmedEvent!.payload as unknown as { a_field_this_schema_has_never_heard_of: string[] }).a_field_this_schema_has_never_heard_of).toEqual(['x', 'y']);
+  });
+
+  it('TC-R16-F-30: a bundle whose verdict_corrected event carries an unknown field (and F-4\'s own new fields) imports successfully, verified', async () => {
+    const useCaseId = 'uc-r16f-passthrough-vc';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-corrected`,
+      use_case_id: useCaseId,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: 'system',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: `${useCaseId}-v1`,
+        new_verdict: minimalVerdict(useCaseId, { id: `${useCaseId}-v2` }),
+        submitter_note: 'Kept on the correction (F-4).',
+      },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const withUnknownField = await rebuildChainWithEdit(bundle, (e) =>
+      e.event_type === 'verdict_corrected' ? ({ ...e, payload: { ...e.payload, a_future_field: 'x' } } as unknown as AuditEvent) : e,
+    );
+
+    const result = await importBundle(withUnknownField);
+    expect(result.outcome).toBe('imported_into_empty');
+
+    const verifyResult = await verifyChain();
+    expect(verifyResult.ok).toBe(true);
+
+    const imported = await getAllForExport();
+    const correctedEvent = imported.find((e) => e.event_type === 'verdict_corrected');
+    expect((correctedEvent!.payload as unknown as { a_future_field: string }).a_future_field).toBe('x');
+    expect((correctedEvent!.payload as unknown as { submitter_note: string }).submitter_note).toBe(
+      'Kept on the correction (F-4).',
+    );
+  });
+
+  it('TC-R16-F-31: a bundle whose KNOWN field is malformed is still rejected — passthrough never loosens validation of a field the schema knows', async () => {
+    const useCaseId = 'uc-r16f-known-malformed';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-confirmed`,
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    // graph_version must be a number — a known field, wrong type.
+    const broken = await rebuildChainWithEdit(bundle, (e) =>
+      e.event_type === 'graph_confirmed' ? ({ ...e, payload: { ...e.payload, graph_version: 'not-a-number' } } as unknown as AuditEvent) : e,
+    );
+
+    const result = await importBundle(broken);
+    expect(result.outcome).toBe('invalid_format');
+    expect(await getAllForExport()).toHaveLength(0);
+  });
+
+  it('TC-R16-F-32: a value tampered WITHOUT recomputing the downstream chain is still reported as tampered — passthrough only protects an honestly-exported unknown field', async () => {
+    const useCaseId = 'uc-r16f-still-tampered';
+    await seedSubmitterCase(useCaseId);
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    // The common careless-edit case TC-RG-8-05 (F2) contrasts against: the
+    // payload is changed but the hash chain and seal are NOT recomputed to
+    // match.
+    const tampered: HandoffBundle = {
+      ...bundle,
+      audit_events: bundle.audit_events.map((e, i) =>
+        i === 0 ? { ...e, payload: { ...e.payload, description: 'TAMPERED — no rehash' } } : e,
+      ) as AuditEvent[],
+    };
+    const result = await importBundle(tampered);
+    expect(result.outcome).toBe('tampered');
+    expect(await getAllForExport()).toHaveLength(0);
+  });
+
+  // Found verifying R16-F: the first pass made only the top-level schemas
+  // passthrough. A nested object (a graph correction, a verdict's caveat)
+  // sits inside the same hashed payload and was still stripped.
+  it('TC-R16-F-60: a bundle whose NESTED record parts (a graph correction, a verdict caveat) carry an unknown field imports, verifies, and keeps the field', async () => {
+    const useCaseId = 'uc-r16f-passthrough-nested';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-graph-corrected`,
+      use_case_id: useCaseId,
+      event_type: 'graph_corrected',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_corrected',
+        correction: {
+          correction_id: 'c1',
+          graph_version_before: 1,
+          graph_version_after: 2,
+          node_id: 'p1',
+          field: 'data_zone',
+          original_value: 'Zone A',
+          corrected_value: 'Zone C',
+          corrected_by: '1LoD',
+          corrected_at: '2026-01-02T00:00:02.000Z',
+        },
+      },
+    });
+    await append({
+      event_id: `${useCaseId}-corrected`,
+      use_case_id: useCaseId,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:03.000Z',
+      actor: 'system',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: `${useCaseId}-v1`,
+        new_verdict: minimalVerdict(useCaseId, {
+          id: `${useCaseId}-v2`,
+          confidence_caveats: [{ ruleId: 'INV-1', field: 'data_zone', reason: 'r', confidence: 'low' }],
+        }),
+      },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const withNestedUnknownFields = await rebuildChainWithEdit(bundle, (e) => {
+      if (e.payload.type === 'graph_corrected') {
+        return {
+          ...e,
+          payload: { ...e.payload, correction: { ...e.payload.correction, a_nested_future_field: 'form' } },
+        } as unknown as AuditEvent;
+      }
+      if (e.payload.type === 'verdict_corrected') {
+        const v = e.payload.new_verdict;
+        return {
+          ...e,
+          payload: {
+            ...e.payload,
+            new_verdict: { ...v, confidence_caveats: v.confidence_caveats.map((c) => ({ ...c, a_caveat_future_field: 1 })) },
+          },
+        } as unknown as AuditEvent;
+      }
+      return e;
+    });
+
+    const result = await importBundle(withNestedUnknownFields);
+    expect(result.outcome).toBe('imported_into_empty');
+    expect((await verifyChain()).ok).toBe(true);
+
+    const imported = await getAllForExport();
+    const graphCorrected = imported.find((e) => e.event_type === 'graph_corrected');
+    expect((graphCorrected!.payload as unknown as { correction: { a_nested_future_field: string } }).correction.a_nested_future_field).toBe('form');
+    const verdictCorrected = imported.find((e) => e.event_type === 'verdict_corrected');
+    expect(
+      (verdictCorrected!.payload as unknown as { new_verdict: { confidence_caveats: Array<{ a_caveat_future_field: number }> } })
+        .new_verdict.confidence_caveats[0]!.a_caveat_future_field,
+    ).toBe(1);
+  });
+});
+
 describe('RG-8 hand-off bundle — prefix merge and divergence (the ping-pong)', () => {
   beforeEach(async () => {
     await freshMachine();

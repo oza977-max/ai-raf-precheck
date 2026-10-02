@@ -26,6 +26,17 @@ const STEPS: Array<{ key: string; label: string; matches: (s: IntakeState['step'
   { key: 'verdict', label: 'Result', matches: (s) => s === 'evaluation_pending' || s === 'verdict' },
 ];
 
+// §3 (DR7-10). The one source of the step numbering the live-region
+// announcement in IntakeFlow.tsx reads — so the announcement
+// ("Step 3 of 6: Your answers") can never disagree with what the visual
+// tracker above it shows, the same anti-duplication reasoning as every
+// other "one computation, several readers" rule in this codebase.
+export function describeStep(current: IntakeState['step']): string {
+  const activeStepIndex = STEPS.findIndex((s) => s.matches(current));
+  if (activeStepIndex === -1) return '';
+  return `Step ${activeStepIndex + 1} of ${STEPS.length}: ${STEPS[activeStepIndex]!.label}`;
+}
+
 const ORDER = [
   'description_entry',
   'duplicate_check',

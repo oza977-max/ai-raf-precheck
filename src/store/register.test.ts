@@ -9,6 +9,7 @@ import {
   updateUseCaseVerdictSummary,
   exportAll,
   findLatestVerdictEvent,
+  confirmationPrecondition,
 } from './register';
 import { getAll, append } from './audit';
 import type { AuditEvent, RegisterNode, RegisterEdge } from './types';
@@ -620,5 +621,103 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
     // RG-1-02 allows 2 seconds. A generous ceiling that still catches a
     // quadratic scan, rather than a micro-benchmark that flakes under load.
     expect(elapsed).toBeLessThan(2000);
+  });
+});
+
+// R16-F F-1 (DR7-02, DR7-03). Read-only — the check `runConfirmAndEvaluate`
+// (IntakeFlow.tsx) makes FIRST inside withCaseLock, before any write, to
+// refuse a repeat confirm or correction. These tests exercise the store
+// read directly; IntakeFlow.r16f.test.tsx covers the UI-level refusal.
+describe('confirmationPrecondition', () => {
+  it('TC-R16-F-15: a fresh confirm on a case with no trail at all is "ok"', async () => {
+    expect(await confirmationPrecondition(crypto.randomUUID())).toBe('ok');
+  });
+
+  it('TC-R16-F-16: a fresh confirm is "already-decided" when the trail already holds a verdict_produced for the case, even with no register node written yet', async () => {
+    const useCaseId = crypto.randomUUID();
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict: makeVerdict({ use_case_id: useCaseId }) },
+    });
+    // Deliberately no addNode() here — the audit signal alone must be
+    // enough to refuse, independent of whether the register write landed.
+    expect(await confirmationPrecondition(useCaseId)).toBe('already-decided');
+  });
+
+  it('TC-R16-F-17: a fresh confirm is "already-decided" when a register node already exists for the case, even with no verdict_produced event', async () => {
+    const useCaseId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: useCaseId }));
+    // Deliberately no verdict_produced event — the register signal alone
+    // must be enough to refuse.
+    expect(await confirmationPrecondition(useCaseId)).toBe('already-decided');
+  });
+
+  it('TC-R16-F-18: a fresh confirm is "ok" when the case has a graph_confirmed but no verdict yet (a genuine evaluation retry, not a repeat)', async () => {
+    const useCaseId = crypto.randomUUID();
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+    });
+    expect(await confirmationPrecondition(useCaseId)).toBe('ok');
+  });
+
+  // getUseCase()'s current_verdict_id is COMPUTED from the audit trail's
+  // latest verdict_produced/verdict_corrected event (register.ts's
+  // toSummary/findLatestVerdictEvent) — not read off the register node's
+  // own metadata.current_verdict_id directly — so these two tests write
+  // real verdict events, matching what the real write path produces.
+  it('TC-R16-F-19: a correction is "ok" when the trail\'s current verdict still matches the one being corrected', async () => {
+    const useCaseId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: useCaseId }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'verdict_produced',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict: makeVerdict({ id: 'v-current', use_case_id: useCaseId }) },
+    });
+    expect(await confirmationPrecondition(useCaseId, 'v-current')).toBe('ok');
+  });
+
+  it('TC-R16-F-20: a correction is "corrected-elsewhere" when another correction already moved the trail\'s current verdict on', async () => {
+    const useCaseId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: useCaseId }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict: makeVerdict({ id: 'v-original', use_case_id: useCaseId }) },
+    });
+    // Another tab's correction already landed, moving the current verdict
+    // on to v-newer.
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: useCaseId,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-original',
+        new_verdict: makeVerdict({ id: 'v-newer', use_case_id: useCaseId }),
+      },
+    });
+    // This tab still thinks it is correcting v-original — stale.
+    expect(await confirmationPrecondition(useCaseId, 'v-original')).toBe('corrected-elsewhere');
+  });
+
+  it('TC-R16-F-21: a correction against a case with no register node at all is "ok" — nothing to conflict with', async () => {
+    expect(await confirmationPrecondition(crypto.randomUUID(), 'v-whatever')).toBe('ok');
   });
 });

@@ -86,12 +86,22 @@ const lifecycleStageSchema = z.enum(LIFECYCLE_STAGES);
 
 // code-review-005 round 2, N4. ConfidenceCaveat (src/engine/types.ts) in
 // full — small and stable, like graphCorrectionSchema below.
-const confidenceCaveatSchema = z.object({
-  ruleId: z.string(),
-  field: z.string(),
-  reason: z.string(),
-  confidence: z.enum(['low', 'medium', 'high']),
-});
+//
+// R16-F F-5 (DR7-01): `.passthrough()` here and on every other NESTED object
+// schema below (rule rationale, tripped invariant, verdict conditions, graph
+// correction), not just the top-level event/payload/node/edge ones. These
+// sit inside hashed payloads too — a nested `z.object` strips an unknown key
+// just the same, and the chain is then recomputed over the stripped copy, so
+// a field a later version adds one level down would make an untouched file
+// fail as "altered after it was exported" exactly like a top-level one.
+const confidenceCaveatSchema = z
+  .object({
+    ruleId: z.string(),
+    field: z.string(),
+    reason: z.string(),
+    confidence: z.enum(['low', 'medium', 'high']),
+  })
+  .passthrough();
 
 // N4: RuleRationale / TrippedInvariantDetail / VerdictExplanation
 // (src/engine/types.ts). explanation itself stays OPTIONAL on the schema
@@ -104,21 +114,25 @@ const confidenceCaveatSchema = z.object({
 // WhyThisVerdict/"how fragile" sections; RegisterDetail.tsx's
 // challengeableRules), so a bundle supplying a partially-shaped explanation
 // object is exactly as dangerous as one supplying none — reject it instead.
-const ruleRationaleSchema = z.object({
-  rule_id: z.string(),
-  rule_name: z.string().optional(),
-  matched_field: z.string().optional(),
-  regulatory_basis: z.string().optional(),
-});
+const ruleRationaleSchema = z
+  .object({
+    rule_id: z.string(),
+    rule_name: z.string().optional(),
+    matched_field: z.string().optional(),
+    regulatory_basis: z.string().optional(),
+  })
+  .passthrough();
 
-const trippedInvariantDetailSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  severity: z.string(),
-  regulatory_basis: z.string().optional(),
-  required_controls: z.array(z.string()),
-  graph_path: z.string(),
-});
+const trippedInvariantDetailSchema = z
+  .object({
+    id: z.string(),
+    description: z.string(),
+    severity: z.string(),
+    regulatory_basis: z.string().optional(),
+    required_controls: z.array(z.string()),
+    graph_path: z.string(),
+  })
+  .passthrough();
 
 const verdictExplanationSchema = z
   .object({
@@ -161,7 +175,7 @@ const verdictSchema = z
     confidence_caveats: z.array(confidenceCaveatSchema),
     controls: z.array(z.string()),
     downstream_reviews: z.array(z.string()),
-    conditions: z.object({ hypotheses: z.array(z.string()) }),
+    conditions: z.object({ hypotheses: z.array(z.string()) }).passthrough(),
     margin_achieved: z.number(),
     margin_target: z.number(),
     single_covered_invariants: z.array(z.string()),
@@ -175,41 +189,54 @@ const verdictSchema = z
 // GraphCorrection (src/engine/types.ts) in full — it is a small, flat,
 // stable type (unlike Verdict), so mirroring it exactly costs little and
 // buys real protection for RegisterDetail's correction-record rendering.
-const graphCorrectionSchema = z.object({
-  correction_id: z.string(),
-  graph_version_before: z.number(),
-  graph_version_after: z.number(),
-  node_id: z.string(),
-  field: z.string(),
-  original_value: z.unknown(),
-  corrected_value: z.unknown(),
-  corrected_by: z.string(),
-  corrected_at: z.string(),
-  reason: z.string().optional(),
-});
+// F-5: passthrough for the reason given above confidenceCaveatSchema.
+const graphCorrectionSchema = z
+  .object({
+    correction_id: z.string(),
+    graph_version_before: z.number(),
+    graph_version_after: z.number(),
+    node_id: z.string(),
+    field: z.string(),
+    original_value: z.unknown(),
+    corrected_value: z.unknown(),
+    corrected_by: z.string(),
+    corrected_at: z.string(),
+    reason: z.string().optional(),
+  })
+  .passthrough();
 
 // Mirrors AuditEventPayload (src/store/types.ts) variant-for-variant: the
 // `type` literal plus that variant's OWN required fields, so an incomplete
 // payload is rejected at the boundary instead of rendering blank/"undefined"
 // downstream (F13).
+// F-5 (DR7-01). `.passthrough()` on every variant below (and on the event/
+// node/metadata/edge schemas further down): a plain `z.object` strips
+// unknown keys, and the seal + chain are then recomputed over the STRIPPED
+// copy (computeSeal/eventContent below) — so any field a future
+// app version adds (D2's assumptions was the motivating case) makes an
+// untouched file fail import as "altered after it was exported" the
+// moment an OLDER version receives it. `.passthrough()` keeps unknown
+// fields exactly as sent, so they are hashed as sent; every FIELD THIS
+// SCHEMA ALREADY KNOWS stays fully validated — passthrough only changes
+// what happens to keys this schema has never heard of.
 const auditPayloadSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('use_case_created'),
     description: z.string(),
     intake_method: z.enum(['llm', 'structured_form']),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('duplicate_dismissed'),
     candidate_use_case_id: z.string(),
     candidate_label: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('classification_adopted'),
     adopted_from_use_case_id: z.string(),
     adopted_from_label: z.string(),
     tier: z.string().nullable(),
     track: z.string().nullable(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('graph_confirmed'),
     graph_id: z.string(),
@@ -218,45 +245,49 @@ const auditPayloadSchema = z.discriminatedUnion('type', [
     submitter_note: z.string().optional(),
     contradiction_resolutions: z.array(z.string()).optional(),
     answer_contexts: z.array(z.string()).optional(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('verdict_produced'),
     verdict: verdictSchema,
     reasoning_trace: z.string().optional(),
     knowledge_lens_matched_entry_ids: z.array(z.string()).optional(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('graph_corrected'),
     correction: graphCorrectionSchema,
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('verdict_corrected'),
     original_verdict_id: z.string(),
     new_verdict: verdictSchema,
     reasoning_trace: z.string().optional(),
     knowledge_lens_matched_entry_ids: z.array(z.string()).optional(),
-  }),
+    // F-4 (DR7-12, DR7-16): same shapes as graph_confirmed above.
+    submitter_note: z.string().optional(),
+    contradiction_resolutions: z.array(z.string()).optional(),
+    answer_contexts: z.array(z.string()).optional(),
+  }).passthrough(),
   z.object({
     type: z.literal('lifecycle_stage_changed'),
     from_stage: lifecycleStageSchema,
     to_stage: lifecycleStageSchema,
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('re_evaluation_queued'),
     policy_version: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('twoloD_reviewed'),
     action: z.enum(['approved', 'rejected', 'correction_requested']),
     verdict_id: z.string(),
     attested_by_name: z.string().optional(),
     notes: z.string().optional(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('reasoning_trace_generated'),
     verdict_id: z.string(),
     trace: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('rule_dissent_filed'),
     verdict_id: z.string(),
@@ -264,27 +295,27 @@ const auditPayloadSchema = z.discriminatedUnion('type', [
     rule_label: z.string().optional(),
     dissent: z.string(),
     filed_by_name: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('sampling_reviewed'),
     verdict_id: z.string(),
     reviewed_by_name: z.string(),
     outcome_note: z.string().optional(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('control_ownership_assigned'),
     verdict_id: z.string(),
     control_id: z.string(),
     owner_name: z.string(),
     target_date: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     type: z.literal('control_evidence_attested'),
     verdict_id: z.string(),
     control_id: z.string(),
     attested_by_name: z.string(),
     evidence_note: z.string(),
-  }),
+  }).passthrough(),
 ]);
 
 const AUDIT_EVENT_TYPES = [
@@ -316,6 +347,8 @@ const auditEventSchema = z
     prev_hash: z.string().nullable(),
     hash: z.string(),
   })
+  // F-5 (DR7-01): see auditPayloadSchema's comment above.
+  .passthrough()
   .refine((e) => e.event_type === e.payload.type, {
     message: 'event_type does not match payload.type',
   });
@@ -323,6 +356,8 @@ const auditEventSchema = z
 const REGISTER_NODE_TYPES = ['use_case', 'ai_model', 'platform', 'vendor', 'data_source', 'control'] as const;
 
 // Mirrors RegisterNodeMetadata (src/store/types.ts) variant-for-variant.
+// F-5 (DR7-01): `.passthrough()` on every variant, and on the node/edge
+// schemas below — see auditPayloadSchema's comment above for why.
 const registerNodeMetadataSchema = z.discriminatedUnion('node_type', [
   z.object({
     node_type: z.literal('use_case'),
@@ -332,33 +367,33 @@ const registerNodeMetadataSchema = z.discriminatedUnion('node_type', [
     current_verdict_id: z.string().nullable(),
     tier: z.string().nullable(),
     track: z.string().nullable(),
-  }),
+  }).passthrough(),
   z.object({
     node_type: z.literal('ai_model'),
     model_id: z.string(),
     vendor: z.string(),
     is_approved: z.boolean(),
-  }),
+  }).passthrough(),
   z.object({
     node_type: z.literal('platform'),
     platform_id: z.string(),
     approved_envelope_summary: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     node_type: z.literal('vendor'),
     vendor_name: z.string(),
     approval_status: z.enum(['approved', 'unapproved', 'pending']),
-  }),
+  }).passthrough(),
   z.object({
     node_type: z.literal('data_source'),
     data_class: z.string(),
     data_zone: z.string(),
-  }),
+  }).passthrough(),
   z.object({
     node_type: z.literal('control'),
     control_id: z.string(),
     burden: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
-  }),
+  }).passthrough(),
 ]);
 
 const registerNodeSchema = z
@@ -369,6 +404,7 @@ const registerNodeSchema = z
     created_at: isoDatetime,
     metadata: registerNodeMetadataSchema,
   })
+  .passthrough()
   .refine((n) => n.node_type === n.metadata.node_type, {
     message: 'node_type does not match metadata.node_type',
   });
@@ -379,7 +415,7 @@ const registerEdgeSchema = z.object({
   to_node_id: z.string(),
   edge_type: z.enum(['uses_model', 'runs_on_platform', 'provided_by_vendor', 'consumes_data_from', 'requires_control']),
   created_at: isoDatetime,
-});
+}).passthrough();
 
 // Cheap pre-check so an unsupported format_version gets its OWN honest
 // message (F3/F4/F13/F20) instead of the generic "not a bundle" one — run

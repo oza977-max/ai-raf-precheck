@@ -473,7 +473,7 @@ function WhatToDo({
                   // (unchanged) vocabulary.
                   const matchingReviews = safeguard?.coveredReviews.map((r) => r.formalName) ?? [];
                   return (
-                    <li key={id} id={`verdict-todo-control-${id}`} className="verdict__todo-item">
+                    <li key={id} id={`verdict-todo-control-${id}`} className="verdict__todo-item" tabIndex={-1}>
                       <details
                         open={expandedControls.has(id) || undefined}
                         onToggle={(e) => {
@@ -1239,6 +1239,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
     // the element, keeps this a safe no-op in tests and a real scroll in a
     // browser.
     el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    // §3 (DR7-10): scrolling alone never moved focus, so a keyboard or
+    // screen-reader user following "Go to this safeguard" landed nowhere —
+    // the scroll was a purely visual cue. The target (`tabIndex={-1}` on
+    // its own container, below) is focusable without being in the normal
+    // tab order.
+    el?.focus?.({ preventScroll: true });
     setScrollTarget(null);
   }, [scrollTarget, reviewerOpen, expandedControls]);
   const handleGoToSafeguard = (controlId: string) => {

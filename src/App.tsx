@@ -269,47 +269,64 @@ export default function App() {
       <div className="app-body">
         <nav className="app-sidebar" aria-label="Workspace navigation">
           <div className="app-sidebar__label">Workspace</div>
-          <div
+          {/* §3 (DR7-10). Real buttons — a keyboard or screen-reader user
+              could not reach any of these five items when they were plain
+              <div>s with an onClick (no native keyboard handling, no
+              accessible role). Same classes, same look (App.css resets the
+              browser's own button chrome); aria-current="page" names the
+              active one, the same thing the --active class already shows
+              visually. */}
+          <button
+            type="button"
             className={view === 'intake' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            aria-current={view === 'intake' ? 'page' : undefined}
             onClick={() => {
               navigate('intake');
               setNewPrecheckNonce((n) => n + 1);
             }}
           >
             + New pre-check
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
             className={view === 'register' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            aria-current={view === 'register' ? 'page' : undefined}
             onClick={() => navigate('register')}
           >
             <span>▤ Register</span>
             {registerCount !== null && registerCount > 0 && (
               <span className="app-sidebar__count">{registerCount}</span>
             )}
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
             className={view === 'policyEditor' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            aria-current={view === 'policyEditor' ? 'page' : undefined}
             onClick={() => navigate('policyEditor')}
           >
             § Appetite framework
-          </div>
+          </button>
           {/* R12-AD-2: the entry surface stays narrow for 1LoD — the
               reviewer-only queue is hidden, never merely disabled. 2LoD
               keeps seeing everything unchanged. */}
           {role === '2LoD' && (
-            <div
+            <button
+              type="button"
               className={view === 'ruleQueue' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+              aria-current={view === 'ruleQueue' ? 'page' : undefined}
               onClick={() => navigate('ruleQueue')}
             >
               ⚑ Rule challenges
-            </div>
+            </button>
           )}
-          <div
+          <button
+            type="button"
             className={view === 'about' ? 'app-sidebar__item app-sidebar__item--active' : 'app-sidebar__item'}
+            aria-current={view === 'about' ? 'page' : undefined}
             onClick={() => navigate('about')}
           >
             ? About
-          </div>
+          </button>
           <div className="app-sidebar__settings">
             <SettingsPanel />
           </div>

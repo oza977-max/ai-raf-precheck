@@ -94,6 +94,17 @@ export type AuditEventPayload =
       reasoning_trace?: string;
       // R11-KL-2: same allowance as verdict_produced's field above.
       knowledge_lens_matched_entry_ids?: string[];
+      // F-4 (DR7-12, DR7-16). Same shapes, same spread-if-present write
+      // discipline, as graph_confirmed's fields above — a correction used
+      // to drop the submitter's note, their contradiction explanations and
+      // their answer contexts entirely, because only the graph_confirmed
+      // branch ever wrote them. RegisterDetail reads these from whichever
+      // event recorded the CURRENT verdict (the latest verdict_corrected
+      // when it came from a correction, else the case's graph_confirmed) —
+      // one helper, used for all three fields.
+      submitter_note?: string;
+      contradiction_resolutions?: string[];
+      answer_contexts?: string[];
     }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 're_evaluation_queued'; policy_version: string }

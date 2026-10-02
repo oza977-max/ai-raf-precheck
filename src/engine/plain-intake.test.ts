@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { plainAnswersToFormValues, platformZoneOptionKeys } from './plain-intake';
-import type { PlainAnswers } from '../components/plain-copy';
+// R16-F §5 (DR7-06): PlainAnswers is engine-owned (ids/keys only) —
+// imported from its real source rather than round-tripping through the
+// component layer's re-export.
+import type { PlainAnswers } from './plain-questions';
 import type { PolicyFile } from './types';
 
 // R16-B (§2.1, §2.2). Pure engine module — no React, no I/O, no Date.now,
@@ -152,17 +155,16 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
       expect(values.processingDataZone).toBe('Zone A');
     });
 
-    it('TC-R16-W-04: "Not sure" on PLAT-INTERNAL-ML (earliest allowed = Zone B) resolves to Zone B, with the "outside supplier" assumption text', () => {
+    it('TC-R16-W-04: "Not sure" on PLAT-INTERNAL-ML (earliest allowed = Zone B) resolves to Zone B, with an assumption reference carrying earliestZone Zone B', () => {
       const { values, assumptions } = plainAnswersToFormValues(
         { ...BASE, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'not-sure' },
         policy(),
       );
       expect(values.processingDataZone).toBe('Zone B');
-      expect(assumptions).toHaveLength(1);
-      expect(assumptions[0]!.questionId).toBe('3platformZone');
-      expect(assumptions[0]!.assumption).toBe(
-        'it may pass your information to an outside supplier — the stricter case.',
-      );
+      // R16-F §5 (DR7-06): the engine returns a REFERENCE — the worded
+      // "outside supplier" sentence is asserted on describeAssumptions()
+      // instead (src/components/plain-copy.test.ts).
+      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' }]);
     });
 
     it('TC-R16-W-05: leaving the follow-up unanswered behaves exactly like "Not sure" (the default branch), not like an unresolved platform', () => {
@@ -171,11 +173,10 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
         policy(),
       );
       expect(values.processingDataZone).toBe('Zone B');
-      expect(assumptions).toHaveLength(1);
-      expect(assumptions[0]!.questionId).toBe('3platformZone');
+      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' }]);
     });
 
-    it('TC-R16-W-06: "Not sure" when the earliest allowed zone is A uses the "strictest case" wording instead', () => {
+    it('TC-R16-W-06: "Not sure" when the earliest allowed zone is A carries earliestZone Zone A instead', () => {
       const allowsA = policy({
         platforms: [
           {
@@ -192,7 +193,7 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
         allowsA,
       );
       expect(values.processingDataZone).toBe('Zone A');
-      expect(assumptions[0]!.assumption).toBe('an outside website or service — the strictest case.');
+      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone A' }]);
     });
 
     it('TC-R16-W-07: a platform allowed in only one zone keeps the old mapping — no follow-up is read even if answered', () => {
@@ -370,11 +371,14 @@ describe('plainAnswersToFormValues — Q4 / Q4a (kind of AI)', () => {
     expect(values.modelType).toBe('ml');
   });
 
-  it('TC-R16-B-01: Q4 "Not sure" -> agentic, listed as an assumption with the exact text', () => {
+  it('TC-R16-B-01: Q4 "Not sure" -> agentic, listed as an assumption reference ({questionId, optionKey})', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '4': 'not-sure' }, policy());
     expect(values.modelType).toBe('agentic');
+    // R16-F §5 (DR7-06): the engine returns a reference, never the worded
+    // text — the exact wording is asserted on describeAssumptions()
+    // instead (src/components/plain-copy.test.ts).
     const a = assumptions.find((x) => x.questionId === '4');
-    expect(a?.assumption).toMatch(/strictest case, because agents need the most safeguards/);
+    expect(a).toEqual({ questionId: '4', optionKey: 'not-sure' });
   });
 
   it('Q13/Q14 answers are read through when present, regardless of how Q4 was answered (agentic or Not sure)', () => {
@@ -484,14 +488,14 @@ describe('plainAnswersToFormValues — Q6 / Q6a / Q6b (what happens with the out
     expect(values.hitl).toBe(false);
   });
 
-  it('TC-R16-B-03: Q6 "Not sure" -> execute, level 4, no hitl, binding, listed as an assumption with the exact text', () => {
+  it('TC-R16-B-03: Q6 "Not sure" -> execute, level 4, no hitl, binding, listed as an assumption reference', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '6': 'not-sure' }, policy());
     expect(values.outputActionType).toBe('execute');
     expect(values.autonomyLevel).toBe(4);
     expect(values.hitl).toBe(false);
     expect(values.decisionBindingness).toBe('binding');
     const a = assumptions.find((x) => x.questionId === '6');
-    expect(a?.assumption).toMatch(/strictest case\. This changes the result a lot/);
+    expect(a).toEqual({ questionId: '6', optionKey: 'not-sure' });
   });
 
   it('Q6a "Not sure" -> material, listed as an assumption', () => {
@@ -515,11 +519,11 @@ describe('plainAnswersToFormValues — Q7 (who sees it)', () => {
     }
   });
 
-  it('TC-R16-B-04: "Not sure" -> market-facing, listed as an assumption with the exact text', () => {
+  it('TC-R16-B-04: "Not sure" -> market-facing, listed as an assumption reference', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '7': 'not-sure' }, policy());
     expect(values.outputExposure).toBe('market-facing');
     const a = assumptions.find((x) => x.questionId === '7');
-    expect(a?.assumption).toMatch(/widest audience/);
+    expect(a).toEqual({ questionId: '7', optionKey: 'not-sure' });
   });
 });
 
@@ -556,11 +560,11 @@ describe('plainAnswersToFormValues — Q9 (can it be undone)', () => {
     expect(plainAnswersToFormValues({ ...BASE, '9': 'no' }, policy()).values.outputReversibility).toBe('irreversible');
   });
 
-  it('TC-R16-B-05: "Not sure" -> irreversible, listed as an assumption with the exact text', () => {
+  it('TC-R16-B-05: "Not sure" -> irreversible, listed as an assumption reference', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '9': 'not-sure' }, policy());
     expect(values.outputReversibility).toBe('irreversible');
     const a = assumptions.find((x) => x.questionId === '9');
-    expect(a?.assumption).toMatch(/can’t be undone — the strictest case/);
+    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure' });
   });
 });
 
@@ -611,15 +615,33 @@ describe('plainAnswersToFormValues — Q13 (agent access, tick-all)', () => {
     expect(values.systemAccessScope).toEqual(['shared_infrastructure', 'credentialed_systems']);
   });
 
-  it('"Nothing beyond..." is exclusive -> system access scope is ["none"]', () => {
+  it('"Nothing beyond..." ticked alone -> system access scope is ["none"]', () => {
     const { values } = plainAnswersToFormValues(
-      { ...BASE, '4': 'agentic', '13': ['none', 'shared'] },
+      { ...BASE, '4': 'agentic', '13': ['none'] },
       policy(),
     );
     expect(values.systemAccessScope).toEqual(['none']);
   });
 
-  it('TC-R16-B-06: "Not sure" -> all three non-none kinds, listed as an assumption', () => {
+  // F-8 (DR7-08). Before R16-F, "none" ticked together with another kind
+  // was hand-resolved to ["none"] unconditionally, silently discarding the
+  // other ticks. The real form's own exclusivity (StructuredForm.tsx's
+  // toggleMulti) never lets a person reach this combination, but a stale
+  // draft or a hand-built PlainAnswers object can — routed through the
+  // single checker (normaliseAccessScope), this is now a REFUSAL, not a
+  // silent resolution: systemAccessScope stays unstated, the same way any
+  // other unanswered-looking Q13 does. The submitter-facing half of this
+  // fix is that the form's OWN required check (StructuredForm.test.tsx)
+  // calls the identical function and never lets this reach Continue.
+  it('F-8 (DR7-08): "none" ticked together with another kind is refused, not silently resolved to "none" — systemAccessScope stays unstated', () => {
+    const { values } = plainAnswersToFormValues(
+      { ...BASE, '4': 'agentic', '13': ['none', 'shared'] },
+      policy(),
+    );
+    expect(values.systemAccessScope).toBeUndefined();
+  });
+
+  it('TC-R16-B-06: "Not sure" -> all three non-none kinds, listed as an assumption reference', () => {
     const { values, assumptions } = plainAnswersToFormValues(
       { ...BASE, '4': 'agentic', '13': ['not-sure'] },
       policy(),
@@ -628,7 +650,7 @@ describe('plainAnswersToFormValues — Q13 (agent access, tick-all)', () => {
       expect.arrayContaining(['shared_infrastructure', 'credentialed_systems', 'deployment_authority']),
     );
     expect(values.systemAccessScope).toHaveLength(3);
-    expect(assumptions.some((a) => a.questionId === '13')).toBe(true);
+    expect(assumptions.find((a) => a.questionId === '13')).toEqual({ questionId: '13', optionKey: 'not-sure' });
   });
 
   it('Q13 unanswered (not an agent) leaves systemAccessScope unstated', () => {
@@ -664,10 +686,10 @@ describe('plainAnswersToFormValues — basics', () => {
     expect(values.description).toBe('Does a thing.');
   });
 
-  it('every Assumption carries the question text alongside the assumption text', () => {
+  it('every assumption reference carries a questionId and an optionKey (R16-F §5: the worded text is a describeAssumptions() concern, not this module\'s)', () => {
     const { assumptions } = plainAnswersToFormValues({ ...BASE, '9': 'not-sure' }, policy());
     const a = assumptions.find((x) => x.questionId === '9');
-    expect(a?.question).toMatch(/can the mistake be caught/i);
+    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure' });
   });
 
   it('no assumptions are recorded when nothing was "Not sure"', () => {

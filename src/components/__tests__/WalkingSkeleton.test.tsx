@@ -343,12 +343,16 @@ describe('Walking Skeleton', () => {
     expect(useCase).toBeDefined();
 
     const events = await getAll(useCase!.use_case_id);
-    expect(events.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
-    expect(new Date(events[0]!.occurred_at).getTime()).toBeLessThanOrEqual(new Date(events[1]!.occurred_at).getTime());
+    // R16-F F-3 (DR7-05): the creation record is now written at Confirm, on
+    // EITHER path (not only the form path) — the description path used to
+    // have none at all. Order on the trail is fixed: use_case_created ->
+    // graph_confirmed -> verdict_produced.
+    expect(events.map((e) => e.event_type)).toEqual(['use_case_created', 'graph_confirmed', 'verdict_produced']);
+    expect(new Date(events[1]!.occurred_at).getTime()).toBeLessThanOrEqual(new Date(events[2]!.occurred_at).getTime());
 
     expect(events[0]!.actor).toBe('1LoD'); // TC-UC-6-03, against the documented hardcoded-role placeholder
 
-    const verdictPayload = events[1]!.payload;
+    const verdictPayload = events[2]!.payload;
     expect(verdictPayload.type).toBe('verdict_produced');
     if (verdictPayload.type === 'verdict_produced') {
       expect(verdictPayload.verdict.use_case_id).toBe(useCase!.use_case_id); // TC-UC-6-02: full Verdict object
@@ -433,7 +437,8 @@ describe('Walking Skeleton', () => {
     const confirms = events.filter((e) => e.event_type === 'graph_confirmed');
     // The damage is un-cleanable: the trail is append-only by design.
     expect(confirms).toHaveLength(1);
-    expect(events.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
+    // R16-F F-3 (DR7-05): use_case_created is now written at Confirm too.
+    expect(events.map((e) => e.event_type)).toEqual(['use_case_created', 'graph_confirmed', 'verdict_produced']);
   });
 
   it('P4-C04: a correction made during graph review survives through questionnaire and confirmation to the graph_confirmed audit event (BC-P4C04-03, review finding: full chain, not just one hop)', async () => {
@@ -565,8 +570,13 @@ describe('Walking Skeleton', () => {
     const useCaseId = useCase!.use_case_id;
 
     const eventsBeforeCorrection = await getAll(useCaseId);
-    expect(eventsBeforeCorrection.map((e) => e.event_type)).toEqual(['graph_confirmed', 'verdict_produced']);
-    const originalVerdictEvent = eventsBeforeCorrection[1]!;
+    // R16-F F-3 (DR7-05): use_case_created is now written at Confirm too.
+    expect(eventsBeforeCorrection.map((e) => e.event_type)).toEqual([
+      'use_case_created',
+      'graph_confirmed',
+      'verdict_produced',
+    ]);
+    const originalVerdictEvent = eventsBeforeCorrection[2]!;
 
     // Click "Correct this classification?" — re-enters graph_review.
     await user.click(screen.getByRole('button', { name: /correct this classification/i }));
@@ -587,6 +597,7 @@ describe('Walking Skeleton', () => {
 
     const eventsAfterCorrection = await getAll(useCaseId);
     expect(eventsAfterCorrection.map((e) => e.event_type)).toEqual([
+      'use_case_created',
       'graph_confirmed',
       'verdict_produced',
       'graph_corrected',
@@ -594,9 +605,9 @@ describe('Walking Skeleton', () => {
     ]);
 
     // The original verdict_produced event is byte-identical — never modified.
-    expect(eventsAfterCorrection[1]).toEqual(originalVerdictEvent);
+    expect(eventsAfterCorrection[2]).toEqual(originalVerdictEvent);
 
-    const verdictCorrectedEvent = eventsAfterCorrection[3]!;
+    const verdictCorrectedEvent = eventsAfterCorrection[4]!;
     if (verdictCorrectedEvent.payload.type === 'verdict_corrected') {
       expect(verdictCorrectedEvent.payload.original_verdict_id).toBe(
         originalVerdictEvent.payload.type === 'verdict_produced' ? originalVerdictEvent.payload.verdict.id : undefined,
@@ -668,12 +679,14 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     // Must NOT hang on "Evaluating..." — a real error renders and the
-    // flow returns to graph_review, not a dead end.
+    // flow returns to a working screen, not a dead end.
     expect(await screen.findByRole('alert')).toHaveTextContent(/evaluation could not complete/i);
-    // R16-W W-3 (D-69): EVALUATION_FAILED still lands on graph_review for
-    // every graph (out of scope for this chunk) — this IS graph_review's
-    // own heading, correctly unchanged.
-    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
+    // R16-F F-2 (DR7-04): a form-path graph now returns to the FORM itself
+    // (filled in, same case), never graph_review — which this path has
+    // never visited on the way forward either (W-3). Superseded assertion:
+    // this test used to check for "Confirm what we understood"
+    // (graph_review's heading), which this path cannot reach.
+    expect(await screen.findByLabelText(/what do you want to call it/i)).toHaveValue('No track match tool');
   });
 
   it('TC-LC-2-02 (P6-C02): a High-tier verdict routes the register node to lifecycle_stage "pre_checked" pending 2LoD approval, not auto-approved', async () => {

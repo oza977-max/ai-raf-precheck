@@ -12,9 +12,13 @@ import type {
 } from './types';
 import type { StructuredFormValues } from './build-graph-from-form';
 import { DATA_CLASS_RANK } from './envelope';
-import { ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
-import { findQuestion, makeAssumption } from '../components/plain-copy';
-import type { Assumption, PlainAnswers, QuestionId } from '../components/plain-copy';
+import { ACCESS_SCOPE_CANONICAL_ORDER, normaliseAccessScope } from './access-scope';
+import type { NormaliseAccessScopeResult } from './access-scope';
+// R16-F §5 (DR7-06). Ids and keys only — no words. `findQuestion` and
+// `makeAssumption` (which return/consume WORDED text) stay component-side;
+// this module now returns assumption REFERENCES instead (see
+// `AssumptionRef` below), so it no longer needs them.
+import type { AssumptionRef, PlainAnswers, QuestionId } from './plain-questions';
 
 // R16-B (build/prompts/R16.md v2.1 §2.1, §2.2). Pure (cross-cutting.md §7
 // Rule 1): engine types and stdlib only. No React, no idb, no SDK, no
@@ -24,7 +28,9 @@ import type { Assumption, PlainAnswers, QuestionId } from '../components/plain-c
 // This is the single documented mapping table from the submitter's plain
 // answers to the engine's StructuredFormValues (UC-8 fit criterion 2): the
 // same answers always produce the same values object, and every "Not sure"
-// maps to the stricter reading, listed back as an Assumption (principle 3).
+// maps to the stricter reading, listed back as an assumption reference
+// (principle 3; the wording is resolved component-side — see
+// `describeAssumptions()`, src/components/plain-copy.ts).
 
 const DATA_ZONE_ORDER: DataZone[] = ['Zone A', 'Zone B', 'Zone C'];
 
@@ -66,6 +72,28 @@ function toArray(v: string | string[] | undefined): string[] {
   return Array.isArray(v) ? v : [v];
 }
 
+// F-8 (DR7-08). The one place Q13's form-option ticks (none / credentialed /
+// deployment / shared / not-sure) become engine `SystemAccessScope` values
+// AND are validated, through `normaliseAccessScope` — the SAME checker
+// `GraphView`'s correction editor and the questionnaire's multi-select use,
+// so the four legal values, their canonical order and the `none`-exclusivity
+// rule can never drift between call sites. Exported so `StructuredForm.tsx`'s
+// required-field check calls this exact function rather than re-deriving
+// "is Q13 answered" from the raw tick count — the DR7-08 bug was precisely
+// that a mismatched tick list could satisfy a hand-rolled "ticks.length > 0"
+// check while mapping to nothing real.
+export function resolveAccessScopeAnswer(ticks: string[]): NormaliseAccessScopeResult {
+  if (ticks.includes('not-sure')) {
+    return normaliseAccessScope(ACCESS_SCOPE_CANONICAL_ORDER.filter((v) => v !== 'none'));
+  }
+  const mapped: string[] = [];
+  if (ticks.includes('none')) mapped.push('none');
+  if (ticks.includes('shared')) mapped.push('shared_infrastructure');
+  if (ticks.includes('credentialed')) mapped.push('credentialed_systems');
+  if (ticks.includes('deployment')) mapped.push('deployment_authority');
+  return normaliseAccessScope(mapped);
+}
+
 function companyAssistantVendors(policy: PolicyFile): RegistryEntry[] {
   return (policy.vendors ?? []).filter((v) => v.kind === 'company_assistant');
 }
@@ -77,11 +105,10 @@ function supplierVendors(policy: PolicyFile): RegistryEntry[] {
 export function plainAnswersToFormValues(
   answers: PlainAnswers,
   policy: PolicyFile,
-): { values: StructuredFormValues; assumptions: Assumption[] } {
-  const assumptions: Assumption[] = [];
+): { values: StructuredFormValues; assumptions: AssumptionRef[] } {
+  const assumptions: AssumptionRef[] = [];
   function assume(id: QuestionId, optionKey: string): void {
-    const a = makeAssumption(id, optionKey);
-    if (a) assumptions.push(a);
+    assumptions.push({ questionId: id, optionKey });
   }
 
   const str = (id: QuestionId): string | undefined => {
@@ -196,22 +223,14 @@ export function plainAnswersToFormValues(
             case 'not-sure':
             default:
               destinationZone = earliest;
-              // The assumption text names which outside party the
-              // "Not sure" reading assumes, which depends on which zone is
-              // actually earliest for THIS platform's allowed set — built
-              // inline rather than through makeAssumption()/ASSUMPTION_TEXT
-              // (plain-copy.ts), because the wording is a runtime
-              // computation over the platform's envelope, not a fixed
-              // per-option string plain-copy.ts's code-free module (§2.4)
-              // could hold.
-              assumptions.push({
-                questionId: '3platformZone',
-                question: findQuestion('3platformZone')!.text,
-                assumption:
-                  earliest === 'Zone A'
-                    ? 'an outside website or service — the strictest case.'
-                    : 'it may pass your information to an outside supplier — the stricter case.',
-              });
+              // R16-F §5 (DR7-06): a REFERENCE, not the worded sentence —
+              // the wording still depends on which zone is earliest for
+              // THIS platform's allowed set, a runtime computation over
+              // the platform's envelope, never a fixed per-option string
+              // plain-copy.ts's code-free module (§2.4) could hold on its
+              // own. `describeAssumptions()` (plain-copy.ts) resolves this
+              // exact case to the same two sentences as before.
+              assumptions.push({ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: earliest });
           }
         } else {
           destinationZone = earliest;
@@ -490,20 +509,23 @@ export function plainAnswersToFormValues(
   }
 
   // ---- Q13: agent access (tick-all) ----
+  // F-8 (DR7-08): routed through the single checker (`normaliseAccessScope`,
+  // via `resolveAccessScopeAnswer` below) instead of pushing engine values
+  // by hand. A refusal (ticks that map to nothing the engine recognises —
+  // e.g. a stale key left over from an older app version) leaves
+  // `systemAccessScope` unset here, same as "not answered"; it must never
+  // read to the SUBMITTER as the honest "not stated" case. That is enforced
+  // one layer up, at the form: `StructuredForm.tsx`'s own required-field
+  // check calls this SAME function and shows the refusal reason instead of
+  // letting the question read as satisfied, so a submitter can never reach
+  // Continue with ticks this mapping would silently drop.
   let systemAccessScope: SystemAccessScope[] | undefined;
   if (answers['13'] !== undefined) {
     const ticks = toArray(answers['13']);
-    if (ticks.includes('not-sure')) {
-      systemAccessScope = ACCESS_SCOPE_CANONICAL_ORDER.filter((v) => v !== 'none') as SystemAccessScope[];
-      assume('13', 'not-sure');
-    } else if (ticks.includes('none')) {
-      systemAccessScope = ['none'];
-    } else {
-      const mapped: SystemAccessScope[] = [];
-      if (ticks.includes('shared')) mapped.push('shared_infrastructure');
-      if (ticks.includes('credentialed')) mapped.push('credentialed_systems');
-      if (ticks.includes('deployment')) mapped.push('deployment_authority');
-      systemAccessScope = mapped.length > 0 ? mapped : undefined;
+    const resolved = resolveAccessScopeAnswer(ticks);
+    if (resolved.ok) {
+      systemAccessScope = (Array.isArray(resolved.value) ? resolved.value : [resolved.value]) as SystemAccessScope[];
+      if (ticks.includes('not-sure')) assume('13', 'not-sure');
     }
   }
 

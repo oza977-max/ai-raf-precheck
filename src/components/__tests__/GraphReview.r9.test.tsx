@@ -161,6 +161,12 @@ describe('R9-SC-4/-5 — actions before information; similar cases collapsed', (
 // App-run vs seeded trail comparison (2026-08-17): the form path was
 // missing use_case_created — found by actually driving the app, not by
 // any review. Pinned so it cannot regress.
+//
+// R16-F F-3 (DR7-05): the write itself moved from the form's own Continue
+// to Confirm (so "Start over" before Confirm strands nothing) — this test
+// now drives all the way through Confirm before checking the trail,
+// which is the only timing change; the assertion (description, method)
+// is unchanged.
 describe('form path — the trail records the birth event', () => {
   it('writes use_case_created with the typed description and structured_form method', async () => {
     localStorage.clear();
@@ -196,6 +202,9 @@ describe('form path — the trail records the birth event', () => {
     // R16-W W-3 (D-69): the form path reaches the summary directly — no
     // graph_review heading on this path any more.
     await screen.findByText(/here.s what we understood/i);
+    // R16-F F-3 (DR7-05): the write now happens at Confirm, not here.
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
 
     const created = (await getAllForExport()).filter((e) => e.payload.type === 'use_case_created');
     const mine = created.find(

@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { INTRO_TEXT, findQuestion, neutralPlatformLabel, neutralSupplierLabel } from './plain-copy';
+import {
+  ACCESS_SCOPE_REFUSAL_TEXT,
+  INTRO_TEXT,
+  describeAssumptions,
+  findQuestion,
+  neutralPlatformLabel,
+  neutralSupplierLabel,
+} from './plain-copy';
 import type { Assumption, PlainAnswers, PlainOption, QuestionId } from './plain-copy';
-import { plainAnswersToFormValues, platformZoneOptionKeys } from '../engine/plain-intake';
+import { plainAnswersToFormValues, platformZoneOptionKeys, resolveAccessScopeAnswer } from '../engine/plain-intake';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import { saveFormDraft, loadFormDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
 import type { DataFlowGraph, PolicyFile } from '../engine/types';
@@ -313,7 +320,14 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   const showQ8other = answers['8'] === 'other';
 
   // ---- required-ness (§2.2 Details: "required = an option chosen") ----
+  // F-8 (DR7-08): Q13 is answered only when its ticks resolve through the
+  // single checker — the same function the mapping itself calls. A tick
+  // list that maps to nothing real (a stale draft, an unexpected value)
+  // must never silently count as answered here and reach the engine as
+  // "not stated" — that was the DR7-08 bug.
+  const q13Result = resolveAccessScopeAnswer(toArray(answers['13']));
   function isAnswered(id: QuestionId): boolean {
+    if (id === '13') return q13Result.ok;
     const q = findQuestion(id);
     if (q?.multi) return toArray(answers[id]).length > 0;
     if (q?.freeText) return Boolean((answers[id] as string | undefined)?.trim());
@@ -337,7 +351,10 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
     if (!isComplete) return;
     const { values, assumptions } = plainAnswersToFormValues(answers, policy);
     clearFormDraft();
-    onSubmit(buildGraphFromForm(values), assumptions, answers);
+    // R16-F §5 (DR7-06): the engine returns assumption REFERENCES; this is
+    // the one, immediate conversion to the worded `Assumption[]` onSubmit's
+    // callers (and the reducer state they carry) still expect.
+    onSubmit(buildGraphFromForm(values), describeAssumptions(assumptions), answers);
   }
 
   // Bundles the props every question renderer needs, so each call site below
@@ -398,6 +415,16 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
         <SingleSelect id="9" {...qp} />
         <SingleSelect id="12" {...qp} />
         {isAgentic && <MultiSelect id="13" {...qp} />}
+        {/* F-8 (DR7-08): a refusal from the single checker becomes a
+            validation message here, never a silent "not stated". Shown only
+            while something is ticked: nothing ticked (untouched, or every
+            tick removed) is just "not answered yet", which the required
+            marker already says. Plain words, never the engine's reason. */}
+        {isAgentic && toArray(answers['13']).length > 0 && !q13Result.ok && (
+          <p role="alert" className="field-help field-help--error">
+            {ACCESS_SCOPE_REFUSAL_TEXT}
+          </p>
+        )}
         {isAgentic && <SingleSelect id="14" {...qp} />}
       </fieldset>
 

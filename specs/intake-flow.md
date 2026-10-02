@@ -814,14 +814,30 @@ the same defect from two directions.
 pure function, never the reverse.** `plainAnswersToFormValues(answers,
 policy)` (`src/engine/plain-intake.ts`) takes `PlainAnswers` — option
 *keys* against question ids, e.g. `{'6': 'drafts', '6a': 'little'}` — and
-returns `{ values: StructuredFormValues, assumptions: Assumption[] }`.
+returns `{ values: StructuredFormValues, assumptions: AssumptionRef[] }`.
 Pure (cross-cutting.md §7 Rule 1): no ids, no clock — `buildGraphFromForm`
-stays the only place those are minted. The question *text* a submitter
-reads, and the stable option *keys* the engine mapping reads, live in one
-code-free module, `src/components/plain-copy.ts` — shared by the guided
-form (chunk B), the questionnaire (chunk E, not yet built) and the summary
-(chunk C), so the three paths can never describe the same situation in
-different words.
+stays the only place those are minted. **Amended R16-F §5 (DR7-06):**
+`assumptions` was originally specified (and first built) as worded
+`Assumption[]` — the engine resolving its own WORDED text, which required
+importing the words from the component layer and broke Rule 1
+("engine → ui"). It now returns `AssumptionRef[]` (`{ questionId,
+optionKey }`, plus a `3platformZone`-specific variant carrying a computed
+`earliestZone`) — ids and keys only — and
+`src/components/plain-copy.ts`'s `describeAssumptions(refs)` is the one
+place a reference becomes the worded `Assumption` every caller still
+needs; every caller of `plainAnswersToFormValues` converts once,
+immediately (`StructuredForm.tsx`'s `handleSubmit`). The question *text*
+a submitter reads, and the stable option *keys* the engine mapping
+reads, live in one code-free module, `src/components/plain-copy.ts` —
+shared by the guided form (chunk B), the questionnaire (chunk E, not yet
+built) and the summary (chunk C), so the three paths can never describe
+the same situation in different words. The ids/keys themselves
+(`QuestionId`, `PlainAnswers`) now live in `src/engine/plain-questions.ts`
+(engine-owned); `plain-copy.ts` imports and re-exports them so every
+existing component import keeps working unchanged. A guard test
+(`src/engine/engine-boundary.test.ts`) scans every non-test file under
+`src/engine/` for an import resolving into `src/components/` and fails
+the build if one exists.
 
 No question or option names an engine term: no data class, zone letter,
 autonomy level, bindingness, model-type code, tier or track (principle 1,
@@ -942,10 +958,117 @@ New content the old summary never rendered at all: the kind of AI (`model_type`)
 
 `ConfirmationStep`'s notice, optional-note label/help, and attestation line are reworded (exact text in `build/prompts/R16-W.md` §3) — the button keeps its label. `IntakeFlow.tsx`'s subtitle, the describe step (label/placeholder/button — "Next →" replaces "Read & extract →" — /help), the duplicate-check screen (now two distinct no-match/match-found compositions: tag "HAS THIS BEEN CHECKED BEFORE?" + help + "Looking through earlier checks…" + result text + "Continue →" for no match; title "Something similar has been checked before" + a tier-free 1LoD line + explanation + "Use the earlier result" / "Mine is different — continue →" for a match, 2LoD's own line unchanged), the adopted screen (tag "EARLIER RESULT USED" + two reworded paragraphs), and `App.tsx`'s first-time welcome note are all reworded to the exact text in `build/prompts/R16-W.md` §4 — every one of them a screen a newcomer passes before reaching the (already reworded) guided form. `StepTracker`'s labels: "Check overlap" → "Similar checks", "Review details" → "Your answers", "Verdict" → "Result".
 
+## 23. Round R16-F — Fixes from Design Review 007
+
+Spec for `build/prompts/R16-F.md`, closing design-review-007.html's Group 1
+findings (DR7-01 to DR7-14) against the built code (§21/§22 above), plus the
+two requirement amendments the owner approved alongside it (WCAG 2.1 AA for
+new/changed screens; NF-12's persona coverage — `requirements/requirements.md`).
+
+**F-2/DR7-04 — an evaluation error never orphans the case.** `evaluation_pending`
+now carries `plainAnswers?`/`assumptions?` (set by `CONFIRMED`, from the
+confirmation state). `EVALUATION_FAILED` branches on
+`graph.intake_method`: a form-path graph returns to `graph_extraction`
+(`method: 'form'`) with `useCaseId`/`plainAnswers`/`assumptions` — the
+filled form, same case, same as `CHANGE_ANSWER`'s own form-path branch —
+never the retired field-card screen the form path has never visited
+forward either (W-3). A description-path graph still returns to
+`graph_review`, now with `afterFailedEvaluation: true`. `STEP_BACK` from
+`graph_review` returns the state unchanged when `afterFailedEvaluation` is
+set, exactly like a correction pass's `originalVerdictId` guard, and
+`canStepBack` (`IntakeFlow.tsx`) checks both flags identically. An
+evaluation retry (no verdict yet) reuses the case id and passes F-1's
+precondition, so the next Confirm writes a genuine second `graph_confirmed`
+— a deliberate second attestation, not a duplicate.
+
+**F-3/DR7-05 — the creation record is written at Confirm, once.** The
+form's early `use_case_created` write (on the first Continue,
+`handleFormSubmitted`) is deleted along with its `isResubmission` branch;
+the case id is still minted once and reused across resubmissions
+(W-4), only the WRITE moved. Inside `runConfirmAndEvaluate`'s fresh-confirm
+branch (not a correction), a `use_case_created` is written — description
+= the description being confirmed (`typedDescription`, which by
+construction is always the real recorded one — W-1), `intake_method` from
+the graph — unless the trail already holds one for the case (an
+evaluation retry). Order on the trail is fixed: `use_case_created` →
+`graph_confirmed` → `verdict_produced`. "Start over" after Continue but
+before Confirm now leaves no event at all on the trail, on either path.
+
+**F-6/DR7-13 — one routing rule, one policy gate.** `nextReviewStep(questions,
+contradictions)` (`intake-state.ts`, pure) replaces the "questions →
+contradiction review → confirmation" priority that was written out twice
+— once in the `FORM_SUBMITTED` reducer case, once in
+`handleProceedFromGraphReview` (`IntakeFlow.tsx`). `checkPolicyGate()`
+(`IntakeFlow.tsx`) replaces the near-identical invalid-policy throw +
+reference-check pair that `handleProceedFromGraphReview` and
+`handleFormSubmitted` each wrote separately; both now call the same
+function. Behaviour unchanged on both call sites; a test pins the
+priority once (`intake-state.test.ts`) rather than twice.
+
+**F-7/DR7-07 — the "couldn't tell" list survives a refresh.** `uncertainNodeIds?:
+string[]` now lives on `questionnaire`, `contradiction_review` and
+`confirmation` (`intake-state.ts`), set once at `QUESTIONS_GENERATED` from
+`graph_review`'s own `guessedFields`, then threaded forward through every
+subsequent transition exactly like `plainAnswers`/`assumptions` already
+were (W-3/W-4). `IntakeFlow.tsx` reads it directly off `state`; the
+`uncertainNodeIds` `useState` and its `graph_review`-only effect are
+deleted. A refresh on confirmation now keeps the list, the same fix W-4
+already made for the form path's assumptions.
+
+**F-9/DR7-09 — the zone answer is cross-checked and attributed.**
+`src/engine/plausibility.ts`'s messages are rewritten in plain words — no
+zone letters, field names or "graph"; each names the guided-form question
+that actually drives the field (e.g. *Check "Where does the AI come
+from?"*). `UnderstoodSummary.tsx` now takes `description`/`plainAnswers`
+and renders `plausibilityWarnings(description, graph)` under a heading
+**"Please double-check"**, computed purely at render — no new state — for
+BOTH paths (it is the one screen `ConfirmationStep` renders on both). When
+the destination zone came from an explicit `3platformZone` answer (not the
+"Not sure" default), `plain-copy.ts`'s `summaryDestinationLine()` adds the
+attribution: *Your firm's own systems (you told us your information stays
+on them).* / the Zone B equivalent for "an outside supplier". `R16.md` §0.1
+gains threat-model rows for this lever and for W-7's evidence scope,
+mitigated the same way plus (D2, not yet built) the claimed
+platform/supplier shown beside any "already in place" line.
+
+**§3/DR7-10 — accessibility (owner decision: WCAG 2.1 AA, new/changed
+screens).** `App.tsx`'s five sidebar items are now `<button type="button">`
+(same classes, CSS-reset chrome), with `aria-current="page"` on the
+active one. `IntakeFlow.tsx` has one focus/announce mechanism for every
+intake-step change (not on first load): the step container
+(`tabIndex={-1}`) gets `.focus({ preventScroll: true })`, and a single
+polite live region announces `StepTracker`'s own `describeStep()` (e.g.
+"Step 3 of 6: Your answers") — one source of the step numbering, shared
+with the visible tracker. `VerdictDisplay.tsx`'s "Go to this safeguard"
+now moves focus to the target (`tabIndex={-1}` on its container) after
+scrolling, not only scrolling.
+
+**§4/DR7-11 — the correction screen's agent-access editor.** `GraphView.tsx`
+gains a tick-all checkbox editor for `system_access_scope` only (every
+other field keeps its single `<select>`), with the form's own Q13
+exclusivity ("Nothing beyond…" clears the others and vice versa) and
+option wording (`plain-copy.ts`'s Q13 text, mapped engine-value →
+form-option-key). The options sit in a `<fieldset>` named "system
+access", each its own `<label>` (one label around all four made every click
+on an option's words tick the first box). Every change is validated through
+`normaliseAccessScope` before being written; a refusal shows one plain
+sentence (`plain-copy.ts`'s `ACCESS_SCOPE_REFUSAL_TEXT`, never the engine's
+reason, which names the internal field) and writes nothing. The form's Q13
+shows the same sentence, and only while something is ticked — nothing
+ticked is "not answered yet". `handleCorrectNode` (`IntakeFlow.tsx`)
+validates `system_access_scope` through the same function again (defence
+in depth) and compares the before/after by SET content
+(`sameAccessScopeSet`, `src/engine/access-scope.ts`), so
+re-saving the identical set — possibly in a different order, or where the
+stored value predates this editor and was a bare string — is not recorded
+as a correction. `build/prompts/R16.md:42` (D-22), which claimed this
+editor already existed, is corrected to say it was built here.
+
 ## 14. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-02 | §23 added — round R16-F, closing design-review-007.html's Group 1 findings (DR7-01 to DR7-14). ADR-IF-R16-1 amended: `plainAnswersToFormValues` returns assumption REFERENCES, not worded text (DR7-06) — the engine/screen boundary fix that also moved `QuestionId`/`PlainAnswers` to a new `src/engine/plain-questions.ts`. |
 | 2026-07-29 | §13 added — round 3 jurisdiction completeness (R3-JU). ADR-IF-R3-1 places the answered-state on the form rather than the graph, leaving the engine's input contract unchanged. |
 | 2026-08-16 | §15 added — round 5 explainable graph review. ADR-IF-R5-1 (per-node confirmation, reducer-held, LLM path only), ADR-IF-R5-2 (jurisdiction filter in orchestration, not src/llm). |
 | 2026-08-16 | §16 added — round 6 provenance/questions/context. ADR-IF-R6-1 (provenance beside the graph), ADR-IF-R6-2 (guessed cards resolve via questions, no plain confirm), ADR-IF-R6-3 (answers apply as corrections — closes the discovered answers-never-consumed defect). |

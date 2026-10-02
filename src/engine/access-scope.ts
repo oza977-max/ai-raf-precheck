@@ -64,3 +64,13 @@ export function normaliseAccessScope(input: unknown): NormaliseAccessScopeResult
   }
   return { ok: true, value: ordered };
 }
+
+// R16-F §4 (DR7-11). Do two system_access_scope values name the same kinds?
+// Order is ignored and a bare (non-array) value counts as a one-item set, so
+// a correction that re-saves the same kinds — reordered, or against a value
+// stored before the tick-all editor existed — is recognised as no change.
+export function sameAccessScopeSet(a: unknown, b: unknown): boolean {
+  const key = (v: unknown): string =>
+    (v === undefined ? [] : Array.isArray(v) ? v.map(String) : [String(v)]).sort().join(',');
+  return key(a) === key(b);
+}

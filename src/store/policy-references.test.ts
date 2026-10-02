@@ -231,6 +231,56 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(result.warnings.some((w) => /TP-01/.test(w) && /unknown_team/.test(w))).toBe(true);
   });
 
+  // R16-F §6 (DR7-14). A review's plain_name must be a noun phrase — it is
+  // read inside "Doing this also completes {list} — one piece of work."
+  // and a clause breaks that sentence grammatically (the exact mistake W-6
+  // found and fixed by hand, grounding/PACK-AUTHORING.md). Grammar is not a
+  // condition a loader can prove right, so this is a best-effort WARNING,
+  // never an error — it catches the SHAPE of the mistake (an article
+  // followed by a finite verb), not every ungrammatical name.
+  it('TC-R16-F-40: a downstream review plain_name that reads as a clause ("the X is/are/was/were/has/have…") warns', () => {
+    const policy = basePolicy({
+      downstream_reviews: [
+        { id: 'DR-01', review: 'r', condition: {}, plain_name: 'the supplier is assessed' },
+      ],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.warnings.some((w) => /DR-01/.test(w) && /clause/i.test(w))).toBe(true);
+  });
+
+  it('TC-R16-F-41: a downstream review plain_name that is a genuine noun phrase does not warn', () => {
+    const policy = basePolicy({
+      downstream_reviews: [
+        { id: 'DR-02', review: 'r', condition: {}, plain_name: 'a supplier assessment' },
+      ],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.warnings.some((w) => /DR-02/.test(w))).toBe(false);
+  });
+
+  it('a pack required_review effect\'s plain_name is checked for the same clause mistake', () => {
+    const pack: JurisdictionPack = {
+      pack_id: 'TEST-PACK', version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: 'TP-02', title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'required_review', review: 'r', plain_name: 'the model was validated' },
+        condition: {}, basis: 'verbatim',
+      }],
+    };
+    const result = checkPolicyReferences(basePolicy(), [pack]);
+    expect(result.warnings.some((w) => /TP-02/.test(w) && /clause/i.test(w))).toBe(true);
+  });
+
+  it('the shipped policy\'s own review plain_name values never trigger the clause warning (regression guard for TC-R16-A2-09)', () => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(yaml);
+    if (!result.valid) throw new Error('shipped policy invalid');
+    const packResult = loadPacks(getPackSources());
+    const refCheck = checkPolicyReferences(result.policy, packResult.packs);
+    expect(refCheck.warnings.filter((w) => /clause/i.test(w))).toEqual([]);
+  });
+
   it('warnings never block — a policy with only warnings is still otherwise clean of errors', () => {
     const policy = basePolicy({ controls: [control({ plain_owner: '@mystery' })] });
     const result = checkPolicyReferences(policy, []);

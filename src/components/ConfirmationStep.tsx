@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { DataFlowGraph, GraphCorrection, PolicyFile } from '../engine/types';
-import type { Assumption } from './plain-copy';
+import type { Assumption, PlainAnswers } from './plain-copy';
 import UnderstoodSummary from './UnderstoodSummary';
 import SimilarCases from './SimilarCases';
 import type { EnrichedPrecedent } from './SimilarCases';
@@ -23,6 +23,15 @@ interface ConfirmationStepProps {
   assumptions?: Assumption[];
   /** Description path (UC-12): node ids the extractor could not verify. */
   uncertainNodeIds?: string[];
+  /** F-9 (DR7-09): the description being confirmed, for the plausibility
+   *  cross-check — on BOTH paths (the form's own question 2's final text,
+   *  or the typed description). Optional only so pre-existing callers/
+   *  tests keep compiling; IntakeFlow.tsx always passes one. */
+  description?: string;
+  /** F-9 (DR7-09): the form's own answers, undefined on the description
+   *  path — used only to attribute the destination zone to an explicit
+   *  3platformZone answer. */
+  plainAnswers?: PlainAnswers;
   /** W-3 (R16-W §1): similar decided cases, computed by the caller — on the
    *  description path only when the graph came from the guided form (the
    *  form path's own graph_review equivalent no longer exists, so this is
@@ -41,6 +50,11 @@ interface ConfirmationStepProps {
    *  screen says so, because the alternative is a submitter believing the
    *  rules weighed their words (dropdown review, 2026-08-15). */
   onConfirm: (reviewerNote?: string) => void;
+  /** F-1 (DR7-02, DR7-03): true once a confirm/correction has been refused
+   *  by the precondition check — retrying would read the identical,
+   *  still-stale precondition and refuse again, so Confirm disables
+   *  itself rather than inviting a click that can only fail the same way. */
+  confirmDisabled?: boolean;
 }
 
 export default function ConfirmationStep({
@@ -49,9 +63,12 @@ export default function ConfirmationStep({
   policy,
   assumptions,
   uncertainNodeIds,
+  description,
+  plainAnswers,
   precedents,
   onChangeAnswer,
   onConfirm,
+  confirmDisabled = false,
 }: ConfirmationStepProps) {
   const [note, setNote] = useState('');
 
@@ -73,6 +90,8 @@ export default function ConfirmationStep({
         policy={policy}
         assumptions={assumptions}
         uncertainNodeIds={uncertainNodeIds}
+        description={description}
+        plainAnswers={plainAnswers}
         onChangeAnswer={onChangeAnswer}
       />
 
@@ -123,7 +142,7 @@ export default function ConfirmationStep({
         By confirming, you&rsquo;re saying these answers are accurate, as far as you know.
       </p>
 
-      <button type="button" onClick={() => onConfirm(note.trim() || undefined)}>
+      <button type="button" onClick={() => onConfirm(note.trim() || undefined)} disabled={confirmDisabled}>
         Confirm and evaluate
       </button>
     </section>

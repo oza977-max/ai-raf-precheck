@@ -1,7 +1,6 @@
 import { graphSummaryRows, dataClassesBySeverity } from './graph-summary';
 import {
   SUMMARY_LABELS,
-  SUMMARY_DESTINATION,
   SUMMARY_DATA_CLASS,
   SUMMARY_MODEL_TYPE,
   SUMMARY_BINDINGNESS,
@@ -14,9 +13,11 @@ import {
   summaryBehaviourLine,
   summaryShowsWeight,
   summaryDecisionLine,
+  summaryDestinationLine,
 } from './plain-copy';
-import type { Assumption } from './plain-copy';
+import type { Assumption, PlainAnswers } from './plain-copy';
 import { Fold } from './Fold';
+import { plausibilityWarnings } from '../engine/plausibility';
 import type { DataFlowGraph, PolicyFile, SystemAccessScope } from '../engine/types';
 
 // R16-C (UC-9, UC-12; build/prompts/R16.md v2.1 §3), rewritten for R16-W §2
@@ -73,6 +74,17 @@ interface UnderstoodSummaryProps {
   assumptions?: Assumption[];
   /** Description path (UC-12): node ids the extractor could not verify. */
   uncertainNodeIds?: string[];
+  /** F-9 (DR7-09): the description being confirmed — read here, purely at
+   *  render, for the plausibility cross-check against the graph. Present
+   *  on both real paths (the form's own question 2 final text, or the
+   *  typed description); optional only so existing callers/tests that
+   *  predate this prop keep compiling — an absent description simply
+   *  never matches a plausibility signal. */
+  description?: string;
+  /** F-9 (DR7-09): the form's own answers, undefined on the description
+   *  path — used only to attribute the destination zone to an explicit
+   *  3platformZone answer ("you told us…"). */
+  plainAnswers?: PlainAnswers;
   /** Navigates only — back to the question (form path) or into the
    *  existing correction flow (description path, UC-7). No write of its
    *  own; the one write stays the Confirm button and its in-flight guard. */
@@ -84,6 +96,8 @@ export default function UnderstoodSummary({
   policy,
   assumptions = [],
   uncertainNodeIds = [],
+  description = '',
+  plainAnswers,
   onChangeAnswer,
 }: UnderstoodSummaryProps) {
   const processing = graph.processing_nodes[0];
@@ -94,6 +108,14 @@ export default function UnderstoodSummary({
   const countryNames = graph.jurisdictions.map(
     (code) => policy?.jurisdictions.find((j) => j.code === code)?.name ?? code,
   );
+  // F-9 (DR7-09). Pure, computed at render from the description and the
+  // graph already in hand — no new state. Runs for BOTH paths: this
+  // component is the one point the form path reaches that the field-card
+  // screen (graph_review, description-path only) used to be the sole
+  // carrier of this check. The check flags each affected part of the case
+  // separately (right for the field cards, one card each), so the same
+  // sentence can come back several times — the summary shows each once.
+  const doubleCheckWarnings = [...new Set(plausibilityWarnings(description, graph).map((w) => w.message))];
 
   const uncertainLabels = uncertainNodeIds
     .map(
@@ -106,10 +128,21 @@ export default function UnderstoodSummary({
     <section aria-label="Here's what we understood" className="understood-summary">
       <h2>Here&rsquo;s what we understood</h2>
 
+      {doubleCheckWarnings.length > 0 && (
+        <section className="understood-summary__section understood-summary__double-check" role="note">
+          <h3>Please double-check</h3>
+          <ul>
+            {doubleCheckWarnings.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {processing && (
         <section className="understood-summary__section">
           <h3>{SUMMARY_LABELS.destination}</h3>
-          <p>{SUMMARY_DESTINATION[processing.data_zone]}</p>
+          <p>{summaryDestinationLine(processing.data_zone, plainAnswers)}</p>
           {through.through && <p>{through.through}</p>}
           {through.unregistered && <p>Your firm hasn’t assessed this supplier yet.</p>}
           {runsOn && <p>{runsOn}</p>}

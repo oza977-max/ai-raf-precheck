@@ -588,9 +588,9 @@ against its own quote. **Do not reinstate the confidence score.**
 >
 > **Amended 2026-09-28 (code review 005).** The one path that can replace stored records is the user-confirmed hand-off replace (RG-8) — see VD-4's amendment for its conditions. The fit criterion above holds for every other path.
 
-**NF-12 (Must):** *(added 2026-09-28, round 16)* Newcomer comprehension gate. Any change to the intake questions or to the verdict's first screen shall pass a newcomer test before it ships. At least six simulated first-time users with everyday jobs — at least one of them new to the product — are each given a real use case and only the screen text; they answer the questions and read their own verdict, computed by the real engine.
+**NF-12 (Must):** *(added 2026-09-28, round 16)* Newcomer comprehension gate. Any change to the intake questions or to the verdict's first screen shall pass a newcomer test before it ships. At least six simulated first-time users with everyday jobs — at least one of them new to the product — are each given a real use case and only the screen text; they answer the questions and read their own verdict, computed by the real engine. The personas include at least one person who gets a "No", one who corrects an answer, and one who answers a tick-all question. *(Amended 2026-10-02, design review 007.)*
 
-> Fit criterion: Pass means: no question answered "didn't understand"; no answer that would make the verdict less strict than the correct answer; and every tester can say whether they can start, what they themselves must do, and who signs off. The results are recorded with the change. Simulated testers know more than real newcomers, so the product owner's own run-through, then a real colleague's, is the final check.
+> Fit criterion: Pass means: no question answered "didn't understand"; no answer that would make the verdict less strict than the correct answer; every tester can say whether they can start, what they themselves must do, and who signs off; and every tester who gets a "No" can say why, what would change the answer, and whom to talk to. The results are recorded with the change. Simulated testers know more than real newcomers, so the product owner's own run-through, then a real colleague's, is the final check.
 
 **NF-3 (Must):** No use case data shall leave the user's local environment in the MVP. The engine runs entirely client-side.
 
@@ -616,7 +616,7 @@ against its own quote. **Do not reinstate the confidence score.**
 
 - The bank's risk function has at least one person with sufficient domain knowledge to review and customise the starter policy file.
 - The regulatory frameworks referenced in the starter policy file (SR 26-2, SS1/23, EU AI Act, OSFI E-23, MAS FEAT, DORA, FSA Japan) are applicable to global financial institutions; banks operating in a single jurisdiction will trim the policy file to their relevant regimes.
-- MVP users are internal professionals (risk managers and developers). Consumer accessibility requirements (WCAG) do not apply to MVP.
+- New and changed screens meet WCAG 2.1 AA: every control is reachable and usable by keyboard, has an accessible name, focus moves to new content when the screen changes, and status changes are announced. Older screens are brought up to the same standard when they are next changed. *(Amended 2026-10-02, design review 007 — replaces the earlier assumption that consumer accessibility requirements did not apply to MVP.)*
 - The LLM used for graph extraction (UC-3) is accessed via a bank-configured API key. The bank is responsible for data handling compliance for any data sent to the LLM provider.
 - "Minimal control set" means the smallest combination of controls in the policy file's control library that satisfies all invariants — not the cheapest or easiest to implement. Cost-weighting of controls is a V2 feature.
 - Typical street practice runs to hundreds of intake questions, with separate depth for PoC and production assessments. The pre-check is not intended to replace all of those — it owns the AI risk appetite evaluation and triggers the other required reviews (InfoSec, vendor, cloud, FinOps) as outputs.

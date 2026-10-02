@@ -215,6 +215,13 @@ describe('R16-W W-4 (D-70): changing an answer / stepping back reopens the form 
   });
 });
 
+// R16-F F-3 (DR7-05): the creation write itself moved from the form's
+// first Continue to Confirm (inside the F-1 case lock, runConfirmAndEvaluate)
+// — the "one use case, one creation event" INVARIANT this test pins is
+// unchanged (and still holds, by construction, now that there is only
+// ever one write site); only WHEN it is written moved, which is why this
+// test — already driving the flow through to Confirm before checking the
+// trail — needed no change to its own assertions.
 describe('R16-W W-4 (D-70): one use case, one creation event', () => {
   it('TC-R16-W-62: submit, Change an answer, submit again — exactly one use_case_created for the intake, and the confirmed use case has that id', async () => {
     const user = userEvent.setup();
@@ -247,6 +254,10 @@ describe('R16-W W-4 (D-70): one use case, one creation event', () => {
   });
 });
 
+// R16-F F-3 (DR7-05): see TC-R16-W-62's comment above — the write moved to
+// Confirm; "question 2's final text" is still what gets recorded, read at
+// the same point (typedDescription, threaded from the confirmation state)
+// either way.
 describe('R16-W W-1 (D-67): the text left in question 2 is the description from then on', () => {
   it('TC-R16-W-66: the trail and the register record question 2’s edited text, not the first screen’s words', async () => {
     const user = userEvent.setup();
@@ -280,7 +291,8 @@ describe('Confirm guard across intakes (found by the R16-W walkthrough)', () => 
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
 
-    // The sidebar item is a clickable <div>, not a <button> (pre-existing).
+    // The sidebar item is a real <button> (R16-F §3) — getByText still
+    // finds it via the click event bubbling from its text.
     await user.click(screen.getByText('+ New pre-check'));
     const second = 'Marrowdeep lanternfall second tool';
     await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'The second case in this tab.');

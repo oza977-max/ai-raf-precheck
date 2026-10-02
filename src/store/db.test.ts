@@ -1,6 +1,70 @@
 import { describe, it, expect } from 'vitest';
-import { openAuditDb, openRegisterDb } from './db';
+import { openAuditDb, openRegisterDb, withCaseLock } from './db';
 import type { RegisterNode } from './types';
+
+// R16-F F-1 (DR7-02, DR7-03). withCaseLock orders a whole confirm-or-correct
+// sequence per case — same navigator.locks pattern as createWriteQueue, but
+// keyed per case rather than per store, and with its own same-tab ordering
+// (a per-case queue) so the no-navigator.locks fallback (this project's own
+// test environment, jsdom) still orders two same-tab calls for the SAME
+// case correctly.
+describe('withCaseLock', () => {
+  it('TC-R16-F-12: serialises two concurrent calls for the SAME case — the second never starts until the first resolves', async () => {
+    const order: string[] = [];
+    let release: (() => void) | undefined;
+    const first = withCaseLock('case-1', async () => {
+      order.push('first-start');
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      order.push('first-end');
+    });
+    // Give the first call a tick to actually start before racing the second.
+    await Promise.resolve();
+    const second = withCaseLock('case-1', async () => {
+      order.push('second-start');
+    });
+    expect(order).toEqual(['first-start']);
+    release!();
+    await Promise.all([first, second]);
+    expect(order).toEqual(['first-start', 'first-end', 'second-start']);
+  });
+
+  it('TC-R16-F-13: two DIFFERENT cases never wait on each other', async () => {
+    const order: string[] = [];
+    let releaseA: (() => void) | undefined;
+    const a = withCaseLock('case-a', async () => {
+      order.push('a-start');
+      await new Promise<void>((resolve) => {
+        releaseA = resolve;
+      });
+      order.push('a-end');
+    });
+    await Promise.resolve();
+    // case-b must be able to run to completion while case-a is still held.
+    const b = withCaseLock('case-b', async () => {
+      order.push('b-start');
+      order.push('b-end');
+    });
+    await b;
+    expect(order).toEqual(['a-start', 'b-start', 'b-end']);
+    releaseA!();
+    await a;
+    expect(order).toEqual(['a-start', 'b-start', 'b-end', 'a-end']);
+  });
+
+  it('TC-R16-F-14: the result and a thrown error both propagate to the caller', async () => {
+    await expect(withCaseLock('case-2', async () => 'ok')).resolves.toBe('ok');
+    await expect(
+      withCaseLock('case-2', async () => {
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+    // A failure must not leave the per-case queue stuck — a later call for
+    // the SAME case still runs.
+    await expect(withCaseLock('case-2', async () => 'after-failure')).resolves.toBe('after-failure');
+  });
+});
 
 describe('openAuditDb', () => {
   it('writes a real row and reads it back (boundary proof)', async () => {

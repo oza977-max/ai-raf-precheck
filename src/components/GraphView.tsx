@@ -8,8 +8,17 @@ import {
   EXPOSURES,
   MODEL_TYPES,
 } from '../engine/canonical-vocabulary';
-import type { DataFlowGraph, InputNode, OutputNode, ProcessingNode } from '../engine/types';
+import type { DataFlowGraph, InputNode, OutputNode, ProcessingNode, SystemAccessScope } from '../engine/types';
 import type { PlausibilityWarning } from '../engine/plausibility';
+import { normaliseAccessScope } from '../engine/access-scope';
+// §4 (DR7-11). Plain wording for THIS ONE EDITOR only — the Q13 option
+// text (src/components/plain-copy.ts), so a reviewer correcting this field
+// sees the exact same words the submitter answered against. The rest of
+// this screen keeps its own (reviewer) vocabulary unchanged — a component
+// importing plain-copy.ts is an ordinary component-to-component import,
+// not an engine/screen boundary crossing (cross-cutting.md §7 forbids
+// engine -> ui, never ui -> ui).
+import { ACCESS_SCOPE_REFUSAL_TEXT, findOption } from './plain-copy';
 import {
   ACTION_TYPE_LABELS,
   AUTONOMY_LABELS,
@@ -201,6 +210,99 @@ function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated'
     );
   }
   return <span className="graph-node__badge graph-node__badge--not-stated">not stated</span>;
+}
+
+// §4 (DR7-11). system_access_scope's four engine values -> the form's own
+// Q13 option keys (plain-copy.ts) — different key strings (the form's
+// 'shared'/'credentialed'/'deployment' vs the engine's
+// 'shared_infrastructure'/'credentialed_systems'/'deployment_authority'),
+// so this is the one place that maps between them for THIS editor.
+const Q13_OPTION_KEY_FOR_SCOPE: Record<SystemAccessScope, string> = {
+  none: 'none',
+  shared_infrastructure: 'shared',
+  credentialed_systems: 'credentialed',
+  deployment_authority: 'deployment',
+};
+
+const ACCESS_SCOPE_VALUES: SystemAccessScope[] = [
+  'none',
+  'shared_infrastructure',
+  'credentialed_systems',
+  'deployment_authority',
+];
+
+// §4 (DR7-11). A tick-all checkbox editor for system_access_scope — the
+// single `<select>` every other field uses can hold only one value, so a
+// correction here used to silently narrow a genuine multi-value answer
+// (e.g. "has its own logins AND runs on shared infrastructure") down to
+// whichever single option was last picked, with no check at all. Same
+// exclusivity as the form's own Q13 (StructuredForm.tsx's toggleMulti):
+// "Nothing beyond…" clears every other tick and vice versa. Every change
+// is validated through `normaliseAccessScope` (src/engine/access-scope.ts)
+// — the SAME single checker the form, the questionnaire and
+// `coerceAnswerValue` all call — before it is written; a refusal (e.g.
+// unticking the only remaining kind, leaving nothing selected) shows the
+// reason and writes nothing, leaving the prior, still-valid value in
+// place and still displayed.
+function AccessScopeEditor({
+  node,
+  record,
+  onCorrect,
+}: {
+  node: AnyNode;
+  record: Record<string, unknown>;
+  onCorrect: (nodeId: string, field: string, value: unknown) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const raw = record.system_access_scope;
+  const current: string[] = raw === undefined ? [] : Array.isArray(raw) ? (raw as string[]) : [String(raw)];
+
+  function toggle(scope: SystemAccessScope) {
+    let next: string[];
+    if (scope === 'none') {
+      next = current.includes('none') ? [] : ['none'];
+    } else {
+      const withoutNone = current.filter((v) => v !== 'none');
+      next = withoutNone.includes(scope) ? withoutNone.filter((v) => v !== scope) : [...withoutNone, scope];
+    }
+    const result = normaliseAccessScope(next);
+    if (!result.ok) {
+      // Plain words, never the engine's reason (which names the field).
+      setError(ACCESS_SCOPE_REFUSAL_TEXT);
+      return;
+    }
+    setError(null);
+    onCorrect(node.id, 'system_access_scope', result.value);
+  }
+
+  // A fieldset, not one <label> around everything: a label's control is its
+  // FIRST input, so clicking any option's words inside a single wrapping
+  // label ticked "Nothing beyond…" instead. Each option is its own label;
+  // the legend names the group (WCAG 1.3.1).
+  return (
+    <fieldset className="graph-node__field graph-node__access-scope-editor">
+      <legend>system access</legend>
+      {ACCESS_SCOPE_VALUES.map((scope) => {
+        const text = findOption('13', Q13_OPTION_KEY_FOR_SCOPE[scope])?.text ?? scope;
+        return (
+          <label key={scope} className="graph-node__access-scope-option">
+            <input
+              type="checkbox"
+              aria-label={`${node.label} — ${text}`}
+              checked={current.includes(scope)}
+              onChange={() => toggle(scope)}
+            />
+            {text}
+          </label>
+        );
+      })}
+      {error && (
+        <p role="alert" className="field-help field-help--error">
+          {error}
+        </p>
+      )}
+    </fieldset>
+  );
 }
 
 function NodeCard({
@@ -407,31 +509,37 @@ function NodeCard({
               </button>
             </span>
           </label>
-          {fields.map((spec) => (
-            <label key={spec.field} className="graph-node__field">
-              <span>{spec.label}</span>
-              <select
-                aria-label={`${node.label} — ${spec.label}`}
-                value={String(record[spec.field] ?? '')}
-                onChange={(e) =>
-                  onCorrect(
-                    node.id,
-                    spec.field,
-                    spec.numeric ? Number(e.target.value) : spec.boolean ? e.target.value === 'true' : e.target.value,
-                  )
-                }
-              >
-                {spec.optional && record[spec.field] === undefined && <option value="">not stated</option>}
-                {spec.options.map((o) => (
-                  <option key={String(o)} value={String(o)}>
-                    {spec.optionLabel
-                      ? spec.optionLabel(o)
-                      : spec.meanings?.[String(o)] ?? String(o)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+          {fields.map((spec) =>
+            // §4 (DR7-11): the one field with its own tick-all editor —
+            // every other field keeps the single-select it already had.
+            spec.field === 'system_access_scope' ? (
+              <AccessScopeEditor key={spec.field} node={node} record={record} onCorrect={onCorrect} />
+            ) : (
+              <label key={spec.field} className="graph-node__field">
+                <span>{spec.label}</span>
+                <select
+                  aria-label={`${node.label} — ${spec.label}`}
+                  value={String(record[spec.field] ?? '')}
+                  onChange={(e) =>
+                    onCorrect(
+                      node.id,
+                      spec.field,
+                      spec.numeric ? Number(e.target.value) : spec.boolean ? e.target.value === 'true' : e.target.value,
+                    )
+                  }
+                >
+                  {spec.optional && record[spec.field] === undefined && <option value="">not stated</option>}
+                  {spec.options.map((o) => (
+                    <option key={String(o)} value={String(o)}>
+                      {spec.optionLabel
+                        ? spec.optionLabel(o)
+                        : spec.meanings?.[String(o)] ?? String(o)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ),
+          )}
         </div>
       )}
 

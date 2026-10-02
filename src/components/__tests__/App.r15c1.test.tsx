@@ -46,9 +46,10 @@ describe('App — R15-C1 role switcher honesty', () => {
     await addNode(node);
 
     render(<App />);
-    const registerItem = screen.getByText('▤ Register').closest('div');
-    expect(registerItem).not.toBeNull();
-    await userEvent.click(registerItem as HTMLElement);
+    // §3 (DR7-10): the sidebar item is now a real <button> (R16-F) — find
+    // it by its accessible name rather than the nearest ancestor <div>.
+    const registerItem = screen.getByRole('button', { name: /▤ Register/ });
+    await userEvent.click(registerItem);
 
     expect(
       await screen.findByText("You're viewing as 1LoD — a view preference, not a permission; this build has no sign-in."),

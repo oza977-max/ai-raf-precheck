@@ -347,6 +347,42 @@ export async function getUseCase(
   return toSummary(node, auditEvents, currentPolicyVersion, samplingRate);
 }
 
+export type ConfirmationPreconditionResult = 'ok' | 'already-decided' | 'corrected-elsewhere';
+
+// F-1 (DR7-02, DR7-03; design-review-007.html). Read-only — the one check
+// that turns "ordered" (db.ts's `withCaseLock` orders writes for the same
+// case; it does not, by itself, detect a repeat) into "a repeat is
+// refused". The caller (IntakeFlow.tsx's `runConfirmAndEvaluate`) checks
+// this FIRST, inside `withCaseLock`, before any write.
+//
+//   - Fresh confirm (no `originalVerdictId`): 'already-decided' when the
+//     trail already holds a `verdict_produced` for this case, OR a
+//     register node already exists for it. Checked independently rather
+//     than through `getUseCase` alone — a register write can fail for a
+//     reason unrelated to this exact race (e.g. a genuine IndexedDB error)
+//     while the audit trail already shows a verdict; either signal alone
+//     is reason enough to refuse a second attestation.
+//   - Correction (`originalVerdictId` given): 'corrected-elsewhere' when
+//     the register's `current_verdict_id` has moved on from the verdict
+//     this correction was made against — another tab's correction landed
+//     first.
+//
+// Reads only: `getAll` (audit.ts:217), `getUseCase` (above).
+export async function confirmationPrecondition(
+  useCaseId: string,
+  originalVerdictId?: string,
+): Promise<ConfirmationPreconditionResult> {
+  if (!originalVerdictId) {
+    const events = await getAuditEvents(useCaseId);
+    if (events.some((e) => e.payload.type === 'verdict_produced')) return 'already-decided';
+    if (await getUseCase(useCaseId)) return 'already-decided';
+    return 'ok';
+  }
+  const existing = await getUseCase(useCaseId);
+  if (existing && existing.current_verdict_id !== originalVerdictId) return 'corrected-elsewhere';
+  return 'ok';
+}
+
 // register-lifecycle.md §10.2: the "Policy updated" banner fires when a
 // use case has a re_evaluation_queued event more recent than its latest
 // verdict event. Dormant in practice until P6-C02 builds the

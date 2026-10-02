@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseAccessScope, ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
+import { normaliseAccessScope, sameAccessScopeSet, ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
 
 // R16-A1 (PE-9, §1.1, D-65). normaliseAccessScope is the SINGLE
 // implementation of the system_access_scope validation + canonical-order
@@ -66,5 +66,20 @@ describe('normaliseAccessScope', () => {
       'credentialed_systems',
       'deployment_authority',
     ]);
+  });
+});
+
+// R16-F §4 (DR7-11). The correction handler's "is this actually a change?"
+// check — moved here from IntakeFlow.tsx while verifying R16-F, so it could
+// be tested at all (the editor itself can never re-save an identical set:
+// every click changes it, so the check is defence in depth for other
+// callers of onCorrect).
+describe('sameAccessScopeSet', () => {
+  it('TC-R16-F-63: treats order and a bare stored value as the same set, and different kinds as different', () => {
+    expect(sameAccessScopeSet(['credentialed_systems', 'shared_infrastructure'], ['shared_infrastructure', 'credentialed_systems'])).toBe(true);
+    expect(sameAccessScopeSet('shared_infrastructure', ['shared_infrastructure'])).toBe(true);
+    expect(sameAccessScopeSet(undefined, [])).toBe(true);
+    expect(sameAccessScopeSet(['shared_infrastructure'], ['shared_infrastructure', 'credentialed_systems'])).toBe(false);
+    expect(sameAccessScopeSet('none', ['deployment_authority'])).toBe(false);
   });
 });

@@ -78,6 +78,11 @@ completes the supplier is assessed" reads. This is not machine-checkable (gramma
 condition), so it is a rule-review line, not a loader check — hold every `plain_name`, in the
 starter policy and in every pack, against this test when reviewing it.
 
+**Reviewer checklist addition (R16-F §6, DR7-14):** a `verification_evidence.applies_to` entry
+is a claim that the stored evidence genuinely covers that platform or supplier — check it like
+any other condition when reviewing the rule, the same way the `covers_reviews` line above asks
+you to check that a control's action really satisfies the review it names.
+
 **6. Sign.**
 `reviewer_name` (real name), `reviewer_role`, `sign_off_date`, against the source hash.
 Validation rejects `[FIRM]` placeholders — an unsigned rule produces provisional verdicts (NF-7).

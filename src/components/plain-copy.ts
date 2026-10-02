@@ -15,6 +15,14 @@
 // stop being code-free). StructuredForm.tsx and plain-intake.ts each build
 // the dynamic options straight from the policy, using the registry entry's
 // own id as that option's key.
+//
+// Vocabulary rule (R16-F §6, DR7-14): "check" already carries six different
+// meanings across this product's screens (confirm an answer, review a
+// graph, a policy reference check, a plausibility double-check, a 2LoD
+// review, a verification-evidence check…). Do not reach for "check" for a
+// NEW meaning in any text added here — prefer "confirm", "review", or "try
+// again", whichever one is actually meant; reserve "check" for the senses
+// already established.
 
 import type {
   ActionType,
@@ -24,15 +32,16 @@ import type {
   DecisionType,
   Exposure,
   ModelType,
+  MultiInstanceCoordination,
+  OutputReversibility,
   SystemAccessScope,
 } from '../engine/types';
-
-export type QuestionId =
-  | '1' | '2' | '3' | '3supplier' | '3supplierName' | '3model' | '3a' | '3aWhich' | '3platformZone'
-  | '4' | '4a' | '5' | '6' | '6a' | '6b' | '7' | '8' | '8other' | '9' | '10'
-  | '11' | '12' | '13' | '14';
-
-export type PlainAnswers = Partial<Record<QuestionId, string | string[]>>;
+// R16-F §5 (DR7-06). QuestionId/PlainAnswers are now engine-owned (ids and
+// keys only, no words) — re-exported here so every existing component
+// import of them from `./plain-copy` keeps working unchanged.
+import type { AssumptionRef } from '../engine/plain-questions';
+export type { QuestionId, PlainAnswers } from '../engine/plain-questions';
+import type { QuestionId, PlainAnswers } from '../engine/plain-questions';
 
 export interface Assumption {
   questionId: QuestionId;
@@ -398,6 +407,15 @@ export function findOption(id: QuestionId, key: string): PlainOption | undefined
   return findQuestion(id)?.options.find((o) => o.key === key);
 }
 
+// R16-F F-8 / §4 (DR7-08, DR7-11): shown when a tick-all answer about
+// system access is refused by the engine's normaliseAccessScope — on the
+// form's question 13 and in the correction screen's editor. The engine's own
+// reasons name the internal field ("system_access_scope must have at least
+// one value"): fine for a log, not for a person. Every refusal a person can
+// reach has the same fix, so one sentence covers them all.
+export const ACCESS_SCOPE_REFUSAL_TEXT =
+  'Tick at least one option. “Nothing beyond what it’s given for the task” goes on its own — it can’t be ticked with the others.';
+
 // A worked case's answers (backtest/worked-case-answers.json) were typed
 // independently of this file and use plain ASCII apostrophes throughout
 // ("they're", "can't"); this module's own option text uses the typographic
@@ -456,6 +474,39 @@ export function makeAssumption(id: QuestionId, optionKey: string): Assumption | 
   return { questionId: id, question: question.text, assumption: text };
 }
 
+// R16-F §5 (DR7-06). The component-layer counterpart to the engine's
+// AssumptionRef: `plain-intake.ts` returns references ({ questionId,
+// optionKey }, plus the platform-zone case below) instead of worded
+// assumptions, and this is the one place a reference becomes the worded
+// `Assumption` a submitter reads. Every caller of `plainAnswersToFormValues`
+// converts once, immediately — never carrying a raw ref past that point.
+export function describeAssumptions(refs: AssumptionRef[]): Assumption[] {
+  const out: Assumption[] = [];
+  for (const ref of refs) {
+    if ('earliestZone' in ref) {
+      // W-9 (R16-W §1, D-79): the wording depends on which zone is
+      // earliest for the platform the submitter picked, computed at the
+      // mapping call site — never a fixed per-option string this module's
+      // own code-free ASSUMPTION_TEXT table could hold. Mirrors
+      // plain-intake.ts's own pre-R16-F inline branch exactly.
+      const question = findQuestion(ref.questionId);
+      if (!question) continue;
+      out.push({
+        questionId: ref.questionId,
+        question: question.text,
+        assumption:
+          ref.earliestZone === 'Zone A'
+            ? 'an outside website or service — the strictest case.'
+            : 'it may pass your information to an outside supplier — the stricter case.',
+      });
+      continue;
+    }
+    const a = makeAssumption(ref.questionId, ref.optionKey);
+    if (a) out.push(a);
+  }
+  return out;
+}
+
 // §3 — "Here's what we understood" section labels (chunk C). Plain,
 // code-free headings for UnderstoodSummary; the values beside each are
 // derived from the graph by graph-summary.ts / UnderstoodSummary.tsx, never
@@ -496,6 +547,33 @@ export const SUMMARY_DESTINATION: Record<DataZone, string> = {
   'Zone B': 'A supplier’s systems, outside your firm’s own.',
   'Zone C': 'Your firm’s own systems.',
 };
+
+// F-9 (DR7-09). W-9's "Does your information stay on your firm's own
+// systems the whole time?" (question 3platformZone) is self-attested, like
+// every other form answer — when it is what actually set the destination
+// zone (an explicit answer, never the "Not sure" default), the summary says
+// so, the same honesty posture as every other self-reported fact on this
+// screen. Keyed by the question's own option keys, not the resulting zone,
+// because the TEXT differs by which answer was given even when two answers
+// could resolve to the same zone on a different platform.
+const DESTINATION_ATTRIBUTION_3PLATFORMZONE: Partial<Record<string, string>> = {
+  'firm-systems': 'you told us your information stays on them',
+  'outside-supplier': 'you told us it goes to an outside supplier',
+  'outside-service': 'you told us it goes out to a public website or service',
+};
+
+/** §2 "Where your information will go" (F-9, DR7-09): the plain destination
+ *  sentence, with a parenthetical attribution when the zone came from an
+ *  explicit answer to the 3platformZone follow-up rather than a default or
+ *  a "Not sure" assumption. Form path only — `plainAnswers` is undefined on
+ *  the description path, which never asks this question, so the
+ *  attribution never fires there. */
+export function summaryDestinationLine(zone: DataZone, plainAnswers?: PlainAnswers): string {
+  const base = SUMMARY_DESTINATION[zone];
+  const answer = plainAnswers?.['3platformZone'];
+  const attribution = typeof answer === 'string' ? DESTINATION_ATTRIBUTION_3PLATFORMZONE[answer] : undefined;
+  return attribution ? `${base.replace(/\.$/, '')} (${attribution}).` : base;
+}
 
 export const SUMMARY_DATA_CLASS: Record<DataClass, string> = {
   'Client PII': 'Information about people — clients, applicants, staff or anyone else who can be identified',
@@ -585,7 +663,7 @@ export const SUMMARY_EXPOSURE: Record<Exposure, string> = {
   'market-facing': 'The public, the market or regulators see what it produces',
 };
 
-export const SUMMARY_REVERSIBILITY: Record<'reversible' | 'irreversible' | 'unknown', string> = {
+export const SUMMARY_REVERSIBILITY: Record<OutputReversibility, string> = {
   reversible: 'The mistake can be caught and put right before it does lasting harm',
   irreversible: 'The mistake can’t be taken back once it happens',
   unknown: 'Not known whether a mistake can be put right',
@@ -631,7 +709,7 @@ export const SUMMARY_ACCESS_SCOPE: Record<SystemAccessScope, string> = {
   shared_infrastructure: 'It runs on computers or servers shared with other automated tools',
 };
 
-export const SUMMARY_MULTI_INSTANCE: Record<'yes' | 'no' | 'unknown', string> = {
+export const SUMMARY_MULTI_INSTANCE: Record<MultiInstanceCoordination, string> = {
   no: 'It works alone',
   yes: 'Copies of it, or other AI agents, pass work or messages to each other',
   unknown: 'Not known whether copies of it, or other AI agents, pass work to each other',

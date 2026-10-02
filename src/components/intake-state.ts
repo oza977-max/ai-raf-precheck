@@ -62,6 +62,14 @@ export type IntakeState =
       // that the loaded policy does not recognise — removed from the graph
       // before the human sees it, surfaced so the removal is visible.
       ignoredJurisdictions?: string[];
+      // F-2 (DR7-04). Set by EVALUATION_FAILED on a description-path graph
+      // ONLY — this is a re-entry after a genuine engine/policy failure,
+      // not a fresh submission, so it must not be walked out of the same
+      // way a correction pass (originalVerdictId) cannot be: STEP_BACK
+      // returns the state unchanged, and canStepBack (IntakeFlow.tsx) is
+      // false here, exactly mirroring the correction-pass rule. Absent on
+      // every other route into graph_review.
+      afterFailedEvaluation?: boolean;
     }
   | {
       step: 'questionnaire';
@@ -86,6 +94,16 @@ export type IntakeState =
       // description/LLM path, which never sets them.
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
+      // F-7 (DR7-07). Node ids the LLM path flagged uncertain/guessed,
+      // captured from graph_review's own `guessedFields` at the moment
+      // QUESTIONS_GENERATED leaves that step — set once, here, then
+      // threaded forward through every subsequent transition (never
+      // re-derived, since graph_review's own guessedFields field does not
+      // exist past that step). Replaces the `uncertainNodeIds` useState
+      // IntakeFlow.tsx used to hold instead, which a refresh silently
+      // dropped (the draft only ever persisted IntakeState). Absent/empty
+      // on the form path, which never sets guessedFields.
+      uncertainNodeIds?: string[];
     }
   | {
       step: 'contradiction_review';
@@ -101,6 +119,8 @@ export type IntakeState =
       // W-3/W-4: see the questionnaire variant's comment above.
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
+      // F-7: see the questionnaire variant's comment above.
+      uncertainNodeIds?: string[];
     }
   | {
       step: 'confirmation';
@@ -122,6 +142,10 @@ export type IntakeState =
       // IntakeState) silently lost.
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
+      // F-7: see the questionnaire variant's comment above — this is what
+      // IntakeFlow now reads directly for UnderstoodSummary's "uncertain"
+      // list, replacing the component `useState` of the same name.
+      uncertainNodeIds?: string[];
     }
   | {
       step: 'evaluation_pending';
@@ -131,6 +155,14 @@ export type IntakeState =
       // Review 004 finding 2: carried so a failed evaluation can restore a
       // WORKING review screen — description visible, jurisdictions editable.
       description?: string;
+      // F-2 (DR7-04). Carried from the confirmation state so EVALUATION_FAILED
+      // can hand them straight back: a form-path graph returns to the form
+      // itself (graph_extraction), which needs both to reopen filled in; a
+      // description-path graph returns to graph_review, which does not read
+      // these directly but a later re-confirm still needs them threaded
+      // onward exactly as any other confirmation re-entry does.
+      plainAnswers?: PlainAnswers;
+      assumptions?: Assumption[];
     }
   | { step: 'verdict'; verdictId: string };
 
@@ -218,6 +250,20 @@ export type IntakeAction =
   // trail — the one write stays the Confirm button and its in-flight guard.
   | { type: 'CHANGE_ANSWER' };
 
+// F-6 (DR7-13). The "questions -> contradiction review -> confirmation"
+// priority used to be written twice: once here (FORM_SUBMITTED, below) and
+// once in IntakeFlow.tsx's `handleProceedFromGraphReview` (the description
+// path's own exit from graph_review). One pure function, used by both —
+// behaviour unchanged, the priority pinned once.
+export function nextReviewStep(
+  questions: IntakeQuestion[],
+  contradictions: Contradiction[],
+): 'questionnaire' | 'contradiction_review' | 'confirmation' {
+  if (questions.length > 0) return 'questionnaire';
+  if (contradictions.length > 0) return 'contradiction_review';
+  return 'confirmation';
+}
+
 /** The submitted description, carried forward wherever the current step still
  *  has it. `evaluation_pending` and `verdict` do not, so a correction pass
  *  re-enters graph_review without it — pre-existing, out of scope for the
@@ -268,7 +314,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           // silently turning a correction of a recorded verdict into a fresh
           // blank draft. Found live (2026-08-15). A correction's only exits
           // are completing it or RESTART.
-          if (state.originalVerdictId) return state;
+          //
+          // F-2 (DR7-04): a re-entry after a genuine evaluation failure
+          // (afterFailedEvaluation) is refused for the identical reason —
+          // the case already has a graph_confirmed attestation on the
+          // trail, and "back" must not route the next Continue into
+          // minting a second, orphaned case the way it used to.
+          if (state.originalVerdictId || state.afterFailedEvaluation) return state;
           return { step: 'duplicate_check', description: carriedDescription(state) };
         case 'questionnaire':
           // W-3 (R16-W §1, D-69): a form-path graph steps back into the
@@ -356,38 +408,40 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         plainAnswers: action.plainAnswers,
         assumptions: action.assumptions,
       };
-      // Same priority handleProceedFromGraphReview already applies to
-      // every other graph: generated questions first; failing that, a
-      // contradiction stops at its own review; failing that, confirmation.
-      if (action.questions.length > 0) {
-        return {
-          step: 'questionnaire',
-          ...carried,
-          questions: action.questions,
-          answers: [],
-          resolutionNotes: [],
-          corrections: [],
-        };
+      // F-6 (DR7-13): the ONE routing rule, shared with
+      // handleProceedFromGraphReview's dispatch choice (IntakeFlow.tsx) —
+      // generated questions first; failing that, a contradiction stops at
+      // its own review; failing that, confirmation.
+      switch (nextReviewStep(action.questions, action.contradictions)) {
+        case 'questionnaire':
+          return {
+            step: 'questionnaire',
+            ...carried,
+            questions: action.questions,
+            answers: [],
+            resolutionNotes: [],
+            corrections: [],
+          };
+        case 'contradiction_review':
+          return {
+            step: 'contradiction_review',
+            ...carried,
+            questions: action.questions,
+            answers: [],
+            contradictions: action.contradictions,
+            resolutionNotes: [],
+            corrections: [],
+          };
+        case 'confirmation':
+          return {
+            step: 'confirmation',
+            ...carried,
+            graphVersion: action.graph.version,
+            corrections: [],
+            answers: [],
+            resolutionNotes: [],
+          };
       }
-      if (action.contradictions.length > 0) {
-        return {
-          step: 'contradiction_review',
-          ...carried,
-          questions: action.questions,
-          answers: [],
-          contradictions: action.contradictions,
-          resolutionNotes: [],
-          corrections: [],
-        };
-      }
-      return {
-        step: 'confirmation',
-        ...carried,
-        graphVersion: action.graph.version,
-        corrections: [],
-        answers: [],
-        resolutionNotes: [],
-      };
     }
 
     case 'CORRECTION_APPLIED':
@@ -469,6 +523,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // F-7 (DR7-07): captured once, here, from graph_review's own
+        // guessedFields — the only step this field exists on.
+        uncertainNodeIds: Object.keys(state.guessedFields ?? {}),
       };
 
     case 'ANSWER_SUBMITTED':
@@ -516,6 +573,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // once it returns to the questionnaire and on to confirmation.
         plainAnswers: state.plainAnswers,
         assumptions: state.assumptions,
+        // F-7: threaded forward, never re-derived.
+        uncertainNodeIds: state.uncertainNodeIds,
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -536,6 +595,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // W-4: see CONTRADICTIONS_DETECTED's comment above.
         plainAnswers: state.plainAnswers,
         assumptions: state.assumptions,
+        // F-7: threaded forward, never re-derived.
+        uncertainNodeIds: state.uncertainNodeIds,
       };
 
     case 'PROCEED_TO_CONFIRMATION':
@@ -555,6 +616,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // to carry these, same as FORM_SUBMITTED's own confirmation exit.
         plainAnswers: state.plainAnswers,
         assumptions: state.assumptions,
+        // F-7: threaded forward, never re-derived.
+        uncertainNodeIds: state.uncertainNodeIds,
       };
 
     case 'CHANGE_ANSWER':
@@ -592,17 +655,37 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
         description: state.description,
+        // F-2 (DR7-04): carried so EVALUATION_FAILED can hand a form-path
+        // graph straight back to the filled-in form.
+        plainAnswers: state.plainAnswers,
+        assumptions: state.assumptions,
       };
 
     case 'VERDICT_READY':
       if (state.step !== 'evaluation_pending') return state;
       return { step: 'verdict', verdictId: state.useCaseId };
 
-    case 'EVALUATION_FAILED':
-      // Back to graph_review, not stuck on "Evaluating..." forever —
-      // simplest safe recovery point (re-derive graphVersion/corrections
-      // rather than threading them through evaluation_pending too).
+    case 'EVALUATION_FAILED': {
+      // Back to the review point, not stuck on "Evaluating..." forever.
       if (state.step !== 'evaluation_pending') return state;
+      // F-2 (DR7-04). A form-path graph returns to the FORM itself — the
+      // same filled-in shape FORM_SUBMITTED/CHANGE_ANSWER/the form-path
+      // STEP_BACK already produce — never the retired field-card screen,
+      // which the form path has never visited on the way forward either
+      // (W-3). `useCaseId` is reused (the case already has a
+      // graph_confirmed attestation on the trail); the next Confirm
+      // passes the F-1 precondition and writes a new one — a deliberate
+      // second attestation.
+      if (state.graph.intake_method === 'structured_form') {
+        return {
+          step: 'graph_extraction',
+          description: carriedDescription(state),
+          method: 'form',
+          useCaseId: state.useCaseId,
+          plainAnswers: state.plainAnswers,
+          assumptions: state.assumptions,
+        };
+      }
       return {
         step: 'graph_review',
         description: carriedDescription(state),
@@ -616,7 +699,12 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // Confirmed=true (it was confirmed before evaluation; re-entry is
         // not a fresh attestation, the R5 rule), editable via the panel.
         jurisdictionsConfirmed: true,
+        // F-2 (DR7-04): a re-entry after a genuine failure, not a fresh
+        // submission — STEP_BACK must not walk out of it, mirroring the
+        // correction-pass rule (see the STEP_BACK case above).
+        afterFailedEvaluation: true,
       };
+    }
 
     case 'CORRECT_VERDICT':
       if (state.step !== 'verdict') return state;
