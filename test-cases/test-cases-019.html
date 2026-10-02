@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 19 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#2-1-data-shapes-and-the-mapping-plain-intake-ts">&sect;2.1 &mdash; Data shapes and the mapping (<code>plain-intake.ts</code>)</a></li>
+                <li><a href="#2-1-buildgraphfromform-extended-for-several-inpu">&sect;2.1 &mdash; <code>buildGraphFromForm</code> extended for several input nodes</a></li>
+                <li><a href="#2-2-the-guided-form-structuredform-tsx">&sect;2.2 &mdash; The guided form (<code>StructuredForm.tsx</code>)</a></li>
+                <li><a href="#3-here-s-what-we-understood-understoodsummary-ts">&sect;3 &mdash; "Here's what we understood" (<code>UnderstoodSummary.tsx</code>, <code>graph-summary.ts</code>)</a></li>
+                <li><a href="#2-3-parity-test-blind-answers-vs-the-worked-case">&sect;2.3 &mdash; Parity test: blind answers vs the worked-case predictions</a></li>
+                <li><a href="#2-3-non-blind-uc-9-13-recorded-field-values-no-n">&sect;2.3 &mdash; NON-blind: UC-9..13 (recorded field values, no narrative)</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 19</h1>
+<p class="metadata">2 October 2026 &middot; Generated from test-cases-019.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-02. R16 chunks B and C &mdash; the plain-language guided form (UC-8, UC-10, UC-11) and "Here's what we understood" (UC-9, UC-12), released as one unit (<code>build/prompts/R16.md</code> v2.1 &sect;2&ndash;&sect;3, D-18). Chunk A1/A2 (the schema, engine and policy text this round's form and summary read) are covered in <code>test-cases-018.md</code>; chunk D1/D2 (the verdict's own first screen) is a separate, parallel chunk with its own test-case file.</em></p>
+<p>Test files: <code>src/engine/plain-intake.test.ts</code>, <code>src/engine/build-graph-from-form.test.ts</code>, <code>src/components/intake-draft.test.ts</code>, <code>src/components/__tests__/StructuredForm.test.tsx</code>, <code>src/components/graph-summary.test.ts</code>, <code>src/components/__tests__/graph-summary.verdict-record.test.tsx</code>, <code>src/components/__tests__/UnderstoodSummary.test.tsx</code>, <code>src/components/__tests__/ConfirmationStep.test.tsx</code>, <code>src/engine/backtest-parity.test.ts</code>, <code>src/engine/backtest-parity-nonblind.test.ts</code>.</p>
+
+<section id="2-1-data-shapes-and-the-mapping-plain-intake-ts">
+<h2>&sect;2.1 &mdash; Data shapes and the mapping (<code>plain-intake.ts</code>)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-B-01</td><td>Q4 "Not sure" maps to <code>agentic</code>, listed back as an assumption with the exact &sect;2.2 text &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-02</td><td>UC-10: ticking two different kinds of information (Q5, tick-all) produces one input node per distinct class &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-03</td><td>Q6 "Not sure" maps to execute/level 4/no hitl/binding, listed back as an assumption with the exact &sect;2.2 text &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-04</td><td>Q7 "Not sure" maps to market-facing, listed back as an assumption with the exact &sect;2.2 text &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-05</td><td>Q9 "Not sure" maps to irreversible, listed back as an assumption with the exact &sect;2.2 text &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-06</td><td>Q13 "Not sure" maps to all three non-<code>none</code> access kinds, listed back as an assumption &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-B-07</td><td>A draft under the pre-R16 key is detected, cleared, and reported exactly once (<code>probeLegacyFormDraft</code>) &mdash; <code>intake-draft.test.ts</code></td></tr>
+</tbody>
+</table>
+<p>Every Q3/Q3a/Q3supplier/Q4/Q5/Q6/Q6a/Q6b/Q7/Q8/Q9/Q10/Q11/Q12/Q13/Q14 branch in the &sect;2.2 mapping table has at least one direct unit test in <code>plain-intake.test.ts</code> beyond the ids above (e.g. the dynamic-platform zone/vendor resolution, the "earliest letter" rule, the never-matched free-text supplier name, the 3a/3aWhich company-assistant resolution with 0/1/many registered vendors) &mdash; named by scenario rather than by a separate TC id per branch, consistent with test-cases-018.md's own density for <code>access-scope.test.ts</code>.</p>
+</section>
+
+<section id="2-1-buildgraphfromform-extended-for-several-inpu">
+<h2>&sect;2.1 &mdash; <code>buildGraphFromForm</code> extended for several input nodes</h2>
+<p>Covered by the existing <code>build-graph-from-form.test.ts</code> (unchanged ids from round 18) plus new, unnamed assertions for <code>inputDataClasses</code> producing N input nodes and N edges, falling back to the singular <code>inputDataClass</code> field byte-identically when absent &mdash; see that file directly; no new TC id was needed because the single-input case is provably unchanged (every TC-UC-3a-01/02 assertion there still passes) and the multi-input case is exercised end-to-end via TC-R16-B-02 above and the StructuredForm/parity tests below.</p>
+</section>
+
+<section id="2-2-the-guided-form-structuredform-tsx">
+<h2>&sect;2.2 &mdash; The guided form (<code>StructuredForm.tsx</code>)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-B-08</td><td>No question or option renders a bare engine term or code (Zone letters, MNPI, "LLM", "agentic", tier/track names) &mdash; principle 1 &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-09</td><td>Q3a appears only when Q3 is "An AI assistant or website run by an outside company", and its answer is cleared when Q3 changes away &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-10</td><td>Q13/Q14 appear only for the agentic option at Q4, or Q4 "Not sure" &mdash; and nowhere else &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-11</td><td>Q13 "Nothing beyond what it's given for the task" is exclusive with the other ticks, and vice versa &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-12</td><td>A platform or supplier without a <code>plain_name</code> shows "Your firm's AI service {n}" / "Supplier {n}", never its raw registry name or a bare <code>[FIRM]</code> placeholder (D-23) &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-13</td><td>A draft under the pre-R16 key shows "Your saved draft was from an older version of this form and couldn't be reused &mdash; please start again." exactly once, and never blocks the fresh form &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-14</td><td>The guided form's answers round-trip across a remount under the new versioned draft key &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-B-15</td><td>Q8 "Something else" requires the free-text description before Continue enables &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+<h3>UC-3a survives (requirements.md's 2026-10-02 amendment)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-UC-3a-01</td><td>The guided form produces a valid <code>DataFlowGraph</code> with one node per category &mdash; adapted to the new questions (firm-built / llm / everyday-information / read / jurisdictions-none path) &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-UC-3a-02</td><td>The guided form sets <code>intake_method</code> to <code>structured_form</code> &mdash; adapted &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-UC-3a-03</td><td>Continue is disabled until every required question is answered &mdash; adapted from "mandatory field missing &mdash; blocked" &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+<h3>Jurisdictions (tick-all), adapted from round 3 (R3-JU)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R3-JU-1-01</td><td>An untouched jurisdiction question (Q11) blocks progress; ticking a real jurisdiction unblocks it &mdash; adapted &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R3-JU-1-02</td><td>"Somewhere else, or not sure" submits an empty <code>jurisdictions</code> array &mdash; the engine contract is unchanged &mdash; adapted &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R3-JU-1-03</td><td>Ticking a real jurisdiction unblocks progress &mdash; adapted &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R3-JU-5-01</td><td>Every unconditional base question that blocks progress carries both a visible marker and <code>aria-required</code> &mdash; adapted and narrowed to the 12 base questions (each conditional follow-up's own requiredness is covered by its own dedicated test, TC-R16-B-09/10/15) &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R3-JU-5-02</td><td>Optional free-text fields (3supplierName, 3model) carry neither signal &mdash; adapted &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-here-s-what-we-understood-understoodsummary-ts">
+<h2>&sect;3 &mdash; "Here's what we understood" (<code>UnderstoodSummary.tsx</code>, <code>graph-summary.ts</code>)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-C-01</td><td><code>graphSummaryRows</code>: a single input node renders exactly as before this chunk (unchanged "Input data" label) &mdash; <code>graph-summary.test.ts</code></td></tr>
+<tr><td>TC-R16-C-02</td><td><code>VerdictDisplay</code>'s "What you told us" record grid renders two "Input data N" rows for a two-input graph, without any source change to <code>VerdictDisplay.tsx</code> itself (D-62) &mdash; <code>graph-summary.verdict-record.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-03</td><td><code>destinationDescription</code> resolves each zone to plain words with no bare zone letter in the output (&sect;1.2's <code>{destination}</code> token, read in reverse from a zone) &mdash; <code>graph-summary.test.ts</code></td></tr>
+<tr><td>TC-R16-C-04</td><td><code>dataClassesBySeverity</code> ranks distinct input data classes most-sensitive-first, using the same ranking as <code>DATA_CLASS_RANK</code> (D-03) &mdash; <code>graph-summary.test.ts</code></td></tr>
+<tr><td>TC-R16-C-05</td><td>The destination section names the plain zone description and, when resolvable, the supplier's plain name &mdash; never a bare zone letter &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-06</td><td>Every distinct data class is listed, most sensitive first, with no bare code &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-07</td><td>Form path: every assumption appears under "Things we assumed because you weren't sure", with its exact text &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-08</td><td>Description path: uncertain node labels appear under "Things we couldn't tell from your description" &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-09</td><td>"Change an answer" calls the navigation callback and performs no write of its own &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-C-10</td><td>"Show the details the rules use" holds the existing <code>graphSummaryRows</code> grid, collapsed by default &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p><code>ConfirmationStep.test.tsx</code>'s existing TC-R15-C3-01/02/03 assertions (the plain-phrase-then-code attest grid, the retired internal-id tag) are re-run unedited against <code>ConfirmationStep</code> now rendering <code>UnderstoodSummary</code> internally &mdash; all three still pass, proving the exact-string grid contract <code>graph-summary.ts</code>'s own header comment promises is unbroken by moving the grid behind the new "Show the details" disclosure.</p>
+</section>
+
+<section id="2-3-parity-test-blind-answers-vs-the-worked-case">
+<h2>&sect;2.3 &mdash; Parity test: blind answers vs the worked-case predictions</h2>
+<p><code>backtest/worked-case-answers.json</code> holds the blind answers (written from each worked case's narrative only, by a separate agent, before this mapping was built &mdash; see that file's own <code>note</code> field). Every difference from the pinned prediction is asserted and explained in the test itself, per the contract; none are mapping defects.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-B-16</td><td>UC-1: matches in full, plus the cloud-assistant platform's <code>vendor_id</code> link (chunk A2) correctly adds "Vendor risk assessment" &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-17</td><td>UC-2: matches in full (rejected via HL-002), same added vendor-risk review on the hard-line rejection &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-18</td><td>UC-3: DIFFERS &mdash; "Not sure yet" (Q3) adds the unregistered-vendor obligation; the tick-all Q5 correctly adds a second data class (Confidential) the old single-field form could never express; Q8 correctly captures a decision type (credit-decision) the old recording never set at all, forcing Critical tier and a fairness obligation &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-19</td><td>UC-4: status and binding (HL-001) match; the 4a branch's model-type reading ("ml" vs the original's recorded "traditional-ml") is verdict-neutral since tier/track are skipped on a hard-line rejection and the hard line itself never reads model_type &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-20</td><td>UC-5: DIFFERS &mdash; "Not sure yet" again adds the unregistered-vendor obligation; a defensible independent reading of the narrative's own data (Confidential, not Internal) and output weight (drafts/material, not recommend/advisory) changes the binding constraint from INV-TRACK2-01 to INV-HALLUC-01 &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-21</td><td>UC-6a: matches in full (rejected via HL-002), same added vendor-risk review &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-22</td><td>UC-6b: DIFFERS &mdash; the contract's own documented case: the in-house platform's "earliest letter among its allowed zones" rule resolves to Zone B, not the originally-recorded Zone C, flipping the verdict to rejected under HL-002 &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-23</td><td>UC-7: DIFFERS &mdash; three narrative-supported facts the old single-field recording never carried (an unlisted named supplier, confidential-not-internal data, standing credentials ticked at Q13) correctly add obligations and change the binding constraint to the more severe INV-AGENT-CRED-01; status/tier/track unaffected &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-24</td><td>UC-8: DIFFERS &mdash; reproduces the pack's own "UC-8b" entry (Q8 is required, so the blank-decision-type variant is unreachable by design, exactly as the contract anticipates), plus a defensible wider-audience reading (market-facing) that forces Critical tier and changes the binding constraint &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-25</td><td>Assumption case: Q9 "Not sure" + acting entirely by itself + clients see it &rarr; HL-001 ("No"), with the Q9 assumption listed (D-07) &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-26</td><td>Assumption case: Q4 "Not sure" for a tool described as acting on its own &rarr; agent safeguards present (INV-AGENT-01), with the Q4 assumption listed (D-48) &mdash; <code>backtest-parity.test.ts</code></td></tr>
+<tr><td>TC-R16-B-27</td><td>Assumption case: Q6 + Q7 "Not sure" together &rarr; the strictest graph (ten tripped invariants at once), with both assumptions listed &mdash; <code>backtest-parity.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-3-non-blind-uc-9-13-recorded-field-values-no-n">
+<h2>&sect;2.3 &mdash; NON-blind: UC-9..13 (recorded field values, no narrative)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-B-28</td><td>UC-9 (EU retail credit scoring): matches in full &mdash; <code>backtest-parity-nonblind.test.ts</code></td></tr>
+<tr><td>TC-R16-B-29</td><td>UC-10 (EU CV screening): DIFFERS, verdict-neutral &mdash; declaring the in-house platform here genuinely fits its approved envelope, so two controls are satisfied by PV-3 inheritance instead of being solved for directly; same tripped invariants, status, tier, track, binding and downstream reviews &mdash; only which control discharges INV-EXPLAIN-01 differs &mdash; <code>backtest-parity-nonblind.test.ts</code></td></tr>
+<tr><td>TC-R16-B-30</td><td>UC-11 (UK-only quant VaR model): matches in full; the fixed autonomy level the "suggests" branch carries is verdict-neutral here, same documented class as UC-4/UC-7 &mdash; <code>backtest-parity-nonblind.test.ts</code></td></tr>
+<tr><td>TC-R16-B-31</td><td>UC-12 (Canada model): matches in full; same verdict-neutral autonomy-level note &mdash; <code>backtest-parity-nonblind.test.ts</code></td></tr>
+<tr><td>TC-R16-B-32</td><td>UC-13 (SG+JP client-facing assistant): matches in full &mdash; <code>backtest-parity-nonblind.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Verification</h3>
+<p>Every touched/new file was run individually via <code>npm test -- &lt;path&gt;</code> (never bare <code>vitest</code>) three times consecutively, then the full suite three times via <code>npm test</code>. <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code> and <code>python3 scripts/trace-check.py</code> all clean. Live browser walkthrough of the guided form and the summary screen at <code>http://localhost:5173</code>.</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-02</td><td>Written for R16 chunks B and C (plain-language guided form, understood summary).</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

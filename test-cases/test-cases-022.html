@@ -234,36 +234,34 @@
 <body>
 <div class="container">
 <nav class="toc-nav"><h3>Contents</h3><ul>
-                <li><a href="#boundary">&sect;5 &mdash; Engine/Screen Boundary</a></li>
-                <li><a href="#f1">F-1 &mdash; Cross-Tab Confirm/Correction</a></li>
-                <li><a href="#f2">F-2 &mdash; Evaluation Error Routing</a></li>
-                <li><a href="#f3">F-3 &mdash; Creation Record Timing</a></li>
-                <li><a href="#f4">F-4 &mdash; Correction Keeps What Was Typed</a></li>
-                <li><a href="#f5">F-5 &mdash; Hand-Off Passthrough</a></li>
-                <li><a href="#f6">F-6 &mdash; One Routing Rule, One Gate</a></li>
-                <li><a href="#f7">F-7 &mdash; Uncertain List Survives Refresh</a></li>
-                <li><a href="#f8">F-8 &mdash; The Single Access-Scope Checker</a></li>
-                <li><a href="#f9">F-9 &mdash; Zone Cross-Check and Attribution</a></li>
-                <li><a href="#a11y">&sect;3 &mdash; Accessibility</a></li>
-                <li><a href="#graphview">&sect;4 &mdash; Agent-Access Editor</a></li>
-                <li><a href="#minors">&sect;6 &mdash; Minors</a></li>
-                <li><a href="#nf12">&sect;7 &mdash; Requirement Change</a></li>
-                <li><a href="#untested">Untested Behaviours</a></li>
+                <li><a href="#5-engine-screen-boundary-dr7-06">&sect;5 &mdash; Engine/screen boundary (DR7-06)</a></li>
+                <li><a href="#f-1-dr7-02-dr7-03-one-confirmation-per-case-acro">F-1 (DR7-02, DR7-03) &mdash; one confirmation per case, across tabs</a></li>
+                <li><a href="#f-2-dr7-04-an-evaluation-error-never-orphans-the">F-2 (DR7-04) &mdash; an evaluation error never orphans the case</a></li>
+                <li><a href="#f-3-dr7-05-the-creation-record-is-written-at-con">F-3 (DR7-05) &mdash; the creation record is written at Confirm, once</a></li>
+                <li><a href="#f-4-dr7-12-dr7-16-a-correction-keeps-what-the-pe">F-4 (DR7-12, DR7-16) &mdash; a correction keeps what the person typed</a></li>
+                <li><a href="#f-5-dr7-01-a-hand-off-file-is-never-wrongly-call">F-5 (DR7-01) &mdash; a hand-off file is never wrongly called tampered</a></li>
+                <li><a href="#f-6-dr7-13-one-routing-rule-one-gate-check">F-6 (DR7-13) &mdash; one routing rule, one gate check</a></li>
+                <li><a href="#f-7-dr7-07-the-couldn-t-tell-list-survives-a-ref">F-7 (DR7-07) &mdash; the "couldn't tell" list survives a refresh</a></li>
+                <li><a href="#f-8-dr7-08-the-form-s-agent-access-answer-goes-t">F-8 (DR7-08) &mdash; the form's agent-access answer goes through the single checker</a></li>
+                <li><a href="#f-9-dr7-09-the-zone-answer-is-cross-checked-and-">F-9 (DR7-09) &mdash; the zone answer is cross-checked and attributed</a></li>
+                <li><a href="#3-accessibility-dr7-10-owner-decision-wcag-2-1-a">&sect;3 &mdash; Accessibility (DR7-10, owner decision: WCAG 2.1 AA for new and changed screens)</a></li>
+                <li><a href="#4-the-correction-screen-s-agent-access-editor-dr">&sect;4 &mdash; The correction screen's agent-access editor (DR7-11)</a></li>
+                <li><a href="#6-minors-dr7-14">&sect;6 &mdash; Minors (DR7-14)</a></li>
+                <li><a href="#7-requirement-change-nf-12-persona-coverage-wcag">&sect;7 &mdash; Requirement change (NF-12 persona coverage; WCAG 2.1 AA)</a></li>
+                <li><a href="#untested-behaviours">Untested behaviours</a></li>
                 <li><a href="#verification">Verification</a></li>
-                <li><a href="#changelog">Changelog</a></li>
 </ul></nav>
 <main class="main-content">
 <header>
 <h1>Counterpoise &mdash; Test Cases, Round R16-F</h1>
-<p class="subtitle">Fixes to built code from design review 007 (Group 1, DR7-01 to DR7-14)</p>
 <p class="metadata">3 October 2026 &middot; Generated from test-cases-022.md &mdash; do not hand-edit</p>
 </header>
-<p><em>Written 2026-10-03. <code>build/prompts/R16-F.md</code> &mdash; fixes to built code from design review 007 (<code>design-review/design-review-007.html</code> Group 1, DR7-01 to DR7-14), plus the two requirement amendments the owner approved alongside it: WCAG 2.1 AA for new and changed screens (DR7-10), and NF-12&rsquo;s persona coverage (DR7-23, approved for this round though raised against the not-yet-built D2 plan). Owner triage 2026-10-02: fix all, each with a test.</em></p>
+<p><em>Written 2026-10-03. <code>build/prompts/R16-F.md</code> &mdash; fixes to built code from design review 007 (<code>design-review/design-review-007.html</code> Group 1, DR7-01 to DR7-14), plus the two requirement amendments the owner approved alongside it: WCAG 2.1 AA for new and changed screens (DR7-10), and NF-12's persona coverage (DR7-23, approved for this round though raised against the not-yet-built D2 plan). Owner triage 2026-10-02: fix all, each with a test.</em></p>
 <p>Test files: <code>src/engine/engine-boundary.test.ts</code>, <code>src/components/plain-copy.test.ts</code>, <code>src/engine/plain-intake.test.ts</code>, <code>src/engine/plausibility.test.ts</code>, <code>src/store/db.test.ts</code>, <code>src/store/register.test.ts</code>, <code>src/components/__tests__/IntakeFlow.r16f.test.tsx</code>, <code>src/components/intake-state.test.ts</code>, <code>src/components/__tests__/RegisterDetail.test.tsx</code>, <code>src/store/handoff.test.ts</code>, <code>src/components/__tests__/GraphView.r16f.test.tsx</code>, <code>src/components/__tests__/StructuredForm.test.tsx</code>, <code>src/components/__tests__/UnderstoodSummary.test.tsx</code>, <code>src/components/__tests__/App.r16f.test.tsx</code>, <code>src/components/__tests__/VerdictDisplay.r16d1.test.tsx</code>, <code>src/store/policy-references.test.ts</code>.</p>
 
-<section id="boundary">
-<h2>&sect;5 &mdash; Engine/Screen Boundary (DR7-06)</h2>
-<p><code>src/engine/plain-intake.ts</code> imported question-text helpers and types straight from <code>src/components/plain-copy.ts</code>. Fixed by moving the ids/keys the mapping needs into a new <code>src/engine/plain-questions.ts</code>; the engine now returns assumption <em>references</em> (<code>{questionId, optionKey}</code>, plus a <code>3platformZone</code> case) instead of worded text, and <code>plain-copy.ts</code>&rsquo;s <code>describeAssumptions()</code> is the one place a reference becomes the worded <code>Assumption</code>.</p>
+<section id="5-engine-screen-boundary-dr7-06">
+<h2>&sect;5 &mdash; Engine/screen boundary (DR7-06)</h2>
+<p><code>src/engine/plain-intake.ts</code> imported question-text helpers and types straight from <code>src/components/plain-copy.ts</code>. Fixed by moving the ids/keys the mapping needs into a new <code>src/engine/plain-questions.ts</code>; the engine now returns assumption <em>references</em> (<code>{questionId, optionKey}</code>, plus a <code>3platformZone</code> case) instead of worded text, and <code>plain-copy.ts</code>'s <code>describeAssumptions()</code> is the one place a reference becomes the worded <code>Assumption</code>.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
@@ -272,15 +270,15 @@
 <tr><td>TC-R16-F-03</td><td><code>describeAssumptions([])</code> returns <code>[]</code> &mdash; <code>plain-copy.test.ts</code></td></tr>
 <tr><td>TC-R16-F-04</td><td>A generic reference resolves to the exact worded assumption and question text (moved from <code>plain-intake.test.ts</code>) &mdash; <code>plain-copy.test.ts</code></td></tr>
 <tr><td>TC-R16-F-05</td><td>A reference with no <code>ASSUMPTION_TEXT</code> entry is dropped silently, same as <code>makeAssumption()</code> &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-06</td><td>The <code>3platformZone</code> case with <code>earliestZone</code> Zone B resolves to the &ldquo;outside supplier&rdquo; sentence &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-07</td><td>The <code>3platformZone</code> case with <code>earliestZone</code> Zone A resolves to the &ldquo;outside website or service&rdquo; sentence &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-F-06</td><td>The <code>3platformZone</code> case with <code>earliestZone</code> Zone B resolves to the "outside supplier" sentence &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-F-07</td><td>The <code>3platformZone</code> case with <code>earliestZone</code> Zone A resolves to the "outside website or service" sentence &mdash; <code>plain-copy.test.ts</code></td></tr>
 </tbody>
 </table>
-<p><code>plain-intake.test.ts</code>&rsquo;s own mapping tests (TC-R16-B-01, -03, -06, TC-R16-W-04/05/06 and others) are <strong>updated, not superseded</strong>: they now assert the reference shape (<code>{questionId, optionKey}</code>) instead of worded text &mdash; the worded assertions moved to <code>plain-copy.test.ts</code> above, which is where the words now live.</p>
+<p><code>plain-intake.test.ts</code>'s own mapping tests (TC-R16-B-01, -03, -06, TC-R16-W-04/05/06 and others) are <strong>updated, not superseded</strong>: they now assert the reference shape (<code>{questionId, optionKey}</code>) instead of worded text &mdash; the worded assertions moved to <code>plain-copy.test.ts</code> above, which is where the words now live.</p>
 </section>
 
-<section id="f1">
-<h2>F-1 (DR7-02, DR7-03) &mdash; One Confirmation Per Case, Across Tabs</h2>
+<section id="f-1-dr7-02-dr7-03-one-confirmation-per-case-acro">
+<h2>F-1 (DR7-02, DR7-03) &mdash; one confirmation per case, across tabs</h2>
 <p><code>withCaseLock</code> (<code>src/store/db.ts</code>) orders a whole confirm-or-correct sequence per case; <code>confirmationPrecondition</code> (<code>src/store/register.ts</code>) is the read-only check, run first inside the lock, that turns that ordering into an actual refusal of a repeat.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
@@ -292,17 +290,17 @@
 <tr><td>TC-R16-F-16</td><td>A fresh confirm is <code>'already-decided'</code> when the trail already holds a <code>verdict_produced</code>, even with no register node written yet &mdash; <code>register.test.ts</code></td></tr>
 <tr><td>TC-R16-F-17</td><td>A fresh confirm is <code>'already-decided'</code> when a register node already exists, even with no <code>verdict_produced</code> event &mdash; <code>register.test.ts</code></td></tr>
 <tr><td>TC-R16-F-18</td><td>A fresh confirm is <code>'ok'</code> when the case has a <code>graph_confirmed</code> but no verdict yet (a genuine evaluation retry, not a repeat) &mdash; <code>register.test.ts</code></td></tr>
-<tr><td>TC-R16-F-19</td><td>A correction is <code>'ok'</code> when the trail&rsquo;s current verdict still matches the one being corrected &mdash; <code>register.test.ts</code></td></tr>
-<tr><td>TC-R16-F-20</td><td>A correction is <code>'corrected-elsewhere'</code> when another correction already moved the trail&rsquo;s current verdict on &mdash; <code>register.test.ts</code></td></tr>
+<tr><td>TC-R16-F-19</td><td>A correction is <code>'ok'</code> when the trail's current verdict still matches the one being corrected &mdash; <code>register.test.ts</code></td></tr>
+<tr><td>TC-R16-F-20</td><td>A correction is <code>'corrected-elsewhere'</code> when another correction already moved the trail's current verdict on &mdash; <code>register.test.ts</code></td></tr>
 <tr><td>TC-R16-F-21</td><td>A correction against a case with no register node at all is <code>'ok'</code> &mdash; nothing to conflict with &mdash; <code>register.test.ts</code></td></tr>
-<tr><td>TC-R16-F-22</td><td>A confirm refused because another tab already confirmed the same case writes nothing, shows the &ldquo;already decided&rdquo; alert, and disables Confirm &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-23</td><td>A correction refused because another tab&rsquo;s correction already landed writes nothing and shows the &ldquo;corrected elsewhere&rdquo; alert &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-22</td><td>A confirm refused because another tab already confirmed the same case writes nothing, shows the "already decided" alert, and disables Confirm &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-23</td><td>A correction refused because another tab's correction already landed writes nothing and shows the "corrected elsewhere" alert &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
 </tbody>
 </table>
 </section>
 
-<section id="f2">
-<h2>F-2 (DR7-04) &mdash; An Evaluation Error Never Orphans the Case</h2>
+<section id="f-2-dr7-04-an-evaluation-error-never-orphans-the">
+<h2>F-2 (DR7-04) &mdash; an evaluation error never orphans the case</h2>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
@@ -314,38 +312,38 @@
 </table>
 </section>
 
-<section id="f3">
-<h2>F-3 (DR7-05) &mdash; The Creation Record Is Written at Confirm, Once</h2>
+<section id="f-3-dr7-05-the-creation-record-is-written-at-con">
+<h2>F-3 (DR7-05) &mdash; the creation record is written at Confirm, once</h2>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
-<tr><td>TC-R16-F-25</td><td>&ldquo;Start over&rdquo; after Continue but before Confirm leaves no event on the trail for that case id &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-25</td><td>"Start over" after Continue but before Confirm leaves no event on the trail for that case id &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
 </tbody>
 </table>
-<p>TC-R16-W-62 and TC-R16-W-66 (<code>IntakeFlow.r16w.test.tsx</code>) are <strong>updated, not superseded</strong>: both already drove the flow through to Confirm before reading the trail, so their assertions hold unchanged under the new write timing &mdash; only their comments were refreshed. The WalkingSkeleton tests asserting the audit-trail event sequence for a fresh confirm, and <code>GraphReview.r9.test.tsx</code>&rsquo;s &ldquo;trail records the birth event&rdquo; test, are likewise <strong>updated, not superseded</strong> (<code>WalkingSkeleton.test.tsx</code>, <code>GraphReview.r9.test.tsx</code>).</p>
+<p>TC-R16-W-62 and TC-R16-W-66 (<code>IntakeFlow.r16w.test.tsx</code>) are <strong>updated, not superseded</strong>: both already drove the flow through to Confirm before reading the trail, so their assertions (exactly one <code>use_case_created</code>, carrying question 2's final text) hold unchanged under the new write timing &mdash; only their comments were refreshed to say so. The WalkingSkeleton tests that asserted the audit-trail event sequence for a fresh confirm (<code>P4-C04</code>, <code>explore-001 D-001</code>, <code>P5-C01</code>, and the no-track-match test) are also <strong>updated, not superseded</strong>: each now expects a leading <code>use_case_created</code> the description path never had before this fix, and the no-track-match test's routing assertion was updated to match F-2 (<code>WalkingSkeleton.test.tsx</code>). <code>GraphReview.r9.test.tsx</code>'s "the trail records the birth event" test is <strong>updated, not superseded</strong>: it now drives through Confirm (where the write happens) before checking, instead of checking right after Continue.</p>
 </section>
 
-<section id="f4">
-<h2>F-4 (DR7-12, DR7-16) &mdash; A Correction Keeps What the Person Typed</h2>
-<p><code>verdict_corrected</code> gains optional <code>submitter_note</code> / <code>contradiction_resolutions</code> / <code>answer_contexts</code> (same shapes as <code>graph_confirmed</code>); <code>RegisterDetail.tsx</code>&rsquo;s <code>currentVerdictAttestationFields</code> is the one helper that reads whichever event recorded the CURRENT verdict.</p>
+<section id="f-4-dr7-12-dr7-16-a-correction-keeps-what-the-pe">
+<h2>F-4 (DR7-12, DR7-16) &mdash; a correction keeps what the person typed</h2>
+<p><code>verdict_corrected</code> gains optional <code>submitter_note</code> / <code>contradiction_resolutions</code> / <code>answer_contexts</code> (same shapes as <code>graph_confirmed</code>); <code>RegisterDetail.tsx</code>'s <code>currentVerdictAttestationFields</code> is the one helper that reads whichever event recorded the CURRENT verdict.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
 <tr><td>TC-R16-F-26</td><td>Reads the note, contradiction explanations and answer contexts from the CORRECTION, not the original confirmation &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-27</td><td>A correction with none of its own shows none at all &mdash; supersedes, never merges with the original confirmation &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-28</td><td>With no correction at all, still falls back to the case&rsquo;s <code>graph_confirmed</code> &mdash; unaffected by F-4 &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-28</td><td>With no correction at all, still falls back to the case's <code>graph_confirmed</code> &mdash; unaffected by F-4 &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
 </tbody>
 </table>
 </section>
 
-<section id="f5">
-<h2>F-5 (DR7-01) &mdash; A Hand-Off File Is Never Wrongly Called Tampered</h2>
+<section id="f-5-dr7-01-a-hand-off-file-is-never-wrongly-call">
+<h2>F-5 (DR7-01) &mdash; a hand-off file is never wrongly called tampered</h2>
 <p><code>.passthrough()</code> added to every hashed/sealed object schema in <code>src/store/handoff.ts</code> (the event, every payload variant, the register node schema, every metadata variant, the edge schema) &mdash; and, added while verifying the build, to the nested ones inside a payload (graph correction, verdict caveat, rule rationale, tripped invariant, verdict conditions), which strip an unknown key the same way.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
 <tr><td>TC-R16-F-29</td><td>A bundle whose <code>graph_confirmed</code> event carries an unknown field imports successfully, and the field is still present on the imported event &mdash; <code>handoff.test.ts</code></td></tr>
-<tr><td>TC-R16-F-30</td><td>A bundle whose <code>verdict_corrected</code> event carries an unknown field (and F-4&rsquo;s own new fields) imports successfully, verified &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-F-30</td><td>A bundle whose <code>verdict_corrected</code> event carries an unknown field (and F-4's own new fields) imports successfully, verified &mdash; <code>handoff.test.ts</code></td></tr>
 <tr><td>TC-R16-F-31</td><td>A bundle whose KNOWN field is malformed is still rejected &mdash; passthrough never loosens validation of a field the schema knows &mdash; <code>handoff.test.ts</code></td></tr>
 <tr><td>TC-R16-F-32</td><td>A value tampered without recomputing the downstream chain is still reported as tampered &mdash; passthrough only protects an honestly-exported unknown field &mdash; <code>handoff.test.ts</code></td></tr>
 <tr><td>TC-R16-F-60</td><td>A bundle whose NESTED record parts (a graph correction, a verdict caveat) carry an unknown field imports, verifies, and keeps the field &mdash; <code>handoff.test.ts</code></td></tr>
@@ -353,8 +351,8 @@
 </table>
 </section>
 
-<section id="f6">
-<h2>F-6 (DR7-13) &mdash; One Routing Rule, One Gate Check</h2>
+<section id="f-6-dr7-13-one-routing-rule-one-gate-check">
+<h2>F-6 (DR7-13) &mdash; one routing rule, one gate check</h2>
 <p><code>nextReviewStep(questions, contradictions)</code> (pure, <code>intake-state.ts</code>) and <code>checkPolicyGate()</code> (<code>IntakeFlow.tsx</code>) each replace a rule that was written out twice.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
@@ -362,55 +360,59 @@
 <tr><td>TC-R16-F-55</td><td><code>nextReviewStep</code>: questions present wins regardless of contradictions &mdash; <code>intake-state.test.ts</code></td></tr>
 <tr><td>TC-R16-F-56</td><td><code>nextReviewStep</code>: no questions, a contradiction present &rarr; <code>'contradiction_review'</code> &mdash; <code>intake-state.test.ts</code></td></tr>
 <tr><td>TC-R16-F-57</td><td><code>nextReviewStep</code>: neither present &rarr; <code>'confirmation'</code> &mdash; <code>intake-state.test.ts</code></td></tr>
-<tr><td>TC-R16-F-59</td><td>A <code>covers_reviews</code> reference error on the FORM path&rsquo;s own Continue shows the message and never dispatches <code>FORM_SUBMITTED</code> (mirrors TC-R16-A1-63&rsquo;s <code>graph_review</code> coverage) &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-59</td><td>A <code>covers_reviews</code> reference error on the FORM path's own Continue shows the message and never dispatches <code>FORM_SUBMITTED</code> (mirrors TC-R16-A1-63's <code>graph_review</code> coverage) &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
 </tbody>
 </table>
 </section>
 
-<section id="f7">
-<h2>F-7 (DR7-07) &mdash; The &ldquo;Couldn&rsquo;t Tell&rdquo; List Survives a Refresh</h2>
+<section id="f-7-dr7-07-the-couldn-t-tell-list-survives-a-ref">
+<h2>F-7 (DR7-07) &mdash; the "couldn't tell" list survives a refresh</h2>
+<p><code>uncertainNodeIds?: string[]</code> now lives on <code>questionnaire</code>, <code>contradiction_review</code> and <code>confirmation</code> (<code>intake-state.ts</code>), captured once at <code>QUESTIONS_GENERATED</code> from <code>graph_review</code>'s own <code>guessedFields</code> and threaded forward unchanged.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
 <tr><td>TC-R16-F-58</td><td>Survives <code>QUESTIONS_GENERATED</code> &rarr; <code>CONTRADICTIONS_DETECTED</code> &rarr; <code>CONTRADICTION_RESOLVED</code> &rarr; <code>PROCEED_TO_CONFIRMATION</code>, with real (non-empty) node ids &mdash; <code>intake-state.test.ts</code></td></tr>
 </tbody>
 </table>
-<p>The existing <code>QUESTIONS_GENERATED</code> and <code>EVALUATION_FAILED</code> reducer tests (<code>intake-state.test.ts</code>) are <strong>updated, not superseded</strong>: both now expect the new fields in their result objects.</p>
+<p>The existing <code>QUESTIONS_GENERATED</code> reducer test and the <code>EVALUATION_FAILED</code> reducer test (<code>intake-state.test.ts</code>) are <strong>updated, not superseded</strong>: both now expect the new fields (<code>uncertainNodeIds: []</code>, <code>afterFailedEvaluation: true</code>) in their result objects &mdash; the transitions under test are otherwise unchanged.</p>
 </section>
 
-<section id="f8">
-<h2>F-8 (DR7-08) &mdash; The Form&rsquo;s Agent-Access Answer Goes Through the Single Checker</h2>
+<section id="f-8-dr7-08-the-form-s-agent-access-answer-goes-t">
+<h2>F-8 (DR7-08) &mdash; the form's agent-access answer goes through the single checker</h2>
+<p><code>plain-intake.ts</code>'s <code>resolveAccessScopeAnswer()</code> is the one place Q13's ticks become engine values AND are validated, through <code>normaliseAccessScope</code>; <code>StructuredForm.tsx</code>'s own required check calls the same function.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
-<tr><td>TC-R16-F-39</td><td>A mismatched saved Q13 answer (<code>"none"</code> + another kind) is refused with a plain-words validation message (never the engine&rsquo;s reason, which names the internal field), never silently read as answered &mdash; <code>StructuredForm.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-62</td><td>Unticking every Q13 box shows no alert &mdash; nothing ticked is simply &ldquo;not answered yet&rdquo;, which the required marker already says &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-39</td><td>A mismatched saved Q13 answer (<code>"none"</code> + another kind) is refused with a plain-words validation message (never the engine's reason, which names the internal field), never silently read as answered &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-62</td><td>Unticking every Q13 box shows no alert &mdash; nothing ticked is simply "not answered yet", which the required marker already says &mdash; <code>StructuredForm.test.tsx</code></td></tr>
 </tbody>
 </table>
-<p><code>plain-intake.test.ts</code>&rsquo;s Q13 exclusivity test is <strong>updated, not superseded</strong>: &ldquo;none&rdquo; alone is unchanged; &ldquo;none&rdquo; with another kind is now a documented refusal rather than a silent resolution to <code>["none"]</code>.</p>
+<p><code>plain-intake.test.ts</code>'s Q13 exclusivity test is <strong>updated, not superseded</strong>: "none" ticked alone is unchanged (<code>["none"]</code>); "none" ticked together with another kind is now a documented REFUSAL (<code>systemAccessScope</code> stays unstated) rather than a silent resolution to <code>["none"]</code> &mdash; the real form's own exclusivity never lets this combination arise, so the behaviour change only affects a hand-built/stale answer.</p>
 </section>
 
-<section id="f9">
-<h2>F-9 (DR7-09) &mdash; The Zone Answer Is Cross-Checked and Attributed</h2>
+<section id="f-9-dr7-09-the-zone-answer-is-cross-checked-and-">
+<h2>F-9 (DR7-09) &mdash; the zone answer is cross-checked and attributed</h2>
+<p>Every message in <code>src/engine/plausibility.ts</code> is rewritten in plain words &mdash; no zone letters, field names or "graph" &mdash; each naming the guided form's own question. <code>UnderstoodSummary.tsx</code> renders them under "Please double-check", computed purely at render, for both paths; an explicit <code>3platformZone</code> answer attributes the destination line.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
 <tr><td>TC-R16-F-08</td><td><code>summaryDestinationLine</code> with no <code>plainAnswers</code> renders the base destination sentence unchanged &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-09</td><td>An explicit <code>3platformZone</code> &ldquo;firm-systems&rdquo; answer attributes the Zone C line &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-10</td><td>An explicit <code>3platformZone</code> &ldquo;outside-supplier&rdquo; answer attributes the Zone B line &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-11</td><td>An explicit <code>3platformZone</code> &ldquo;outside-service&rdquo; answer attributes the Zone A line &mdash; <code>plain-copy.test.ts</code></td></tr>
-<tr><td>TC-R16-F-48</td><td>A description that contradicts the graph renders &ldquo;Please double-check&rdquo; with the plain-worded message &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-49</td><td>A description with no plausibility signal renders no &ldquo;Please double-check&rdquo; section &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-09</td><td>An explicit <code>3platformZone</code> <code>"firm-systems"</code> answer attributes the Zone C line &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-F-10</td><td>An explicit <code>3platformZone</code> <code>"outside-supplier"</code> answer attributes the Zone B line &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-F-11</td><td>An explicit <code>3platformZone</code> <code>"outside-service"</code> answer attributes the Zone A line &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-F-48</td><td>A description that contradicts the graph renders "Please double-check" with the plain-worded message &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-49</td><td>A description with no plausibility signal renders no "Please double-check" section &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-65</td><td>A warning that applies to several parts of the case is shown once, not once per part (found in the walkthrough) &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-50</td><td>An explicit <code>3platformZone</code> answer attributes the destination line to what the submitter told it &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-51</td><td>No <code>plainAnswers</code> (the description path) never attributes the destination line &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
 </tbody>
 </table>
-<p><code>plausibility.test.ts</code>&rsquo;s existing TC-R5-GR-4-01a/02a/03a/04a tests are <strong>updated, not superseded</strong>: the formal criterion is unchanged; only the expected message text changed to plain words, with new assertions that the rewritten text contains no zone letters or field names.</p>
+<p><code>plausibility.test.ts</code>'s existing TC-R5-GR-4-01a/02a/03a/04a tests are <strong>updated, not superseded</strong>: the formal criterion ("fires when description X but graph says Y") is unchanged; only the expected MESSAGE TEXT changed (plain words instead of zone letters/field names), with new assertions added that the rewritten text contains none of those.</p>
 </section>
 
-<section id="a11y">
-<h2>&sect;3 &mdash; Accessibility (DR7-10, WCAG 2.1 AA for New and Changed Screens)</h2>
+<section id="3-accessibility-dr7-10-owner-decision-wcag-2-1-a">
+<h2>&sect;3 &mdash; Accessibility (DR7-10, owner decision: WCAG 2.1 AA for new and changed screens)</h2>
+<p><code>App.tsx</code>'s five sidebar items are now <code>&lt;button type="button"&gt;</code> with <code>aria-current="page"</code> on the active one; <code>IntakeFlow.tsx</code> has one focus/announce mechanism for every step change; <code>VerdictDisplay.tsx</code>'s "Go to this safeguard" moves focus to the target after scrolling.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
@@ -418,66 +420,65 @@
 <tr><td>TC-R16-F-43</td><td>The active item carries <code>aria-current="page"</code>; the others do not &mdash; <code>App.r16f.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-44</td><td>Pressing Enter on a focused sidebar button activates it &mdash; real keyboard activation, not a mouse-only <code>onClick</code> &mdash; <code>App.r16f.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-45</td><td>Pressing Space on a focused sidebar button activates it &mdash; <code>App.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-46</td><td>A step change (not the first load) moves focus to the step container and announces the new step &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-47</td><td>Clicking &ldquo;Go to this safeguard&rdquo; moves focus to its own container, not only scrolling to it &mdash; <code>VerdictDisplay.r16d1.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-46</td><td>A step change (not the first load) moves focus to the step container and announces the new step via <code>StepTracker</code>'s own <code>describeStep()</code> &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-47</td><td>Clicking "Go to this safeguard" moves focus to the safeguard's own container, not only scrolling to it &mdash; <code>VerdictDisplay.r16d1.test.tsx</code></td></tr>
 </tbody>
 </table>
-<p><code>App.r15c1.test.tsx</code>&rsquo;s TC-R15-C1-10 is <strong>updated, not superseded</strong>: the sidebar lookup moved from <code>.closest('div')</code> to the accessible role, now that the item is a real <code>&lt;button&gt;</code>.</p>
+<p><code>App.r15c1.test.tsx</code>'s <code>TC-R15-C1-10</code> is <strong>updated, not superseded</strong>: it located the sidebar item via <code>.closest('div')</code>, which no longer finds the clickable element now that it is a <code>&lt;button&gt;</code>; the formal criterion (the 1LoD register-scope note's wording) is unchanged, only the element lookup was fixed to use its accessible role.</p>
 </section>
 
-<section id="graphview">
-<h2>&sect;4 (DR7-11) &mdash; The Correction Screen&rsquo;s Agent-Access Editor</h2>
+<section id="4-the-correction-screen-s-agent-access-editor-dr">
+<h2>&sect;4 &mdash; The correction screen's agent-access editor (DR7-11)</h2>
+<p><code>GraphView.tsx</code> gains a tick-all checkbox editor for <code>system_access_scope</code> only, with the form's own Q13 exclusivity and option wording, validated through <code>normaliseAccessScope</code> before every write.</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
-<tr><td>TC-R16-F-33</td><td>Renders a checkbox per kind, using the form&rsquo;s own Q13 option text, each initially unticked when no value is set &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-33</td><td>Renders a checkbox per kind, using the form's own Q13 option text, each initially unticked when no value is set &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-34</td><td>Ticking one kind calls <code>onCorrect</code> with a canonically-ordered array through <code>normaliseAccessScope</code> &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-35</td><td>A second kind ticked alongside the first calls <code>onCorrect</code> with both, in canonical order &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-36</td><td>Ticking &ldquo;Nothing beyond&hellip;&rdquo; clears every other tick &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-37</td><td>Ticking another kind while &ldquo;Nothing beyond&hellip;&rdquo; is set clears it (vice versa) &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-36</td><td>Ticking "Nothing beyond&hellip;" clears every other tick (same exclusivity as the form's Q13) &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-37</td><td>Ticking another kind while "Nothing beyond&hellip;" is set clears it (vice versa) &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
 <tr><td>TC-R16-F-38</td><td>Unticking the only remaining kind is refused &mdash; a plain-words reason shows (never the internal field name), and <code>onCorrect</code> is not called &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-61</td><td>Clicking an option&rsquo;s words ticks THAT option, not the first one (each option is its own label inside a named group) &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
-<tr><td>TC-R16-F-63</td><td>The correction handler&rsquo;s same-set check (<code>sameAccessScopeSet</code>, <code>src/engine/access-scope.ts</code>) treats order and a bare stored value as the same set, and different kinds as different &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-F-61</td><td>Clicking an option's words ticks THAT option, not the first one (each option is its own label inside a named group) &mdash; <code>GraphView.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-63</td><td>The correction handler's same-set check (<code>sameAccessScopeSet</code>, <code>src/engine/access-scope.ts</code>) treats order and a bare stored value as the same set, and different kinds as different &mdash; <code>access-scope.test.ts</code></td></tr>
 <tr><td>TC-R16-F-64</td><td>On the review screen, through App and the REAL correction handler, ticking a second kind applies both kinds to the case &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
 </tbody>
 </table>
-<p><code>handleCorrectNode</code> (<code>IntakeFlow.tsx</code>) is driven for real by TC-R16-F-64. Its same-set comparison is unit-tested through <code>sameAccessScopeSet</code> (TC-R16-F-63); the editor itself can never re-save an identical set (every click changes it), so that check is defence in depth for other callers of <code>onCorrect</code>. An earlier draft of this file said <code>GraphView.r16f.test.tsx</code> exercised the handler &ldquo;indirectly&rdquo; &mdash; it does not: those tests pass a stand-in <code>onCorrect</code>. Corrected while verifying the build.</p>
+<p><code>handleCorrectNode</code> (<code>IntakeFlow.tsx</code>) is driven for real by TC-R16-F-64. Its same-set comparison is unit-tested through <code>sameAccessScopeSet</code> (TC-R16-F-63); the editor itself can never re-save an identical set (every click changes it), so that check is defence in depth for other callers of <code>onCorrect</code>. An earlier draft of this note said <code>GraphView.r16f.test.tsx</code> exercised the handler "indirectly" &mdash; it does not: those tests pass a stand-in <code>onCorrect</code>. Corrected while verifying the build.</p>
 </section>
 
-<section id="minors">
+<section id="6-minors-dr7-14">
 <h2>&sect;6 &mdash; Minors (DR7-14)</h2>
+<p><code>OutputReversibility</code>/<code>MultiInstanceCoordination</code> named types (<code>src/engine/types.ts</code>); <code>checkPolicyReferences</code>'s best-effort clause-name warning (<code>src/store/policy-references.ts</code>).</p>
 <table>
 <thead><tr><th>ID</th><th>Asserts</th></tr></thead>
 <tbody>
-<tr><td>TC-R16-F-40</td><td>A downstream review <code>plain_name</code> that reads as a clause warns &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-F-40</td><td>A downstream review <code>plain_name</code> that reads as a clause ("the X is/are/was/were/has/have&hellip;") warns &mdash; <code>policy-references.test.ts</code></td></tr>
 <tr><td>TC-R16-F-41</td><td>A downstream review <code>plain_name</code> that is a genuine noun phrase does not warn &mdash; <code>policy-references.test.ts</code></td></tr>
 </tbody>
 </table>
-<p>A pack <code>required_review</code> effect&rsquo;s <code>plain_name</code> is checked for the same mistake, and a regression guard confirms the shipped policy&rsquo;s own review names never trigger the warning (both un-ided, <code>policy-references.test.ts</code>). The named-type export, the <code>build/prompts/R16-W.md</code> wording fix, the <code>plain-copy.ts</code> header comment, and the <code>grounding/PACK-AUTHORING.md</code> checklist line are documentation/type-only changes verified by <code>npx tsc --noEmit</code> and by reading the amended files.</p>
+<p>A pack <code>required_review</code> effect's <code>plain_name</code> is checked for the same mistake (own test, un-ided, <code>policy-references.test.ts</code>), and a regression guard confirms the shipped policy's own review <code>plain_name</code> values never trigger the new warning (un-ided, <code>policy-references.test.ts</code>) &mdash; both exercise the same <code>clauseLikePlainNameWarning</code> code path as TC-R16-F-40/41 without needing their own traced ids.</p>
+<p>The named-type export (<code>OutputReversibility</code>/<code>MultiInstanceCoordination</code>) and the <code>build/prompts/R16-W.md</code> "backtest case UC-6b" wording fix, the <code>plain-copy.ts</code> header vocabulary-rule comment, and the <code>grounding/PACK-AUTHORING.md</code> <code>applies_to</code> checklist line are documentation/ type-only changes with no behaviour of their own to test; they are verified by <code>npx tsc --noEmit</code> (the type re-export compiles and is used correctly by <code>plain-copy.ts</code>) and by reading the amended files.</p>
 </section>
 
-<section id="nf12">
-<h2>&sect;7 &mdash; Requirement Change (NF-12 Persona Coverage; WCAG 2.1 AA)</h2>
-<p>Both are requirements-document amendments (<code>requirements/requirements.md</code> + <code>.html</code>, mirrored in <code>build/prompts/R16.md</code> &sect;6) describing a human release-gate process and a standard that this round&rsquo;s &sect;3 items implement. Neither has automated test coverage of its own.</p>
+<section id="7-requirement-change-nf-12-persona-coverage-wcag">
+<h2>&sect;7 &mdash; Requirement change (NF-12 persona coverage; WCAG 2.1 AA)</h2>
+<p>Both are requirements-document amendments (<code>requirements/requirements.md</code> + <code>.html</code>, mirrored in <code>build/prompts/R16.md</code> &sect;6) describing a HUMAN release-gate process (the newcomer test's own persona mix) and a standard (WCAG 2.1 AA) that this round's &sect;3 items implement. Neither has automated test coverage of its own &mdash; &sect;3's items above are exactly what demonstrates WCAG 2.1 AA compliance for this round's changed screens; the NF-12 persona-mix requirement is verified when the newcomer test itself is next run, not by this codebase's automated suite.</p>
 </section>
 
-<section id="untested">
-<h2>Untested Behaviours</h2>
-<p>None by omission. Two items are documentation/type-only (&sect;6 above) and are recorded as such rather than silently skipped.</p>
+<section id="untested-behaviours">
+<h2>Untested behaviours</h2>
+<p>None by omission. Two items are documentation/type-only (see &sect;6 above) and are recorded as such rather than silently skipped.</p>
 </section>
 
 <section id="verification">
 <h2>Verification</h2>
-<p><code>npm test</code> &times;3 (never bare <code>vitest</code>), <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code>, <code>python3 scripts/trace-check.py</code>, and a live browser walkthrough of the guided form&rsquo;s Q13 question, the correction screen&rsquo;s agent-access editor, the confirmation summary&rsquo;s &ldquo;Please double-check&rdquo; section, the sidebar&rsquo;s keyboard navigation, and a forced evaluation failure on the form path.</p>
-</section>
-
-<section id="changelog">
-<h2>Changelog</h2>
+<p><code>npm test</code> &times;3 (never bare <code>vitest</code>), <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code>, <code>python3 scripts/trace-check.py</code>, and a live browser walkthrough of the guided form's Q13 question, the correction screen's agent-access editor, the confirmation summary's "Please double-check" section, the sidebar's keyboard navigation, and a forced evaluation failure on the form path.</p>
 <table>
 <thead><tr><th>Date</th><th>Change</th></tr></thead>
 <tbody>
 <tr><td>2026-10-03</td><td>Written for R16-F (design review 007, Group 1: DR7-01 to DR7-14).</td></tr>
-<tr><td>2026-10-03</td><td>Verification pass: TC-R16-F-60 to -65 added (nested hand-off passthrough, plain refusal wording, tick-all editor labels, the real correction handler, one double-check sentence per message); the &ldquo;exercised indirectly&rdquo; note corrected.</td></tr>
+<tr><td>2026-10-03</td><td>Verification pass: TC-R16-F-60 to -65 added (nested hand-off passthrough, plain refusal wording, tick-all editor labels, the real correction handler, one double-check sentence per message); the "exercised indirectly" note corrected.</td></tr>
 </tbody>
 </table>
 </section>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 21 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-w-9-the-platform-zone-follow-up-the-uc-6b-pari">&sect;1 &mdash; W-9: the platform-zone follow-up (the UC-6b parity fix, D-79)</a></li>
+                <li><a href="#2-w-1-w-2-w-4-the-form-s-own-draft-behaviour">&sect;2 &mdash; W-1/W-2/W-4: the form's own draft behaviour</a></li>
+                <li><a href="#3-w-9-ui-the-platform-zone-follow-up-s-rendering">&sect;3 &mdash; W-9 (UI): the platform-zone follow-up's rendering</a></li>
+                <li><a href="#4-w-3-w-4-the-reducer-form-submitted-carry-forwa">&sect;4 &mdash; W-3/W-4: the reducer (<code>FORM_SUBMITTED</code>, carry-forward)</a></li>
+                <li><a href="#5-2-here-s-what-we-understood-the-summary-s-own-">&sect;5 &mdash; &sect;2 ("Here's what we understood"): the summary's own words (D-71)</a></li>
+                <li><a href="#6-w-6-one-also-completes-note-per-safeguard-in-g">&sect;6 &mdash; W-6: one "also completes" note per safeguard, in grammatical English (D-76)</a></li>
+                <li><a href="#7-w-7-already-in-place-only-where-the-evidence-c">&sect;7 &mdash; W-7: "already in place" only where the evidence covers this tool (D-77)</a></li>
+                <li><a href="#8-w-8-owner-wording-and-a-rendering-bug-d-78">&sect;8 &mdash; W-8: owner wording and a rendering bug (D-78)</a></li>
+                <li><a href="#9-full-flow-integration-app-intakeflow">&sect;9 &mdash; Full-flow integration (App + IntakeFlow)</a></li>
+                <li><a href="#untested-behaviours">Untested behaviours</a></li>
+                <li><a href="#verification">Verification</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 21</h1>
+<p class="metadata">2 October 2026 &middot; Generated from test-cases-021.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-02. R16-W (<code>build/prompts/R16-W.md</code>) &mdash; walkthrough fixes found on a live, owner-side run of the committed B+C + D1 build (commit <code>059d89a</code>): the form path still routed through the retired field-card review screen (W-3), reopened blank after "Change an answer" or Back (W-4), duplicated the plain-language intro (W-2) and never pre-filled question 2 (W-1); the UC-6b worked case failed parity because a multi-zone platform always resolved to its earliest letter (W-9); the "Here's what we understood" summary still read the reviewer cards' own vocabulary instead of the newcomer-tested question wording (&sect;2); the opening screens, the confirmation step, and the knowledge-lens panel's position on the intake verdict screen (W-5), a grammatically-broken "also completes" note (W-6), an over-claimed "already in place" line (W-7) and an owner-wording/ rendering bug (W-8) were all found the same way. Every item below was observed on the running app, not inferred.</em></p>
+<p>Test files: <code>src/engine/plain-intake.test.ts</code>, <code>src/engine/backtest-parity.test.ts</code>, <code>src/components/__tests__/StructuredForm.test.tsx</code>, <code>src/components/intake-state.test.ts</code>, <code>src/components/__tests__/UnderstoodSummary.test.tsx</code>, <code>src/components/verdict-view-model.test.ts</code>, <code>src/components/__tests__/VerdictDisplay.r16d1.test.tsx</code>, <code>src/components/__tests__/VerdictDisplay.test.tsx</code>, <code>src/store/policy.test.ts</code>, <code>src/store/policy-references.test.ts</code>, <code>src/components/__tests__/IntakeFlow.back.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16w.test.tsx</code>.</p>
+
+<section id="1-w-9-the-platform-zone-follow-up-the-uc-6b-pari">
+<h2>&sect;1 &mdash; W-9: the platform-zone follow-up (the UC-6b parity fix, D-79)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-01</td><td>"Yes &mdash; the platform runs the AI on the firm's own systems" resolves the destination zone to Zone C &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-02</td><td>"No &mdash; the platform passes it to an outside supplier's AI" resolves to Zone B &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-03</td><td>"No &mdash; it goes out to a public website or service" resolves to Zone A, for a platform that allows it &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-04</td><td>"Not sure" on a platform whose earliest allowed zone is B resolves to Zone B, with the "may pass your information to an outside supplier" assumption text &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-05</td><td>Leaving the follow-up unanswered behaves exactly like "Not sure" (the mapping's default branch) &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-06</td><td>"Not sure" when the earliest allowed zone is A uses the "an outside website or service &mdash; the strictest case" wording instead &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-07</td><td>A platform allowed in only one zone keeps the pre-W-9 mapping, with no follow-up consulted even if a stray answer is present &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-R16-W-08</td><td><code>platformZoneOptionKeys</code> orders Zone C, Zone B, Zone A (filtered to what the platform allows), "Not sure" always last &mdash; <code>plain-intake.test.ts</code></td></tr>
+</tbody>
+</table>
+<p><code>TC-R16-B-22</code> (<code>backtest-parity.test.ts</code>) is <strong>updated, not superseded</strong>: UC-6b's zone-driven difference (the rejected-vs-approved flip R16.md &sect;2.3 documented) is asserted gone; a separate, pre-existing decision_type-driven tier difference (shared with UC-3/UC-5/UC-7/UC-8's own documented "the new answers capture more than the old fixture did" class) is asserted explicitly instead of silently matched away, per the contract's "report why rather than adjusting expectations" instruction.</p>
+</section>
+
+<section id="2-w-1-w-2-w-4-the-form-s-own-draft-behaviour">
+<h2>&sect;2 &mdash; W-1/W-2/W-4: the form's own draft behaviour</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-09</td><td><code>initialDescription</code> pre-fills question 2 when it has no draft/<code>initialAnswers</code> value yet &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-10</td><td>Editing question 2 is what is carried forward &mdash; a later edit is not overwritten by <code>initialDescription</code> on re-render &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-11</td><td><code>initialAnswers</code> already holding a question-2 value takes precedence over <code>initialDescription</code> &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-12</td><td>The retired "Guided intake &mdash; answer the fields below&hellip;" paragraph is gone; the approved intro is followed by the new sentence &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-13</td><td><code>initialAnswers</code> pre-fills the form when there is no in-progress draft &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-14</td><td>An in-progress draft wins over <code>initialAnswers</code> (strictly newer information) &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-w-9-ui-the-platform-zone-follow-up-s-rendering">
+<h2>&sect;3 &mdash; W-9 (UI): the platform-zone follow-up's rendering</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-15</td><td>Shown only for a platform allowed in more than one zone, with the required marker; a single-zone platform shows no follow-up &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-16</td><td>Only the zones the platform allows are offered, plus "Not sure" &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-17</td><td>Switching Q3 away clears the follow-up answer and removes it from the DOM &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="4-w-3-w-4-the-reducer-form-submitted-carry-forwa">
+<h2>&sect;4 &mdash; W-3/W-4: the reducer (<code>FORM_SUBMITTED</code>, carry-forward)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-18</td><td><code>FORM_SUBMITTED</code> is refused from any step other than <code>graph_extraction</code> with <code>method: 'form'</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-19</td><td>With questions present, goes to <code>questionnaire</code> &mdash; never <code>graph_review</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-20</td><td>With no questions but a contradiction, goes straight to <code>contradiction_review</code> (never through <code>questionnaire</code>) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-21</td><td>With neither questions nor contradictions, goes straight to <code>confirmation</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-22</td><td><code>STEP_BACK</code> from <code>questionnaire</code> on a form-path graph returns to the form, filled in &mdash; not <code>graph_review</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-23</td><td><code>STEP_BACK</code> from <code>questionnaire</code> on a description-path graph still returns to <code>graph_review</code> (unaffected) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-24</td><td><code>CONTRADICTIONS_DETECTED</code> carries <code>plainAnswers</code>/<code>assumptions</code> into <code>contradiction_review</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-25</td><td><code>CONTRADICTION_RESOLVED</code> carries <code>plainAnswers</code>/<code>assumptions</code> back into <code>questionnaire</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-26</td><td><code>PROCEED_TO_CONFIRMATION</code> carries <code>plainAnswers</code>/<code>assumptions</code> into <code>confirmation</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-W-27</td><td><code>CHANGE_ANSWER</code> from <code>confirmation</code> on a form-path graph carries <code>plainAnswers</code>/<code>assumptions</code>/<code>useCaseId</code> back to the form &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="5-2-here-s-what-we-understood-the-summary-s-own-">
+<h2>&sect;5 &mdash; &sect;2 ("Here's what we understood"): the summary's own words (D-71)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-28</td><td>"Through: {name}." renders the registry <code>plain_name</code> for a registered, non-internal vendor &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-29</td><td>An unregistered vendor renders the recorded string plus the "hasn't assessed" second line &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-30</td><td>"Runs on: {platform plain_name}." renders when the processing node names a policy platform &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-31</td><td>The kind of AI (<code>model_type</code>) now renders, in plain words &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-32</td><td><code>autonomy_level &gt;= 2</code> renders the acting-alone line plus its action-type clause &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-33</td><td>A supervised, <code>hitl</code> action appends the person-checks clause &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-34</td><td>The weight line shows only for inform/draft/recommend at <code>autonomy_level &lt;= 1</code> &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-35</td><td>"If it gets something wrong" (new section) renders the reversibility line &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-36</td><td>An unclassified <code>decision_type_other</code> adds the "ask your AI risk team" clause &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-37</td><td>No jurisdictions renders the plain "None of the listed countries&hellip;" fallback, not "No countries specified" &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-38</td><td>No rendered summary text contains "unregistered", a zone letter, "(draft)" or a bare field code, across every plain section at once &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p><code>TC-R16-C-06</code> (<code>UnderstoodSummary.test.tsx</code>) is <strong>updated, not superseded</strong>: its formal criterion (test-cases-019.md, "every distinct data class is listed, most sensitive first, with no bare code") is unchanged and still holds; only the wording the test matches against changed ("everyday business information" &rarr; "everyday work information").</p>
+</section>
+
+<section id="6-w-6-one-also-completes-note-per-safeguard-in-g">
+<h2>&sect;6 &mdash; W-6: one "also completes" note per safeguard, in grammatical English (D-76)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-39</td><td>A safeguard covering one review joins with no "and" &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-40</td><td>A safeguard covering two reviews prints ONE note with "a and b" &mdash; never two notes &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-41</td><td>Three covered reviews join "a, b and c" &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-42</td><td>A safeguard covering nothing has no <code>alsoCompletesNote</code> &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-49</td><td>The first screen renders ONE "(Doing this also completes &hellip;)" note per safeguard, not one per covered review, and never the old grammatically-broken per-review template &mdash; <code>VerdictDisplay.r16d1.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p><code>TC-R16-D1-07d</code>/<code>TC-R16-D1-07e</code> (<code>verdict-view-model.test.ts</code>) are <strong>updated, not superseded</strong>: the sentinel review names they assert are reworded to noun phrases (D-76); the behaviour under test (sentinel resolution) is unchanged.</p>
+</section>
+
+<section id="7-w-7-already-in-place-only-where-the-evidence-c">
+<h2>&sect;7 &mdash; W-7: "already in place" only where the evidence covers this tool (D-77)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-43</td><td><code>applies_to</code> absent (unscoped) &mdash; verified everywhere, exactly the pre-W-7 behaviour &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-44</td><td><code>applies_to</code> present, graph's platform is in scope &mdash; still verified &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-45</td><td><code>applies_to</code> present, graph's vendor is in scope &mdash; still verified &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-46</td><td><code>applies_to</code> present, graph is outside scope &mdash; outstanding (counted in the headline's N), with a "not for this tool" note naming the scoped platforms/vendors by plain name &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-47</td><td><code>applies_to</code> present, no graph available (reopened from the register) &mdash; outstanding, with a "couldn't check" note &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-48</td><td>Out-of-scope evidence with an attestation on file still reads attested, not outstanding (attested beats outstanding) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-W-51</td><td>Evidence scoped by <code>applies_to</code>, with the graph outside that scope, reads UNVERIFIED in the control-evidence panel and shows the "not for this tool" note instead of the detail line &mdash; <code>VerdictDisplay.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-52</td><td>The policy schema accepts <code>verification_evidence.applies_to</code> with only platforms, only vendors, or both &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-W-53</td><td>The policy schema rejects <code>applies_to</code> with both lists empty or absent &mdash; at least one must be named &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-W-54</td><td><code>checkPolicyReferences</code> accepts a registered platform or vendor id in <code>applies_to</code>, with no packs loaded &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-W-55</td><td><code>checkPolicyReferences</code> reports an unregistered platform id in <code>applies_to</code> as an error, always (never gated on packs) &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-W-56</td><td><code>checkPolicyReferences</code> reports an unregistered vendor id in <code>applies_to</code> as an error, always &mdash; <code>policy-references.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="8-w-8-owner-wording-and-a-rendering-bug-d-78">
+<h2>&sect;8 &mdash; W-8: owner wording and a rendering bug (D-78)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-50</td><td>The owner text and the "yours" chip never concatenate into one run-together word (a real space text node separates them) &mdash; <code>VerdictDisplay.r16d1.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p>(<code>CTRL-CONDUCT-01</code>'s <code>plain_owner_with</code> wording change &mdash; "compliance" &rarr; "your compliance team" &mdash; is a policy-text change with no new engine behaviour to assert beyond what TC-R16-D1-05f/05g already cover generically; verified live in the browser walkthrough, &sect;Verification below.)</p>
+</section>
+
+<section id="9-full-flow-integration-app-intakeflow">
+<h2>&sect;9 &mdash; Full-flow integration (App + IntakeFlow)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-W-57</td><td>A contradiction on the form path stops at <code>contradiction_review</code>, never passing through <code>graph_review</code> &mdash; <code>IntakeFlow.back.test.tsx</code> (tagged onto the existing test that already drove this scenario)</td></tr>
+<tr><td>TC-R16-W-58</td><td>The form path reaches "Here's what we understood" directly &mdash; no "Confirm what we understood", no "worth a second look", no graph-review node cards, no bare field code &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-59</td><td>Back from the questionnaire returns to the form with its answers intact &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-60</td><td>"Change an answer" from confirmation reopens the form with its answers intact &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-61</td><td>A refresh on confirmation keeps the "Not sure" assumptions list (restored from the draft, not a component <code>useState</code>) &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-62</td><td>Submit, Change an answer, submit again &mdash; exactly one <code>use_case_created</code> for the intake, and the confirmed use case has that id &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-63</td><td>A similarly-described, already-decided use case shows as a collapsed "similar decided case" panel on the form-path summary, with the same posture line &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-64</td><td>The subtitle, welcome note, and describe step all read the new plain-language text (&sect;4) &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-65</td><td>A real verdict with a knowledge-lens match renders the panel inside a collapsed-by-default <code>&lt;details&gt;</code>, after the reviewer section &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-66</td><td>W-1's second half: the text left in question 2 is the description recorded on <code>use_case_created</code> and on the register node &mdash; not the first screen's words (added at owner-side review: the first build pre-filled question 2 but still recorded the first screen's text) &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+<tr><td>TC-R16-W-67</td><td>After one successful confirmation in a tab, "+ New pre-check" starts a case whose "Confirm and evaluate" still works without a reload &mdash; the confirm guard, deliberately left set after a successful confirm, is released by starting over (pre-existing bug found by the R16-W walkthrough's second submission; the test fails with the release removed) &mdash; <code>IntakeFlow.r16w.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="untested-behaviours">
+<h2>Untested behaviours</h2>
+<p>None by omission. Two items are verified live rather than by a unit/integration test, and are recorded as such rather than silently skipped:</p>
+<ul>
+<li>The duplicate-check and adopted-screen copy rewrites (&sect;4 of the contract: "HAS THIS BEEN CHECKED BEFORE?", "Something similar has been checked before", "EARLIER RESULT USED", the 1LoD tier-free line, both renamed buttons) are exercised structurally by <code>WalkingSkeleton.test.tsx</code>'s existing suite (updated in place to the new copy &mdash; see the handover) and by <code>IntakeFlow.r16w.test.tsx</code>'s own flow; there is no NEW dedicated TC id for the copy strings themselves, consistent with how the pre-existing duplicate-gate tests were never pinned to the old copy by a dedicated id either.</li>
+<li><code>StepTracker</code>'s three relabelled steps ("Similar checks", "Your answers", "Result") have no dedicated test file (none existed before this round); confirmed by the live browser walkthrough, &sect;Verification below.</li>
+</ul>
+</section>
+
+<section id="verification">
+<h2>Verification</h2>
+<p><code>npm test</code> &times;3 (never bare <code>vitest</code>), <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code>, <code>python3 scripts/trace-check.py</code>, and a live browser walkthrough of the guided form, the confirmation summary, the duplicate-check screens, and the verdict first screen.</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-02</td><td>Written for R16-W (walkthrough fixes before chunk D2).</td></tr>
+<tr><td>2026-10-02</td><td>Owner-side review: TC-R16-W-66 (question 2's text is the recorded description; checks now run before the creation write) and TC-R16-W-67 (confirm guard released on starting over).</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

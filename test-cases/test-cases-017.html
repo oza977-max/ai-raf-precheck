@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 17 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#track-order-fix">Track order fix</a></li>
+                <li><a href="#policy-v1-6">Policy v1.6</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 17</h1>
+<p class="metadata">28 September 2026 &middot; Generated from test-cases-017.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-09-28. Two independent, owner-directed engine/policy changes, bundled into one traceability round because both were built and verified in the same pass: (1) a track-order bug fix (PE-2's fit criterion &mdash; "follows the ordered rules in the policy file and short-circuits at the first matching rule" &mdash; was violated by <code>evaluate()</code> id-sorting <code>policy.tracks</code> before matching), and (2) policy v1.6, three owner-approved rule narrowings/ rewordings in <code>policy/appetite.yaml</code>. Both are pre-v1.0.0 engine/policy fixes, not new requirements, so there is no new <code>requirements/</code> entry to trace against &mdash; the fit criterion each closes is named inline below instead.</em></p>
+<p>Test files: <code>src/engine/track.test.ts</code> (track order), <code>src/engine/evaluate.test.ts</code> (policy v1.6). Pre-existing pinned expectations updated in the same files plus <code>src/engine/try-these.test.ts</code>, <code>src/components/field-copy.ts</code> + <code>src/components/__tests__/RegisterDetail.dissent.test.tsx</code> (track order); see the "Pinned expectations updated" note under each section &mdash; those are corrections to existing coverage, not new tests, so they carry no new TC id.</p>
+
+<section id="track-order-fix">
+<h2>Track order fix</h2>
+<p><code>src/engine/evaluate.ts</code> sorted <code>policy.tracks</code> by id before calling <code>assignTrack()</code>, which is first-match/short-circuit over the array in the order it is GIVEN (<code>src/engine/track.ts</code>; <code>specs/evaluation-engine.md</code> &sect;3.4). <code>policy/appetite.yaml</code> declares its track rules in a deliberate order &mdash; <code>TRACK-III-AGENTIC</code> / <code>TRACK-II-REPLACE</code> / <code>TRACK-II-AUTONOMY</code> first, so those special cases win before the general <code>TRACK-III</code>/<code>TRACK-I</code>/<code>TRACK-II</code> rules beneath them &mdash; and id-sorting silently defeated it. 90 of 280 combinations of model type &times; autonomy (0-4) &times; decision bindingness &times; <code>replaces_prior_model</code> routed to the wrong track as a result.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R17-TO-01</td><td>A statistical/traditional-ml model is Track II, not Track I, when it replaces a prior model or acts at autonomy &ge; 3 &mdash; <code>track.test.ts</code></td></tr>
+<tr><td>TC-R17-TO-02</td><td>An llm/generative-ai model with non-binding output is Track III, not Track II; the same model at any other bindingness is still correctly Track II &mdash; <code>track.test.ts</code></td></tr>
+<tr><td>TC-R17-TO-03</td><td>An agentic model is Track III, not Track II, even when it replaces a prior model or acts at autonomy &ge; 3 &mdash; <code>track.test.ts</code></td></tr>
+<tr><td>TC-R17-TO-04</td><td><code>evaluate()</code> assigns the same track as <code>assignTrack(graph, policy.tracks)</code> in the policy file's own order, over the full 280-combination model_type &times; autonomy &times; bindingness &times; replaces_prior_model space (hard-line short-circuits excluded, as documented &mdash; track assignment is honestly skipped there) &mdash; <code>track.test.ts</code></td></tr>
+<tr><td>TC-R17-TO-05</td><td>Anti-vacuity guard: the OLD id-sorted order disagrees with the policy file order on exactly 90 of the 280 combinations, so TC-R17-TO-04 could not have passed vacuously &mdash; <code>track.test.ts</code></td></tr>
+</tbody>
+</table>
+<p><strong>Pinned expectations updated</strong> (not new tests &mdash; corrected because the OLD value was the bug, not because behaviour was redefined):</p>
+<ul>
+<li><code>src/engine/try-these.test.ts</code> case 10 (<code>[TC-PE-3-01]</code>): track <code>I</code> &rarr; <code>II</code> (traditional-ml at autonomy 3 is TRACK-II-AUTONOMY, declared before the general TRACK-I rule).</li>
+<li><code>src/components/field-copy.ts</code> <code>TRACK_MEANINGS.II</code>: reworded &mdash; the old text ("it replaces a prior model or acts with high autonomy") was false for the plain TRACK-II rule itself (ordinary ML/generative models on MRM, neither replacing nor high-autonomy). Now true for all three Track II rules.</li>
+<li><code>src/components/__tests__/RegisterDetail.dissent.test.tsx</code> (~line 280): the one assertion checking that rendered text, updated to match ("a prior model" &rarr; "a prior one").</li>
+<li><code>backtest/engine-verdicts.json</code> (regenerated by <code>backtest-corpus.test.ts</code>, which emits it &mdash; not hand-edited): corpus cases B-02 and G-03 move from Track II to Track III. <code>backtest/corpus.md</code> already documented both as Track III / "AI governance" &mdash; the corpus prose was already right; the engine was contradicting its own back-test corpus. No corpus.md text change needed for these two.</li>
+<li><code>backtest/use-cases.md</code>: no change. All 15 pinned predictions (<code>src/engine/backtest-predictions.test.ts</code>) were re-verified against the fix and none use a field combination the bug affected (none replace a prior model, reach autonomy &ge; 3, or pair llm/generative-ai with non-binding output).</li>
+</ul>
+</section>
+
+<section id="policy-v1-6">
+<h2>Policy v1.6</h2>
+<p>Three owner-approved rule changes in <code>policy/appetite.yaml</code> (version <code>"1.5"</code> &rarr; <code>"1.6"</code>; see the file's own CHANGE LOG header for the full rationale):</p>
+<p>(a) <code>INV-DISCLOSE-01</code> and <code>INV-ESCALATE-01</code> gain <code>action_type: {in: [inform, execute, trade, approve]}</code> &mdash; narrowed to AI that deals with a client directly, so an email a relationship manager edits and sends under their own name no longer trips either. (b) <code>INV-CITE-01</code>'s <code>model_type</code> narrowed from <code>[llm, generative-ai, agentic]</code> to <code>[llm, agentic]</code> &mdash; image/audio/video/code generators dropped, since "every statement carries a citation" has no meaning for them. (c) <code>INV-SEC-01</code>'s description reworded to match its condition (an output-reach story); the condition itself is unchanged.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R17-PV-01</td><td>INV-DISCLOSE-01 and INV-ESCALATE-01 no longer trip when the AI only drafts or recommends for a human to send (action_type <code>draft</code>/<code>recommend</code>); both still trip when the AI deals with the client directly (action_type <code>inform</code>) &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R17-PV-02</td><td>INV-CITE-01 still covers llm and agentic (AI that writes text) but no longer generative-ai (image/audio/video/code generators) &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R17-PV-03</td><td>INV-SEC-01 still trips exactly as before (deep-learning/llm/generative-ai/agentic, exposure beyond the team's own) &mdash; regression guard proving the v1.6 description reword carried no condition change &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R17-PV-04</td><td>The shipped policy's <code>version</code> field is <code>"1.6"</code> &mdash; <code>evaluate.test.ts</code></td></tr>
+</tbody>
+</table>
+<p><strong>Pinned expectations updated:</strong></p>
+<ul>
+<li><code>src/engine/try-these.test.ts</code> case 7 (<code>[TC-PV-8-01]</code>): controls <code>8</code> &rarr; the named 6 (<code>CTRL-CITE-01</code>, <code>CTRL-CONDUCT-01</code>, <code>CTRL-ENC-01</code>, <code>CTRL-FINGERPRINT-01</code>, <code>CTRL-REDTEAM-01</code>, <code>CTRL-SYNTHMARK-01</code>) &mdash; this case's <code>action_type</code> is <code>draft</code>, which no longer matches (a)'s new condition, dropping <code>CTRL-DISCLOSE-01</code> and <code>CTRL-ESCALATE-01</code>.</li>
+<li><code>backtest/engine-verdicts.json</code> (regenerated): corpus case B-03 loses <code>CTRL-CITE-01</code>/<code>CTRL-DISCLOSE-01</code>/<code>CTRL-ESCALATE-01</code> (9 controls &rarr; 6); G-03 moves <code>approved_with_controls</code> &rarr; <code>approved</code> (its only tripped invariant, INV-CITE-01, no longer matches <code>generative-ai</code>); G-05 loses <code>CTRL-DISCLOSE-01</code>/<code>CTRL-ESCALATE-01</code>. <code>backtest/corpus.md</code> amended with a dated note under B-03 &mdash; the only one of the three whose existing prose named an invariant that no longer trips.</li>
+<li><code>backtest/use-cases.md</code>: no change &mdash; none of its 15 pinned predictions use a field combination (a)&ndash;(c) touch.</li>
+</ul>
+<h3>Untested behaviours</h3>
+<p>None. Every new behaviour introduced by the track-order fix and policy v1.6 has a dedicated test above, in addition to the corrected pre-existing expectations.</p>
+<h3>Verification</h3>
+<p><code>python3 scripts/trace-check.py</code> &mdash; clean, every id in this file traced to a named test (<code>TC-R17-TO-NN</code> in <code>track.test.ts</code>'s titles, <code>TC-R17-PV-NN</code> in <code>evaluate.test.ts</code>'s titles, each id at the start of its test's title per this round's convention). <code>src/engine/track.test.ts</code>, <code>src/engine/evaluate.test.ts</code> and <code>src/engine/try-these.test.ts</code> were each run individually with <code>npm test -- &lt;path&gt;</code> (never bare <code>vitest</code>) three times consecutively per the project's timing/ordering discipline, then the full suite once via <code>npm test</code>.</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-09-28</td><td>Written for the track-order fix and policy v1.6.</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

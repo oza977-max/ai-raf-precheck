@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 20 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-the-view-model-buildverdictview">&sect;1 &mdash; The view-model (<code>buildVerdictView</code>)</a></li>
+                <li><a href="#2-the-verdictdisplay-component-wiring">&sect;2 &mdash; The <code>VerdictDisplay</code> component wiring</a></li>
+                <li><a href="#untested-behaviours">Untested behaviours</a></li>
+                <li><a href="#verification">Verification</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 20</h1>
+<p class="metadata">2 October 2026 &middot; Generated from test-cases-020.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-02. R16 chunk D1 (<code>build/prompts/R16.md</code> v2.1, &sect;4): the verdict's first screen (VD-9, VD-10) &mdash; the view-model behind it (<code>src/components/verdict-view-model.ts</code>), the <code>FirstScreen</code> component, the reviewer section everything else moved into, and the refactor of <code>WhatToDo</code>/<code>SignOffChecklist</code>/the evidence panel onto that one computation. Chunk D2 (the "No" screen's own composition, &sect;4.3) is a separate, later chunk &mdash; the rejected-verdict cases here (TC-R16-D1-12a, -21, -23) assert only what D1 itself produces: a minimal view, not D2's fuller copy.</em></p>
+<p>Test files: <code>src/components/verdict-view-model.test.ts</code>, <code>src/components/__tests__/VerdictDisplay.r16d1.test.tsx</code>.</p>
+
+<section id="1-the-view-model-buildverdictview">
+<h2>&sect;1 &mdash; The view-model (<code>buildVerdictView</code>)</h2>
+<h3>Headline (&sect;4.2 item 1)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-01a</td><td>A rejected verdict always headlines "No &mdash; not as described." and sets <code>isRejected</code></td></tr>
+<tr><td>TC-R16-D1-01b</td><td>Sign-off needed, N=0 outstanding &mdash; drops the "&hellip;and N safeguards&hellip;" clause entirely</td></tr>
+<tr><td>TC-R16-D1-01c</td><td>Sign-off needed, N=1 &mdash; singular "1 safeguard is in place"</td></tr>
+<tr><td>TC-R16-D1-01d</td><td>Sign-off needed, N=2 &mdash; plural, "all N safeguards are in place"</td></tr>
+<tr><td>TC-R16-D1-01e</td><td>Self-service, N=0 &mdash; "Yes &mdash; you can start."</td></tr>
+<tr><td>TC-R16-D1-01f</td><td>Self-service, N=1 &mdash; singular</td></tr>
+<tr><td>TC-R16-D1-01g</td><td>Self-service, N=2 &mdash; plural</td></tr>
+<tr><td>TC-R16-D1-01h</td><td>A VERIFIED or ATTESTED safeguard does not count toward N</td></tr>
+<tr><td>TC-R16-D1-01i</td><td>No <code>stage</code> passed at all behaves as self-service (<code>needsSignOff</code> false)</td></tr>
+</tbody>
+</table>
+<h3>Why (&sect;4.2 item 2)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-02a</td><td>Empty when nothing is tripped</td></tr>
+<tr><td>TC-R16-D1-02b</td><td>Resolves <code>plain_reason</code> with <code>{audience}</code>/<code>{destination}</code> placeholders filled; the binding constraint's reason sorts first</td></tr>
+<tr><td>TC-R16-D1-02c</td><td>Caps display at two distinct reasons and sets <code>whyHasMore</code></td></tr>
+<tr><td>TC-R16-D1-02d</td><td>Distinct reasons are de-duplicated by their resolved text</td></tr>
+<tr><td>TC-R16-D1-02e</td><td>Falls back to the formal (captured) description + the pointer line when <code>plain_reason</code> is absent (&sect;4.4)</td></tr>
+<tr><td>TC-R16-D1-02f</td><td>Falls back the same way with no policy loaded at all</td></tr>
+</tbody>
+</table>
+<h3>Safeguard status &mdash; one computation, four readers (&sect;4.1)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-03a</td><td><code>verified</code> beats <code>attested</code> &mdash; machine evidence wins</td></tr>
+<tr><td>TC-R16-D1-03b</td><td><code>attested</code> when not machine-verified but a reviewer attested it; <code>attestedByName</code>/<code>evidenceNote</code> populated</td></tr>
+<tr><td>TC-R16-D1-03c</td><td><code>outstanding</code> when policy is loaded, the control exists, and it is neither verified nor attested</td></tr>
+<tr><td>TC-R16-D1-03d</td><td><code>unknown</code> when no policy is loaded and no attestation exists</td></tr>
+<tr><td>TC-R16-D1-03e</td><td><code>attested</code> (not <code>unknown</code>) with no policy loaded, when an attestation exists</td></tr>
+<tr><td>TC-R16-D1-03f</td><td><code>outstandingSafeguards</code>/<code>inPlaceSafeguards</code>/<code>attestedSafeguards</code> partition <code>safeguards</code> correctly; <code>outstandingCount</code> matches</td></tr>
+</tbody>
+</table>
+<h3>Plain action fallback chain &mdash; never a bare code (&sect;4.4, NF-11)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-04a</td><td>Uses <code>plain_action</code> verbatim when present</td></tr>
+<tr><td>TC-R16-D1-04b</td><td>Falls back to formal name + description + the "means for you" pointer when <code>plain_action</code> is absent</td></tr>
+<tr><td>TC-R16-D1-04c</td><td>A control id absent from the loaded policy renders <code>"Safeguard {n}"</code> + the "involves" pointer &mdash; never the bare code</td></tr>
+<tr><td>TC-R16-D1-04d</td><td>With no policy loaded at all, every safeguard renders <code>"Safeguard {n}"</code> by position &mdash; never the bare code</td></tr>
+<tr><td>TC-R16-D1-04e</td><td>Numbering is by overall position in <code>verdict.controls</code>, not by position among only the unresolved ones</td></tr>
+</tbody>
+</table>
+<h3>Owner tokens (&sect;1.2 of R16.md)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-05a</td><td><code>@submitter</code> &rarr; "you or your manager (as the person responsible for this use)", <code>yours: true</code></td></tr>
+<tr><td>TC-R16-D1-05b</td><td><code>@model_owner</code> with a non-<code>'internal'</code> vendor on the processing node &rarr; "&hellip;working with the supplier", <code>yours: true</code></td></tr>
+<tr><td>TC-R16-D1-05c</td><td><code>@model_owner</code> with vendor <code>'internal'</code> &rarr; "the team that built the model", <code>yours: false</code></td></tr>
+<tr><td>TC-R16-D1-05d</td><td><code>@model_owner</code> with no graph at all &mdash; treated as <code>'internal'</code> (no vendor known), <code>yours: false</code></td></tr>
+<tr><td>TC-R16-D1-05e</td><td>Free-text <code>plain_owner</code> renders verbatim, <code>yours: false</code></td></tr>
+<tr><td>TC-R16-D1-05f</td><td><code>plain_owner_with</code> appends <code>", with {x}"</code> after a free-text or <code>@submitter</code> owner</td></tr>
+<tr><td>TC-R16-D1-05g</td><td><code>plain_owner_with</code> appends <code>" and {x}"</code> after the <code>@model_owner</code> "working with the supplier" branch specifically</td></tr>
+<tr><td>TC-R16-D1-05h</td><td>A register-assigned owner overrides the default: <code>"{name} (assigned on your firm's register), due {date}"</code> &mdash; no "not verified" wording, <code>yours: false</code></td></tr>
+<tr><td>TC-R16-D1-05i</td><td>No owner text at all when the control cannot be resolved (no policy) &mdash; the "Who" line is omittable</td></tr>
+</tbody>
+</table>
+<h3>Outstanding safeguards are yours-first ordered (&sect;4.2 item 4)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-06a</td><td>Yours-owned outstanding safeguards sort before not-yours ones, each group keeping its relative (deterministic) order</td></tr>
+<tr><td>TC-R16-D1-06b</td><td>Already-in-place or attested safeguards are excluded from <code>outstandingSafeguards</code> regardless of ownership</td></tr>
+</tbody>
+</table>
+<h3>Covered vs. owed reviews (<code>covers_reviews</code>, per-instance sources, &sect;1.3/&sect;4.4)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-07a</td><td>A review whose base id is in a safeguard's <code>covers_reviews</code> attaches to that safeguard, not to <code>owedReviews</code></td></tr>
+<tr><td>TC-R16-D1-07b</td><td>An uncovered review's plain name/owner resolve from the firm's <code>downstream_reviews</code> rule</td></tr>
+<tr><td>TC-R16-D1-07c</td><td>Two firm review instances sharing one plain name de-duplicate to one <code>owedReviews</code> entry (D-04)</td></tr>
+<tr><td>TC-R16-D1-07d</td><td>The <code>PV-UNREGISTERED</code> sentinel resolves to its fixed product copy, independent of the component name suffix</td></tr>
+<tr><td>TC-R16-D1-07e</td><td>The <code>MODEL-REGISTRY</code> sentinel resolves to its fixed product copy</td></tr>
+<tr><td>TC-R16-D1-07f</td><td>A pack-rule-sourced review with no local plain-name data falls back to the generic pack-review line (&sect;4.4) &mdash; <code>buildVerdictView</code> has no <code>packs</code> parameter</td></tr>
+<tr><td>TC-R16-D1-07g</td><td>A firm review without <code>plain_name</code> falls back to its formal name + the pointer line (&sect;4.4)</td></tr>
+<tr><td>TC-R16-D1-07h</td><td>An older verdict with no <code>downstream_review_sources</code> at all lists every review separately &mdash; nothing folded away; <code>coveredReviewFormalNames</code> stays empty</td></tr>
+<tr><td>TC-R16-D1-07i</td><td><code>coveredReviewFormalNames</code> (WhatToDo's own filter, formal vocabulary) names a fully-covered formal review once</td></tr>
+<tr><td>TC-R16-D1-07j</td><td>A formal name shared by a covered AND an uncovered instance is NOT reported fully covered</td></tr>
+</tbody>
+</table>
+<h3>Next steps (&sect;4.2 item 3, D-38's "Then" rule)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-08a</td><td>Self-service, nothing outstanding, nothing owed &mdash; only the "Then"-less finish line</td></tr>
+<tr><td>TC-R16-D1-08b</td><td>Self-service with outstanding safeguards keeps "Then" because a preceding step rendered</td></tr>
+<tr><td>TC-R16-D1-08c</td><td>Sign-off with no outstanding safeguards &mdash; "Start once it's signed off."</td></tr>
+<tr><td>TC-R16-D1-08d</td><td>Sign-off AND outstanding safeguards &mdash; the "both" finish line, plus the trailing "not sure who these teams are?" note</td></tr>
+<tr><td>TC-R16-D1-08e</td><td>All outstanding safeguards are "yours" &mdash; singular wording for exactly one</td></tr>
+<tr><td>TC-R16-D1-08f</td><td>All outstanding safeguards are "yours" &mdash; plural wording for more than one</td></tr>
+<tr><td>TC-R16-D1-08g</td><td>A mix of yours/not-yours outstanding safeguards names the "yours" count</td></tr>
+<tr><td>TC-R16-D1-08h</td><td>None of the outstanding safeguards is "yours"</td></tr>
+<tr><td>TC-R16-D1-08i</td><td>Owed reviews produce the "also send this result to {teams}" step, naming the owning teams</td></tr>
+<tr><td>TC-R16-D1-08j</td><td><code>no_regulatory_basis</code> adds the "tell us which countries" step</td></tr>
+<tr><td>TC-R16-D1-08k</td><td>A safeguard partnering with "your AI risk team" adds the sign-off clarification sentence exactly once</td></tr>
+<tr><td>TC-R16-D1-08l</td><td>No safeguard, no owed review, no sign-off, no provisional reason &mdash; next steps is just the one finish line</td></tr>
+</tbody>
+</table>
+<h3>Who signs off (&sect;4.2 item 6)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-09a</td><td>Names "your AI risk team" when sign-off is needed</td></tr>
+<tr><td>TC-R16-D1-09b</td><td>Names "nobody" for self-service</td></tr>
+</tbody>
+</table>
+<h3>Could still change (&sect;4.2 item 7, D-19, RA-11)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-10a</td><td>Empty when the verdict is not provisional and carries no medium caveat</td></tr>
+<tr><td>TC-R16-D1-10b</td><td><code>unsigned_pack_rules</code> line</td></tr>
+<tr><td>TC-R16-D1-10c</td><td><code>unclassified_decision_type</code> line names the typed, quoted text</td></tr>
+<tr><td>TC-R16-D1-10d</td><td>Provisional via the legacy low-caveat path with no named <code>provisional_reasons</code> shows the generic fallback line (D-19)</td></tr>
+<tr><td>TC-R16-D1-10e</td><td>A medium-confidence caveat surfaces its own line even when the verdict is NOT otherwise provisional (RA-11)</td></tr>
+<tr><td>TC-R16-D1-10f</td><td>A named provisional reason and a medium caveat together produce both lines</td></tr>
+</tbody>
+</table>
+<h3>Placeholders resolve from the graph (&sect;1.2)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-11a</td><td><code>{audience}</code> picks the widest exposure across several output nodes (market-facing &gt; client-facing &gt; internal-shared &gt; internal-only)</td></tr>
+<tr><td>TC-R16-D1-11b</td><td><code>{destination}</code> picks the least-controlled zone across several processing nodes (A over B over C)</td></tr>
+<tr><td>TC-R16-D1-11c</td><td>With no graph at all, placeholders resolve to a safe, non-crashing default &mdash; never left as a literal <code>{audience}</code>/<code>{destination}</code> token</td></tr>
+<tr><td>TC-R16-D1-11d</td><td><code>{destination}</code> names the least-controlled zone on any node, and with no graph both placeholders fall back to neutral wording ("clients or the public", "a system outside your firm's own") &mdash; never the most reassuring value; <code>@model_owner</code> with no graph reads "the team responsible for the model" &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Rejected verdicts stay minimal (VD-10 &mdash; the "No" screen is chunk D2)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-12a</td><td>A rejected verdict has no safeguards, no next steps, and no could-still-change lines from this view-model</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-the-verdictdisplay-component-wiring">
+<h2>&sect;2 &mdash; The <code>VerdictDisplay</code> component wiring</h2>
+<h3>First screen: headline leads, no bare code or reserved word (VD-9, NF-11, BC-V12B-03)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-13</td><td>The headline, not the formal status chip, leads the screen; the formal chip is not inside <code>.verdict__first-screen</code>; the whole-page single-match <code>/approved|rejected/i</code> guard still holds (the one allowed match is inside the reviewer section)</td></tr>
+<tr><td>TC-R16-D1-14</td><td>An unresolved control id never reaches the first screen as a bare code &mdash; renders "Safeguard 1"</td></tr>
+</tbody>
+</table>
+<h3>The reviewer section's open/closed default (&sect;4.2 item 9)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-15</td><td>With <code>reasoningDefaultOpen</code> omitted (the submitter path, e.g. <code>IntakeFlow</code>), the reviewer section starts closed</td></tr>
+<tr><td>TC-R16-D1-16</td><td>With <code>reasoningDefaultOpen={true}</code> (<code>RegisterDetail</code>'s 2LoD path), the reviewer section starts open</td></tr>
+<tr><td>TC-R16-D1-17</td><td>With <code>reasoningDefaultOpen={false}</code> explicitly (<code>RegisterDetail</code>'s 1LoD-viewing path), the reviewer section starts closed</td></tr>
+</tbody>
+</table>
+<h3>"Go to this safeguard" (D-26, D-63)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-18</td><td>Clicking it opens the reviewer section AND expands that control's own disclosure inside <code>WhatToDo</code> &mdash; the per-control disclosure stays React-controlled</td></tr>
+<tr><td>TC-R16-D1-19</td><td>The link only appears for a safeguard marked "yours"</td></tr>
+</tbody>
+</table>
+<h3>The correction affordance is wired on every verdict (&sect;4.2 item 8)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-20</td><td>The first screen's own "Think we got something wrong?" button calls <code>onCorrect</code>; the pre-existing reviewer-section button is unaffected and still present</td></tr>
+<tr><td>TC-R16-D1-21</td><td>On a rejected verdict, the first screen still offers the correction affordance</td></tr>
+<tr><td>TC-R16-D1-22</td><td>With no <code>onCorrect</code> (a reviewer page), neither correction affordance renders</td></tr>
+</tbody>
+</table>
+<h3>A rejected verdict's first screen (VD-10 &mdash; chunk D2 owns the "No" screen's own composition)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-23</td><td>Headline only, plus the correct-answers affordance &mdash; no safeguards/next-steps section rendered in D2's place</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="untested-behaviours">
+<h2>Untested behaviours</h2>
+<p>None by omission. The live-browser walkthrough (below) additionally confirmed, on real seeded register cases, that the first screen reads as &sect;4.2 describes with no bare codes &mdash; not independently re-asserted as a unit test, since it depends on real policy/pack data rather than a constructed fixture.</p>
+</section>
+
+<section id="verification">
+<h2>Verification</h2>
+<p>Touched files run individually three times consecutively via <code>npm test -- src/components/verdict-view-model.test.ts</code> and <code>npm test -- src/components/__tests__/VerdictDisplay.r16d1.test.tsx</code> (never bare <code>vitest</code> &mdash; the Node 26/jsdom <code>localStorage</code> gotcha), then the existing <code>VerdictDisplay*</code>/<code>RegisterDetail*</code> suites together (<code>npm test -- src/components/__tests__/VerdictDisplay src/components/__tests__/RegisterDetail</code>) to confirm the refactor of <code>WhatToDo</code>/<code>SignOffChecklist</code>/the evidence panel onto the view-model changed no existing assertion. <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code> and <code>python3 scripts/trace-check.py</code> all clean for this chunk's own files (see the chunk's handover for the unrelated, concurrently-in-progress form-chunk failures this run also surfaced).</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-02</td><td>Written for R16 chunk D1 (the verdict's first screen).</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 16 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#rg-8-hand-off-bundle-export-import-between-two-m">RG-8 &mdash; Hand-off bundle (export/import between two machines)</a></li>
+                <li><a href="#rg-9-control-evidence-attestation">RG-9 &mdash; Control-evidence attestation</a></li>
+                <li><a href="#superseded">Superseded</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 16</h1>
+<p class="metadata">28 September 2026 &middot; Generated from test-cases-016.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-09-28 &mdash; a traceability backfill, not a new build. RG-8 (hand-off bundle) and RG-9 (control-evidence attestation) shipped several rounds ago (commits <code>b484d83</code>, <code>6023103</code>, hardened by code-review-005) but had no test-case entries, so <code>scripts/trace-check.py</code> could not see them. This round adds cases for both, mapped to the automated tests that already prove them &mdash; no new test was written; existing test titles were prefixed with their new TC id. <code>requirements/requirements.md</code>'s 2026-09-28 amendment explains the RG-6/RG-7 -&gt; RG-8/RG-9 relabelling this file follows (the labels collided with the existing, unrelated, unbuilt RG-6/RG-7).</em></p>
+<p>Test files: <code>src/store/handoff.test.ts</code>, <code>src/components/__tests__/RegisterView.handoff.test.tsx</code>, <code>src/store/audit.test.ts</code>, <code>src/store/register.test.ts</code>, <code>src/components/__tests__/RegisterDetail.eventDetail.test.tsx</code> (RG-8); <code>src/components/__tests__/RegisterDetail.controlEvidence.test.tsx</code>, <code>src/components/__tests__/VerdictDisplay.cr005.test.tsx</code> (RG-9).</p>
+
+<section id="rg-8-hand-off-bundle-export-import-between-two-m">
+<h2>RG-8 &mdash; Hand-off bundle (export/import between two machines)</h2>
+<p><code>requirements/requirements.md</code>, RG-8: "The register and its audit trail shall be transferable between two installations as a single file. Import shall re-verify every audit entry and the file's seal, shall merge only when one history continues the other, shall otherwise offer a user-confirmed replace that requires a saved backup first, and shall never overwrite silently. The product shall state that these checks detect damage and simple edits but cannot prove who made the file."</p>
+<h3>Export</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-01</td><td>Given a register with a local case, when the reviewer clicks "Export hand-off bundle", then a success message names the event/entry counts and a sealed bundle downloads &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-02</td><td>Given the same setup, when the browser's download mechanism throws, then an <code>alert</code>-role "Export failed" message is shown, not swallowed &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+</tbody>
+</table>
+<h3>Import &mdash; tamper and forgery detection</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-03</td><td>A bundle whose register was altered after export (seal mismatch) is refused as <code>tampered</code>, with no writes &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-04</td><td>A bundle whose audit payload was edited without recomputing the downstream hash chain is refused as <code>tampered</code> ("chain is broken") &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-05</td><td>The documented limit, pinned on purpose: a bundle edited AND fully re-hashed downstream (payload + every later hash + the seal, using only the module's own public functions) is ACCEPTED &mdash; the product only claims to catch an edit that skipped recomputing the chain, never to prove authorship &mdash; <code>handoff.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Import &mdash; bad-file fixtures (<code>invalid_format</code>)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-06</td><td>A malformed (non-ISO) <code>occurred_at</code> on any event is refused &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-07</td><td>A register node whose <code>metadata.node_type</code> disagrees with its own <code>node_type</code> is refused &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-08</td><td>An unknown <code>event_type</code> is refused &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-09</td><td>A payload missing a field required for its type is refused &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-10</td><td>Two different events sharing the same <code>event_id</code> inside one bundle are refused, with a message naming the duplicate &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-11</td><td>An unsupported <code>format_version</code> gets its own distinct "different version of Counterpoise" message, not the generic "not a bundle" one &mdash; <code>handoff.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Import &mdash; sync outcomes</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-12</td><td>Merge of a continuation: B adopts A's bundle, appends a sign-off, and A imports B's bundle back &mdash; outcome <code>merged</code>, exactly the one new event added, chain verifies &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-13</td><td>Up to date: re-importing a bundle identical to the current state reports <code>up_to_date</code> with zero events added &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-14</td><td>Local-ahead: importing a bundle the local copy already extends does nothing (<code>local_ahead</code>), local state untouched &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-15</td><td>Import into an empty store: an empty machine adopts a bundle wholesale (<code>imported_into_empty</code>), the transplanted chain verifies against the live store &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-16</td><td>"Different histories" message &mdash; the first time this browser has ever received a case: the calm "this is normal" wording, never "warning" &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-17</td><td>"Different histories" message &mdash; after a previous successful sync: a later divergence is worded as a warning asking the user to check with the sender &mdash; <code>handoff.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Two-step replace</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-18</td><td>Backup failure aborts: when the backup download throws, "Couldn't create a backup, so nothing was replaced" is shown and the confirm-replace button never appears &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-19</td><td>Confirm replaces: after a successful backup, step 2's confirm button actually replaces the register with the bundle's contents &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-20</td><td>Keep leaves it: "Keep my register" cancels the pending replace at step 1, no destructive action offered &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-21</td><td>An unrelated failed import (a completely different, broken file) does not clear a valid pending replace decision &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+</tbody>
+</table>
+<h3>Concurrency (append-only data-integrity)</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-22</td><td>A local <code>append()</code> racing a concurrent <code>importBundle()</code> of an extending bundle cannot fork the chain or silently lose either write &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-23</td><td>Two concurrent imports of the same extending bundle apply it exactly once &mdash; no duplicate <code>event_id</code> write &mdash; <code>handoff.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Supporting invariants the hand-off bundle depends on</h3>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-24</td><td>The monotonic clock floor is restored from the stored trail after a reset (simulated page reload), instead of restarting at zero &mdash; protects an imported chain from a later local append landing "before" a far-future imported timestamp &mdash; <code>audit.test.ts</code></td></tr>
+<tr><td>TC-RG-8-25</td><td>Chain verification and export order follow hash links, not <code>occurred_at</code> &mdash; a clock-skewed, out-of-time-order pair still verifies and exports in true chain order, exactly the shape a chain imported from another machine has &mdash; <code>audit.test.ts</code></td></tr>
+<tr><td>TC-RG-8-26</td><td>The register list skips an unreadable row instead of throwing and freezing the whole list &mdash; <code>register.test.ts</code></td></tr>
+<tr><td>TC-RG-8-27</td><td>An unrecognised event type (from a newer app version, or a damaged record) still renders a visible timeline line naming it, instead of a blank line &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p>The audit-export allowlist guard (every function the audit module exports must be named on an explicit allowlist, so a new write path fails this test until someone consciously adds it &mdash; the safeguard hand-off's own replace primitive had to be added to) is also an RG-8 invariant, but it already carries its own ids &mdash; <strong><code>TC-NF-2-01</code> / <code>TC-VD-4-01</code></strong>, in <code>register.test.ts</code> ("the audit trail exposes no update or delete path"). Referenced here, not renamed or re-numbered, per this round's brief.</p>
+<h3>Round 2 fixes (code-review-005 round 2, N1-N9 and the noted test gap)</h3>
+<p><em>Unlike the backfill above, every row in this table names a genuinely NEW test, written before its fix (reproduce first, then fix) per the round-2 brief. <code>partially_replaced</code>, <code>backup_out_of_date</code> and <code>finish_out_of_date</code> are new <code>ImportOutcome</code> values (<code>verdict-audit.md</code> &sect;16.4/&sect;16.8); the <code>finishRegisterReplace</code> export and the "Finish updating the register" UI action are new surface for RG-8 (&sect;16.8 amended). N3's lock-order rule (audit outer, register inner &mdash; <code>verdict-audit.md</code> &sect;16.6, <code>register-lifecycle.md</code> &sect;15.1c) is a new cross-cutting invariant, not scoped to one function.</em></p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-28</td><td>N1: a register-step failure after the audit trail was replaced returns a distinct <code>partially_replaced</code> outcome &mdash; never a thrown, self-contradicting message &mdash; and the audit trail really is replaced &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-29</td><td>N1: <code>finishRegisterReplace</code> completes the register step when the local audit tip still matches the bundle it already replaced &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-30</td><td>N1: <code>finishRegisterReplace</code> refuses as <code>finish_out_of_date</code>, writing nothing, when the audit trail has moved on since the partial replace &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-31</td><td>N2: <code>replaceWithBundle</code> refuses as <code>backup_out_of_date</code>, writing nothing, when a local write landed after the tip the caller's backup actually exported &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-32</td><td>N3: an <code>updateLifecycleStage</code> approval racing a concurrent <code>replaceWithBundle</code> can never leave the audit trail and register disagreeing (fixed lock order: audit outer, register inner, everywhere both queues are touched) &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-33</td><td>N4: a bundle whose verdict is missing <code>confidence_caveats</code> is rejected as <code>invalid_format</code> at import, instead of passing and failing later &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-34</td><td>N9: <code>__APP_VERSION__</code> equals <code>package.json</code>'s version &mdash; the assertion <code>src/vite-env.d.ts</code>'s comment cites &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-35</td><td>N4: a corrupt stored verdict (missing <code>confidence_caveats</code>, written directly, bypassing hand-off import) shows "This case couldn't be loaded" with a way back, instead of hanging on "Loading&hellip;" &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-36</td><td>N5: with no policy loaded, a control with a recorded attestation shows ATTESTED &mdash; NOT VERIFIED with the attester and evidence note, not EVIDENCE UNKNOWN &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-38</td><td>N1 (UI): after a register-step failure, "Finish updating the register" appears in <code>RegisterView</code> and completes the replace &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-39</td><td>N2 (UI): a local write after saving the backup sends the UI back to step 1, keeping the same pending bundle &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-40</td><td>N8: double-clicking "Save a backup of mine first" downloads only once &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-41</td><td>Test gap (noted alongside round 1): a second import started while one is in flight is ignored (the <code>importInFlight</code> guard) &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p>N7 (the plain export success message overclaiming that the file was saved) changes existing copy rather than adding a behaviour &mdash; <code>TC-RG-8-01</code>'s own test was updated to assert the corrected wording in place, not re-numbered.</p>
+<h3>Round 3 fixes (code-review-005 round 3, R3-1 through R3-5)</h3>
+<p><em>Same discipline as round 2: every row below names a genuinely NEW test, written before its fix (reproduce first, confirm it fails, then fix). <code>register_needs_finishing</code> is a new <code>ImportOutcome</code> value (<code>verdict-audit.md</code> &sect;16.4/&sect;16.8, amended). R3-3 and R3-5 touch <code>src/components/challenge-memo.ts</code>/<code>VerdictDisplay.tsx</code> and a test-file comment respectively, not the hand-off bundle itself &mdash; numbered into this same sequence because, like round 2's N5/N6/N7/N9, they are this round's fix pass, not a separate feature.</em></p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-42</td><td>R3-1: after a partial replace, re-importing the SAME bundle (standing in for the in-memory record of a pending finish being lost &mdash; a view switch or a reload) reports <code>register_needs_finishing</code>, naming both that the audit trail already matches and that the register does not; <code>finishRegisterReplace</code> then completes it and the register matches &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-43</td><td>R3-1 regression guard: a bundle that is genuinely fully absorbed, register included, still reports plain <code>up_to_date</code> &mdash; the new register check never fires a false positive &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-RG-8-44</td><td>R3-1 (UI): the same recovery through the real file input and buttons &mdash; unmounting after a partial replace and re-importing the same file in a fresh mount offers "Finish updating the register" (no backup step) and completes it &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-45</td><td>R3-2: while "Finish updating the register" is pending, "Import hand-off bundle" is disabled with a visible reason, and a second, different bundle landing on the import handler anyway is ignored outright &mdash; never both a Keep/Save-backup pair and a Finish pending together, and the ignored bundle's content never reaches the register &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-46</td><td>R3-4 (Minor): <code>finish_out_of_date</code> through the real "Finish updating the register" button (previously only a store-level test, <code>TC-RG-8-30</code>, covered this) &mdash; the audit trail moving on before the click is reported, and the register step never runs &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-47</td><td>R3-3: <code>buildChallengeMemo</code> on a verdict with no <code>explanation</code> at all (BC-V11C01-04 legacy verdicts) renders the same legacy note <code>RegisterDetail</code> shows, with every explanation-derived field falling back to "none recorded", instead of throwing &mdash; <code>challenge-memo.test.ts</code></td></tr>
+<tr><td>TC-RG-8-48</td><td>R3-3: clicking "Download effective-challenge memo" shows a visible error instead of failing silently when memo generation throws &mdash; <code>VerdictDisplay.memo-download.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-48b</td><td>R3-3: a later, successful download clears the earlier error &mdash; <code>VerdictDisplay.memo-download.test.tsx</code></td></tr>
+</tbody>
+</table>
+<p>R3-5 (a stale code comment in <code>src/engine/try-these.test.ts</code> claiming <code>docs/try-these.md</code> was left unedited, when the same commit had already updated it) is a comment-only correction &mdash; no behaviour changed, so no new test applies.</p>
+</section>
+
+<section id="rg-9-control-evidence-attestation">
+<h2>RG-9 &mdash; Control-evidence attestation</h2>
+<p><code>requirements/requirements.md</code>, RG-9: "A reviewer shall be able to record, against the current verdict, that a required control is in place, with their name and an evidence note. The attestation shall be shown as a human claim &mdash; "attested &mdash; not verified" &mdash; never as machine-verified, and shall be counted separately from machine-verified evidence."</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-9-01</td><td>Attesting a control records a <code>control_evidence_attested</code> audit event carrying the control id, the attester's name, the evidence note, and the verdict id &mdash; <code>RegisterDetail.controlEvidence.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-02</td><td>The per-control chip in "What you need to do" reads exactly "attested &mdash; not verified", lower-case like its neighbours &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-03</td><td>The evidence panel shows "ATTESTED &mdash; NOT VERIFIED" with the attester and evidence note, distinct from a "VERIFIED" control alongside it &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-04</td><td>The sign-off checklist counts machine-verified, attested, and outstanding controls separately, and calls the verified+attested total "addressed" &mdash; never "in place", which stays reserved for machine-verified &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-05</td><td>With no policy loaded, the sign-off checklist says evidence is unknown instead of a confident outstanding/addressed count &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-06</td><td>With no policy loaded, a recorded attestation still names itself on the checklist line, because it comes from the audit trail, not the policy &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-07</td><td>Attesting a second, different control while the first control's write is still in flight records both attestations, not just one &mdash; the in-flight guard is per control id &mdash; <code>RegisterDetail.controlEvidence.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-08</td><td>When the write fails, the attest form stays open with the error shown inline (typed values preserved) instead of silently closing as if it had saved &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-09</td><td>"Independent validation (2LoD)" &mdash; a control whose policy entry names a review's base id in <code>covers_reviews</code> &mdash; renders once, as the control, with an "also covers" note naming the matched review instance &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+</tbody>
+</table>
+<h3>Untested behaviours</h3>
+<p>None. Every behaviour on the original backfill's brief had an existing test that already proved it &mdash; that pass only added the id. The round-2 fix pass added genuinely new tests (TC-RG-8-28 through -41, table above) &mdash; each one written first, confirmed to fail, then fixed, per that round's brief. The round-3 fix pass (R3-1 through R3-5) adds TC-RG-8-42 through -48b, same discipline &mdash; the one exception is R3-5's comment-only correction, which has no behaviour to test.</p>
+<h3>Verification</h3>
+<p><code>python3 scripts/trace-check.py</code> &mdash; clean, every id in this file traced to a named test, no dangling <code>[Trace:]</code> paths. The original backfill re-ran its seven touched test files individually with <code>npm test -- &lt;path&gt;</code> (never bare <code>vitest</code> &mdash; this project's Node 26/jsdom <code>localStorage</code> gotcha) and produced the same pass count as before its edits, since no test body, assertion, or behaviour changed there &mdash; only <code>it()</code> title strings gained a <code>TC-RG-8-NN:</code> / <code>TC-RG-9-NN:</code> prefix; the full suite was explicitly out of scope for that pass. The round-2 fix pass is different in kind (real behaviour changed) and was verified accordingly: every touched test file 3x, the full suite 3x consecutively, <code>npx tsc --noEmit</code>, <code>python3 scripts/spec-parity-check.py</code>, and <code>python3 scripts/trace-check.py</code>, all clean. The round-3 fix pass (R3-1 through R3-5) was verified the same way as round 2.</p>
+</section>
+
+<section id="superseded">
+<h2>Superseded</h2>
+<table>
+<thead><tr><th>ID</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>TC-RG-8-37</td><td>R16 chunk D1 (build/prompts/R16.md v2.1 &sect;4.1) deleted <code>describesSameObligation</code>, the significant-word text heuristic this case guarded a subset-vs-equal-set bug in. The replacement mechanism (<code>covers_reviews</code>, a firm-authored, referential list of review base ids) does no word comparison at all, so the bug class &mdash; two names sharing some but not all significant words wrongly folding together &mdash; cannot recur. Superseded by TC-RG-9-09's migrated fixture, <code>VerdictDisplay.cr005.test.tsx</code>.</td></tr>
+<tr><td>TC-RG-9-10</td><td>Same deletion. This case guarded the heuristic's one-significant-word special case ("Validation" never absorbs a review alone). <code>covers_reviews</code> has no word-count concept to have that edge case at all &mdash; superseded by TC-RG-9-09's migrated fixture and the view-model's own <code>covers_reviews</code>/base-id-matching tests (<code>src/components/verdict-view-model.test.ts</code>, TC-R16-D1-07).</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="changelog">
+<h2>Changelog</h2>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-09-28</td><td>Written to close the RG-8/RG-9 traceability gap.</td></tr>
+<tr><td>2026-09-28</td><td>Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41.</td></tr>
+<tr><td>2026-10-02</td><td>Round 3 fix pass (code-review-005 round 3, R3-1 through R3-5): 8 new tests added, TC-RG-8-42 through TC-RG-8-48b.</td></tr>
+<tr><td>2026-10-02</td><td>R16 chunk D1: TC-RG-8-37 and TC-RG-9-10 superseded (describesSameObligation deleted, replaced by <code>covers_reviews</code>); TC-RG-9-09's description updated to describe the replacement mechanism &mdash; see test-cases-020.md for the chunk's own new cases.</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

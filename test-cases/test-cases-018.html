@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 18 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-1-pe-9-list-valued-system-access-scope">&sect;1.1 &mdash; PE-9: list-valued <code>system_access_scope</code></a></li>
+                <li><a href="#1-2-cf-6-optional-plain-language-schema-fields">&sect;1.2 &mdash; CF-6: optional plain-language schema fields</a></li>
+                <li><a href="#1-3-every-review-has-a-source">&sect;1.3 &mdash; Every review has a source</a></li>
+                <li><a href="#1-5-envelope-ts-ranking-export">&sect;1.5 &mdash; <code>envelope.ts</code> ranking export</a></li>
+                <li><a href="#1-4-loader-check-checkpolicyreferences-and-its-c">&sect;1.4 &mdash; Loader check (<code>checkPolicyReferences</code>) and its call sites</a></li>
+                <li><a href="#chunk-a2-plain-language-text-owner-approved">Chunk A2 &mdash; plain-language text (owner-approved)</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 18</h1>
+<p class="metadata">2 October 2026 &middot; Generated from test-cases-018.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-02. R16 chunk A1 &mdash; the schema, engine and loader-check work behind the plain-language redesign (<code>build/prompts/R16.md</code> v2.1, &sect;1.1&ndash;&sect;1.5): PE-9's list-valued <code>system_access_scope</code>, CF-6's optional plain-language schema fields, per-instance downstream review sources, the <code>checkPolicyReferences</code> loader check and its call-site wiring, and the <code>envelope.ts</code> ranking export. The plain-language TEXT (chunk A2), the guided form (chunk B/E) and the verdict's first screen (chunk D1/D2) are separate, later chunks &mdash; nothing here renders a token, a placeholder, or new user-facing copy.</em></p>
+<p>Test files: <code>src/engine/access-scope.test.ts</code>, <code>src/engine/condition.test.ts</code>, <code>src/engine/agent-infra.test.ts</code>, <code>src/engine/build-graph-from-form.test.ts</code>, <code>src/components/field-copy.test.ts</code>, <code>src/components/graph-summary.test.ts</code>, <code>src/components/__tests__/GraphView.r16a1.test.tsx</code>, <code>src/store/policy.test.ts</code>, <code>src/store/packs.test.ts</code>, <code>src/engine/evaluate.test.ts</code>, <code>src/engine/jurisdiction.test.ts</code>, <code>src/engine/envelope.test.ts</code>, <code>src/store/policy-references.test.ts</code>, <code>src/components/__tests__/App.r16a1.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16a1.test.tsx</code>, <code>src/components/__tests__/PolicyEditor.r16a1.test.tsx</code>, <code>src/components/__tests__/SettingsPanel.r16a1.test.tsx</code>, <code>src/seeds/sample-register.test.ts</code>, <code>src/seeds/ib-portfolio.test.ts</code>, <code>src/seeds/aigate-self-assessment.test.ts</code>.</p>
+
+<section id="1-1-pe-9-list-valued-system-access-scope">
+<h2>&sect;1.1 &mdash; PE-9: list-valued <code>system_access_scope</code></h2>
+<p><code>normaliseAccessScope</code> (<code>src/engine/access-scope.ts</code>) is the single implementation of the validate/canonicalise rule; <code>condition.ts</code> and every renderer that touches the field were updated to handle a list without crashing, per the contract.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-01</td><td><code>normaliseAccessScope</code> accepts a single known value and preserves its shape (bare string, not wrapped in an array) &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-02</td><td>Accepts an array and returns it in canonical order &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-03</td><td>Shuffled tick order produces the byte-identical canonical array regardless of input order &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-04</td><td>Rejects an empty array (non-empty rule) &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-05</td><td>Rejects undefined/null as having no value &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-06</td><td>Rejects an unknown value, single or inside a list &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-07</td><td>Rejects duplicate values in a list &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-08</td><td>Rejects "none" combined with another value, in either order &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-09</td><td>Accepts "none" alone, as a single value or a one-element list &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-10</td><td><code>ACCESS_SCOPE_CANONICAL_ORDER</code> is none, shared_infrastructure, credentialed_systems, deployment_authority &mdash; <code>access-scope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-11</td><td>An array-valued field contributes each element to the candidate set (<code>collectFieldValues</code>) &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-12</td><td>A single (non-array) value on a list-valued field still matches as before &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-13</td><td><code>describeGraphPath</code> names every input, not just the first, with two inputs &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-14</td><td>Names every input with three inputs &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-15</td><td>A single input keeps the existing input &rarr; model &rarr; output shape &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-16</td><td>Falls back to the processing node when there are no input nodes at all &mdash; <code>condition.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-17</td><td>A two-kind agent (shared infrastructure + credentialed systems ticked at once) trips both INV-AGENT-INFRA-01 and INV-AGENT-CRED-01, with both controls &mdash; <code>agent-infra.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-18</td><td><code>buildGraphFromForm</code>: a single systemAccessScope value is stored unchanged (shape preserved) &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-19</td><td>A list of systemAccessScope values is stored in canonical order, regardless of tick order &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-20</td><td>An invalid systemAccessScope (e.g. "none" + another value) is omitted, not fabricated &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-21</td><td><code>systemAccessScopeLabel</code>: a single value renders exactly as before this change &mdash; <code>field-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-22</td><td>A list of values renders every value, joined, without crashing &mdash; <code>field-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-23</td><td>A one-element list renders the same as the bare value it contains &mdash; <code>field-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-24</td><td><code>graphSummaryRows</code>: a single system_access_scope value renders one row, unchanged &mdash; <code>graph-summary.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-25</td><td>A list of system_access_scope values does not crash and names every value &mdash; <code>graph-summary.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-26</td><td><code>GraphView</code> display: a single value renders its meaning, as before &mdash; <code>GraphView.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-27</td><td>A list of values renders without crashing and names every value &mdash; <code>GraphView.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-28</td><td><code>validateConditionFieldValue</code> accepts the "in" operator on system_access_scope &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-29</td><td>Rejects not_in on system_access_scope &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-30</td><td>Rejects gte/lte on system_access_scope &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-31</td><td>Rejects bare equality on system_access_scope &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-32</td><td>Rejects an unknown value inside an "in" list on system_access_scope (canonical vocabulary) &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-33</td><td>A policy whose invariant condition uses not_in on system_access_scope is rejected end-to-end via <code>loadPolicy</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-34</td><td>A pack rule whose condition uses not_in on system_access_scope rejects the WHOLE pack via <code>loadPacks</code> &mdash; <code>packs.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="1-2-cf-6-optional-plain-language-schema-fields">
+<h2>&sect;1.2 &mdash; CF-6: optional plain-language schema fields</h2>
+<p>All fields below are optional; the shipped starter policy (with none of them) loads unchanged &mdash; asserted directly in both <code>policy.test.ts</code> and <code>policy-references.test.ts</code> (TC-R16-A1-51).</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-35</td><td>A control accepts <code>plain_action</code>, <code>plain_owner</code>, <code>plain_owner_with</code> and <code>covers_reviews</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-36</td><td>An invariant accepts <code>plain_reason</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-37</td><td>A hard line accepts <code>plain_reason</code> and <code>plain_change</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-38</td><td>A <code>downstream_reviews</code> rule accepts <code>plain_name</code> and <code>plain_owner</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-39</td><td>A platform/vendor registry entry accepts <code>plain_name</code>, <code>vendor_id</code> and <code>kind</code> &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-40</td><td>Rejects an invalid <code>kind</code> value on a vendor entry &mdash; <code>policy.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-41</td><td>A pack <code>required_review</code> effect accepts optional <code>plain_name</code> and <code>plain_owner</code> &mdash; <code>packs.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="1-3-every-review-has-a-source">
+<h2>&sect;1.3 &mdash; Every review has a source</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-42</td><td>The pack hard-line rejection carries <code>downstream_reviews</code> and <code>downstream_review_sources</code>, mirroring the base hard-line branch &mdash; the documented bug fix (previously neither field was set) &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-43</td><td>A BASE hard-line rejection carries sources from the firm, unregistered-component and model-governance producers (never pack obligations, since tier/track are skipped on a hard-line trip) &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-44</td><td><code>downstream_reviews</code> is derived from <code>downstream_review_sources</code>, de-duplicated by review text &mdash; two firm rules sharing the same review text (DR-INFOSEC-01/02) produce two sources but one review string &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-45</td><td>The FINAL assembly branch includes a pack-sourced review, keyed by the pack rule's own id &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-46</td><td>The UNSATISFIABLE-INVARIANT rejection branch also includes the pack-sourced review, from all four producers &mdash; <code>evaluate.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-47</td><td><code>applyJurisdictionOverrides</code>'s <code>addedReviews</code> is sorted by <code>rule_id</code>, deterministically, across multiple firing review rules &mdash; <code>jurisdiction.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="1-5-envelope-ts-ranking-export">
+<h2>&sect;1.5 &mdash; <code>envelope.ts</code> ranking export</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-48</td><td><code>DATA_CLASS_RANK</code> ranks MNPI above Client PII above Confidential above Internal above Public &mdash; <code>envelope.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-49</td><td><code>maxBy</code> picks the most-sensitive class regardless of input order &mdash; <code>envelope.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="1-4-loader-check-checkpolicyreferences-and-its-c">
+<h2>&sect;1.4 &mdash; Loader check (<code>checkPolicyReferences</code>) and its call sites</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-50</td><td>A clean policy with no plain-language fields and no <code>covers_reviews</code> has no errors and no warnings &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-51</td><td>The real shipped starter policy (no plain-language fields yet) loads with no errors &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-52</td><td>Errors &mdash; a <code>covers_reviews</code> id that is not a firm review id, a pack review rule id, <code>PV-UNREGISTERED</code> or <code>MODEL-REGISTRY</code>, in the contract's own message shape &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-53</td><td><code>covers_reviews</code> accepts a firm review id &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-54</td><td>Accepts a pack <code>required_review</code> rule id, but not a pack rule of a different effect type &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-55</td><td>Accepts the bare <code>PV-UNREGISTERED</code> and <code>MODEL-REGISTRY</code> sentinels &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-56</td><td>Errors &mdash; a non-"in" operator on the list-valued system_access_scope field, in an invariant condition, a hard line condition, a downstream_reviews condition, a track condition and a tier trigger &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-57</td><td>A pack rule condition using a non-"in" operator on a list-valued field is also an error &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-58</td><td>Warnings &mdash; an unknown placeholder in a plain-language field; <code>{audience}</code> and <code>{destination}</code> are recognised and do not warn &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-59</td><td>Warnings &mdash; an unknown <code>@</code> token in <code>plain_owner</code>; <code>@submitter</code> and <code>@model_owner</code> are recognised and do not warn &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-60</td><td>Warnings &mdash; a platform or vendor with no <code>plain_name</code>; one with <code>plain_name</code> does not warn &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-61</td><td>A pack <code>required_review</code> effect's <code>plain_name</code>/<code>plain_owner</code> are scanned for placeholders and tokens too &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-62</td><td>App.tsx start-up gate: a <code>covers_reviews</code> reference error shows the "Policy file invalid" banner, naming the bad id, evaluation disabled &mdash; <code>App.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-63</td><td>IntakeFlow's first evaluation gate: clicking Proceed with a reference error shows the message via <code>reviewGateError</code> and does not proceed to the questionnaire/confirmation step &mdash; <code>IntakeFlow.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-64</td><td>PolicyEditor Validate shows a <code>covers_reviews</code> reference error, naming the control and the missing id &mdash; <code>PolicyEditor.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-65</td><td>PolicyEditor Save is refused on the same reference error &mdash; <code>onSaved</code> is never called &mdash; <code>PolicyEditor.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-66</td><td>A reference WARNING (e.g. a platform with no plain_name) still validates successfully and is listed, never blocking &mdash; <code>PolicyEditor.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-67</td><td>SettingsPanel refuses "Load sample use cases" with a specific reference-error message, not the seed function's own "nothing added" &mdash; <code>SettingsPanel.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-68</td><td>Refuses "Reload investment-bank portfolio" with the same specific message &mdash; <code>SettingsPanel.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-69</td><td><code>seedSampleRegister</code> refuses to seed at all on a policy reference error &mdash; <code>sample-register.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-70</td><td><code>seedIbPortfolio</code> refuses to seed at all on a policy reference error &mdash; <code>ib-portfolio.test.ts</code></td></tr>
+<tr><td>TC-R16-A1-71</td><td><code>seedAigateSelfAssessment</code> refuses to seed at all on a policy reference error &mdash; <code>aigate-self-assessment.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Untested behaviours</h3>
+<ul>
+<li>IntakeFlow's <strong>second</strong> evaluation gate (the description-first/correction path, just before the final <code>evaluate()</code> call) is wired identically to the first (same <code>checkPolicyReferences</code> call, same <code>reviewGateError</code> pattern) but has no dedicated UI-level test &mdash; TC-R16-A1-63 proves the pattern through the first gate, which is reached by a much shorter path (a seeded <code>graph_review</code> draft vs. a full confirmation-step rebuild). Reusing an identical, already-proven code shape at the second site was judged lower-risk than the cost of a second full end-to-end harness.</li>
+<li>The downstream backtest re-run (<code>npm test</code>, which runs <code>backtest-corpus.test.ts</code> and <code>backtest-predictions.test.ts</code>) found <strong>zero</strong> worked cases whose <code>downstream_reviews</code> changed &mdash; <code>backtest/engine- verdicts.json</code> is byte-identical before and after this chunk (<code>git diff</code> confirms it), because none of the four shipped packs (<code>policy/packs/*.yaml</code>) defines a <code>hard_line</code> effect, so the pack hard-line bug fix (TC-R16-A1-42) has no real corpus case to move. This is the expected outcome stated in the contract (&sect;1.3: "expected: only pack-hard-line rejections, which now list reviews") &mdash; there are none in the real corpus today, so no pinned expectation in <code>backtest/use- cases.md</code> or <code>backtest/corpus.md</code> needed updating.</li>
+<li>Token rendering (<code>@submitter</code>/<code>@model_owner</code>) and placeholder resolution (<code>{audience}</code>/<code>{destination}</code>) are explicitly out of scope for this chunk (chunk D1's view-model) &mdash; <code>checkPolicyReferences</code> validates which tokens/placeholders are <em>legal</em>, never resolves one, and no test here asserts resolved output.</li>
+</ul>
+<h3>Verification</h3>
+<p><code>python3 scripts/trace-check.py</code> and <code>python3 scripts/spec-parity-check.py</code> &mdash; both clean. Every file touched was run individually with <code>npm test -- &lt;path&gt;</code> (never bare <code>vitest</code>) three times consecutively, then the full suite three times via <code>npm test</code>. <code>npx tsc --noEmit</code> and <code>npm run build</code> both clean.</p>
+</section>
+
+<section id="chunk-a2-plain-language-text-owner-approved">
+<h2>Chunk A2 &mdash; plain-language text (owner-approved)</h2>
+<p>Fills the CF-6 schema fields chunk A1 added, with the exact text approved in <code>build/prompts/R16.md</code> v2.1 &sect;1.6: <code>plain_action</code>/<code>plain_owner</code>/ <code>plain_owner_with</code>/<code>covers_reviews</code> on all 22 controls, <code>plain_reason</code> on all 23 invariants, <code>plain_reason</code>/<code>plain_change</code> on all 5 hard lines, <code>plain_name</code>/<code>plain_owner</code> on the firm's three downstream review rules and on the three pack <code>required_review</code> rules this reaches (<code>SS1-UK-REV-01</code>, <code>DORA-EU-REV-01</code>, <code>SR262-US-REV-01</code>), <code>plain_name</code> (+ <code>vendor_id</code> on <code>PLAT-CLOUD-LLM</code>) on both platforms, and <code>plain_name</code> + <code>kind</code> on <code>VENDOR-APPROVED-LLM</code>. Presentation text only &mdash; <code>reason</code>, <code>description</code>, <code>condition</code> and <code>regulatory_basis</code> are untouched, and nothing this chunk writes is read by the engine yet (chunk D1 renders it). Policy <code>version</code> 1.6 &rarr; 1.7; each of the three edited packs' own <code>version</code> bumped too, with a dated change-log note &mdash; <code>grounding/PACK-AUTHORING.md</code>'s "on change" rule (RA-10) requires re-review/re-sign only for rules citing a CHANGED SECTION, which is none of these (no <code>source.text</code>, <code>condition</code>, effect type/review wording, or <code>basis</code> changed), so sign-off status is unchanged. <code>grounding/PACK-AUTHORING.md</code> also gains a reviewer-checklist line (R16 &sect;1.4, D-51): a <code>covers_reviews</code> entry is a claim the control's action satisfies that review, to be checked like any other condition.</p>
+<p>Test file: <code>src/store/plain-language-coverage.test.ts</code>, reading the shipped <code>policy/appetite.yaml</code> and <code>policy/packs/*.yaml</code> directly off disk.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A2-01</td><td>Every control in the shipped policy has <code>plain_action</code> and <code>plain_owner</code> set &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-02</td><td>Every invariant in the shipped policy has <code>plain_reason</code> set &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-03</td><td>Every hard line in the shipped policy has <code>plain_reason</code> and <code>plain_change</code> set &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-04</td><td>The firm's three downstream review rules (DR-INFOSEC-01, DR-INFOSEC-02, DR-VENDOR-01) each have <code>plain_name</code> and <code>plain_owner</code> &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-05</td><td>The three pack <code>required_review</code> rules this chunk reaches (SS1-UK-REV-01, DORA-EU-REV-01, SR262-US-REV-01) each have <code>plain_name</code> and <code>plain_owner</code> &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-06</td><td>Both platforms have <code>plain_name</code>; PLAT-CLOUD-LLM carries <code>vendor_id: VENDOR-APPROVED-LLM</code> and PLAT-INTERNAL-ML carries none &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-07</td><td>Vendor VENDOR-APPROVED-LLM has <code>plain_name</code> and <code>kind: company_assistant</code> &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-08</td><td><code>covers_reviews</code> is set exactly where the contract specifies (<code>CTRL-INDEP-VAL-01</code> &rarr; <code>[SS1-UK-REV-01]</code>, <code>CTRL-TPRM-01</code> &rarr; <code>[DR-VENDOR-01, PV-UNREGISTERED]</code>) and on no other control &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-09</td><td><code>checkPolicyReferences</code> on the shipped policy + packs returns no errors and no warnings at all (stronger than "no missing-plain_name warnings") &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-10</td><td>No plain-language field in the shipped policy or its packs contains "approved", "rejected" or "fired" &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-11</td><td>The shipped policy's <code>version</code> is <code>"1.7"</code> &mdash; <code>plain-language-coverage.test.ts</code></td></tr>
+<tr><td>TC-R16-A2-12</td><td>With no rule packs loaded at all, an unresolved <code>covers_reviews</code> id is a warning, not an error (it can't be checked, and an id matching nothing can only fail to fold a review, never hide one); with packs loaded it stays an error (TC-R16-A1-52) &mdash; <code>policy-references.test.ts</code></td></tr>
+</tbody>
+</table>
+<h3>Backtest (byte-identical check)</h3>
+<p><code>backtest-predictions.test.ts</code> and <code>backtest-corpus.test.ts</code> were re-run unedited against the new policy/pack text. <code>git diff backtest/engine- verdicts.json</code> shows exactly one line changed &mdash; <code>policy_version: "1.6"</code> &rarr; <code>"1.7"</code> &mdash; no verdict, controls list, downstream_reviews, tripped invariant, or applied override differs for any of the 31 corpus cases. The new <code>PLAT-CLOUD-LLM.vendor_id</code> link has no engine effect: <code>resolveInheritance()</code> (<code>src/engine/evaluate.ts</code>) resolves <code>platform</code>/<code>vendor</code> only from the graph's own declared ids and never reads a platform's <code>vendor_id</code> &mdash; that mapping is chunk B's form work &mdash; confirmed by grep before editing and by the unchanged backtest after.</p>
+<h3>Verification (chunk A2)</h3>
+<p>Touched test run individually three times consecutively via <code>npm test -- src/store/plain-language-coverage.test.ts</code>, then the full suite three times via <code>npm test</code>. <code>npx tsc --noEmit</code>, <code>npm run build</code>, <code>python3 scripts/spec-parity-check.py</code> and <code>python3 scripts/trace-check.py</code> all clean. <code>npm run docs:rules</code> regenerated (policy version line only).</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-02</td><td>Written for R16 chunk A1 (schema, engine, loader).</td></tr>
+<tr><td>2026-10-02</td><td>Written for R16 chunk A2 (plain-language policy text).</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

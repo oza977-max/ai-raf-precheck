@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 11 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#r11-mg-model-governance">R11-MG &mdash; Model governance</a></li>
+                <li><a href="#r11-kl-the-knowledge-lens">R11-KL &mdash; The knowledge lens</a></li>
+                <li><a href="#r11-ui-r11-doc-three-levers-visibly-distinct">R11-UI / R11-DOC &mdash; Three levers, visibly distinct</a></li>
+                <li><a href="#non-functional">Non-functional</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 11</h1>
+<p class="metadata">17 August 2026 &middot; Generated from test-cases-011.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-08-17 alongside the build (v0.13.0) from <code>requirements/requirements-011.md</code>. Traceability 100% at birth.</em></p>
+<p>Test files: <code>src/engine/evaluate.test.ts</code> (TC-R11-MG-1..5, model governance; TC-R11-MG-1a-1..5, model families), <code>src/store/register.model-nodes.test.ts</code> (TC-R11-MG-6, the anti-dormancy guard), <code>src/engine/knowledge-lens.test.ts</code> (TC-R11-KL-*, including TC-R11-KL-NF-1 determinism), plus <code>src/components/__tests__/KnowledgeLensPanel.test.tsx</code> and <code>RegisterDetail.knowledgeLens.test.tsx</code>.</p>
+
+<section id="r11-mg-model-governance">
+<h2>R11-MG &mdash; Model governance</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R11-MG-1..5</td><td>An unlisted or <code>is_approved: false</code> declared model trips a named review (mirrors the existing vendor-approval pattern exactly); an approved model does not; determinism holds with <code>approved_models</code> present</td></tr>
+<tr><td>TC-R11-MG-6</td><td>Two use cases declaring the same <code>model_id</code> produce exactly ONE <code>ai_model</code> register node and TWO <code>uses_model</code> edges &mdash; the dormancy-repeat guard</td></tr>
+<tr><td>TC-R11-MG-1a-1..5</td><td>An exact <code>model_id</code> match wins even when an overlapping family entry also matches; a family-only entry (<code>is_family</code>, <code>version_pattern</code> prefix) approves a differently-versioned declared id with no exact entry; no match (neither exact nor family) still reports as unlisted; Track II's <code>CTRL-FINGERPRINT-01</code> pinning requirement is unaffected by family approval, since it triggers on graph attributes independent of <code>approved_models</code>; 10-run determinism holds with family entries present</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="r11-kl-the-knowledge-lens">
+<h2>R11-KL &mdash; The knowledge lens</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R11-KL-*</td><td><code>parseKnowledgeLens</code> (zod <code>.strict()</code>) rejects an entry with an unrecognised key &mdash; the structural "cannot decide" guarantee; <code>matchKnowledgeLens</code> returns matches sorted by entry id; <code>covered</code> is computed correctly from <code>covering_rule_ids</code> ∩ fired rule ids; the advisory panel renders the posture line "informs &mdash; the rules decide" and distinct (dashed) styling, never interleaved with invariants or jurisdiction packs</td></tr>
+<tr><td>TC-R11-KL-NF-1</td><td>The critical determinism proof: <code>evaluate()</code> is called before and after computing a real, non-empty <code>matchKnowledgeLens</code> result from the actual <code>grounding/risk-knowledge.yaml</code> &mdash; both serialized verdicts are byte-identical, and no lens-shaped key (<code>risk_domain</code>, <code>knowledge_lens</code>, etc.) appears anywhere in the output. <code>evaluate()</code>'s signature has no lens parameter, so there is no argument slot for lens data to reach it through &mdash; this is the "true by construction" property ADR-EE-R11-1 claims, exercised, not asserted by inspection</td></tr>
+<tr><td>&mdash;</td><td>Coverage-gap filing (<code>handleFileKnowledgeGap</code> in RegisterDetail.tsx) writes exactly one <code>rule_dissent_filed</code> event, reusing R4's identical write path &mdash; no new event type, no new write surface</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="r11-ui-r11-doc-three-levers-visibly-distinct">
+<h2>R11-UI / R11-DOC &mdash; Three levers, visibly distinct</h2>
+<p>Held by the existing render-test patterns extended in this round: <code>PolicyEditor.test.tsx</code> covers the three-lever summary bar and the risk-knowledge panel (fixed one label collision &mdash; "Jurisdiction packs" appeared as both a lever label and a panel heading; the lever label was renamed to "Regulation" to match the README's own subgraph naming and stay find-by-text-safe); <code>About.test.tsx</code> is unaffected since the rewritten "The three levers" section introduced no new heading text under test. The README diagram was render-verified before commit (rendered via a Mermaid artifact preview, since no dedicated render-check page existed for this diagram at the time).</p>
+</section>
+
+<section id="non-functional">
+<h2>Non-functional</h2>
+<p>R11-NF-1 (byte-identical with/without the knowledge lens) is TC-R11-KL-NF-1 above &mdash; the strongest form of this guarantee in the codebase, since the lens literally has no path to <code>evaluate()</code>'s call signature. R11-NF-2 (reserved words, append-only) is held by the suite-wide guard plus R4's unmodified write path. R11-NF-3 (CC BY 4.0 attribution) is asserted by grep-able presence in <code>grounding/risk-knowledge.yaml</code>'s header comment, every <code>KnowledgeLensEntry.source_attribution</code> field, the About screen, and the README.</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-08-17</td><td>Written with the R11 build.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round 15 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#r15-c3-guided-form-confirm-attest-questionnaire-">R15-C3 &mdash; Guided form + Confirm &amp; attest + questionnaire tag</a></li>
+                <li><a href="#r15-c4-appetite-framework-split-header-chip">R15-C4 &mdash; Appetite framework split + header chip</a></li>
+                <li><a href="#r15-c5-graph-review-refinements-rule-improvement">R15-C5 &mdash; Graph review refinements + rule-improvement queue</a></li>
+                <li><a href="#superseded">Superseded</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round 15</h1>
+<p class="metadata">25 August 2026 &middot; Generated from test-cases-015.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-08-25 alongside the R15 build (targeted UI redesign, <code>requirements/requirements-015.md</code>, <code>reviews/design-deliberation-001/proposal.md</code>). R15-C1 and R15-C2 shipped without new automated test cases; this file starts with R15-C3.</em></p>
+
+<section id="r15-c3-guided-form-confirm-attest-questionnaire-">
+<h2>R15-C3 &mdash; Guided form + Confirm &amp; attest + questionnaire tag</h2>
+<p>Proposal &sect;3.2, &sect;3.5, &sect;3.7. Skeptic amendment S1b (Must): the raw-vocabulary fix lands at the shared source, <code>graph-summary.ts#graphSummaryRows()</code>, so both ConfirmationStep and VerdictDisplay's "What you told us" fold pick it up from one function.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R15-C3-01</td><td><code>graphSummaryRows()</code> routes Input data / Model / Autonomy / Data zone / Output through <code>field-copy.ts</code>'s <code>plainWithCode()</code> &mdash; the rendered value is <code>"&lt;short plain phrase&gt; &middot; &lt;code&gt;"</code>, not the raw enum alone (S1b)</td></tr>
+<tr><td>TC-R15-C3-02</td><td>The same fixed row shape appears at BOTH call sites from one function: ConfirmationStep's attest grid (<code>ConfirmationStep.test.tsx</code>, pre-existing coverage, unaffected by this change) and VerdictDisplay's "What you told us" fold (<code>VerdictDisplay.test.tsx</code>, renegotiated in this round &mdash; see below) <strong>[Amended 2026-09-28: the "pre-existing coverage" claim for ConfirmationStep.test.tsx was inaccurate &mdash; that file had no assertion on the attest grid's rows. A new test there now proves the ConfirmationStep call site.]</strong></td></tr>
+<tr><td>TC-R15-C3-03</td><td>The <code>UC-6 &middot; CONFIRM &amp; ATTEST</code> internal-id tag no longer renders on the Confirm &amp; attest screen</td></tr>
+<tr><td>TC-R15-C3-04</td><td>The <code>UC-4 &middot; TARGETED QUESTIONS</code> internal-id tag no longer renders on the targeted-questions screen</td></tr>
+<tr><td>TC-R15-C3-05</td><td><code>StructuredForm</code> renders five <code>&lt;fieldset&gt;</code>/<code>&lt;legend&gt;</code> sections ("About it", "What it uses", "What the AI is and how it runs", "What comes out and who it reaches", "Where it applies") &mdash; verified live; no automated DOM-structure assertion added (out of scope for this pass) <strong>[Amended 2026-09-28: an automated fieldset/legend test now exists in StructuredForm.test.tsx.]</strong></td></tr>
+<tr><td>TC-R15-C3-06</td><td>No form field is hidden behind an "advanced" toggle &mdash; all pre-existing <code>getByLabelText</code> queries in <code>StructuredForm.test.tsx</code> still resolve unchanged, proving every field stayed on the single scroll</td></tr>
+<tr><td>TC-R15-C3-07</td><td>The load-bearing zone-crossing sentence ("not where the data is stored &mdash; where it gets sent...") and the load-bearing bindingness sentence ("be honest about what happens in practice...") stay visible outside their "Why we ask" <code>&lt;details&gt;</code> &mdash; pre-existing <code>StructuredForm.test.tsx</code> assertions on both sentences continue to pass unchanged</td></tr>
+<tr><td>TC-R15-C3-08</td><td>Optional fields (platform, vendor, decision type, human-in-the-loop) state the consequence of leaving them blank in the field label itself ("optional &mdash; blank means: &hellip;") <strong>[Amended 2026-09-28: true for platform, vendor and human-in-the-loop, which use "optional &mdash; blank means: &hellip;" verbatim. The decision-type label instead reads "optional &mdash; leave blank only if it feeds no decision at all" &mdash; guidance on when blank is allowed, not the consequence of blank. The test pins each label's real text; the wording inconsistency is recorded here, not hidden.]</strong></td></tr>
+<tr><td>TC-R15-C3-09</td><td><code>FIELD_CONSEQUENCES</code> (field-copy.ts, R5-GR-1) &mdash; computed since that round and never rendered anywhere &mdash; is now consumed by <code>StructuredForm</code>'s "Why we ask" disclosures, closing a computed-but-never-consumed gap</td></tr>
+</tbody>
+</table>
+<h3>Renegotiated</h3>
+<ul>
+<li><code>VerdictDisplay.test.tsx</code> &mdash; "renders the record &amp; provenance panel..." previously asserted the raw <code>'Client notes &middot; Client PII'</code> / <code>'Drafting model &middot; llm'</code> strings. Renegotiated (not weakened) to assert the plainWithCode() form the shared fix now produces: <code>'Client notes &middot; Personal details of clients &middot; Client PII'</code> / <code>'Drafting model &middot; A chatbot or writing assistant &middot; LLM'</code>.</li>
+</ul>
+<h3>Verification</h3>
+<p><code>npm test</code> &times;3 &mdash; 680/680, identical across runs. <code>npx tsc --noEmit</code> clean. <code>npm run build</code> clean. <code>python3 scripts/spec-parity-check.py</code> &mdash; clean (R1&ndash;R8 all pass). No new automated tests target TC-R15-C3-05 (fieldset structure) or the questionnaire rule-name-with-quiet-id change (&sect;3.7) directly &mdash; both were verified by reading the rendered JSX and by TypeScript's structural checks, not by a live browser walkthrough, which this build pass did not have tooling access to run.</p>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-08-25</td><td>Written with the R15-C3 build.</td></tr>
+<tr><td>2026-08-25</td><td>R15-C4 section added.</td></tr>
+</tbody>
+</table>
+<hr>
+</section>
+
+<section id="r15-c4-appetite-framework-split-header-chip">
+<h2>R15-C4 &mdash; Appetite framework split + header chip</h2>
+<p>Proposal &sect;3.4, &sect;3.8. Readable rulebook (levers, action-required banner, jurisdiction packs, hard lines, risk knowledge) is now the default view of <code>PolicyEditor.tsx</code> for every role; the YAML editor sits behind a closed-by-default <code>aria-expanded</code> disclosure carrying the honest no-sign-in line. The header's "translation fidelity" chip drops its <code>title=</code> tooltip for a visible warning + an <code>aria-expanded</code> disclosure carrying the same <code>attestation.reason</code> text.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R15-C4-01</td><td><code>PolicyEditor</code>'s YAML-editor disclosure button renders <code>aria-expanded="false"</code> on first render and the <code>#policy-yaml-input</code> textarea is not in the document until it is opened &mdash; the readable panels above it (levers, jurisdiction packs, hard lines, risk knowledge) render regardless, satisfying "readable rulebook is the default view" <strong>[Amended 2026-09-28: the mechanism has since changed &mdash; design-review round 4 migrated this disclosure to the shared native &lt;details&gt;/&lt;summary&gt; Fold, so it carries an open attribute, not aria-expanded. The substance (closed by default, readable panels render regardless) is what the test proves.]</strong></td></tr>
+<tr><td>TC-R15-C4-02</td><td>Opening the disclosure flips <code>aria-expanded</code> to <code>true</code>, reveals the textarea, Validate/Save and the verbatim honesty sentence "This build has no sign-in &mdash; anyone can open this. A real deployment restricts it to the rule authors." <strong>[Amended 2026-09-28: same mechanism change as C4-01 &mdash; opening the &lt;details&gt; reveals the textarea and the honesty sentence.]</strong></td></tr>
+<tr><td>TC-R15-C4-03</td><td>All pre-existing <code>PolicyEditor.test.tsx</code> and <code>PolicyEditor.r12.test.tsx</code> coverage (pre-fill, validate, save success/failure, ACTION REQUIRED banner, jurisdiction pack list, hard lines, pack age/overdue, invalid-YAML panel suppression) is unchanged in behaviour &mdash; only renegotiated to open the disclosure first before querying the textarea</td></tr>
+<tr><td>TC-R15-C4-04</td><td><code>WalkingSkeleton.test.tsx</code>'s P7-C03 Part B save-flow integration test opens the disclosure before finding the textarea; the real-save assertion (queued count, header policy version bump) is otherwise unchanged</td></tr>
+<tr><td>TC-R15-C4-05</td><td>No role prop is read by <code>PolicyEditor</code>, and none was before this chunk &mdash; confirmed by reading the component and its call site in <code>App.tsx</code> (<code>&lt;PolicyEditor onSaved={...} /&gt;</code>, unconditional). The "NOT role-gated" requirement (&sect;3.4) was already true structurally; this chunk adds a code comment recording the check rather than removing gating that did not exist. This is the documented exception to G6 (&sect;7 gates), not a violation of it</td></tr>
+<tr><td>TC-R15-C4-06</td><td><code>App.tsx</code>'s fidelity chip no longer renders a <code>title=</code> attribute; a button with <code>aria-expanded</code> toggles a <code>&lt;p&gt;</code> containing <code>attestation.reason</code> verbatim &mdash; verified by reading the JSX (no automated App.tsx test previously covered the <code>title=</code> tooltip, so none needed renegotiating)</td></tr>
+<tr><td>TC-R15-C4-07</td><td><code>VerdictDisplay.tsx</code>'s "Rulebook translation: unattested &mdash; the jurisdiction pack rules used here are proposed readings your firm has not yet adopted." checklist line (added R15-C2) is untouched &mdash; confirmed by diff; this chunk only touches the header instance</td></tr>
+</tbody>
+</table>
+<h3>Verification</h3>
+<p><code>npm test</code> &times;3 &mdash; 682/682, identical across runs (up from 680 in R15-C3; six tests added, four renegotiated in place). <code>npx tsc --noEmit</code> clean. <code>npm run build</code> clean. <code>python3 scripts/spec-parity-check.py</code> &mdash; clean (R1&ndash;R8 all pass; no spec <code>.md</code>/<code>.html</code> file was touched this chunk). No live browser walkthrough &mdash; this build pass did not have that tooling available; verified instead by reading the rendered JSX, the full test suite, and TypeScript's structural checks.</p>
+<hr>
+</section>
+
+<section id="r15-c5-graph-review-refinements-rule-improvement">
+<h2>R15-C5 &mdash; Graph review refinements + rule-improvement queue</h2>
+<p>Proposal &sect;3.6 + &sect;3.9 + &sect;3.10's one-line describe-step note. The last of R15's five chunks. <code>GraphView.tsx</code>'s field labels now reuse the four question-derived words the proposal names, sourced from a single new <code>field-copy.ts</code> export (<code>GRAPH_FIELD_LABELS</code>) rather than re-typed inline; the engine field name stays visible beside each as quiet code (<code>.graph-node__field-code</code>), following the same "quiet code beside plain label" pattern used everywhere else in this redesign, not deleted. "model confident &mdash; no verified basis" is reworded to "not found in your text &mdash; worth a second look" and now shares a <code>.graph-node__badge</code> base class with "guessed" (same shape, same visual family) while keeping its own modifier class (<code>--no-basis</code> vs. <code>--guessed</code>) and its own text &mdash; the merge IxD ID-6 asked for and the panel rejected in &sect;5 was not made; the underlying three provenance states (quoted / guessed / confident-no-basis) and the no-plain-confirm gate for guessed cards are untouched code paths, confirmed by reading <code>GraphView.tsx</code>'s conditional branches, which are unchanged in structure. A silently-unanswered optional field (decision type, human-in-the-loop) now renders a quiet <code>.graph-node__badge--not-stated</code> badge instead of a plain "not stated" text node indistinguishable from a real value. The "Why these values matter" disclosure button gained <code>aria-expanded</code>/<code>aria-controls</code>, replacing nothing (it had neither before &mdash; this closes the gap, matching the pattern from C1/C2/C4). Long provenance quotes (<code>ProvenanceQuote</code>) truncate past 90 characters with a <code>aria-expanded</code> "show full quote" button; the field VALUE beside the quote is never touched by this truncation &mdash; it always renders in full. In <code>RuleImprovementQueue.tsx</code>, each group heading now leads with the plain rule label and demotes the rule id to quiet code (falling back to the id alone when no label was ever resolved, e.g. a free-typed rule reference); "fired on N decided cases" is reworded to "has applied to N decided cases"; each entry now carries a source tag distinguishing "filed by a reviewer" from "filed by the risk-knowledge lens", derived by reading the existing <code>filed_by_name</code> string's <code>"(risk-knowledge lens, ...)"</code> marker (the coverage-gap write path, ADR-EE-R11-2) rather than by adding a new audit-event field &mdash; no write path changed. The "advisory by construction" paragraph (<code>.rule-queue__intro</code>) and the append-only caveat (<code>.rule-queue__caveat</code>) are untouched verbatim &mdash; grepped for and confirmed unmodified before and after this change. &sect;3.10 (intake describe, About, Settings, Demo data) needed no code change: reading <code>IntakeFlow.tsx</code> confirmed the step-1 no-model-configured copy already states in one line what happens next, so this note was already true.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R15-C5-01</td><td><code>GraphView.tsx</code>'s <code>data_class</code>, <code>decision_bindingness</code>, <code>output_reversibility</code> and <code>autonomy_level</code> field rows render the plain question-derived label from <code>field-copy.ts</code>'s <code>GRAPH_FIELD_LABELS</code>, with the engine field name still present as a <code>&lt;code&gt;</code> element beside it &mdash; verified by reading the JSX; no automated test previously asserted the old inline label text, so none needed renegotiating</td></tr>
+<tr><td>TC-R15-C5-02</td><td><code>GraphView.r12.test.tsx</code> TC-R12-BD-1-02/03 &mdash; renegotiated in place: the confident-no-basis marker's text assertion moved from <code>/model confident &mdash; no verified basis/i</code> to <code>/not found in your text &mdash; worth a second look/i</code>; the underlying condition under test (no quote, not guessed, model not marked uncertain) is unchanged</td></tr>
+<tr><td>TC-R15-C5-03</td><td>The "guessed" and "no-basis" badges both render <code>.graph-node__badge</code> plus their own distinct modifier class (<code>.graph-node__badge--guessed</code> / <code>.graph-node__badge--no-basis</code>) and distinct text &mdash; confirmed by reading <code>ProvenanceBadge</code> in <code>GraphView.tsx</code>, a single small component the three call sites (field loop, vendor row, model row) share, replacing three near-duplicated inline blocks</td></tr>
+<tr><td>TC-R15-C5-04</td><td><code>GraphReview.r6.test.tsx</code>'s guessed-badge assertion (<code>/guessed &mdash; the description does not say/i</code>) and <code>GraphReview.r9.test.tsx</code>'s <code>.graph-node__guessed-badge</code> count assertion both pass unchanged &mdash; the guessed badge's class and text were preserved exactly, only its markup source moved into <code>ProvenanceBadge</code></td></tr>
+<tr><td>TC-R15-C5-05</td><td><code>GraphReview.r5.test.tsx</code> TC-R5-GR-1-03 &mdash; absent optional fields still render the exact text "not stated" (now wrapped in <code>.graph-node__badge--not-stated</code> rather than a bare text node) &mdash; passes unchanged, confirming the reword did not touch this string</td></tr>
+<tr><td>TC-R15-C5-06</td><td>The "Why these values matter" button renders <code>aria-expanded={showWhy}</code> and <code>aria-controls</code> pointing at the node's <code>&lt;dl id="why-${node.id}"&gt;</code> &mdash; verified by reading the JSX; no automated test previously covered this button's accessible state, so none needed renegotiating</td></tr>
+<tr><td>TC-R15-C5-07</td><td><code>ProvenanceQuote</code> truncates quote text over 90 characters with a <code>show full quote</code> button carrying <code>aria-expanded</code>; the sibling <code>.graph-node__meaning</code> span (the field value) is rendered outside <code>ProvenanceQuote</code> entirely and is never passed through it &mdash; confirmed by reading the component boundary</td></tr>
+<tr><td>TC-R15-C5-08</td><td><code>RuleImprovementQueue.test.tsx</code>'s heading-order assertion &mdash; renegotiated from <code>'INV-DATA-01 &mdash; Client PII rule'</code> to <code>'Client PII rule INV-DATA-01'</code>, asserting the plain label now leads and the id trails as quiet code; the no-label fallback case (<code>'TIER-PII-01'</code>) is unchanged</td></tr>
+<tr><td>TC-R15-C5-09</td><td><code>RuleImprovementQueue.r12.test.tsx</code> TC-R12-AB-2-01 &mdash; renegotiated from <code>/challenged 1 time &middot; fired on 1 decided case/i</code> to <code>/challenged 1 time &middot; has applied to 1 decided case/i</code>; the underlying <code>deriveFiredCounts</code> computation is untouched</td></tr>
+<tr><td>TC-R15-C5-10</td><td>Each queue entry renders a <code>.rule-queue__source-tag</code> reading "filed by a reviewer" or "filed by the risk-knowledge lens", derived in <code>deriveQueue()</code> from whether <code>filed_by_name</code> contains the literal marker <code>(risk-knowledge lens</code> &mdash; no new field was added to the <code>rule_dissent_filed</code> audit-event type (<code>store/types.ts</code> unchanged)</td></tr>
+<tr><td>TC-R15-C5-11</td><td><code>RuleImprovementQueue.test.tsx</code> TC-R4-RC-5-01 through -05 (empty state, grouping/ordering, advisory posture text, reserved-words guard, hostile-dissent-as-text) and TC-R4-NF-2-01 (no duplicate writes on remount) all pass unchanged &mdash; the advisory paragraph and append-only caveat were not edited</td></tr>
+<tr><td>TC-R15-C5-12</td><td><code>.rule-queue__intro</code> and <code>.rule-queue__caveat</code> text is byte-identical before and after this chunk &mdash; confirmed by diff against the pre-chunk file</td></tr>
+</tbody>
+</table>
+<h3>Verification</h3>
+<p><code>npm test</code> &times;3 &mdash; 682/682, identical across all three runs (unchanged count from R15-C4: two existing test files were renegotiated in place for the reworded copy, no test was added or removed). <code>npx tsc --noEmit</code> clean (one type error surfaced and fixed during the build: <code>ProvenanceQuote</code>'s <code>text</code> prop needed a non-null assertion on <code>quotes[spec.field]</code> inside the already-truthy-checked branch). <code>npm run build</code> clean. <code>python3 scripts/spec-parity-check.py</code> &mdash; clean (R1&ndash;R8 all pass; no spec <code>.md</code>/<code>.html</code> file was touched this chunk). No live browser walkthrough &mdash; this build pass did not have that tooling available; verified instead by reading the rendered JSX, the full test suite, and TypeScript's structural checks. This is the last of R15's five chunks; requirements-015.md's Changelog notes the build status (not a release) in the same pass.</p>
+<h3>Traceability closed &mdash; 2026-09-28</h3>
+<p>Every case in this file is now proved by an automated test that names it, checked mechanically by <code>python3 scripts/trace-check.py</code> (247/247 across all test-case files at the time of writing). Rows that R15 had verified only "by reading the JSX" or "by diff" (C3-03, C3-04, C3-05, C3-08, C3-09, C4-05, C4-06, C4-07, C5-01, C5-03, C5-06, C5-07, C5-10, C5-12) now have their own tests; the rest were already proved by existing tests, which now carry the id. Three rows overstated what had been verified &mdash; amended in place above, each marked with its date.</p>
+<h3>Retired by R16 chunk B &mdash; 2026-10-02</h3>
+<p>The field-by-field guided form TC-R15-C3-05/07/08/09 verified is replaced in full by <code>build/prompts/R16.md</code> &sect;2.2's situational question set &mdash; see <code>test-cases-019.md</code> for the new form's own test cases (TC-R16-B-*). Moved to Superseded below.</p>
+</section>
+
+<section id="superseded">
+<h2>Superseded</h2>
+<table>
+<thead><tr><th>ID</th><th>Reason</th></tr></thead>
+<tbody>
+<tr><td>TC-R15-C3-05</td><td>"<code>StructuredForm</code> renders five <code>&lt;fieldset&gt;</code>/<code>&lt;legend&gt;</code> sections (<code>About it</code>, <code>What it uses</code>, <code>What the AI is and how it runs</code>, <code>What comes out and who it reaches</code>, <code>Where it applies</code>) with the documented legend text." R16 chunk B's replacement form uses a different section grouping for the new question set (<code>About it</code>, <code>Where it comes from</code>, <code>What it does</code>, <code>Decisions and safeguards</code>, <code>Scope and countries</code>) &mdash; the specific legend text this case pinned no longer exists by design, not by regression.</td></tr>
+<tr><td>TC-R15-C3-07</td><td>"The load-bearing zone-crossing sentence (<code>not where the data is stored &mdash; where it gets sent...</code>) and the load-bearing bindingness sentence (<code>be honest about what happens in practice...</code>) stay visible outside their <code>Why we ask</code> <code>&lt;details&gt;</code>." Both sentences were written for the retired <code>sf-processing-zone</code>/<code>sf-bindingness</code> fields, which no longer exist &mdash; the new form asks about the submitter's situation (&sect;2.2) rather than the zone or bindingness directly, so neither sentence has a field left to attach to. The new form's own help text (<code>plain-copy.ts</code>) is tested directly in <code>StructuredForm.test.tsx</code> / <code>plain-intake.test.ts</code>.</td></tr>
+<tr><td>TC-R15-C3-08</td><td>"Optional fields (platform, vendor, decision type, human-in-the-loop) state the consequence of leaving them blank in the field label itself." Those four fields do not exist in the new form in that shape &mdash; platform/vendor are resolved from Q3's situational answer (never asked as a bare optional field), decision type is Q8 (required, not optional &mdash; UC-8's design explicitly requires an answer so the engine is never silently under-informed), and human-in-the-loop is derived from Q6, never asked directly (principle 1: no engine vocabulary on the form). TC-R16-B-12's never-render-<code>[FIRM]</code> fallback label test and TC-R3-JU-5-02 (adapted, <code>test-cases-019.md</code>) cover the surviving optional free-text fields (3supplierName, 3model).</td></tr>
+<tr><td>TC-R15-C3-09</td><td>"<code>FIELD_CONSEQUENCES</code> (field-copy.ts, R5-GR-1) is consumed by <code>StructuredForm</code>'s <code>Why we ask</code> disclosures." The retired form's fields (and their <code>FIELD_CONSEQUENCES</code> entries) are gone; the new form's help text lives in <code>plain-copy.ts</code>'s own <code>help</code> field per question, tested directly where it is used, not through <code>field-copy.ts</code>'s now-unrelated map.</td></tr>
+<tr><td>TC-R15-C3-06</td><td>"No form field is hidden behind an <code>advanced</code> toggle &mdash; all pre-existing <code>getByLabelText</code> queries in <code>StructuredForm.test.tsx</code> still resolve unchanged, proving every field stayed on the single scroll." Those specific queries targeted the retired field set. The new form keeps the same "one continuous scroll, no toggle" structure (<code>structured-form__scroll-note</code>, unchanged) &mdash; every one of its own questions, including the conditional ones, is reachable by <code>StructuredForm.test.tsx</code>'s own queries with no toggle ever opened (the conditional questions are situational follow-ups per &sect;2.2, shown or hidden by an earlier ANSWER, not by a reader-operated "advanced" control) &mdash; but there is no longer a single dedicated case naming this property; it is demonstrated structurally (no toggle exists in the component at all) and by every other test in the file not needing to open one.</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>
