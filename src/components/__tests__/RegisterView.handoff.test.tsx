@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ComponentProps } from 'react';
 import RegisterView from '../RegisterView';
 import { addNode } from '../../store/register';
+import * as registerStore from '../../store/register';
 import { append, getAllForExport, __resetChainStateForTests } from '../../store/audit';
 import { __resetDbsForTests } from '../../store/db';
 import { exportBundle, __resetHandoffSyncStateForTests, type HandoffBundle } from '../../store/handoff';
@@ -105,6 +106,19 @@ async function getImportInput(): Promise<HTMLElement> {
   return screen.getByLabelText(/import hand-off bundle file/i);
 }
 
+// Synchronous file-input change — unlike userEvent.upload (which has its own
+// internal await steps), this fires the onChange handler, and therefore
+// handleImportBundleFile's synchronous guard-check-and-set prefix, in the
+// SAME synchronous burst as the call site. Two of these back-to-back, with
+// no await between them, is the deterministic way to land a second call
+// while the first is still in flight (its own first `await file.text()` has
+// not yet had a chance to resume) — the exact race importInFlight exists to
+// close.
+function fireFileChange(input: HTMLElement, file: File): void {
+  Object.defineProperty(input, 'files', { value: [file], configurable: true });
+  fireEvent.change(input);
+}
+
 describe('RegisterView hand-off — export (code-review-005 F1/F2/F20)', () => {
   beforeEach(async () => {
     await __resetDbsForTests();
@@ -135,8 +149,15 @@ describe('RegisterView hand-off — export (code-review-005 F1/F2/F20)', () => {
 
       await user.click(screen.getByRole('button', { name: /^export hand-off bundle$/i }));
 
+      // code-review-005 round 2, N7: the old wording stated the file was
+      // saved as fact ("Exported N events... to a hand-off file") — a
+      // browser can silently block or redirect a download. The new wording
+      // says what the app actually knows and asks the user to confirm the
+      // rest themselves.
       expect(
-        await screen.findByText(/exported 1 audit events and 1 register entries to a hand-off file\. send it to the other reviewer directly\./i),
+        await screen.findByText(
+          /created a hand-off file named .*\.json with 1 audit events and 1 register entries\. check it's in your downloads folder, then send it to the other reviewer directly\./i,
+        ),
       ).toBeInTheDocument();
       expect(capturedJson).toBeDefined();
       const parsed = JSON.parse(capturedJson!);
@@ -298,6 +319,245 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
 
     expect(await screen.findByText('This file is not an AIGate hand-off bundle.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^save a backup of mine first$/i })).toBeInTheDocument();
+  });
+});
+
+// code-review-005 round 2, N1. A register-step failure after the audit
+// trail was already replaced used to be a thrown Error whose message
+// RegisterView appended a fixed "your register was not changed" sentence to
+// — self-contradicting, since the audit trail (also shown on this screen)
+// really had just been replaced. Forcing that failure needs a real
+// register-store error a well-formed bundle cannot produce on its own;
+// vi.spyOn on register.ts's own export injects exactly that one failure.
+describe('RegisterView hand-off — partial replace and finishing it (code-review-005 round 2, N1)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  function mockSuccessfulDownload() {
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        /* no-op — content not inspected in these tests */
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+    return () => {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    };
+  }
+
+  it('TC-RG-8-38: after a register-step failure, "Finish updating the register" appears and completes the replace', async () => {
+    const user = userEvent.setup();
+    const foreignId = crypto.randomUUID();
+    const foreign = await buildForeignBundle(foreignId);
+    await seedLocalDemoCase(crypto.randomUUID());
+
+    const restore = mockSuccessfulDownload();
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+      // Must await the diverged state itself before clicking — the file
+      // input's change handler is fire-and-forget (void
+      // handleImportBundleFile(file)), so userEvent.upload resolving only
+      // means the simulated interaction finished, not that the async import
+      // it kicked off has landed yet.
+      await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+      await user.click(screen.getByRole('button', { name: /^save a backup of mine first$/i }));
+      await screen.findByText(/a backup file named .* was created/i);
+      await user.click(screen.getByRole('button', { name: /i have my backup — replace my register/i }));
+
+      const partialMsg = await screen.findByText(/audit trail was replaced/i);
+      expect(partialMsg.textContent).not.toMatch(/register was not changed/i);
+      expect(screen.queryByRole('button', { name: /i have my backup — replace my register/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^keep my register$/i })).not.toBeInTheDocument();
+
+      // The mocked failure only fires once (mockRejectedValueOnce) — the
+      // retry below calls through to the real implementation.
+      await user.click(screen.getByRole('button', { name: /finish updating the register/i }));
+
+      expect(await screen.findByText(/your previous register is in the backup file you saved/i)).toBeInTheDocument();
+      await waitFor(async () => {
+        const events = await getAllForExport();
+        expect(events.some((e) => e.use_case_id === foreignId)).toBe(true);
+      });
+    } finally {
+      spy.mockRestore();
+      restore();
+    }
+  });
+});
+
+// code-review-005 round 2, N2. Local changes made between "Save a backup of
+// mine first" and confirming are reachable in ONE tab (the case page renders
+// inside this same component, so a user can open a case and sign it off
+// while a replace is still pending) — they are not in the backup file the
+// success message points to. A direct append() here stands in for that
+// in-between write; the mechanism under test (replaceWithBundle's atomic tip
+// check) does not care which UI path produced it.
+describe('RegisterView hand-off — backup staleness at replace time (code-review-005 round 2, N2)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  it('TC-RG-8-39: a local write after the backup sends the UI back to step 1, keeping the same pending bundle', async () => {
+    const user = userEvent.setup();
+    const foreign = await buildForeignBundle(crypto.randomUUID());
+    const localId = crypto.randomUUID();
+    await seedLocalDemoCase(localId);
+
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        /* no-op */
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+      // See the N1 test above for why this wait (not just the upload's own
+      // promise) is required before the first click.
+      await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+      await user.click(screen.getByRole('button', { name: /^save a backup of mine first$/i }));
+      await screen.findByText(/a backup file named .* was created/i);
+
+      await append({
+        event_id: 'uc-n2-ui-extra',
+        use_case_id: localId,
+        event_type: 'lifecycle_stage_changed',
+        occurred_at: new Date().toISOString(),
+        actor: 'system',
+        payload: { type: 'lifecycle_stage_changed', from_stage: 'pre_checked', to_stage: 'approved' },
+      });
+
+      await user.click(screen.getByRole('button', { name: /i have my backup — replace my register/i }));
+
+      expect(await screen.findByText(/your register changed after you saved the backup/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^save a backup of mine first$/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /replace my register/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /finish updating the register/i })).not.toBeInTheDocument();
+    } finally {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+  });
+});
+
+// code-review-005 round 2, N8. "Save a backup of mine first" had no
+// synchronous in-flight guard — a double-click fired handleBackupBeforeReplace
+// twice before React could disable anything, downloading the backup twice.
+describe('RegisterView hand-off — backup double-click guard (code-review-005 round 2, N8)', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  it('TC-RG-8-40: double-clicking "Save a backup of mine first" downloads only once', async () => {
+    const foreign = await buildForeignBundle(crypto.randomUUID());
+    await seedLocalDemoCase(crypto.randomUUID());
+
+    let downloadCount = 0;
+    const OriginalBlob = globalThis.Blob;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    globalThis.Blob = class MockBlob {
+      constructor() {
+        downloadCount += 1;
+      }
+    } as unknown as typeof Blob;
+    URL.createObjectURL = (() => 'blob:mock-url') as typeof URL.createObjectURL;
+    URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+
+    try {
+      render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+      await screen.findByText('Local demo case');
+
+      await userEvent.upload(await getImportInput(), makeFile(foreign));
+      const backupButton = await screen.findByRole('button', { name: /^save a backup of mine first$/i });
+
+      // Two rapid, un-awaited clicks — same style as this codebase's other
+      // in-flight-guard tests (RegisterDetail.test.tsx's double-submission
+      // test): jsdom flushes a re-render between fireEvents, so this proves
+      // the OBSERVABLE outcome (one download), which is what N8 asks for.
+      fireEvent.click(backupButton);
+      fireEvent.click(backupButton);
+
+      await screen.findByText(/a backup file named .* was created/i);
+      expect(downloadCount).toBe(1);
+    } finally {
+      globalThis.Blob = OriginalBlob;
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+  });
+});
+
+// Test gap noted alongside code-review-005 round 1: the import double-click
+// guard (importInFlight) had no test. fireFileChange (top of file) fires the
+// input's change event synchronously, twice, with no await between them, so
+// the second call's guard-check races the first's the same way a real rapid
+// double-drop would.
+describe('RegisterView hand-off — a second import while one is in flight is ignored', () => {
+  beforeEach(async () => {
+    await __resetDbsForTests();
+    __resetChainStateForTests();
+    __resetHandoffSyncStateForTests();
+  });
+
+  it('TC-RG-8-41: firing a second import before the first settles does not process the second file', async () => {
+    const firstId = crypto.randomUUID();
+    const first = await buildForeignBundle(firstId, 3);
+    const secondId = crypto.randomUUID();
+    const second = await buildForeignBundle(secondId, 5);
+
+    // A register row with NO audit events keeps the component past its
+    // `rows.length === 0` early return while leaving the audit chain
+    // genuinely empty — the real precondition for imported_into_empty.
+    const localId = crypto.randomUUID();
+    await addNode(makeUseCaseNode({ node_id: localId, label: 'Local demo case' }));
+
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+    await screen.findByText('Local demo case');
+
+    const input = await getImportInput();
+    fireFileChange(input, makeFile(first));
+    fireFileChange(input, makeFile(second));
+
+    await waitFor(async () => {
+      expect(await getAllForExport()).not.toHaveLength(0);
+    });
+
+    const events = await getAllForExport();
+    const gotFirst = events.some((e) => e.use_case_id === firstId);
+    const gotSecond = events.some((e) => e.use_case_id === secondId);
+    // The guard is synchronous: the FIRST call's guard-check-and-set runs to
+    // completion before the second call is even dispatched, so the first
+    // file is deterministically the one absorbed — never both (a torn,
+    // interleaved import) and never neither (the guard swallowing the only
+    // import that should have gone through).
+    expect(gotFirst).toBe(true);
+    expect(gotSecond).toBe(false);
   });
 });
 

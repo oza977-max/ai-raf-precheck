@@ -114,6 +114,14 @@ function unrecognisedEventLine(type: unknown): string {
 export default function RegisterDetail({ useCaseId, role, policy, onBack }: RegisterDetailProps) {
   const [summary, setSummary] = useState<UseCaseSummary | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  // code-review-005 round 2, N4: load() had no error path at all — a
+  // malformed stored verdict (e.g. one a hand-off bundle let through before
+  // this round's schema hardening, or any other corrupt row) makes
+  // getUseCase() reject, and with nothing catching that, `summary` just
+  // never leaves its initial `null` — the page sits on "Loading…" forever,
+  // indistinguishable from a slow read. A visible error, with the way back,
+  // replaces the endless spinner.
+  const [loadError, setLoadError] = useState<string | null>(null);
   // explore-007 D-001 fix (round 8): a live, provable check — not just an
   // assertion in copy — that the hash chain over the WHOLE audit trail
   // (every use case, not just this one) is intact.
@@ -560,12 +568,20 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   }, [summary?.use_case_id, summary?.label, summary?.description]);
 
   const load = useCallback(async () => {
-    const [s, evs] = await Promise.all([
-      getUseCase(useCaseId, undefined, policy?.sampling_rate),
-      getAuditEvents(useCaseId),
-    ]);
-    setSummary(s ?? null);
-    setEvents(evs);
+    try {
+      const [s, evs] = await Promise.all([
+        getUseCase(useCaseId, undefined, policy?.sampling_rate),
+        getAuditEvents(useCaseId),
+      ]);
+      setSummary(s ?? null);
+      setEvents(evs);
+      setLoadError(null);
+    } catch (err) {
+      // N4: getUseCase() (unlike getUseCases()'s per-row Promise.allSettled)
+      // has no way to skip just this one bad row — there is only this one
+      // row to show. Surface the failure rather than hanging on "Loading…".
+      setLoadError(err instanceof Error ? err.message : String(err));
+    }
   }, [useCaseId, policy?.sampling_rate]);
 
   useEffect(() => {
@@ -768,6 +784,19 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       dissentInFlight.current = false;
       setDissentBusy(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <section className="card register-detail">
+        <button type="button" className="register-detail__back" onClick={onBack}>
+          ← register
+        </button>
+        <p role="alert" className="register-detail__load-error">
+          This case couldn&apos;t be loaded: {loadError}
+        </p>
+      </section>
+    );
   }
 
   if (!summary) {

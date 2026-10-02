@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.5",
+  "policy_version": "1.6",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",
@@ -56,7 +56,7 @@
       "title": "Internal policy document search and summarisation",
       "status": "approved_with_controls",
       "tier": "Medium",
-      "track": "II",
+      "track": "III",
       "binding_constraint": "INV-SEC-01",
       "controls": [
         "CTRL-CITE-01",
@@ -76,11 +76,8 @@
       "track": "II",
       "binding_constraint": "INV-CONDUCT-01",
       "controls": [
-        "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
-        "CTRL-DISCLOSE-01",
         "CTRL-ENC-01",
-        "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01",
@@ -90,11 +87,8 @@
         "Information security review"
       ],
       "tripped_invariants": [
-        "INV-CITE-01",
         "INV-CONDUCT-01",
         "INV-DATA-01",
-        "INV-DISCLOSE-01",
-        "INV-ESCALATE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
         "INV-SYNTHMARK-01",
@@ -517,19 +511,15 @@
     },
     "G-03": {
       "title": "US generative-AI drafting assistant",
-      "status": "approved_with_controls",
+      "status": "approved",
       "tier": "Low",
-      "track": "II",
-      "binding_constraint": "INV-CITE-01",
-      "controls": [
-        "CTRL-CITE-01"
-      ],
+      "track": "III",
+      "binding_constraint": "",
+      "controls": [],
       "downstream_reviews": [
         "AI Governance review (outside MRM scope per SR 26-2)"
       ],
-      "tripped_invariants": [
-        "INV-CITE-01"
-      ],
+      "tripped_invariants": [],
       "applied_overrides": [
         "SR-26-2:SR262-US-REV-01:Added downstream review \"AI Governance review (outside MRM scope per SR 26-2)\"."
       ]
@@ -562,9 +552,7 @@
       "controls": [
         "CTRL-CITE-01",
         "CTRL-CONDUCT-01",
-        "CTRL-DISCLOSE-01",
         "CTRL-ENC-01",
-        "CTRL-ESCALATE-01",
         "CTRL-FINGERPRINT-01",
         "CTRL-REDTEAM-01",
         "CTRL-SAMPLE-01",
@@ -577,8 +565,6 @@
         "INV-CITE-01",
         "INV-CONDUCT-01",
         "INV-DATA-01",
-        "INV-DISCLOSE-01",
-        "INV-ESCALATE-01",
         "INV-SAMPLE-01",
         "INV-SEC-01",
         "INV-SYNTHMARK-01",

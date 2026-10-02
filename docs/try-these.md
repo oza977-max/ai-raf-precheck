@@ -128,21 +128,27 @@ did the work, and the inheritance panel shows the envelope that justified it.*
 
 ## 7. Platform inheritance withdrawn
 
-> A chatbot on our approved cloud LLM service that answers customer questions
-> about their accounts, using their personal details.
+> A chatbot on our approved cloud LLM service that drafts replies to customer
+> questions about their accounts, using their personal details; a person sends
+> each reply.
 
 **Fields:** **Client PII**, Zone B, LLM, autonomy = *level 1*, Zone B,
 does = *draft*, **client-facing**, advisory, reversible, at scale,
 **platform = PLAT-CLOUD-LLM**, UK
 
-**Expect:** **Approved with controls**, Tier High, Track II, **8 controls** and
+**Expect:** **Approved with controls**, Tier High, Track II, **6 controls** and
 1 downstream review. **Nothing inherited.**
 
 *Compare directly against case 6. Same idea — an approved platform — opposite
 result. The cloud LLM platform is cleared for internal drafting on Internal
 data only; client-facing output and Client PII both fall outside its envelope,
 so the inheritance panel names each breached dimension with the cleared value
-beside your value. Eight controls is the cost of leaving the envelope.*
+beside your value. Six controls is the cost of leaving the envelope.*
+
+*Policy v1.6 (2026-09-28) narrowed two rules — telling people they're dealing
+with an AI, and giving them a route to a person — to cases where clients deal
+with the AI directly. This case drafts replies a person sends, so those two
+no longer apply (it was 8 controls under v1.5).*
 
 ---
 

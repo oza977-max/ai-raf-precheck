@@ -141,6 +141,28 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 
 > Fit criterion: If a submitter corrects a node (e.g., changes data class from "Internal" to "MNPI"), the correction is recorded alongside the original extraction. The audit trail shows both the original LLM-extracted value and the human-corrected value.
 
+**Round 16 — plain-language intake (added 2026-09-28).** Six rounds of rewording the guided form's labels did not make it answerable by a newcomer: the form asked people to classify their tool in the engine's own categories (data class, zone, model type, autonomy level, how "binding" the output is). A newcomer test — simulated first-time users with everyday jobs, each given a real use case and only the screen text — found 23% of answers to today's form were "I don't understand this question" and 4 of 6 testers answered in ways that made their verdict less strict than it should have been. A redesign that asks about the submitter's situation instead scored 0% "didn't understand" and 0 of 9 less-strict answers across two rounds (NF-12). UC-8 to UC-12 record what that redesign must do.
+
+**UC-8 (Must):** The guided form shall ask about the submitter's situation in everyday words and derive the engine's fields from the answers. It shall never ask the submitter to classify their tool in the engine's vocabulary.
+
+> Fit criterion: (1) No question or option shows an engine term or code — data class, data zone or zone letters, autonomy level, bindingness, model-type names such as LLM, ML or agentic, tier, track, MNPI, PII, 2LoD. (2) Every answer maps to graph fields through one documented mapping table, and the same answers always produce the same graph. (3) Every question a submitter may not know the answer to offers "Not sure", which takes the stricter reading. (4) Where more than one option could fit, the question says which to pick ("the one lowest on the list", "the one where it has the most freedom", "the widest"), and the options are ordered so that rule always takes the stricter reading. (5) The worked cases in `backtest/use-cases.md`, answered through the new questions, produce the same verdicts as their recorded graphs, or each difference is listed and explained.
+
+**UC-9 (Must):** Before evaluation, the system shall show the submitter, in plain words, what it understood from their answers — where their information will go, the most sensitive information involved, what the AI's output does and who receives it — and list every assumption it made because they answered "Not sure". The submitter can change any answer from this screen before confirming (UC-6).
+
+> Fit criterion: Every "Not sure" answer appears under "Things we assumed" with the assumption taken. Changing an answer updates the summary. Confirming records the same attestation as UC-6.
+
+**UC-10 (Must):** Where more than one answer can be true at once, the form shall let the submitter tick all that apply, and every ticked answer shall be evaluated — for the kinds of information the AI sees (each kind becomes its own input) and for what an AI agent can reach by itself.
+
+> Fit criterion: Ticking two kinds of information evaluates the rules for both, and the stricter outcome governs. An agent with its own logins, the ability to deploy by itself and servers shared with other tools receives the safeguards for all three (PE-9).
+
+**UC-11 (Should):** Follow-up questions shall appear only when an earlier answer makes them relevant, and the exact model name shall be optional.
+
+> Fit criterion: A submitter describing a chat assistant is never asked the AI-agent questions. The form can be completed without a model name; the verdict's reviewer section then states that no model was named.
+
+**UC-12 (Must):** The description-first path (UC-1, UC-3) shall use the same plain wording as the guided form on its review screen and in its follow-up questions.
+
+> Fit criterion: The review screen and follow-up questions on the description-first path show no engine vocabulary (the same list as UC-8), and the same situation is described in the same words on both paths.
+
 ---
 
 ### PE — Policy Engine
@@ -152,6 +174,12 @@ James is a developer on the trading desk who builds internal AI tools. He is tec
 **PE-2 (Must):** The system shall classify every use case into one of three governance tracks using the ordered classification test from the bank's policy file: Track I (Traditional MRM), Track II (AI on MRM), Track III (AI Governance).
 
 > Fit criterion: Track assignment follows the ordered rules in the policy file and short-circuits at the first matching rule. The track assigned and the rule that matched are included in the verdict output.
+
+**Non-compliance found and fixed 2026-09-28.** The engine sorted the track rules by id before applying "first match wins" — a step meant to keep results repeatable — which overrode the policy file's order: 90 of 280 combinations of model type, autonomy, weight and "replaces a prior model" were routed to a different track than the policy's order gives (for example, a scorecard replacing a prior model went to Track I, not Track II). Found while mapping the plain-language form's answers to engine fields; no pinned worked case covered those combinations. Track rules are now applied in the file's own order, which is itself fixed, so results stay repeatable.
+
+**PE-9 (Must):** A node attribute that can hold several values at once — at minimum, what an AI agent can reach by itself — shall match a rule when any one of its values matches, the same way several nodes are matched today.
+
+> Fit criterion: An agent recorded with both shared servers and its own logins trips both the isolation rule and the credentials rule. Evaluation stays deterministic (NF-1).
 
 **PE-3 (Must):** The system shall assign a materiality tier (Critical / High / Medium / Low) using impact-dominant rules from the policy file. A high-impact trigger shall always result in Critical or High regardless of low complexity or low reliance scores.
 
@@ -221,6 +249,8 @@ requirement and a schema change, not a bug fix.
 
 > Fit criterion: The verdict status, tier, and track are visible without scrolling on any standard screen. No jargon the submitter cannot interpret without a glossary.
 
+**Amended 2026-09-28 (round 16, VD-9).** In newcomer testing, "Approved with controls", tier and track on the first screen were the words readers could not act on: none of six testers could say what they themselves had to do. The first screen now answers "can I start?" in plain words (VD-9, VD-10); the formal status, tier and track stay on the same page in the reviewer's section, still visible to anyone who opens it. The fit criterion above now applies to that answer, not to the formal labels.
+
 **VD-2 (Must):** The verdict shall show the exact invariant that was the binding constraint — the specific rule in the policy file that determined the outcome — and the specific path in the data-flow graph that triggered it.
 
 > Fit criterion: The submitter can read the verdict and understand precisely why the outcome is what it is, without asking a risk manager to interpret it. Example: *"Client email data (classified as potential MNPI) flows to an external model in Zone A. Policy rule PE-DATA-3 prohibits MNPI from flowing outside Zone C."*
@@ -232,6 +262,16 @@ requirement and a schema change, not a bug fix.
 **VD-4 (Must):** Every verdict shall be permanently recorded in an immutable audit trail. No verdict, correction, or attestation can be deleted or modified after the fact.
 
 > Fit criterion: The audit trail for a use case includes: all versions of the data-flow graph, all questions asked and answers given, all corrections made, the policy file version in force, the regulatory pack versions in force, and the verdict at each stage. The audit trail is available to 2LoD on demand.
+
+**Amended 2026-09-28 (code review 005).** One bounded exception now exists, and the requirement is amended to state it rather than claim an absolute: the hand-off replace (RG-8) can swap a browser's whole local trail for a verified bundle's trail, only after the user has saved a backup file and confirmed, and only if nothing was recorded locally since that backup. Every other path is append-only, and a test fails if a new write path is added to the audit store without being consciously allowed. The trail was always tamper-evident, not tamper-proof (NF-2); the specs (`verdict-audit.md` §4.4, §16) describe the exception.
+
+**VD-9 (Must):** The first screen of a verdict shall answer, in plain words and in this order: whether the submitter can start, and what has to happen first; why, in one or two reasons; the submitter's own next steps; the safeguards that must be in place — each with what must be true, who usually arranges it, and why it applies to this case, with the submitter's own items listed first and marked; checks other teams run; who signs off; and, where the verdict is provisional, what could still change it. The formal detail — status, tier, track, every rule checked, evidence and sources — remains available in a reviewer section on the same page.
+
+> Fit criterion: (1) No engine term or code on the first screen (NF-11). (2) Each reason is written from what its rule actually checks, so it is true of the case. (3) The same obligation is not listed twice. (4) The first screen passes the newcomer test (NF-12).
+
+**VD-10 (Must):** When the answer is no, the first screen shall say so plainly, give the reason, say what would change the answer, and say whom to talk to.
+
+> Fit criterion: A hard-line result shows "No — not as described", the plain reason, the change that would make a difference, and the AI risk team as the contact. No list of safeguards is shown, because none can help.
 
 **VD-5 (Must):** The verdict record shall include the version of the policy file and the version of each regulatory pack that was active at the time of evaluation.
 
@@ -411,6 +451,10 @@ in force on every verdict — is implemented and tested.
 
 > Health report: Added via HR-06 resolution (June 2026). Surfaced during /gvm-test-cases Phase 1 — RA-7 references "rejected on load" but the load-failure behaviour was unspecified.
 
+**CF-6 (Must):** The plain-language text shown to submitters (VD-9, VD-10) shall live in the policy file next to the rule it explains — for each control, what must be in place and who usually arranges it; for each invariant and hard line, why it applies; for each hard line, what would change the answer. These are optional fields the firm edits and approves like any other rule text. Where a field is absent, the formal wording is shown instead.
+
+> Fit criterion: Removing a plain-language field makes the screen fall back to the formal wording without error. The starter policy ships with plain-language text for every control, invariant and hard line. An owner assigned to a control on the register overrides the default "who usually arranges it" for that case.
+
 ---
 
 ### RA — Regulatory Alignment
@@ -532,6 +576,12 @@ against its own quote. **Do not reinstate the confidence score.**
 > Fit criterion: The audit trail is append-only. There is no delete or edit function for audit records. Historical records are readable but not writable.
 >
 > **V1 honest limitation:** NF-2 and NF-3 are directly contradictory for a client-side deployment. A local file or browser store is editable by definition — true immutability requires a server-backed, append-only store. V1 is therefore honestly positioned as **provisional / proof-of-concept grade** for audit purposes. Any deployment intended to produce a regulator-defensible audit trail requires V1.5 (append-only server store, even if minimal). This must be stated clearly to any bank deploying V1 as a system of record.
+>
+> **Amended 2026-09-28 (code review 005).** The one path that can replace stored records is the user-confirmed hand-off replace (RG-8) — see VD-4's amendment for its conditions. The fit criterion above holds for every other path.
+
+**NF-12 (Must):** *(added 2026-09-28, round 16)* Newcomer comprehension gate. Any change to the intake questions or to the verdict's first screen shall pass a newcomer test before it ships. At least six simulated first-time users with everyday jobs — at least one of them new to the product — are each given a real use case and only the screen text; they answer the questions and read their own verdict, computed by the real engine.
+
+> Fit criterion: Pass means: no question answered "didn't understand"; no answer that would make the verdict less strict than the correct answer; and every tester can say whether they can start, what they themselves must do, and who signs off. The results are recorded with the change. Simulated testers know more than real newcomers, so the product owner's own run-through, then a real colleague's, is the final check.
 
 **NF-3 (Must):** No use case data shall leave the user's local environment in the MVP. The engine runs entirely client-side.
 
@@ -616,6 +666,11 @@ against its own quote. **Do not reinstate the confidence score.**
 | UC-5 | Intake | Contradiction detection | Must | **V1** |
 | UC-6 | Intake | Graph confirmation / attestation | Must | **V1** |
 | UC-7 | Intake | Correction recording | Must | **V1** |
+| UC-8 | Intake | Plain-language guided questions (situation, not categories) | Must | **V1** |
+| UC-9 | Intake | "Here's what we understood" + assumptions list | Must | **V1** |
+| UC-10 | Intake | Tick-all answers, every ticked answer evaluated | Must | **V1** |
+| UC-11 | Intake | Follow-ups only when relevant; model name optional | Should | **V1** |
+| UC-12 | Intake | Description-first path uses the same plain wording | Must | **V1** |
 | PE-1 | Policy Engine | Deterministic graph evaluation | Must | **V1** |
 | PE-2 | Policy Engine | Triple-track classification | Must | **V1** |
 | PE-3 | Policy Engine | Impact-dominant materiality tiering | Must | **V1** |
@@ -624,6 +679,7 @@ against its own quote. **Do not reinstate the confidence score.**
 | PE-6 | Policy Engine | Most demanding standard governs | Must | **V1** |
 | PE-7 | Policy Engine | YAML policy file | Must | **V1** |
 | PE-8 | Policy Engine | Starter config pre-loaded | Must | **V1** |
+| PE-9 | Policy Engine | Multi-valued node attributes match on any value | Must | **V1** |
 | CS-1 | Control Solve | Control set with safety margin | Must | **V1** |
 | CS-2 | Control Solve | Reject when no set satisfies | Must | **V1** |
 | CS-3 | Control Solve | Triggered downstream reviews | Must | **V1** |
@@ -636,6 +692,8 @@ against its own quote. **Do not reinstate the confidence score.**
 | VD-6 | Verdict | Living status field in data model | Should | **V1** |
 | VD-7 | Verdict | Conditions block (hypothesis schema) | Must | **V1** |
 | VD-8 | Verdict | Plain-English reasoning trace | Must | **V1** |
+| VD-9 | Verdict | Plain first screen: can I start, why, my next steps, safeguards | Must | **V1** |
+| VD-10 | Verdict | Plain "No" screen: why, what would change it, who to talk to | Must | **V1** |
 | LC-1 | Lifecycle | Use case stages | Must | **V1** |
 | LC-2 | Lifecycle | Tier-driven governance process | Must | **V1** |
 | LC-3 | Lifecycle | 2LoD review step | Should | V1.5 |
@@ -669,6 +727,7 @@ against its own quote. **Do not reinstate the confidence score.**
 | CF-3 | Configuration | Policy file versioning | Must | **V1** |
 | CF-4 | Configuration | Versioned regulatory packs | Must | **V1** |
 | CF-5 | Configuration | Policy file validation on load | Must | **V1** |
+| CF-6 | Configuration | Plain-language rule and control text in the policy file | Must | **V1** |
 | RA-1 | Regulatory | Jurisdiction pack activation | Must | **V1** |
 | RA-2 | Regulatory | Most demanding standard governs | Must | **V1** |
 | RA-3 | Regulatory | Pack version in audit trail | Must | **V1** |
@@ -691,6 +750,8 @@ against its own quote. **Do not reinstate the confidence score.**
 | NF-8 | Non-Functional | Full reasoning chain in audit trail | Must | **V1** |
 | NF-9 | Non-Functional | Staleness warning at rule level | Should | V1.5 |
 | NF-10 | Non-Functional | Translation-fidelity attestation | Must | **V1** |
+| NF-11 | Non-Functional | No bare internal codes on user-facing screens | Must | **V1** |
+| NF-12 | Non-Functional | Newcomer comprehension gate for questions and first screen | Must | **V1** |
 
 ---
 

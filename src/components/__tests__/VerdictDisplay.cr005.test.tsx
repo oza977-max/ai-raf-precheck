@@ -276,6 +276,60 @@ describe('VerdictDisplay — code review 005 (usability testing): a control and 
     const reviewsList = todo.querySelector('.verdict__todo-list--reviews');
     expect(reviewsList?.textContent).toMatch(/data validation review/i);
   });
+
+  it("TC-RG-8-37: code-review-005 round 2, N6: a firm's \"Model risk assessment\" control does not absorb an unrelated \"Vendor risk assessment\" review", () => {
+    // Before the fix this was a SUBSET match: {risk, assessment} (after
+    // "model" — a generic word — drops out) is a subset of {vendor, risk,
+    // assessment}, so the review wrongly folded into the control despite
+    // naming a genuinely different obligation (model risk vs. vendor risk).
+    // Equal significant-word SETS is the correct test — sizes differ here
+    // (2 vs. 3), so this must never fold.
+    const policy = makePolicy([{ id: 'CTRL-MODEL-RISK', name: 'Model risk assessment', resolves: [] }]);
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({
+          controls: ['CTRL-MODEL-RISK'],
+          downstream_reviews: ['Vendor risk assessment'],
+        })}
+        auditEvents={[]}
+        policy={policy}
+      />,
+    );
+    const todo = document.querySelector<HTMLElement>('.verdict__todo')!;
+    expect(within(todo).queryByText(/also covers/i)).not.toBeInTheDocument();
+    const reviewsList = todo.querySelector('.verdict__todo-list--reviews');
+    expect(reviewsList?.textContent).toMatch(/vendor risk assessment/i);
+  });
+});
+
+// code-review-005 round 2, N5. The no-policy branch of "The control set,
+// with evidence status" showed EVIDENCE UNKNOWN for every control, even one
+// with a recorded attestation — contradicting the WhatToDo panel and the
+// sign-off checklist elsewhere on the SAME screen, which both already call
+// that control "attested". No policy means no VERIFIED tier is possible
+// (there is nothing to check machine evidence against), but an attestation
+// comes from the audit trail, not the policy, so it is exactly as knowable
+// here as it is in the with-policy branch.
+describe('VerdictDisplay — code review 005 round 2, N5: no policy loaded, but a control is attested', () => {
+  it('TC-RG-8-36: shows ATTESTED — NOT VERIFIED with the attester (name not verified) and the evidence note, not EVIDENCE UNKNOWN', () => {
+    render(
+      <VerdictDisplay
+        verdict={makeVerdict({ controls: ['CTRL-X', 'CTRL-Y'] })}
+        auditEvents={[]}
+        // No `policy` prop at all — the BC-V13-03 no-policy branch.
+        controlAttestations={{ 'CTRL-X': { attested_by_name: 'Priya Nair', evidence_note: 'sign-off ticket 456' } }}
+      />,
+    );
+    const panel = within(document.querySelector('.verdict__controlset')!);
+    expect(panel.getByText('ATTESTED — NOT VERIFIED')).toBeInTheDocument();
+    expect(panel.getByText(/priya nair/i)).toBeInTheDocument();
+    expect(panel.getByText(/name not verified/i)).toBeInTheDocument();
+    expect(panel.getByText(/sign-off ticket 456/i)).toBeInTheDocument();
+    // The OTHER control, genuinely un-attested, still reads unknown — this
+    // fix must not fabricate an attestation that was never recorded.
+    expect(panel.getByText('EVIDENCE UNKNOWN')).toBeInTheDocument();
+    expect(document.querySelector('.verdict__controlset')?.textContent).not.toMatch(NO_RESERVED_WORDS);
+  });
 });
 
 describe('VerdictDisplay — code review 005, F19: the attest form waits for confirmation', () => {

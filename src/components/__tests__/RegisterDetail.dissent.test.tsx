@@ -277,6 +277,10 @@ describe('RegisterDetail — tier and track explained in plain words', () => {
     renderDetail(id);
     await screen.findByRole('region', { name: /verdict/i });
     expect(screen.getByText(/a lot could go wrong/i)).toBeInTheDocument();
-    expect(screen.getByText(/replaces a prior model or acts with high autonomy/i)).toBeInTheDocument();
+    // Track-order fix, 2026-09-28: TRACK_MEANINGS.II reworded (field-copy.ts)
+    // so it holds for the plain TRACK-II rule too, not just the
+    // TRACK-II-REPLACE / TRACK-II-AUTONOMY special cases — "a prior model"
+    // became "a prior one".
+    expect(screen.getByText(/replaces a prior one or acts with high autonomy/i)).toBeInTheDocument();
   });
 });

@@ -117,9 +117,17 @@ describe('docs/try-these.md — every printed outcome', () => {
       platform: 'PLAT-CLOUD-LLM', jurisdictions: ['UK'] });
     expect(v.tier).toBe('High');
     expect(v.inheritance?.inherited_controls ?? []).toHaveLength(0);
-    // The contrast with case 6 is the whole point of the pair — if this ever
-    // stops being 8, the page's "eight controls is the cost" line is wrong.
-    expect(v.controls).toHaveLength(8);
+    // changed by policy v1.6, 2026-09-28: was 8 (CTRL-DISCLOSE-01 and
+    // CTRL-ESCALATE-01 included). This case's action_type is 'draft' — the
+    // chatbot's reply is drafted, not sent to the client directly by the AI
+    // (outputActionType here models the same "AI upstream of a human-sent
+    // message" shape v1.6 narrowed INV-DISCLOSE-01/INV-ESCALATE-01 for) — so
+    // neither invariant's new action_type: {in: [inform, execute, trade,
+    // approve]} condition matches any more, and both controls drop out.
+    // See docs/try-these.md's "8 controls" / "Eight controls is the cost of
+    // leaving the envelope" line, now stale (out of this agent's file
+    // ownership — reported, not edited).
+    expect(v.controls).toEqual(['CTRL-CITE-01', 'CTRL-CONDUCT-01', 'CTRL-ENC-01', 'CTRL-FINGERPRINT-01', 'CTRL-REDTEAM-01', 'CTRL-SYNTHMARK-01']);
   });
 
   it('case 8: hiring tiers High for the firm and is floored to Critical by the EU pack', () => {
@@ -152,7 +160,14 @@ describe('docs/try-these.md — every printed outcome', () => {
       decisionType: 'credit-decision', hitl: false, platform: 'PLAT-INTERNAL-ML', jurisdictions: ['UK', 'EU'] });
     expect(v.status).toBe('approved_with_controls');
     expect(v.tier).toBe('Critical');
-    expect(v.track).toBe('I');
+    // changed by the track-order fix, 2026-09-28: traditional-ml at
+    // autonomy 3 is TRACK-II-AUTONOMY ("autonomy >= 3 is Track II
+    // regardless of model type"), which the policy file declares BEFORE
+    // the general TRACK-I rule specifically so it wins here. evaluate()
+    // previously sorted the tracks array by id before matching, which
+    // alphabetised TRACK-I ahead of TRACK-II-AUTONOMY and silently
+    // defeated that ordering — was 'I', correct value is 'II'.
+    expect(v.track).toBe('II');
     expect(v.binding_constraint).toBe('INV-AUTONOMY-01');
     // v1.5: also trips INV-ACT-LOG-01 (approve + autonomy 3), adding
     // CTRL-LOG-01 — 6 -> 7. See docs/try-these.md's updated prose.

@@ -128,6 +128,26 @@ Tests: TRACK-III, INV-CITE-01, the clean low-tier path.
 Tests: High tier, **INV-DISCLOSE-01** (EU AI Act Art. 50, live 2 Aug 2026),
 INV-CONDUCT-01, INV-ESCALATE-01.
 
+> Amendment 2026-09-28 (policy v1.6). INV-DISCLOSE-01 and INV-ESCALATE-01 no
+> longer trip on this case: v1.6 narrowed both to
+> `action_type: {in: [inform, execute, trade, approve]}` — the AI must deal
+> with the client directly (answer them or act), not merely sit upstream of
+> a decision — and this case's recorded `action_type` is `recommend`, not
+> `inform`. `CTRL-CITE-01` also drops (this case's `model_type` is
+> `generative-ai`, which v1.6 removed from INV-CITE-01's scope — that rule is
+> now `[llm, agentic]` only, since "every statement carries a citation" has
+> no meaning for an image/audio/video/code generator). Net effect on the
+> engine verdict: controls drop from 9 to 6 (lose CTRL-CITE-01,
+> CTRL-DISCLOSE-01, CTRL-ESCALATE-01); tier, status and track are unchanged.
+> Worth an editorial look, not changed here: the prose above describes a
+> chatbot that "answers... questions... in natural language", which reads as
+> direct dealing with the client — if that is the intended shape, this
+> case's `action_type` may belong as `inform` rather than `recommend`
+> (`inform` was added 2026-08-17 specifically for "answers/presents
+> directly"). Rule text is owner-owned, so the condition is implemented
+> exactly as approved; this is a corpus-fixture question, not a rule
+> question.
+
 **B-04 · Autonomous client communications**
 > Generates and sends client emails about account changes with no human review;
 > messages cannot be recalled once sent.

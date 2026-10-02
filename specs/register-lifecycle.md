@@ -174,6 +174,10 @@ export interface RegisterStore {
     useCaseId: string,
     summary: Partial<UseCaseSummary> & { currentVerdictId?: string },
   ): Promise<void>;
+  // Writes the register node AND appends the lifecycle_stage_changed audit
+  // event. Since code-review-005 round 2 (§15.6, N3) this holds the audit
+  // queue for its whole body and nests the register write inside it — the
+  // one lock order this codebase uses everywhere both queues are touched.
   updateLifecycleStage(useCaseId: string, stage: LifecycleStage, actor: string): Promise<void>;
 
   // Read — role-filtered
@@ -676,6 +680,37 @@ work.
 | R3-RD-4 | §15.1 | TC-R3-RD-4-01 |
 | R3-NF-2 | §15.3 | TC-R3-NF-2-01, -02 |
 
+### 15.6 Lock order with the audit queue (code-review-005 round 2, N3)
+
+`updateLifecycleStage` writes to both stores it touches: the register node
+(this file's own queue, `enqueueRegister`) and, since the change records a
+`lifecycle_stage_changed` audit event, the audit trail (`audit.ts`'s queue).
+Before this round it held the register queue for its whole body and awaited
+the audit queue from inside that callback — register outer, audit inner.
+`verdict-audit.md`'s hand-off replace (§16.8) does the opposite: it holds the
+audit queue and, when it must, reaches into this store's queue.
+
+Two operations nesting the SAME two queues in OPPOSITE directions can
+deadlock outright if they run concurrently (each holds the queue the other is
+waiting for — reproduced directly: reverting only this function while
+`replaceWithBundle` keeps its round-2 fix makes `TC-RG-8-32` in
+`handoff.test.ts` time out, not merely fail an assertion). Short of a
+deadlock, leaving the two queues genuinely un-nested (two separate top-level
+calls with a gap between them) lets a third write land in that gap and leave
+the audit trail recording a change the register does not show — the register
+half of the same defect class `verdict-audit.md` §16.8 describes for replace.
+
+**The fixed rule, with no exception anywhere in this codebase: audit outer,
+register inner.** `updateLifecycleStage` now holds `audit.ts`'s
+`withAuditQueue()` for its whole body, nests this file's `enqueueRegister()`
+inside it for the node write, and appends the audit event with
+`audit.ts`'s `appendWithinQueue()` (not the plain, self-queuing `append()` —
+calling that from inside a callback the SAME audit queue is already running
+would enqueue a second turn behind the first, which is the one awaiting it: a
+deadlock, not a race). See `verdict-audit.md` §16.6 for the full write-queue
+picture across both stores, and §16.8 for the replace-side half of this same
+lock order.
+
 ## 16. Round 11 — The Dormant Schema, Consumed (R11-MG-3)
 
 Spec for `requirements/requirements-011.md`. §4.1's `ai_model` node type
@@ -711,3 +746,4 @@ gatekeeper" framing.
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |
 | 2026-08-17 | §17 added — round 11. ADR-RL-R11-1 consumes the dormant `ai_model`/`uses_model` schema (deduped by `model_id`); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path. |
 | 2026-08-25 | R15-C1/S4 — §10.2's Must-level column set amended: Stale and Sampling merge into one "Flags" column (badge per true condition; accessible empty-state name when neither applies), and Stage joins the visible columns. TC-RG-2-02 updated to assert the amended set. |
+| 2026-09-28 | §15.6 added — code review 005 round 2 (N3). `updateLifecycleStage` flipped from register-outer/audit-inner to audit-outer/register-inner nesting, the one lock order this codebase now uses everywhere both queues are touched (`verdict-audit.md` §16.6/§16.8) — the previous ordering could deadlock against the round-2 hand-off replace fix, not just race it. |

@@ -494,14 +494,27 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
     // code-review-005 F7: this used to be a keyword blocklist ('update',
     // 'delete', 'remove', 'edit', 'clear', 'put'), and the hand-off replace
     // primitive evaded it by name alone — `replaceAllRawEvents` (and its
-    // successor, `backupAndReplaceAllRawEvents`) contains none of those
-    // words, so the blocklist would have passed even though a UI-reachable
-    // path can now clear and rewrite the whole trail (a bounded, documented
-    // exception: a verified bundle, user-confirmed, backup taken first — see
-    // handoff.ts's replaceWithBundle). A blocklist can only catch names
-    // someone thought to list; an ALLOWLIST inverts the failure mode — every
-    // export must be named here on purpose, so ANY new write path, whatever
-    // it is called, fails this test until someone consciously adds it.
+    // successor, `backupAndReplaceAllRawEventsWithinQueue`) contains none of
+    // those words, so the blocklist would have passed even though a
+    // UI-reachable path can now clear and rewrite the whole trail (a
+    // bounded, documented exception: a verified bundle, user-confirmed,
+    // backup taken first — see handoff.ts's replaceWithBundle). A blocklist
+    // can only catch names someone thought to list; an ALLOWLIST inverts the
+    // failure mode — every export must be named here on purpose, so ANY new
+    // write path, whatever it is called, fails this test until someone
+    // consciously adds it.
+    //
+    // code-review-005 round 2, N3: `append`/`importTailIfContinues`/
+    // `backupAndReplaceAllRawEvents` each grew a *WithinQueue sibling (or, in
+    // the two multi-word cases, were renamed to it outright — nothing needed
+    // the old top-level self-queuing form once every caller that must touch
+    // both this module's queue and register.ts's queue does so through
+    // `withAuditQueue`) so a caller already holding the audit queue
+    // (register.ts's updateLifecycleStage; handoff.ts's replaceWithBundle /
+    // importBundle / finishRegisterReplace) can extend that SAME turn across
+    // a nested register.ts call instead of racing it as a separate one — see
+    // audit.ts's withAuditQueue doc for why that nesting order is now fixed
+    // everywhere in this codebase.
     const auditModule = await import('./audit');
     const names = Object.keys(auditModule).sort();
 
@@ -509,13 +522,16 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
       '__resetChainStateForTests',
       '__recomputeChainForTests',
       'append',
-      'backupAndReplaceAllRawEvents',
+      'appendWithinQueue',
+      'backupAndReplaceAllRawEventsWithinQueue',
+      'currentTipWithinQueue',
       'getAll',
       'getAllForExport',
-      'importTailIfContinues',
+      'importTailIfContinuesWithinQueue',
       'sha256Hex',
       'verifyChain',
       'verifyChainOf',
+      'withAuditQueue',
     ].sort();
 
     expect(names).toEqual(ALLOWED_AUDIT_EXPORTS);

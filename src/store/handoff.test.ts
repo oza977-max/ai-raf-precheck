@@ -1,11 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { append, getAllForExport, verifyChain, __resetChainStateForTests, __recomputeChainForTests } from './audit';
-import { addNode } from './register';
+import { addNode, updateLifecycleStage } from './register';
+import * as registerStore from './register';
 import { __resetDbsForTests } from './db';
 import {
   exportBundle,
   importBundle,
   replaceWithBundle,
+  finishRegisterReplace,
   computeSeal,
   __resetHandoffSyncStateForTests,
   type HandoffBundle,
@@ -52,6 +55,36 @@ function useCaseNode(id: string, label: string): RegisterNode {
   } as RegisterNode;
 }
 
+// Minimal-but-fully-shaped verdict payload; the chain hashes it opaquely, but
+// handoff.ts's import validation checks it structurally, so it must carry
+// every field the schema now requires (round-2 N4 broadened this from
+// {id, use_case_id, status, policy_version} to the full load-bearing subset —
+// see handoff.ts's verdictSchema comment) — a bare, partial fixture would
+// itself now be rejected as invalid_format at import, which is exactly F13's
+// (and N4's) point: an incomplete verdict is a real defect, not a test
+// convenience.
+function minimalVerdict(useCaseId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id: `${useCaseId}-v1`,
+    use_case_id: useCaseId,
+    status: 'approved_with_controls',
+    policy_version: '1.0',
+    tier: 'High',
+    track: 'II',
+    confidence_caveats: [],
+    controls: [],
+    downstream_reviews: [],
+    conditions: { hypotheses: [] },
+    margin_achieved: 0,
+    margin_target: 0.1,
+    single_covered_invariants: [],
+    boundary_proximity: false,
+    attested_at: '2026-01-02T00:00:01.000Z',
+    living_status: 'approved',
+    ...overrides,
+  } as never;
+}
+
 // Build a small submitter-side state: one use case + a two-event trail.
 async function seedSubmitterCase(useCaseId: string): Promise<void> {
   await addNode(useCaseNode(useCaseId, 'Hand-off fixture'));
@@ -69,20 +102,9 @@ async function seedSubmitterCase(useCaseId: string): Promise<void> {
     event_type: 'verdict_produced',
     occurred_at: '2026-01-02T00:00:01.000Z',
     actor: 'system',
-    // minimal-but-shaped verdict payload; the chain hashes it opaquely. Must
-    // include every field handoff.ts's import validation now requires
-    // (id, use_case_id, status, policy_version) — a bare `{id, use_case_id,
-    // status}` fixture (this file's pre-code-review-005 shape) would itself
-    // now be rejected as invalid_format at import, which is exactly F13's
-    // point: an incomplete verdict is a real defect, not a test convenience.
     payload: {
       type: 'verdict_produced',
-      verdict: {
-        id: `${useCaseId}-v1`,
-        use_case_id: useCaseId,
-        status: 'approved_with_controls',
-        policy_version: '1.0',
-      } as never,
+      verdict: minimalVerdict(useCaseId),
     },
   });
 }
@@ -656,6 +678,270 @@ describe('RG-8 hand-off bundle — concurrency (code-review-005 F5)', () => {
     const finalChain = await getAllForExport();
     expect(finalChain.map((e) => e.event_id)).toEqual(['uc-race-dup-created', 'uc-race-dup-verdict', 'uc-race-dup-signoff']);
     expect((await verifyChain()).ok).toBe(true);
+  });
+});
+
+// code-review-005 round 2, N1. A register-step failure AFTER the audit
+// trail was already replaced used to be thrown as an Error whose message
+// RegisterView then appended a FIXED "your register was not changed" sentence
+// to — a direct self-contradiction, since the audit trail (also rendered on
+// the register screen) had in fact just been replaced. Forcing this failure
+// needs a real register-store error the fixture data itself cannot produce
+// (a well-formed, schema-valid bundle never fails backupAndReplaceRegister's
+// plain IndexedDB put()s) — vi.spyOn on register.ts's own export is the
+// narrowest way to inject exactly that one failure without touching
+// register.ts's source.
+describe('RG-8 hand-off bundle — partial replace and finishing it (code-review-005 round 2, N1)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('TC-RG-8-28: replaceWithBundle returns partially_replaced (never a thrown, self-contradicting message) when the register step fails after the audit trail was replaced', async () => {
+    await seedSubmitterCase('uc-partial-a');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-partial-own');
+
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      const result = await replaceWithBundle(bundle);
+      expect(result.outcome).toBe('partially_replaced');
+      // The N1 bug, stated directly: the message must never claim BOTH that
+      // the audit trail was replaced AND that nothing changed.
+      expect(result.message).toMatch(/audit trail was replaced/i);
+      expect(result.message).not.toMatch(/register was not changed/i);
+      expect(result.message).toMatch(/finish updating the register/i);
+
+      // The audit trail (source of truth) really was replaced, even though
+      // the register did not follow.
+      expect((await getAllForExport()).map((e) => e.event_id)).toEqual(bundle.audit_events.map((e) => e.event_id));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('TC-RG-8-29: finishRegisterReplace completes the register step when the local audit tip still matches the bundle it already replaced', async () => {
+    await seedSubmitterCase('uc-finish-ok');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-finish-ok-own');
+
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    let partial: Awaited<ReturnType<typeof replaceWithBundle>>;
+    try {
+      partial = await replaceWithBundle(bundle);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(partial.outcome).toBe('partially_replaced');
+
+    const finished = await finishRegisterReplace(bundle);
+    expect(finished.outcome).toBe('replaced');
+    expect(finished.message).toMatch(/your previous register is in the backup file you saved/i);
+
+    const { nodes } = await registerStore.exportAll();
+    expect(nodes.some((n) => n.node_id === 'uc-finish-ok')).toBe(true);
+    expect(nodes.some((n) => n.node_id === 'uc-finish-ok-own')).toBe(false);
+  });
+
+  it('TC-RG-8-30: finishRegisterReplace refuses as finish_out_of_date, and writes nothing, when the audit trail has moved on since the partial replace', async () => {
+    await seedSubmitterCase('uc-finish-stale');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-finish-stale-own');
+
+    const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
+    try {
+      expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');
+    } finally {
+      spy.mockRestore();
+    }
+
+    // Something else touches the (already-replaced) audit trail before the
+    // user gets to "Finish updating the register" — the same shape of write
+    // a concurrent 2LoD approval's audit event would be.
+    await append({
+      event_id: 'uc-finish-stale-extra',
+      use_case_id: 'uc-finish-stale',
+      event_type: 'lifecycle_stage_changed',
+      occurred_at: new Date().toISOString(),
+      actor: 'system',
+      payload: { type: 'lifecycle_stage_changed', from_stage: 'idea', to_stage: 'exploring' },
+    });
+
+    const finished = await finishRegisterReplace(bundle);
+    expect(finished.outcome).toBe('finish_out_of_date');
+    expect(finished.message).toMatch(/reload/i);
+
+    // The register step never ran — the pre-replace seed data this test
+    // planted is still there, not the bundle's register.
+    const { nodes } = await registerStore.exportAll();
+    expect(nodes.some((n) => n.node_id === 'uc-finish-stale-own')).toBe(true);
+  });
+});
+
+// code-review-005 round 2, N2. Local changes made between "Save a backup of
+// mine first" and confirming the replace are reachable in ONE tab (the case
+// page renders inside RegisterView, so a user can open a case and sign it
+// off while a pending replace still awaits confirmation) — they are not in
+// the backup file the success message points to, yet the OLD code discarded
+// them silently. The fix records the tip the backup actually exported and
+// refuses, atomically with the replace itself, if the live trail has moved
+// past it.
+describe('RG-8 hand-off bundle — backup staleness at replace time (code-review-005 round 2, N2)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('TC-RG-8-31: replaceWithBundle refuses as backup_out_of_date, and writes nothing, when a local write landed after the recorded backup tip', async () => {
+    await seedSubmitterCase('uc-foreign-n2');
+    const foreign = await exportBundle(APP_VERSION);
+
+    await freshMachine();
+    await seedSubmitterCase('uc-local-n2'); // the state as of "step 1: save a backup"
+    const myBackup = await exportBundle(APP_VERSION); // what that backup file actually contains
+    const recordedTip = { hash: myBackup.audit_events.at(-1)?.hash ?? null, count: myBackup.audit_events.length };
+
+    // Between saving the backup and confirming the replace, the user does
+    // something else locally.
+    await append({
+      event_id: 'uc-local-n2-extra',
+      use_case_id: 'uc-local-n2',
+      event_type: 'lifecycle_stage_changed',
+      occurred_at: new Date().toISOString(),
+      actor: 'system',
+      payload: { type: 'lifecycle_stage_changed', from_stage: 'pre_checked', to_stage: 'approved' },
+    });
+
+    const result = await replaceWithBundle(foreign, recordedTip);
+    expect(result.outcome).toBe('backup_out_of_date');
+    expect(result.message).toMatch(/save a new backup/i);
+
+    // Nothing written — local state (seed + the extra local write) untouched.
+    const local = await getAllForExport();
+    expect(local.some((e) => e.event_id === 'uc-local-n2-extra')).toBe(true);
+    expect(local.some((e) => e.use_case_id === 'uc-foreign-n2')).toBe(false);
+  });
+
+  it('replaceWithBundle proceeds normally when no backup tip is supplied (a caller that opts out of the check gets the plain replace)', async () => {
+    await seedSubmitterCase('uc-nocheck-foreign');
+    const foreign = await exportBundle(APP_VERSION);
+    await freshMachine();
+    await seedSubmitterCase('uc-nocheck-own');
+
+    const result = await replaceWithBundle(foreign);
+    expect(result.outcome).toBe('replaced');
+  });
+});
+
+// code-review-005 round 2, N3. register.ts's updateLifecycleStage used to
+// hold the REGISTER queue and await the AUDIT queue from inside it, while
+// replaceWithBundle took the two queues separately with a gap between them —
+// opposite nestings that, raced against each other, could leave the audit
+// trail recording an approval the register does not show. Both functions now
+// nest the same way (audit outer, register inner; see audit.ts's
+// withAuditQueue doc), so the two operations can no longer partially
+// interleave — one completes in full before the other's turn begins,
+// whichever order the queue happens to serialise them in.
+describe('RG-8 hand-off bundle — approve-during-replace lock ordering (code-review-005 round 2, N3)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('TC-RG-8-32: an updateLifecycleStage approval racing a concurrent replaceWithBundle can never leave the audit trail and register disagreeing', async () => {
+    await seedSubmitterCase('uc-foreign-n3');
+    const foreign = await exportBundle(APP_VERSION);
+
+    await freshMachine();
+    // uc-local-n3 is NOT part of the foreign bundle's register, so if
+    // replace's turn runs first, the approval's register write has no node
+    // left to update by the time its turn comes — it must fail visibly with
+    // nothing written, never disagree with the audit trail.
+    await seedSubmitterCase('uc-local-n3');
+
+    const racingApprove = updateLifecycleStage('uc-local-n3', 'approved', '2LoD').catch(() => 'rejected' as const);
+    const racingReplace = replaceWithBundle(foreign);
+    const [approveOutcome, replaceResult] = await Promise.all([racingApprove, racingReplace]);
+
+    expect(replaceResult.outcome).toBe('replaced');
+
+    const finalAuditEvents = await getAllForExport();
+    const approveAuditEventPresent = finalAuditEvents.some(
+      (e) =>
+        e.use_case_id === 'uc-local-n3' &&
+        e.payload.type === 'lifecycle_stage_changed' &&
+        e.payload.to_stage === 'approved',
+    );
+    const finalRegister = await registerStore.exportAll();
+    const localNode = finalRegister.nodes.find((n) => n.node_id === 'uc-local-n3');
+    const registerShowsApproved =
+      localNode !== undefined && localNode.metadata.node_type === 'use_case' && localNode.metadata.lifecycle_stage === 'approved';
+
+    // The invariant N3 names, checked directly regardless of which order the
+    // queue actually serialised the two operations in: the audit trail
+    // records the approval if and only if the register agrees it happened.
+    expect(approveAuditEventPresent).toBe(registerShowsApproved);
+    // And concretely, in THIS test's setup (the local case never appears in
+    // the foreign bundle), the only two honest end states are "approval
+    // fully absorbed and then correctly wiped by the replace" or "approval
+    // rejected outright" — never a half-applied approval.
+    expect(approveAuditEventPresent).toBe(false);
+    if (approveOutcome !== 'rejected') {
+      // The approval's own call resolved (it ran before the replace wiped
+      // its target) — verifyChain must still hold over the final, replaced
+      // trail regardless.
+      expect((await verifyChain()).ok).toBe(true);
+    }
+  });
+});
+
+// code-review-005 round 2, N4. handoff.ts's verdictSchema did not require
+// confidence_caveats, which isVerdictProvisional (src/engine/provisional.ts)
+// reads whenever provisional_reasons is absent — a bundle missing it used to
+// pass import cleanly, then throw the first time anything tried to read the
+// verdict back (register.ts's toSummary, reached from getUseCase/getUseCases),
+// dropping the case from the register list and hanging its own page on
+// "Loading…" forever.
+describe('RG-8 hand-off bundle — verdict schema hardening (code-review-005 round 2, N4)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  it('TC-RG-8-33: rejects a bundle whose verdict is missing confidence_caveats, instead of accepting it and failing later', async () => {
+    await seedSubmitterCase('uc-no-caveats');
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const broken = {
+      ...bundle,
+      audit_events: bundle.audit_events.map((e) => {
+        if (e.payload.type !== 'verdict_produced') return e;
+        const verdict = e.payload.verdict as unknown as Record<string, unknown>;
+        const { confidence_caveats: _confidenceCaveats, ...verdictWithoutCaveats } = verdict;
+        return { ...e, payload: { ...e.payload, verdict: verdictWithoutCaveats } };
+      }),
+    };
+
+    const result = await importBundle(broken);
+    expect(result.outcome).toBe('invalid_format');
+    expect(await getAllForExport()).toHaveLength(0);
+  });
+});
+
+// code-review-005 round 2, N9. vite-env.d.ts's comment claims __APP_VERSION__
+// is "verified empirically... see the assertion in src/store/handoff.test.ts"
+// — this is that assertion. Reads package.json the same way vite.config.ts's
+// own `define` block does (readFileSync + JSON.parse, not a JSON import),
+// so this proves the STAMPED value matches the file, not merely that two
+// reads of the same config agree.
+describe('RG-8 hand-off bundle — app_version provenance (code-review-005 round 2, N9)', () => {
+  it("TC-RG-8-34: __APP_VERSION__ equals package.json's version", () => {
+    // Same read vite.config.ts's own `define` block does (readFileSync +
+    // JSON.parse against the repo-root-relative path, not a JSON import) —
+    // both vite.config.ts and `npm test` (this project's required way to run
+    // the suite; see CLAUDE.md) run with the repo root as cwd.
+    const pkgVersion = JSON.parse(readFileSync('./package.json', 'utf-8')).version as string;
+    expect(__APP_VERSION__).toBe(pkgVersion);
   });
 });
 

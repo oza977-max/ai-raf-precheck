@@ -32,7 +32,9 @@ checked at review:
 
 **Determinism is a product requirement, not a style preference (NF-1).**
 `evaluate()` must be byte-identical across runs for identical inputs; policy
-collections are sorted by id before iteration, and TC-PE-1-01 asserts this
+collections are sorted by id before iteration — except track rules, which are
+first-match in the policy file's own order (sorting them once sent 90 of 280
+input combinations to the wrong track) — and TC-PE-1-01 asserts this
 over 10 runs by comparing the whole serialized result — so any new field is
 covered automatically and a non-deterministic addition fails loudly.
 

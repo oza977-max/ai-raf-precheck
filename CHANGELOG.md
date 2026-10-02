@@ -6,7 +6,7 @@ scaffolding and build mechanics are left out.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions refer to the **application**; the starter risk-appetite policy carries
-its own version (currently `1.3`), shown in the app header and recorded on
+its own version (currently `1.6`), shown in the app header and recorded on
 every verdict.
 
 ---

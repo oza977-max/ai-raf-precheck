@@ -1,5 +1,5 @@
 import { openRegisterDb, createWriteQueue } from './db';
-import { append, getAll as getAuditEvents } from './audit';
+import { appendWithinQueue, withAuditQueue, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
 import { isVerdictProvisional } from '../engine/provisional';
 import { isSampledForReview } from '../engine/temporal';
@@ -182,10 +182,10 @@ function toSummary(
 // transactions, which let another writer's transaction land in between them
 // — invisible in a single tab (nothing else runs between two `await`s on the
 // same microtask queue... except another async caller of THIS SAME function,
-// or of replaceRegister/importRegister, genuinely can), and a real lost
-// update across two tabs (IndexedDB serialises transactions against the same
-// store even across tabs, so making this ONE transaction closes that gap
-// there too). Also routed through enqueueRegister so it cannot interleave
+// or of backupAndReplaceRegister/importRegister, genuinely can), and a real
+// lost update across two tabs (IndexedDB serialises transactions against the
+// same store even across tabs, so making this ONE transaction closes that
+// gap there too). Also routed through enqueueRegister so it cannot interleave
 // with a whole-register replace/import.
 export function updateUseCaseVerdictSummary(
   useCaseId: string,
@@ -224,33 +224,51 @@ export function updateUseCaseVerdictSummary(
 // change here (F17): the register's own get-then-put is now one transaction,
 // queued against every other register writer, so a concurrent replace/import
 // or another lifecycle change cannot land between the read and the write.
+//
+// code-review-005 round 2, N3: this used to hold the REGISTER queue
+// (enqueueRegister) for the whole function and await audit.append() —
+// itself queued on the AUDIT queue — from inside that callback. That is the
+// opposite nesting from handoff.ts's replaceWithBundle (audit, then
+// register), and this codebase's fixed rule (audit.ts's withAuditQueue doc)
+// is that every operation touching both queues nests the SAME way: audit
+// outer, register inner. Flipped here to match — the register write still
+// happens first and the audit append second (same order as before; only
+// which queue is held OUTERMOST changed) — so a concurrent replace can no
+// longer interleave with an approval and leave the audit trail recording a
+// change the register does not show (reproduced in audit.test.ts /
+// handoff.test.ts). appendWithinQueue(), not append(), because this callback
+// is already running inside the audit queue by the time it is called —
+// calling append() (which enqueues again) here would deadlock.
 export function updateLifecycleStage(
   useCaseId: string,
   stage: LifecycleStage,
   actor: string
 ): Promise<void> {
-  return enqueueRegister(async () => {
-    const db = await openRegisterDb();
-    const tx = db.transaction('register_nodes', 'readwrite');
-    const node = await tx.store.get(useCaseId);
-    if (!node || node.metadata.node_type !== 'use_case') {
-      throw new Error(`updateLifecycleStage(): no use_case node found for ${useCaseId}`);
-    }
+  return withAuditQueue(async () => {
+    const fromStage = await enqueueRegister(async () => {
+      const db = await openRegisterDb();
+      const tx = db.transaction('register_nodes', 'readwrite');
+      const node = await tx.store.get(useCaseId);
+      if (!node || node.metadata.node_type !== 'use_case') {
+        throw new Error(`updateLifecycleStage(): no use_case node found for ${useCaseId}`);
+      }
 
-    const fromStage = node.metadata.lifecycle_stage;
+      const fromStage = node.metadata.lifecycle_stage;
 
-    const updatedNode: RegisterNode = {
-      ...node,
-      metadata: {
-        ...node.metadata,
-        lifecycle_stage: stage,
-      },
-    };
+      const updatedNode: RegisterNode = {
+        ...node,
+        metadata: {
+          ...node.metadata,
+          lifecycle_stage: stage,
+        },
+      };
 
-    await tx.store.put(updatedNode);
-    await tx.done;
+      await tx.store.put(updatedNode);
+      await tx.done;
+      return fromStage;
+    });
 
-    await append({
+    await appendWithinQueue({
       event_id: crypto.randomUUID(),
       use_case_id: useCaseId,
       event_type: 'lifecycle_stage_changed',

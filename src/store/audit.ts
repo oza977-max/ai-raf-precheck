@@ -151,18 +151,59 @@ export type AuditEventInput = Omit<AuditEvent, 'prev_hash' | 'hash'>;
 // cross-tab lock where the browser supports one (db.ts).
 const enqueue = createWriteQueue('aigate-audit-write');
 
+// code-review-005 round 2, N3. register.ts's updateLifecycleStage used to
+// hold the REGISTER queue and await this module's append() (audit) from
+// inside it; handoff.ts's replaceWithBundle took the audit queue and the
+// register queue as two separate, UN-nested calls with a gap between them a
+// concurrent write could land in. Both are the same defect wearing different
+// clothes: without one fixed nesting order, two operations that each touch
+// both queues can deadlock if they nest in opposite directions (A holds
+// audit, awaits register; B holds register, awaits audit — neither call can
+// ever resolve), and short of an outright deadlock, leaving the two queues
+// un-nested lets a third write land in the gap and leave the two stores
+// disagreeing — the exact "audit trail records a change the register no
+// longer shows" bug N3 reproduces.
+//
+// The fixed rule, with no exception anywhere in this codebase: AUDIT OUTER,
+// REGISTER INNER, always nested (never two separate top-level calls when one
+// logical operation must touch both stores). withAuditQueue() is how a
+// caller (register.ts's updateLifecycleStage; handoff.ts's replaceWithBundle
+// / importBundle / finishRegisterReplace) holds this queue across a nested
+// call into register.ts's own queue (enqueueRegister).
+//
+// A caller already inside withAuditQueue() must use the *WithinQueue
+// siblings below (appendWithinQueue, backupAndReplaceAllRawEventsWithinQueue,
+// importTailIfContinuesWithinQueue, currentTipWithinQueue) rather than the
+// plain, self-queuing versions — calling a self-queuing function (which
+// calls enqueue() again) from inside a callback this SAME queue is already
+// running would schedule the new turn after the current one, which is the
+// one awaiting it: a real deadlock, not a hypothetical one.
+export function withAuditQueue<T>(fn: () => Promise<T>): Promise<T> {
+  return enqueue(fn);
+}
+
+async function appendUnqueued(event: AuditEventInput): Promise<void> {
+  const db = await openAuditDb();
+  const occurred_at = await monotonicOccurredAt(event.occurred_at);
+  const prev_hash = await lastChainHash();
+  const withoutHash = { ...event, occurred_at };
+  const hash = await sha256Hex((prev_hash ?? 'GENESIS') + '|' + eventContent(withoutHash));
+  await db.add('audit_events', { ...withoutHash, prev_hash, hash });
+  cachedLastHash = hash;
+}
+
 // db.add() not db.put() — duplicate event_id throws ConstraintError rather than
 // silently overwriting. Append-only discipline (verdict-audit.md §4.4).
 export function append(event: AuditEventInput): Promise<void> {
-  return enqueue(async () => {
-    const db = await openAuditDb();
-    const occurred_at = await monotonicOccurredAt(event.occurred_at);
-    const prev_hash = await lastChainHash();
-    const withoutHash = { ...event, occurred_at };
-    const hash = await sha256Hex((prev_hash ?? 'GENESIS') + '|' + eventContent(withoutHash));
-    await db.add('audit_events', { ...withoutHash, prev_hash, hash });
-    cachedLastHash = hash;
-  });
+  return enqueue(() => appendUnqueued(event));
+}
+
+// For a caller already holding this queue via withAuditQueue() —
+// register.ts's updateLifecycleStage is the one production call site. See
+// the withAuditQueue doc above for why this must never be replaced by a call
+// to the plain append() from inside that callback.
+export function appendWithinQueue(event: AuditEventInput): Promise<void> {
+  return appendUnqueued(event);
 }
 
 // Per-use-case read. Chain-ordered (F15) rather than blindly time-sorted, so
@@ -231,25 +272,32 @@ export type ImportTailOutcome =
   | { kind: 'up_to_date' }
   | { kind: 'imported'; added: number };
 
-// code-review-005 F5. The single entry point for landing an already-verified
-// incoming chain (`bundleEvents`, chain-ordered, seal- and hash-checked by
-// the CALLER before this is ever reached — this function does not repeat
-// that work). Everything that decides WHETHER to write and then the write
-// itself happens inside one queued step: the local chain is read, compared,
-// and — if and only if it is still prefix-compatible AT THIS EXACT MOMENT —
-// extended, with no other queued operation able to run in between the read
-// and the write. This closes the gap the old code had: it read the local
-// chain, decided, and wrote as three separate un-queued steps, so a second
-// import, a local append(), or (via the cross-tab lock in db.ts) another
-// tab's write could land in the gap and make the eventual write attach to a
-// tip that had already moved — not tampering, but the same kind of fork
-// concurrent append() calls are already guarded against. `local.length === 0`
-// naturally falls through the same logic as any other prefix match (the
-// "prefix" of an empty array matches everything), so this one primitive
-// covers what used to be two separately-raced special cases (adopting into
-// an empty register, and merging a tail onto a non-empty one).
-export function importTailIfContinues(bundleEvents: readonly AuditEvent[]): Promise<ImportTailOutcome> {
-  return enqueue(async () => {
+// code-review-005 F5, restructured round 2 (N3): the single entry point for
+// landing an already-verified incoming chain (`bundleEvents`, chain-ordered,
+// seal- and hash-checked by the CALLER before this is ever reached — this
+// function does not repeat that work). Everything that decides WHETHER to
+// write and then the write itself happens as one unbroken step: the local
+// chain is read, compared, and — if and only if it is still prefix-compatible
+// AT THIS EXACT MOMENT — extended, with no other queued operation able to run
+// in between the read and the write. This closes the gap the old code had: it
+// read the local chain, decided, and wrote as three separate un-queued steps,
+// so a second import, a local append(), or (via the cross-tab lock in db.ts)
+// another tab's write could land in the gap and make the eventual write
+// attach to a tip that had already moved — not tampering, but the same kind
+// of fork concurrent append() calls are already guarded against.
+// `local.length === 0` naturally falls through the same logic as any other
+// prefix match (the "prefix" of an empty array matches everything), so this
+// one primitive covers what used to be two separately-raced special cases
+// (adopting into an empty register, and merging a tail onto a non-empty one).
+//
+// Round 2 (N3): this is now the *WithinQueue* primitive — it does NOT enqueue
+// itself. The caller (handoff.ts's importBundle) wraps the whole operation
+// (this call, THEN its nested register.importRegister call) in ONE
+// withAuditQueue() turn, so the audit merge and the register merge that must
+// go with it can no longer be split by a concurrent write landing in the gap
+// between two separate top-level calls — see withAuditQueue's doc above.
+export function importTailIfContinuesWithinQueue(bundleEvents: readonly AuditEvent[]): Promise<ImportTailOutcome> {
+  return (async () => {
     const db = await openAuditDb();
     const all = await db.getAll('audit_events');
     const local = chainOrder(all);
@@ -270,36 +318,85 @@ export function importTailIfContinues(bundleEvents: readonly AuditEvent[]): Prom
     const floor = await clockFloor();
     lastOccurredAtMs = Math.max(floor, ...tail.map((e) => safeTimeMs(e.occurred_at)));
     return { kind: 'imported', added: tail.length };
-  });
+  })();
 }
 
-// code-review-005 F16. Reads what is about to be discarded and replaces it
-// with `events` in ONE queued step, returning the discarded (chain-ordered)
-// events. Doing the "read for backup" and the "clear + rewrite" as two
-// separate un-queued calls (the old replaceAllRawEvents, paired with a
-// caller-side export()) left a gap: a write landing in that gap was captured
-// by neither the backup nor the replace — silently destroyed, with no trace
-// anywhere. Folding both into one transaction inside one queued turn means
-// nothing else touching this store can run between the read and the clear;
-// the backup this function returns is therefore exactly what existed the
-// instant before it was overwritten, not what existed whenever some earlier,
-// separate export happened to run. HAND-OFF REPLACE ONLY
-// (store/handoff.ts replaceWithBundle) — this discards evidence, and the
+// The chain tip as it stands RIGHT NOW, for a caller already holding the
+// audit queue (withAuditQueue) that needs to compare "what's here now"
+// against a value it recorded earlier — handoff.ts's replaceWithBundle (N2:
+// does the current tip still match what the backup actually exported?) and
+// finishRegisterReplace (N1: has anything else touched the audit trail since
+// the partial replace this is finishing?). Both count AND hash are returned
+// because the finding this closes asks for both — a hash collision is
+// practically impossible, but the count is a cheap, legible second signal
+// for anyone reading a failure message or a test assertion.
+async function currentTipUnqueued(): Promise<{ hash: string | null; count: number }> {
+  const db = await openAuditDb();
+  const all = await db.getAll('audit_events');
+  const ordered = chainOrder(all);
+  return { hash: ordered.at(-1)?.hash ?? null, count: ordered.length };
+}
+
+export function currentTipWithinQueue(): Promise<{ hash: string | null; count: number }> {
+  return currentTipUnqueued();
+}
+
+export type ReplaceAllRawEventsOutcome =
+  | { kind: 'replaced'; discarded: AuditEvent[] }
+  // code-review-005 round 2, N2: the caller's `expectedCurrentTip` (the tip
+  // it recorded when it actually built the backup file, hash + count) no
+  // longer matches what is about to be discarded — something wrote to the
+  // audit trail after the backup was taken (the reachable-in-one-tab case:
+  // the case page renders inside RegisterView, so a user can open a case and
+  // sign it off while a pending replace is still awaiting confirmation).
+  // Refused, nothing written — the caller's backup file no longer covers
+  // everything replacing would discard, so it can no longer honestly claim
+  // "your previous register is in the backup file you saved".
+  | { kind: 'backup_out_of_date'; currentTip: { hash: string | null; count: number } };
+
+// code-review-005 F16 (backup-then-replace as one queued step) + round 2 N2
+// (refuse a stale backup) + round 2 N3 (this is the *WithinQueue* primitive —
+// see importTailIfContinuesWithinQueue's doc for why it no longer enqueues
+// itself, and withAuditQueue's doc for the one nesting order this codebase
+// uses). Reads what is about to be discarded and, if `expectedCurrentTip` is
+// given and still matches, replaces it with `events`, returning the
+// discarded (chain-ordered) events; otherwise refuses with
+// 'backup_out_of_date' and writes nothing. Doing the "read for backup", the
+// staleness check, and the "clear + rewrite" as one unbroken step (rather
+// than three separate calls) means nothing else touching this store can run
+// between the read and the clear — the backup this function returns, and the
+// tip it checks against, are exactly what existed the instant before any
+// write here, never what existed whenever some earlier, separate read
+// happened to run. HAND-OFF REPLACE ONLY (store/handoff.ts
+// replaceWithBundle/finishRegisterReplace) — this discards evidence, and the
 // caller must already have verified the incoming bundle's seal and chain,
 // and have put the discarded copy this function returns somewhere the user
 // can get it back from before this is called.
-export function backupAndReplaceAllRawEvents(events: readonly AuditEvent[]): Promise<AuditEvent[]> {
-  return enqueue(async () => {
+export function backupAndReplaceAllRawEventsWithinQueue(
+  events: readonly AuditEvent[],
+  expectedCurrentTip?: { hash: string | null; count: number },
+): Promise<ReplaceAllRawEventsOutcome> {
+  return (async () => {
     const db = await openAuditDb();
     const tx = db.transaction('audit_events', 'readwrite');
     const discarded = await tx.store.getAll();
+    if (expectedCurrentTip) {
+      const ordered = chainOrder(discarded);
+      const currentTip = { hash: ordered.at(-1)?.hash ?? null, count: ordered.length };
+      if (currentTip.hash !== expectedCurrentTip.hash || currentTip.count !== expectedCurrentTip.count) {
+        // Read-only so far (tx.store.getAll()) — letting the transaction
+        // finish here commits no write.
+        await tx.done;
+        return { kind: 'backup_out_of_date', currentTip };
+      }
+    }
     await tx.store.clear();
     for (const e of events) await tx.store.add(e);
     await tx.done;
     cachedLastHash = undefined;
     lastOccurredAtMs = events.reduce((m, e) => Math.max(m, safeTimeMs(e.occurred_at)), 0);
-    return chainOrder(discarded);
-  });
+    return { kind: 'replaced', discarded: chainOrder(discarded) };
+  })();
 }
 
 export interface ChainVerification {
@@ -353,8 +450,8 @@ export async function verifyChainOf(events: readonly AuditEvent[]): Promise<Chai
 // signature, and does not prove who produced the file") with a real forged
 // bundle that a fresh import accepts, rather than only asserting the limit
 // in prose. Not a runtime path: no production code needs to rebuild a chain
-// from scratch, because append() and importTailIfContinues() only ever
-// extend one. `startingPrevHash` defaults to null (a fresh genesis) but a
+// from scratch, because append() and importTailIfContinuesWithinQueue() only
+// ever extend one. `startingPrevHash` defaults to null (a fresh genesis) but a
 // test simulating an existing, non-empty chain (e.g. F15's clock-skew test)
 // must pass the CURRENT real tip, or this would mint a second "genesis"
 // (prev_hash: null) event and break the very chain it is trying to extend.

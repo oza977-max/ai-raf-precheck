@@ -97,6 +97,38 @@ carries its own ids — **`TC-NF-2-01` / `TC-VD-4-01`**, in `register.test.ts`
 ("the audit trail exposes no update or delete path"). Referenced here, not
 renamed or re-numbered, per this round's brief.
 
+### Round 2 fixes (code-review-005 round 2, N1-N9 and the noted test gap)
+
+*Unlike the backfill above, every row in this table names a genuinely NEW
+test, written before its fix (reproduce first, then fix) per the round-2
+brief. `partially_replaced`, `backup_out_of_date` and `finish_out_of_date`
+are new `ImportOutcome` values (`verdict-audit.md` §16.4/§16.8); the
+`finishRegisterReplace` export and the "Finish updating the register" UI
+action are new surface for RG-8 (§16.8 amended). N3's lock-order rule (audit
+outer, register inner — `verdict-audit.md` §16.6, `register-lifecycle.md`
+§15.1c) is a new cross-cutting invariant, not scoped to one function.*
+
+| ID | Asserts |
+|---|---|
+| TC-RG-8-28 | N1: a register-step failure after the audit trail was replaced returns a distinct `partially_replaced` outcome — never a thrown, self-contradicting message — and the audit trail really is replaced — `handoff.test.ts` |
+| TC-RG-8-29 | N1: `finishRegisterReplace` completes the register step when the local audit tip still matches the bundle it already replaced — `handoff.test.ts` |
+| TC-RG-8-30 | N1: `finishRegisterReplace` refuses as `finish_out_of_date`, writing nothing, when the audit trail has moved on since the partial replace — `handoff.test.ts` |
+| TC-RG-8-31 | N2: `replaceWithBundle` refuses as `backup_out_of_date`, writing nothing, when a local write landed after the tip the caller's backup actually exported — `handoff.test.ts` |
+| TC-RG-8-32 | N3: an `updateLifecycleStage` approval racing a concurrent `replaceWithBundle` can never leave the audit trail and register disagreeing (fixed lock order: audit outer, register inner, everywhere both queues are touched) — `handoff.test.ts` |
+| TC-RG-8-33 | N4: a bundle whose verdict is missing `confidence_caveats` is rejected as `invalid_format` at import, instead of passing and failing later — `handoff.test.ts` |
+| TC-RG-8-34 | N9: `__APP_VERSION__` equals `package.json`'s version — the assertion `src/vite-env.d.ts`'s comment cites — `handoff.test.ts` |
+| TC-RG-8-35 | N4: a corrupt stored verdict (missing `confidence_caveats`, written directly, bypassing hand-off import) shows "This case couldn't be loaded" with a way back, instead of hanging on "Loading…" — `RegisterDetail.test.tsx` |
+| TC-RG-8-36 | N5: with no policy loaded, a control with a recorded attestation shows ATTESTED — NOT VERIFIED with the attester and evidence note, not EVIDENCE UNKNOWN — `VerdictDisplay.cr005.test.tsx` |
+| TC-RG-8-37 | N6: a firm's "Model risk assessment" control does not absorb an unrelated "Vendor risk assessment" review (equal significant-word sets required, not a subset match) — `VerdictDisplay.cr005.test.tsx` |
+| TC-RG-8-38 | N1 (UI): after a register-step failure, "Finish updating the register" appears in `RegisterView` and completes the replace — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-39 | N2 (UI): a local write after saving the backup sends the UI back to step 1, keeping the same pending bundle — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-40 | N8: double-clicking "Save a backup of mine first" downloads only once — `RegisterView.handoff.test.tsx` |
+| TC-RG-8-41 | Test gap (noted alongside round 1): a second import started while one is in flight is ignored (the `importInFlight` guard) — `RegisterView.handoff.test.tsx` |
+
+N7 (the plain export success message overclaiming that the file was saved)
+changes existing copy rather than adding a behaviour — `TC-RG-8-01`'s own
+test was updated to assert the corrected wording in place, not re-numbered.
+
 ## RG-9 — Control-evidence attestation
 
 `requirements/requirements.md`, RG-9: "A reviewer shall be able to record,
@@ -120,24 +152,29 @@ counted separately from machine-verified evidence."
 
 ### Untested behaviours
 
-None. Every behaviour on this round's brief had an existing test that
-already proved it — this round only added the id.
+None. Every behaviour on the original backfill's brief had an existing test
+that already proved it — that pass only added the id. The round-2 fix pass
+added genuinely new tests (TC-RG-8-28 through -41, table above) — each one
+written first, confirmed to fail, then fixed, per that round's brief.
 
 ### Verification
 
 `python3 scripts/trace-check.py` — clean, every id in this file traced to a
-named test, no dangling `[Trace:]` paths (none used in this round — see
-`test-cases-015.md`'s precedent). Each of the seven touched test files was
-re-run individually with `npm test -- <path>` (never bare `vitest` — this
-project's Node 26/jsdom `localStorage` gotcha) and produced the same pass
-count as before this round's edits, since no test body, assertion, or
-behaviour changed — only `it()` title strings gained a `TC-RG-8-NN:` /
-`TC-RG-9-NN:` prefix. The full suite was not run for this round (explicitly
-out of scope for the task that produced this file).
+named test, no dangling `[Trace:]` paths. The original backfill re-ran its
+seven touched test files individually with `npm test -- <path>` (never bare
+`vitest` — this project's Node 26/jsdom `localStorage` gotcha) and produced
+the same pass count as before its edits, since no test body, assertion, or
+behaviour changed there — only `it()` title strings gained a `TC-RG-8-NN:` /
+`TC-RG-9-NN:` prefix; the full suite was explicitly out of scope for that
+pass. The round-2 fix pass is different in kind (real behaviour changed) and
+was verified accordingly: every touched test file 3x, the full suite 3x
+consecutively, `npx tsc --noEmit`, `python3 scripts/spec-parity-check.py`,
+and `python3 scripts/trace-check.py`, all clean.
 
 | Date | Change |
 |---|---|
 | 2026-09-28 | Written to close the RG-8/RG-9 traceability gap. |
+| 2026-09-28 | Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41. |
 
 ---
 

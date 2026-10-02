@@ -322,7 +322,16 @@ function describesSameObligation(controlName: string, reviewName: string): boole
   const controlWords = significantWords(controlName);
   if (controlWords.size < 2) return false;
   const reviewWords = significantWords(reviewName);
-  return [...controlWords].every((w) => reviewWords.has(w));
+  // code-review-005 round 2, N6: this was a SUBSET match (every control word
+  // present in the review), which let a review with EXTRA significant words
+  // absorb a control it does not actually restate — a firm's "Model risk
+  // assessment" control (after "model" — a generic word — drops out, {risk,
+  // assessment}) would wrongly fold in an unrelated "Vendor risk assessment"
+  // review ({vendor, risk, assessment}), since {risk, assessment} is a
+  // subset of {vendor, risk, assessment}. The two names describe the SAME
+  // obligation only when their significant-word sets are EQUAL, not merely
+  // when one contains the other — same size, same words.
+  return reviewWords.size === controlWords.size && [...controlWords].every((w) => reviewWords.has(w));
 }
 
 /** The plain-language answer to "so what do I actually have to do?".
@@ -1549,17 +1558,41 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           // absence of a policy is not evidence of absent evidence. Saying
           // nothing at all would be the same defect in the other direction:
           // a reader cannot distinguish "not checked" from "nothing to show".
+          //
+          // code-review-005 round 2, N5: a control with a RECORDED
+          // attestation (controlAttestations, from the audit trail — not the
+          // policy file) is not "unknown" just because no policy is loaded;
+          // the attestation exists independently of today's policy, same as
+          // it does in the with-policy branch above. Showing EVIDENCE UNKNOWN
+          // here for a control the checklist and the to-do list, elsewhere on
+          // this SAME screen, already call "attested" was the contradiction —
+          // same precedence rule as controlEvidenceStates above (machine-
+          // verified beats attested beats unknown), minus the "verified" tier
+          // this branch has no policy to check against.
           <div className="verdict__controlset" id="verdict-controls-section">
             <h3>The control set, with evidence status</h3>
             <ul>
-              {verdict.controls.map((id) => (
-                <li key={id}>
-                  <div className="verdict__control-head">
-                    <code>{id}</code>
-                    <span className="verdict__vchip verdict__vchip--unknown">EVIDENCE UNKNOWN</span>
-                  </div>
-                </li>
-              ))}
+              {verdict.controls.map((id) => {
+                const attestation = controlAttestations?.[id];
+                return (
+                  <li key={id}>
+                    <div className="verdict__control-head">
+                      <code>{id}</code>
+                      {attestation ? (
+                        <span className="verdict__vchip verdict__vchip--attested">ATTESTED — NOT VERIFIED</span>
+                      ) : (
+                        <span className="verdict__vchip verdict__vchip--unknown">EVIDENCE UNKNOWN</span>
+                      )}
+                    </div>
+                    {attestation && (
+                      <p className="verdict__control-evidence verdict__control-evidence--attested">
+                        Attested by {attestation.attested_by_name} (name not verified) — evidence: &ldquo;
+                        {attestation.evidence_note}&rdquo;
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <p className="verdict__controlset-asof">
               No policy is loaded, so whether evidence exists for these controls could not be

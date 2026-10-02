@@ -719,3 +719,68 @@ describe('evaluate — jurisdiction packs (V2-A)', () => {
     for (const r of results) expect(JSON.stringify(r)).toBe(first);
   });
 });
+
+// Policy v1.6, 2026-09-28. Three owner-approved rule changes:
+//   (a) INV-DISCLOSE-01 / INV-ESCALATE-01 narrowed to direct dealing —
+//       action_type: {in: [inform, execute, trade, approve]} added, so an
+//       AI upstream of a human-sent message (e.g. a draft an RM edits and
+//       sends under their own name) no longer trips either.
+//   (b) INV-CITE-01's model_type narrowed to [llm, agentic] — generative-ai
+//       (image/audio/video/code generators) no longer trips it.
+//   (c) INV-SEC-01's description reworded only; its condition is UNCHANGED.
+describe('evaluate — policy v1.6 (2026-09-28)', () => {
+  function directDealingGraph(model_type: string, action_type: string): DataFlowGraph {
+    return graph({
+      processing_nodes: [
+        { id: 'p1', label: 'x', model_type: model_type as never, autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: action_type as never, exposure: 'client-facing', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+  }
+
+  it("TC-R17-PV-01: INV-DISCLOSE-01 and INV-ESCALATE-01 no longer trip when the AI only drafts or recommends for a human to send — only when it deals with the client directly (inform/execute/trade/approve)", () => {
+    const drafted = evaluate(directDealingGraph('llm', 'draft'), policy);
+    const recommended = evaluate(directDealingGraph('llm', 'recommend'), policy);
+    const informed = evaluate(directDealingGraph('llm', 'inform'), policy);
+    expect(drafted.ok && drafted.value.controls).not.toContain('CTRL-DISCLOSE-01');
+    expect(drafted.ok && drafted.value.controls).not.toContain('CTRL-ESCALATE-01');
+    expect(recommended.ok && recommended.value.controls).not.toContain('CTRL-DISCLOSE-01');
+    expect(recommended.ok && recommended.value.controls).not.toContain('CTRL-ESCALATE-01');
+    expect(informed.ok && informed.value.controls).toContain('CTRL-DISCLOSE-01');
+    expect(informed.ok && informed.value.controls).toContain('CTRL-ESCALATE-01');
+    const informedIds = informed.ok ? informed.value.explanation.tripped_invariants.map((t) => t.id) : [];
+    expect(informedIds).toContain('INV-DISCLOSE-01');
+    expect(informedIds).toContain('INV-ESCALATE-01');
+  });
+
+  it('TC-R17-PV-02: INV-CITE-01 covers llm and agentic (AI that writes text) but no longer generative-ai (image/audio/video/code generators)', () => {
+    const llmRead = evaluate(directDealingGraph('llm', 'read'), policy);
+    const agenticRead = evaluate(directDealingGraph('agentic', 'read'), policy);
+    const genAiRead = evaluate(directDealingGraph('generative-ai', 'read'), policy);
+    expect(llmRead.ok && llmRead.value.controls).toContain('CTRL-CITE-01');
+    expect(agenticRead.ok && agenticRead.value.controls).toContain('CTRL-CITE-01');
+    expect(genAiRead.ok && genAiRead.value.controls).not.toContain('CTRL-CITE-01');
+  });
+
+  it('TC-R17-PV-03: INV-SEC-01 still trips exactly as before — v1.6 reworded its description only, the condition (model type + exposure beyond the team\'s own) is unchanged', () => {
+    const internalOnly = graph({
+      processing_nodes: [
+        { id: 'p1', label: 'x', model_type: 'deep-learning', autonomy_level: 1, data_zone: 'Zone C', vendor: 'internal', replaces_prior_model: false },
+      ],
+      output_nodes: [
+        { id: 'o1', label: 'y', action_type: 'recommend', exposure: 'internal-only', decision_bindingness: 'advisory', output_reversibility: 'reversible', scale: 'limited' },
+      ],
+    });
+    const beyondTeam = graph({ ...internalOnly, output_nodes: [{ ...internalOnly.output_nodes[0]!, exposure: 'internal-shared' }] });
+    const stillInternal = evaluate(internalOnly, policy);
+    const reachesBeyond = evaluate(beyondTeam, policy);
+    expect(stillInternal.ok && stillInternal.value.controls).not.toContain('CTRL-REDTEAM-01');
+    expect(reachesBeyond.ok && reachesBeyond.value.controls).toContain('CTRL-REDTEAM-01');
+  });
+
+  it('TC-R17-PV-04: the shipped policy version is 1.6', () => {
+    expect(policy.version).toBe('1.6');
+  });
+});

@@ -169,7 +169,12 @@ export const TIER_MEANINGS: Record<string, string> = {
 
 export const TRACK_MEANINGS: Record<string, string> = {
   I: 'overseen as a traditional model, under classic model risk management.',
-  II: 'overseen as a model with extra scrutiny — it replaces a prior model or acts with high autonomy.',
+  // Track-order fix, 2026-09-28: the old wording ("it replaces a prior
+  // model or acts with high autonomy") was false for the plain TRACK-II
+  // rule itself (ordinary ML/generative models on MRM, no replacement or
+  // autonomy involved) — true only for the TRACK-II-REPLACE / TRACK-II-
+  // AUTONOMY special cases. Reworded to hold for all three.
+  II: 'overseen as a model with extra scrutiny — machine-learning models, and any model that replaces a prior one or acts with high autonomy.',
   III: 'overseen by AI governance — generative or agentic AI that newer regulation carves out of the classic model definition.',
 };
 

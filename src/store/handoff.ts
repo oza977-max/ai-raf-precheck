@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { AuditEvent, RegisterNode, RegisterEdge } from './types';
-import { getAllForExport, importTailIfContinues, backupAndReplaceAllRawEvents, verifyChainOf, sha256Hex } from './audit';
+import {
+  getAllForExport,
+  importTailIfContinuesWithinQueue,
+  backupAndReplaceAllRawEventsWithinQueue,
+  currentTipWithinQueue,
+  withAuditQueue,
+  verifyChainOf,
+  sha256Hex,
+} from './audit';
 import { exportAll, importRegister, backupAndReplaceRegister } from './register';
 
 // RG-8 — verified hand-off bundle (2026-09-01; relabelled from RG-6 in
@@ -76,19 +84,91 @@ const isoDatetime = z.string().datetime({ offset: true, message: 'must be a vali
 const LIFECYCLE_STAGES = ['idea', 'exploring', 'pre_checked', 'approved', 'in_production', 'monitored', 'retired'] as const;
 const lifecycleStageSchema = z.enum(LIFECYCLE_STAGES);
 
+// code-review-005 round 2, N4. ConfidenceCaveat (src/engine/types.ts) in
+// full — small and stable, like graphCorrectionSchema below.
+const confidenceCaveatSchema = z.object({
+  ruleId: z.string(),
+  field: z.string(),
+  reason: z.string(),
+  confidence: z.enum(['low', 'medium', 'high']),
+});
+
+// N4: RuleRationale / TrippedInvariantDetail / VerdictExplanation
+// (src/engine/types.ts). explanation itself stays OPTIONAL on the schema
+// below (VerdictDisplay.tsx already treats a missing explanation as a real,
+// legacy-tolerant possibility — "BC-V11C01-04: verdicts persisted before
+// V1.1-C01 lack `explanation`" — and every render site guards it with
+// `explanation &&`), but once present its shape is required in full: several
+// of its own fields (tripped_invariants, hard_lines_checked, ...) are read
+// unguarded ONCE `explanation` itself is truthy (VerdictDisplay.tsx's
+// WhyThisVerdict/"how fragile" sections; RegisterDetail.tsx's
+// challengeableRules), so a bundle supplying a partially-shaped explanation
+// object is exactly as dangerous as one supplying none — reject it instead.
+const ruleRationaleSchema = z.object({
+  rule_id: z.string(),
+  rule_name: z.string().optional(),
+  matched_field: z.string().optional(),
+  regulatory_basis: z.string().optional(),
+});
+
+const trippedInvariantDetailSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  severity: z.string(),
+  regulatory_basis: z.string().optional(),
+  required_controls: z.array(z.string()),
+  graph_path: z.string(),
+});
+
+const verdictExplanationSchema = z
+  .object({
+    tier_rationale: ruleRationaleSchema.nullable(),
+    track_rationale: ruleRationaleSchema.nullable(),
+    hard_lines_checked: z.number(),
+    invariants_checked: z.number(),
+    tripped_invariants: z.array(trippedInvariantDetailSchema),
+    binding_reason: z.string().nullable(),
+    binding_regulatory_basis: z.string().nullable(),
+  })
+  .passthrough(); // regulatory_chain (optional on the real type) and any future field ride through unvalidated — not dereferenced without its own `?? []`/`?.` guard anywhere in this codebase today.
+
 // Load-bearing subset of Verdict (src/types/verdict.ts extends
-// EvaluationResult, src/engine/types.ts) — exactly the fields register.ts's
-// toSummary()/hasPendingPolicyUpdate() dereference. Everything else on a
-// real Verdict rides through via passthrough.
+// EvaluationResult, src/engine/types.ts) — every field register.ts's
+// toSummary()/isVerdictProvisional()/hasPendingPolicyUpdate() OR
+// VerdictDisplay.tsx/RegisterDetail.tsx dereference WITHOUT a `??`/`?.` guard
+// (code-review-005 round 2, N4 — a bundle missing `confidence_caveats` used
+// to pass this schema, then throw inside isVerdictProvisional/toSummary,
+// which dropped the case from the register list and hung its own page on
+// "Loading…" forever). Everything else on a real Verdict rides through via
+// passthrough — mirroring the type field-for-field here would be its own
+// drift risk (the project's RF-1/RF-3 recurring findings); this is
+// deliberately the load-bearing subset, not the whole shape, same posture as
+// graphCorrectionSchema's comment below.
 const verdictSchema = z
   .object({
     id: z.string(),
     use_case_id: z.string(),
     status: z.enum(['approved', 'approved_with_controls', 'rejected']),
     policy_version: z.string(),
-    tier: z.string().nullable().optional(),
-    track: z.string().nullable().optional(),
+    // Real Tier/Track are non-null enums (src/engine/types.ts) — VerdictDisplay
+    // dereferences `verdict.tier.toLowerCase()` unguarded, which throws on
+    // null, the one value the PRE-round-2 schema allowed.
+    tier: z.enum(['Critical', 'High', 'Medium', 'Low']),
+    track: z.enum(['I', 'II', 'III']),
+    // Absent-as-legacy is the one deliberate exception (isVerdictProvisional's
+    // own documented legacy branch) — every other field here is required.
     provisional_reasons: z.array(z.string()).optional(),
+    confidence_caveats: z.array(confidenceCaveatSchema),
+    controls: z.array(z.string()),
+    downstream_reviews: z.array(z.string()),
+    conditions: z.object({ hypotheses: z.array(z.string()) }),
+    margin_achieved: z.number(),
+    margin_target: z.number(),
+    single_covered_invariants: z.array(z.string()),
+    boundary_proximity: z.boolean(),
+    attested_at: isoDatetime,
+    living_status: z.enum(['approved', 'amber', 'breached', 'revoked']),
+    explanation: verdictExplanationSchema.optional(),
   })
   .passthrough();
 
@@ -396,12 +476,42 @@ export type ImportOutcome =
   | 'merged' // bundle extended local; events/register absorbed
   | 'imported_into_empty' // local was empty; whole bundle absorbed (code-review-005 F27: was 'adopted', which collided with the unrelated classification_adopted audit event)
   | 'replaced' // user-confirmed: local discarded (backup taken), bundle installed
-  | 'diverged'; // two histories that cannot be merged — rejected, no writes
+  | 'diverged' // two histories that cannot be merged — rejected, no writes
+  // round 2, N1: the audit trail (source of truth) WAS replaced, but the
+  // register (derived view) failed to follow. A distinct, honest outcome —
+  // returned, never thrown — so the caller can offer a real way to finish
+  // (finishRegisterReplace) instead of a message that has to claim both
+  // "replaced" and "not changed" about the same operation.
+  | 'partially_replaced'
+  // round 2, N2: the local audit tip no longer matches the tip the caller's
+  // backup file actually exported — something was written locally (in the
+  // one reachable-in-one-tab window: a case opened and signed off while a
+  // replace was pending) between "save a backup" and "confirm replace".
+  // Refused, nothing written; the backup no longer covers everything a
+  // replace would discard.
+  | 'backup_out_of_date'
+  // round 2, N1: finishRegisterReplace's own re-check found the local audit
+  // tip has moved on since the partial replace it is trying to finish —
+  // finishing now would install a register that no longer matches what the
+  // audit trail (the source of truth) actually says. Refused; reload.
+  | 'finish_out_of_date';
 
 export interface ImportResult {
   outcome: ImportOutcome;
   message: string;
   eventsAdded: number;
+}
+
+// round 2, N2. The audit tip (hash + event count) the UI recorded at the
+// moment it actually built and downloaded the backup file — read INSIDE the
+// audit queue (exportBundle -> audit.getAllForExport, itself queued), so it
+// is the tip that bundle's audit_events actually contains, not a
+// best-effort snapshot from some other moment. Passed back into
+// replaceWithBundle so the replace can refuse, atomically, if the local
+// trail has moved on since.
+export interface AuditTip {
+  hash: string | null;
+  count: number;
 }
 
 // --- F14: remember successful syncs, so a later divergence reads as a
@@ -486,7 +596,7 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
 
   // 3. Duplicate event ids inside one bundle (F3/F4/F13/F20) — a bundle
   //    cannot be internally self-consistent if it claims the same event
-  //    twice, and importTailIfContinues' db.add() would only fail loudly
+  //    twice, and importTailIfContinuesWithinQueue's db.add() would only fail loudly
   //    AFTER the seal/chain checks below had already passed.
   const seenIds = new Set<string>();
   for (const e of bundle.audit_events) {
@@ -531,6 +641,25 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   return { bundle };
 }
 
+// round 2, N1's distinct, honest outcome for "the audit trail was replaced,
+// but the register step then failed" — returned by BOTH replaceWithBundle
+// and finishRegisterReplace, worded so the two can never contradict each
+// other the way a caught-and-rethrown message with a fixed sentence
+// appended to it could (the exact N1 bug: "your audit trail was replaced"
+// and "your register was not changed" about the same call).
+function partiallyReplacedResult(auditEventCount: number, err: unknown): ImportResult {
+  return {
+    outcome: 'partially_replaced',
+    message: `Your audit trail was replaced with this bundle's (${auditEventCount} events) — that part is done and cannot be undone. The register view could not be updated to match: ${
+      err instanceof Error ? err.message : String(err)
+    }. Use "Finish updating the register" to try again, or reload to see the latest audit trail.`,
+    eventsAdded: auditEventCount,
+  };
+}
+
+const REPLACED_MESSAGE = (auditEventCount: number) =>
+  `Your register was replaced with this bundle (${auditEventCount} events). Your previous register is in the backup file you saved.`;
+
 // The explicit, user-confirmed way out of 'diverged'. Found by a live dry run
 // (2026-09-27): every browser seeds its own demo cases on first load, so a
 // reviewer's register is never empty and never a prefix of the submitter's —
@@ -543,37 +672,93 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
 // the register (a derived view) — a mid-way failure then leaves the source
 // of truth already correct and only the presentation layer stale, never the
 // reverse (a register showing a stage/verdict its own trail cannot justify).
-// F16: each replace is its own atomic "read what's discarded, then discard
-// it" queued step (audit.backupAndReplaceAllRawEvents /
-// register.backupAndReplaceRegister) — see those functions for why that
-// closes a real data-loss window a two-call "export, then replace" left
-// open.
-export async function replaceWithBundle(raw: unknown): Promise<ImportResult> {
+// F16: the audit replace is an atomic "read what's discarded, then discard
+// it" step. Round 2 (N1/N2/N3) restructures the REST of this function:
+//
+// - N3: the whole operation — the audit replace AND the register replace —
+//   now runs inside ONE withAuditQueue() turn (audit outer, register inner,
+//   this codebase's one fixed nesting order — see audit.ts's withAuditQueue
+//   doc). Previously these were two separate top-level calls with a gap
+//   between them a concurrent updateLifecycleStage() could land in, leaving
+//   the (already-replaced) audit trail recording an approval the
+//   (not-yet-replaced, or already-replaced-and-now-stale) register did not
+//   agree with. Holding the queue across both steps means no other
+//   audit-outer/register-inner operation can interleave.
+// - N2: `expectedBackupTip`, when given, is checked ATOMICALLY with the
+//   audit replace (inside backupAndReplaceAllRawEventsWithinQueue) against
+//   the CURRENT local tip — refusing as 'backup_out_of_date' if anything
+//   local changed since the caller's backup was actually built.
+// - N1: a register-step failure AFTER the audit trail was replaced is a
+//   distinct, honest, RETURNED outcome ('partially_replaced'), never a
+//   thrown error with a fixed "nothing changed" sentence appended to it.
+export async function replaceWithBundle(raw: unknown, expectedBackupTip?: AuditTip): Promise<ImportResult> {
   const v = await validateBundle(raw);
   if ('failure' in v) return v.failure;
   const { bundle } = v;
 
-  await backupAndReplaceAllRawEvents(bundle.audit_events);
-  try {
-    await backupAndReplaceRegister(bundle.register.nodes, bundle.register.edges);
-  } catch (err) {
-    // The audit trail (source of truth) is already replaced; the register
-    // (derived view) failed to follow. Surface this honestly — RegisterView
-    // catches it and shows it (F6) — rather than claiming a clean replace.
-    throw new Error(
-      `Your audit trail was replaced, but the register view could not be updated: ${
-        err instanceof Error ? err.message : String(err)
-      }. Reload to see the latest state.`,
-    );
-  }
+  return withAuditQueue(async () => {
+    const auditResult = await backupAndReplaceAllRawEventsWithinQueue(bundle.audit_events, expectedBackupTip);
+    if (auditResult.kind === 'backup_out_of_date') {
+      return {
+        outcome: 'backup_out_of_date',
+        message:
+          'Your register changed after you saved the backup, so nothing was replaced. Save a new backup of yours, then replace.',
+        eventsAdded: 0,
+      };
+    }
+    // auditResult.kind === 'replaced' — the audit trail (source of truth) now
+    // holds the bundle's events. From here, ONLY the register step remains.
 
-  recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+    try {
+      await backupAndReplaceRegister(bundle.register.nodes, bundle.register.edges);
+    } catch (err) {
+      // The audit trail is already replaced and cannot be un-replaced from
+      // here; recordSyncedTip reflects that the audit side DID sync, even
+      // though the register did not yet follow.
+      recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+      return partiallyReplacedResult(bundle.audit_events.length, err);
+    }
 
-  return {
-    outcome: 'replaced',
-    message: `Your register was replaced with this bundle (${bundle.audit_events.length} events). Your previous register is in the backup file you saved.`,
-    eventsAdded: bundle.audit_events.length,
-  };
+    recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+    return { outcome: 'replaced', message: REPLACED_MESSAGE(bundle.audit_events.length), eventsAdded: bundle.audit_events.length };
+  });
+}
+
+// round 2, N1. The way out of 'partially_replaced': re-applies the SAME
+// bundle's register only, and only after re-confirming (atomically, inside
+// the same withAuditQueue() turn) that the local audit tip still equals the
+// bundle's tip — i.e. nothing else has touched the audit trail since the
+// replace that got the audit side this far. If it has (another partial
+// replace, an import, or — were it not for this same fixed lock order — a
+// concurrent approval), finishing now would install a register that no
+// longer matches what the audit trail actually says, so this refuses
+// ('finish_out_of_date') rather than finish blind.
+export async function finishRegisterReplace(raw: unknown): Promise<ImportResult> {
+  const v = await validateBundle(raw);
+  if ('failure' in v) return v.failure;
+  const { bundle } = v;
+  const bundleTip: AuditTip = { hash: bundle.audit_events.at(-1)?.hash ?? null, count: bundle.audit_events.length };
+
+  return withAuditQueue(async () => {
+    const localTip = await currentTipWithinQueue();
+    if (localTip.hash !== bundleTip.hash || localTip.count !== bundleTip.count) {
+      return {
+        outcome: 'finish_out_of_date',
+        message:
+          "Your audit trail has changed since it was replaced, so the register can't be safely finished from here. Reload the page to see the current state.",
+        eventsAdded: 0,
+      };
+    }
+
+    try {
+      await backupAndReplaceRegister(bundle.register.nodes, bundle.register.edges);
+    } catch (err) {
+      return partiallyReplacedResult(bundle.audit_events.length, err);
+    }
+
+    recordSyncedTip(bundleTip.hash);
+    return { outcome: 'replaced', message: REPLACED_MESSAGE(bundle.audit_events.length), eventsAdded: bundle.audit_events.length };
+  });
 }
 
 export async function importBundle(raw: unknown): Promise<ImportResult> {
@@ -581,50 +766,60 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
   if ('failure' in v) return v.failure;
   const { bundle } = v;
 
-  // code-review-005 F5: read-the-local-chain, check-the-prefix, and write-
-  // the-tail now happen as ONE queued step inside audit.ts, re-verified
-  // immediately before the write — see importTailIfContinues for why the
-  // old three-separate-calls version could race a concurrent import/append.
-  const tailResult = await importTailIfContinues(bundle.audit_events);
+  // code-review-005 F5, restructured round 2 (N3): read-the-local-chain,
+  // check-the-prefix, and write-the-tail happen as one unbroken step
+  // (importTailIfContinuesWithinQueue), and the WHOLE operation — that step
+  // AND the nested register merge below — now runs inside one
+  // withAuditQueue() turn, the same audit-outer/register-inner nesting
+  // replaceWithBundle uses, so a concurrent updateLifecycleStage() cannot
+  // land between this function's audit step and its register step either.
+  return withAuditQueue(async () => {
+    const tailResult = await importTailIfContinuesWithinQueue(bundle.audit_events);
 
-  if (tailResult.kind === 'diverged') {
-    return {
-      outcome: 'diverged',
-      message: hasSyncedBefore() ? REPEAT_DIVERGED_MESSAGE : FIRST_TIME_DIVERGED_MESSAGE,
-      eventsAdded: 0,
-    };
-  }
-  if (tailResult.kind === 'local_ahead') {
+    if (tailResult.kind === 'diverged') {
+      return {
+        outcome: 'diverged',
+        message: hasSyncedBefore() ? REPEAT_DIVERGED_MESSAGE : FIRST_TIME_DIVERGED_MESSAGE,
+        eventsAdded: 0,
+      };
+    }
+    if (tailResult.kind === 'local_ahead') {
+      recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+      return { outcome: 'local_ahead', message: 'Your copy already contains everything in this bundle and more. Nothing to import.', eventsAdded: 0 };
+    }
+    if (tailResult.kind === 'up_to_date') {
+      recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
+      return { outcome: 'up_to_date', message: 'Your copy is already up to date with this bundle. Nothing to import.', eventsAdded: 0 };
+    }
+
+    // tailResult.kind === 'imported'. When the tail IS the whole bundle, the
+    // local chain was empty beforehand — imported_into_empty; otherwise it is
+    // a genuine merge of the new tail onto an existing chain.
+    const outcome: ImportOutcome = tailResult.added === bundle.audit_events.length ? 'imported_into_empty' : 'merged';
+
+    // code-review-005 F6: register (derived view) written AFTER the audit
+    // trail (source of truth, already updated by
+    // importTailIfContinuesWithinQueue above) — a failure here leaves the
+    // trail correct and only the register stale, which RegisterView
+    // surfaces rather than swallows. Unlike replaceWithBundle (N1), this
+    // path still throws: no pre-existing self-contradiction bug was found
+    // on the merge path (RegisterView's import handler never appends a
+    // fixed sentence to a caught error), so round 2 leaves its wording
+    // unchanged and fixes only the lock ordering (N3) around it.
+    try {
+      await importRegister(bundle.register.nodes, bundle.register.edges);
+    } catch (err) {
+      throw new Error(
+        `The audit trail was updated (${tailResult.added} event${tailResult.added === 1 ? '' : 's'}), but the register view could not be refreshed: ${
+          err instanceof Error ? err.message : String(err)
+        }. Reload to see the latest state.`,
+      );
+    }
+
     recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
-    return { outcome: 'local_ahead', message: 'Your copy already contains everything in this bundle and more. Nothing to import.', eventsAdded: 0 };
-  }
-  if (tailResult.kind === 'up_to_date') {
-    recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
-    return { outcome: 'up_to_date', message: 'Your copy is already up to date with this bundle. Nothing to import.', eventsAdded: 0 };
-  }
 
-  // tailResult.kind === 'imported'. When the tail IS the whole bundle, the
-  // local chain was empty beforehand — imported_into_empty; otherwise it is
-  // a genuine merge of the new tail onto an existing chain.
-  const outcome: ImportOutcome = tailResult.added === bundle.audit_events.length ? 'imported_into_empty' : 'merged';
-
-  // code-review-005 F6: register (derived view) written AFTER the audit
-  // trail (source of truth, already updated by importTailIfContinues
-  // above) — a failure here leaves the trail correct and only the register
-  // stale, which RegisterView surfaces rather than swallows.
-  try {
-    await importRegister(bundle.register.nodes, bundle.register.edges);
-  } catch (err) {
-    throw new Error(
-      `The audit trail was updated (${tailResult.added} event${tailResult.added === 1 ? '' : 's'}), but the register view could not be refreshed: ${
-        err instanceof Error ? err.message : String(err)
-      }. Reload to see the latest state.`,
-    );
-  }
-
-  recordSyncedTip(bundle.audit_events.at(-1)?.hash ?? null);
-
-  return outcome === 'imported_into_empty'
-    ? { outcome, message: `Imported ${tailResult.added} events into an empty register.`, eventsAdded: tailResult.added }
-    : { outcome, message: `Merged ${tailResult.added} new event${tailResult.added === 1 ? '' : 's'} from this bundle.`, eventsAdded: tailResult.added };
+    return outcome === 'imported_into_empty'
+      ? { outcome, message: `Imported ${tailResult.added} events into an empty register.`, eventsAdded: tailResult.added }
+      : { outcome, message: `Merged ${tailResult.added} new event${tailResult.added === 1 ? '' : 's'} from this bundle.`, eventsAdded: tailResult.added };
+  });
 }

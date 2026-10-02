@@ -126,6 +126,10 @@ interface TrackAssignment {
 
 Track rules are evaluated in order. **First match returns** (short-circuit). If no rule matches, the function returns an `EngineError` of kind `'no-track-match'` — this is a policy configuration error, not a use case rejection.
 
+**Track order is the policy file's own declared order — not sorted by id.** Every other policy collection `evaluate()` iterates (hard lines, tiers, invariants, controls) is sorted by `id` before use, so YAML authoring order can never matter (§7 point 2). Tracks are the deliberate exception: because assignment is first-match/short-circuit, the array order **is** the rule, not an accident of how the firm listed them in the file. `policy/appetite.yaml` places `TRACK-III-AGENTIC`, `TRACK-II-REPLACE` and `TRACK-II-AUTONOMY` before the general `TRACK-III`/`TRACK-I`/`TRACK-II` precisely so those special cases win first — sorting them alphabetically would put `TRACK-I` ahead of `TRACK-II-AUTONOMY` and silently defeat that ordering. `evaluate()` passes `policy.tracks` to `assignTrack()` unsorted, in file order (`src/engine/evaluate.ts`).
+
+Fixed 2026-09-28: `evaluate()` previously called `sortedById(policy.tracks)` before `assignTrack()` — a copy of the id-sort every other collection legitimately gets, wrongly applied to the one collection where order is the mechanism. 90 of the 280 combinations of model type × autonomy (0-4) × decision bindingness × `replaces_prior_model` routed to the wrong track as a result (e.g. a statistical model at autonomy ≥ 3 landed on Track I instead of Track II). This does not weaken determinism (NF-1, §7): the policy file's array order is itself a fixed, deterministic input, byte-identical across runs without being re-sorted. See `src/engine/track.test.ts` (TC-R17-TO-01 through -05) for the regression tests and the property that pins the fix.
+
 ### 3.5 Step 4 — Tier assignment
 
 ```
@@ -422,7 +426,7 @@ The LLM prompt for reasoning trace construction includes all of these structured
 The engine guarantees determinism through:
 
 1. **Pure function**: `evaluate(graph, policy)` has no side effects and no access to external state (no Date.now(), no Math.random(), no localStorage reads)
-2. **Sorted inputs**: Before evaluation, all arrays (invariants, controls, hard lines, pack rules) are sorted by ID to eliminate ordering non-determinism from YAML load order
+2. **Sorted inputs**: Before evaluation, all arrays (invariants, controls, hard lines, pack rules) are sorted by ID to eliminate ordering non-determinism from YAML load order. **Tracks are the one exception, by design, not by omission** (§3.4): track assignment is first-match/short-circuit, so the policy file's own declared order IS the rule, and sorting it would silently change which rule wins. Leaving it unsorted does not weaken determinism — the policy file's array order is a fixed input, not a source of run-to-run variance. Tiers are also unsorted, for the opposite structural reason: tier assignment evaluates every rule and takes the highest-ranked match (§3.5), so its result is order-independent by construction and sorting would add nothing.
 3. **No LLM in the evaluation path**: The Anthropic SDK is never called within `evaluate()` or any function it calls
 4. **Deterministic solver**: The greedy algorithm is deterministic when tie-breaking is deterministic (lowest burden, then alphabetical by control ID)
 
@@ -707,6 +711,7 @@ already produced.
 
 | Date | Change |
 |---|---|
+| 2026-09-28 | §3.4 amended and §7 point 2 clarified — track assignment uses the policy file's own declared order, not sorted by id (the one deliberate exception among policy collections). Fixes a defect where `evaluate()` sorted `policy.tracks` by id before calling `assignTrack()`, silently defeating the ordering `policy/appetite.yaml` already declares deliberately (oracle rounds 001/002). See `src/engine/track.test.ts` TC-R17-TO-01..05. |
 | 2026-08-18 | §15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction. |
 | 2026-07-29 | §13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations in `VerdictDisplay.tsx` and `store/register.ts` that round 3 would otherwise have required editing in parallel. |
 | 2026-08-17 | §14 added — round 11 knowledge lens (ADR-EE-R11-1: pure function outside evaluate()'s call graph, reusing matchesCondition unchanged — determinism true by construction; ADR-EE-R11-2: coverage-gap filing reuses R4's dissent write path exactly). |

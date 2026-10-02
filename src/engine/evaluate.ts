@@ -42,7 +42,31 @@ export function evaluate(
   packs: JurisdictionPack[] = [],
 ): Result<EvaluationResult, EngineError> {
   const hardLines = sortedById(policy.hard_lines);
-  const tracks = sortedById(policy.tracks);
+  // Tracks are the ONE policy collection that is NOT sorted by id — this is
+  // deliberate, not an oversight to fix later. Track assignment is
+  // first-match/short-circuit (assignTrack, track.ts; evaluation-engine.md
+  // §3.4), and the policy file declares its track rules in a load-bearing
+  // order: TRACK-III-AGENTIC / TRACK-II-REPLACE / TRACK-II-AUTONOMY are
+  // placed FIRST in policy/appetite.yaml precisely so those special cases
+  // win before the general TRACK-III/TRACK-I/TRACK-II rules beneath them
+  // (see the comment block above `tracks:` there — oracle rounds 001/002
+  // fixed this exact ordering twice already, in the policy file itself).
+  // `sortedById` here silently re-imposed alphabetical order
+  // (TRACK-I, TRACK-II, TRACK-II-AUTONOMY, TRACK-II-REPLACE, TRACK-III,
+  // TRACK-III-AGENTIC) UNDER that fix, undoing it one layer up in the
+  // engine: e.g. a statistical model with autonomy >= 3 landed on TRACK-I
+  // (alphabetically first) instead of TRACK-II-AUTONOMY, and an agentic
+  // model that replaces a prior one landed on TRACK-II-REPLACE instead of
+  // TRACK-III-AGENTIC. Determinism (NF-1) does not require id-sorting: the
+  // policy file's array order is itself a fixed, deterministic input —
+  // byte-identical across runs without being re-sorted. Every OTHER
+  // collection below IS sorted because it has no such order dependency:
+  // hard lines short-circuit but the firm authors them id-ordered by
+  // convention; tiers/invariants/controls are evaluated in full and are
+  // order-independent by construction (tier.ts takes the highest-ranked
+  // match, invariants/controls are all evaluated, none short-circuit).
+  // Tracks are the exception, not the rule — leave this one unsorted.
+  const tracks = policy.tracks;
   const tiers = sortedById(policy.tiers);
   const invariants = sortedById(policy.invariants);
   const controls = sortedById(policy.controls);

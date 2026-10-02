@@ -8,5 +8,8 @@
 // vite.config.ts (the `test` block lives in the same defineConfig() call as
 // `define`), so __APP_VERSION__ is stamped with the real package version
 // under `npm test` too. Verified empirically, not just by reading the
-// config: see the assertion in src/store/handoff.test.ts.
+// config: code-review-005 round 2, N9 — TC-RG-8-34 in
+// src/store/handoff.test.ts asserts __APP_VERSION__ equals package.json's
+// own version (that test did not exist when this comment first cited it;
+// it does now).
 declare const __APP_VERSION__: string;

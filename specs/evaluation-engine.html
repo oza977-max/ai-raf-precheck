@@ -419,6 +419,10 @@ interface TrackAssignment {
 }</code></pre>
     <p>Track rules are evaluated in order. <strong>First match returns</strong> (short-circuit). If no rule matches, the function returns an <code>EngineError</code> of kind <code>'no-track-match'</code> — this is a policy configuration error, not a use case rejection.</p>
 
+    <p><strong>Track order is the policy file's own declared order — not sorted by id.</strong> Every other policy collection <code>evaluate()</code> iterates (hard lines, tiers, invariants, controls) is sorted by <code>id</code> before use, so YAML authoring order can never matter (&sect;7 point 2). Tracks are the deliberate exception: because assignment is first-match/short-circuit, the array order <strong>is</strong> the rule, not an accident of how the firm listed them in the file. <code>policy/appetite.yaml</code> places <code>TRACK-III-AGENTIC</code>, <code>TRACK-II-REPLACE</code> and <code>TRACK-II-AUTONOMY</code> before the general <code>TRACK-III</code>/<code>TRACK-I</code>/<code>TRACK-II</code> precisely so those special cases win first — sorting them alphabetically would put <code>TRACK-I</code> ahead of <code>TRACK-II-AUTONOMY</code> and silently defeat that ordering. <code>evaluate()</code> passes <code>policy.tracks</code> to <code>assignTrack()</code> unsorted, in file order (<code>src/engine/evaluate.ts</code>).</p>
+
+    <p>Fixed 2026-09-28: <code>evaluate()</code> previously called <code>sortedById(policy.tracks)</code> before <code>assignTrack()</code> — a copy of the id-sort every other collection legitimately gets, wrongly applied to the one collection where order is the mechanism. 90 of the 280 combinations of model type &times; autonomy (0-4) &times; decision bindingness &times; <code>replaces_prior_model</code> routed to the wrong track as a result (e.g. a statistical model at autonomy &ge; 3 landed on Track I instead of Track II). This does not weaken determinism (NF-1, &sect;7): the policy file's array order is itself a fixed, deterministic input, byte-identical across runs without being re-sorted. See <code>src/engine/track.test.ts</code> (TC-R17-TO-01 through -05) for the regression tests and the property that pins the fix.</p>
+
     <h3 id="step-4-tier">Step 4 — Tier Assignment</h3>
     <pre><code>assignTier(
   graph: DataFlowGraph,
@@ -617,7 +621,7 @@ interface VerdictTraceData {
     <p>The engine guarantees determinism through:</p>
     <ol>
       <li><strong>Pure function</strong>: <code>evaluate(graph, policy)</code> has no side effects and no access to external state (no Date.now(), no Math.random(), no localStorage reads)</li>
-      <li><strong>Sorted inputs</strong>: Before evaluation, all arrays (invariants, controls, hard lines, pack rules) are sorted by ID to eliminate ordering non-determinism from YAML load order</li>
+      <li><strong>Sorted inputs</strong>: Before evaluation, all arrays (invariants, controls, hard lines, pack rules) are sorted by ID to eliminate ordering non-determinism from YAML load order. <strong>Tracks are the one exception, by design, not by omission</strong> (&sect;3.4): track assignment is first-match/short-circuit, so the policy file's own declared order IS the rule, and sorting it would silently change which rule wins. Leaving it unsorted does not weaken determinism — the policy file's array order is a fixed input, not a source of run-to-run variance. Tiers are also unsorted, for the opposite structural reason: tier assignment evaluates every rule and takes the highest-ranked match (&sect;3.5), so its result is order-independent by construction and sorting would add nothing.</li>
       <li><strong>No LLM in the evaluation path</strong>: The Anthropic SDK is never called within <code>evaluate()</code> or any function it calls</li>
       <li><strong>Deterministic solver</strong>: The greedy algorithm is deterministic when tie-breaking is deterministic (lowest burden, then alphabetical by control ID)</li>
     </ol>
@@ -833,6 +837,7 @@ interface VerdictTraceData {
     <table>
       <thead><tr><th>Date</th><th>Change</th></tr></thead>
       <tbody>
+        <tr><td>2026-09-28</td><td>&sect;3.4 amended and &sect;7 point 2 clarified — track assignment uses the policy file's own declared order, not sorted by id (the one deliberate exception among policy collections). Fixes a defect where <code>evaluate()</code> sorted <code>policy.tracks</code> by id before calling <code>assignTrack()</code>, silently defeating the ordering <code>policy/appetite.yaml</code> already declares deliberately (oracle rounds 001/002). See <code>src/engine/track.test.ts</code> TC-R17-TO-01..05.</td></tr>
         <tr><td>2026-08-18</td><td>&sect;15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction.</td></tr>
         <tr><td>2026-07-29</td><td>&sect;13 added — round 3 provisional reasons. ADR-EE-R3-1 moves the Provisional determination into the engine, replacing two independent derivations that round 3 would otherwise have required editing in parallel.</td></tr>
         <tr><td>2026-08-17</td><td>&sect;14 added &mdash; round 11 knowledge lens (ADR-EE-R11-1: pure function outside evaluate()&rsquo;s call graph, reusing matchesCondition unchanged &mdash; determinism true by construction; ADR-EE-R11-2: coverage-gap filing reuses R4&rsquo;s dissent write path exactly).</td></tr>

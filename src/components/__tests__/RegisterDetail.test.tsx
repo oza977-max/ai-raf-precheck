@@ -715,3 +715,52 @@ describe('RegisterDetail — the submitter note reaches the reviewer', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 });
+
+// code-review-005 round 2, N4. handoff.ts's import validation now rejects a
+// bundle whose verdict is missing confidence_caveats (see
+// src/store/handoff.test.ts's TC-RG-8-33), but a stored row can be corrupt
+// for OTHER reasons too — an old record from before this schema existed, a
+// write from some other path. Before this round, getUseCase() (called by
+// this page's load()) had nothing catching that rejection, so `summary`
+// simply never left its initial `null` and the page stayed on "Loading…"
+// forever, indistinguishable from a slow read. This proves the defence in
+// depth: RegisterDetail itself now surfaces the failure, not just the
+// hand-off boundary.
+describe('RegisterDetail — a corrupt stored verdict shows a visible error, not an endless spinner (code-review-005 round 2, N4)', () => {
+  it("TC-RG-8-35: a verdict record missing confidence_caveats shows \"This case couldn't be loaded\" with a way back, instead of hanging on Loading…", async () => {
+    const id = crypto.randomUUID();
+    await addNode(makeNode(id));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'use_case_created',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'use_case_created', description: 'Drafts client emails.', intake_method: 'structured_form' },
+    });
+    // Written directly via append() (bypassing handoff.ts entirely) — the
+    // exact shape of a pre-existing corrupt row, not a hand-off import.
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_produced',
+        verdict: {
+          id: `${id}-v1`,
+          use_case_id: id,
+          status: 'approved_with_controls',
+          policy_version: '1.0',
+        } as unknown as Verdict,
+      },
+    });
+
+    renderDetail(id);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/this case couldn.t be loaded/i);
+    expect(screen.getByRole('button', { name: /register/i })).toBeInTheDocument(); // the way back
+    expect(screen.queryByText(/^loading…$/i)).not.toBeInTheDocument();
+  });
+});

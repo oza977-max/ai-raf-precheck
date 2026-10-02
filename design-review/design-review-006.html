@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Review 006 — Plain-Language Intake and Verdict</title>
+<style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables (Few's principles) ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Verdict Box ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .issue-fix {
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ── Criterion Rows ── */
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style></head><body><main>
+<h1>Design Review 006 — plain-language intake and verdict (R16)</h1>
+<p class="subtitle">Review of <code>build/prompts/R16.md</code> against the round-16 requirements · 2026-09-28 · Round 1, liberal criterion</p>
+
+<h2>1. Summary</h2>
+<p>Six panels (A requirements coverage, B interface contracts, C structural soundness, D implementability, E security, F comprehension by a first-time user — the utility tree's one high-importance, high-risk leaf, NF-12) reviewed the build contract for the plain-language redesign before any code is written. All six returned. Code was read as committed (HEAD 2c05776) because other agents were editing the working tree.</p>
+<p><strong>47 findings after de-duplication: 15 Critical, 19 Important, 13 Minor.</strong> Every one is a gap or error in the contract — nothing has been built. The three themes: (1) the contract specifies the happy path and leaves identity, fallbacks and old data undefined (D-04, D-09–D-13, D-19, D-20); (2) three new surfaces were checked only for well-meaning use — a typed supplier name, “Not sure” on reversibility, and the policy's “covers” list (D-05–D-07, D-21); (3) the first screen and the form would re-derive facts that already exist elsewhere (D-02, D-03, D-28).</p>
+<p>What held up: the question table's overall design, the PE-9 list matching (consistent with the engine's existing any-node rule), the “No” screen, the stricter-when-unsure principle where it is applied, the draft-versioning rule, and the chunk ordering (no circular dependencies).</p>
+
+<h2>2. Critical findings</h2>
+<div class="issue critical"><p class="issue-title"><strong>D-01</strong> — The first screen drops two things the submitter has today</p><p class="issue-location">Panels: A (C6 related) · R16.md §4 intro and content list; VerdictDisplay.tsx medium-confidence caveat, “Correct this classification?”</p><p class="issue-detail">Everything that renders today moves into a fold titled for the AI risk team and collapsed for the submitter. That fold would now hold the medium-confidence caveat (RA-11: “verify this reasoning with your compliance team”) and the correction button (VD-3) — both addressed to the submitter, and both visible above the fold today by spec (verdict-audit §5.1, §5.3). The plain reasoning trace (VD-8) and the audit-trail honesty line (NF-2) go the same way.</p><p class="issue-fix"><strong>Fix:</strong> Add to the first screen: the medium-confidence caveat, in plain words, under “Could still change”; and “Think we got something wrong? Correct your answers and check again.” wired to the existing correction flow, on every verdict (not only the “No” screen).</p></div><div class="issue critical"><p class="issue-title"><strong>D-02</strong> — The verdict screen&#x27;s key facts would be worked out in four separate places</p><p class="issue-location">Panels: C, A, B · R16.md §4; VerdictDisplay.tsx WhatToDo, SignOffChecklist, controlEvidenceStates</p><p class="issue-detail">What counts as outstanding, attested or machine-verified — and which reviews a safeguard covers — is already computed three separate times on today's screen (one mismatch was a Critical in code review 005). The plan names no shared module for the first screen, so it would become a fourth.</p><p class="issue-fix"><strong>Fix:</strong> One pure module (no React) computes, once per verdict: each safeguard's status, owner text and “yours” flag, its plain reasons, the reviews it covers, and the reviews still owed. The first screen, the to-do list, the sign-off checklist and the evidence panel all read from it.</p></div><div class="issue critical"><p class="issue-title"><strong>D-03</strong> — With several kinds of information ticked, the confirmation grid shows only the first</p><p class="issue-location">Panels: C, B · graph-summary.ts (input_nodes[0]); condition.ts describeGraphPath</p><p class="issue-detail">The tick-all question creates one input per kind of information, but the shared summary behind the attestation grid and the verdict's detail grid reads only the first input. A submitter would attest to a grid that silently leaves out price-sensitive information they ticked second. The graph-path sentence has the same blind spot.</p><p class="issue-fix"><strong>Fix:</strong> graph-summary lists every input (or the most sensitive, using one exported ranking shared with envelope.ts); the graph-path description names the input that actually matched where it can; tests with two and three ticked kinds.</p></div><div class="issue critical"><p class="issue-title"><strong>D-04</strong> — Reviews have no reliable identity for “this safeguard also covers that review”</p><p class="issue-location">Panels: B, D · R16.md §1.2–1.4, §4; evaluate.ts downstream_review_sources; jurisdiction.ts</p><p class="issue-detail">Only the firm's own review rules carry an id today; pack reviews and the two reviews the engine writes itself do not. The plan's single literal ids would merge two different unlisted suppliers into one line, while the firm's two information-security rules (different ids, same review) would show twice. The worked example uses a description instead of the real pack rule id (SS1-UK-REV-01).</p><p class="issue-fix"><strong>Fix:</strong> Every review on a verdict carries a source entry — firm rules, pack rules and engine reviews — with a per-instance id (e.g. PV-UNREGISTERED:&lt;component&gt;). “Covers” matches by id; the “checks other teams run” list then de-duplicates by plain name. Fix the SS1/23 example.</p></div><div class="issue critical"><p class="issue-title"><strong>D-05</strong> — A typo in the policy&#x27;s “covers” list could hide a required review from everyone</p><p class="issue-location">Panels: E · R16.md §1.2; src/store/policy.ts (no cross-reference checks)</p><p class="issue-detail">One firm-edited list would decide what disappears from both the submitter's screen and the reviewer's section, and nothing checks the ids when the policy loads.</p><p class="issue-fix"><strong>Fix:</strong> Check every “covers” id when the policy loads and refuse to start with a clear error if one doesn't exist (as CF-5 does). Covered reviews leave the submitter's list only; the reviewer's section always lists every review, marked “covered by …”.</p></div><div class="issue critical"><p class="issue-title"><strong>D-06</strong> — Typing a supplier&#x27;s name could borrow an assessed supplier&#x27;s record</p><p class="issue-location">Panels: E, B, A · R16.md §2 row 3+; evaluate.ts resolveInheritance (exact-id match inherits the supplier&#x27;s envelope)</p><p class="issue-detail">The plan matches a typed supplier name to the firm's list. Typing the name of an approved supplier would make an unassessed tool inherit that supplier's approved limits and skip the supplier checks — exactly what a submitter wanting a lighter verdict would try. The matching rule itself was also unspecified.</p><p class="issue-fix"><strong>Fix:</strong> Pick the supplier from the firm's list (by its plain name), or choose “Not on this list — type its name”, which always counts as not yet assessed. Never match typed text to the list.</p></div><div class="issue critical"><p class="issue-title"><strong>D-07</strong> — “Not sure” about undoing mistakes is treated more leniently than “No”</p><p class="issue-location">Panels: E · R16.md §2 Q9; policy HL-001, INV-IRREV-01 (match only “irreversible”)</p><p class="issue-detail">The plan maps “Not sure” to “unknown”, which neither the hard line nor the undo-window rule matches — so “Not sure” can clear a line the firm never crosses, while “No” would not. That breaks the approved “Not sure takes the stricter reading” rule.</p><p class="issue-fix"><strong>Fix:</strong> “Not sure” → can't be undone (listed as an assumption). Add a worked case: acts entirely by itself + clients see it + “Not sure”.</p></div><div class="issue critical"><p class="issue-title"><strong>D-08</strong> — The describe-it-in-words path can&#x27;t record what an agent can reach</p><p class="issue-location">Panels: B, E · R16.md §5; src/llm/graph-extractor.ts (field not extracted); types.ts IntakeQuestion (no multi-select); QuestionnaireStep (single choice)</p><p class="issue-detail">The field is never extracted from a description, so no follow-up question is ever asked about it, and the question machinery has no tick-all type. UC-10 and UC-12 require both paths to capture it.</p><p class="issue-fix"><strong>Fix:</strong> Chunk E adds the field to the extraction schema, a tick-all question type with an array-aware answer check, and a tick-all control in the questionnaire and the graph review screen.</p></div><div class="issue critical"><p class="issue-title"><strong>D-09</strong> — How the firm&#x27;s own AI service maps to a supplier is undefined</p><p class="issue-location">Panels: D · R16.md §2 Q3(d); RegistryEntry has no vendor field</p><p class="issue-detail">Whether supplier checks apply to a platform-based use depends entirely on the vendor value, and the plan gives no source for it.</p><p class="issue-fix"><strong>Fix:</strong> Platforms gain an optional supplier id (the supplier behind the service); absent means built in-house. Starter policy: the cloud AI assistant names the firm's registered AI supplier.</p></div><div class="issue critical"><p class="issue-title"><strong>D-10</strong> — “The company AI-assistant account” can&#x27;t be picked out once a firm lists a second supplier</p><p class="issue-location">Panels: D, B · R16.md §2 Q3a; vendor registry has no kind field</p><p class="issue-detail">“Exactly one registered company-assistant vendor” works today only because there is one supplier in the starter file; the fallback question has no wording.</p><p class="issue-fix"><strong>Fix:</strong> Suppliers gain an optional kind (company assistant / other). Q3a picks the one company assistant; with several, a follow-up lists them by plain name (exact wording specified); with none, not yet assessed.</p></div><div class="issue critical"><p class="issue-title"><strong>D-11</strong> — Where the AI processes the information is never stated</p><p class="issue-location">Panels: D · R16.md §2; StructuredFormValues.processingDataZone (required)</p><p class="issue-detail">The processing node's zone is required today and the plan never says what fills it.</p><p class="issue-fix"><strong>Fix:</strong> Processing zone = the destination zone from Q3/Q3a; state it in the mapping table and test it.</p></div><div class="issue critical"><p class="issue-title"><strong>D-12</strong> — The same-answers-same-verdicts check could prove nothing</p><p class="issue-location">Panels: D, C · R16.md §2 parity test; backtest-predictions.test.ts; backtest-corpus.test.ts</p><p class="issue-detail">The same builder would write the mapping and the answers that “prove” it; the comparison fields aren't named (ids and timestamps differ every run); and one worked case (the regulatory-reporting drafter) is already unreachable because Q8 is now required.</p><p class="issue-fix"><strong>Fix:</strong> Answers for each worked case are written from the case's narrative only — never from its recorded form values or prediction — by a different agent from the builder, stored as a fixture file, and compared on a named subset (status, tier, track, binding constraint, controls, reviews, tripped rules). Each difference is listed for the owner; UC-8 vs UC-8b resolved up front.</p></div><div class="issue critical"><p class="issue-title"><strong>D-13</strong> — The form&#x27;s answer format is unspecified</p><p class="issue-location">Panels: D · R16.md §2 plainAnswersToFormValues(answers, policy)</p><p class="issue-detail">The one new function the chunk exists for has no input shape, which forces the builder to invent the form's state model.</p><p class="issue-fix"><strong>Fix:</strong> answers: a record keyed by question id ('1', '3', '3a', …, '14') holding a string or a list of strings; plus the typed shapes of Assumption and the result.</p></div><div class="issue critical"><p class="issue-title"><strong>D-14</strong> — Three different names for IT on one screen</p><p class="issue-location">Panels: F · R16.md §1.4 owner table</p><p class="issue-detail">“Your IT or platform team”, “your IT security team” and “IT, or whoever sets the tool up” would appear side by side on an agent case — the same confusion testers raised about “security” versus “information-security”.</p><p class="issue-fix"><strong>Fix:</strong> Owner decision (see triage): two names — “your IT team (or whoever sets the tool up)” for building and running the tool, and “your information-security team” for anything about security — used everywhere.</p></div><div class="issue critical"><p class="issue-title"><strong>D-15</strong> — Country-rule reviews would show raw regulatory titles on the first screen</p><p class="issue-location">Panels: F · R16.md §1.4 (pack names drafted, not approved); §4 fallbacks</p><p class="issue-detail">The plain names for the reviews that come from country rules are drafts awaiting approval, and the fallback shows the formal title (e.g. “ICT third-party concentration review (DORA Art. 28/29)”) — engine vocabulary on the first screen.</p><p class="issue-fix"><strong>Fix:</strong> Owner approves the drafted names (see triage). A review with no plain name shows “a regulatory review required for this kind of use — ask your AI risk team which” instead of its citation.</p></div>
+<h2>3. Important findings</h2>
+<div class="issue important"><p class="issue-title"><strong>D-16</strong> — “Stricter” zone ordering isn&#x27;t defined</p><p class="issue-location">Panels: D · R16.md §2 Q3(d)</p><p class="issue-detail">A builder could read “stricter” as the more locked-down zone — the opposite — and silently switch off the data rules for platform cases.</p><p class="issue-fix"><strong>Fix:</strong> State once: zones run most exposed → most contained as A, B, C; “stricter” always means the earlier letter.</p></div><div class="issue important"><p class="issue-title"><strong>D-17</strong> — Questions 6 and 7 have no “Not sure”</p><p class="issue-location">Panels: D · R16.md §2 Q6, Q7</p><p class="issue-detail">Every other closed question offers it; these two gate autonomy, weight and audience.</p><p class="issue-fix"><strong>Fix:</strong> Owner decision (see triage). Recommended: no “Not sure” — the submitter knows what their tool does and who gets the result — and the form says so.</p></div><div class="issue important"><p class="issue-title"><strong>D-18</strong> — The form and the “what we understood” screen must ship together</p><p class="issue-location">Panels: D · R16.md §6 order</p><p class="issue-detail">If chunk B lands before chunk C, the live site briefly takes new answers without showing what it understood.</p><p class="issue-fix"><strong>Fix:</strong> B and C are one release unit: built in order, committed together.</p></div><div class="issue important"><p class="issue-title"><strong>D-19</strong> — Old saved verdicts need safe fallbacks</p><p class="issue-location">Panels: D, C, B · R16.md §4 fallbacks; provisional.ts legacy branch; RegisterDetail reuses VerdictDisplay</p><p class="issue-detail">Verdicts saved before this change lack review source ids and may lack provisional reasons; the plan only covers “no policy loaded”.</p><p class="issue-fix"><strong>Fix:</strong> Old verdict without source ids → list every review separately, never fold one away. “Could still change” is gated on isVerdictProvisional, with a generic line when no specific reason is recorded.</p></div><div class="issue important"><p class="issue-title"><strong>D-20</strong> — A bare rule code could still reach the screen</p><p class="issue-location">Panels: E, B · R16.md §4 fallbacks; VerdictDisplay.tsx `control?.name ?? id`</p><p class="issue-detail">With no policy loaded, or a control since renamed, today's fallback prints the code (e.g. CTRL-ENC-01) — which NF-11 forbids.</p><p class="issue-fix"><strong>Fix:</strong> Never print a bare code on the first screen: “Safeguard 1, 2, …” with “ask your AI risk team what this involves”; the reviewer section keeps the code beside its gloss.</p></div><div class="issue important"><p class="issue-title"><strong>D-21</strong> — No threat model</p><p class="issue-location">Panels: E · R16.md (whole)</p><p class="issue-detail">The plan never names who could misuse the new surfaces — which is how D-05, D-06 and D-07 were missed.</p><p class="issue-fix"><strong>Fix:</strong> Add a short threat model: a submitter optimising for a lighter verdict; a careless or malformed policy or pack file; a hand-off bundle carrying old or crafted verdicts. State what each new surface does against each.</p></div><div class="issue important"><p class="issue-title"><strong>D-22</strong> — The graph review screen can&#x27;t edit a list of access kinds</p><p class="issue-location">Panels: B · GraphView.tsx PROCESSING_FIELDS (single select)</p><p class="issue-detail">The screen where a submitter or reviewer corrects the graph can show and edit only one value.</p><p class="issue-fix"><strong>Fix:</strong> Tick-all control for this field in GraphView; its corrections recorded as today (UC-7).</p></div><div class="issue important"><p class="issue-title"><strong>D-23</strong> — A platform or supplier without a plain name would break the no-jargon rule on the form</p><p class="issue-location">Panels: B · R16.md §1.2, Q3(d)</p><p class="issue-detail">Unlike the verdict, the form has no acceptable “formal text” fallback.</p><p class="issue-fix"><strong>Fix:</strong> Platforms and suppliers without a plain name show “Your firm's AI service 1, 2, …” on the form, and the policy check warns at load.</p></div><div class="issue important"><p class="issue-title"><strong>D-24</strong> — Nothing guarantees the access list is sorted in the form path</p><p class="issue-location">Panels: C · R16.md §1.1 vs Q13 option order</p><p class="issue-detail">The canonical order and the question's display order differ, and no test ticks boxes in a different order.</p><p class="issue-fix"><strong>Fix:</strong> buildGraphFromForm sorts; a test ticks the same boxes in two orders and gets byte-identical graphs.</p></div><div class="issue important"><p class="issue-title"><strong>D-25</strong> — Two parallel chunks share the one stylesheet</p><p class="issue-location">Panels: C · R16.md §6; src/App.css</p><p class="issue-detail">Chunks B and D run in parallel and both will need new styles in the single stylesheet.</p><p class="issue-fix"><strong>Fix:</strong> Each chunk adds its styles in its own clearly-marked block; the second to finish merges.</p></div><div class="issue important"><p class="issue-title"><strong>D-26</strong> — “Yours” safeguards have no action on the first screen</p><p class="issue-location">Panels: C (A-01 related) · R16.md §4</p><p class="issue-detail">The owner-assignment and attest actions live in a fold labelled for another team.</p><p class="issue-fix"><strong>Fix:</strong> Each “yours” safeguard on the first screen links to its action in the detailed section (opens and scrolls to it).</p></div><div class="issue important"><p class="issue-title"><strong>D-27</strong> — “No model was named” is promised but unassigned</p><p class="issue-location">Panels: A · UC-11 fit criterion</p><p class="issue-detail">Making the model name optional is the first time it can be blank; nothing states it.</p><p class="issue-fix"><strong>Fix:</strong> The reviewer section says “No model was named — your AI risk team may ask which one it uses.”</p></div><div class="issue important"><p class="issue-title"><strong>D-28</strong> — Shared labels still carry codes such as “(LLM)”</p><p class="issue-location">Panels: A, C · field-copy.ts label maps; QuestionnaireStep</p><p class="issue-detail">The describe-it-in-words path would inherit the codes; stripping them would break the reviewer grid that needs them.</p><p class="issue-fix"><strong>Fix:</strong> One shared, code-free set of question and option texts used by both paths; the code-bearing labels stay for the reviewer grid.</p></div><div class="issue important"><p class="issue-title"><strong>D-29</strong> — Requirement UC-3a now contradicts UC-8</p><p class="issue-location">Panels: A · requirements.md UC-3a</p><p class="issue-detail">Its fit criterion still describes labelled engine fields.</p><p class="issue-fix"><strong>Fix:</strong> Amend UC-3a: the surviving obligations are no API key needed, the same graph shape, and marked as form intake.</p></div><div class="issue important"><p class="issue-title"><strong>D-30</strong> — “(name not verified)” would mean two different things</p><p class="issue-location">Panels: F · R16.md §1.2 vs §4</p><p class="issue-detail">On an owner assignment it would suggest the safeguard is claimed done; on an attestation it means “only as good as this person's word”.</p><p class="issue-fix"><strong>Fix:</strong> Assignment line: “{name} (assigned on your firm's register), due {date}”. Keep “(name not verified)” for attestations only.</p></div><div class="issue important"><p class="issue-title"><strong>D-31</strong> — Question 4 has no example for translation</p><p class="issue-location">Panels: F · R16.md §2 Q4</p><p class="issue-detail">Q3 names translation websites; Q4 then leaves the reader to guess.</p><p class="issue-fix"><strong>Fix:</strong> “Reads, summarises, translates, writes or answers questions in words”.</p></div><div class="issue important"><p class="issue-title"><strong>D-32</strong> — “What to charge a client” doesn&#x27;t cover valuation models</p><p class="issue-location">Panels: F · R16.md §2 Q8</p><p class="issue-detail">A quant's pricing or valuation model has no clear option.</p><p class="issue-fix"><strong>Fix:</strong> “What to charge a client, or how something is priced or valued”.</p></div><div class="issue important"><p class="issue-title"><strong>D-33</strong> — Question 7 assumes a person reads the output</p><p class="issue-location">Panels: F · R16.md §2 Q7</p><p class="issue-detail">An agent that changes code or systems produces nothing people “receive”.</p><p class="issue-fix"><strong>Fix:</strong> Help text: “If it changes code, records or systems instead, think about who is affected by those changes.”</p></div><div class="issue important"><p class="issue-title"><strong>D-34</strong> — Chunks A and D each bundle two different jobs</p><p class="issue-location">Panels: A · R16.md §6</p><p class="issue-detail">A mixes engine plumbing with owner-approved content; D bundles the “No” screen with the main screen.</p><p class="issue-fix"><strong>Fix:</strong> Split A into A1 (schema and engine) and A2 (policy text); build the “No” screen as its own slice of D.</p></div>
+<h2>4. Minor findings</h2>
+<div class="issue minor"><p class="issue-title"><strong>D-35</strong> — The reviewer fold must wrap today&#x27;s content unchanged</p><p class="issue-location">Panels: D · R16.md §4</p><p class="issue-fix"><strong>Fix:</strong> State the new outer fold is additive and reuses the existing default-open rule; inner folds unchanged.</p></div><div class="issue minor"><p class="issue-title"><strong>D-36</strong> — Q11 “required” means an option picked</p><p class="issue-location">Panels: D · R16.md §2</p><p class="issue-detail">“Somewhere else, or not sure” legitimately gives no countries.</p><p class="issue-fix"><strong>Fix:</strong> Required = an option selected, not a non-empty list.</p></div><div class="issue minor"><p class="issue-title"><strong>D-37</strong> — Which Q3 answers show the name fields</p><p class="issue-location">Panels: D · R16.md §2 row 3+</p><p class="issue-fix"><strong>Fix:</strong> Name fields show for the outside-assistant, software-feature and specialist-product answers only.</p></div><div class="issue minor"><p class="issue-title"><strong>D-38</strong> — Empty next-step bullets</p><p class="issue-location">Panels: D · R16.md §4 item 3</p><p class="issue-fix"><strong>Fix:</strong> Omit empty bullets; “Then …” only follows a preceding step.</p></div><div class="issue minor"><p class="issue-title"><strong>D-39</strong> — Unknown placeholders and owner tokens</p><p class="issue-location">Panels: E · R16.md §1.2</p><p class="issue-fix"><strong>Fix:</strong> Unknown placeholder or token → flagged at policy load and shown literally; tokens namespaced (e.g. “@submitter”) so a real team name can't collide.</p></div><div class="issue minor"><p class="issue-title"><strong>D-40</strong> — “Not in” under list-valued fields</p><p class="issue-location">Panels: B · condition.ts matchesOperator</p><p class="issue-detail">“Any value matches” semantics would make a not-in test pass when an excluded value is present.</p><p class="issue-fix"><strong>Fix:</strong> Document that list-valued fields support “in” only; the policy check rejects “not in” on them.</p></div><div class="issue minor"><p class="issue-title"><strong>D-41</strong> — Old form drafts need an actual notice</p><p class="issue-location">Panels: B · intake-draft.ts</p><p class="issue-detail">A renamed key alone hides the old draft silently.</p><p class="issue-fix"><strong>Fix:</strong> Probe the old key, clear it and show the one-line notice.</p></div><div class="issue minor"><p class="issue-title"><strong>D-42</strong> — VD-2 needs the same amendment note as VD-1</p><p class="issue-location">Panels: A · requirements.md VD-2</p><p class="issue-fix"><strong>Fix:</strong> One-line amendment: the binding rule's plain reason is on the first screen; its formal text and graph path are in the reviewer section.</p></div><div class="issue minor"><p class="issue-title"><strong>D-43</strong> — The summary component must not write</p><p class="issue-location">Panels: A · R16.md §3</p><p class="issue-detail">This codebase has twice needed guards against double audit writes.</p><p class="issue-fix"><strong>Fix:</strong> State the summary only navigates (“Change an answer”); the one write stays on the existing Confirm button.</p></div><div class="issue minor"><p class="issue-title"><strong>D-44</strong> — “Provisional tier” shows on the questionnaire</p><p class="issue-location">Panels: A · QuestionnaireStep progress line</p><p class="issue-fix"><strong>Fix:</strong> Replace with “Question X of Y”.</p></div><div class="issue minor"><p class="issue-title"><strong>D-45</strong> — The worked-case document&#x27;s “form values” go stale</p><p class="issue-location">Panels: A · backtest/use-cases.md</p><p class="issue-fix"><strong>Fix:</strong> Note at the top: the form-value lines predate the new questions; the automated check replaces them.</p></div><div class="issue minor"><p class="issue-title"><strong>D-46</strong> — Q4&#x27;s “pick the lowest” needs an example</p><p class="issue-location">Panels: F · R16.md §2 Q4</p><p class="issue-detail">An interview note-taker transcribes and summarises; readers stop at the first match.</p><p class="issue-fix"><strong>Fix:</strong> Add: “for example, something that turns speech into text and writes a summary of it”.</p></div><div class="issue minor"><p class="issue-title"><strong>D-47</strong> — Fallback text gives no next step</p><p class="issue-location">Panels: F · R16.md §4 fallbacks</p><p class="issue-fix"><strong>Fix:</strong> Every fallback line ends “Ask your AI risk team what this means for you.”</p></div>
+<h2>5. Owner disposition</h2>
+<p><em>Pending — findings are presented to the owner before any disposition or verdict (shared rule 28).</em></p>
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main></body></html>

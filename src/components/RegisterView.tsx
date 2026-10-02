@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUseCases, hasPendingPolicyUpdate, exportAll } from '../store/register';
-import { exportBundle, importBundle, replaceWithBundle, type ImportOutcome } from '../store/handoff';
+import { exportBundle, importBundle, replaceWithBundle, finishRegisterReplace, type ImportOutcome, type AuditTip } from '../store/handoff';
 import { AIGATE_USE_CASE_ID } from '../seeds/aigate-self-assessment';
 import RegisterDetail from './RegisterDetail';
 import type { UseCaseSummary } from '../store/types';
@@ -62,12 +62,24 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   const [pendingReplace, setPendingReplace] = useState<unknown>(null);
   // code-review-005 F1: replace is now two explicit steps — a backup must
   // succeed and be acknowledged before the destructive step is even offered.
-  // backupReady holds the filename shown to the user in step 2's message;
-  // it is reset whenever pendingReplace changes or is cleared, so a stale
-  // "I already backed up" state from a DIFFERENT bundle's decision can never
-  // carry over into a new one.
-  const [backupReady, setBackupReady] = useState<{ filename: string } | null>(null);
+  // backupReady holds the filename shown to the user in step 2's message,
+  // AND (round 2, N2) the audit tip that backup file actually exported —
+  // recorded here so replaceWithBundle can refuse, atomically, if the local
+  // trail changed after this backup was taken (reachable in one tab: the
+  // case page renders inside this same component, so a user can open a case
+  // and sign it off while this replace is still pending). Reset whenever
+  // pendingReplace changes or is cleared, so a stale "I already backed up"
+  // state from a DIFFERENT bundle's decision can never carry over into a new
+  // one.
+  const [backupReady, setBackupReady] = useState<{ filename: string; auditTip: AuditTip } | null>(null);
+  // round 2, N1: set when a replace got as far as 'partially_replaced' — the
+  // audit trail was replaced but the register step failed. Offers "Finish
+  // updating the register" instead of the normal confirm-replace button;
+  // cleared on success, on a hard refusal to finish (finish_out_of_date), or
+  // when the user abandons this pending bundle entirely.
+  const [awaitingFinish, setAwaitingFinish] = useState(false);
   const replaceInFlight = useRef(false);
+  const backupInFlight = useRef(false); // N8: synchronous guard — a double-click on "Save a backup of mine first" must not download the file twice
   const importInFlight = useRef(false); // F5: synchronous guard — a state update lands too late to stop a second concurrent import
 
   type ExportResult = { ok: true; bundle: Awaited<ReturnType<typeof exportBundle>>; filename: string } | { ok: false; error: string };
@@ -98,9 +110,14 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   async function handleExportBundle() {
     const result = await performExportBundle();
     if (result.ok) {
+      // code-review-005 round 2, N7: the old wording ("Exported N events...
+      // to a hand-off file") stated the file was saved as fact — a browser
+      // can silently block or redirect a download. This says what the app
+      // actually knows (it asked the browser to save a file with this name
+      // and this content) and asks the user to confirm the rest themselves.
       setHandoffMsg({
         tone: 'ok',
-        text: `Exported ${result.bundle.audit_events.length} audit events and ${result.bundle.register.nodes.length} register entries to a hand-off file. Send it to the other reviewer directly.`,
+        text: `Created a hand-off file named ${result.filename} with ${result.bundle.audit_events.length} audit events and ${result.bundle.register.nodes.length} register entries. Check it's in your downloads folder, then send it to the other reviewer directly.`,
       });
     } else {
       setHandoffMsg({ tone: 'error', text: `Export failed: ${result.error}` });
@@ -154,18 +171,33 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
   // Step 1: "Save a backup of mine first". Only on success does step 2
   // become available — a browser can block or cancel a download silently,
   // so the user is asked to confirm they actually have the file before
-  // anything is replaced (F1).
+  // anything is replaced (F1). code-review-005 round 2, N8: a synchronous
+  // ref guard, same pattern as replaceInFlight/importInFlight — a
+  // double-click fires this async handler twice before React re-renders any
+  // disabled state, which would otherwise download the backup file twice.
   async function handleBackupBeforeReplace() {
-    const result = await performExportBundle();
-    if (!result.ok) {
-      setHandoffMsg({ tone: 'error', text: "Couldn't create a backup, so nothing was replaced." });
-      return;
+    if (backupInFlight.current) return;
+    backupInFlight.current = true;
+    try {
+      const result = await performExportBundle();
+      if (!result.ok) {
+        setHandoffMsg({ tone: 'error', text: "Couldn't create a backup, so nothing was replaced." });
+        return;
+      }
+      // round 2, N2: record exactly what this backup exported (hash + count
+      // of its last audit event) — this is the tip replaceWithBundle will
+      // re-check against the live trail before it discards anything.
+      setBackupReady({
+        filename: result.filename,
+        auditTip: { hash: result.bundle.audit_events.at(-1)?.hash ?? null, count: result.bundle.audit_events.length },
+      });
+      setHandoffMsg({
+        tone: 'info',
+        text: `A backup file named ${result.filename} was created. Check it's in your downloads folder before you replace anything.`,
+      });
+    } finally {
+      backupInFlight.current = false;
     }
-    setBackupReady({ filename: result.filename });
-    setHandoffMsg({
-      tone: 'info',
-      text: `A backup file named ${result.filename} was created. Check it's in your downloads folder before you replace anything.`,
-    });
   }
 
   // Step 2: "I have my backup — replace my register". Only this button
@@ -174,17 +206,35 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
     if (!pendingReplace || !backupReady || replaceInFlight.current) return;
     replaceInFlight.current = true;
     try {
-      const result = await replaceWithBundle(pendingReplace);
+      const result = await replaceWithBundle(pendingReplace, backupReady.auditTip);
       setHandoffMsg({ tone: result.outcome === 'replaced' ? 'ok' : 'error', text: result.message });
       if (result.outcome === 'replaced') {
         setPendingReplace(null);
         setBackupReady(null);
+        setAwaitingFinish(false);
         setRefreshKey((k) => k + 1);
+      } else if (result.outcome === 'partially_replaced') {
+        // round 2, N1: the audit trail was already replaced — there is no
+        // "keep my register" any more (that ship sailed the moment the
+        // audit side succeeded). Offer to finish the register step instead,
+        // keeping the same pending bundle and backup record.
+        setAwaitingFinish(true);
+      } else if (result.outcome === 'backup_out_of_date') {
+        // round 2, N2: something local changed since this backup was taken.
+        // Back to step 1 — the SAME pending bundle, a fresh backup required.
+        setBackupReady(null);
+        setAwaitingFinish(false);
       }
       // F6: on any other outcome, keep the pending replace (and the backup
       // already taken) available so the user can retry rather than losing
       // their place.
     } catch (err) {
+      // Only a genuine audit-step failure reaches here now (round 2, N1) —
+      // backupAndReplaceAllRawEventsWithinQueue's transaction aborts
+      // atomically, so nothing was written and this sentence is honest. A
+      // register-step failure after a successful audit replace is the
+      // distinct 'partially_replaced' outcome handled above, never this
+      // catch block — appending this sentence to THAT case was the N1 bug.
       setHandoffMsg({
         tone: 'error',
         text: `Replace failed: ${err instanceof Error ? err.message : String(err)}. Your register was not changed — your pending replace is still available.`,
@@ -194,9 +244,41 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
     }
   }
 
+  // round 2, N1: the way out of 'partially_replaced'. Re-applies the same
+  // pending bundle's register only, after finishRegisterReplace re-confirms
+  // the local audit tip has not moved on since the replace that got this far.
+  async function handleFinishRegisterReplace() {
+    if (!pendingReplace || replaceInFlight.current) return;
+    replaceInFlight.current = true;
+    try {
+      const result = await finishRegisterReplace(pendingReplace);
+      setHandoffMsg({ tone: result.outcome === 'replaced' ? 'ok' : 'error', text: result.message });
+      if (result.outcome === 'replaced' || result.outcome === 'finish_out_of_date') {
+        // 'replaced': done. 'finish_out_of_date': the audit trail moved on —
+        // finishing from here can no longer be trusted, and the message
+        // above already tells the user to reload, so there is nothing left
+        // for this pending bundle to offer.
+        setPendingReplace(null);
+        setBackupReady(null);
+        setAwaitingFinish(false);
+        if (result.outcome === 'replaced') setRefreshKey((k) => k + 1);
+      }
+      // otherwise ('partially_replaced' again — the retry ALSO failed to
+      // update the register): keep offering Finish, same as F6's precedent.
+    } catch (err) {
+      setHandoffMsg({
+        tone: 'error',
+        text: `Finishing the register update failed: ${err instanceof Error ? err.message : String(err)}. Your audit trail is unaffected by this — try again, or reload.`,
+      });
+    } finally {
+      replaceInFlight.current = false;
+    }
+  }
+
   function handleKeepRegister() {
     setPendingReplace(null);
     setBackupReady(null);
+    setAwaitingFinish(false);
     setHandoffMsg(null);
   }
 
@@ -401,7 +483,11 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
         )}
         {/* code-review-005 F1: two explicit steps. Step 1 must succeed (and
             the user must confirm they have the file) before step 2 — the
-            actual destructive replace — is even offered. */}
+            actual destructive replace — is even offered. Round 2 (N1) adds a
+            third state: once the audit side of a replace has actually
+            succeeded, "Keep my register" is no longer an honest option (that
+            part cannot be undone from here) — only "Finish updating the
+            register" is offered. */}
         {pendingReplace !== null && !backupReady && (
           <div className="register-view__handoff-actions">
             <button type="button" onClick={() => void handleBackupBeforeReplace()}>
@@ -412,13 +498,20 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
             </button>
           </div>
         )}
-        {pendingReplace !== null && backupReady && (
+        {pendingReplace !== null && backupReady && !awaitingFinish && (
           <div className="register-view__handoff-actions">
             <button type="button" onClick={() => void handleConfirmReplace()}>
               I have my backup — replace my register
             </button>
             <button type="button" onClick={handleKeepRegister}>
               Keep my register
+            </button>
+          </div>
+        )}
+        {pendingReplace !== null && awaitingFinish && (
+          <div className="register-view__handoff-actions">
+            <button type="button" onClick={() => void handleFinishRegisterReplace()}>
+              Finish updating the register
             </button>
           </div>
         )}
