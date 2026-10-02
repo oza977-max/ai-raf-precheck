@@ -23,6 +23,12 @@ Exit 1 if any case is untraced or any trace path is dangling (warnings do
 not fail the build — they flag a row this script does not yet understand).
 Cases that are deliberately not built are listed in DEFERRED with the
 reason; they are reported, never silently skipped.
+
+A case whose behaviour was intentionally replaced by a later requirement is
+listed in a `## Superseded` section of a test-cases file, as a table row
+`| TC-... | <reason, naming what replaced it> |`. It no longer needs a test,
+but it is printed as SUPERSEDED with its reason on every run — retired in the
+open, never dropped silently. A superseded row without a reason is an error.
 """
 import re
 import sys
@@ -64,6 +70,8 @@ RANGE_LETTER = re.compile(
 )
 WILDCARD = re.compile(r"^\|\s*(TC-[A-Za-z0-9-]+-)\*\s*\|", re.M)
 ANY_TC_ROW = re.compile(r"^\|\s*TC-.*$", re.M)
+SUPERSEDED_SECTION = re.compile(r"^## Superseded[^\n]*\n(.*?)(?=^## |\Z)", re.M | re.S)
+SUPERSEDED_ROW = re.compile(r"^\|\s*(" + ID + r")\s*\|\s*([^|\n]*?)\s*\|", re.M)
 
 
 def expand_range_dot(m: "re.Match[str]") -> list[str]:
@@ -102,9 +110,17 @@ def main() -> int:
     dangling: list[str] = []
     expansions: list[str] = []
     warnings: list[str] = []
+    superseded: dict[str, str] = {}  # id -> "reason (file)"
+    bad_superseded: list[str] = []
 
     for f in case_files:
         text = f.read_text(encoding="utf-8")
+        for sec in SUPERSEDED_SECTION.finditer(text):
+            for row in SUPERSEDED_ROW.finditer(sec.group(1)):
+                tc, why = row.group(1), row.group(2).strip()
+                if not why:
+                    bad_superseded.append(f"{f.name}: {tc} is listed as superseded with no reason")
+                superseded[tc] = f"{why} ({f.name})"
         consumed: set[int] = set()  # start offsets of rows already accounted for
 
         for m in HEADING.finditer(text):
@@ -161,12 +177,13 @@ def main() -> int:
 
     untraced = []
     for tc, (src, mode) in sorted(defined.items()):
-        if tc in DEFERRED:
+        if tc in DEFERRED or tc in superseded:
             continue
         if not is_traced(tc, mode, test_text):
             untraced.append(f"{tc}  ({src})")
 
-    traced = len(defined) - len(untraced) - len(DEFERRED)
+    retired = len([tc for tc in defined if tc in superseded and tc not in DEFERRED])
+    traced = len(defined) - len(untraced) - len(DEFERRED) - retired
     print(f"trace-check: {len(defined)} test cases across {len(case_files)} files")
     print(f"  traced to a named test: {traced}")
     if expansions:
@@ -175,13 +192,17 @@ def main() -> int:
             print(f"    {e}")
     for tc, why in sorted(DEFERRED.items()):
         print(f"  DEFERRED {tc}: {why}")
+    for tc, why in sorted(superseded.items()):
+        print(f"  SUPERSEDED {tc}: {why}")
+    for b in bad_superseded:
+        print(f"  ERROR {b}")
     for u in untraced:
         print(f"  UNTRACED {u}")
     for d in dangling:
         print(f"  DANGLING {d}")
     for w in warnings:
         print(f"  WARNING {w}")
-    if untraced or dangling:
+    if untraced or dangling or bad_superseded:
         return 1
     print("trace-check: clean")
     return 0
