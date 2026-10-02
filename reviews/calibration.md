@@ -36,6 +36,7 @@ against.
 | 4 | 2026-08-31 | explore | confirmation, same persona, no founder present | 0 | 0 | 1 obs | 3 of 4 findings confirmed CLOSED by direct inspection (live chain-integrity check, in-product governance mapping, honest calibration wording); 1 observation — completion tracking remains a stated, accepted V1 limitation, not silently missing |
 | 5 | 2026-09-28 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 8 | 14 | 7 | **Merge with caveats** (owner fix-all ×3: round 1 27/29 verified + 9 new; round 2 all 9 verified + 5 new (2C/1I/2M) fixed with tests, not re-reviewed — stopping rule) (pre-release gate for v1.0.0, range 7a82346..HEAD, 6 commits/41 files: hand-off bundle + control attestation + traceability tests. 72 raw → 29 de-duplicated + 3 observations. Dual review: 9 of 22 C+I reported by ≥1 blind panel, 3 blind-only (F7 spec/guard-test contradiction, F17 cross-tab register writes, F19 dropped attestation). Verdict recorded after the fix pass is re-reviewed) |
 | 1 | 2026-10-02 | design | A,B,C,D,E + F (comprehension sub-panel, utility-tree H/H leaf NF-12), liberal | 15 | 19 | 13 | **Build with caveats** (round 2 strict: 42/47 closed, 5 partly, 19 new incl. 4 C — all written into v2.1, not re-reviewed; owner: start building) (build contract R16 for the plain-language intake + verdict, before any code; 3 owner decisions: two team names, review plain names approved, Q6/Q7 'Not sure' → strictest) |
+| 3 | 2026-10-02 | design | A,B,C,D,E,F1,F2 ×2 (DUAL: calibrated + blind), strict — design review 007 | 10 | 23 | 5 | **Do not build** (as written — R16-W built without a cleared review, checked retroactively; R16-D2 and R16-E plans before build. 108 raw → 34 + 1 minor batch; 15 of 34 rest on blind-only reports. Owner triage: fix all 14 built-code findings after renaming the product to Counterpoise; rewrite both plans with every fix and build D2 then E in order; adopt WCAG 2.1 AA for new and changed screens; NF-12 gate amended to cover a "No"; pack-rule "No" limitation NOT approved → fix in D2. Rewritten plans get a fix-verification pass, then a verdict for build) |
 
 ## Round 1 measurements
 
@@ -764,3 +765,64 @@ independent perspective, run immediately after a fix, rather than
 trusting the fix description. Worth formalizing as a standing practice
 for any Critical-severity explore finding: fix, then re-run the same
 scenario cold before considering it closed.
+
+## Design review 007 (2026-10-02) — R16 delta: walkthrough fixes (built), the "No" screen and the description path (plans)
+
+**Scope and shape.** Round 3 of the R16 lineage, strict, dual review: seven
+panels (A–E always-on; F1 first-time comprehension and operability and F2
+audit-trail integrity of new writes — the two High/High utility-tree leaves),
+each run calibrated and blind — 14 Sonnet panels. R16-W was reviewed
+retroactively: it had been built without a cleared design review (a DR-1
+breach the owner caught by asking "are you following GVM?"). 108 raw findings
+→ 34 consolidated + a batch of 5 minors: 10 Critical, 23 Important. Scores
+(calibrated/blind): A 6/6, B 3/4, C 4/6, D 5/4, E 5/5, F1 4/4, F2 3/3.
+Hallucination check: 12 load-bearing quotes from 9 panels verified verbatim;
+one panel claim corrected at synthesis (BC-7 said an unknown-field bundle
+imports silently — it fails as a false "tampered").
+
+**Dual review earned its cost again.** 15 of the 34 consolidated findings rest
+wholly or partly on blind-only reports, including all three cross-tab and
+abandonment integrity defects (F2B-7, F2B-8, F2B-1) and the leftover machine
+words on the review screen (F1B-1, F1B-3).
+
+**Anchor examples:**
+- Worst, implementability/contracts: the plans asserted four facts about the
+  existing code that were never true — a `SUMMARY_VALUES` export, a tick-all
+  editor in GraphView (R16.md D-22), the guessed-field mechanism covering two
+  new extraction fields, and a session value carrying assumptions to the
+  verdict step. BC-001 existed precisely for this and was not applied by the
+  plan's own author (the chair).
+- Worst, integrity (F2): a hand-off bundle carrying any record field the
+  importing version does not know is reported as tampered — the schema strips
+  unknown payload keys before the seal and chain are recomputed.
+- Best, requirements (A): both coverage matrices independently located all
+  three partial requirements (UC-12, VD-10, NF-12) at the same seam — the
+  parallel D2/E build.
+- Best, operability (F1): the first review in this project to test the
+  keyboard and screen-reader path; it found the requirement itself still
+  says WCAG does not apply.
+
+**Recurring patterns:**
+- **BC-001 triggered (4 instances)** — see reviews/build-checks.md.
+- **RF-6 recurs** (boundary validated at the outer shape only): hand-off
+  `assumptions[].questionId` planned as "three strings"; the form's Q13
+  mapping bypassing the single access-scope recogniser.
+- **RF-7 recurs** (a design written for the honest user): W-9's zone answer
+  and W-7's evidence scope are self-attestation levers no plan named.
+- **Lesson — a live walkthrough is not a substitute for the design gate.**
+  The walkthrough that produced R16-W found real defects, but building its
+  fixes without a review re-created the same class it was fixing: plausible
+  plans asserting unverified things about the code.
+
+**Owner triage (2026-10-02):** fix all 14 built-code findings, after first
+renaming the product AIGate → Counterpoise; rewrite R16-D2 and R16-E with every
+fix and build them in order; adopt WCAG 2.1 AA for every new or changed screen
+and fix the three known gaps; amend NF-12 so the newcomer test covers a "No",
+a correction and a tick-all question; the pack-rule "No" limitation was not
+approved — fix it in D2.
+
+## Parity Check History
+
+| Date | Total | Per rule | Δ vs previous |
+|---|---|---|---|
+| 2026-10-02 (before design review 007) | 0 | R1–R8: 0 | 0 |

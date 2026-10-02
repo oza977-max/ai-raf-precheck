@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Review 007 — R16 walkthrough fixes, the No screen, the description path</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+    body {
+      font-family: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      color: #111;
+      background: #fffff8;
+      line-height: 1.6;
+      padding: 2rem 1rem 6rem;
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #111;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 400;
+      font-style: italic;
+      margin-top: 3rem;
+      margin-bottom: 1rem;
+      color: #111;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.6rem;
+      color: #333;
+    }
+
+    p, li {
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 0.8rem;
+      max-width: 640px;
+    }
+
+    ul, ol { padding-left: 1.4rem; margin-bottom: 1.2rem; }
+    li { margin-bottom: 0.4rem; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      font-style: italic;
+      color: #555;
+      margin-bottom: 2.5rem;
+      max-width: 640px;
+    }
+
+    .date {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ── Floating TOC (Left Side) ── */
+    nav.toc {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 220px;
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+      background: #fffff8;
+      border-right: 2px solid #ddd;
+      padding: 1rem 1rem 1rem 0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      z-index: 100;
+    }
+
+    nav.toc .toc-title {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 0.6rem;
+    }
+
+    nav.toc a {
+      color: #555;
+      text-decoration: none;
+      display: block;
+      padding: 0.15rem 0;
+      transition: color 0.15s;
+    }
+
+    nav.toc a:hover { color: #111; }
+    nav.toc a.active { color: #111; font-weight: 600; }
+    nav.toc .toc-h3 { padding-left: 0.8rem; font-size: 0.78rem; color: #888; }
+    nav.toc .toc-h3:hover { color: #555; }
+
+    /* Offset main content for left TOC */
+    main {
+      margin-left: 260px;
+    }
+
+    /* ── Sidenotes (Right Margin) ── */
+    .sidenote {
+      float: right;
+      clear: right;
+      width: 220px;
+      margin-right: -260px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #666;
+      padding-left: 1rem;
+      border-left: 2px solid #e0e0e0;
+    }
+
+    /* ── Tables ── */
+    table {
+      border-collapse: collapse;
+      margin: 1.5rem 0 2rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      width: auto;
+      min-width: 480px;
+    }
+
+    thead th {
+      text-align: left;
+      font-weight: 600;
+      padding: 0.5rem 1rem 0.5rem 0;
+      border-bottom: 2px solid #333;
+      color: #111;
+    }
+
+    tbody td {
+      padding: 0.45rem 1rem 0.45rem 0;
+      border-bottom: 1px solid #e8e8e8;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td { border-bottom: 2px solid #333; }
+    tbody tr:nth-child(even) { background: #f9f9f4; }
+
+    caption {
+      font-style: italic;
+      font-size: 0.88rem;
+      color: #666;
+      text-align: left;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Inline Code ── */
+    code {
+      font-family: "Menlo", "Consolas", "Monaco", monospace;
+      font-size: 0.88rem;
+      background: #f0f0e8;
+      padding: 0.1rem 0.35rem;
+      border-radius: 2px;
+    }
+
+    /* ── Verdict Box ── */
+    .verdict {
+      border: 2px solid #333;
+      padding: 1.2rem 1.5rem;
+      margin: 2rem 0;
+      max-width: 640px;
+    }
+
+    .verdict-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    .verdict-text {
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.4rem;
+    }
+
+    .verdict-basis {
+      font-size: 0.88rem;
+      color: #555;
+      max-width: 640px;
+    }
+
+    .verdict.caveats { border-color: #e67e22; background: #fef8f0; }
+    .verdict.caveats .verdict-text { color: #e67e22; }
+    .verdict.not-ready { border-color: #c0392b; background: #fdf3f2; }
+    .verdict.not-ready .verdict-text { color: #c0392b; }
+
+    /* ── Score Card ── */
+    .score-card {
+      background: #f7f7f0;
+      border: 2px solid #333;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    .overall-score {
+      font-size: 2.4rem;
+      font-weight: 400;
+      color: #111;
+      margin-bottom: 0.8rem;
+    }
+
+    .score-breakdown {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .score-item {
+      font-size: 0.88rem;
+      color: #555;
+    }
+
+    /* ── Issue Blocks ── */
+    .issue {
+      border-left: 3px solid;
+      padding: 0.8rem 1rem;
+      margin: 0.8rem 0;
+      max-width: 640px;
+    }
+
+    .issue.critical {
+      border-left-color: #c0392b;
+      background: #fdf0ef;
+    }
+
+    .issue.important {
+      border-left-color: #e67e22;
+      background: #fef8f0;
+    }
+
+    .issue.minor {
+      border-left-color: #7f8c8d;
+      background: #f7f7f4;
+    }
+
+    .issue-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-detail {
+      font-size: 0.92rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+
+    .issue-location {
+      font-size: 0.78rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .issue-fix {
+      font-size: 0.92rem;
+      color: #333;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* ── Criterion Rows ── */
+    .criterion {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      margin: 0.6rem 0;
+      max-width: 640px;
+    }
+
+    .criterion-name {
+      font-weight: 600;
+      color: #333;
+      min-width: 160px;
+    }
+
+    .criterion-score {
+      font-size: 0.85rem;
+      font-weight: 600;
+      min-width: 40px;
+    }
+
+    .criterion-score.high { color: #27ae60; }
+    .criterion-score.mid { color: #e67e22; }
+    .criterion-score.low { color: #c0392b; }
+
+    .criterion-note {
+      font-size: 0.88rem;
+      color: #666;
+    }
+
+    /* ── GVM Attribution ── */
+    .gvm-attribution {
+      font-size: 0.75rem;
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      margin-top: 3rem;
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) {
+      nav.toc {
+        position: static;
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+      }
+      main { margin-left: 0; }
+      .sidenote {
+        float: none;
+        width: 100%;
+        margin: 0.8rem 0;
+        padding: 0.6rem 0 0.6rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+  </nav>
+
+  <main>
+    <p class="date">October 2026</p>
+    <h1>Design Review 007 — R16 Walkthrough Fixes, The No Screen, The Description Path</h1>
+    <p class="subtitle">Round 3 strict review of R16-W (built, retroactive check), R16-D2 and R16-E (not yet built) using dual-review panels across seven dimensions</p>
+
+    <div class="verdict not-ready">
+      <div class="verdict-label">Verdict</div>
+      <div class="verdict-text">Do not build</div>
+      <p class="verdict-basis">As written: 10 Critical, 23 Important, 5 Minor after de-duplication — any Critical means not ready. Recorded after owner triage (2026-10-02): every finding is to be fixed; the R16-D2 and R16-E plans are rewritten with every fix and get a fix-verification pass before a build verdict is given.</p>
+    </div>
+
+    <h2 id="executive-summary">Executive Summary</h2>
+    <p><strong>Scope:</strong> R16-W (walkthrough fixes — built, retroactive DR-1 check), R16-D2 (the "No" screen — not yet built), R16-E (description-path plan — not yet built).</p>
+    <p><strong>Review method:</strong> Round 3, strict criterion, dual review. Seven panels (A Requirements coverage, B Interface contracts, C Structural soundness, D Implementability, E Security, F1 Comprehension and operability, F2 Audit-trail integrity) were calibrated on prior rounds, then reviewed blind independently. Total: 14 Sonnet panels. Full depth across all three areas. Parity script run before dispatch — clean.</p>
+    <p><strong>Findings:</strong> 108 raw findings from 14 panels. After de-duplication: 34 consolidated findings plus 1 batch of 5 minor findings. Hallucination check: 12 load-bearing quotes from 9 panels grep-verified verbatim against the source files — all present; every panel listed its files read. One panel claim corrected at synthesis: BC-7 said an unknown-field bundle would import "silently"; verified it fails as a false "tampered" alarm (F2C-1 and F2B-6 are correct).</p>
+    <p><strong>Dual-review value:</strong> 41 of 108 raw findings were blind-only before merging. After de-duplication, 15 of 34 consolidated findings rest wholly or partly on a blind-only report (marked †). Dual review earned its cost: these findings would have been invisible in a single-pass review.</p>
+    <p><strong>Panel scores (0–10 rubric: 9–10 no gaps; 7–8 one or two partial gaps; 5–6 several partial gaps; below 5 a missing element or structural failure):</strong></p>
+    <ul>
+      <li><strong>A Requirements coverage:</strong> 6 calibrated / 6 blind</li>
+      <li><strong>B Interface contracts:</strong> 3 calibrated / 4 blind</li>
+      <li><strong>C Structural soundness:</strong> 4 calibrated / 6 blind</li>
+      <li><strong>D Implementability:</strong> 5 calibrated / 4 blind</li>
+      <li><strong>E Security:</strong> 5 calibrated / 5 blind</li>
+      <li><strong>F1 Comprehension and operability:</strong> 4 calibrated / 4 blind</li>
+      <li><strong>F2 Audit-trail integrity:</strong> 3 calibrated / 3 blind</li>
+    </ul>
+    <p><strong>Utility tree (ATAM):</strong> Two High/High leaves — F1 (first-time user comprehension and operability, NF-12) and F2 (audit-trail integrity of new writes). Other branches (determinism NF-1, honesty NF-7, security) rated High importance / Medium risk — covered by panels C and E. The tree's coverage reflects the dual-review distribution.</p>
+
+    <h2 id="requirements-coverage">Requirements Coverage Matrix</h2>
+    <table>
+      <caption>Table 1 — Requirements coverage by build scope</caption>
+      <thead>
+        <tr><th>Requirement</th><th>Status</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UC-5 Plain-language intake form path</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-6 Description-based intake path</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-7 Graph review and correction</td><td>Covered</td><td>D2 gaps: DR7-22</td></tr>
+        <tr><td>UC-8 Worked cases (determinism check)</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-9 Customizable policy</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-10 Tick-all field access control</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-11 Optional model name</td><td>Covered</td><td></td></tr>
+        <tr><td>UC-12 Model output gate</td><td>Partial</td><td>DR7-24 to DR7-30</td></tr>
+        <tr><td>VD-3 Correction flow</td><td>Covered</td><td></td></tr>
+        <tr><td>VD-9 Reviewer section</td><td>Covered</td><td></td></tr>
+        <tr><td>VD-10 Verdict text and next steps</td><td>Partial</td><td>DR7-15, DR7-18, DR7-20</td></tr>
+        <tr><td>CF-6 Customizable controls</td><td>Covered</td><td></td></tr>
+        <tr><td>NF-1 Determinism</td><td>Covered</td><td></td></tr>
+        <tr><td>NF-2 Audit-trail honesty</td><td>Covered</td><td></td></tr>
+        <tr><td>NF-7 Verdict honesty</td><td>Covered</td><td></td></tr>
+        <tr><td>NF-12 First-time user comprehension and operability</td><td>Partial</td><td>DR7-10, DR7-23</td></tr>
+        <tr><td>PE-9 Plainest available text for every message</td><td>Partial</td><td>Covered in design; implementation gaps: DR7-11, DR7-25, DR7-27</td></tr>
+        <tr><td>RG-8 Plaintext and citations for regulatory calls</td><td>Covered</td><td>DR7-01, DR7-19</td></tr>
+        <tr><td>RG-9 and 2026-10-02 amendment (verdicts use safe plaintext)</td><td>Covered</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="utility-tree">Utility Tree &mdash; ATAM</h2>
+    <p>Root utility: AIGate verdicts carry the firm's risk appetite, deterministically, verifiably, and without overstating confidence.</p>
+    <h3 id="utility-high-high">High Importance / High Risk</h3>
+    <p><strong>F1. First-time user comprehension and operability (NF-12):</strong> A submitter new to the product must understand what they are filling in and what the verdict means, and they must be able to navigate to correct their answers. High risk: keyboard and screen-reader users today cannot reach controls (DR7-10); the summary and correction flow need integration work (DR7-23). Panels: F1C and F1B; findings: DR7-10, DR7-23.</p>
+    <p><strong>F2. Audit-trail integrity of new writes:</strong> Every write must be atomic and happen at most once per confirmed action, across tabs, retries, and crashes. High risk: the confirmation-double-write path is live (DR7-02); corrections can be silently clobbered across tabs (DR7-03); evaluation errors leave orphaned records (DR7-04); the description path's disclosure is unpersisted (DR7-07). Panels: F2C and F2B; findings: DR7-01 to DR7-05, DR7-07, DR7-12, DR7-16, DR7-22.</p>
+    <h3 id="utility-high-medium">High Importance / Medium Risk</h3>
+    <p><strong>Determinism (NF-1):</strong> Same inputs always produce byte-identical verdicts. Medium risk: the issue is architectural (not new with D2 or E) and covered by existing tests (TC-PE-1-01). Panels: C; findings: none new.</p>
+    <p><strong>Honesty (NF-7):</strong> The verdict never claims more than it can prove. Medium risk: false claims are rare (jargon on fallback paths, claims about fields never extracted). Panels: C and E; findings: DR7-06, DR7-25, DR7-30.</p>
+    <p><strong>Security:</strong> The engine and forms resist tampering and misuse. Medium risk: identified by panels C and E; findings: DR7-01 (false tamper alarm), DR7-05 to DR7-07 (data leakage paths), DR7-09 (unchecked self-attestation), DR7-21 (policy tampering).</p>
+
+    <h2 id="findings-group-1">Findings — Built Code (R16-W and Earlier)</h2>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-01</strong> — Hand-off import calls an untouched file "tampered" when a record carries an unknown field</p>
+      <p class="issue-detail">The import schema's record types are plain zod objects that strip unknown keys, and the seal and chain are then recomputed over the stripped copy. Any new optional field reaching an app version that doesn't recognize it triggers a false tamper alarm. D2's assumptions field will cause this the moment the schema lands.</p>
+      <p class="issue-location">Sources: F2C-1, F2B-6† (BC-7 corrected). Pre-existing schema design, made live by D2.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Let unknown record fields ride through (passthrough on the payload variants) so verification hashes what was sent; add D2's fields to the schema explicitly; test a bundle with an unknown field.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-02</strong> — Two tabs confirming the same draft both write a verdict; the second fails and every retry writes another duplicate pair</p>
+      <p class="issue-detail">The cross-tab lock only orders writes, it does not detect repeats. The register write then fails ("Evaluation failed"), and the retry loop writes another duplicate audit pair.</p>
+      <p class="issue-location">Sources: F2B-7†, F2C-3. Pre-existing; register.ts:27 db.add; IntakeFlow.tsx confirm path; db.ts:9-36.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Refuse a second confirmation inside the locked write ("this case was already confirmed in another tab — reload"), no retry loop; correct the overclaiming comment and spec line.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-03</strong> — Two tabs correcting the same verdict: the later write silently replaces the earlier</p>
+      <p class="issue-detail">The register's read-modify-write lets one person's correction stop being current without anyone being told.</p>
+      <p class="issue-location">Source: F2B-8†. Pre-existing; D2 widens the path (register.ts:190-217).</p>
+      <p class="issue-fix"><strong>Fix:</strong> An expected-current-verdict check (the pattern replaceWithBundle already uses), refusing with a clear message.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-04</strong> — An evaluation error followed by Back leaves a creation + confirmation record with no case behind it</p>
+      <p class="issue-detail">Confirmation is written before evaluate(), so a graph-review Back after an error creates an orphaned record. The retry starts a second case. Form-path users also land on the old field-card screen after an engine error (EVALUATION_FAILED).</p>
+      <p class="issue-location">Sources: F2C-2, CB-7†. Pre-existing; graph_review Back → duplicate check drops the case id (intake-state.ts:264-272), confirmation written before evaluate() (intake-state.ts:601-619).</p>
+      <p class="issue-fix"><strong>Fix:</strong> Graph review Back and retry keep the same case; form-path graphs return to the filled form.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-05</strong> — "Start over" after a first form submit strands that submit's creation record</p>
+      <p class="issue-detail">The recorded description can also differ from the one finally evaluated, since it is written at first Continue and edits come later.</p>
+      <p class="issue-location">Sources: F2B-1†, F2B-2†. Pre-existing.</p>
+      <p class="issue-fix"><strong>Fix:</strong> On the form path write the creation record at Confirm — once, with the final description — instead of at first Continue. Simplifies W-4 and D2 §2.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-06</strong> — The engine imports from the screen layer, breaking the architecture's first rule</p>
+      <p class="issue-detail">src/engine/plain-intake.ts imports question text helpers and types from src/components/plain-copy.ts. No lint rule catches it; D2 would deepen it.</p>
+      <p class="issue-location">Sources: CC-1 (rated Critical), CB-1†. Cross-cutting.md §7 prohibits engine → UI.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Move question ids and assumption keys to the engine side; screens resolve the words.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-07</strong> — Description path: "Things we couldn't tell" lives in temporary memory, not the saved draft</p>
+      <p class="issue-detail">A refresh before Confirm silently drops it — the bug W-4 fixed for the form path.</p>
+      <p class="issue-location">Source: CC-2 (rated Critical). IntakeFlow.tsx:170, 751.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Carry it in the saved state.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-08</strong> — The form's agent-access question (Q13) maps ticks by hand instead of through the single access-scope checker</p>
+      <p class="issue-detail">A mismatched saved answer would silently become "not stated" and skip the agent safeguards.</p>
+      <p class="issue-location">Source: EB-1†. plain-intake.ts:502-506; the "answered" check counts raw ticks.</p>
+      <p class="issue-fix"><strong>Fix:</strong> One checker; check the result.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-09</strong> — The zone question (W-9) is unchecked self-attestation</p>
+      <p class="issue-detail">The description-vs-answer plausibility check now runs only on the field-card screen the form path skips; nothing records which answer set the zone; after D2 answers can be re-tried freely.</p>
+      <p class="issue-location">Sources: EB-3†, EC-2. plausibility.ts:34-36; IntakeFlow.tsx:1498.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Run the plausibility check on the form path and show any warning on the summary; record how the zone was set; add the lever to the threat model (R16.md §0.1).</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-10</strong> — Keyboard and screen-reader use: accessibility requirements never revisited for newcomers</p>
+      <p class="issue-detail">Requirements still say "Consumer accessibility requirements (WCAG) do not apply to MVP"; sidebar items including "+ New pre-check" are clickable divs no keyboard can reach; no screen change moves focus; "Go to this safeguard" scrolls but doesn't move focus.</p>
+      <p class="issue-location">Sources: F1C-1..4, F1B-4†, F1B-5†. App.tsx:273-313; VerdictDisplay.tsx:1241; requirements.md:616.</p>
+      <p class="issue-fix"><strong>Fix:</strong> An owner decision on the requirement, then real buttons, focus on each step's heading, focus on the target safeguard.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-11</strong> — The review/correction screen edits agent access with a single dropdown; cannot record more than one kind</p>
+      <p class="issue-detail">Editing a correct multi-value answer silently narrows it with no check. The R16 plan says a tick-all editor exists (R16.md:42, D-22) — it was never built.</p>
+      <p class="issue-location">Sources: F1C-5, EB-5†, BC-5. GraphView.tsx:98-104, 413-423; IntakeFlow.tsx:529-560.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Build the tick-all editor through the single checker (in E); correct R16.md.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-12</strong> — A correction already drops the submitter's note and answer notes</p>
+      <p class="issue-detail">These are written only on a first confirmation, not on corrections.</p>
+      <p class="issue-location">Source: F2B-5†. IntakeFlow.tsx:873-907.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Keep them on the correction record (D2 touches this branch).</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-13</strong> — The "questions → contradictions → summary" routing rule is written twice</p>
+      <p class="issue-detail">Once in form submit and once in the review screen. So are the policy gate checks.</p>
+      <p class="issue-location">Sources: CB-2†, CC-5. intake-state.ts:359-362 vs IntakeFlow.tsx:608-631.</p>
+      <p class="issue-fix"><strong>Fix:</strong> One shared function.</p>
+    </div>
+
+    <div class="issue minor">
+      <p class="issue-title"><strong>DR7-14</strong> — Minor batch: five observations</p>
+      <p class="issue-detail">Two summary tables restate value lists instead of importing them; "UC-6b" used as if a requirement; "check" used for six different actions; the noun-phrase rule for review names is documentation-only; no authoring-checklist line for evidence scope.</p>
+      <p class="issue-location">Sources: BB-5†, AC-4, F1C-10, EB-6†, EC-7.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Import the lists; remove UC-6b references; pick one term for "verify"; document the noun-phrase rule in code; add evidence scope line to the checklist.</p>
+    </div>
+
+    <h2 id="findings-group-2">Findings — The "No" Screen Plan (R16-D2), Not Yet Built</h2>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-15</strong> — The "No" screen's "answers you weren't sure about" line would always be empty on a first result</p>
+      <p class="issue-detail">The only carrier of the assumptions is gone by the result step, and the result screen is never given them. The plan frames the choice as correction-only and as an open "pick one".</p>
+      <p class="issue-location">Sources: DB-1†, BC-1, DC-1, CB-3†, CC-3. IntakeFlow.tsx:161; intake-state.ts:135.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Keep the confirmed answers and assumptions for the session (taken before Confirm, like the reviewer note), pass them to the result screen; state plainly that this lasts until a reload.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-16</strong> — Where assumptions live after a correction, and how the register reads them, is undefined</p>
+      <p class="issue-detail">Corrections write no confirmation record; the register's existing lookup reads only confirmation records for notes and its current-verdict accessor excludes them.</p>
+      <p class="issue-location">Sources: DC-2, BB-2b†, F2C-4, F2B-4†, BC-2. register.ts:94-99, RegisterDetail.tsx:948-951.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Pin it — first confirmation → confirmation record; correction → the correction record; the register reads whichever matches the current verdict; tests for both.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-17</strong> — Correcting through the form must carry the original verdict id and description through the form state</p>
+      <p class="issue-detail">If not carried, the correction is treated as a new case and the register write fails.</p>
+      <p class="issue-location">Source: DB-3†. intake-state.ts:12-25, 352-358; IntakeFlow.tsx:871, 1052.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Thread the verdict id and original description through the form state and submit action.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-18</strong> — The "No" sentence needs short question labels and a pointer clause</p>
+      <p class="issue-detail">The full question text makes a run-on sentence. It should point to the full list of guesses so fixing one isn't mistaken for fixing all.</p>
+      <p class="issue-location">Sources: F1B-2† (rated Critical), F1C-8.</p>
+      <p class="issue-fix"><strong>Fix:</strong> A short label per question; a pointer clause that explains this is a partial list.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-19</strong> — The "which guesses contributed" table must cover every question and be validated as a closed set</p>
+      <p class="issue-detail">Must include 6a, 6b, the supplier sub-questions, and 4a. Must be checked against the mapping, validated as a closed set in hand-off imports, and not be keyed across the layer boundary.</p>
+      <p class="issue-location">Sources: DB-2†, BB-4†, EB-2†, EC-5, CB-1†.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Complete the table; add schema validation; test hand-off imports with the closed set.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-20</strong> — A "No" from a country rule pack gets a generic reason and no "contributed" line</p>
+      <p class="issue-detail">Packs have no plain text for hard lines; the result view has no packs.</p>
+      <p class="issue-location">Sources: AB-3†, F1C-7. No shipped pack uses pack hard lines today.</p>
+      <p class="issue-fix"><strong>Fix:</strong> State it as a known v1.0.0 limitation, or extend packs to carry plain text for hard lines.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-21</strong> — The plan adds a third "correct your answers" button; two already show on every result</p>
+      <p class="issue-detail">This creates visual redundancy and unclear prioritization.</p>
+      <p class="issue-location">Source: DC-3. VerdictDisplay.tsx:1200, 2140.</p>
+      <p class="issue-fix"><strong>Fix:</strong> The new text replaces the first-screen one; the lower one is hidden on a "No".</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-22</strong> — Form-path correction records must keep the original node ids and cover every field including cleared ones</p>
+      <p class="issue-detail">The rebuilt graph mints new ids. A removed model name is a missing key, not a changed one. The record must say "0 corrections — reviewed, nothing changed" and record that the correction came from the form.</p>
+      <p class="issue-location">Sources: BB-3†, BC-8, F2C-5, F2B-3†, F2C-6, CB-4†, CC-6.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Preserve node ids from the original graph; include cleared fields in the diff; add the form-origin flag; test all cases.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-23</strong> — The newcomer release test (NF-12) must include a "No" result, a correction, and a tick-all question</p>
+      <p class="issue-detail">Today it only asks the three "can I start" questions.</p>
+      <p class="issue-location">Sources: AC-3, AB-4†. requirements.md NF-12.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Amend NF-12 to require: a "No" result, a correction, a tick-all question, and the three questions "why, what would change it, whom to ask" (owner decision).</p>
+    </div>
+
+    <h2 id="findings-group-3">Findings — The Description-Path Plan (R16-E), Not Yet Built</h2>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-24</strong> — D2 and E share a data contract nobody owns</p>
+      <p class="issue-detail">E's "Not sure" questionnaire answers have no way to be carried; the summary would show them under the form path's heading and drop the "couldn't tell" list; the "No" screen's contributing check cannot see them.</p>
+      <p class="issue-location">Sources: AC-1 (Critical), BB-1† (Critical). UnderstoodSummary.tsx:194 vs 207.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Build D2 then E (the plan's own order, R16.md §6); specify how questionnaire assumptions are carried and shown as one list.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-25</strong> — Agent questions may never be asked on the description path</p>
+      <p class="issue-detail">The two new fields are missing from the quote-checked field list and its schema, so a model's unsupported claim is accepted with one click and a missing value never becomes a question. The agent safeguards can silently not apply.</p>
+      <p class="issue-location">Sources: BB-2†, EB-4†, BC-6. graph-extractor.ts:225-229, 68-74.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Add the fields to the extractor schema and the quote-checked list; test a description that names agent access.</p>
+    </div>
+
+    <div class="issue critical">
+      <p class="issue-title"><strong>DR7-26</strong> — The plan tells the builder to reuse "SUMMARY_VALUES", which does not exist</p>
+      <p class="issue-detail">The real tables have other names, and two rows need cross-field sentences the review screen's structure cannot hold without a change.</p>
+      <p class="issue-location">Sources: DC-4, DB-4†.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Name the real tables; specify the cross-field sentence structure; add any needed fields to the review screen.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-27</strong> — Tick-all questions in the questionnaire: multiple problems</p>
+      <p class="issue-detail">The generator would still produce a single choice; the answer checker rejects lists; every tick-all answer would be recorded as a correction (arrays compared by reference); the "Recorded:" line would show raw codes; the model-output gate must call the single checker rather than re-encode it.</p>
+      <p class="issue-location">Sources: DB-6†, EC-1, EC-6, BC-3 (rated Critical), BC-4. IntakeFlow.tsx:1138; question-generator.ts.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Generator produces tick-all controls; checker accepts arrays; correction detection compares normalized lists; use the single checker in the model gate.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-28</strong> — No plain question for the supplier or the model name</p>
+      <p class="issue-detail">Today they render as "Please confirm the value for 'vendor'".</p>
+      <p class="issue-location">Sources: AC-2, F1C-6. question-generator.ts:75.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Add templated plain questions for these system fields; e.g., "Which AI model or service is this?"</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-29</strong> — Decision type: two options would carry identical labels (credit and lending); "Something else" must stay</p>
+      <p class="issue-detail">Dropping "Something else" would give the description path a lighter route than the form.</p>
+      <p class="issue-location">Sources: DC-5, DB-5†, F1C-9, EC-4 (panels disagreed on whether the questionnaire can record free text: it can, as a follow-up text question).</p>
+      <p class="issue-fix"><strong>Fix:</strong> Keep "Something else" with a free-text follow-up; add a worked case for this path.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-30</strong> — Machine words left on submitter screens</p>
+      <p class="issue-detail">"The model proposed everything below…" and the "guessed" badge; "Graph extraction failed: parse-error" and "Review the graph and try again"; the contradiction screen's "Your description says…" with no real quote; "Anything we should know" implies the system reads the note.</p>
+      <p class="issue-location">Sources: F1B-1† (Critical), AB-1†, F1B-3† (Critical), F1B-6†. GraphView.tsx:192, 522-524; IntakeFlow.tsx:395, 1431; contradiction.ts:26-27.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Replace jargon: "We think this is what you described" / "told us"; "We need help understanding one thing"; "Tell us if we got something wrong"; "This will help us give you a better answer". Add real quote display.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-31</strong> — Moving question text to the screen layer leaves the engine's text computed but never read</p>
+      <p class="issue-detail">This is a known bug class here; an existing test relies on the text being in the engine.</p>
+      <p class="issue-location">Source: DC-6.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Keep one copy of the text; if moving to screens, update the test.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-32</strong> — Parallel build risks: no rule for shared files, build order conflicts</p>
+      <p class="issue-detail">E's file list misses IntakeFlow.tsx (where its gate messages live); D2 says its fallback screen stays "unchanged" while E says that screen "must be plain for everyone".</p>
+      <p class="issue-location">Sources: DB-7†, AB-2†, CB-5†, CC-4, DC-7 (Critical).</p>
+      <p class="issue-fix"><strong>Fix:</strong> Build in order, D2 then E; E owns that screen's words; document shared-file ownership in CLAUDE.md.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-33</strong> — The description path shows two "what we understood" screens; never decided which is which</p>
+      <p class="issue-detail">The review screen and the summary serve different purposes.</p>
+      <p class="issue-location">Source: CB-6†.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Record the decision (the review screen corrects, the summary confirms) and make the headings say so.</p>
+    </div>
+
+    <div class="issue important">
+      <p class="issue-title"><strong>DR7-34</strong> — Evidence scope (W-7) gives a reason to name a registered platform or supplier</p>
+      <p class="issue-detail">It turns "to do" into "already in place". Show the claimed platform/supplier beside that line.</p>
+      <p class="issue-location">Source: EC-3.</p>
+      <p class="issue-fix"><strong>Fix:</strong> Display the platform/supplier name beside the evidence-scope line in the verdict.</p>
+    </div>
+
+    <h2 id="cross-panel-themes">Cross-Panel Themes</h2>
+
+    <h3 id="theme-contracts">Theme A: Contracts Asserting Things About Existing Code That Were Never True</h3>
+    <p>Findings: DR7-11, DR7-15, DR7-25, DR7-26.</p>
+    <p>The R16 build plan refers to code that does not exist or has never done what the plan claims: a tick-all editor in GraphView (DR7-11), session storage of assumptions (DR7-15), fields in the graph extractor (DR7-25), and named export SUMMARY_VALUES (DR7-26). These create builder confusion and will cause test failures when the code lands. All four require the plan to match reality — either build what the plan promises or rewrite the plan to match what exists.</p>
+
+    <h3 id="theme-duplication">Theme B: One Rule Implemented Twice or Not at All on One Path</h3>
+    <p>Findings: DR7-08, DR7-09, DR7-13, DR7-27.</p>
+    <p>The form and description paths split the logic for agent access (DR7-08 does not use the shared checker; DR7-27's questionnaire does not support tick-all), plausibility checking (DR7-09 runs only on one path), and routing logic (DR7-13 is duplicated). These split implementations are a source of bugs (silent narrowing of access values, silent loss of zone attestation, different routing behavior) and maintenance cost. Each has a single-source-of-truth fix.</p>
+
+    <h3 id="theme-write-once">Theme C: Write-Once Integrity Broken Across Tabs, Retries, and Abandonment</h3>
+    <p>Findings: DR7-01 to DR7-05.</p>
+    <p>Five findings (false tamper alarm, duplicate writes on confirm, silent overwrites on correction, orphaned records after error, stranded description) are all variations on the same architectural pattern: audit writes are not guarded against repeats, dropped values are not persisted, and error cleanup is incomplete. All are fixable within the existing architecture but require attention to atomicity, state lifecycle, and error handling. This is the F2 (audit-trail integrity) panel's core concern.</p>
+
+    <h3 id="theme-ownership">Theme D: Parallel D2/E Build Has No Owner for Shared Files and Shared Data</h3>
+    <p>Findings: DR7-24, DR7-32.</p>
+    <p>D2 and E run in parallel and both touch IntakeFlow.tsx, the question list, and the result-screen assumptions. D2 specifies the assumptions as a correction-only feature (DR7-15), but E's questionnaire would generate assumptions that need to flow into D2's "No" screen. Without a named owner for the handoff, silent conflicts are guaranteed. The fix is explicit: build D2 first (in order from R16.md §6), then E as the owner of the shared screens.</p>
+
+    <h2 id="scores">Scores</h2>
+    <table>
+      <caption>Table 2 — Panel scores (0–10 rubric)</caption>
+      <thead>
+        <tr><th>Panel</th><th>Dimension</th><th>Calibrated</th><th>Blind</th><th>Average</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A</td><td>Requirements coverage</td><td>6</td><td>6</td><td>6</td></tr>
+        <tr><td>B</td><td>Interface contracts</td><td>3</td><td>4</td><td>3.5</td></tr>
+        <tr><td>C</td><td>Structural soundness</td><td>4</td><td>6</td><td>5</td></tr>
+        <tr><td>D</td><td>Implementability</td><td>5</td><td>4</td><td>4.5</td></tr>
+        <tr><td>E</td><td>Security</td><td>5</td><td>5</td><td>5</td></tr>
+        <tr><td>F1</td><td>Comprehension and operability</td><td>4</td><td>4</td><td>4</td></tr>
+        <tr><td>F2</td><td>Audit-trail integrity</td><td>3</td><td>3</td><td>3</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Rubric:</strong> 9–10 no gaps; 7–8 one or two partial gaps; 5–6 several partial gaps; below 5 a missing element or structural failure.</p>
+
+    <h2 id="preventing-higher-scores">What Prevents a Higher Score</h2>
+
+    <div class="criterion">
+      <div class="criterion-name">A. Requirements coverage</div>
+      <div class="criterion-score low">6/10</div>
+      <div class="criterion-note">Three partial requirements (UC-12, VD-10, NF-12), all at the D2/E seam: form-path correction records, "No" screen flow, first-time operability. Fixable within the build phases.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">B. Interface contracts</div>
+      <div class="criterion-score low">3.5/10</div>
+      <div class="criterion-note">Four boundary gaps: the hand-off false-tamper alarm (DR7-01), the unowned questionnaire-assumptions contract (DR7-24), the missing specification of how questionnaire answers flow into D2's "No" screen, and builder-facing jargon in the question-generator fallback (DR7-28). Blind panel found issues here that calibrated missed.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">C. Structural soundness</div>
+      <div class="criterion-score mid">5/10</div>
+      <div class="criterion-note">Engine importing from the UI layer (DR7-06), two copies of one routing rule (DR7-13), unpersisted description-path disclosure (DR7-07). All architectural, fixable without redesign.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">D. Implementability</div>
+      <div class="criterion-score mid">4.5/10</div>
+      <div class="criterion-note">Four builder-facing errors in the plans: non-existent symbols (DR7-26 SUMMARY_VALUES), missing threading (DR7-17 verdict id through form state), unresolved "pick one" (DR7-29 Decision type), and unclear definitions (DR7-16 "where do assumptions live after correction"). Blind panel rated one Critical (DC-7 parallel build risks).</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">E. Security</div>
+      <div class="criterion-score high">5/10</div>
+      <div class="criterion-note">Two parsers for one input (form vs. description extraction of agent access), new self-attestation levers without a named adversary (DR7-09 zone field, DR7-21 policy tampering). Both require threat modeling; both are mitigated by the existing operator access controls.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">F1. Comprehension and operability</div>
+      <div class="criterion-score low">4/10</div>
+      <div class="criterion-note">Operability absent from every contract: no mention of keyboard focus, screen-reader navigation, or how newcomers correct their answers without a keyboard. Requirements say accessibility does not apply to MVP (needs owner reversal). Calibrated and blind both found critical accessibility gaps.</div>
+    </div>
+
+    <div class="criterion">
+      <div class="criterion-name">F2. Audit-trail integrity</div>
+      <div class="criterion-score low">3/10</div>
+      <div class="criterion-note">Write-once integrity broken across tabs (DR7-02 confirm, DR7-03 correction), retries (DR7-04 error loop), and abandonment (DR7-05 stranded creates). The cross-tab lock only orders, it does not detect repeats. All fixable; none requires redesign.</div>
+    </div>
+
+    <p><strong>Summary:</strong> All issues are fixable; none is a deliberate ceiling. The gaps fall into three categories: (1) incomplete specs (D, early B) that leave builders guessing; (2) architectural wrinkles that never got attention (C, F2) because they work quietly most of the time; (3) requirements that need owner decision (F1 accessibility, E threat model, A operability). The build phases can close all of them.</p>
+
+    <h2 id="expert-panel">Expert Panel &mdash; Authorities per Dimension</h2>
+    <table>
+      <caption>Table 3 — Expert authorities by panel</caption>
+      <thead>
+        <tr><th>Panel</th><th>Dimension</th><th>Expert Authorities</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A</td><td>Requirements coverage</td><td>Karl Wiegers (<em>Software Requirements</em>), Mike Cohn (<em>User Stories Applied</em>)</td></tr>
+        <tr><td>B</td><td>Interface contracts</td><td>Michael Keeling (<em>Design It!</em>), Martin Kleppmann (<em>Designing Data-Intensive Applications</em>), Paul Clements (<em>Documenting Software Architectures</em>)</td></tr>
+        <tr><td>C</td><td>Structural soundness</td><td>Martin Fowler (<em>Patterns of Enterprise Application Architecture</em>), Frederick Brooks (<em>The Mythical Man-Month</em>), George Fairbanks (<em>Just Enough Software Architecture</em>)</td></tr>
+        <tr><td>D</td><td>Implementability</td><td>Steve McConnell (<em>Code Complete</em>), Hunt &amp; Thomas (<em>The Pragmatic Programmer</em>), Dan Vanderkam (<em>Effective TypeScript</em>), React core team (<em>react.dev</em>)</td></tr>
+        <tr><td>E</td><td>Security</td><td>Ross Anderson (<em>Security Engineering</em>), Bratus, Patterson &amp; Sassaman (LANGSEC), OWASP ASVS, OWASP Top 10 for LLM Applications</td></tr>
+        <tr><td>F1</td><td>Comprehension and operability</td><td>Steve Krug (<em>Don't Make Me Think</em>), Alan Cooper (<em>About Face</em>), Torrey Podmajersky (<em>Strategic Writing for UX</em>), Heydon Pickering and WCAG 2.1</td></tr>
+        <tr><td>F2</td><td>Audit-trail integrity</td><td>Bass, Clements &amp; Kazman (<em>Software Architecture in Practice</em>), Michael Power (<em>The Audit Society</em>)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="owner-triage">Owner Triage</h2>
+    <p>Owner decisions, recorded 2026-10-02:</p>
+    <ul>
+      <li><strong>Group 1 (DR7-01 to DR7-14, built code):</strong> fix all, each with a test — after first renaming the product from AIGate to Counterpoise.</li>
+      <li><strong>Groups 2 and 3 (DR7-15 to DR7-34, the plans):</strong> rewrite R16-D2 and R16-E with every fix; build D2 first and E second, not in parallel. The rewritten plans get a fix-verification pass (each DR7 finding checked as addressed) before a build verdict.</li>
+      <li><strong>Accessibility (DR7-10):</strong> adopt WCAG 2.1 AA for every new or changed screen; retire the "WCAG does not apply" assumption; fix the three known gaps now.</li>
+      <li><strong>NF-12 (DR7-23):</strong> approved — the newcomer test must include a "No" result, a correction and a tick-all question, and ask why, what would change it and whom to ask.</li>
+      <li><strong>Pack-rule "No" (DR7-20):</strong> stating it as a known limitation was <em>not</em> approved — fix it in D2.</li>
+    </ul>
+    <p>No finding was deferred or dismissed.</p>
+
+    <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+  </main>
+
+  <script>
+    (function () {
+      const toc = document.getElementById('toc');
+      const headings = document.querySelectorAll('h2[id], h3[id]');
+      const links = [];
+
+      headings.forEach(function (h) {
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        if (h.tagName === 'H3') a.classList.add('toc-h3');
+        toc.appendChild(a);
+        links.push({ el: a, target: h });
+      });
+
+      function onScroll() {
+        let current = links[0];
+        for (let i = 0; i < links.length; i++) {
+          if (links[i].target.getBoundingClientRect().top <= 80) current = links[i];
+        }
+        links.forEach(function (l) { l.el.classList.remove('active'); });
+        if (current) {
+          current.el.classList.add('active');
+          const tocEl = document.getElementById('toc');
+          const elTop = current.el.offsetTop - tocEl.offsetTop;
+          const elBot = elTop + current.el.offsetHeight;
+          if (elTop < tocEl.scrollTop || elBot > tocEl.scrollTop + tocEl.clientHeight) {
+            tocEl.scrollTop = elTop - tocEl.clientHeight / 2;
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

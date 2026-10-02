@@ -31,6 +31,7 @@ error is only found when someone tries to build from it, or later.
 | explore 003 (2026-07-28) | D-002 claimed the guided form had no jurisdiction field. It had six checkboxes. |
 | tech-spec round 3 (2026-07-29) | Phase 8 sequenced a chunk first because existing tests "would break". They could not — the assertions fire on a different screen. |
 | design round 1 (2026-07-29) | C-1 assumed the sign-off payload could reference a verdict; C-2 assumed evidence status lived on the Verdict; I-1 assumed an affordance could be suppressed by omission; I-5 assumed StrictMode semantics backwards. |
+| design review 007 (2026-10-02) | The R16 delta plans asserted four untrue facts about existing code: a `SUMMARY_VALUES` export, a tick-all editor in GraphView (R16.md D-22), the guessed-field mechanism covering two new extraction fields, and a session value carrying assumptions to the verdict step. None carried a `(verified: path:line)` citation. |
 
 **Acceptance criterion.** Any spec statement asserting a property of an existing
 symbol carries an inline citation of the form `(verified: path:line)` or is
@@ -38,4 +39,4 @@ rewritten as an explicit assumption to be checked during the build. A spec
 section describing a component's contract without any such citation fails this
 check. Reviewers may challenge a citation by reading the cited line.
 
-**Last triggered:** round 1 (design), 2026-07-29 — the round that promoted it.
+**Last triggered:** design review 007, 2026-10-02 (four instances in the R16-D2/R16-E plans).
