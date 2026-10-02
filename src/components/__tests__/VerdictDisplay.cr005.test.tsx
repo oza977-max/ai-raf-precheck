@@ -113,7 +113,13 @@ describe('VerdictDisplay — code review 005, F8: the evidence panel gets a thir
       />,
     );
     const panel = document.querySelector('.verdict__controlset');
-    expect(panel?.closest('details')).toBeNull();
+    // R16-D1: this panel now always sits inside the new reviewer-section
+    // <details> (verdict__reviewer-section) — the honesty floor this test
+    // guards is specifically that the CS-1 evidence Fold itself (Fold.tsx's
+    // own <details class="ui__fold">) does not ALSO wrap it while a control
+    // is truly outstanding, so scope the check to that class rather than
+    // "no details ancestor at all".
+    expect(panel?.closest('details.ui__fold')).toBeNull();
     expect(screen.getByText('UNVERIFIED')).toBeInTheDocument();
   });
 });
@@ -206,16 +212,36 @@ describe('VerdictDisplay — code review 005, F12: no policy loaded', () => {
   });
 });
 
+// R16-D1 (build/prompts/R16.md v2.1 §4.1/§1.3): describesSameObligation's
+// significant-word text heuristic is deleted. A control now names, in the
+// policy file, exactly which review ids (base ids, §1.3) its own action
+// covers (`covers_reviews`), matched against the per-instance
+// `downstream_review_sources` the verdict carries — a referential check
+// (grounding/PACK-AUTHORING.md's reviewer checklist), not a guess from two
+// authors' wording. TC-RG-9-10 and TC-RG-8-37 guarded specific bugs in that
+// deleted word-matching algorithm (a one-significant-word control, a subset-
+// vs-equal-set mismatch) — moved to test-cases-016.md's Superseded section;
+// the mechanism they protected against no longer exists to regress.
 describe('VerdictDisplay — code review 005 (usability testing): a control and a review naming the same obligation render once', () => {
   it('TC-RG-9-09: shows "Independent validation (2LoD)" once, as the control, noting it also covers the pack review', () => {
     const policy = makePolicy([
-      { id: 'CTRL-INDEP-VAL-01', name: 'Independent validation (2LoD)', resolves: [], description: 'Validation team review' },
+      {
+        id: 'CTRL-INDEP-VAL-01',
+        name: 'Independent validation (2LoD)',
+        resolves: [],
+        description: 'Validation team review',
+        covers_reviews: ['SS1-UK-REV-01'],
+      },
     ]);
     render(
       <VerdictDisplay
         verdict={makeVerdict({
           controls: ['CTRL-INDEP-VAL-01'],
           downstream_reviews: ['Independent model validation (2LoD)', 'Vendor risk assessment'],
+          downstream_review_sources: [
+            { review: 'Independent model validation (2LoD)', rule_id: 'SS1-UK-REV-01' },
+            { review: 'Vendor risk assessment', rule_id: 'DR-VENDOR-01' },
+          ],
         })}
         auditEvents={[]}
         policy={policy}
@@ -237,13 +263,17 @@ describe('VerdictDisplay — code review 005 (usability testing): a control and 
     expect(lead?.textContent).toMatch(/1 separate review/);
   });
 
-  it('lists both reviews separately when neither matches a control name', () => {
+  it("lists both reviews separately when no control's covers_reviews names them", () => {
     const policy = makePolicy([{ id: 'CTRL-ENC-01', name: 'Encryption in transit', resolves: [] }]);
     render(
       <VerdictDisplay
         verdict={makeVerdict({
           controls: ['CTRL-ENC-01'],
           downstream_reviews: ['Information security review', 'Vendor risk assessment'],
+          downstream_review_sources: [
+            { review: 'Information security review', rule_id: 'DR-INFOSEC-01' },
+            { review: 'Vendor risk assessment', rule_id: 'DR-VENDOR-01' },
+          ],
         })}
         auditEvents={[]}
         policy={policy}
@@ -253,51 +283,6 @@ describe('VerdictDisplay — code review 005 (usability testing): a control and 
     expect(within(todo).queryByText(/also covers/i)).not.toBeInTheDocument();
     const reviewsList = todo.querySelector('.verdict__todo-list--reviews');
     expect(reviewsList?.textContent).toMatch(/information security review/i);
-    expect(reviewsList?.textContent).toMatch(/vendor risk assessment/i);
-  });
-
-  it('TC-RG-9-10: never folds a review into a control whose name has only one significant word', () => {
-    // A firm can author a one-word control name. One shared word ("validation")
-    // is not evidence that a data-quality review and a model check are the
-    // same obligation, so the review must stay listed on its own.
-    const policy = makePolicy([{ id: 'CTRL-FIRM-VAL', name: 'Validation', resolves: [] }]);
-    render(
-      <VerdictDisplay
-        verdict={makeVerdict({
-          controls: ['CTRL-FIRM-VAL'],
-          downstream_reviews: ['Data validation review'],
-        })}
-        auditEvents={[]}
-        policy={policy}
-      />,
-    );
-    const todo = document.querySelector<HTMLElement>('.verdict__todo')!;
-    expect(within(todo).queryByText(/also covers/i)).not.toBeInTheDocument();
-    const reviewsList = todo.querySelector('.verdict__todo-list--reviews');
-    expect(reviewsList?.textContent).toMatch(/data validation review/i);
-  });
-
-  it("TC-RG-8-37: code-review-005 round 2, N6: a firm's \"Model risk assessment\" control does not absorb an unrelated \"Vendor risk assessment\" review", () => {
-    // Before the fix this was a SUBSET match: {risk, assessment} (after
-    // "model" — a generic word — drops out) is a subset of {vendor, risk,
-    // assessment}, so the review wrongly folded into the control despite
-    // naming a genuinely different obligation (model risk vs. vendor risk).
-    // Equal significant-word SETS is the correct test — sizes differ here
-    // (2 vs. 3), so this must never fold.
-    const policy = makePolicy([{ id: 'CTRL-MODEL-RISK', name: 'Model risk assessment', resolves: [] }]);
-    render(
-      <VerdictDisplay
-        verdict={makeVerdict({
-          controls: ['CTRL-MODEL-RISK'],
-          downstream_reviews: ['Vendor risk assessment'],
-        })}
-        auditEvents={[]}
-        policy={policy}
-      />,
-    );
-    const todo = document.querySelector<HTMLElement>('.verdict__todo')!;
-    expect(within(todo).queryByText(/also covers/i)).not.toBeInTheDocument();
-    const reviewsList = todo.querySelector('.verdict__todo-list--reviews');
     expect(reviewsList?.textContent).toMatch(/vendor risk assessment/i);
   });
 });

@@ -135,24 +135,32 @@ describe('Walking Skeleton', () => {
     // Structured intake banner renders instead of the old dead-end message.
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
+    // R16-B: the field-by-field form this used to drive is replaced by the
+    // situational question set (build/prompts/R16.md §2.2) — adapted to the
+    // same scenario: Client PII, the firm's in-house platform (Zone B,
+    // vendor internal — same zone-crossing shape INV-DATA-01/CTRL-ENC-01
+    // need, same as the retired "Zone B" + unset-vendor combination), a
+    // draft a person checks, internal-only, non-binding, reversible,
+    // limited, no jurisdiction named.
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafting tool');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
+    await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('radio', { name: /creates a draft/i }));
+    await user.click(screen.getByRole('radio', { name: /^little/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
 
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
     // where the system operates.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
@@ -614,24 +622,26 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
+    // R16-B: adapted to the new questions, same no-track-match scenario —
+    // deep-learning (via "recognises things in images, sound or
+    // documents") matches no track in the holed policy above; "read"
+    // conveniently keeps the same non-binding, no-6a-follow-up shape the
+    // retired form field had.
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'No track match tool');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'A tool with no matching track rule.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    // deep-learning matches no track in the holed policy above.
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'deep-learning');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(screen.getByRole('radio', { name: /recognises things in images, sound or documents/i }));
+    await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+    await user.click(screen.getByRole('radio', { name: /finds or summarises for people to read/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
     // where the system operates.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await confirmAllNodes(user);
@@ -656,24 +666,28 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
     expect(await screen.findByText(/guided intake — answer the fields below/i)).toBeInTheDocument();
 
+    // R16-B: adapted to the new questions — traditional-ml via "gives a
+    // score..." + "they can show which factors drove each result",
+    // suggests/recommend with material weight, client-facing exposure
+    // (still the TIER-HIGH trigger, policy/appetite.yaml).
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'High tier tool');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'Client-facing decision support.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'recommend');
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(screen.getByRole('radio', { name: /gives a score, ranking, flag, category or forecast/i }));
+    await user.click(screen.getByRole('radio', { name: /they can show which factors drove each result/i }));
+    await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+    await user.click(screen.getByRole('radio', { name: /suggests, ranks or flags things/i }));
+    await user.click(screen.getByRole('radio', { name: /usually what a decision is based on/i }));
     // client-facing exposure trips TIER-HIGH (policy/appetite.yaml).
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'client-facing');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'material');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
+    await user.click(screen.getByRole('radio', { name: /clients or customers/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
     // P8-C01 upstream fix: R3-JU-1 requires an explicit jurisdiction answer.
     // These journeys previously proceeded having told the engine nothing about
     // where the system operates.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await confirmAllNodes(user);
@@ -907,20 +921,23 @@ describe('Register row naming (charter 004 D-004)', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     await screen.findByText(/guided intake — answer the fields below/i);
+    // R16-B: adapted to the new questions — same Client PII / in-house
+    // platform (Zone B, vendor internal) / drafted-for-review scenario.
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mortgage servicing assistant');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts servicing letters.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('radio', { name: /creates a draft/i }));
+    await user.click(screen.getByRole('radio', { name: /^little/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await screen.findByText(/confirm what we understood/i);
@@ -953,20 +970,23 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
     await screen.findByText(/guided intake — answer the fields below/i);
+    // R16-B: adapted to the new questions — same Client PII / in-house
+    // platform (Zone B, vendor internal) / drafted-for-review scenario.
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafter');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts emails.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone B');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('radio', { name: /creates a draft/i }));
+    await user.click(screen.getByRole('radio', { name: /^little/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     await screen.findByText(/confirm what we understood/i);

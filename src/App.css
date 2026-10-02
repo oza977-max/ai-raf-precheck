@@ -3342,4 +3342,255 @@ details input {
 }
 
 .verdict__binding-gloss { font-size: 0.82rem; color: var(--ink-faint); }
+
+/* R16-D1 (build/prompts/R16.md v2.1 §4.2, VD-9/VD-10) — the verdict's first
+   screen, and the reviewer section it sits above. Inserted directly after
+   the last pre-existing .verdict rule, per the chunk's file ownership (the
+   parallel guided-form chunk inserts its own marked block elsewhere). */
+
+.verdict__first-screen {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 1rem 1.25rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.verdict__first-headline {
+  margin: 0 0 0.6rem;
+  font-size: 1.3rem;
+  line-height: 1.3;
+}
+
+.verdict__first-why {
+  margin: 0 0 0.75rem;
+  color: var(--ink-soft);
+}
+
+.verdict__first-next-steps,
+.verdict__first-safeguards,
+.verdict__first-owed-reviews,
+.verdict__first-could-change {
+  margin: 0.9rem 0;
+}
+
+.verdict__first-next-steps h3,
+.verdict__first-safeguards h3,
+.verdict__first-owed-reviews h3,
+.verdict__first-could-change h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.verdict__first-next-steps ol {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.verdict__first-next-steps li {
+  /* Overrides the pre-existing bare `li { display: flex; ... }` rule
+     (line ~655) — that rule is for single-line "label — value" rows
+     elsewhere; `display: flex` on an <li> also suppresses its numbered
+     marker, which silently dropped the 1/2/3 numbering here. */
+  display: list-item;
+  padding: 0;
+  border-bottom: none;
+  margin: 0 0 0.35rem;
+}
+
+.verdict__first-safeguard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.verdict__first-safeguard {
+  /* Overrides the pre-existing bare `li { display: flex; ... }` rule — this
+     card stacks several block lines (action/owner/reason/covers/button),
+     not a single flex row. */
+  display: block;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+}
+
+.verdict__first-safeguard-action {
+  margin: 0 0 0.3rem;
+  font-weight: 600;
+}
+
+.verdict__first-safeguard-owner,
+.verdict__first-safeguard-reason {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.verdict__first-yours-chip {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.02rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid var(--navy);
+  color: var(--navy);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.verdict__first-also-covers {
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+
+.verdict__first-go-to {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.verdict__first-in-place,
+.verdict__first-attested {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.verdict__first-owed-reviews ul {
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.verdict__first-owed-reviews li {
+  /* Same override as .verdict__first-next-steps li above — restores the
+     bullet the pre-existing bare `li { display: flex }` rule suppresses. */
+  display: list-item;
+  padding: 0;
+  border-bottom: none;
+}
+
+.verdict__first-who-signs-off {
+  margin: 0.9rem 0;
+}
+
+.verdict__first-could-change p {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.verdict__first-correct {
+  margin-top: 0.75rem;
+}
+
+/* The reviewer section — collapsed for the submitter, open for 2LoD
+   (reasoningDefaultOpen); everything inside it is the pre-existing verdict
+   content, unchanged. */
+.verdict__reviewer-section {
+  margin-top: 0.5rem;
+}
+
+.verdict__reviewer-summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem 0;
+  color: var(--ink-soft);
+}
+
+.verdict__reviewer-body {
+  padding-top: 0.25rem;
+}
+
+/* PV-6 / D-61: the inheritance panel's per-entry source label (platform vs.
+   supplier) — a header-level tag and a quieter per-dimension-row repeat. */
+.verdict__chain-source {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.02rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid var(--ink-faint);
+  color: var(--ink-faint);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.verdict__chain-source--quiet {
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+}
+
 .ui__fold-title { font-weight: 600; font-size: 0.95rem; }
+
+/* R16-B/C (build/prompts/R16.md v2.1 §2.2, §3) — the plain-language guided
+   form and "Here's what we understood" summary. Appended after the
+   parallel verdict-screen chunk's own R16-D1 block, per the contract's
+   "second to finish merges" rule (D-25); this is a separate, additive
+   block, not an edit to anything above it. */
+
+.plain-form__intro {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-bottom: 1.2rem;
+}
+
+.plain-form__legacy-draft {
+  background: var(--amber-bg, #fff6e5);
+  border: 1px solid var(--amber-border, #e0b84d);
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.plain-form__question {
+  margin-bottom: 1.4rem;
+}
+
+.plain-form__question legend {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.plain-form__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.plain-form__option input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.understood-summary {
+  margin-bottom: 1.5rem;
+}
+
+.understood-summary__section {
+  margin-bottom: 1.1rem;
+}
+
+.understood-summary__section h3 {
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.understood-summary__assumptions {
+  background: var(--amber-bg, #fff6e5);
+  border-left: 3px solid var(--amber-border, #e0b84d);
+  padding: 0.6rem 0.8rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.understood-summary__change {
+  margin: 0.8rem 0 1.2rem;
+}

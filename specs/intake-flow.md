@@ -180,6 +180,20 @@ The response is parsed with a Zod schema matching `DataFlowGraph`. If parsing fa
 
 ## 5. Structured Form Fallback (UC-3a)
 
+**Amended 2026-10-02 (R16 chunks B/C, UC-8/UC-9/UC-10/UC-11).** §5.2's table
+below describes the form as it stood through round 15 — one field per
+graph attribute, labelled in business words but still asking the
+submitter to pick a canonical value (a data class, a zone, a model type).
+Six rounds of that approach still left 23% of newcomer-test answers
+"I don't understand this question" (CLAUDE.md, requirements.md round 16
+entry). §21 replaces this table with a question set about the
+submitter's *situation* — what the AI does, who it affects, what it's
+built on — that the engine derives the same canonical fields from, through
+one documented mapping. What survives unchanged from §5.1 and §5.3 below:
+the form works with no API key, produces the same `DataFlowGraph` shape,
+and is recorded as `structured_form` intake. §5.2's table is kept as a
+historical record of the pre-R16 field set, not as the current form.
+
 ### 5.1 When the form is shown
 
 The `usePolicy` hook exposes `hasApiKey: boolean`. If false, `IntakeFlow.tsx` sets `method: 'form'` in the `graph_extraction` state and renders `StructuredForm.tsx` instead of calling the LLM.
@@ -788,6 +802,91 @@ existing dissent-filing write path from `RegisterDetail.tsx`, not a new
 one — ADR consistency with R4's "advisory by construction" guarantee: the
 action writes exactly one event and nothing else).
 
+## 21. Round 16 — Plain-Language Guided Form and Understood Summary (R16-B, R16-C)
+
+Spec for `requirements/requirements.md` round 16 (UC-8, UC-9, UC-10, UC-11,
+UC-12), grounded in `build/prompts/R16.md` v2.1 §2–§3. Chunks B (the form)
+and C (the summary) are one release unit (D-18): a form that cannot be
+honestly understood and a summary that cannot show what it understood are
+the same defect from two directions.
+
+**ADR-IF-R16-1 — the mapping is situation-in, canonical-fields-out, one
+pure function, never the reverse.** `plainAnswersToFormValues(answers,
+policy)` (`src/engine/plain-intake.ts`) takes `PlainAnswers` — option
+*keys* against question ids, e.g. `{'6': 'drafts', '6a': 'little'}` — and
+returns `{ values: StructuredFormValues, assumptions: Assumption[] }`.
+Pure (cross-cutting.md §7 Rule 1): no ids, no clock — `buildGraphFromForm`
+stays the only place those are minted. The question *text* a submitter
+reads, and the stable option *keys* the engine mapping reads, live in one
+code-free module, `src/components/plain-copy.ts` — shared by the guided
+form (chunk B), the questionnaire (chunk E, not yet built) and the summary
+(chunk C), so the three paths can never describe the same situation in
+different words.
+
+No question or option names an engine term: no data class, zone letter,
+autonomy level, bindingness, model-type code, tier or track (principle 1,
+R16.md §0). Where a question's answer could resolve to more than one
+canonical value depending on context — "where does the AI come from"
+resolving to a processing zone and a vendor — the resolution rule is
+documented once, beside the mapping, not re-derived at each call site:
+
+| Situation | Resolves to | Rule |
+|---|---|---|
+| A shared platform the firm already runs (Q3, option d) | processing zone, vendor | zone = the earliest-lettered zone among the platform's own approved zones (A is least contained, C most); vendor = the platform's declared `vendor_id`, else `internal` |
+| An outside company's account used under the firm's own contract (Q3 → Q3a) | zone, vendor | the firm's own account resolves to the registered `company_assistant` vendor (asking Q3aWhich when more than one exists); a personal account or "Not sure" resolves to Zone A, unregistered |
+| A supplier feature or specialist product (Q3 → Q3supplier) | zone, vendor | Zone B; the chosen supplier's registry id, or a free-typed name rendered as `"{text} (not on your firm's list)"` — **never matched against the registry** (D-06) — or "I don't know" (unregistered, the stricter case) |
+| What information it uses (Q5, tick-all) | one input node per distinct ticked class | several ticks collapse to their *distinct* classes only; every input node sits in the same destination zone the Q3 chain resolved |
+| What happens with the output (Q6, single-select) | action type, autonomy level, human-in-the-loop, decision weight | each option is a fixed situational bundle (e.g. "creates a draft... a person checks it" → `draft`, level 1, `hitl: true`), not four independently-dialable fields — the follow-up (Q6a for weight, Q6b for which action) narrows only what the chosen bundle leaves open |
+| An AI agent, or "Not sure" at Q4 | the agent-only questions (Q13, Q14) are asked | "Not sure" is read as the strictest kind of AI *and* triggers the questions that kind needs (D-48) |
+
+Every "Not sure" is listed back under **"Things we assumed because you
+weren't sure"** with the *exact* assumption sentence from R16.md §2.2
+where the contract pins one, and a sentence in the same voice where it
+does not (`ASSUMPTION_TEXT`, `plain-copy.ts`) — principle 3: every
+assumption takes the stricter reading, never the convenient one.
+
+**ADR-IF-R16-2 — the summary is one pure read of the graph, not a second
+copy of the mapping.** `UnderstoodSummary.tsx` (chunk C) renders from the
+confirmed graph via `graph-summary.ts`'s pure helpers
+(`destinationDescription`, `dataClassesBySeverity`, both exported so chunk
+D1's verdict view-model ranks severity the identical way, D-03) — never
+by re-walking the submitter's answers. It is rendered by
+`ConfirmationStep` on both the form path (assumptions passed through) and
+the description path (uncertain/guessed node ids passed through,
+labelled **"Things we couldn't tell from your description"** instead). Its
+field-by-field grid (every input node, D-03) sits under a collapsed
+**"Show the details the rules use"** disclosure — the same `graphSummaryRows()`
+function `VerdictDisplay`'s own "What you told us" fold reads, so the two
+screens can never disagree about the same graph. "Change an answer" is
+navigation only, a new, dedicated reducer action (`CHANGE_ANSWER`,
+`intake-state.ts`) rather than a repurposed `STEP_BACK` — the existing
+"no Back control on the confirmation step" rule (FN-006, the attestation
+boundary) is left exactly as it was; `CHANGE_ANSWER` is a different
+control, reachable only from the summary itself, that returns to the
+guided form (form path) or into the existing correction flow (description
+path, UC-7) without writing anything — the one write stays the Confirm
+button and its in-flight guard.
+
+**Draft migration (D-41).** The guided form's draft key is now versioned
+(`aigate:intake-form-draft:v2`) because `PlainAnswers` (option keys) and
+the retired `StructuredFormValues`-shaped draft it replaces share no
+structure — silently reading one as the other would feed a value nobody
+chose through the new mapping. `probeLegacyFormDraft()`
+(`src/components/intake-draft.ts`) checks the old key once on mount,
+clears it, and the form shows "Your saved draft was from an older version
+of this form and couldn't be reused — please start again." exactly once.
+
+**Parity testing (R16.md §2.3).** `src/engine/backtest-parity.test.ts`
+runs the worked cases' BLIND answers (`backtest/worked-case-answers.json`,
+written from narrative only, never from the recorded form values) through
+the mapping and the real engine, and compares against the same cases'
+pinned predictions (`backtest-predictions.test.ts`). Every difference is
+asserted and explained in place — most are genuine improvements (the new
+tick-all questions correctly express more than the old single-field form
+ever could), not mapping defects. `backtest-parity-nonblind.test.ts`
+covers UC-9..13, which have recorded field values but no narrative to stay
+blind to.
+
 ## 14. Changelog
 
 | Date | Change |
@@ -799,3 +898,4 @@ action writes exactly one event and nothing else).
 | 2026-08-17 | §18 added — round 8 similar decided cases (ADR-IF-R8-1: pure token-overlap precedent, appetite vocabulary, advisory posture on every render). |
 | 2026-08-17 | §19 added — round 9 review-screen recomposition (ADR-IF-R9-1: aggregation and priority, never deletion; R5-GR-1 criterion amended with approval). |
 | 2026-08-17 | §20 added — round 11 model governance + knowledge advisory (ADR-IF-R11-MG-1: model is graph data, the engine gates it, not intake; ADR-IF-R11-KL-1: knowledge panel reuses the existing dissent-filing write path). |
+| 2026-10-02 | §21 added — round 16 chunks B/C, plain-language guided form and understood summary (ADR-IF-R16-1: situational answers map to canonical fields through one pure, documented function; ADR-IF-R16-2: the summary reads the graph once, shared with the verdict screen, "Change an answer" is its own reducer action rather than a repurposed STEP_BACK). §5 amended to mark its field-by-field table as historical. |

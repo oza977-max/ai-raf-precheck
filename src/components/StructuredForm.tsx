@@ -1,268 +1,294 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ACTION_TYPES,
-  DATA_CLASSES,
-  DATA_ZONES,
-  DECISION_BINDINGNESS,
-  DECISION_TYPES,
-  EXPOSURES,
-  MODEL_TYPES,
-} from '../engine/canonical-vocabulary';
-import {
-  ACTION_TYPE_LABELS,
-  AUTONOMY_LABELS,
-  BINDINGNESS_LABELS,
-  DATA_CLASS_LABELS,
-  DATA_ZONE_LABELS,
-  DECISION_TYPE_LABELS,
-  EXPOSURE_LABELS,
-  FIELD_CONSEQUENCES,
-  MODEL_TYPE_LABELS,
-  REVERSIBILITY_LABELS,
-  SCALE_LABELS,
-} from './field-copy';
+import { INTRO_TEXT, findQuestion, neutralPlatformLabel, neutralSupplierLabel } from './plain-copy';
+import type { Assumption, PlainAnswers, PlainOption, QuestionId } from './plain-copy';
+import { plainAnswersToFormValues } from '../engine/plain-intake';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
-import { saveFormDraft, loadFormDraft, clearFormDraft } from './intake-draft';
-import type { StructuredFormValues } from '../engine/build-graph-from-form';
-import type { ApprovedModel, DataFlowGraph, JurisdictionEntry, RegistryEntry } from '../engine/types';
+import { saveFormDraft, loadFormDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
+import type { DataFlowGraph, PolicyFile } from '../engine/types';
 
-// UC-3a (intake-flow.md §5). Rule 4 (cross-cutting.md §7): presentation-only
-// — calls buildGraphFromForm(), no business logic inline.
+// R16-B (UC-8, UC-10, UC-11; build/prompts/R16.md v2.1 §2.2). Rule 4
+// (cross-cutting.md §7): presentation-only — every answer->graph decision
+// lives in plainAnswersToFormValues() (src/engine/plain-intake.ts), this
+// component only renders questions and collects answers.
 //
-// Deviation from intake-flow.md §5.2's literal wording ("values from policy
-// data_classes/model_types/..."): those PolicyFile field names don't exist
-// anywhere in policy-schema.md (confirmed via grep) — the canonical
-// vocabulary is a fixed closed enum set (§3.0), not per-policy. Options are
-// sourced from src/engine/canonical-vocabulary.ts instead, consistent with
-// P4-C01's extractGraph() deviation. jurisdictions IS a real PolicyFile
-// field and is genuinely sourced from the loaded policy below.
+// Replaces the field-by-field form entirely (UC-3a amendment, 2026-10-02):
+// no question or option here names an engine term or code — data class,
+// zone, autonomy level, bindingness, model type, tier, track (principle 1,
+// §0). The situational questions below are the tested v2.1 set; see
+// grounding/PACK-AUTHORING.md's sibling note for why the wording is not
+// paraphrased from the contract.
+//
+// IMPORTANT: SingleSelect/MultiSelect/FreeText/RequiredMark are declared at
+// MODULE scope, not nested inside StructuredForm(). A component defined
+// inside another component's render body gets a NEW function identity every
+// render, which React treats as a different component TYPE — so it tears
+// down and recreates the DOM subtree (including every input) on every
+// keystroke, dropping focus after the first character. That is a real bug
+// this chunk hit directly (every answer field went blank after one
+// keystroke in testing) and fixed by hoisting these out.
 
 interface StructuredFormProps {
-  jurisdictions: JurisdictionEntry[];
-  platforms?: RegistryEntry[];
-  vendors?: RegistryEntry[];
-  // R11-MG-2 (ADR-IF-R11-MG-1): sourced from the policy's approved-model
-  // registry. Optional so every existing caller stays valid.
-  approvedModels?: ApprovedModel[];
-  onSubmit: (graph: DataFlowGraph) => void;
+  policy: PolicyFile;
+  onSubmit: (graph: DataFlowGraph, assumptions: Assumption[]) => void;
 }
 
-type JurisdictionAnswer = 'unanswered' | 'none' | 'selected';
-
-/** Persisted draft shape from P8-C01 onward. A bare values object is the
- *  pre-round-3 shape and carries no answered-state (R3-JU-7). */
-interface FormDraftEnvelope {
-  values: Partial<StructuredFormValues>;
-  jurisdictionAnswer: JurisdictionAnswer;
+function toArray(v: string | string[] | undefined): string[] {
+  if (v === undefined) return [];
+  return Array.isArray(v) ? v : [v];
 }
 
-/** R3-JU-5 / intake-flow.md §13.3. ONE enumeration of the fields that hold the
- *  Continue gate. `isComplete` derives from it and the required-markers render
- *  from it, so the thing the user is told and the thing the gate enforces
- *  cannot drift apart. Design review round 1, I-8 asked for exactly this: the
- *  previous hand-written boolean conjunction (verified at
- *  src/components/StructuredForm.tsx:116-137 as of commit e38ef98, the state
- *  this chunk replaced) made the blocking set unenumerable, so a test could
- *  only check it by restating the list.
- *
- *  `controlId` is the element the marker and `aria-required` attach to. For the
- *  jurisdiction question that is the fieldset: the answer is the group, not any
- *  one checkbox. ARIA defines `aria-required` for form controls rather than for
- *  `group`, so this is a deliberate compromise — there is no conformant
- *  attribute for "this checkbox group must be answered", and leaving the
- *  question unmarked would be the larger failure. */
-interface RequiredField {
-  controlId: string;
-  isAnswered: (v: Partial<StructuredFormValues>, answer: JurisdictionAnswer) => boolean;
+/** D-23: a platform or supplier without a plain_name must never fall back
+ *  to its raw registry `name` (which may itself carry the bare `[FIRM]`
+ *  placeholder) — it gets this neutral, numbered label instead. */
+function dynamicOptions(
+  entries: { id: string; plain_name?: string }[],
+  neutral: (n: number) => string,
+): PlainOption[] {
+  return entries.map((e, i) => ({ key: e.id, text: e.plain_name ?? neutral(i + 1) }));
 }
 
-export const REQUIRED_FIELDS: RequiredField[] = [
-  { controlId: 'sf-name', isAnswered: (v) => Boolean(v.useCaseName) },
-  { controlId: 'sf-description', isAnswered: (v) => Boolean(v.description) },
-  { controlId: 'sf-input-data-class', isAnswered: (v) => Boolean(v.inputDataClass) },
-  { controlId: 'sf-input-data-zone', isAnswered: (v) => Boolean(v.inputDataZone) },
-  { controlId: 'sf-model-type', isAnswered: (v) => Boolean(v.modelType) },
-  { controlId: 'sf-processing-zone', isAnswered: (v) => Boolean(v.processingDataZone) },
-  { controlId: 'sf-action-type', isAnswered: (v) => Boolean(v.outputActionType) },
-  { controlId: 'sf-exposure', isAnswered: (v) => Boolean(v.outputExposure) },
-  { controlId: 'sf-bindingness', isAnswered: (v) => Boolean(v.decisionBindingness) },
-  { controlId: 'sf-reversibility', isAnswered: (v) => Boolean(v.outputReversibility) },
-  { controlId: 'sf-scale', isAnswered: (v) => Boolean(v.outputScale) },
-  // R11-MG-2: required — "which model" is a mandatory select on the form
-  // path (an unlisted/unapproved choice is not gated here; the ENGINE trips
-  // the review, per ADR-IF-R11-MG-1). A non-empty free-text value satisfies
-  // this the same way a registry id does.
-  {
-    controlId: 'sf-model',
-    isAnswered: (v) =>
-      Boolean(v.declaredModelIdOther?.trim() || (v.declaredModelId && v.declaredModelId.trim())),
-  },
-  // R3-JU-1: presence of the array is not an answer. `[]` is truthy, which is
-  // exactly how a user could previously proceed having told us nothing about
-  // where the system operates.
-  { controlId: 'sf-jurisdiction', isAnswered: (_v, answer) => answer !== 'unanswered' },
-];
-
-const REQUIRED_CONTROL_IDS = new Set(REQUIRED_FIELDS.map((f) => f.controlId));
-
-/** Marks a field required in both registers at once — the visible marker and
- *  the accessible attribute always travel together, because either alone is a
- *  half-kept promise. Spread onto the control; render `<RequiredMark>` in its
- *  label. */
-function requiredProps(controlId: string) {
-  return REQUIRED_CONTROL_IDS.has(controlId) ? { 'aria-required': true as const } : {};
-}
-
-function RequiredMark({ controlId }: { controlId: string }) {
-  if (!REQUIRED_CONTROL_IDS.has(controlId)) return null;
-  return (
-    <span className="required-marker" data-required-marker-for={controlId} title="Required">
+function RequiredMark({ id, requiredIds }: { id: QuestionId; requiredIds: QuestionId[] }) {
+  return requiredIds.includes(id) ? (
+    <span className="required-marker" title="Required">
       {' '}
       *
     </span>
-  );
+  ) : null;
 }
 
-/** R15-C3 (proposal §3.2): "help paragraphs live behind accessible 'Why we
- *  ask' disclosures... any load-bearing sentence stays visible outside the
- *  disclosure." The one-line prompt each field already renders via
- *  `field-help` stays visible; this adds the longer methodology sentence
- *  behind a native `<details>` (same disclosure mechanism as VerdictDisplay's
- *  Fold, so open/closed state is programmatic, never hover-only — G3).
- *
- *  Sourced from FIELD_CONSEQUENCES (field-copy.ts, R5-GR-1) — written for
- *  exactly this purpose and, until this chunk, computed and never rendered
- *  anywhere (the "computed but never consumed" defect class, CLAUDE.md). */
-function WhyWeAsk({ field }: { field: string }) {
-  const text = FIELD_CONSEQUENCES[field];
-  if (!text) return null;
+interface QuestionProps {
+  id: QuestionId;
+  extraOptions?: PlainOption[];
+  /** Where `extraOptions` are spliced relative to the question's own static
+   *  options — undefined prepends (the common case: every dynamic list in
+   *  §2.2 other than Q3's sits before or after the WHOLE static list, never
+   *  in the middle). Q3 is the one exception: its platform option is
+   *  documented as option (d), between the static (c) and (e) — spliced at
+   *  this index into `question.options` instead of prepended, so the
+   *  rendered order matches the newcomer-tested a/b/c/d/e/f sequence. */
+  extraOptionsAtIndex?: number;
+  requiredIds: QuestionId[];
+  answers: PlainAnswers;
+  onSingle: (id: QuestionId, key: string) => void;
+  onMulti: (id: QuestionId, key: string) => void;
+  onText: (id: QuestionId, text: string) => void;
+}
+
+function mergeOptions(base: PlainOption[], extra: PlainOption[], atIndex?: number): PlainOption[] {
+  if (extra.length === 0) return base;
+  if (atIndex === undefined) return [...extra, ...base];
+  return [...base.slice(0, atIndex), ...extra, ...base.slice(atIndex)];
+}
+
+function SingleSelect({ id, extraOptions = [], extraOptionsAtIndex, requiredIds, answers, onSingle }: QuestionProps) {
+  const question = findQuestion(id);
+  if (!question) return null;
+  const options = mergeOptions(question.options, extraOptions, extraOptionsAtIndex);
   return (
-    <details className="field-why">
-      <summary>Why we ask</summary>
-      <p>{text}</p>
-    </details>
+    <fieldset className="plain-form__question" aria-required={requiredIds.includes(id) || undefined}>
+      <legend>
+        {question.text}
+        <RequiredMark id={id} requiredIds={requiredIds} />
+      </legend>
+      {question.help && <p className="field-help">{question.help}</p>}
+      {options.map((o) => (
+        <label key={o.key} className="plain-form__option">
+          <input
+            type="radio"
+            name={`pf-${id}`}
+            value={o.key}
+            checked={answers[id] === o.key}
+            onChange={() => onSingle(id, o.key)}
+          />
+          {o.text}
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
-/** The two fields the form opens with an answer already in: autonomy defaults
- *  to "no autonomy" and the replaces-something box to unticked. Both are real
- *  answers, so neither can be outstanding and neither is marked — marking a
- *  field that can never block tells the user nothing, which §13.3 rejects as
- *  firmly as marking none.
- *
- *  A draft written before those defaults existed can restore without them,
- *  though, and then the gate is held by a field with no marker able to name it.
- *  Normalising on restore is what keeps "cannot be outstanding" true. */
-function withDefaults(v: Partial<StructuredFormValues>): Partial<StructuredFormValues> {
-  return {
-    ...v,
-    autonomyLevel: v.autonomyLevel ?? 0,
-    replacesPriorModel: v.replacesPriorModel ?? false,
-  };
+function MultiSelect({ id, extraOptions = [], requiredIds, answers, onMulti }: QuestionProps) {
+  const question = findQuestion(id);
+  if (!question) return null;
+  const options = [...extraOptions, ...question.options];
+  const current = toArray(answers[id]);
+  return (
+    <fieldset className="plain-form__question" aria-required={requiredIds.includes(id) || undefined}>
+      <legend>
+        {question.text}
+        <RequiredMark id={id} requiredIds={requiredIds} />
+      </legend>
+      {question.help && <p className="field-help">{question.help}</p>}
+      {options.map((o) => (
+        <label key={o.key} className="plain-form__option">
+          <input type="checkbox" checked={current.includes(o.key)} onChange={() => onMulti(id, o.key)} />
+          {o.text}
+        </label>
+      ))}
+    </fieldset>
+  );
 }
 
-export default function StructuredForm({ jurisdictions, platforms = [], vendors = [], approvedModels = [], onSubmit }: StructuredFormProps) {
-  // D-002/D-003: restore any half-filled form so a refresh or a trip to the
-  // register no longer costs the user eleven answers.
-  // R3-JU-1 / ADR-IF-R3-1. The answered-state is persisted ALONGSIDE the
-  // form values in a draft envelope, not inside StructuredFormValues:
-  // buildGraphFromForm consumes StructuredFormValues and must not see a
-  // form-only concern (verified: src/engine/build-graph-from-form.ts:86 —
-  // `jurisdictions: values.jurisdictions`, unchanged by this chunk).
-  //
-  // An empty array cannot express the difference between "never touched"
-  // and "answered: none", and that difference is the requirement — a user
-  // who answered "none" told us something; a user who did not answer did not.
-  //
-  // A draft written before this chunk is a BARE values object with no
-  // envelope. It therefore carries no answered-state and loads as
-  // 'unanswered' — which is R3-JU-7's rule falling out of the shape rather
-  // than being special-cased. Inferring 'selected' from a populated
-  // jurisdictions array would let a pre-round-3 draft pass the new gate and
-  // reopen, for every user holding one, exactly the defect R3-JU-1 closes.
-  // Read the draft ONCE, at mount. Review pass 2 caught this running on every
-  // render — harmless, because the values are only consumed by lazy useState
-  // initialisers, but a needless sessionStorage read and JSON.parse per
-  // keystroke.
-  const restoredRef = useRef<{
-    restored: FormDraftEnvelope | Partial<StructuredFormValues> | null;
-    envelope: FormDraftEnvelope | null;
-  } | null>(null);
-  if (restoredRef.current === null) {
-    const raw = loadFormDraft<FormDraftEnvelope | Partial<StructuredFormValues>>();
-    restoredRef.current = {
-      restored: raw,
-      envelope: raw && typeof raw === 'object' && 'values' in raw ? (raw as FormDraftEnvelope) : null,
-    };
-  }
-  const restored = restoredRef.current.restored;
-  const restoredEnvelope = restoredRef.current.envelope;
-
-  const [values, setValues] = useState<Partial<StructuredFormValues>>(() =>
-    withDefaults(
-      restoredEnvelope?.values ??
-        (restoredEnvelope
-          ? {}
-          : ((restored as Partial<StructuredFormValues> | null) ?? null)) ?? {
-          jurisdictions: [],
-        },
-    ),
+function FreeText({
+  id,
+  multiline = false,
+  requiredIds,
+  answers,
+  onText,
+}: QuestionProps & { multiline?: boolean }) {
+  const question = findQuestion(id);
+  if (!question) return null;
+  const value = (answers[id] as string | undefined) ?? '';
+  const inputId = `pf-${id}`;
+  return (
+    <div className="plain-form__question">
+      <label htmlFor={inputId}>
+        {question.text}
+        <RequiredMark id={id} requiredIds={requiredIds} />
+      </label>
+      {question.help && <p className="field-help">{question.help}</p>}
+      {multiline ? (
+        <textarea id={inputId} value={value} onChange={(e) => onText(id, e.target.value)} />
+      ) : (
+        <input id={inputId} type="text" value={value} onChange={(e) => onText(id, e.target.value)} />
+      )}
+    </div>
   );
+}
 
-  const [jurisdictionAnswer, setJurisdictionAnswer] = useState<JurisdictionAnswer>(
-    () => restoredEnvelope?.jurisdictionAnswer ?? 'unanswered',
+export default function StructuredForm({ policy, onSubmit }: StructuredFormProps) {
+  const platformOptions = dynamicOptions(policy.platforms ?? [], neutralPlatformLabel);
+  const supplierOptions = dynamicOptions(
+    (policy.vendors ?? []).filter((v) => (v.kind ?? 'supplier') === 'supplier'),
+    neutralSupplierLabel,
   );
+  const companyAssistantOptions = dynamicOptions(
+    (policy.vendors ?? []).filter((v) => v.kind === 'company_assistant'),
+    neutralSupplierLabel,
+  );
+  const jurisdictionOptions: PlainOption[] = (policy.jurisdictions ?? []).map((j) => ({
+    key: j.code,
+    text: j.name,
+  }));
+
+  // D-41: probe the OLD draft key once, before first paint, and never
+  // again — an incompatible shape must be reported once and then be gone,
+  // not re-detected on every render.
+  const legacyRef = useRef<boolean | null>(null);
+  if (legacyRef.current === null) legacyRef.current = probeLegacyFormDraft();
+  const [legacyDraftFound] = useState(legacyRef.current);
+
+  const restoredRef = useRef<PlainAnswers | null>(null);
+  if (restoredRef.current === null) restoredRef.current = loadFormDraft<PlainAnswers>() ?? {};
+  const [answers, setAnswers] = useState<PlainAnswers>(restoredRef.current);
 
   useEffect(() => {
-    saveFormDraft({ values, jurisdictionAnswer });
-  }, [values, jurisdictionAnswer]);
+    saveFormDraft(answers);
+  }, [answers]);
 
-  function update<K extends keyof StructuredFormValues>(field: K, value: StructuredFormValues[K]) {
-    setValues((v) => ({ ...v, [field]: value }));
+  function setSingle(id: QuestionId, key: string) {
+    setAnswers((prev) => {
+      const next: PlainAnswers = { ...prev, [id]: key };
+      // Conditional follow-ups are cleared when their trigger changes
+      // (§2.2 Details: "follow-ups are required when shown and cleared
+      // when their trigger changes").
+      if (id === '3') {
+        delete next['3a'];
+        delete next['3aWhich'];
+        delete next['3supplier'];
+        delete next['3supplierName'];
+      }
+      if (id === '3a') {
+        delete next['3aWhich'];
+      }
+      if (id === '3supplier' && key !== 'not-on-list') {
+        delete next['3supplierName'];
+      }
+      if (id === '4') {
+        if (key !== 'score') delete next['4a'];
+        if (key !== 'agentic' && key !== 'not-sure') {
+          delete next['13'];
+          delete next['14'];
+        }
+      }
+      if (id === '6') {
+        if (!['answers', 'drafts', 'suggests'].includes(key)) delete next['6a'];
+        if (!['acts-reviewed', 'acts-bounded', 'acts-alone'].includes(key)) delete next['6b'];
+      }
+      if (id === '8' && key !== 'other') {
+        delete next['8other'];
+      }
+      return next;
+    });
   }
 
-  // R3-JU-5: the gate is now the list, not a parallel restatement of it. The
-  // two defaulted fields are asserted here as a type-narrowing check rather
-  // than as a gate — `withDefaults` guarantees both are present, including for
-  // a restored legacy draft, so neither can hold Continue shut.
-  function isComplete(v: Partial<StructuredFormValues>): v is StructuredFormValues {
-    return Boolean(
-      REQUIRED_FIELDS.every((f) => f.isAnswered(v, jurisdictionAnswer)) &&
-        v.jurisdictions &&
-        v.autonomyLevel !== undefined &&
-        v.replacesPriorModel !== undefined,
-    );
+  function setText(id: QuestionId, text: string) {
+    setAnswers((prev) => ({ ...prev, [id]: text }));
   }
+
+  function toggleMulti(id: QuestionId, key: string) {
+    setAnswers((prev) => {
+      const current = toArray(prev[id]);
+      let next: string[];
+      if (id === '13') {
+        if (key === 'none') {
+          next = current.includes('none') ? [] : ['none'];
+        } else {
+          const withoutNone = current.filter((k) => k !== 'none');
+          next = withoutNone.includes(key) ? withoutNone.filter((k) => k !== key) : [...withoutNone, key];
+        }
+      } else {
+        next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      }
+      return { ...prev, [id]: next };
+    });
+  }
+
+  // ---- visibility ----
+  const q3 = typeof answers['3'] === 'string' ? (answers['3'] as string) : undefined;
+  const showQ3Supplier = q3 === 'supplier-feature' || q3 === 'specialist-product';
+  const showQ3Model = q3 === 'outside-assistant' || showQ3Supplier;
+  const showQ3a = q3 === 'outside-assistant';
+  const show3supplierName = answers['3supplier'] === 'not-on-list';
+  const show3aWhich = answers['3a'] === 'firm-account' && companyAssistantOptions.length > 1;
+  const q4 = typeof answers['4'] === 'string' ? (answers['4'] as string) : undefined;
+  const showQ4a = q4 === 'score';
+  const isAgentic = q4 === 'agentic' || q4 === 'not-sure';
+  const q6 = typeof answers['6'] === 'string' ? (answers['6'] as string) : undefined;
+  const showQ6a = q6 !== undefined && ['answers', 'drafts', 'suggests'].includes(q6);
+  const showQ6b = q6 !== undefined && ['acts-reviewed', 'acts-bounded', 'acts-alone'].includes(q6);
+  const showQ8other = answers['8'] === 'other';
+
+  // ---- required-ness (§2.2 Details: "required = an option chosen") ----
+  function isAnswered(id: QuestionId): boolean {
+    const q = findQuestion(id);
+    if (q?.multi) return toArray(answers[id]).length > 0;
+    if (q?.freeText) return Boolean((answers[id] as string | undefined)?.trim());
+    return answers[id] !== undefined && answers[id] !== '';
+  }
+
+  const requiredIds: QuestionId[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+  if (showQ3Supplier) requiredIds.push('3supplier');
+  if (showQ3a) requiredIds.push('3a');
+  if (show3aWhich) requiredIds.push('3aWhich');
+  if (showQ4a) requiredIds.push('4a');
+  if (showQ6a) requiredIds.push('6a');
+  if (showQ6b) requiredIds.push('6b');
+  if (showQ8other) requiredIds.push('8other');
+  if (isAgentic) requiredIds.push('13', '14');
+
+  const isComplete = requiredIds.every(isAnswered);
 
   function handleSubmit() {
-    if (!isComplete(values)) return;
+    if (!isComplete) return;
+    const { values, assumptions } = plainAnswersToFormValues(answers, policy);
     clearFormDraft();
-    onSubmit(buildGraphFromForm(values));
+    onSubmit(buildGraphFromForm(values), assumptions);
   }
 
-  function toggleJurisdiction(code: string) {
-    const current = values.jurisdictions ?? [];
-    const next = current.includes(code) ? current.filter((c) => c !== code) : [...current, code];
-    update('jurisdictions', next);
-    // TC-R3-JU-1-05: unticking the last jurisdiction leaves the question
-    // ANSWERED, not unanswered. A user who ticked and unticked has engaged
-    // with it; silently re-blocking them with no explanation would be a
-    // worse defect than the one this chunk fixes.
-    setJurisdictionAnswer(next.length > 0 ? 'selected' : 'none');
-  }
-
-  function chooseNoJurisdiction() {
-    // Mutually exclusive with the checkboxes by construction rather than by
-    // validation — choosing this clears the selection outright.
-    update('jurisdictions', []);
-    setJurisdictionAnswer('none');
-  }
-
-  // R15-C3 (proposal §3.2): counts describe the form as it actually renders,
-  // not a fixed wireframe number — a hardcoded "16" would drift the moment a
-  // field is added or removed, which is the same class of honesty failure
-  // CLAUDE.md warns about for rendered claims.
-  const totalFieldCount = 19;
+  // Bundles the props every question renderer needs, so each call site below
+  // stays a one-liner.
+  const qp = { requiredIds, answers, onSingle: setSingle, onMulti: toggleMulti, onText: setText };
 
   return (
     <section aria-label="Structured intake form">
@@ -272,554 +298,81 @@ export default function StructuredForm({ jurisdictions, platforms = [], vendors 
         same outcome. (Configuring a model in Settings unlocks an optional plain-English alternative
         to this form; it changes how the description is read in, not how it is scored.)
       </p>
-      <p className="structured-form__meta">
-        5 sections · {totalFieldCount} questions ({REQUIRED_FIELDS.length} required) · about ten
-        minutes. One continuous scroll — nothing is hidden behind an &ldquo;advanced&rdquo; toggle.
-      </p>
+      <p className="plain-form__intro">{INTRO_TEXT}</p>
+      {legacyDraftFound && (
+        <p role="status" className="plain-form__legacy-draft">
+          Your saved draft was from an older version of this form and couldn&rsquo;t be reused — please
+          start again.
+        </p>
+      )}
 
       <fieldset className="structured-form__section">
-        <legend>1&nbsp;&nbsp;About it</legend>
-
-        <label htmlFor="sf-name">What do you want to call it?
-          <RequiredMark controlId="sf-name" />
-        </label>
-        <input
-          id="sf-name"
-          {...requiredProps('sf-name')}
-          type="text"
-          value={values.useCaseName ?? ''}
-          onChange={(e) => update('useCaseName', e.target.value)}
-        />
-
-        <label htmlFor="sf-description">In a sentence or two, what does it do?
-          <RequiredMark controlId="sf-description" />
-        </label>
-        <textarea
-          id="sf-description"
-          {...requiredProps('sf-description')}
-          value={values.description ?? ''}
-          onChange={(e) => update('description', e.target.value)}
-        />
+        <legend>About it</legend>
+        <FreeText id="1" {...qp} />
+        <FreeText id="2" multiline {...qp} />
       </fieldset>
 
       <fieldset className="structured-form__section">
-        <legend>2&nbsp;&nbsp;What it uses <span className="structured-form__section-code">(input data)</span></legend>
-
-        <label htmlFor="sf-input-data-class">What kind of information does it use?
-          <RequiredMark controlId="sf-input-data-class" />
-        </label>
-        <p className="field-help">
-          Pick the most sensitive kind it touches, even if that&apos;s only occasionally.
-        </p>
-        <select
-          id="sf-input-data-class"
-          {...requiredProps('sf-input-data-class')}
-          value={values.inputDataClass ?? ''}
-          onChange={(e) => update('inputDataClass', e.target.value as StructuredFormValues['inputDataClass'])}
-        >
-          <option value="">Select…</option>
-          {DATA_CLASSES.map((v) => (
-            <option key={v} value={v}>
-              {DATA_CLASS_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="data_class" />
-
-        <label htmlFor="sf-input-data-zone">Where does that information sit today?
-          <RequiredMark controlId="sf-input-data-zone" />
-        </label>
-        <p className="field-help">
-          Before the AI touches it. If it is stored in more than one place, pick the least protected.
-        </p>
-        <select
-          id="sf-input-data-zone"
-          {...requiredProps('sf-input-data-zone')}
-          value={values.inputDataZone ?? ''}
-          onChange={(e) => update('inputDataZone', e.target.value as StructuredFormValues['inputDataZone'])}
-        >
-          <option value="">Select…</option>
-          {DATA_ZONES.map((v) => (
-            <option key={v} value={v}>
-              {DATA_ZONE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="data_zone" />
+        <legend>Where it comes from</legend>
+        <SingleSelect id="3" extraOptions={platformOptions} extraOptionsAtIndex={3} {...qp} />
+        {showQ3Supplier && <SingleSelect id="3supplier" extraOptions={supplierOptions} {...qp} />}
+        {show3supplierName && <FreeText id="3supplierName" {...qp} />}
+        {showQ3Model && <FreeText id="3model" {...qp} />}
+        {showQ3a && <SingleSelect id="3a" {...qp} />}
+        {show3aWhich && <SingleSelect id="3aWhich" extraOptions={companyAssistantOptions} {...qp} />}
       </fieldset>
 
       <fieldset className="structured-form__section">
-        <legend>3&nbsp;&nbsp;What the AI is and how it runs <span className="structured-form__section-code">(processing)</span></legend>
-
-        <label htmlFor="sf-model-type">What kind of AI is it?
-          <RequiredMark controlId="sf-model-type" />
-        </label>
-        <p className="field-help">
-          If you are not sure, pick the closest description — you can correct it on the next screen.
-        </p>
-        <select
-          id="sf-model-type"
-          {...requiredProps('sf-model-type')}
-          value={values.modelType ?? ''}
-          onChange={(e) => update('modelType', e.target.value as StructuredFormValues['modelType'])}
-        >
-          <option value="">Select…</option>
-          {MODEL_TYPES.map((v) => (
-            <option key={v} value={v}>
-              {MODEL_TYPE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="model_type" />
-
-        <label htmlFor="sf-autonomy">How much can it do without a person?</label>
-        <select
-          id="sf-autonomy"
-          value={values.autonomyLevel ?? 0}
-          onChange={(e) => update('autonomyLevel', Number(e.target.value) as StructuredFormValues['autonomyLevel'])}
-        >
-          {([0, 1, 2, 3, 4] as const).map((level) => (
-            <option key={level} value={level}>
-              {AUTONOMY_LABELS[level]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="autonomy_level" />
-
-        <label htmlFor="sf-system-access">
-          What can it reach and touch, beyond the data it processes? (optional — blank means: not stated)
-        </label>
-        <p className="field-help">
-          Not the data — the infrastructure. Shared compute, package repositories, live credentials,
-          deployment pipelines. One answer only in this version: if several apply, pick the most
-          severe (deployment &gt; credentials &gt; shared infrastructure) and note the rest for the
-          reviewer in the sign-off note.
-        </p>
-        <WhyWeAsk field="system_access_scope" />
-        <select
-          id="sf-system-access"
-          value={values.systemAccessScope ?? ''}
-          onChange={(e) =>
-            update(
-              'systemAccessScope',
-              e.target.value === ''
-                ? undefined
-                : (e.target.value as StructuredFormValues['systemAccessScope']),
-            )
-          }
-        >
-          <option value="">Not stated</option>
-          <option value="none">Nothing beyond its own task&rsquo;s data (none)</option>
-          <option value="shared_infrastructure">
-            Runs alongside other AI instances or processes on shared infrastructure (shared infrastructure)
-          </option>
-          <option value="credentialed_systems">
-            Holds live credentials to systems beyond its immediate task (credentialed systems)
-          </option>
-          <option value="deployment_authority">
-            Can push code, change configuration, or deploy with no separate human action (deployment authority)
-          </option>
-        </select>
-
-        <label htmlFor="sf-multi-instance">
-          Can it communicate or coordinate with other AI instances? (optional — blank means: not stated)
-        </label>
-        <WhyWeAsk field="multi_instance_coordination" />
-        <select
-          id="sf-multi-instance"
-          value={values.multiInstanceCoordination ?? ''}
-          onChange={(e) =>
-            update(
-              'multiInstanceCoordination',
-              e.target.value === ''
-                ? undefined
-                : (e.target.value as StructuredFormValues['multiInstanceCoordination']),
-            )
-          }
-        >
-          <option value="">Not stated</option>
-          <option value="no">No — it runs alone</option>
-          <option value="yes">Yes — it can exchange information with other instances or AI systems</option>
-          <option value="unknown">Not sure</option>
-        </select>
-
-        <label htmlFor="sf-processing-zone">Where does the AI itself run?
-          <RequiredMark controlId="sf-processing-zone" />
-        </label>
-        {/* Load-bearing sentence (proposal §3.2): the storage-vs-processing
-            distinction is the one people get wrong, and the one the
-            zone-crossing rules turn on. It stays visible outside the
-            disclosure; the rest of the methodology paragraph does not. */}
-        <p className="field-help">
-          Not where the data is stored — where it gets sent to be processed.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>
-            A cloud AI service counts as an outside supplier even if your data normally never leaves
-            the firm. Information moving from a more protected place to a less protected one is the
-            single thing these rules watch for most closely.
-          </p>
-        </details>
-        <select
-          id="sf-processing-zone"
-          {...requiredProps('sf-processing-zone')}
-          value={values.processingDataZone ?? ''}
-          onChange={(e) =>
-            update('processingDataZone', e.target.value as StructuredFormValues['processingDataZone'])
-          }
-        >
-          <option value="">Select…</option>
-          {DATA_ZONES.map((v) => (
-            <option key={v} value={v}>
-              {DATA_ZONE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="sf-platform">
-          Which approved platform does it run on? (optional — blank means: not on an approved platform)
-        </label>
-        <p className="field-help">
-          If it runs on a platform your firm has already approved, say so — the controls that approval
-          already covers are not asked for again.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>Choosing one your firm has not approved routes it to a full platform risk assessment.</p>
-        </details>
-        <select
-          id="sf-platform"
-          value={values.platform ?? ''}
-          onChange={(e) => update('platform', e.target.value || undefined)}
-        >
-          <option value="">Not on an approved platform / don&apos;t know</option>
-          {platforms.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.id})
-            </option>
-          ))}
-          <option value="__other__">Something else — not on the list</option>
-        </select>
-
-        <label htmlFor="sf-vendor">
-          Whose model or service is it? (optional — blank means: assessed as built in-house)
-        </label>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>
-            A vendor not on the approved list is treated as a new vendor and triggers a full vendor
-            risk assessment.
-          </p>
-        </details>
-        <select
-          id="sf-vendor"
-          value={values.vendor ?? ''}
-          onChange={(e) => update('vendor', e.target.value || undefined)}
-        >
-          {/* D-006: this read "Built in-house (internal)" — the unchosen state
-              presented as something the user had declared. The graph then showed
-              "vendor: internal" and the next screen asked them to attest it was
-              accurate. The sentinel is unchanged; what changed is that the form
-              now says what it will assume, before the attestation rather than
-              after it. */}
-          <option value="">Not stated — will be assessed as built in-house</option>
-          {vendors.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name} ({v.id})
-            </option>
-          ))}
-          <option value="__other__">Another vendor — not on the list</option>
-        </select>
-
-        <label htmlFor="sf-model">
-          Which model does it run on?
-          <RequiredMark controlId="sf-model" />
-        </label>
-        <p className="field-help">
-          Choose the model from the firm&apos;s approved-model registry, or say it is not listed and
-          name it.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>
-            A model that is not on the registry, or is on it without sign-off, is not blocked here —
-            it routes to a model governance review on the verdict.
-          </p>
-        </details>
-        <select
-          id="sf-model"
-          {...requiredProps('sf-model')}
-          value={values.declaredModelIdOther !== undefined ? '__other__' : (values.declaredModelId ?? '')}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === '__other__') {
-              update('declaredModelId', undefined);
-              update('declaredModelIdOther', '');
-            } else {
-              update('declaredModelIdOther', undefined);
-              update('declaredModelId', v || undefined);
-            }
-          }}
-        >
-          <option value="">Choose a model&hellip;</option>
-          {approvedModels.map((m) => (
-            <option key={m.model_id} value={m.model_id}>
-              {m.model_id} ({m.vendor})
-            </option>
-          ))}
-          <option value="__other__">Not listed — name it</option>
-        </select>
-        {values.declaredModelIdOther !== undefined && (
-          <input
-            type="text"
-            aria-label="Name the model"
-            placeholder="e.g. gpt-4o, llama-3-70b"
-            value={values.declaredModelIdOther}
-            onChange={(e) => update('declaredModelIdOther', e.target.value)}
-          />
-        )}
+        <legend>What it does</legend>
+        <SingleSelect id="4" {...qp} />
+        {showQ4a && <SingleSelect id="4a" {...qp} />}
+        <MultiSelect id="5" {...qp} />
+        <SingleSelect id="6" {...qp} />
+        {showQ6a && <SingleSelect id="6a" {...qp} />}
+        {showQ6b && <SingleSelect id="6b" {...qp} />}
+        <SingleSelect id="7" {...qp} />
       </fieldset>
 
       <fieldset className="structured-form__section">
-        <legend>4&nbsp;&nbsp;What comes out and who it reaches <span className="structured-form__section-code">(output)</span></legend>
-
-        <label htmlFor="sf-action-type">What does it actually produce or do?
-          <RequiredMark controlId="sf-action-type" />
-        </label>
-        <select
-          id="sf-action-type"
-          {...requiredProps('sf-action-type')}
-          value={values.outputActionType ?? ''}
-          onChange={(e) => update('outputActionType', e.target.value as StructuredFormValues['outputActionType'])}
-        >
-          <option value="">Select…</option>
-          {ACTION_TYPES.map((v) => (
-            <option key={v} value={v}>
-              {ACTION_TYPE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="action_type" />
-
-        <label htmlFor="sf-exposure">Who sees what it produces?
-          <RequiredMark controlId="sf-exposure" />
-        </label>
-        <p className="field-help">Pick the widest audience it reaches.</p>
-        <select
-          id="sf-exposure"
-          {...requiredProps('sf-exposure')}
-          value={values.outputExposure ?? ''}
-          onChange={(e) => update('outputExposure', e.target.value as StructuredFormValues['outputExposure'])}
-        >
-          <option value="">Select…</option>
-          {EXPOSURES.map((v) => (
-            <option key={v} value={v}>
-              {EXPOSURE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="exposure" />
-
-        <label htmlFor="sf-bindingness">How much weight does its output carry?
-          <RequiredMark controlId="sf-bindingness" />
-        </label>
-        {/* Load-bearing (proposal §3.2): this is the sentence a submitter
-            needs to answer honestly rather than to the letter of the
-            process. The illustrative example stays behind the disclosure. */}
-        <p className="field-help">
-          Be honest about what happens in practice rather than what the process says.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>
-            If people almost always go with what it says, that is closer to &ldquo;substantially
-            drives the decision&rdquo; than to &ldquo;one input among several&rdquo;.{' '}
-            {FIELD_CONSEQUENCES.decision_bindingness}
-          </p>
-        </details>
-        <select
-          id="sf-bindingness"
-          {...requiredProps('sf-bindingness')}
-          value={values.decisionBindingness ?? ''}
-          onChange={(e) =>
-            update('decisionBindingness', e.target.value as StructuredFormValues['decisionBindingness'])
-          }
-        >
-          <option value="">Select…</option>
-          {DECISION_BINDINGNESS.map((v) => (
-            <option key={v} value={v}>
-              {BINDINGNESS_LABELS[v]}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="sf-reversibility">If it gets something wrong, can it be undone?
-          <RequiredMark controlId="sf-reversibility" />
-        </label>
-        <p className="field-help">
-          Think about the point at which someone would notice.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>
-            Money already sent, a message already seen by a client, or a filing already made
-            generally cannot be taken back. {FIELD_CONSEQUENCES.output_reversibility}
-          </p>
-        </details>
-        <select
-          id="sf-reversibility"
-          {...requiredProps('sf-reversibility')}
-          value={values.outputReversibility ?? ''}
-          onChange={(e) =>
-            update('outputReversibility', e.target.value as StructuredFormValues['outputReversibility'])
-          }
-        >
-          <option value="">Select…</option>
-          {['reversible', 'irreversible', 'unknown'].map((v) => (
-            <option key={v} value={v}>
-              {REVERSIBILITY_LABELS[v]}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="sf-decision-type">
-          What kind of decision does it feed? (optional — leave blank only if it feeds no decision at
-          all)
-        </label>
-        <p className="field-help">
-          Some areas carry extra legal duties — lending and hiring especially. If none of these fit,
-          choose <em>Something else — let me describe it</em> and say what it is.
-        </p>
-        <details className="field-why">
-          <summary>Why we ask</summary>
-          <p>{FIELD_CONSEQUENCES.decision_type} The verdict will show that your policy has no rule for it.</p>
-        </details>
-        <select
-          id="sf-decision-type"
-          value={values.decisionTypeOther !== undefined ? '__other__' : (values.decisionType ?? '')}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === '__other__') {
-              // Clearing decisionType is the whole point: the two are mutually
-              // exclusive, and leaving a stale known type behind would let a
-              // policy rule fire for a decision the submitter just told us was
-              // something else.
-              update('decisionType', undefined);
-              update('decisionTypeOther', '');
-            } else {
-              update('decisionTypeOther', undefined);
-              update('decisionType', (v || undefined) as StructuredFormValues['decisionType']);
-            }
-          }}
-        >
-          <option value="">None / not applicable</option>
-          {DECISION_TYPES.map((v) => (
-            <option key={v} value={v}>
-              {DECISION_TYPE_LABELS[v]}
-            </option>
-          ))}
-          <option value="__other__">Something else — let me describe it</option>
-        </select>
-
-        {values.decisionTypeOther !== undefined && (
-          <>
-            <label htmlFor="sf-decision-type-other">What kind of decision is it?</label>
-            <p className="field-help">
-              In your own words — for example &ldquo;collections prioritisation&rdquo; or &ldquo;AML alert
-              triage&rdquo;. This is recorded with the verdict, and because your policy has no rule for it,
-              the tier will rest on your other answers alone. That is stated on the verdict, not hidden.
-            </p>
-            <input
-              id="sf-decision-type-other"
-              type="text"
-              value={values.decisionTypeOther}
-              onChange={(e) => update('decisionTypeOther', e.target.value)}
-              placeholder="e.g. collections prioritisation"
-            />
-          </>
-        )}
-
-        <label htmlFor="sf-hitl">
-          Does a person check it before anything happens? (optional — blank means: not specified)
-        </label>
-        <WhyWeAsk field="hitl" />
-        <select
-          id="sf-hitl"
-          value={values.hitl === undefined ? '' : values.hitl ? 'yes' : 'no'}
-          onChange={(e) =>
-            update('hitl', e.target.value === '' ? undefined : e.target.value === 'yes')
-          }
-        >
-          <option value="">Not specified</option>
-          <option value="yes">Yes — a human approves before action</option>
-          <option value="no">No — the system acts without prior human review</option>
-        </select>
-
-        <label htmlFor="sf-scale">How widely is it used?
-          <RequiredMark controlId="sf-scale" />
-        </label>
-        <select
-          id="sf-scale"
-          {...requiredProps('sf-scale')}
-          value={values.outputScale ?? ''}
-          onChange={(e) => update('outputScale', e.target.value as StructuredFormValues['outputScale'])}
-        >
-          <option value="">Select…</option>
-          {['limited', 'at_scale'].map((v) => (
-            <option key={v} value={v}>
-              {SCALE_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <WhyWeAsk field="scale" />
-
-        <label htmlFor="sf-replaces">
-          <input
-            id="sf-replaces"
-            type="checkbox"
-            checked={values.replacesPriorModel ?? false}
-            onChange={(e) => update('replacesPriorModel', e.target.checked)}
-          />
-          It replaces something we already use (a model, a tool or a manual process)
-        </label>
+        <legend>Decisions and safeguards</legend>
+        <SingleSelect id="8" {...qp} />
+        {showQ8other && <FreeText id="8other" {...qp} />}
+        <SingleSelect id="9" {...qp} />
+        <SingleSelect id="12" {...qp} />
+        {isAgentic && <MultiSelect id="13" {...qp} />}
+        {isAgentic && <SingleSelect id="14" {...qp} />}
       </fieldset>
 
-      <fieldset id="sf-jurisdiction" {...requiredProps('sf-jurisdiction')} className="structured-form__section">
-        <legend>
-          5&nbsp;&nbsp;Where it applies <span className="structured-form__section-code">(jurisdictions)</span>
-          <RequiredMark controlId="sf-jurisdiction" />
-        </legend>
-        <p className="field-help">
-          Tick anywhere the clients, staff or data involved are based. This decides which local rules apply.
-        </p>
-        {jurisdictions.map((j) => (
-          <label key={j.code} htmlFor={`sf-jurisdiction-${j.code}`}>
-            <input
-              id={`sf-jurisdiction-${j.code}`}
-              type="checkbox"
-              checked={(values.jurisdictions ?? []).includes(j.code)}
-              onChange={() => toggleJurisdiction(j.code)}
-            />
-            {j.name}
-          </label>
-        ))}
-        <label htmlFor="sf-jurisdiction-none">
-          <input
-            id="sf-jurisdiction-none"
-            type="checkbox"
-            checked={jurisdictionAnswer === 'none'}
-            onChange={chooseNoJurisdiction}
-          />
-          None of these, or not sure yet
-        </label>
+      <fieldset className="structured-form__section">
+        <legend>Scope and countries</legend>
+        <SingleSelect id="10" {...qp} />
+        <MultiSelect id="11" extraOptions={jurisdictionOptions} {...qp} />
       </fieldset>
 
       <p className="structured-form__scroll-note">One continuous scroll — no Next/Back paging.</p>
 
-      <button type="button" onClick={handleSubmit} disabled={!isComplete(values)}>
+      <button type="button" onClick={handleSubmit} disabled={!isComplete}>
         Continue
       </button>
     </section>
   );
+}
+
+// Exported for StructuredForm.test.tsx and the parity test only — not part
+// of the component's own render path. Lets both resolve the dynamic
+// platform/vendor/jurisdiction option lists the same way the component
+// does, without duplicating the policy-reading logic above.
+export function buildDynamicOptions(policy: PolicyFile) {
+  return {
+    platforms: dynamicOptions(policy.platforms ?? [], neutralPlatformLabel),
+    suppliers: dynamicOptions(
+      (policy.vendors ?? []).filter((v) => (v.kind ?? 'supplier') === 'supplier'),
+      neutralSupplierLabel,
+    ),
+    companyAssistants: dynamicOptions(
+      (policy.vendors ?? []).filter((v) => v.kind === 'company_assistant'),
+      neutralSupplierLabel,
+    ),
+    jurisdictions: (policy.jurisdictions ?? []).map((j) => ({ key: j.code, text: j.name })) as PlainOption[],
+  };
 }

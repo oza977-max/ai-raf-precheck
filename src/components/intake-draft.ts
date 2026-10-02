@@ -62,7 +62,18 @@ export function clearDraft(): void {
 // empty form — the work the user actually did was still lost. This is the
 // second half of the D-002/D-003 fix, found by verifying the first half in
 // the browser rather than trusting it.
-const FORM_KEY = 'aigate:intake-form-draft';
+//
+// R16-B (D-41): versioned key. The plain-language form's answer shape
+// (PlainAnswers — option KEYS against question ids) has nothing in common
+// with the old field-by-field form's StructuredFormValues shape it
+// replaces. Reusing the old key would let a stray old-shape draft be read
+// back as though its values were real PlainAnswers — silently feeding a
+// value nobody chose through the new question mapping. Bumping the key
+// means an old draft is simply never found under the new one; probing the
+// OLD key (below) is how the user is told plainly, once, rather than the
+// draft just rotting in sessionStorage.
+const FORM_KEY = 'aigate:intake-form-draft:v2';
+const LEGACY_FORM_KEY = 'aigate:intake-form-draft';
 
 export function saveFormDraft(values: unknown): void {
   try {
@@ -86,5 +97,21 @@ export function clearFormDraft(): void {
     sessionStorage.removeItem(FORM_KEY);
   } catch {
     /* nothing to do */
+  }
+}
+
+/** R16-B (D-41). Checks the OLD, pre-R16 draft key and clears it if present,
+ *  returning whether one was found so the caller (StructuredForm) can show
+ *  "Your saved draft was from an older version of this form and couldn't be
+ *  reused — please start again." exactly once. Never reads the draft's
+ *  content — an incompatible shape is not even worth parsing, only
+ *  removing. */
+export function probeLegacyFormDraft(): boolean {
+  try {
+    const existed = sessionStorage.getItem(LEGACY_FORM_KEY) !== null;
+    if (existed) sessionStorage.removeItem(LEGACY_FORM_KEY);
+    return existed;
+  } catch {
+    return false;
   }
 }

@@ -14,7 +14,7 @@ import { selfAssessmentSeeded } from '../seeds/aigate-self-assessment';
 import { addNode, addUseCaseModelLink, getUseCase, getUseCases, updateUseCaseVerdictSummary, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
 import { getRole } from '../store/role';
 import { routeToWorkflow } from '../engine/workflow-router';
-import type { DataFlowGraph, GraphCorrection } from '../engine/types';
+import type { DataFlowGraph, GraphCorrection, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { AuditEvent, LifecycleStage, UseCaseSummary } from '../store/types';
 import { coerceAnswerValue, generateQuestions, getQuestionBudget, questionsForGuessedFields } from '../engine/question-generator';
@@ -36,6 +36,7 @@ import { intakeReducer } from './intake-state';
 import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
+import type { Assumption } from './plain-copy';
 import GraphView from './GraphView';
 import StepTracker from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
@@ -78,6 +79,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // key, so clearing the reducer draft alone left the abandoned answers to
     // reappear on the next visit to the form step.
     clearFormDraft();
+    // R16-C: a fresh run must never inherit the previous run's assumptions.
+    setFormAssumptions([]);
     setShowResumed(false);
     // RESTART, not DESCRIPTION_CHANGED — the latter is discarded by the
     // reducer from every step but description_entry, so the banner hid
@@ -143,6 +146,21 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // R5-GR-2: the proceed-gate refusal message. State, not derived, so it
   // appears only after an attempted Proceed rather than scolding upfront.
   const [reviewGateError, setReviewGateError] = useState<string | null>(null);
+  // R16-C (§3, UC-9): every "Not sure" answer from the guided form, carried
+  // forward from StructuredForm's submit to the summary/confirmation
+  // screen. Kept in local component state rather than IntakeState/the
+  // reducer — the contract scopes this round to "keep the assumptions in
+  // IntakeFlow state for now; persisting them for the verdict screen is
+  // chunk D2's job". Reset wherever a genuinely NEW run's extraction begins
+  // (handleStartOver, handleConfirmNewUseCase) so a stale value from an
+  // earlier form-path run can never leak into a later llm-path one.
+  const [formAssumptions, setFormAssumptions] = useState<Assumption[]>([]);
+  // R16-C (§3, UC-12): node ids the LLM path flagged uncertain/guessed,
+  // captured while on graph_review (where state.guessedFields lives) and
+  // frozen at whatever it was when the user left that step — confirmation
+  // has no guessedFields of its own in IntakeState's shape. Naturally []
+  // for every form-path run, since the form never sets guessedFields.
+  const [uncertainNodeIds, setUncertainNodeIds] = useState<string[]>([]);
   // R8-SC: similar decided cases, enriched with each match's controls read
   // from its own audit trail (3 reads max — the ranked top three only).
   const [precedents, setPrecedents] = useState<EnrichedPrecedent[]>([]);
@@ -161,6 +179,29 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // PolicyEditor's Save button already requires leaving this screen
   // first); not worth a cross-component subscription mechanism for V1.
   const policyResult = useMemo(() => loadPolicy(getCurrentPolicyYaml()), []);
+  // R16-B: StructuredForm now takes the whole PolicyFile (it reads
+  // platforms/vendors/jurisdictions/approved_models itself). An invalid
+  // policy is already a best-effort-only condition elsewhere in this file
+  // (handleProceedFromGraphReview throws rather than render a usable
+  // screen); this minimal stand-in just keeps the form's own render from
+  // crashing on a missing object — every dynamic option list it drives
+  // reads as empty, same degraded behaviour the old per-field props had.
+  const EMPTY_POLICY_FALLBACK: PolicyFile = {
+    version: '0',
+    policy_id: 'INVALID',
+    firm_name: '[FIRM]',
+    translation_attestation: { attested_by: '', role: '', date: '', raf_version_checked: '' },
+    hard_lines: [],
+    tracks: [],
+    tiers: [],
+    invariants: [],
+    controls: [],
+    kri_thresholds: {},
+    jurisdictions: [],
+    roles: {},
+    tier_workflow: { Critical: 'self-service', High: 'self-service', Medium: 'self-service', Low: 'self-service' },
+    safety_margin: 0,
+  };
   // V2-A: jurisdiction packs — bundled files, parsed once. Invalid packs
   // are dropped by the loader (whole-pack rejection, CF-5/RA-7) and shown
   // on the Appetite screen; evaluation proceeds with the valid ones.
@@ -302,6 +343,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (state.step !== 'duplicate_check') return;
     if (confirmNewInFlight.current) return;
     confirmNewInFlight.current = true;
+    // R16-C: this is the one place EVERY new run's extraction begins
+    // (llm or form) — clear the previous run's assumptions here so a
+    // leftover form-path value can never attach itself to a later
+    // llm-path run sharing the same mounted IntakeFlow.
+    setFormAssumptions([]);
     try {
 
     // UC-2 / TC-UC-2-03. Dismissing a surfaced match is a decision about the
@@ -595,6 +641,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // written exclusively through appendAuditEvent.
     if (state.step === 'verdict') clearDraft();
     else saveDraft(state);
+  }, [state]);
+
+  // R16-C (§3, UC-12): tracks live while the user is on graph_review (where
+  // state.guessedFields actually lives) and simply stops updating once they
+  // proceed past it — confirmation's own IntakeState shape carries no
+  // guessedFields, so this is the only way UnderstoodSummary can still say
+  // which nodes were uncertain by the time it renders. Naturally empty for
+  // the form path (guessedFields is never set there) and for a correction
+  // pass whose graph has no unresolved guesses.
+  useEffect(() => {
+    if (state.step === 'graph_review') setUncertainNodeIds(Object.keys(state.guessedFields ?? {}));
   }, [state]);
 
   // R8-SC-1/-3: precedents = decided register entries ranked by the pure
@@ -1212,11 +1269,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'graph_extraction' && state.method === 'form' && (
           <StructuredForm
-            jurisdictions={policyResult.valid ? policyResult.policy.jurisdictions : []}
-            platforms={policyResult.valid ? policyResult.policy.platforms ?? [] : []}
-            approvedModels={policyResult.valid ? policyResult.policy.approved_models ?? [] : []}
-            vendors={policyResult.valid ? policyResult.policy.vendors ?? [] : []}
-            onSubmit={async (graph) => {
+            policy={policyResult.valid ? policyResult.policy : EMPTY_POLICY_FALLBACK}
+            onSubmit={async (graph, assumptions) => {
+              setFormAssumptions(assumptions);
               const useCaseId = crypto.randomUUID();
               // App-run vs seeded trail comparison (2026-08-17) found the
               // form path never wrote use_case_created — the submitter's
@@ -1448,6 +1503,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           <ConfirmationStep
             graph={state.graph}
             corrections={state.corrections}
+            policy={policyResult.valid ? policyResult.policy : undefined}
+            assumptions={formAssumptions}
+            uncertainNodeIds={uncertainNodeIds}
+            onChangeAnswer={() => dispatch({ type: 'CHANGE_ANSWER' })}
             onConfirm={(note) => void handleConfirmAndEvaluate(note)}
           />
         )}

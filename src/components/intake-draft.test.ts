@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveDraft, loadDraft, clearDraft, saveFormDraft, loadFormDraft, clearFormDraft } from './intake-draft';
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  saveFormDraft,
+  loadFormDraft,
+  clearFormDraft,
+  probeLegacyFormDraft,
+} from './intake-draft';
 import type { IntakeState } from './intake-state';
 
 // explore-001 D-002 (Important) and D-003 (Minor): in-flight intake was lost
@@ -69,7 +77,52 @@ describe('guided-form draft (the half the first fix missed)', () => {
   });
 
   it('survives corrupt storage without breaking intake', () => {
-    sessionStorage.setItem('aigate:intake-form-draft', 'not json');
+    sessionStorage.setItem('aigate:intake-form-draft:v2', 'not json');
+    expect(loadFormDraft()).toBeNull();
+  });
+});
+
+// R16-B (D-41). The plain-language form's PlainAnswers shape has nothing in
+// common with the old field-by-field StructuredFormValues shape it
+// replaces — a stray old-shape value (e.g. a raw DataClass string under a
+// key the new form reads as an option KEY) must never be silently read back
+// as though it were a real answer. The key is versioned so an old draft is
+// never even attempted; it is instead probed, cleared, and reported once so
+// the submitter is told plainly rather than finding a half-populated form.
+describe('legacy form-draft migration (R16-B, D-41)', () => {
+  const LEGACY_KEY = 'aigate:intake-form-draft';
+  const NEW_KEY = 'aigate:intake-form-draft:v2';
+
+  beforeEach(() => {
+    sessionStorage.removeItem(LEGACY_KEY);
+    clearFormDraft();
+  });
+
+  it('TC-R16-B-07: a draft under the old key is detected, cleared, and reported once', () => {
+    sessionStorage.setItem(LEGACY_KEY, JSON.stringify({ useCaseName: 'Old form draft' }));
+    expect(probeLegacyFormDraft()).toBe(true);
+    expect(sessionStorage.getItem(LEGACY_KEY)).toBeNull();
+    // Calling it again finds nothing left to report — it is truly gone, not
+    // merely hidden.
+    expect(probeLegacyFormDraft()).toBe(false);
+  });
+
+  it('no old draft present -> reports false and touches nothing', () => {
+    expect(probeLegacyFormDraft()).toBe(false);
+    expect(sessionStorage.getItem(NEW_KEY)).toBeNull();
+  });
+
+  it('saveFormDraft/loadFormDraft round-trip through the NEW versioned key only', () => {
+    saveFormDraft({ '1': 'Test tool' });
+    expect(sessionStorage.getItem(LEGACY_KEY)).toBeNull();
+    expect(sessionStorage.getItem(NEW_KEY)).not.toBeNull();
+    expect(loadFormDraft()).toEqual({ '1': 'Test tool' });
+  });
+
+  it('a legacy draft is never read back as a new-shape answer object', () => {
+    sessionStorage.setItem(LEGACY_KEY, JSON.stringify({ useCaseName: 'Old form draft', inputDataClass: 'Client PII' }));
+    // loadFormDraft only ever reads the NEW key — the legacy key is a
+    // probe-and-clear concern handled separately by probeLegacyFormDraft.
     expect(loadFormDraft()).toBeNull();
   });
 });

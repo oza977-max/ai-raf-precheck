@@ -17,7 +17,7 @@ const g: DataFlowGraph = {
 
 describe('ConfirmationStep — the note for the reviewer', () => {
   it('offers an OPTIONAL note and says in terms who reads it — the reviewer, not the rules', () => {
-    render(<ConfirmationStep graph={g} corrections={[]} onConfirm={vi.fn()} />);
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
     const note = screen.getByLabelText(/anything the reviewer should know/i);
     expect(note).toBeInTheDocument();
     // The label of the mechanism IS the mechanism: without this sentence a
@@ -28,7 +28,7 @@ describe('ConfirmationStep — the note for the reviewer', () => {
   it('passes a trimmed note to onConfirm', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
-    render(<ConfirmationStep graph={g} corrections={[]} onConfirm={onConfirm} />);
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={onConfirm} />);
     await user.type(screen.getByLabelText(/anything the reviewer should know/i), '  The PII is pseudonymised first.  ');
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(onConfirm).toHaveBeenCalledWith('The PII is pseudonymised first.');
@@ -39,7 +39,7 @@ describe('ConfirmationStep — the note for the reviewer', () => {
     // is permanent, and "note: ''" reads as a note somebody chose to leave.
     const user = userEvent.setup();
     const onConfirm = vi.fn();
-    render(<ConfirmationStep graph={g} corrections={[]} onConfirm={onConfirm} />);
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={onConfirm} />);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(onConfirm).toHaveBeenCalledWith(undefined);
   });
@@ -47,7 +47,7 @@ describe('ConfirmationStep — the note for the reviewer', () => {
   it('confirming stays possible with the note untouched — it is genuinely optional', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
-    render(<ConfirmationStep graph={g} corrections={[]} onConfirm={onConfirm} />);
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={onConfirm} />);
     const btn = screen.getByRole('button', { name: /confirm and evaluate/i });
     expect(btn).toBeEnabled();
     await user.click(btn);
@@ -63,7 +63,7 @@ describe('ConfirmationStep — the note for the reviewer', () => {
 // call (see VerdictDisplay.test.tsx's paired assertion on the same shape).
 describe('ConfirmationStep — plain-English attest grid, no internal-id tag (R15-C3)', () => {
   it('TC-R15-C3-03: the "UC-6 · CONFIRM & ATTEST" internal-id tag does not render on the Confirm and evaluate screen', () => {
-    render(<ConfirmationStep graph={g} corrections={[]} onConfirm={vi.fn()} />);
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
     expect(screen.getByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
     expect(screen.queryByText(/UC-6/)).not.toBeInTheDocument();
     expect(screen.queryByText(/CONFIRM & ATTEST/i)).not.toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('ConfirmationStep — plain-English attest grid, no internal-id tag (R1
       intake_method: 'structured_form',
       extracted_at: '2026-01-01T00:00:00.000Z',
     };
-    render(<ConfirmationStep graph={graph} corrections={[]} onConfirm={vi.fn()} />);
+    render(<ConfirmationStep graph={graph} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
     // Not the raw enum alone ("Client PII", "llm") — plainWithCode() leads with
     // a short plain phrase and keeps the code quiet beside it, matching the
     // VerdictDisplay assertion on the identical string this pairs with.

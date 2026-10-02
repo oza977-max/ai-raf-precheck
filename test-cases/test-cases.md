@@ -1546,6 +1546,12 @@ And the output MUST NOT contain: a verdict displaying as fully authoritative whe
 
 ---
 
+## Superseded
+
+| ID | Reason |
+|---|---|
+| TC-VD-1-01 | R16 chunk D1 (`build/prompts/R16.md` v2.1, VD-9/VD-10 — `requirements/requirements.md`'s round-16 amendment to VD-1) replaces this case's fit criterion. The formal status/tier/track `<h2>` this case required to be "visible above the fold... MUST NOT be hidden below a fold" now sits inside the collapsed-by-default reviewer section — the first screen's plain headline leads instead. See `specs/verdict-audit.md` §5.1/§5.7 and `test-cases/test-cases-020.md` (TC-R16-D1-01, -13) for the replacement behaviour and its tests. |
+
 ## Traceability Matrix
 
 | Requirement ID | Priority | Version | Test Case IDs |
@@ -1758,6 +1764,12 @@ Counterexample strategy: fast-check — generate a tripped invariant set T and c
 - Coverage is measured as *a test case exists*, not as *the test passes and
   asserts the right thing*. HR-14 is the cautionary example: CS-1 read as
   covered for two months while half unimplemented.
+
+## Superseded
+
+| ID | Reason |
+|---|---|
+| TC-UC-3a-04 | "Structured form field values constrained to policy-defined permitted values" — asserted that the form's `<select>` option values equal the canonical-vocabulary arrays (`DATA_CLASSES`, `MODEL_TYPES`, ...) verbatim. R16 chunk B (2026-10-02) retires the field-by-field form this depended on: the replacement form (`build/prompts/R16.md` §2.2) shows plain-language situational options, never a literal canonical value, by design (principle 1 — no engine vocabulary on the form). Constraint to the permitted set is now enforced inside `plainAnswersToFormValues` (`src/engine/plain-intake.ts`), tested directly there, not via dropdown option equality. |
 
 ---
 

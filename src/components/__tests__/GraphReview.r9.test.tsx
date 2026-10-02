@@ -170,43 +170,28 @@ describe('form path — the trail records the birth event', () => {
     await user.type(screen.getByLabelText(/describe your ai use case/i), 'A tool that sorts internal mail queues.');
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /new use case/i }));
-    // On the guided form now; fill the minimum and submit.
+    // On the guided form now; fill the minimum and submit. R16-B: the
+    // field-by-field form this used to drive (by label, with an sf-* id
+    // fallback) is replaced by the situational question set — adapted to
+    // the same underlying scenario (Internal data, firm-built/Zone C, an
+    // ml-type recommendation, internal-only, advisory, reversible, at
+    // scale), same assertion below (use_case_created, structured_form).
     await screen.findByText(/guided intake/i);
     const { getAllForExport } = await import('../../store/audit');
-    // Fill via the form's own controls.
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mail queue sorter');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'Sorts internal mail queues.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-    const selects = [
-      [/where does that information live/i, 'Zone C'],
-      [/what kind of ai is it/i, 'ml'],
-      [/where does the processing happen/i, 'Zone C'],
-      [/what does its output do/i, 'recommend'],
-      [/who sees what it produces/i, 'internal-only'],
-      [/how much does the output drive/i, 'advisory'],
-      [/can what it does be undone/i, 'reversible'],
-      [/how widely will it run/i, 'at_scale'],
-    ] as const;
-    for (const [label, value] of selects) {
-      const el = screen.queryByLabelText(label);
-      if (el) await user.selectOptions(el, value);
-    }
-    // Fallback: set any remaining required selects generically by id.
-    for (const [id, value] of [
-      ['sf-input-data-zone', 'Zone C'], ['sf-model-type', 'ml'], ['sf-processing-zone', 'Zone C'],
-      ['sf-action-type', 'recommend'], ['sf-exposure', 'internal-only'], ['sf-bindingness', 'advisory'],
-      ['sf-reversibility', 'reversible'], ['sf-scale', 'at_scale'],
-    ] as const) {
-      const el = document.getElementById(id) as HTMLSelectElement | null;
-      if (el && !el.value) await user.selectOptions(el, value);
-    }
-    // R11-MG-2: "which model" is now a required field.
-    const modelSelect = document.getElementById('sf-model') as HTMLSelectElement | null;
-    if (modelSelect && !modelSelect.value) {
-      await user.selectOptions(modelSelect, '__other__');
-      await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    }
-    await user.click(document.getElementById('sf-jurisdiction-none')!);
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(screen.getByRole('radio', { name: /gives a score, ranking, flag, category or forecast/i }));
+    await user.click(screen.getByRole('radio', { name: /no, or i don.t know/i }));
+    await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+    await user.click(screen.getByRole('radio', { name: /suggests, ranks or flags things/i }));
+    await user.click(screen.getByRole('radio', { name: /one input among several/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /several teams, the whole business/i }));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await screen.findByText(/confirm what we understood/i);
 

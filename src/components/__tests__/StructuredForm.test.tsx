@@ -1,740 +1,340 @@
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StructuredForm from '../StructuredForm';
-import { DATA_CLASSES, DATA_ZONES, MODEL_TYPES } from '../../engine/canonical-vocabulary';
+import type { PolicyFile } from '../../engine/types';
 
-const JURISDICTIONS = [{ code: 'UK', name: 'United Kingdom', pack_files: [] }];
+// Several questions share a short option word ("Yes"/"No"/"Not sure") on
+// this continuous-scroll form, where every question is in the DOM at once
+// (§2.2: "one continuous scroll"). Ambiguous role queries are scoped to the
+// right fieldset via its legend; the fieldset gets an accessible "group"
+// name from the legend for free. A draft left in sessionStorage by one test
+// must never leak into the next (StructuredForm restores from it on mount).
+beforeEach(() => {
+  sessionStorage.clear();
+});
 
-function optionValues(labelPattern: RegExp): string[] {
-  return [...screen.getByLabelText(labelPattern).querySelectorAll('option:not([value=""])')].map(
-    (o) => (o as HTMLOptionElement).value,
-  );
+function radioIn(groupName: RegExp, optionName: RegExp) {
+  return within(screen.getByRole('group', { name: groupName })).getByRole('radio', { name: optionName });
 }
 
-describe('StructuredForm', () => {
-  // V2-E: strengthened. Previously this only counted options, which a
-  // hardcoded list of the right length would have passed. Since the labels
-  // are now plain English while the values stay canonical, asserting the
-  // VALUES is what actually pins the form to the vocabulary the policy
-  // rules match on.
-  it('TC-UC-3a-03: select option values are the canonical vocabulary, not hardcoded strings [TC-UC-3a-04]', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
+// R16-B (build/prompts/R16.md v2.1 §2.2). Replaces the field-by-field form
+// entirely — UC-3a's requirements/requirements.md amendment (2026-10-02)
+// retires that shape. What survives, named explicitly there, is tested
+// below under the ORIGINAL ids (TC-UC-3a-01/02/03): the form works with no
+// API key, produces the same DataFlowGraph shape, and records
+// structured_form intake. Everything the old suite tested that depended on
+// the retired field-by-field shape (canonical-vocabulary dropdown values,
+// the five-fieldset legend text, the old field-specific help copy, the
+// three-state jurisdiction/draft migration mechanics) is moved to a
+// `## Superseded` section in test-cases.md / test-cases-003.md /
+// test-cases-015.md with its reason — never silently dropped.
 
-    expect(optionValues(/what kind of information does it use/i)).toEqual([...DATA_CLASSES]);
-    expect(optionValues(/what kind of ai is it/i)).toEqual([...MODEL_TYPES]);
-    expect(optionValues(/where does that information sit today/i)).toEqual([...DATA_ZONES]);
-  });
+function policy(overrides: Partial<PolicyFile> = {}): PolicyFile {
+  return {
+    version: '1.0',
+    policy_id: 'TEST',
+    firm_name: 'Test',
+    translation_attestation: { attested_by: 'x', role: 'x', date: 'x', raf_version_checked: 'x' },
+    hard_lines: [],
+    tracks: [],
+    tiers: [],
+    invariants: [],
+    controls: [],
+    kri_thresholds: {},
+    jurisdictions: [{ code: 'UK', name: 'United Kingdom', pack_files: [] }],
+    roles: {},
+    tier_workflow: { Critical: 'x', High: 'x', Medium: 'x', Low: 'x' },
+    safety_margin: 0.1,
+    ...overrides,
+  };
+}
 
-  it('TC-UC-3a-01/02: submitting a fully-filled form calls onSubmit with a valid structured_form graph', async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
-
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    // R11-MG-2: "which model" is now a required field.
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-
-    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
-    // answer, so this pre-existing test must answer it. It previously relied
-    // on being able to proceed having told the engine nothing.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    const graph = onSubmit.mock.calls[0]?.[0];
-    expect(graph.intake_method).toBe('structured_form');
-    expect(graph.input_nodes[0]?.data_class).toBe('Internal');
-    expect(graph.processing_nodes[0]?.declared_model_id).toBe('test-model');
-  });
-
-  it('disables submit until all required fields are filled', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
-  });
-
-  it('shows the exact spec-mandated banner text (intake-flow.md §5.1)', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(
-      screen.getByText(
-        /guided intake — answer the fields below to describe your use case\. no ai is involved in reading your answers or in the decision that follows, so the same answers always produce the same outcome\./i,
-      ),
-    ).toBeInTheDocument();
-  });
-});
-
-// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-05. The row records
-// this as "verified live; no automated DOM-structure assertion added (out of
-// scope for this pass)" — confirmed true by reading StructuredForm.test.tsx
-// before this chunk: no test asserted the fieldset/legend structure at all.
-// This closes that gap.
-describe('StructuredForm — five-section structure (TC-R15-C3-05)', () => {
-  it('TC-R15-C3-05: renders exactly five fieldset/legend sections with the documented legend text', () => {
-    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    const legends = [...container.querySelectorAll('fieldset > legend')].map((l) => l.textContent ?? '');
-    expect(legends).toHaveLength(5);
-    [
-      'About it',
-      'What it uses',
-      'What the AI is and how it runs',
-      'What comes out and who it reaches',
-      'Where it applies',
-    ].forEach((text, i) => {
-      expect(legends[i]).toContain(text);
-    });
-  });
-});
-
-describe('StructuredForm — business-friendly wording (V2-E)', () => {
-  // The user feedback that drove this: the form asked for "input data
-  // class", "output reversibility" and so on — the engine's own field
-  // names. Nobody outside model risk can answer those. These assertions
-  // stop the internal vocabulary leaking back into the labels.
-  it('asks questions in business language, not engine field names', () => {
-    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
-
-    expect(screen.getByLabelText(/what kind of information does it use/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/where does the ai itself run/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/if it gets something wrong, can it be undone/i)).toBeInTheDocument();
-
-    expect(screen.queryByLabelText(/^input data class$/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^output reversibility$/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^decision bindingness$/i)).not.toBeInTheDocument();
-  });
-
-  // Plain language must not cost traceability: a model-validation reader
-  // has to be able to map an answer back to the term the policy and the
-  // verdict are written in.
-  it('keeps the canonical term visible on each option so answers stay traceable', () => {
-    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
-
-    expect(screen.getByRole('option', { name: /price-sensitive information.*\(MNPI\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /chatbot or writing assistant.*\(LLM\)/i })).toBeInTheDocument();
-    // Zone B appears on both zone questions — the point is that the
-    // canonical code survives alongside the plain wording.
-    expect(screen.getAllByRole('option', { name: /with an outside supplier.*\(Zone B\)/i })).toHaveLength(2);
-  });
-
-  it('TC-R15-C3-07: explains the traps a first-time submitter falls into', () => {
-    render(<StructuredForm jurisdictions={[]} onSubmit={vi.fn()} />);
-    // Storage location vs processing location is the distinction people get
-    // wrong, and it is the one the zone-crossing rules turn on.
-    expect(screen.getByText(/not where the data is stored — where it gets sent/i)).toBeInTheDocument();
-    // Bindingness is routinely understated relative to what happens in practice.
-    expect(screen.getByText(/be honest about what happens in practice/i)).toBeInTheDocument();
-  });
-});
-
-// SR-1 (code review 001). PV-2 and PV-5 were implemented in the engine, test-
-// covered, and unreachable from the product: build-graph-from-form hardcoded
-// vendor:'internal' and the form never asked for a platform or vendor. The
-// engine capability existed with no path from the UI.
-describe('StructuredForm — platform and vendor reach the graph (SR-1)', () => {
-  const PLATFORMS = [
-    { id: 'PLAT-A', name: 'Internal ML platform', approved_envelope: {}, satisfies_controls: [] },
-  ];
-  const VENDORS = [
-    { id: 'VENDOR-A', name: 'Approved LLM vendor', approved_envelope: {}, satisfies_controls: [] },
-  ];
-
-  async function fill(user: ReturnType<typeof userEvent.setup>) {
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'SR-1 probe');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    // R11-MG-2: "which model" is now a required field.
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-  }
-
-  it('offers the approved platforms and vendors from the policy registries', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} platforms={PLATFORMS} vendors={VENDORS} onSubmit={vi.fn()} />);
-    expect(screen.getByRole('option', { name: /Internal ML platform \(PLAT-A\)/ })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Approved LLM vendor \(VENDOR-A\)/ })).toBeInTheDocument();
-    // PV-5 must be reachable: a component NOT on the registry has to be sayable.
-    // Asserted on the two SPECIFIC options rather than by counting anything
-    // matching "not on the list" — that count broke the moment the decision-type
-    // field grew its own escape hatch, which is a different concern entirely and
-    // says nothing about PV-5.
-    expect(screen.getByRole('option', { name: /Something else — not on the list/ })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Another vendor — not on the list/ })).toBeInTheDocument();
-  });
-
-  it('carries a selected platform and vendor onto the graph, so PV-3 and PV-5 can fire', async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} platforms={PLATFORMS} vendors={VENDORS} onSubmit={onSubmit} />);
-    await fill(user);
-    await user.selectOptions(screen.getByLabelText(/which approved platform/i), 'PLAT-A');
-    await user.selectOptions(screen.getByLabelText(/whose model or service/i), 'VENDOR-A');
-    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
-    // answer, so this pre-existing test must answer it. It previously relied
-    // on being able to proceed having told the engine nothing.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    const graph = onSubmit.mock.calls[0]?.[0];
-    expect(graph.processing_nodes[0].platform).toBe('PLAT-A');
-    expect(graph.processing_nodes[0].vendor).toBe('VENDOR-A');
-  });
-
-  it("defaults to the 'internal' sentinel when nothing is chosen, so existing behaviour is unchanged", async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
-    await fill(user);
-    // P8-C01 upstream fix: R3-JU-1 now requires an explicit jurisdiction
-    // answer, so this pre-existing test must answer it. It previously relied
-    // on being able to proceed having told the engine nothing.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    const graph = onSubmit.mock.calls[0]?.[0];
-    expect(graph.processing_nodes[0].vendor).toBe('internal');
-    expect(graph.processing_nodes[0].platform).toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// P8-C01 — jurisdiction answered-state (R3-JU-1, R3-JU-4)
-//
-// The defect: the jurisdiction fieldset existed and was offered, but nothing
-// required an answer. isComplete tested `v.jurisdictions` for presence and an
-// empty array is truthy, so Continue enabled with nothing ticked. The user
-// then attested to a graph reading "None specified" and got a verdict with no
-// packs, no regulatory chain and no citations — with nothing saying so.
-// Charter 004 D-002; requirements-003 R3-JU-1; intake-flow.md §13.1.
-// ---------------------------------------------------------------------------
-
-async function fillEverythingExceptJurisdiction(user: ReturnType<typeof userEvent.setup>) {
+/** The minimal path through every BASE required question (1-12) with no
+ *  conditional follow-up triggered — Q3 "firm-built" skips 3a/3supplier/
+ *  3model's visibility, Q4 "language" skips 4a/13/14, Q6 "read" skips
+ *  6a/6b, Q8 "operational" skips 8other. Conditional-follow-up
+ *  requiredness is covered by its own dedicated tests below rather than
+ *  folded into this probe. */
+async function fillBase(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
   await user.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.');
-  await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Internal');
-  await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-  await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'traditional-ml');
-  await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-  await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'read');
-  await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-only');
-  await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'non-binding');
-  await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-  await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-  // R11-MG-2: "which model" is now a required field.
-  await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-  await user.type(screen.getByLabelText(/name the model/i), 'test-model');
+  await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+  await user.click(
+    screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+  );
+  await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+  await user.click(screen.getByRole('radio', { name: /finds or summarises for people to read/i }));
+  await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+  await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+  await user.click(radioIn(/if it gets something wrong/i, /^yes$/i));
+  await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+  await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+  await user.click(radioIn(/does it replace something/i, /^no$/i));
 }
 
-describe('StructuredForm — jurisdiction answered-state (P8-C01)', () => {
-  // ACCEPTANCE TEST (TDD-1, outside-in — written first).
-  it('TC-R3-JU-1-01/02: an untouched jurisdiction question blocks progress; an explicit "none" unblocks it', async () => {
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    await fillEverythingExceptJurisdiction(user);
-
-    // Not answered — every other field is complete, so the ONLY thing
-    // holding the gate is the untouched jurisdiction question.
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
-
-    // Answered: none — an explicit choice, so the gate opens.
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-  });
-
-  it('TC-R3-JU-1-03: ticking a jurisdiction unblocks progress', async () => {
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await fillEverythingExceptJurisdiction(user);
-
-    await user.click(screen.getByLabelText(/united kingdom/i));
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-  });
-
-  // Supporting test for the "none" control's mechanics. No trace id: the two
-  // answers being mutually exclusive is how TC-R3-JU-1-02 and -03 are made to
-  // hold, not a test case of its own. Borrowing -03's id here made two tests
-  // claim the same coverage (spec-parity R7).
-  it('the two jurisdiction answers are mutually exclusive by construction', async () => {
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    expect(screen.getByLabelText(/none.*not sure/i)).toBeChecked();
-
-    await user.click(screen.getByLabelText(/united kingdom/i));
-    expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
-    expect(screen.getByLabelText(/united kingdom/i)).toBeChecked();
-
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    expect(screen.getByLabelText(/united kingdom/i)).not.toBeChecked();
-  });
-
-  // REALISTIC-FIXTURE VARIANT (TDD-3). Not the clean two-state path — the
-  // one a real user takes. Ticking then unticking must leave the question
-  // ANSWERED, not silently return the user to a blocked state with no
-  // explanation. That would be a worse defect than the one being fixed.
-  it('TC-R3-JU-1-05: deselecting the last jurisdiction stays answered, it does not revert to unanswered', async () => {
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await fillEverythingExceptJurisdiction(user);
-
-    await user.click(screen.getByLabelText(/united kingdom/i));
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-
-    await user.click(screen.getByLabelText(/united kingdom/i)); // untick
-    expect(screen.getByLabelText(/united kingdom/i)).not.toBeChecked();
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-
-    // Review pass 1 strengthened this. Asserting only "Continue stays
-    // enabled" passes equally against a bug that never updates the state
-    // away from 'selected' — the observable facts are identical. Asserting
-    // the "none" box became checked is what distinguishes a real transition
-    // to 'none' from stale 'selected'. Round 2's Critical in this project
-    // was exactly a test that could not fail.
-    expect(screen.getByLabelText(/none.*not sure/i)).toBeChecked();
-  });
-
-  it('TC-R3-JU-1-02: "none" submits an empty jurisdictions array — the engine contract is unchanged', async () => {
+describe('StructuredForm — the replacement form (UC-3a survives: no API key, same graph shape, structured_form intake)', () => {
+  it('TC-UC-3a-01: produces a valid DataFlowGraph with one node per category', async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
-    await fillEverythingExceptJurisdiction(user);
-
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    render(<StructuredForm policy={policy()} onSubmit={onSubmit} />);
+    await fillBase(user);
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0]?.[0].jurisdictions).toEqual([]);
+    const [graph, assumptions] = onSubmit.mock.calls[0]!;
+    expect(graph.input_nodes).toHaveLength(1);
+    expect(graph.processing_nodes).toHaveLength(1);
+    expect(graph.output_nodes).toHaveLength(1);
+    expect(graph.input_nodes[0].data_class).toBe('Internal');
+    expect(graph.processing_nodes[0].model_type).toBe('llm');
+    expect(Array.isArray(assumptions)).toBe(true);
   });
 
-  it('TC-R3-JU-4-01: the question states that the answer decides which regulatory rules apply', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(screen.getByText(/decides which local rules apply/i)).toBeInTheDocument();
+  it('TC-UC-3a-02: sets intake_method to structured_form', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={onSubmit} />);
+    await fillBase(user);
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+    expect(onSubmit.mock.calls[0]![0].intake_method).toBe('structured_form');
+  });
+
+  it('TC-UC-3a-03: Continue is disabled until every required question is answered', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    await fillBase(user);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+
+  it('no API key is needed anywhere on this path — the form never imports or calls the LLM boundary', async () => {
+    // Structural guarantee: StructuredForm's only engine imports are
+    // plain-intake and build-graph-from-form, both pure and API-free; this
+    // is asserted at the module level by cross-cutting.md §7 Rule 1/2, and
+    // behaviourally by the WalkingSkeleton no-api-key suite.
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<StructuredForm policy={policy()} onSubmit={onSubmit} />);
+    await fillBase(user);
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+    expect(onSubmit).toHaveBeenCalled();
   });
 });
 
-describe('StructuredForm — draft envelope (P8-C01, review pass 1)', () => {
-  // Review pass 1, finding 2. Inferring 'selected' from a populated
-  // jurisdictions array would let a draft written BEFORE this chunk pass the
-  // new gate — reopening, for every user holding one, exactly the defect
-  // R3-JU-1 closes. A pre-round-3 draft is a bare values object with no
-  // envelope, so it carries no answered-state and must load as unanswered.
-  it('TC-R3-JU-7-02: a pre-round-3 draft with jurisdictions already ticked still loads as unanswered', () => {
-    sessionStorage.setItem(
-      'aigate:intake-form-draft',
-      JSON.stringify({
-        useCaseName: 'Legacy draft',
-        description: 'Saved before round 3.',
-        inputDataClass: 'Internal',
-        inputDataZone: 'Zone C',
-        modelType: 'traditional-ml',
-        autonomyLevel: 0,
-        processingDataZone: 'Zone C',
-        outputActionType: 'read',
-        outputExposure: 'internal-only',
-        decisionBindingness: 'non-binding',
-        outputReversibility: 'reversible',
-        outputScale: 'limited',
-        replacesPriorModel: false,
-        jurisdictions: ['UK'],
-      }),
-    );
-
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    // Everything else is complete, so the gate can only be held by the
-    // missing jurisdiction ANSWER.
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
-    expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
-    sessionStorage.clear();
-  });
-
-  // P8-C03 (FN-001). The behaviour was delivered by P8-C01's envelope shape;
-  // this chunk adds the trace. The empty legacy draft is the comfortable case
-  // and the populated one above is the case that bites (Kaner) — both are
-  // required, because an implementation that read "answered" off the array's
-  // presence rather than its contents would pass one and fail the other.
-  it('TC-R3-JU-7-01: an empty pre-round-3 draft loads unanswered, with Continue held shut', () => {
-    sessionStorage.setItem(
-      'aigate:intake-form-draft',
-      JSON.stringify({
-        useCaseName: 'Legacy draft',
-        description: 'Saved before round 3.',
-        inputDataClass: 'Internal',
-        inputDataZone: 'Zone C',
-        modelType: 'traditional-ml',
-        autonomyLevel: 0,
-        processingDataZone: 'Zone C',
-        outputActionType: 'read',
-        outputExposure: 'internal-only',
-        decisionBindingness: 'non-binding',
-        outputReversibility: 'reversible',
-        outputScale: 'limited',
-        replacesPriorModel: false,
-        jurisdictions: [],
-      }),
-    );
-
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    // Every other field is restored and complete, so the gate can only be held
-    // by the absent answer.
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
-    // Not merely blocked — blocked in the UNANSWERED state. A draft that
-    // loaded as 'none' would also be a migration failure, and it would look
-    // identical if only the button were asserted.
-    expect(screen.getByLabelText(/none.*not sure/i)).not.toBeChecked();
-    expect(screen.getByLabelText(/united kingdom/i)).not.toBeChecked();
-    sessionStorage.clear();
-  });
-
-  // P8-C03 coverage confirmation. TC-R3-JU-1-04 was listed as delivered by
-  // P8-C01 and no test carried its id — found by cross-reading the ids in
-  // test-cases/test-cases-003.md against the ids present in this suite, rather
-  // than by trusting the prior handover's coverage claim.
-  it('TC-R3-JU-1-04: the three answered-states are distinguishable from persisted state', async () => {
-    const user = userEvent.setup();
-
-    function persisted() {
-      return JSON.parse(sessionStorage.getItem('aigate:intake-form-draft') ?? 'null');
+describe('StructuredForm — no engine vocabulary on the first screen (principle 1, UC-8 fit criterion 1)', () => {
+  it('TC-R16-B-08: no question or option renders a bare engine term or code', () => {
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    const text = document.body.textContent ?? '';
+    for (const banned of ['Zone A', 'Zone B', 'Zone C', 'MNPI', 'autonomy', 'bindingness', 'Track I', 'Track II', 'Track III']) {
+      expect(text).not.toContain(banned);
     }
-
-    // 1. Never interacted with.
-    const untouched = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'A');
-    const neverAnswered = persisted();
-    untouched.unmount();
-    sessionStorage.clear();
-
-    // 2. Answered "none".
-    const none = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    const answeredNone = persisted();
-    none.unmount();
-    sessionStorage.clear();
-
-    // 3. UK ticked.
-    const uk = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await user.click(screen.getByLabelText(/united kingdom/i));
-    const answeredUk = persisted();
-    uk.unmount();
-    sessionStorage.clear();
-
-    expect(neverAnswered.jurisdictionAnswer).toBe('unanswered');
-    expect(answeredNone.jurisdictionAnswer).toBe('none');
-    expect(answeredUk.jurisdictionAnswer).toBe('selected');
-
-    // All three distinct — the point of the requirement.
-    expect(
-      new Set([
-        neverAnswered.jurisdictionAnswer,
-        answeredNone.jurisdictionAnswer,
-        answeredUk.jurisdictionAnswer,
-      ]).size,
-    ).toBe(3);
-
-    // And "not answered" is NOT inferred from the selected set being empty:
-    // states 1 and 2 both persist an empty array and are still distinguishable.
-    expect(neverAnswered.values.jurisdictions ?? []).toEqual([]);
-    expect(answeredNone.values.jurisdictions).toEqual([]);
+    // "LLM", "agentic" etc. as bare category names must not appear either —
+    // the kind-of-AI question describes situations, not model-type labels.
+    expect(screen.queryByText(/^LLM$/)).not.toBeInTheDocument();
   });
 
-  it('an answered "none" survives a remount — the answer is persisted, not re-derived', async () => {
+  it('never renders the bare [FIRM] placeholder', () => {
+    render(
+      <StructuredForm
+        policy={policy({
+          platforms: [{ id: 'PLAT-X', name: '[FIRM] internal platform', approved_envelope: {}, satisfies_controls: [] }],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/\[FIRM\]/)).not.toBeInTheDocument();
+  });
+});
+
+describe('StructuredForm — never-render-[FIRM] fallback labels (D-23)', () => {
+  it('TC-R16-B-12: a platform with no plain_name shows "Your firm’s AI service {n}", not its raw registry name', () => {
+    render(
+      <StructuredForm
+        policy={policy({
+          platforms: [{ id: 'PLAT-X', name: '[FIRM] internal platform', approved_envelope: {}, satisfies_controls: [] }],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: /your firm.s ai service 1/i })).toBeInTheDocument();
+  });
+
+  it('a supplier with no plain_name shows "Supplier {n}"', async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    await fillEverythingExceptJurisdiction(user);
-    await user.click(screen.getByLabelText(/none.*not sure/i));
+    render(
+      <StructuredForm
+        policy={policy({
+          vendors: [{ id: 'VEND-X', name: '[FIRM] vendor', approved_envelope: {}, satisfies_controls: [], kind: 'supplier' }],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await user.click(
+      screen.getByRole('radio', {
+        name: /a product your firm is buying from a specialist supplier/i,
+      }),
+    );
+    expect(screen.getByRole('radio', { name: /^supplier 1$/i })).toBeInTheDocument();
+  });
+});
+
+describe('StructuredForm — conditional follow-ups (§2.2 Details)', () => {
+  it('TC-R16-B-09: Q3a appears only for "outside-assistant", and its answer is cleared when Q3 changes away', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    expect(screen.queryByRole('radio', { name: /a free or personal account/i })).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('radio', { name: /an ai assistant or website run by an outside company/i }),
+    );
+    expect(screen.getByRole('radio', { name: /a free or personal account/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: /a free or personal account/i }));
+
+    // Switching Q3 away removes Q3a from the DOM entirely.
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    expect(screen.queryByRole('radio', { name: /a free or personal account/i })).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-B-10: Q13/Q14 appear for the agentic option and for Q4 "Not sure", and nowhere else', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    expect(screen.queryByText(/what can it get into by itself/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: /an ai agent that works through tasks on its own/i }));
+    expect(screen.getByText(/what can it get into by itself/i)).toBeInTheDocument();
+    expect(screen.getByText(/can copies of it, or other ai agents, pass work/i)).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    expect(screen.queryByText(/what can it get into by itself/i)).not.toBeInTheDocument();
+
+    const q4NotSure = screen.getAllByRole('radio', { name: /^not sure$/i })[0]!;
+    await user.click(q4NotSure);
+    expect(screen.getByText(/what can it get into by itself/i)).toBeInTheDocument();
+  });
+
+  it('TC-R16-B-11: Q13 "Nothing beyond..." is exclusive with the other ticks, and vice versa', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole('radio', { name: /an ai agent that works through tasks on its own/i }));
+
+    const none = screen.getByRole('checkbox', { name: /nothing beyond what it’s given for the task/i });
+    const credentialed = screen.getByRole('checkbox', { name: /its own logins, passwords or access tokens/i });
+
+    await user.click(credentialed);
+    expect(credentialed).toBeChecked();
+    await user.click(none);
+    expect(none).toBeChecked();
+    expect(credentialed).not.toBeChecked();
+
+    await user.click(credentialed);
+    expect(credentialed).toBeChecked();
+    expect(none).not.toBeChecked();
+  });
+
+  it('TC-R16-B-15: Q8 "Something else" requires the free-text description before Continue enables', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await fillBase(user);
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+
+    await user.click(screen.getByRole('radio', { name: /something else — describe it/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/what kind of decision is it/i), 'Collections prioritisation');
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+});
+
+describe('StructuredForm — jurisdictions (tick-all), adapted from R3-JU-1', () => {
+  async function fillExceptJurisdiction(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.');
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+    await user.click(screen.getByRole('radio', { name: /finds or summarises for people to read/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(radioIn(/if it gets something wrong/i, /^yes$/i));
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(radioIn(/does it replace something/i, /^no$/i));
+  }
+
+  it('TC-R3-JU-1-01: an untouched jurisdiction question blocks progress; ticking one unblocks it', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await fillExceptJurisdiction(user);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+
+  it('TC-R3-JU-1-02: "Somewhere else, or not sure" submits an empty jurisdictions array', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={onSubmit} />);
+    await fillExceptJurisdiction(user);
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+    expect(onSubmit.mock.calls[0]![0].jurisdictions).toEqual([]);
+  });
+
+  it('TC-R3-JU-1-03: ticking a real jurisdiction unblocks progress', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await fillExceptJurisdiction(user);
+    await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+});
+
+describe('StructuredForm — required-field markers (adapted from R3-JU-5)', () => {
+  it('TC-R3-JU-5-01: every BASE question that blocks progress carries both a visible marker and aria-required (narrowed to the 12 unconditional base questions — each conditional follow-up’s own requiredness is covered by its dedicated test above)', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await fillBase(user);
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    const markers = container.querySelectorAll('.required-marker');
+    expect(markers.length).toBeGreaterThanOrEqual(12);
+    const requiredFieldsets = container.querySelectorAll('fieldset[aria-required="true"]');
+    expect(requiredFieldsets.length).toBeGreaterThanOrEqual(9); // the 9 single/multi-select base questions
+  });
+
+  it('TC-R3-JU-5-02: optional fields (3supplierName, 3model) carry neither signal', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await user.click(
+      screen.getByRole('radio', { name: /a product your firm is buying from a specialist supplier/i }),
+    );
+    const modelInput = screen.getByLabelText(/model name, if you know it/i);
+    expect(modelInput).not.toHaveAttribute('aria-required');
+    expect(container.querySelector('[data-required-marker-for="pf-3model"]')).toBeNull();
+  });
+});
+
+describe('StructuredForm — draft persistence under the new versioned key (R16-B, D-41)', () => {
+  it('TC-R16-B-14: round-trips answers across a remount', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Persisted name');
     unmount();
 
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(screen.getByLabelText(/none.*not sure/i)).toBeChecked();
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/what do you want to call it/i)).toHaveValue('Persisted name');
     sessionStorage.clear();
   });
-});
 
-// ── P8-C02 — required-field markers (R3-JU-5) ────────────────────────────────
-//
-// The empirical blocking set is measured, not declared. Each candidate field
-// is omitted from an otherwise-complete form and Continue is observed. That
-// keeps the test independent of REQUIRED_FIELDS: if the component's list and
-// the form's real gate disagree, this test fails. Comparing REQUIRED_FIELDS to
-// markers rendered FROM REQUIRED_FIELDS would be tautological — it would pass
-// against any list, including a wrong one.
-
-type FieldProbe = {
-  /** The DOM id whose aria-required / marker state is being compared. */
-  id: string;
-  /** Answer this field. A no-op means the field is pre-answered by default. */
-  answer: () => void;
-};
-
-// fireEvent, not userEvent, deliberately. This probe re-renders the whole form
-// once per field — 18 renders — and userEvent simulates every keystroke, which
-// took the test to the edge of the 5s timeout and then over it as soon as the
-// machine was busy. A timeout reads as a failure of the code under test and is
-// not one. These assertions are about the disabled state of one button, not
-// about typing behaviour, so the cheaper event is the honest one here; the
-// tests that DO exercise real user interaction still use userEvent.
-const setValue = (labelPattern: RegExp, value: string) =>
-  fireEvent.change(screen.getByLabelText(labelPattern), { target: { value } });
-
-const FIELD_PROBES: FieldProbe[] = [
-  { id: 'sf-name', answer: () => setValue(/what do you want to call it/i, 'Test tool') },
-  { id: 'sf-description', answer: () => setValue(/in a sentence or two/i, 'A test description.') },
-  {
-    id: 'sf-input-data-class',
-    answer: () => setValue(/what kind of information does it use/i, 'Internal'),
-  },
-  {
-    id: 'sf-input-data-zone',
-    answer: () => setValue(/where does that information sit today/i, 'Zone C'),
-  },
-  { id: 'sf-model-type', answer: () => setValue(/what kind of ai is it/i, 'traditional-ml') },
-  // Pre-answered: the select opens on "no autonomy", which is a real answer.
-  { id: 'sf-autonomy', answer: () => {} },
-  { id: 'sf-processing-zone', answer: () => setValue(/where does the ai itself run/i, 'Zone C') },
-  { id: 'sf-action-type', answer: () => setValue(/what does it actually produce or do/i, 'read') },
-  { id: 'sf-exposure', answer: () => setValue(/who sees what it produces/i, 'internal-only') },
-  {
-    id: 'sf-bindingness',
-    answer: () => setValue(/how much weight does its output carry/i, 'non-binding'),
-  },
-  { id: 'sf-reversibility', answer: () => setValue(/if it gets something wrong/i, 'reversible') },
-  { id: 'sf-scale', answer: () => setValue(/how widely is it used/i, 'limited') },
-  // Pre-answered: an unticked box is the answer "no".
-  { id: 'sf-replaces', answer: () => {} },
-  { id: 'sf-jurisdiction', answer: () => fireEvent.click(screen.getByLabelText(/none.*not sure/i)) },
-  // Declared optional in their own labels — included so the probe covers the
-  // whole form, not only the fields expected to block.
-  { id: 'sf-platform', answer: () => {} },
-  { id: 'sf-vendor', answer: () => {} },
-  {
-    id: 'sf-model',
-    answer: () => {
-      setValue(/which model does it run on/i, '__other__');
-      setValue(/name the model/i, 'test-model');
-    },
-  },
-  { id: 'sf-decision-type', answer: () => {} },
-  { id: 'sf-hitl', answer: () => {} },
-  // Optional infrastructure-access questions (2026-08-31) — blank means
-  // "not stated", so neither blocks progress nor carries a required marker.
-  { id: 'sf-system-access', answer: () => {} },
-  { id: 'sf-multi-instance', answer: () => {} },
-];
-
-function answerAllExcept(omittedId: string | null): void {
-  for (const probe of FIELD_PROBES) {
-    if (probe.id === omittedId) continue;
-    probe.answer();
-  }
-}
-
-function markedFieldIds(container: HTMLElement): string[] {
-  return [...container.querySelectorAll('[aria-required="true"]')].map((el) => el.id).sort();
-}
-
-// TC-R15-C3-06: every field probe below resolves its own control via
-// getByLabelText/fireEvent on a single un-toggled render — FIELD_PROBES spans
-// every field the form has (matching StructuredForm.tsx's own totalFieldCount
-// = 19) — proving no form field is hidden behind an "advanced" toggle; every
-// field stays reachable on the one continuous scroll.
-describe('StructuredForm — required-field markers (P8-C02, R3-JU-5)', () => {
-  // ACCEPTANCE TEST (TDD-1, outside-in — written first).
-  // 19 full mount/unmount cycles of the whole form (1 baseline + 18 field
-  // probes) reliably exceed vitest's 5000ms default on GitHub Actions'
-  // shared ubuntu-latest runners — passes locally every time, timed out on
-  // CI in 8/8 runs checked 2026-08-30/31. Not a hang; a slower machine.
-  it('TC-R3-JU-5-01: the fields that block progress and the fields marked required are the same set', () => {
-    // Baseline: answering everything must open the gate, or "omitting X keeps
-    // it shut" proves nothing.
-    const baseline = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    answerAllExcept(null);
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-    const marked = markedFieldIds(baseline.container);
-
-    // Both signals, not one. A screen-reader attribute alone is not a visible
-    // marker, and a visible asterisk alone is not accessible; R3-JU-5 asks for
-    // both, so asserting only the attribute would pass an implementation that
-    // tells sighted users nothing.
-    for (const id of marked) {
-      const mark = baseline.container.querySelector(`[data-required-marker-for="${id}"]`);
-      expect(mark, `no visible required-marker for ${id}`).not.toBeNull();
-      expect(mark?.textContent?.trim()).not.toBe('');
-    }
-
-    baseline.unmount();
-    sessionStorage.clear();
-
-    const blocking: string[] = [];
-    for (const probe of FIELD_PROBES) {
-      const view = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-      answerAllExcept(probe.id);
-      if ((screen.getByRole('button', { name: /continue/i }) as HTMLButtonElement).disabled) {
-        blocking.push(probe.id);
-      }
-      view.unmount();
-      sessionStorage.clear();
-    }
-
-    // Set equality in BOTH directions. A one-directional assertion would pass
-    // an implementation that marks every field — as unhelpful as marking none.
-    expect(marked).toEqual(blocking.sort());
-    expect(blocking.length).toBeGreaterThan(0);
-  }, 20000);
-
-  it('TC-R3-JU-5-02: the optional platform and vendor fields carry neither signal', () => {
-    const { container } = render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    for (const id of ['sf-platform', 'sf-vendor', 'sf-decision-type', 'sf-hitl']) {
-      expect(container.querySelector(`#${id}`)?.getAttribute('aria-required')).toBeNull();
-      expect(container.querySelector(`[data-required-marker-for="${id}"]`)).toBeNull();
-    }
-  });
-
-  // REALISTIC-FIXTURE VARIANT (TDD-3, web/UI). The happy path never produces
-  // this shape: a draft saved before round 3 that never carried the two
-  // defaulted keys at all. Restored as-is they are `undefined`, so the form
-  // would render a plausible-looking answer ("no autonomy", box unticked) over
-  // a value the gate rejects — Continue disabled, with no marker able to name
-  // the field, because those fields are deliberately unmarked.
-  it('a legacy draft missing the defaulted keys does not silently block Continue', async () => {
-    sessionStorage.setItem(
-      'aigate:intake-form-draft',
-      JSON.stringify({
-        useCaseName: 'Legacy draft',
-        description: 'Saved before round 3.',
-        inputDataClass: 'Internal',
-        inputDataZone: 'Zone C',
-        modelType: 'traditional-ml',
-        processingDataZone: 'Zone C',
-        outputActionType: 'read',
-        outputExposure: 'internal-only',
-        decisionBindingness: 'non-binding',
-        outputReversibility: 'reversible',
-        outputScale: 'limited',
-        jurisdictions: [],
-        // autonomyLevel and replacesPriorModel absent — the shape the current
-        // form never writes.
-      }),
-    );
-
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    // The jurisdiction and model answers are genuinely outstanding and ARE marked.
-    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
-
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-
-    // Nothing invisible is left holding the gate.
-    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
-    sessionStorage.clear();
-  });
-});
-
-// Round 4 — charter 004 D-006. The vendor field is optional and, left
-// untouched, silently becomes 'internal' in the graph
-// (build-graph-from-form.ts:64). The review screen then renders
-// "vendor: internal" and the NEXT screen asks the user to attest the graph is
-// accurate to the best of their knowledge. A value nobody chose was being
-// folded into an attestation.
-//
-// The root cause is the option label, not the sentinel: the unchosen state was
-// presented as a positive declaration ("Built in-house (internal)"). The
-// engine's sentinel is unchanged — what changes is that the user is told
-// plainly what will be assumed, before they attest to it.
-describe('StructuredForm — an untouched vendor field does not read as a declaration (D-006)', () => {
-  it('presents the default as "not stated", naming what will be assumed', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-
-    const vendor = screen.getByLabelText(/whose model or service is it/i) as HTMLSelectElement;
-    const selected = vendor.options[vendor.selectedIndex]!;
-
-    // The user sees this text without opening the dropdown, so it is the
-    // claim the form is making on their behalf.
-    expect(selected.textContent).toMatch(/not stated/i);
-    expect(selected.textContent).toMatch(/in-house/i);
-    // And it must not read as something they chose.
-    expect(selected.textContent).not.toMatch(/^Built in-house/);
-  });
-
-  it('still submits the in-house sentinel, so the engine contract is unchanged', async () => {
-    const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={onSubmit} />);
-    await fillEverythingExceptJurisdiction(user);
-    await user.click(screen.getByLabelText(/none.*not sure/i));
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0]?.[0].processing_nodes[0].vendor).toBe('internal');
-    sessionStorage.clear();
-  });
-});
-
-// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-08. The row names four
-// optional fields (platform, vendor, decision type, human-in-the-loop) as
-// stating the consequence of leaving them blank in the label itself. Three of
-// the four use the literal "optional — blank means: …" template; the
-// decision-type label instead reads "optional — leave blank only if it feeds
-// no decision at all" — a precondition for choosing blank rather than the
-// same "blank means:" wording, though it conveys the same information (see
-// test-cases-015.md's TC-R15-C3-08 amendment for the finding writeup).
-// All four are asserted here against their real, current copy.
-describe('StructuredForm — optional fields state what leaving them blank means (TC-R15-C3-08)', () => {
-  it('TC-R15-C3-08: platform, vendor, decision-type and human-in-the-loop labels state the consequence of leaving them blank', () => {
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    expect(screen.getByText(/blank means: not on an approved platform/i)).toBeInTheDocument();
-    expect(screen.getByText(/blank means: assessed as built in-house/i)).toBeInTheDocument();
-    expect(screen.getByText(/blank means: not specified/i)).toBeInTheDocument();
-    expect(screen.getByText(/leave blank only if it feeds no decision at all/i)).toBeInTheDocument();
-  });
-});
-
-// R15-C3 (proposal §3.2) — test-cases-015.md TC-R15-C3-09. FIELD_CONSEQUENCES
-// (field-copy.ts, R5-GR-1) was computed since that round and rendered nowhere
-// — the exact "computed but never consumed" defect class CLAUDE.md names.
-// This proves several of its entries now reach the DOM through the "Why we
-// ask" disclosures WhyWeAsk() renders, closing that gap. No pre-existing test
-// asserted any FIELD_CONSEQUENCES text before this chunk.
-describe('StructuredForm — FIELD_CONSEQUENCES reaches the disclosures (TC-R15-C3-09)', () => {
-  it('TC-R15-C3-09: FIELD_CONSEQUENCES text now renders inside "Why we ask" disclosures', async () => {
-    const user = userEvent.setup();
-    render(<StructuredForm jurisdictions={JURISDICTIONS} onSubmit={vi.fn()} />);
-    for (const summary of screen.getAllByText('Why we ask')) {
-      await user.click(summary);
-    }
+  it('TC-R16-B-13: a draft under the pre-R16 key is reported once and cannot block the fresh form', () => {
+    sessionStorage.setItem('aigate:intake-form-draft', JSON.stringify({ useCaseName: 'Old shape' }));
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
     expect(
-      await screen.findByText(
-        /how sensitive the data is\. the strictest rules key off personal client data and price-sensitive information\./i,
-      ),
+      screen.getByText(/your saved draft was from an older version of this form and couldn’t be reused/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/what kind of ai this is\. generative and agentic models attract extra oversight rules\./i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/how much happens without a person/i)).toBeInTheDocument();
-    expect(screen.getByText(/trigger the strictest oversight/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/what do you want to call it/i)).toHaveValue('');
+    sessionStorage.clear();
   });
 });

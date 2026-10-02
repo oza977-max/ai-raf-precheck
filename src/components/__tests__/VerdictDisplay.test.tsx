@@ -45,9 +45,16 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
 }
 
 describe('VerdictDisplay', () => {
-  it('TC-VD-1-01: verdict status is visible above the fold as an h2', () => {
+  // TC-VD-1-01 superseded (test-cases.md's Superseded section) by R16 chunk
+  // D1 (VD-9): the formal status no longer leads the screen above any fold
+  // — it is still an <h2>, still present, now inside the reviewer section.
+  // See VerdictDisplay.r16d1.test.tsx (TC-R16-D1-13) for the first screen's
+  // own headline and the single-match reserved-word guard this still holds.
+  it('the formal status is still an h2, now inside the reviewer section rather than leading the screen', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={vi.fn()} />);
-    expect(screen.getByRole('heading', { name: /approved with controls/i })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: /approved with controls/i });
+    expect(heading).toBeInTheDocument();
+    expect(heading.closest('#verdict-reviewer-section')).not.toBeNull();
   });
 
   it('TC-VD-2-01: binding constraint renders as <code> with the graph path shown', () => {

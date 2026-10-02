@@ -1,0 +1,486 @@
+import type {
+  ActionType,
+  DataClass,
+  DataZone,
+  DecisionBindingness,
+  DecisionType,
+  Exposure,
+  ModelType,
+  PolicyFile,
+  RegistryEntry,
+  SystemAccessScope,
+} from './types';
+import type { StructuredFormValues } from './build-graph-from-form';
+import { DATA_CLASS_RANK } from './envelope';
+import { ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
+import { makeAssumption } from '../components/plain-copy';
+import type { Assumption, PlainAnswers, QuestionId } from '../components/plain-copy';
+
+// R16-B (build/prompts/R16.md v2.1 §2.1, §2.2). Pure (cross-cutting.md §7
+// Rule 1): engine types and stdlib only. No React, no idb, no SDK, no
+// Date.now()/Math.random() anywhere in this module's call graph —
+// buildGraphFromForm stays the sole place ids and the timestamp are minted.
+//
+// This is the single documented mapping table from the submitter's plain
+// answers to the engine's StructuredFormValues (UC-8 fit criterion 2): the
+// same answers always produce the same values object, and every "Not sure"
+// maps to the stricter reading, listed back as an Assumption (principle 3).
+
+const DATA_ZONE_ORDER: DataZone[] = ['Zone A', 'Zone B', 'Zone C'];
+
+function earliestZone(zones: DataZone[] | undefined): DataZone {
+  if (!zones || zones.length === 0) return 'Zone B';
+  return [...zones].sort((a, b) => DATA_ZONE_ORDER.indexOf(a) - DATA_ZONE_ORDER.indexOf(b))[0]!;
+}
+
+function toArray(v: string | string[] | undefined): string[] {
+  if (v === undefined) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
+function companyAssistantVendors(policy: PolicyFile): RegistryEntry[] {
+  return (policy.vendors ?? []).filter((v) => v.kind === 'company_assistant');
+}
+
+function supplierVendors(policy: PolicyFile): RegistryEntry[] {
+  return (policy.vendors ?? []).filter((v) => (v.kind ?? 'supplier') === 'supplier');
+}
+
+export function plainAnswersToFormValues(
+  answers: PlainAnswers,
+  policy: PolicyFile,
+): { values: StructuredFormValues; assumptions: Assumption[] } {
+  const assumptions: Assumption[] = [];
+  function assume(id: QuestionId, optionKey: string): void {
+    const a = makeAssumption(id, optionKey);
+    if (a) assumptions.push(a);
+  }
+
+  const str = (id: QuestionId): string | undefined => {
+    const v = answers[id];
+    return typeof v === 'string' ? v : undefined;
+  };
+
+  // ---- Q3: where the AI comes from -> destination zone + vendor + platform ----
+  let destinationZone: DataZone = 'Zone B';
+  let vendor: string | undefined;
+  let platform: string | undefined;
+
+  const q3 = str('3');
+  switch (q3) {
+    case 'outside-assistant': {
+      const q3a = str('3a');
+      switch (q3a) {
+        case 'firm-account': {
+          const assistants = companyAssistantVendors(policy);
+          destinationZone = 'Zone B';
+          if (assistants.length === 1) {
+            vendor = assistants[0]!.id;
+          } else if (assistants.length > 1) {
+            const which = str('3aWhich');
+            if (which === 'not-sure') {
+              vendor = 'your firm’s AI assistant (not confirmed which one)';
+              assume('3aWhich', 'not-sure');
+            } else {
+              const match = assistants.find((v) => v.id === which);
+              vendor = match ? match.id : 'your firm’s AI assistant (not confirmed which one)';
+            }
+          } else {
+            // D-64 literal fallback: none registered at all.
+            vendor = 'company AI assistant (not on your firm’s list)';
+          }
+          break;
+        }
+        case 'personal-account':
+          destinationZone = 'Zone A';
+          vendor = 'unregistered (personal account, no firm contract)';
+          break;
+        case 'not-sure':
+        default:
+          destinationZone = 'Zone A';
+          vendor = 'unregistered (not sure which account)';
+          assume('3a', 'not-sure');
+          break;
+      }
+      break;
+    }
+    case 'supplier-feature':
+    case 'specialist-product': {
+      destinationZone = 'Zone B';
+      const q3supplier = str('3supplier');
+      switch (q3supplier) {
+        case 'not-on-list': {
+          const typed = str('3supplierName')?.trim();
+          vendor = typed
+            ? `${typed} (not on your firm’s list)`
+            : 'An unlisted supplier (not on your firm’s list)';
+          break;
+        }
+        case 'dont-know':
+          vendor = 'unregistered (supplier not confirmed)';
+          assume('3supplier', 'dont-know');
+          break;
+        default: {
+          // A supplier vendor id, picked from the dynamic list.
+          const match = supplierVendors(policy).find((v) => v.id === q3supplier);
+          vendor = match ? match.id : 'unregistered (supplier not confirmed)';
+        }
+      }
+      break;
+    }
+    case 'firm-built':
+      destinationZone = 'Zone C';
+      vendor = 'internal';
+      break;
+    case 'not-sure':
+    case undefined:
+      destinationZone = 'Zone A';
+      vendor = 'unregistered (where this AI comes from was not sure)';
+      if (q3 === 'not-sure') assume('3', 'not-sure');
+      break;
+    default: {
+      // A platform id, picked from the dynamic list (d).
+      const matchedPlatform = (policy.platforms ?? []).find((p) => p.id === q3);
+      if (matchedPlatform) {
+        destinationZone = earliestZone(matchedPlatform.approved_envelope.data_zones);
+        vendor = matchedPlatform.vendor_id ?? 'internal';
+        platform = matchedPlatform.id;
+      } else {
+        destinationZone = 'Zone A';
+        vendor = 'unregistered (where this AI comes from was not sure)';
+      }
+    }
+  }
+
+  // ---- Q3model: optional named model ----
+  let declaredModelId: string | undefined;
+  let declaredModelIdOther: string | undefined;
+  const modelText = str('3model')?.trim();
+  if (modelText) {
+    const match = (policy.approved_models ?? []).find((m) => m.model_id === modelText);
+    if (match) declaredModelId = match.model_id;
+    else declaredModelIdOther = modelText;
+  }
+
+  // ---- Q4 / Q4a: kind of AI -> modelType ----
+  let modelType: ModelType;
+  const q4 = str('4');
+  switch (q4) {
+    case 'score': {
+      const q4a = str('4a');
+      if (q4a === 'rules') modelType = 'statistical';
+      else if (q4a === 'explainable') modelType = 'traditional-ml';
+      else modelType = 'ml'; // 'unexplainable' or unanswered
+      break;
+    }
+    case 'perception':
+      modelType = 'deep-learning';
+      break;
+    case 'language':
+      modelType = 'llm';
+      break;
+    case 'generative':
+      modelType = 'generative-ai';
+      break;
+    case 'agentic':
+      modelType = 'agentic';
+      break;
+    case 'not-sure':
+      modelType = 'agentic';
+      assume('4', 'not-sure');
+      break;
+    default:
+      modelType = 'llm';
+  }
+
+  // ---- Q5: information it uses (tick-all) -> inputDataClasses ----
+  const classSet = new Set<DataClass>();
+  for (const key of toArray(answers['5'])) {
+    switch (key) {
+      case 'people':
+        classSet.add('Client PII');
+        break;
+      case 'price-sensitive':
+        classSet.add('MNPI');
+        break;
+      case 'confidential':
+        classSet.add('Confidential');
+        break;
+      case 'everyday':
+      case 'typed-only':
+        classSet.add('Internal');
+        break;
+      case 'public':
+        classSet.add('Public');
+        break;
+      case 'not-sure':
+        classSet.add('Confidential');
+        assume('5', 'not-sure');
+        break;
+    }
+  }
+  if (classSet.size === 0) classSet.add('Internal');
+  // Most sensitive first — the same ranking the summary and the verdict
+  // view-model use (§1.5, D-03), so the order a reviewer sees here is never
+  // a second, silently-disagreeing ranking.
+  const inputDataClasses = [...classSet].sort(
+    (a, b) => DATA_CLASS_RANK[b] - DATA_CLASS_RANK[a],
+  );
+
+  // ---- Q6 / Q6a / Q6b: what happens with the output ----
+  let outputActionType: ActionType;
+  let autonomyLevel: 0 | 1 | 2 | 3 | 4;
+  let hitl: boolean | undefined;
+  let decisionBindingness: DecisionBindingness;
+
+  function resolve6a(): DecisionBindingness {
+    const q6a = str('6a');
+    switch (q6a) {
+      case 'little':
+        return 'non-binding';
+      case 'one-input':
+        return 'advisory';
+      case 'not-sure':
+        assume('6a', 'not-sure');
+        return 'material';
+      case 'usually-basis':
+      default:
+        return 'material';
+    }
+  }
+  function resolve6b(): ActionType {
+    const q6b = str('6b');
+    switch (q6b) {
+      case 'trades':
+        return 'trade';
+      case 'yes-no-decision':
+        return 'approve';
+      case 'something-else':
+      default:
+        return 'execute';
+    }
+  }
+
+  const q6 = str('6');
+  switch (q6) {
+    case 'read':
+      outputActionType = 'read';
+      autonomyLevel = 0;
+      decisionBindingness = 'non-binding';
+      break;
+    case 'answers':
+      outputActionType = 'inform';
+      autonomyLevel = 0;
+      decisionBindingness = resolve6a();
+      break;
+    case 'drafts':
+      outputActionType = 'draft';
+      autonomyLevel = 1;
+      hitl = true;
+      decisionBindingness = resolve6a();
+      break;
+    case 'suggests':
+      outputActionType = 'recommend';
+      autonomyLevel = 1;
+      hitl = true;
+      decisionBindingness = resolve6a();
+      break;
+    case 'prepares':
+      outputActionType = 'execute';
+      autonomyLevel = 1;
+      hitl = true;
+      decisionBindingness = 'material';
+      break;
+    case 'acts-reviewed':
+      autonomyLevel = 2;
+      hitl = false;
+      decisionBindingness = 'binding';
+      outputActionType = resolve6b();
+      break;
+    case 'acts-bounded':
+      autonomyLevel = 3;
+      hitl = false;
+      decisionBindingness = 'binding';
+      outputActionType = resolve6b();
+      break;
+    case 'acts-alone':
+      autonomyLevel = 4;
+      hitl = false;
+      decisionBindingness = 'binding';
+      outputActionType = resolve6b();
+      break;
+    case 'not-sure':
+      outputActionType = 'execute';
+      autonomyLevel = 4;
+      hitl = false;
+      decisionBindingness = 'binding';
+      assume('6', 'not-sure');
+      break;
+    default:
+      outputActionType = 'read';
+      autonomyLevel = 0;
+      decisionBindingness = 'non-binding';
+  }
+
+  // ---- Q7: who sees it -> exposure ----
+  let outputExposure: Exposure;
+  switch (str('7')) {
+    case 'me-or-team':
+      outputExposure = 'internal-only';
+      break;
+    case 'other-teams':
+      outputExposure = 'internal-shared';
+      break;
+    case 'clients':
+      outputExposure = 'client-facing';
+      break;
+    case 'not-sure':
+      outputExposure = 'market-facing';
+      assume('7', 'not-sure');
+      break;
+    case 'public-market':
+    default:
+      outputExposure = str('7') === 'public-market' ? 'market-facing' : 'internal-only';
+  }
+
+  // ---- Q8 / Q8other: decision type ----
+  let decisionType: DecisionType | undefined;
+  let decisionTypeOther: string | undefined;
+  switch (str('8')) {
+    case 'credit':
+      decisionType = 'credit-decision';
+      break;
+    case 'hiring':
+      decisionType = 'hiring';
+      break;
+    case 'pricing':
+      decisionType = 'pricing';
+      break;
+    case 'trading':
+      decisionType = 'trading';
+      break;
+    case 'fraud':
+      decisionType = 'fraud-detection';
+      break;
+    case 'regulatory':
+      decisionType = 'regulatory-reporting';
+      break;
+    case 'operational':
+      decisionType = 'operational';
+      break;
+    case 'other':
+      decisionTypeOther = str('8other')?.trim() || 'unspecified';
+      break;
+  }
+
+  // ---- Q9: can it be undone -> reversibility ----
+  let outputReversibility: 'reversible' | 'irreversible' | 'unknown';
+  switch (str('9')) {
+    case 'yes':
+      outputReversibility = 'reversible';
+      break;
+    case 'not-sure':
+      outputReversibility = 'irreversible';
+      assume('9', 'not-sure');
+      break;
+    case 'no':
+      outputReversibility = 'irreversible';
+      break;
+    default:
+      outputReversibility = 'unknown';
+  }
+
+  // ---- Q10: how widely used -> scale ----
+  const outputScale: 'limited' | 'at_scale' = str('10') === 'small' ? 'limited' : 'at_scale';
+
+  // ---- Q11: jurisdictions (tick-all) ----
+  const q11 = toArray(answers['11']);
+  const knownCodes = new Set((policy.jurisdictions ?? []).map((j) => j.code));
+  const jurisdictions = q11.includes('elsewhere-not-sure')
+    ? []
+    : q11.filter((code) => knownCodes.has(code));
+
+  // ---- Q12: replaces something ----
+  let replacesPriorModel: boolean;
+  switch (str('12')) {
+    case 'yes':
+      replacesPriorModel = true;
+      break;
+    case 'not-sure':
+      replacesPriorModel = true;
+      assume('12', 'not-sure');
+      break;
+    case 'no':
+    default:
+      replacesPriorModel = false;
+  }
+
+  // ---- Q13: agent access (tick-all) ----
+  let systemAccessScope: SystemAccessScope[] | undefined;
+  if (answers['13'] !== undefined) {
+    const ticks = toArray(answers['13']);
+    if (ticks.includes('not-sure')) {
+      systemAccessScope = ACCESS_SCOPE_CANONICAL_ORDER.filter((v) => v !== 'none') as SystemAccessScope[];
+      assume('13', 'not-sure');
+    } else if (ticks.includes('none')) {
+      systemAccessScope = ['none'];
+    } else {
+      const mapped: SystemAccessScope[] = [];
+      if (ticks.includes('shared')) mapped.push('shared_infrastructure');
+      if (ticks.includes('credentialed')) mapped.push('credentialed_systems');
+      if (ticks.includes('deployment')) mapped.push('deployment_authority');
+      systemAccessScope = mapped.length > 0 ? mapped : undefined;
+    }
+  }
+
+  // ---- Q14: instance coordination ----
+  let multiInstanceCoordination: 'yes' | 'no' | 'unknown' | undefined;
+  switch (str('14')) {
+    case 'no':
+      multiInstanceCoordination = 'no';
+      break;
+    case 'yes':
+      multiInstanceCoordination = 'yes';
+      break;
+    case 'not-sure':
+      multiInstanceCoordination = 'unknown';
+      assume('14', 'not-sure');
+      break;
+    default:
+      multiInstanceCoordination = undefined;
+  }
+
+  const values: StructuredFormValues = {
+    useCaseName: str('1') ?? '',
+    description: str('2') ?? '',
+    inputDataClass: inputDataClasses[0]!,
+    inputDataZone: destinationZone,
+    inputDataClasses,
+    modelType,
+    autonomyLevel,
+    processingDataZone: destinationZone,
+    outputActionType,
+    outputExposure,
+    decisionBindingness,
+    outputReversibility,
+    outputScale,
+    replacesPriorModel,
+    ...(platform ? { platform } : {}),
+    ...(vendor !== undefined ? { vendor } : {}),
+    ...(declaredModelId ? { declaredModelId } : {}),
+    ...(declaredModelIdOther ? { declaredModelIdOther } : {}),
+    ...(decisionType !== undefined ? { decisionType } : {}),
+    ...(decisionTypeOther !== undefined ? { decisionTypeOther } : {}),
+    ...(hitl !== undefined ? { hitl } : {}),
+    ...(systemAccessScope !== undefined ? { systemAccessScope } : {}),
+    ...(multiInstanceCoordination !== undefined ? { multiInstanceCoordination } : {}),
+    jurisdictions,
+  };
+
+  return { values, assumptions };
+}
+
+// Exported for StructuredForm.tsx and the parity test, which both need the
+// same "earliest letter" rule for the platform option's zone without
+// re-deriving it — one implementation (D-16).
+export { earliestZone };

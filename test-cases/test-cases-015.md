@@ -166,6 +166,23 @@ tests; the rest were already proved by existing tests, which now carry the
 id. Three rows overstated what had been verified — amended in place above,
 each marked with its date.
 
+### Retired by R16 chunk B — 2026-10-02
+
+The field-by-field guided form TC-R15-C3-05/07/08/09 verified is replaced
+in full by `build/prompts/R16.md` §2.2's situational question set — see
+`test-cases-019.md` for the new form's own test cases (TC-R16-B-*). Moved
+to Superseded below.
+
+## Superseded
+
+| ID | Reason |
+|---|---|
+| TC-R15-C3-05 | "`StructuredForm` renders five `<fieldset>`/`<legend>` sections (`About it`, `What it uses`, `What the AI is and how it runs`, `What comes out and who it reaches`, `Where it applies`) with the documented legend text." R16 chunk B's replacement form uses a different section grouping for the new question set (`About it`, `Where it comes from`, `What it does`, `Decisions and safeguards`, `Scope and countries`) — the specific legend text this case pinned no longer exists by design, not by regression. |
+| TC-R15-C3-07 | "The load-bearing zone-crossing sentence (`not where the data is stored — where it gets sent...`) and the load-bearing bindingness sentence (`be honest about what happens in practice...`) stay visible outside their `Why we ask` `<details>`." Both sentences were written for the retired `sf-processing-zone`/`sf-bindingness` fields, which no longer exist — the new form asks about the submitter's situation (§2.2) rather than the zone or bindingness directly, so neither sentence has a field left to attach to. The new form's own help text (`plain-copy.ts`) is tested directly in `StructuredForm.test.tsx` / `plain-intake.test.ts`. |
+| TC-R15-C3-08 | "Optional fields (platform, vendor, decision type, human-in-the-loop) state the consequence of leaving them blank in the field label itself." Those four fields do not exist in the new form in that shape — platform/vendor are resolved from Q3's situational answer (never asked as a bare optional field), decision type is Q8 (required, not optional — UC-8's design explicitly requires an answer so the engine is never silently under-informed), and human-in-the-loop is derived from Q6, never asked directly (principle 1: no engine vocabulary on the form). TC-R16-B-12's never-render-`[FIRM]` fallback label test and TC-R3-JU-5-02 (adapted, `test-cases-019.md`) cover the surviving optional free-text fields (3supplierName, 3model). |
+| TC-R15-C3-09 | "`FIELD_CONSEQUENCES` (field-copy.ts, R5-GR-1) is consumed by `StructuredForm`'s `Why we ask` disclosures." The retired form's fields (and their `FIELD_CONSEQUENCES` entries) are gone; the new form's help text lives in `plain-copy.ts`'s own `help` field per question, tested directly where it is used, not through `field-copy.ts`'s now-unrelated map. |
+| TC-R15-C3-06 | "No form field is hidden behind an `advanced` toggle — all pre-existing `getByLabelText` queries in `StructuredForm.test.tsx` still resolve unchanged, proving every field stayed on the single scroll." Those specific queries targeted the retired field set. The new form keeps the same "one continuous scroll, no toggle" structure (`structured-form__scroll-note`, unchanged) — every one of its own questions, including the conditional ones, is reachable by `StructuredForm.test.tsx`'s own queries with no toggle ever opened (the conditional questions are situational follow-ups per §2.2, shown or hidden by an earlier ANSWER, not by a reader-operated "advanced" control) — but there is no longer a single dedicated case naming this property; it is demonstrated structurally (no toggle exists in the component at all) and by every other test in the file not needing to open one. |
+
 ---
 
 *Developed using the Grounded Vibe Methodology*

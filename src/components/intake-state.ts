@@ -156,7 +156,15 @@ export type IntakeAction =
   | { type: 'VERDICT_READY' }
   // VD-3 (verdict-audit.md §6): re-enters graph_review reusing the
   // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
-  | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string };
+  | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string }
+  // R16-C (§3): "Change an answer" on the UnderstoodSummary. Deliberately
+  // its OWN action rather than reusing STEP_BACK — STEP_BACK's existing
+  // reducer case and canStepBack's UI gate stay exactly as they are
+  // (confirmation has no "← Back" control, on purpose: IntakeFlow.back.test.tsx
+  // asserts that). This is a navigation-only transition, same destination
+  // shape as STEP_BACK's questionnaire case, never a write to the audit
+  // trail — the one write stays the Confirm button and its in-flight guard.
+  | { type: 'CHANGE_ANSWER' };
 
 /** The submitted description, carried forward wherever the current step still
  *  has it. `evaluation_pending` and `verdict` do not, so a correction pass
@@ -422,6 +430,26 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
       };
+
+    case 'CHANGE_ANSWER':
+      if (state.step !== 'confirmation') return state;
+      // The form path returns to the guided form itself (its own draft,
+      // probed separately by StructuredForm, is what repopulates it — a
+      // known limitation: the draft was already cleared on submit, same as
+      // before this chunk, so the form reopens blank rather than
+      // pre-filled). The description path returns to the existing
+      // correction flow (GraphView, UC-7), unchanged.
+      return state.graph.intake_method === 'structured_form'
+        ? { step: 'graph_extraction', description: state.description, method: 'form' }
+        : {
+            step: 'graph_review',
+            description: carriedDescription(state),
+            graph: state.graph,
+            graphVersion: state.graph.version,
+            corrections: state.corrections,
+            useCaseId: state.useCaseId,
+            originalVerdictId: state.originalVerdictId,
+          };
 
     case 'CONFIRMED':
       if (state.step !== 'confirmation') return state;

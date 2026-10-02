@@ -146,22 +146,26 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
-    // Declare the opposite of the description.
+    // Declare the opposite of the description. R16-B: adapted to the new
+    // questions — Client PII (contradicts "no client data") and autonomy
+    // level 3 via "acts by itself within limits someone set" (contradicts
+    // "no autonomy"); same two contradiction triggers contradiction.ts
+    // checks (autonomy_level >= 3, data_class Client PII), same assertions.
     await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Contradictor');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/how much can it do without a person/i), '3');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-shared');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    await user.click(screen.getByLabelText(/united kingdom/i));
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('radio', { name: /acts by itself within limits someone set/i }));
+    await user.click(screen.getByRole('radio', { name: /something else — sends, books, updates records/i }));
+    await user.click(screen.getByRole('radio', { name: /^other teams in the firm$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /proceed/i }));
 
@@ -198,21 +202,27 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     await user.click(screen.getByRole('button', { name: /read & extract/i }));
     await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
 
+    // R16-B: the field-by-field form this test drove is replaced by the
+    // situational question set (build/prompts/R16.md §2.2) — adapted to the
+    // new questions, same underlying scenario (Client PII, firm-built,
+    // drafts for a person to check, UK), same assertion below.
     await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Resolver');
     await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
-    await user.selectOptions(screen.getByLabelText(/what kind of information does it use/i), 'Client PII');
-    await user.selectOptions(screen.getByLabelText(/where does that information sit today/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what kind of ai is it/i), 'llm');
-    await user.selectOptions(screen.getByLabelText(/how much can it do without a person/i), '1');
-    await user.selectOptions(screen.getByLabelText(/where does the ai itself run/i), 'Zone C');
-    await user.selectOptions(screen.getByLabelText(/what does it actually produce or do/i), 'draft');
-    await user.selectOptions(screen.getByLabelText(/who sees what it produces/i), 'internal-shared');
-    await user.selectOptions(screen.getByLabelText(/how much weight does its output carry/i), 'advisory');
-    await user.selectOptions(screen.getByLabelText(/if it gets something wrong/i), 'reversible');
-    await user.selectOptions(screen.getByLabelText(/how widely is it used/i), 'limited');
-    await user.selectOptions(screen.getByLabelText(/which model does it run on/i), '__other__');
-    await user.type(screen.getByLabelText(/name the model/i), 'test-model');
-    await user.click(screen.getByLabelText(/united kingdom/i));
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(
+      screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('radio', { name: /creates a draft/i }));
+    await user.click(screen.getByRole('radio', { name: /one input among several/i }));
+    await user.click(screen.getByRole('radio', { name: /^other teams in the firm$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    // Q9 and Q12 both offer a bare "Yes"/"No" option on this continuous-
+    // scroll form; Q9 ("can the mistake be caught") renders first.
+    await user.click(screen.getAllByRole('radio', { name: /^yes$/i })[0]!);
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+    await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /proceed/i }));
 

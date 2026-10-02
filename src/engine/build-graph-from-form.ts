@@ -20,6 +20,15 @@ export interface StructuredFormValues {
   description: string;
   inputDataClass: DataClass;
   inputDataZone: DataZone;
+  // R16-B (UC-10 §2.1): several input nodes, one per distinct ticked data
+  // class, each in the destination zone (`processingDataZone` below — this
+  // round's single "destination zone" concept replaces a separate
+  // per-input zone). When present and non-empty this takes precedence over
+  // the singular inputDataClass/inputDataZone pair above, which stays
+  // required so every existing single-input caller is unaffected: a
+  // single-class answer still produces a graph byte-identical to before
+  // this field existed.
+  inputDataClasses?: DataClass[];
   modelType: ModelType;
   autonomyLevel: 0 | 1 | 2 | 3 | 4;
   processingDataZone: DataZone;
@@ -61,21 +70,29 @@ export interface StructuredFormValues {
 }
 
 export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph {
-  const inputId = crypto.randomUUID();
   const processingId = crypto.randomUUID();
   const outputId = crypto.randomUUID();
+
+  // R16-B (UC-10): a distinct class per ticked kind of information becomes
+  // its own input node, every one in the destination zone. Falls back to
+  // the singular inputDataClass/inputDataZone pair when inputDataClasses is
+  // absent or empty, which keeps every pre-R16-B caller's graph unchanged —
+  // one element produces the exact same single input node as before.
+  const classes =
+    values.inputDataClasses && values.inputDataClasses.length > 0
+      ? values.inputDataClasses
+      : [values.inputDataClass];
+  const inputNodes = classes.map((dataClass, i) => ({
+    id: crypto.randomUUID(),
+    label: i === 0 ? `${values.useCaseName} — input` : `${values.useCaseName} — input ${i + 1}`,
+    data_class: dataClass,
+    data_zone: values.inputDataZone,
+  }));
 
   return {
     id: crypto.randomUUID(),
     version: 1,
-    input_nodes: [
-      {
-        id: inputId,
-        label: `${values.useCaseName} — input`,
-        data_class: values.inputDataClass,
-        data_zone: values.inputDataZone,
-      },
-    ],
+    input_nodes: inputNodes,
     processing_nodes: [
       {
         id: processingId,
@@ -129,7 +146,7 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
       },
     ],
     edges: [
-      { from: inputId, to: processingId },
+      ...inputNodes.map((n) => ({ from: n.id, to: processingId })),
       { from: processingId, to: outputId },
     ],
     jurisdictions: values.jurisdictions,

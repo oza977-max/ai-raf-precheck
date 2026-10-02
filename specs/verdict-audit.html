@@ -442,6 +442,35 @@ const AUDIT_DB_SCHEMA = {
     <h3 id="reasoning-expander">5.4 Reasoning Expander</h3>
     <p>Clicking "Expand Reasoning" shows the plain-English trace of each control and decision step. Steps are hierarchical; users can collapse/expand each section. Timestamps and policy versions are shown in a footer.</p>
 
+    <h3 id="verdict-view-model">5.5 The verdict view-model (VD-9, VD-10, D-02)</h3>
+    <p><code>src/components/verdict-view-model.ts</code> is a pure module (no React, no store calls — cross-cutting.md §7) exporting one function:</p>
+    <pre><code>function buildVerdictView(
+  verdict: Verdict,
+  policy: PolicyFile | undefined,
+  graph: DataFlowGraph | undefined,
+  ownership: ControlOwnership | undefined,
+  attestations: ControlAttestations | undefined,
+  stage: LifecycleStage | undefined,
+): VerdictView</code></pre>
+    <p>It is the one computation behind both the first screen (§5.6) and three existing readers that previously each derived a safeguard's status independently — <code>WhatToDo</code>, <code>SignOffChecklist</code>, and the control-evidence panel (including its no-policy branch). For each safeguard (control) it resolves:</p>
+    <ul>
+      <li><strong>status</strong> — <code>verified</code> (machine-evidenced) | <code>attested</code> (a reviewer's on-record claim, not machine-verified) | <code>outstanding</code> | <code>unknown</code> (no policy loaded and no attestation). Verified beats attested beats outstanding/unknown — the same precedence every reader used before this round.</li>
+      <li><strong>plain action</strong> — the control's <code>plain_action</code> (CF-6), or its formal name + description + a pointer line when absent, or <code>"Safeguard {n}"</code> (by position, never the bare id) when the control is not in the loaded policy at all (NF-11).</li>
+      <li><strong>owner</strong> — <code>plain_owner</code> resolved: <code>@submitter</code> → "you or your manager (as the person responsible for this use)", marked <em>yours</em>; <code>@model_owner</code> → "…working with the supplier" (marked <em>yours</em>) when the graph's processing-node vendor is not the engine's <code>'internal'</code> sentinel, otherwise "the team that built the model" (not <em>yours</em>); free text renders verbatim; <code>plain_owner_with</code> appends a partner clause. A register-assigned owner overrides all of this: <code>"{name} (assigned on your firm's register), due {date}"</code>.</li>
+      <li><strong>plain reasons</strong> — from the tripped invariants that require this control, each one's <code>plain_reason</code> with <code>{audience}</code> (widest exposure across the output nodes) and <code>{destination}</code> (least-controlled zone on any node &mdash; inputs and processing &mdash; A &gt; B &gt; C) filled in; when the graph is not available (a case reopened from the register) they read &ldquo;clients or the public&rdquo; and &ldquo;a system outside your firm&rsquo;s own&rdquo; &mdash; never the most reassuring value &mdash; and <code>@model_owner</code> reads &ldquo;the team responsible for the model&rdquo;; falling back to its description plus a pointer line; de-duplicated.</li>
+      <li><strong>covered reviews</strong> — the verdict's per-instance <code>downstream_review_sources</code> whose base id (before the first <code>:</code>) appears in the control's own <code>covers_reviews</code> list.</li>
+    </ul>
+    <p>It also resolves, once: the <strong>headline</strong> (rejected / sign-off-needed / self-service, each with singular/plural safeguard counts); <strong>why</strong> (distinct plain reasons, binding constraint first, capped at two); <strong>next steps</strong> (sign-off, safeguard ownership, other teams' reviews, <code>no_regulatory_basis</code>, a closing "start" line — each step omitted when its condition is false); <strong>reviews still owed</strong> (de-duplicated by plain name, not base id — two firm rules sharing one plain name show once); <strong>who signs off</strong>; and <strong>could still change</strong> (gated on <code>isVerdictProvisional</code>, plus the independent RA-11 medium-confidence-caveat line, which surfaces whether or not the verdict is otherwise provisional).</p>
+    <p>A review's plain name resolves against <code>policy.downstream_reviews</code> for a firm rule id, fixed product-level copy for the two engine sentinels (<code>PV-UNREGISTERED</code>, <code>MODEL-REGISTRY</code>), or a generic "ask your AI risk team which" line for a pack rule id — <code>buildVerdictView</code> has no <code>packs</code> parameter, so a pack's own <code>plain_name</code> cannot be resolved here by design. A verdict with no <code>downstream_review_sources</code> at all (predating this round) folds nothing away: every review lists separately. A rejected verdict returns a minimal view (headline only) — the "No" screen's own composition is VD-10/chunk D2's slice, not fabricated here.</p>
+
+    <h3 id="verdict-first-screen">5.6 The first screen (VD-9, VD-10)</h3>
+    <p>Rendered by a <code>FirstScreen</code> component at the top of <code>VerdictDisplay</code>, in the view-model's own order: headline; why; next steps (numbered); the safeguards that must be in place (outstanding, yours first — plain action, "Who:", a "yours" chip, "Because …", and a "(This also covers …)" note per covered review; a yours-and-outstanding safeguard also gets a "Go to this safeguard" link); already-in-place and attested safeguards (summary lines); checks other teams run; who signs off; could still change; and a correction link ("Think we got something wrong? Correct your answers and check again."), wired to the same correction handler as the reviewer section's own button, on every verdict including a rejected one. No string here contains "approved" or "rejected" — the one allowed match is the formal status label inside the reviewer section (§5.7).</p>
+    <p>"Go to this safeguard" opens the reviewer section, adds the control to <code>WhatToDo</code>'s per-control expanded set (lifted into <code>VerdictDisplay</code>'s own state so an external click can control it, since the disclosure is React-controlled), then scrolls to it.</p>
+
+    <h3 id="verdict-reviewer-section">5.7 The reviewer section (VD-9)</h3>
+    <p>A single <code>&lt;details&gt;</code> (<code>#verdict-reviewer-section</code>), titled "The full reasoning — every rule checked, the evidence, the sources, and the reviewer's actions", wrapping everything described in §5.1–§5.4 above plus the control evidence panel, provenance, and platform/vendor inheritance — unchanged and additive. Its open/closed default is the existing <code>reasoningDefaultOpen</code> prop, now defaulting to closed (was open): the register's 2LoD view always passes it explicitly, so its behaviour is unchanged there; the submitter's own view never passed it, so it now starts closed with no change to that caller.</p>
+    <p><code>WhatToDo</code>, <code>SignOffChecklist</code> and the control-evidence panel keep their pre-existing rendered text, now reading each safeguard's status from the view-model (§5.5) instead of deriving it independently. The significant-word text heuristic that used to guess when a control and a review named the same obligation is deleted, replaced by the firm-authored, referential <code>covers_reviews</code> field. The platform/vendor inheritance panel now labels each declared component's header, and each dimension row, by source ("Platform" / "Supplier") — needed once a platform and a supplier can be declared on the same processing node and constrain the same dimension.</p>
+
     <!-- Correction Flow -->
     <h2 id="correction-flow">Correction Flow</h2>
 
@@ -799,6 +828,11 @@ const REASONING_TEMPLATES: Record&lt;string, Record&lt;'pass' | 'fail', string&g
           <td>VD-T8</td>
           <td>Reasoning trace rendered in UI; all steps visible</td>
           <td>VD-4</td>
+        </tr>
+        <tr>
+          <td>TC-R16-D1-01 &hellip; -23</td>
+          <td>The verdict view-model (every branch) and the first-screen component &mdash; test-cases/test-cases-020.md. Uses the project's real test-case id scheme (not the VD-T# rows above, which predate it).</td>
+          <td>VD-9, VD-10</td>
         </tr>
       </tbody>
     </table>

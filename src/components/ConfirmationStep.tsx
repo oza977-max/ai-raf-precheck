@@ -1,17 +1,30 @@
 import { useState } from 'react';
-import type { DataFlowGraph, GraphCorrection } from '../engine/types';
-import { graphSummaryRows } from './graph-summary';
+import type { DataFlowGraph, GraphCorrection, PolicyFile } from '../engine/types';
+import type { Assumption } from './plain-copy';
+import UnderstoodSummary from './UnderstoodSummary';
 
 // UC-6 (intake-flow.md §9). Rule 4 (cross-cutting.md §7): presentation-only.
 // This click is the attestation point — writing the graph_confirmed audit
 // event happens in IntakeFlow.tsx's handler, not here.
 //
-// Field-by-field summary grid per the Claude Design export's Confirm
-// screen (design_export.md memory) — Input data / Model / Autonomy /
-// Data zone / Output / Jurisdictions, not a flat node list.
+// R16-C (§3): the field-by-field grid this screen used to render directly
+// is now UnderstoodSummary's job — "Here's what we understood" in plain
+// words first, with the same grid demoted to a collapsed "Show the details
+// the rules use" disclosure inside it (graph-summary.ts's one shared
+// derivation, unchanged). This component keeps the one write (Confirm) and
+// its surrounding attestation copy; the summary has none of its own.
 interface ConfirmationStepProps {
   graph: DataFlowGraph;
   corrections: GraphCorrection[];
+  policy?: PolicyFile;
+  /** Form path (UC-9): every "Not sure" answer, carried from StructuredForm. */
+  assumptions?: Assumption[];
+  /** Description path (UC-12): node ids the extractor could not verify. */
+  uncertainNodeIds?: string[];
+  /** "Change an answer" on the summary — navigates back to the question
+   *  (form path) or into the existing correction flow (description path,
+   *  UC-7). Not a write; the one write stays onConfirm below. */
+  onChangeAnswer: () => void;
   /** Called with the submitter's optional note for the 2LoD reviewer —
    *  `undefined` when nothing was written, never an empty string. The note is
    *  recorded on the attestation and read by a human at sign-off. It is NOT
@@ -21,8 +34,15 @@ interface ConfirmationStepProps {
   onConfirm: (reviewerNote?: string) => void;
 }
 
-export default function ConfirmationStep({ graph, corrections, onConfirm }: ConfirmationStepProps) {
-  const summary = graphSummaryRows(graph);
+export default function ConfirmationStep({
+  graph,
+  corrections,
+  policy,
+  assumptions,
+  uncertainNodeIds,
+  onChangeAnswer,
+  onConfirm,
+}: ConfirmationStepProps) {
   const [note, setNote] = useState('');
 
   return (
@@ -38,14 +58,13 @@ export default function ConfirmationStep({ graph, corrections, onConfirm }: Conf
         change these answers afterward. Confirming is timestamped and permanently recorded.
       </p>
 
-      <div className="confirmation__grid">
-        {summary.map((row) => (
-          <div key={row.label} className="confirmation__grid-cell">
-            <span className="confirmation__grid-label">{row.label}</span>
-            <span className="confirmation__grid-value">{row.value}</span>
-          </div>
-        ))}
-      </div>
+      <UnderstoodSummary
+        graph={graph}
+        policy={policy}
+        assumptions={assumptions}
+        uncertainNodeIds={uncertainNodeIds}
+        onChangeAnswer={onChangeAnswer}
+      />
 
       {corrections.length > 0 && (
         <p className="confirmation__corrections">

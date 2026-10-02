@@ -44,7 +44,12 @@ vi.mock('@anthropic-ai/sdk', () => {
 });
 
 const DRAFT_KEY = 'aigate:intake-draft';
-const FORM_DRAFT_KEY = 'aigate:intake-form-draft';
+// R16-B (D-41): the guided-form draft key is now versioned — the old key
+// is probed and cleared separately, by StructuredForm itself on mount, so
+// an incompatible pre-R16 shape is reported once rather than silently
+// misread. "Start over" clearing the CURRENT form draft is still the
+// behaviour this test protects; it just targets the new key.
+const FORM_DRAFT_KEY = 'aigate:intake-form-draft:v2';
 
 describe('IntakeFlow — resuming a restored draft', () => {
   beforeEach(() => {

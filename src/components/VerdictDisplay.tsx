@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import type { DataFlowGraph, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
+import { useEffect, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
+import type { DataFlowGraph, EnvelopeDimensionFit, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
+import { fitsEnvelope, inheritableControls } from '../engine/envelope';
 import { graphSummaryRows } from './graph-summary';
 import { isVerdictProvisional } from '../engine/provisional';
 import type { ProvisionalReason } from '../engine/provisional';
@@ -11,6 +13,11 @@ import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
 import { Fold } from './Fold';
+// R16 chunk D1 (build/prompts/R16.md v2.1 §4.1): the one view-model behind
+// the verdict's first screen AND the four readers that need a safeguard's
+// status (this first screen, WhatToDo, SignOffChecklist, the evidence
+// panel below) — "one computation per fact" (principle 0.5).
+import { buildVerdictView, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -78,9 +85,21 @@ interface VerdictDisplayProps {
   // deliberate choice for 2LoD reviewers) had no seam to vary for a
   // first-time non-technical reader. Same pattern as showSignOffChecklist —
   // the caller (RegisterDetail) owns role, decides the default, and passes
-  // it down; VerdictDisplay never re-derives role itself. Omitted defaults
-  // to true (open), preserving existing behaviour for any render path that
-  // doesn't pass it.
+  // it down; VerdictDisplay never re-derives role itself.
+  //
+  // R16-D1: omitted now defaults to FALSE (closed) — was `true`. This is also
+  // the default open/closed state of the new outer "reviewer section" this
+  // chunk adds (§4.2 item 9: "collapsed for the submitter, open for 2LoD via
+  // the existing reasoningDefaultOpen"). RegisterDetail always passes this
+  // prop explicitly (`role === '2LoD'`), so its behaviour is unchanged by the
+  // new default; IntakeFlow's submitter-facing render never passed it and so
+  // picks up the new default, which is exactly the "collapsed for the
+  // submitter" behaviour this chunk needs — with no edit to IntakeFlow.tsx
+  // (file-ownership boundary; see the chunk D1 handover note). Flipping a
+  // default changes no visible DOM query result in the existing suite: every
+  // Testing Library query here finds text regardless of a closed <details>'s
+  // open attribute, which is why this is safe against the many tests that
+  // never pass this prop.
   //
   // design-review round 3 (2026-08-31, Panel D): now also gates the
   // fragility, regulatory-reasoning, and controls-with-evidence Folds — the
@@ -285,6 +304,16 @@ function WhyThisVerdict({
 // evidence panel's ALL-CAPS "ATTESTED — NOT VERIFIED" is a different chip
 // family (verdict__vchip) with its own convention; the two are not meant to
 // match.
+// R16-D1: WhatToDo's own four display-string statuses, unchanged, now
+// derived from the view-model's abstract SafeguardStatus (one computation —
+// verdict-view-model.ts's `safeguardStatus` — four readers).
+const SAFEGUARD_STATUS_DISPLAY: Record<SafeguardStatus, string> = {
+  verified: 'in place',
+  attested: 'attested',
+  outstanding: 'outstanding',
+  unknown: 'evidence unknown',
+};
+
 const TODO_CHIP_LABEL: Record<string, string> = {
   'in place': 'in place',
   attested: 'attested — not verified',
@@ -292,47 +321,15 @@ const TODO_CHIP_LABEL: Record<string, string> = {
   'evidence unknown': 'evidence unknown',
 };
 
-// code-review-005 (usability testing): a jurisdiction-pack review sometimes
-// restates a firm control's own obligation under a slightly different name —
-// e.g. this pack's "Independent model validation (2LoD)" review and the
-// firm's own "Independent validation (2LoD)" control are the same real-world
-// review, worded differently by two different authors (a pack rule vs. the
-// firm's policy). Showing both told a reader to do the same thing twice.
-// Matched on the SIGNIFICANT words the two names share — every one of the
-// control's significant words must appear in the review's — so this cannot
-// misfire on two obligations that merely share a common, generic term (e.g.
-// two different "… risk assessment" reviews). A control name with fewer than
-// two significant words never matches: a firm can author a one-word control
-// ("Validation"), and one shared word is not evidence of one obligation.
-// Presentation-only (Rule 4: a text-normalization lookup, not business logic,
-// same posture as rationaleLine's prefix-stripping above); it never changes
-// what the engine decided or named — only how two names for the same thing
-// are displayed. An explicit, firm-authored control→review mapping in the
-// policy would remove the guesswork; that belongs with the plain-language
-// policy fields, not this fix.
-const GENERIC_OBLIGATION_WORDS = new Set(['model', 'review', 'the', 'a', 'an', 'of', 'for', 'and']);
-function significantWords(s: string): Set<string> {
-  return new Set(
-    (s.toLowerCase().replace(/\([^)]*\)/g, ' ').match(/[a-z]+/g) ?? []).filter(
-      (w) => !GENERIC_OBLIGATION_WORDS.has(w),
-    ),
-  );
-}
-function describesSameObligation(controlName: string, reviewName: string): boolean {
-  const controlWords = significantWords(controlName);
-  if (controlWords.size < 2) return false;
-  const reviewWords = significantWords(reviewName);
-  // code-review-005 round 2, N6: this was a SUBSET match (every control word
-  // present in the review), which let a review with EXTRA significant words
-  // absorb a control it does not actually restate — a firm's "Model risk
-  // assessment" control (after "model" — a generic word — drops out, {risk,
-  // assessment}) would wrongly fold in an unrelated "Vendor risk assessment"
-  // review ({vendor, risk, assessment}), since {risk, assessment} is a
-  // subset of {vendor, risk, assessment}. The two names describe the SAME
-  // obligation only when their significant-word sets are EQUAL, not merely
-  // when one contains the other — same size, same words.
-  return reviewWords.size === controlWords.size && [...controlWords].every((w) => reviewWords.has(w));
-}
+// R16-D1 (build/prompts/R16.md v2.1 §4.1): `describesSameObligation`'s
+// text-heuristic match (deleted here) is replaced by the firm-authored,
+// referential `covers_reviews` field — a control names the review ids its
+// own action satisfies, checked at policy-load time like any other
+// condition (grounding/PACK-AUTHORING.md's reviewer checklist), rather than
+// guessed from significant-word overlap at render time. The matching now
+// lives once, in verdict-view-model.ts, and both this component's "also
+// covers" note and the "separate reviews" filter below read its result
+// (`view.safeguards[].coveredReviews`, `view.coveredReviewFormalNames`).
 
 /** The plain-language answer to "so what do I actually have to do?".
  *
@@ -343,7 +340,10 @@ function describesSameObligation(controlName: string, reviewName: string): boole
 function WhatToDo({
   verdict,
   policy,
+  view,
   needsSignOff,
+  expandedControls,
+  setExpandedControls,
   controlOwnership,
   onAssignControlOwner,
   controlOwnerBusyId,
@@ -356,11 +356,22 @@ function WhatToDo({
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
+  // R16-D1: the one computation of each safeguard's status and which
+  // reviews it covers — see verdict-view-model.ts. This component keeps its
+  // own rendered text (it moved into the reviewer section unchanged); only
+  // the status/coverage SOURCE changed.
+  view: VerdictView;
   // design-review-003 (Panel C): "needs sign-off" used to be independently
   // re-derived from registerStage in three places across two files — a
   // future workflow change (e.g. a routing stage between pre_checked and
   // approved) risked the sites disagreeing. Computed once by the caller now.
   needsSignOff: boolean;
+  // R16-D1: lifted from a local useState to the main component so the first
+  // screen's "Go to this safeguard" link can expand a specific control's
+  // disclosure from outside this component (D-26, D-63) — the per-control
+  // disclosure stays React-controlled either way.
+  expandedControls: Set<string>;
+  setExpandedControls: Dispatch<SetStateAction<Set<string>>>;
   controlOwnership?: Record<string, { owner_name: string; target_date: string }>;
   onAssignControlOwner?: (controlId: string, ownerName: string, targetDate: string) => void;
   controlOwnerBusyId?: string | null;
@@ -374,26 +385,18 @@ function WhatToDo({
   const rejected = verdict.status === 'rejected';
   const controls = verdict.controls ?? [];
   const allReviews = verdict.downstream_reviews ?? [];
-  // code-review-005 (usability testing): a review folded into a control's
-  // "Also satisfies" note below (describesSameObligation) is no longer a
-  // SEPARATE ask — it is the same real-world obligation under another name —
-  // so it drops out of both the "separate reviews" list and its count.
-  // `allReviews` (the untouched engine output) still drives the per-control
-  // note; `reviews` (this filtered list) drives everything a reader counts.
-  const reviews = allReviews.filter(
-    (r) =>
-      !controls.some((id) => {
-        const c = policy?.controls.find((pc) => pc.id === id);
-        return c ? describesSameObligation(c.name, r) : false;
-      }),
-  );
+  // R16-D1: was describesSameObligation's significant-word text heuristic —
+  // now the real, firm-authored covers_reviews mechanism, matched once in
+  // the view-model (`coveredReviewFormalNames`) and read here. `allReviews`
+  // (the untouched engine output) still drives the per-control note below;
+  // `reviews` (this filtered list) drives everything a reader counts.
+  const reviews = allReviews.filter((r) => !view.coveredReviewFormalNames.includes(r));
   // R15-C2 (proposal §3.1): "summary-then-detail; default collapsed per
   // item, Expand all". Status chip stays on the always-visible summary line
   // (Governance's clarification of Layout F8 — items move to "addressed",
   // they never vanish); the three-line body opens per item via a native
   // <details>, so open/closed state is programmatic (G3) without any extra
   // wiring. "Expand all" just opens every item's <details> at once.
-  const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
   const allControlsExpanded = controls.length > 0 && controls.every((id) => expandedControls.has(id));
   const toggleExpandAll = () => setExpandedControls(allControlsExpanded ? new Set() : new Set(controls));
 
@@ -452,42 +455,25 @@ function WhatToDo({
                 {controls.map((id) => {
                   const control = policy?.controls.find((c) => c.id === id);
                   const attestation = controlAttestations?.[id];
-                  // Four states now (RG-9). Precedence: the policy's machine/
-                  // hand-edited `verified` is the strongest ("in place"); a
-                  // reviewer's on-the-record attestation is the next
-                  // ("attested" — a human claim, not machine-verified, shown
-                  // as such); otherwise "outstanding". Without a policy loaded
-                  // we cannot tell verified from not, but an attestation does
-                  // NOT come from the policy — it is known either way — so it
-                  // still surfaces as "attested" rather than being swallowed
-                  // into "evidence unknown" (code-review-005 F12: a recorded
-                  // attestation must always show for its control). Only a
-                  // control with neither a policy verdict nor an attestation
-                  // falls back to "evidence unknown" (never a fabricated claim
-                  // about a control nobody looked at — BC-V13-03).
-                  const status = !policy
-                    ? attestation
-                      ? 'attested'
-                      : 'evidence unknown'
-                    : control?.verification_evidence?.status === 'verified'
-                      ? 'in place'
-                      : attestation
-                        ? 'attested'
-                        : 'outstanding';
+                  // R16-D1: one computation (verdict-view-model.ts's
+                  // `safeguardStatus`) — four readers. Precedence (verified
+                  // beats attested beats outstanding/unknown) is unchanged;
+                  // only the source of truth moved.
+                  const safeguard = view.safeguards.find((s) => s.id === id);
+                  const status = SAFEGUARD_STATUS_DISPLAY[safeguard?.status ?? 'unknown'];
                   // Which of this verdict's tripped rules demanded this control
                   // — read from the explanation the engine already produced.
                   const demandedBy = (verdict.explanation?.tripped_invariants ?? []).filter((t) =>
                     t.required_controls.includes(id),
                   );
-                  // code-review-005 (usability testing): reviews this control's
-                  // own name already covers, read from the RAW review list
-                  // (not the filtered `reviews`) so the note names exactly what
-                  // it is folding in.
-                  const matchingReviews = control
-                    ? allReviews.filter((r) => describesSameObligation(control.name, r))
-                    : [];
+                  // R16-D1: reviews this control's covers_reviews names,
+                  // read from the view-model's referential match (replacing
+                  // describesSameObligation's text heuristic) — formal
+                  // names, since this list is the reviewer section's own
+                  // (unchanged) vocabulary.
+                  const matchingReviews = safeguard?.coveredReviews.map((r) => r.formalName) ?? [];
                   return (
-                    <li key={id} className="verdict__todo-item">
+                    <li key={id} id={`verdict-todo-control-${id}`} className="verdict__todo-item">
                       <details
                         open={expandedControls.has(id) || undefined}
                         onToggle={(e) => {
@@ -889,13 +875,15 @@ export function classifyProvisionalReason(reason: ProvisionalReason): 'signoff_g
 function SignOffChecklist({
   verdict,
   policy,
+  view,
   hasRiskKnowledgeSection,
-  controlAttestations,
 }: {
   verdict: Verdict;
   policy?: PolicyFile;
+  // R16-D1: one computation of each safeguard's status (verdict-view-
+  // model.ts) — this reader just counts it.
+  view: VerdictView;
   hasRiskKnowledgeSection?: boolean;
-  controlAttestations?: Record<string, { attested_by_name: string; evidence_note: string }>;
 }) {
   const reasons = verdict.provisional_reasons ?? [];
   const controls = verdict.controls ?? [];
@@ -909,24 +897,17 @@ function SignOffChecklist({
     : undefined;
   // RG-9: three evidence tiers, counted separately so the checklist stays
   // honest — a reviewer's attestation is NOT folded into machine-verified.
-  // Both counts are well-defined even with no policy loaded: `verified`
-  // reads `undefined?.status === 'verified'` (always false), and `attested`
-  // reads controlAttestations directly, which does not come from the policy
-  // at all (F12) — only the DISPLAY below hides the verified/outstanding
-  // split when there is no policy to have read it from.
-  const verified = controls.filter(
-    (id) => policy?.controls.find((c) => c.id === id)?.verification_evidence?.status === 'verified',
-  ).length;
-  const attested = controls.filter(
-    (id) =>
-      policy?.controls.find((c) => c.id === id)?.verification_evidence?.status !== 'verified' &&
-      controlAttestations?.[id] !== undefined,
-  ).length;
+  // Both counts are well-defined even with no policy loaded, same as before
+  // (the view-model's `safeguardStatus` preserves that precedence) — only
+  // the DISPLAY below hides the verified/outstanding split when there is no
+  // policy to have read it from.
+  const verified = view.inPlaceSafeguards.length;
+  const attested = view.attestedSafeguards.length;
   // "Addressed" = verified OR attested; only these leave the outstanding
   // pile. This is what lets the list reach zero-outstanding once a reviewer
   // has attested each control — the RG-9 goal — without claiming any of them
   // are machine-verified.
-  const outstanding = controls.length - verified - attested;
+  const outstanding = view.outstandingCount;
   const addressed = verified + attested;
 
   return (
@@ -997,11 +978,257 @@ function SignOffChecklist({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = true, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
+interface InheritanceSourceEntry {
+  source: 'platform' | 'supplier';
+  declaredId: string;
+  resolved: boolean;
+  inheritedControls: string[];
+  dimensions: EnvelopeDimensionFit[];
+}
+
+const INHERITANCE_SOURCE_LABEL: Record<InheritanceSourceEntry['source'], string> = {
+  platform: 'Platform',
+  supplier: 'Supplier',
+};
+
+/** PV-6 / D-61 (R16-D1, flagged in the A2 handover and in appetite.yaml's own
+ *  PLAT-CLOUD-LLM comment): `resolveInheritance()` (engine/evaluate.ts)
+ *  merges a declared platform's and a declared vendor's envelope fits into
+ *  one flat `dimensions` list with no source tag. That was harmless while a
+ *  use case only ever declared one of the two; the platform→vendor_id link
+ *  (chunk A2's policy data; the graph-side mapping is chunk B's form work)
+ *  means a single processing node can now declare BOTH at once, and the two
+ *  can constrain the SAME dimension — unlabelled, a reader could not tell
+ *  the two "data_zones" rows apart, or which one belonged to which approval.
+ *
+ *  The common case (only one of the two declared — every verdict reachable
+ *  before chunk B lands) needs no recomputation at all: the verdict's own
+ *  merged fields already ARE that one source's, so they are reused as-is,
+ *  just labelled. Only when BOTH are declared does this call the engine's
+ *  own exported, pure `fitsEnvelope`/`inheritableControls` again, split by
+ *  source — the SAME computation the engine already ran once merged, not a
+ *  second one that could disagree with it. */
+function inheritanceEntries(
+  inheritance: NonNullable<Verdict['inheritance']>,
+  policy: PolicyFile | undefined,
+  graph: DataFlowGraph | undefined,
+): InheritanceSourceEntry[] {
+  const hasPlatform = inheritance.declared_platform !== undefined;
+  const hasVendor = inheritance.declared_vendor !== undefined;
+  if (!hasPlatform && !hasVendor) return [];
+
+  if (hasPlatform !== hasVendor) {
+    const source: InheritanceSourceEntry['source'] = hasPlatform ? 'platform' : 'supplier';
+    const declaredId = (hasPlatform ? inheritance.declared_platform : inheritance.declared_vendor)!;
+    return [
+      {
+        source,
+        declaredId,
+        resolved: inheritance.resolved,
+        inheritedControls: inheritance.inherited_controls,
+        dimensions: inheritance.dimensions,
+      },
+    ];
+  }
+
+  // Both declared at once — split the merged result back out by source.
+  if (!graph) return [];
+  const entries: InheritanceSourceEntry[] = [];
+  const platform = policy?.platforms?.find((p) => p.id === inheritance.declared_platform);
+  const platformDims = platform ? fitsEnvelope(graph, platform.approved_envelope) : [];
+  entries.push({
+    source: 'platform',
+    declaredId: inheritance.declared_platform!,
+    resolved: !inheritance.unresolved_components.includes(inheritance.declared_platform!),
+    inheritedControls: platform ? inheritableControls(platform.satisfies_controls, platformDims, platform.coupled_clusters) : [],
+    dimensions: platformDims,
+  });
+  const vendor = policy?.vendors?.find((v) => v.id === inheritance.declared_vendor);
+  const vendorDims = vendor ? fitsEnvelope(graph, vendor.approved_envelope) : [];
+  entries.push({
+    source: 'supplier',
+    declaredId: inheritance.declared_vendor!,
+    resolved: !inheritance.unresolved_components.includes(inheritance.declared_vendor!),
+    inheritedControls: vendor ? inheritableControls(vendor.satisfies_controls, vendorDims, vendor.coupled_clusters) : [],
+    dimensions: vendorDims,
+  });
+  return entries;
+}
+
+/** R16-D1 (VD-9/VD-10, §4.2): the verdict's first screen — the only thing a
+ *  first-time, non-technical reader needs: can I start and what has to
+ *  happen first; why, in one or two reasons; my own next steps; the
+ *  safeguards that must be in place (yours first); checks other teams run;
+ *  who signs off; and, where the verdict is provisional, what could still
+ *  change it. Renders entirely from `view` (verdict-view-model.ts) — no
+ *  business logic here (Rule 4, cross-cutting.md §7).
+ *
+ *  A rejected verdict renders only its headline and the correct-your-
+ *  answers affordance here: the "No" screen's own composition (VD-10, the
+ *  hard line's reason, what would change it, who to talk to) is chunk D2's
+ *  slice (build/prompts/R16.md §4.3) — this never fabricates that copy in
+ *  its place, and the full hard-line reasoning is still one click away in
+ *  the reviewer section below. */
+function FirstScreen({
+  view,
+  onGoToSafeguard,
+  onCorrect,
+  showSubmitterAffordances,
+}: {
+  view: VerdictView;
+  onGoToSafeguard: (controlId: string) => void;
+  onCorrect?: () => void;
+  showSubmitterAffordances: boolean;
+}) {
+  const hasSafeguards = view.outstandingSafeguards.length > 0 || view.inPlaceSafeguards.length > 0 || view.attestedSafeguards.length > 0;
+
+  return (
+    <div className="verdict__first-screen">
+      <h2 className="verdict__first-headline">{view.headline}</h2>
+
+      {view.whyReasons.length > 0 && (
+        <p className="verdict__first-why">
+          <strong>Why:</strong> {view.whyReasons.join('; and ')}
+          {view.whyHasMore && ' (Each safeguard below gives its own reason.)'}
+        </p>
+      )}
+
+      {view.nextSteps.length > 0 && (
+        <div className="verdict__first-next-steps">
+          <h3>Your next steps</h3>
+          <ol>
+            {view.nextSteps.map((step, i) => (
+              <li key={i}>{step}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {hasSafeguards && (
+        <div className="verdict__first-safeguards">
+          <h3>Safeguards that must be in place before you start ({view.outstandingCount})</h3>
+          {view.outstandingSafeguards.length > 0 && (
+            <ul className="verdict__first-safeguard-list">
+              {view.outstandingSafeguards.map((s: SafeguardView) => (
+                <li key={s.id} className="verdict__first-safeguard">
+                  <p className="verdict__first-safeguard-action">{s.plainAction}</p>
+                  {s.ownerText && (
+                    <p className="verdict__first-safeguard-owner">
+                      Who: {s.ownerText}
+                      {s.yours && <span className="verdict__first-yours-chip">yours</span>}
+                    </p>
+                  )}
+                  {s.plainReasons.length > 0 && (
+                    <p className="verdict__first-safeguard-reason">Because {s.plainReasons.join('; ')}</p>
+                  )}
+                  {s.coveredReviews.map((r, i) => (
+                    <p key={`${r.baseId}-${i}`} className="verdict__first-also-covers">
+                      (This also covers {r.plainName} — one piece of work.)
+                    </p>
+                  ))}
+                  {s.yours && (
+                    <button type="button" className="verdict__first-go-to" onClick={() => onGoToSafeguard(s.id)}>
+                      Go to this safeguard
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {view.inPlaceSafeguards.length > 0 && (
+            <p className="verdict__first-in-place">
+              Already in place: {view.inPlaceSafeguards.map((s) => s.plainAction).join(', ')} (your firm&rsquo;s
+              records show this)
+            </p>
+          )}
+          {view.attestedSafeguards.map((s) => (
+            <p key={s.id} className="verdict__first-attested">
+              Reported in place by {s.attestedByName} (name not verified): {s.plainAction}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {view.owedReviews.length > 0 && (
+        <div className="verdict__first-owed-reviews">
+          <h3>Checks other teams run</h3>
+          <ul>
+            {view.owedReviews.map((r) => (
+              <li key={r.plainName}>
+                {r.plainName} — {r.ownerText}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!view.isRejected && (
+        <p className="verdict__first-who-signs-off">
+          <strong>Who signs off:</strong> {view.whoSignsOff}
+        </p>
+      )}
+
+      {view.couldStillChange.length > 0 && (
+        <div className="verdict__first-could-change">
+          <h3>Could still change</h3>
+          {view.couldStillChange.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      )}
+
+      {showSubmitterAffordances && onCorrect && (
+        <button type="button" className="verdict__first-correct" onClick={onCorrect}>
+          Think we got something wrong? Correct your answers and check again.
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = false, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
   const needsSignOff = registerStage === 'pre_checked';
+
+  // R16-D1 (§4.1): the one view-model behind the first screen below AND the
+  // three existing readers (WhatToDo, SignOffChecklist, the evidence panel)
+  // that need a safeguard's status — built once, per render, from the same
+  // props every one of them already received.
+  const view: VerdictView = buildVerdictView(verdict, policy, graph, controlOwnership, controlAttestations, registerStage);
+
+  // R16-D1: the reviewer section's own open/closed state, controlled (not
+  // the Fold component's uncontrolled defaultOpen) so "Go to this safeguard"
+  // (§4.2 item 4, D-26/D-63) can force it open from outside. Initialised
+  // from reasoningDefaultOpen, same as every inner Fold.
+  const [reviewerOpen, setReviewerOpen] = useState(reasoningDefaultOpen);
+  // Lifted from WhatToDo's own local state (R15-C2) so the same click can
+  // also expand one specific control's disclosure — the per-control
+  // disclosure stays React-controlled either way (D-26/D-63: an anchor
+  // alone would be closed again on the next render).
+  const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
+  // One render-cycle "please scroll to this once the DOM reflects the state
+  // above" signal — scrollIntoView has to run AFTER the reviewer section and
+  // the target control's <details> have actually opened, not in the same
+  // tick as the state updates that open them.
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const el = document.getElementById(`verdict-todo-control-${scrollTarget}`);
+    // jsdom (this project's test environment) does not implement
+    // scrollIntoView at all — optional-chaining the method itself, not just
+    // the element, keeps this a safe no-op in tests and a real scroll in a
+    // browser.
+    el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    setScrollTarget(null);
+  }, [scrollTarget, reviewerOpen, expandedControls]);
+  const handleGoToSafeguard = (controlId: string) => {
+    setReviewerOpen(true);
+    setExpandedControls((prev) => new Set(prev).add(controlId));
+    setScrollTarget(controlId);
+  };
+
   // code-review-005, R3-3 (round 3): downloadMemo is wired to its button as
   // `onClick={() => void downloadMemo()}` — a void-ed promise. A throw
   // anywhere in here (buildChallengeMemo on a verdict missing `explanation`
@@ -1084,22 +1311,46 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // Fold summary, its collapse condition, and its per-control chip all agree
   // — the exact self-contradiction the finding closes was a control shown
   // UNVERIFIED in this panel while an "attested" chip and the checklist's own
-  // count, elsewhere on the SAME screen, said otherwise. Same precedence as
-  // WhatToDo: machine-verified beats attested beats outstanding. Only
-  // meaningful with a policy loaded (the no-policy branch below is its own,
-  // separate BC-V13-03 "evidence unknown" case, untouched by this fix).
+  // count, elsewhere on the SAME screen, said otherwise. R16-D1: `verified`/
+  // `attested` now read the view-model's one safeguard-status computation
+  // (same precedence as before: machine-verified beats attested beats
+  // outstanding); `control`/`evidence` are still read directly from policy
+  // for this panel's own detail fields (description, design/operating axes),
+  // which are not part of the view-model's safeguard shape. Only meaningful
+  // with a policy loaded (the no-policy branch below is its own, separate
+  // BC-V13-03 "evidence unknown" case, untouched by this fix).
   const controlEvidenceStates = policy
     ? verdict.controls.map((id) => {
         const control = policy.controls.find((c) => c.id === id);
         const evidence = control?.verification_evidence;
-        const verified = evidence?.status === 'verified';
-        const attestation = !verified ? controlAttestations?.[id] : undefined;
-        return { id, control, evidence, verified, attested: attestation !== undefined, attestation };
+        const safeguard = view.safeguards.find((s) => s.id === id);
+        const verified = safeguard?.status === 'verified';
+        const attested = safeguard?.status === 'attested';
+        const attestation = attested ? controlAttestations?.[id] : undefined;
+        return { id, control, evidence, verified, attested, attestation };
       })
     : [];
 
   return (
     <section className={`verdict verdict--${verdict.status}`} aria-label="Verdict">
+      {/* R16-D1 (VD-9/VD-10, §4.2): the first screen — headline, why, next
+          steps, safeguards, checks other teams run, who signs off, could
+          still change, correct-your-answers. Everything else on this page
+          (the formal status/tier/track, every rule checked, the evidence,
+          the regulatory sources, and the reviewer's own actions) is
+          unchanged and additive, inside the reviewer section below it. */}
+      <FirstScreen view={view} onGoToSafeguard={handleGoToSafeguard} onCorrect={onCorrect} showSubmitterAffordances={showSubmitterAffordances} />
+
+      <details
+        id="verdict-reviewer-section"
+        className="verdict__reviewer-section"
+        open={reviewerOpen || undefined}
+        onToggle={(e) => setReviewerOpen(e.currentTarget.open)}
+      >
+        <summary className="verdict__reviewer-summary">
+          The full reasoning — every rule checked, the evidence, the sources, and the reviewer&rsquo;s actions
+        </summary>
+        <div className="verdict__reviewer-body">
       {/* R12-ST-1: an undismissable statement of fact, in the same honesty
           idiom as the PROVISIONAL banner but its own block — staleness never
           blocks a verdict, it just says the regulatory text behind it is
@@ -1285,7 +1536,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       <WhatToDo
         verdict={verdict}
         policy={policy}
+        view={view}
         needsSignOff={needsSignOff}
+        expandedControls={expandedControls}
+        setExpandedControls={setExpandedControls}
         controlOwnership={controlOwnership}
         onAssignControlOwner={onAssignControlOwner}
         controlOwnerBusyId={controlOwnerBusyId}
@@ -1307,8 +1561,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         <SignOffChecklist
           verdict={verdict}
           policy={policy}
+          view={view}
           hasRiskKnowledgeSection={hasRiskKnowledgeSection}
-          controlAttestations={controlAttestations}
         />
       )}
 
@@ -1585,7 +1839,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             <h3>The control set, with evidence status</h3>
             <ul>
               {verdict.controls.map((id) => {
-                const attestation = controlAttestations?.[id];
+                // R16-D1: reads the view-model's one status computation,
+                // same as the with-policy branch above — behaviourally
+                // identical to reading controlAttestations directly here
+                // (the view-model's no-policy rule is exactly "attested ?
+                // 'attested' : 'unknown'"), but now the single source.
+                const attested = view.safeguards.find((s) => s.id === id)?.status === 'attested';
+                const attestation = attested ? controlAttestations?.[id] : undefined;
                 return (
                   <li key={id}>
                     <div className="verdict__control-head">
@@ -1744,70 +2004,76 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             envelope.
           </p>
 
-          <div className="verdict__chain-entry">
-            <div className="verdict__chain-head">
-              <code>{verdict.inheritance.declared_platform ?? verdict.inheritance.declared_vendor}</code>
-              <span
-                className={`verdict__conf verdict__conf--${verdict.inheritance.resolved ? 'registered' : 'unregistered'}`}
-              >
-                {verdict.inheritance.resolved ? 'On the covered registry' : 'Not on the registry'}
-              </span>
-            </div>
+          {/* R16-D1 (PV-6, D-61): one entry per declared component, each
+              labelled by source ("Platform" / "Supplier") in its own header
+              AND on each of its dimension rows — see inheritanceEntries'
+              own comment for why this no longer flattens platform and
+              vendor fits into one unlabelled list. */}
+          {inheritanceEntries(verdict.inheritance, policy, graph).map((entry) => (
+            <div className="verdict__chain-entry" key={entry.source}>
+              <div className="verdict__chain-head">
+                <span className="verdict__chain-source">{INHERITANCE_SOURCE_LABEL[entry.source]}</span>
+                <code>{entry.declaredId}</code>
+                <span className={`verdict__conf verdict__conf--${entry.resolved ? 'registered' : 'unregistered'}`}>
+                  {entry.resolved ? 'On the covered registry' : 'Not on the registry'}
+                </span>
+              </div>
 
-            {verdict.inheritance.resolved ? (
-              verdict.inheritance.inherited_controls.length > 0 ? (
-                <p className="verdict__chain-derived">
-                  {/* design-review-003 (Panel B): every other control list on
-                      this page resolves the id through policy.controls before
-                      showing it — this one used to print the raw id list. */}
-                  Inherited:&ensp;
-                  {verdict.inheritance.inherited_controls
-                    .map((id) => findControlName(policy, id) ?? id)
-                    .join(', ')}{' '}
-                  — already satisfied by this approval, so not re-imposed here.
-                </p>
+              {entry.resolved ? (
+                entry.inheritedControls.length > 0 ? (
+                  <p className="verdict__chain-derived">
+                    {/* design-review-003 (Panel B): every other control list on
+                        this page resolves the id through policy.controls before
+                        showing it — this one used to print the raw id list. */}
+                    Inherited:&ensp;
+                    {entry.inheritedControls.map((id) => findControlName(policy, id) ?? id).join(', ')}{' '}
+                    — already satisfied by this approval, so not re-imposed here.
+                  </p>
+                ) : (
+                  <p className="verdict__chain-derived">
+                    Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
+                    controls are assessed from scratch.
+                  </p>
+                )
               ) : (
                 <p className="verdict__chain-derived">
-                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
-                  controls are assessed from scratch.
+                  Nothing inherited:&ensp;this component is not on the covered registry. A full
+                  vendor and platform risk assessment is required.
                 </p>
-              )
-            ) : (
-              <p className="verdict__chain-derived">
-                Nothing inherited:&ensp;this component is not on the covered registry. A full
-                vendor and platform risk assessment is required.
-              </p>
-            )}
+              )}
 
-            {verdict.inheritance.dimensions.length > 0 && (
-              <ul className="verdict__tripped">
-                {/* Key includes the index: the flattened dimension list can
-                    legitimately carry the same dimension twice (platform AND
-                    vendor each check exposure/data_zones) — bare d.dimension
-                    collided, console-warned, and risked mis-reconciled rows. */}
-                {verdict.inheritance.dimensions.map((d, i) => (
-                  <li key={`${i}-${d.dimension}`}>
-                    {/* design-review-003 (Panel B): field-copy.ts already
-                        maintains GRAPH_FIELD_LABELS for this exact field-key
-                        set, consumed elsewhere (the intake form, graph
-                        summaries) — this list used to bypass it and print
-                        the raw internal key. */}
-                    {GRAPH_FIELD_LABELS[d.dimension] ?? d.dimension}
-                    {GRAPH_FIELD_LABELS[d.dimension] && (
-                      <code className="verdict__id-quiet"> {d.dimension}</code>
-                    )}{' '}
-                    <span
-                      className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}
-                    >
-                      {d.fits ? 'Within envelope' : 'Outside envelope'}
-                    </span>{' '}
-                    — cleared for {d.ceiling}
-                    {d.observed !== undefined && <>; this use case has {d.observed}</>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+              {entry.dimensions.length > 0 && (
+                <ul className="verdict__tripped">
+                  {entry.dimensions.map((d, i) => (
+                    <li key={`${i}-${d.dimension}`}>
+                      {/* D-61: the source label repeats on each row, not just
+                          the header above — a platform+supplier pair can
+                          constrain the SAME dimension, and a reader scanning
+                          rows (rather than reading top-down) must still be
+                          able to tell which approval each one belongs to. */}
+                      <span className="verdict__chain-source verdict__chain-source--quiet">
+                        {INHERITANCE_SOURCE_LABEL[entry.source]}
+                      </span>{' '}
+                      {/* design-review-003 (Panel B): field-copy.ts already
+                          maintains GRAPH_FIELD_LABELS for this exact field-key
+                          set, consumed elsewhere (the intake form, graph
+                          summaries) — this list used to bypass it and print
+                          the raw internal key. */}
+                      {GRAPH_FIELD_LABELS[d.dimension] ?? d.dimension}
+                      {GRAPH_FIELD_LABELS[d.dimension] && (
+                        <code className="verdict__id-quiet"> {d.dimension}</code>
+                      )}{' '}
+                      <span className={`verdict__severity verdict__severity--${d.fits ? 'low' : 'critical'}`}>
+                        {d.fits ? 'Within envelope' : 'Outside envelope'}
+                      </span>{' '}
+                      — cleared for {d.ceiling}
+                      {d.observed !== undefined && <>; this use case has {d.observed}</>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </div></Fold>
       )}
 
@@ -1901,6 +2167,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         (see the chain-integrity check on the audit trail below). It is still client-side with no
         external anchor, so it cannot rule out a full, consistent rewrite by someone with local access.
       </p>
+        </div>
+      </details>
     </section>
   );
 }

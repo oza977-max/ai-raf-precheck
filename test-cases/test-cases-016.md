@@ -119,7 +119,6 @@ outer, register inner — `verdict-audit.md` §16.6, `register-lifecycle.md`
 | TC-RG-8-34 | N9: `__APP_VERSION__` equals `package.json`'s version — the assertion `src/vite-env.d.ts`'s comment cites — `handoff.test.ts` |
 | TC-RG-8-35 | N4: a corrupt stored verdict (missing `confidence_caveats`, written directly, bypassing hand-off import) shows "This case couldn't be loaded" with a way back, instead of hanging on "Loading…" — `RegisterDetail.test.tsx` |
 | TC-RG-8-36 | N5: with no policy loaded, a control with a recorded attestation shows ATTESTED — NOT VERIFIED with the attester and evidence note, not EVIDENCE UNKNOWN — `VerdictDisplay.cr005.test.tsx` |
-| TC-RG-8-37 | N6: a firm's "Model risk assessment" control does not absorb an unrelated "Vendor risk assessment" review (equal significant-word sets required, not a subset match) — `VerdictDisplay.cr005.test.tsx` |
 | TC-RG-8-38 | N1 (UI): after a register-step failure, "Finish updating the register" appears in `RegisterView` and completes the replace — `RegisterView.handoff.test.tsx` |
 | TC-RG-8-39 | N2 (UI): a local write after saving the backup sends the UI back to step 1, keeping the same pending bundle — `RegisterView.handoff.test.tsx` |
 | TC-RG-8-40 | N8: double-clicking "Save a backup of mine first" downloads only once — `RegisterView.handoff.test.tsx` |
@@ -174,8 +173,7 @@ counted separately from machine-verified evidence."
 | TC-RG-9-06 | With no policy loaded, a recorded attestation still names itself on the checklist line, because it comes from the audit trail, not the policy — `VerdictDisplay.cr005.test.tsx` |
 | TC-RG-9-07 | Attesting a second, different control while the first control's write is still in flight records both attestations, not just one — the in-flight guard is per control id — `RegisterDetail.controlEvidence.test.tsx` |
 | TC-RG-9-08 | When the write fails, the attest form stays open with the error shown inline (typed values preserved) instead of silently closing as if it had saved — `VerdictDisplay.cr005.test.tsx` |
-| TC-RG-9-09 | "Independent validation (2LoD)" — a control and a downstream review naming the same obligation in different words — renders once, as the control, with an "also covers" note naming the matched review — `VerdictDisplay.cr005.test.tsx` |
-| TC-RG-9-10 | A control name with only one significant word (e.g. "Validation") never absorbs a review by that one shared word alone — the review stays listed on its own — `VerdictDisplay.cr005.test.tsx` |
+| TC-RG-9-09 | "Independent validation (2LoD)" — a control whose policy entry names a review's base id in `covers_reviews` — renders once, as the control, with an "also covers" note naming the matched review instance — `VerdictDisplay.cr005.test.tsx` |
 
 ### Untested behaviours
 
@@ -202,11 +200,21 @@ consecutively, `npx tsc --noEmit`, `python3 scripts/spec-parity-check.py`,
 and `python3 scripts/trace-check.py`, all clean. The round-3 fix pass
 (R3-1 through R3-5) was verified the same way as round 2.
 
+## Superseded
+
+| ID | Reason |
+|---|---|
+| TC-RG-8-37 | R16 chunk D1 (build/prompts/R16.md v2.1 §4.1) deleted `describesSameObligation`, the significant-word text heuristic this case guarded a subset-vs-equal-set bug in. The replacement mechanism (`covers_reviews`, a firm-authored, referential list of review base ids) does no word comparison at all, so the bug class — two names sharing some but not all significant words wrongly folding together — cannot recur. Superseded by TC-RG-9-09's migrated fixture, `VerdictDisplay.cr005.test.tsx`. |
+| TC-RG-9-10 | Same deletion. This case guarded the heuristic's one-significant-word special case ("Validation" never absorbs a review alone). `covers_reviews` has no word-count concept to have that edge case at all — superseded by TC-RG-9-09's migrated fixture and the view-model's own `covers_reviews`/base-id-matching tests (`src/components/verdict-view-model.test.ts`, TC-R16-D1-07). |
+
+## Changelog
+
 | Date | Change |
 |---|---|
 | 2026-09-28 | Written to close the RG-8/RG-9 traceability gap. |
 | 2026-09-28 | Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41. |
 | 2026-10-02 | Round 3 fix pass (code-review-005 round 3, R3-1 through R3-5): 8 new tests added, TC-RG-8-42 through TC-RG-8-48b. |
+| 2026-10-02 | R16 chunk D1: TC-RG-8-37 and TC-RG-9-10 superseded (describesSameObligation deleted, replaced by `covers_reviews`); TC-RG-9-09's description updated to describe the replacement mechanism — see test-cases-020.md for the chunk's own new cases. |
 
 ---
 
