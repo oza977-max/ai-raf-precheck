@@ -112,6 +112,20 @@ const ControlSchema = z.object({
       // vocabulary). Backward compatible — absent axes = legacy evidence.
       design: EffectivenessAxisSchema.optional(),
       operating: EffectivenessAxisSchema.optional(),
+      // W-7 (R16-W §5, D-77): scopes "verified" to the platforms/vendors
+      // the evidence actually covers. At least one list must be non-empty
+      // when present — an applies_to with both lists empty would silently
+      // scope the evidence to nothing, which is never what a policy author
+      // means by writing it.
+      applies_to: z
+        .object({
+          platforms: z.array(z.string().min(1)).optional(),
+          vendors: z.array(z.string().min(1)).optional(),
+        })
+        .refine((v) => (v.platforms?.length ?? 0) > 0 || (v.vendors?.length ?? 0) > 0, {
+          message: 'verification_evidence.applies_to must list at least one platform or vendor id',
+        })
+        .optional(),
     })
     .optional(),
   // R16-A1 (CF-6 §1.2): optional plain-language fields (VD-9). All absent

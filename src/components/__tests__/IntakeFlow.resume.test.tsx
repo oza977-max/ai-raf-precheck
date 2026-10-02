@@ -69,7 +69,10 @@ describe('IntakeFlow — resuming a restored draft', () => {
 
     // The way out of the step must appear without the user re-entering
     // anything. Before the fix this never resolves and no button is rendered.
-    expect(await screen.findByRole('button', { name: /this is a new use case/i })).toBeInTheDocument();
+    // R16-W §4 (D-74): no seeded match for this description, so the button
+    // is the no-match screen's "Continue →", not the match-found screen's
+    // "Mine is different — continue →".
+    expect(await screen.findByRole('button', { name: /continue →/i })).toBeInTheDocument();
     expect(screen.queryByText(/checking the existing inventory/i)).not.toBeInTheDocument();
   });
 
@@ -97,7 +100,7 @@ describe('IntakeFlow — resuming a restored draft', () => {
     );
 
     render(<App />);
-    await screen.findByRole('button', { name: /this is a new use case/i });
+    await screen.findByRole('button', { name: /continue →/i });
 
     // Without the registerLoaded guard the restored check resolves against
     // an empty array and reports having checked nothing — a wrong answer
@@ -117,7 +120,7 @@ describe('IntakeFlow — resuming a restored draft', () => {
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /start over instead/i }));
 
-    const input = await screen.findByLabelText(/describe your ai use case/i);
+    const input = await screen.findByLabelText(/what ai tool do you want to use/i);
     expect(input).toHaveValue('');
     // Both drafts, not just the reducer's: a start-over that leaves the
     // guided form's answers behind has not started over.
@@ -141,11 +144,14 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Dismissal probe assistant');
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
-    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Dismissal probe assistant');
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    // R16-W §4 (D-74): this description keyword-matches the seeded row
+    // above, so the match-found screen's own button ("Mine is different —
+    // continue →") renders, not the no-match screen's "Continue →".
+    await user.click(await screen.findByRole('button', { name: /mine is different/i }));
 
-    await screen.findByText(/guided intake — answer the fields below/i);
+    await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
 
     const events = await getAll(existing.node_id);
     const dismissal = events.find((e) => e.payload.type === 'duplicate_dismissed');
@@ -157,15 +163,17 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/describe your ai use case/i), 'Adoption probe assistant');
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Adoption probe assistant');
+    await user.click(screen.getByRole('button', { name: /^next/i }));
 
-    const adopt = await screen.findByRole('button', { name: /adopt this classification/i });
+    // R16-W §4 (D-74): "Adopt this classification" is now "Use the earlier
+    // result".
+    const adopt = await screen.findByRole('button', { name: /use the earlier result/i });
     await user.click(adopt);
 
     // The submitter is NOT asked intake questions — that is the point of
     // adopting.
-    expect(screen.queryByText(/guided intake — answer the fields below/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/new pre-check — tell us about the ai you want to use/i)).not.toBeInTheDocument();
 
     // A new record exists, linked to the original, and the link says where the
     // classification came from.
@@ -218,15 +226,17 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
 // double-click writes two events into an append-only trail, which cannot be
 // cleaned up afterwards by design.
 describe('The duplicate gate cannot double-write (round 4 review, Panel E)', () => {
-  it('a double-click on "This is a new use case" appends exactly one dismissal', async () => {
+  it('a double-click on "Mine is different — continue" appends exactly one dismissal', async () => {
     const existing = await seedExistingUseCase('Double-click probe assistant');
     render(<App />);
 
-    const ta = await screen.findByLabelText(/describe your ai use case/i);
+    const ta = await screen.findByLabelText(/what ai tool do you want to use/i);
     fireEvent.change(ta, { target: { value: 'Double-click probe assistant' } });
-    fireEvent.click(screen.getByRole('button', { name: /read & extract/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^next/i }));
 
-    const confirm = await screen.findByRole('button', { name: /this is a new use case/i });
+    // R16-W §4 (D-74): this description keyword-matches the seeded row
+    // above, so the match-found screen's button renders.
+    const confirm = await screen.findByRole('button', { name: /mine is different/i });
 
     // Two clicks inside one tick — a state update disabling the button lands
     // too late, which is why the guard has to be a synchronous ref.

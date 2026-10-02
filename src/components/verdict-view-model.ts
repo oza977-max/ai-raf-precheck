@@ -40,8 +40,21 @@ export interface SafeguardView {
   plainReasons: string[];
   /** Reviews on this verdict this safeguard's own action also satisfies. */
   coveredReviews: CoveredReview[];
+  /** W-6 (R16-W §5, D-76): ONE grammatical sentence covering every review in
+   *  `coveredReviews` — "(Doing this also completes {list} — one piece of
+   *  work.)" — undefined when there is nothing covered. Computed here, not
+   *  per-review at render time, so a safeguard covering two reviews prints
+   *  one note, not two. */
+  alsoCompletesNote?: string;
   attestedByName?: string;
   evidenceNote?: string;
+  /** W-7 (R16-W §5, D-77): set only when the policy's verification_evidence
+   *  is `status: 'verified'` but scoped (`applies_to`) away from this
+   *  graph's platform/vendor, or the graph is unavailable to check against
+   *  — the reason the evidence panel shows instead of the detail line.
+   *  Undefined when evidence applies normally (unscoped) or there is no
+   *  verified evidence to begin with. */
+  evidenceScopeNote?: string;
 }
 
 export interface OwedReviewView {
@@ -241,11 +254,55 @@ function resolveOwner(
   return { ownerText: base, yours };
 }
 
-function safeguardStatus(controlId: string, policy: PolicyFile | undefined, attestations: ControlAttestations | undefined): SafeguardStatus {
+// W-7 (R16-W §5, D-77). Firm-level evidence (e.g. "platform allow-list
+// pins TLS 1.3") does not prove anything about a tool the evidence's own
+// `applies_to` scope does not cover — claiming it would state more than
+// the firm's records prove (NF-7). Absent `applies_to` = applies
+// everywhere (the pre-W-7 behaviour, unchanged).
+type EvidenceApplies = 'applies' | 'does-not-apply' | 'cannot-check';
+
+function evidenceApplies(
+  appliesTo: { platforms?: string[]; vendors?: string[] } | undefined,
+  graph: DataFlowGraph | undefined,
+): EvidenceApplies {
+  if (!appliesTo) return 'applies';
+  if (!graph) return 'cannot-check';
+  const node = graph.processing_nodes[0];
+  const platformMatches = node?.platform !== undefined && (appliesTo.platforms ?? []).includes(node.platform);
+  const vendorMatches = node?.vendor !== undefined && (appliesTo.vendors ?? []).includes(node.vendor);
+  return platformMatches || vendorMatches ? 'applies' : 'does-not-apply';
+}
+
+/** §5 "Reviewer evidence panel" text — only ever shown when the policy's
+ *  evidence WOULD have been verified but for the scope mismatch (callers
+ *  gate on that; see buildVerdictView's safeguard loop). */
+function evidenceScopeNote(
+  appliesTo: { platforms?: string[]; vendors?: string[] },
+  applies: EvidenceApplies,
+  policy: PolicyFile | undefined,
+): string {
+  const names = [
+    ...(appliesTo.platforms ?? []).map((id) => policy?.platforms?.find((p) => p.id === id)?.plain_name ?? id),
+    ...(appliesTo.vendors ?? []).map((id) => policy?.vendors?.find((v) => v.id === id)?.plain_name ?? id),
+  ];
+  const joined = joinWithAnd(names);
+  return applies === 'cannot-check'
+    ? `Your firm's records show this for ${joined} — we couldn't check whether that includes this tool.`
+    : `Your firm's records show this for ${joined} — not for this tool.`;
+}
+
+function safeguardStatus(
+  controlId: string,
+  policy: PolicyFile | undefined,
+  attestations: ControlAttestations | undefined,
+  graph: DataFlowGraph | undefined,
+): SafeguardStatus {
   const attested = attestations?.[controlId] !== undefined;
   if (!policy) return attested ? 'attested' : 'unknown';
   const control = policy.controls.find((c) => c.id === controlId);
-  if (control?.verification_evidence?.status === 'verified') return 'verified';
+  if (control?.verification_evidence?.status === 'verified') {
+    if (evidenceApplies(control.verification_evidence.applies_to, graph) === 'applies') return 'verified';
+  }
   return attested ? 'attested' : 'outstanding';
 }
 
@@ -260,8 +317,14 @@ interface ReviewInstance {
   ownerText: string;
 }
 
-const PV_UNREGISTERED_PLAIN = { name: "the supplier is assessed — it isn't on your firm's list yet", owner: 'your vendor-risk team' };
-const MODEL_REGISTRY_PLAIN = { name: "the model is added to your firm's list of known models", owner: 'your AI risk team' };
+// W-6 (R16-W §5, D-76): both renamed to noun phrases — these plainNames
+// feed BOTH "Checks other teams run" (a list item, already fine as a noun
+// phrase) AND the new single "(Doing this also completes {list} — one
+// piece of work.)" sentence (§4.2 item 4), where the OLD clause-shaped
+// name ("the supplier is assessed") read as "(This also covers the
+// supplier is assessed — one piece of work.)" — grammatically broken.
+const PV_UNREGISTERED_PLAIN = { name: "adding the supplier to your firm's list", owner: 'your vendor-risk team' };
+const MODEL_REGISTRY_PLAIN = { name: "adding the model to your firm's list of known models", owner: 'your AI risk team' };
 // §4.4: "pack review → 'a regulatory review required for this kind of use —
 // ask your AI risk team which'" (D-15). buildVerdictView has no packs
 // parameter (§4.1's signature is fixed), so a pack rule's own plain_name
@@ -483,7 +546,7 @@ export function buildVerdictView(
 
   const safeguards: SafeguardView[] = verdict.controls.map((cid, position) => {
     const control = policy?.controls.find((c) => c.id === cid);
-    const status = safeguardStatus(cid, policy, attestations);
+    const status = safeguardStatus(cid, policy, attestations, graph);
     const { ownerText, yours } = resolveOwner(control, graph, ownership?.[cid]);
     const plainReasons = dedupeStrings(
       tripped.filter((t) => t.required_controls.includes(cid)).map((t) => invariantPlainReason(t, policy, graph)),
@@ -493,7 +556,18 @@ export function buildVerdictView(
           .filter((inst) => (control?.covers_reviews ?? []).includes(inst.baseId))
           .map((inst) => ({ plainName: inst.plainName, formalName: inst.formalName, baseId: inst.baseId }))
       : [];
+    // W-6 (D-76): one sentence, every covered review listed once, "a" /
+    // "a and b" / "a, b and c" — never one note per review.
+    const alsoCompletesNote =
+      coveredReviews.length > 0
+        ? `(Doing this also completes ${joinWithAnd(coveredReviews.map((r) => r.plainName))} — one piece of work.)`
+        : undefined;
     const attestation = attestations?.[cid];
+    // W-7 (D-77): a scope note is only meaningful for evidence that WOULD
+    // have been verified but for the scope mismatch.
+    const evidence = control?.verification_evidence;
+    const appliesTo = evidence?.status === 'verified' ? evidence.applies_to : undefined;
+    const applies = appliesTo ? evidenceApplies(appliesTo, graph) : 'applies';
     return {
       id: cid,
       status,
@@ -502,7 +576,9 @@ export function buildVerdictView(
       yours,
       plainReasons,
       coveredReviews,
+      ...(alsoCompletesNote ? { alsoCompletesNote } : {}),
       ...(attestation ? { attestedByName: attestation.attested_by_name, evidenceNote: attestation.evidence_note } : {}),
+      ...(appliesTo && applies !== 'applies' ? { evidenceScopeNote: evidenceScopeNote(appliesTo, applies, policy) } : {}),
     };
   });
 

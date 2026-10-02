@@ -514,25 +514,25 @@ describe('buildVerdictView — TC-R16-D1-07: covered vs. owed reviews (covers_re
     expect(view.owedReviews[0]!.plainName).toBe('an information-security review');
   });
 
-  it('TC-R16-D1-07d: PV-UNREGISTERED sentinel resolves to its fixed product copy, with the component name stripped from the base id', () => {
+  it('TC-R16-D1-07d: PV-UNREGISTERED sentinel resolves to its fixed product copy (R16-W W-6: reworded to a noun phrase, D-76), with the component name stripped from the base id', () => {
     const verdict = makeVerdict({
       controls: [],
       downstream_reviews: ['Unapproved component: Zapier'],
       downstream_review_sources: [{ review: 'Unapproved component: Zapier', rule_id: 'PV-UNREGISTERED:Zapier' }],
     });
     const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);
-    expect(view.owedReviews[0]!.plainName).toBe("the supplier is assessed — it isn't on your firm's list yet");
+    expect(view.owedReviews[0]!.plainName).toBe("adding the supplier to your firm's list");
     expect(view.owedReviews[0]!.ownerText).toBe('your vendor-risk team');
   });
 
-  it('TC-R16-D1-07e: MODEL-REGISTRY sentinel resolves to its fixed product copy', () => {
+  it('TC-R16-D1-07e: MODEL-REGISTRY sentinel resolves to its fixed product copy (R16-W W-6: reworded to a noun phrase, D-76)', () => {
     const verdict = makeVerdict({
       controls: [],
       downstream_reviews: ['Unlisted model: gpt-5'],
       downstream_review_sources: [{ review: 'Unlisted model: gpt-5', rule_id: 'MODEL-REGISTRY:gpt-5' }],
     });
     const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);
-    expect(view.owedReviews[0]!.plainName).toBe("the model is added to your firm's list of known models");
+    expect(view.owedReviews[0]!.plainName).toBe("adding the model to your firm's list of known models");
     expect(view.owedReviews[0]!.ownerText).toBe('your AI risk team');
   });
 
@@ -601,6 +601,145 @@ describe('buildVerdictView — TC-R16-D1-07: covered vs. owed reviews (covers_re
     expect(view.owedReviews).toHaveLength(2);
     expect(view.safeguards[0]!.coveredReviews).toHaveLength(0);
     expect(view.coveredReviewFormalNames).toEqual([]);
+  });
+});
+
+describe('buildVerdictView — R16-W W-6: one "also completes" note per safeguard (D-76)', () => {
+  it('TC-R16-W-39: a safeguard covering one review joins with no "and"', () => {
+    const policy = makePolicy({
+      controls: [{ id: 'C1', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', covers_reviews: ['DR-VENDOR-01'] }],
+      downstream_reviews: [{ id: 'DR-VENDOR-01', review: 'Vendor risk assessment', condition: {}, plain_name: 'a supplier assessment', plain_owner: 'your vendor-risk team' }],
+    });
+    const verdict = makeVerdict({
+      controls: ['C1'],
+      downstream_reviews: ['Vendor risk assessment'],
+      downstream_review_sources: [{ review: 'Vendor risk assessment', rule_id: 'DR-VENDOR-01' }],
+    });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.alsoCompletesNote).toBe('(Doing this also completes a supplier assessment — one piece of work.)');
+  });
+
+  it('TC-R16-W-40: a safeguard covering two reviews prints ONE note with "a and b" — never two notes', () => {
+    const policy = makePolicy({
+      controls: [{ id: 'C1', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', covers_reviews: ['DR-VENDOR-01', 'PV-UNREGISTERED'] }],
+      downstream_reviews: [{ id: 'DR-VENDOR-01', review: 'Vendor risk assessment', condition: {}, plain_name: 'a supplier assessment', plain_owner: 'your vendor-risk team' }],
+    });
+    const verdict = makeVerdict({
+      controls: ['C1'],
+      downstream_reviews: ['Vendor risk assessment', 'Unapproved component: Zapier'],
+      downstream_review_sources: [
+        { review: 'Vendor risk assessment', rule_id: 'DR-VENDOR-01' },
+        { review: 'Unapproved component: Zapier', rule_id: 'PV-UNREGISTERED:Zapier' },
+      ],
+    });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.alsoCompletesNote).toBe(
+      "(Doing this also completes a supplier assessment and adding the supplier to your firm's list — one piece of work.)",
+    );
+  });
+
+  it('TC-R16-W-41: three covered reviews join "a, b and c"', () => {
+    const policy = makePolicy({
+      controls: [{ id: 'C1', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', covers_reviews: ['DR-A', 'DR-B', 'DR-C'] }],
+      downstream_reviews: [
+        { id: 'DR-A', review: 'Review A', condition: {}, plain_name: 'review A', plain_owner: 'team' },
+        { id: 'DR-B', review: 'Review B', condition: {}, plain_name: 'review B', plain_owner: 'team' },
+        { id: 'DR-C', review: 'Review C', condition: {}, plain_name: 'review C', plain_owner: 'team' },
+      ],
+    });
+    const verdict = makeVerdict({
+      controls: ['C1'],
+      downstream_reviews: ['Review A', 'Review B', 'Review C'],
+      downstream_review_sources: [
+        { review: 'Review A', rule_id: 'DR-A' },
+        { review: 'Review B', rule_id: 'DR-B' },
+        { review: 'Review C', rule_id: 'DR-C' },
+      ],
+    });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.alsoCompletesNote).toBe('(Doing this also completes review A, review B and review C — one piece of work.)');
+  });
+
+  it('TC-R16-W-42: a safeguard covering nothing has no alsoCompletesNote', () => {
+    const policy = makePolicy({ controls: [{ id: 'C1', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v' }] });
+    const view = buildVerdictView(makeVerdict({ controls: ['C1'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.alsoCompletesNote).toBeUndefined();
+  });
+});
+
+describe('buildVerdictView — R16-W W-7: evidence scoped to the platforms/vendors it covers (D-77)', () => {
+  function policyWithScopedEvidence(appliesTo: { platforms?: string[]; vendors?: string[] }) {
+    return makePolicy({
+      controls: [
+        {
+          id: 'CTRL-ENC-01',
+          name: 'Encryption in transit',
+          description: 'd',
+          resolves: [],
+          burden: 1,
+          verification: 'v',
+          verification_evidence: { status: 'verified', detail: 'Platform allow-list pins TLS 1.3', applies_to: appliesTo },
+        },
+      ],
+      platforms: [{ id: 'PLAT-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Platform' }],
+      vendors: [{ id: 'VENDOR-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Vendor' }],
+    });
+  }
+
+  it('TC-R16-W-43: applies_to absent (unscoped) — verified everywhere, exactly the pre-W-7 behaviour', () => {
+    const policy = makePolicy({ controls: [{ id: 'CTRL-ENC-01', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', verification_evidence: { status: 'verified' } }] });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('verified');
+    expect(view.safeguards[0]!.evidenceScopeNote).toBeUndefined();
+  });
+
+  it('TC-R16-W-44: applies_to present, graph’s platform is in scope — still verified', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, platform: 'PLAT-X', vendor: 'internal' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('verified');
+    expect(view.safeguards[0]!.evidenceScopeNote).toBeUndefined();
+  });
+
+  it('TC-R16-W-45: applies_to present, graph’s vendor is in scope — still verified', () => {
+    const policy = policyWithScopedEvidence({ vendors: ['VENDOR-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, vendor: 'VENDOR-X' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('verified');
+  });
+
+  it('TC-R16-W-46: applies_to present, graph is OUTSIDE scope — outstanding (counted in the headline’s N), with a "not for this tool" evidence note naming the scoped platforms/vendors by plain name', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'], vendors: ['VENDOR-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, vendor: 'an AI service you weren’t sure about' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, 'approved');
+    expect(view.safeguards[0]!.status).toBe('outstanding');
+    expect(view.outstandingCount).toBe(1);
+    expect(view.safeguards[0]!.evidenceScopeNote).toBe(
+      "Your firm's records show this for Firm Platform and Firm Vendor — not for this tool.",
+    );
+  });
+
+  it('TC-R16-W-47: applies_to present, no graph available (reopened from the register) — outstanding, with a "couldn’t check" evidence note', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('outstanding');
+    expect(view.safeguards[0]!.evidenceScopeNote).toBe(
+      "Your firm's records show this for Firm Platform — we couldn't check whether that includes this tool.",
+    );
+  });
+
+  it('TC-R16-W-48: out-of-scope evidence with an attestation on file still reads attested, not outstanding, and carries no scope note (attested beats outstanding)', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, vendor: 'unregistered' }] };
+    const view = buildVerdictView(
+      makeVerdict({ controls: ['CTRL-ENC-01'] }),
+      policy,
+      graph,
+      undefined,
+      { 'CTRL-ENC-01': { attested_by_name: 'Sam', evidence_note: 'checked manually' } },
+      undefined,
+    );
+    expect(view.safeguards[0]!.status).toBe('attested');
   });
 });
 

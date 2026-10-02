@@ -2,13 +2,27 @@
 // IntakeFlow.tsx so the reducer is independently unit-testable without
 // React Testing Library (Dan Vanderkam: typed discriminated unions).
 import type { Contradiction, DataFlowGraph, GraphCorrection, IntakeQuestion, QuestionAnswer } from '../engine/types';
+import type { Assumption, PlainAnswers } from './plain-copy';
 
 export type { Contradiction, IntakeQuestion, QuestionAnswer };
 
 export type IntakeState =
   | { step: 'description_entry'; description: string }
   | { step: 'duplicate_check'; description: string }
-  | { step: 'graph_extraction'; description: string; method: 'llm' | 'form' }
+  | {
+      step: 'graph_extraction';
+      description: string;
+      method: 'llm' | 'form';
+      // W-4 (R16-W §1, D-70). Present only on a RESUBMISSION of the form —
+      // CHANGE_ANSWER and the form-path STEP_BACK set these so the form
+      // reopens filled in (plainAnswers) and so a second Continue reuses
+      // the use case this intake already minted rather than writing a
+      // second use_case_created (useCaseId). Absent on the very first
+      // visit to the form, and always absent on the description/LLM path.
+      useCaseId?: string;
+      plainAnswers?: PlainAnswers;
+      assumptions?: Assumption[];
+    }
   | {
       step: 'graph_review';
       // Round 4 (charter 004 D-001, charter 005 O-001). The description was
@@ -64,6 +78,14 @@ export type IntakeState =
       // answer. Ephemeral review state; the trail records only what is
       // attested.
       undo?: { graph: DataFlowGraph; correctionsLen: number };
+      // W-3/W-4 (R16-W §1). Present only when this questionnaire was
+      // reached via FORM_SUBMITTED (the form path's own questions, if
+      // any) — carried so a form-path STEP_BACK can return to the form
+      // filled in, and so the summary can still show the "Not sure"
+      // assumptions once the graph reaches confirmation. Absent on the
+      // description/LLM path, which never sets them.
+      plainAnswers?: PlainAnswers;
+      assumptions?: Assumption[];
     }
   | {
       step: 'contradiction_review';
@@ -76,6 +98,9 @@ export type IntakeState =
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
+      // W-3/W-4: see the questionnaire variant's comment above.
+      plainAnswers?: PlainAnswers;
+      assumptions?: Assumption[];
     }
   | {
       step: 'confirmation';
@@ -90,6 +115,13 @@ export type IntakeState =
       resolutionNotes: string[];
       useCaseId: string;
       originalVerdictId?: string;
+      // W-3/W-4: see the questionnaire variant's comment above. This is
+      // what IntakeFlow now reads directly for UnderstoodSummary's
+      // assumptions list — replacing the `formAssumptions` useState the
+      // B+C chunk used, which a refresh (the draft only ever persisted
+      // IntakeState) silently lost.
+      plainAnswers?: PlainAnswers;
+      assumptions?: Assumption[];
     }
   | {
       step: 'evaluation_pending';
@@ -125,6 +157,26 @@ export type IntakeAction =
       ignoredJurisdictions?: string[];
       provenance?: Record<string, Record<string, string>>;
       guessedFields?: Record<string, string[]>;
+    }
+  // W-3 (R16-W §1, D-69). Valid only from graph_extraction with
+  // method: 'form' — GRAPH_EXTRACTED (above) stays the description path's
+  // own action; the form path's screen-after-screen field-card review
+  // (`graph_review`) is engine vocabulary principle 1 bans from a path
+  // where the person picked every value themselves, so this skips it.
+  // The caller computes `questions`/`contradictions` from the graph in
+  // hand (never from stale state) and this reducer only picks which of
+  // the three destinations they lead to — pure, no audit write here (the
+  // one write for a fresh submission stays IntakeFlow's use_case_created,
+  // written before this dispatches).
+  | {
+      type: 'FORM_SUBMITTED';
+      graph: DataFlowGraph;
+      useCaseId: string;
+      description: string;
+      plainAnswers: PlainAnswers;
+      assumptions: Assumption[];
+      questions: IntakeQuestion[];
+      contradictions: Contradiction[];
     }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
   // R5-GR-2: the human states a model-proposed node is right as shown.
@@ -219,6 +271,22 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           if (state.originalVerdictId) return state;
           return { step: 'duplicate_check', description: carriedDescription(state) };
         case 'questionnaire':
+          // W-3 (R16-W §1, D-69): a form-path graph steps back into the
+          // form itself, filled in (W-4) — not the retired field-card
+          // screen, which the form path no longer visits on the way
+          // forward either (FORM_SUBMITTED skips straight past it). Same
+          // intake_method branch CHANGE_ANSWER already uses from
+          // confirmation, below.
+          if (state.graph.intake_method === 'structured_form') {
+            return {
+              step: 'graph_extraction',
+              description: carriedDescription(state),
+              method: 'form',
+              useCaseId: state.useCaseId,
+              plainAnswers: state.plainAnswers,
+              assumptions: state.assumptions,
+            };
+          }
           return {
             step: 'graph_review',
             description: carriedDescription(state),
@@ -275,6 +343,52 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           ? { ignoredJurisdictions: action.ignoredJurisdictions }
           : {}),
       };
+
+    case 'FORM_SUBMITTED': {
+      // W-3 (R16-W §1, D-69): valid only from the form's own
+      // graph_extraction — GRAPH_EXTRACTED (above) is the description
+      // path's exit from this step, never this one's.
+      if (state.step !== 'graph_extraction' || state.method !== 'form') return state;
+      const carried = {
+        description: action.description,
+        graph: action.graph,
+        useCaseId: action.useCaseId,
+        plainAnswers: action.plainAnswers,
+        assumptions: action.assumptions,
+      };
+      // Same priority handleProceedFromGraphReview already applies to
+      // every other graph: generated questions first; failing that, a
+      // contradiction stops at its own review; failing that, confirmation.
+      if (action.questions.length > 0) {
+        return {
+          step: 'questionnaire',
+          ...carried,
+          questions: action.questions,
+          answers: [],
+          resolutionNotes: [],
+          corrections: [],
+        };
+      }
+      if (action.contradictions.length > 0) {
+        return {
+          step: 'contradiction_review',
+          ...carried,
+          questions: action.questions,
+          answers: [],
+          contradictions: action.contradictions,
+          resolutionNotes: [],
+          corrections: [],
+        };
+      }
+      return {
+        step: 'confirmation',
+        ...carried,
+        graphVersion: action.graph.version,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+      };
+    }
 
     case 'CORRECTION_APPLIED':
       if (state.step !== 'graph_review') return state;
@@ -398,6 +512,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // W-4: carried so a form-path contradiction review still has them
+        // once it returns to the questionnaire and on to confirmation.
+        plainAnswers: state.plainAnswers,
+        assumptions: state.assumptions,
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -415,6 +533,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // W-4: see CONTRADICTIONS_DETECTED's comment above.
+        plainAnswers: state.plainAnswers,
+        assumptions: state.assumptions,
       };
 
     case 'PROCEED_TO_CONFIRMATION':
@@ -429,18 +550,30 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         resolutionNotes: state.resolutionNotes,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // W-4: the one place a form-path intake reaches confirmation
+        // without a question or a contradiction ever firing — still has
+        // to carry these, same as FORM_SUBMITTED's own confirmation exit.
+        plainAnswers: state.plainAnswers,
+        assumptions: state.assumptions,
       };
 
     case 'CHANGE_ANSWER':
       if (state.step !== 'confirmation') return state;
-      // The form path returns to the guided form itself (its own draft,
-      // probed separately by StructuredForm, is what repopulates it — a
-      // known limitation: the draft was already cleared on submit, same as
-      // before this chunk, so the form reopens blank rather than
-      // pre-filled). The description path returns to the existing
-      // correction flow (GraphView, UC-7), unchanged.
+      // The form path returns to the guided form itself, filled in (W-4:
+      // plainAnswers/assumptions/useCaseId carried so StructuredForm
+      // reopens with its answers and a resubmission reuses the same use
+      // case — see "One use case, one creation event" §1). The
+      // description path returns to the existing correction flow
+      // (GraphView, UC-7), unchanged.
       return state.graph.intake_method === 'structured_form'
-        ? { step: 'graph_extraction', description: state.description, method: 'form' }
+        ? {
+            step: 'graph_extraction',
+            description: state.description,
+            method: 'form',
+            useCaseId: state.useCaseId,
+            plainAnswers: state.plainAnswers,
+            assumptions: state.assumptions,
+          }
         : {
             step: 'graph_review',
             description: carriedDescription(state),

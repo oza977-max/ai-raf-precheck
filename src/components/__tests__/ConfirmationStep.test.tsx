@@ -16,20 +16,21 @@ const g: DataFlowGraph = {
 };
 
 describe('ConfirmationStep — the note for the reviewer', () => {
-  it('offers an OPTIONAL note and says in terms who reads it — the reviewer, not the rules', () => {
+  it('offers an OPTIONAL note and says in terms who reads it — your AI risk team, not the rules (R16-W §3, D-73)', () => {
     render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
-    const note = screen.getByLabelText(/anything the reviewer should know/i);
+    const note = screen.getByLabelText(/anything your ai risk team should know/i);
     expect(note).toBeInTheDocument();
     // The label of the mechanism IS the mechanism: without this sentence a
     // submitter reasonably assumes the engine weighed their words.
-    expect(screen.getByText(/read by the reviewer.*not by the rules/i)).toBeInTheDocument();
+    expect(screen.getByText(/your ai risk team reads this when they review it/i)).toBeInTheDocument();
+    expect(screen.getByText(/it doesn.t change the result/i)).toBeInTheDocument();
   });
 
   it('passes a trimmed note to onConfirm', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
     render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={onConfirm} />);
-    await user.type(screen.getByLabelText(/anything the reviewer should know/i), '  The PII is pseudonymised first.  ');
+    await user.type(screen.getByLabelText(/anything your ai risk team should know/i), '  The PII is pseudonymised first.  ');
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(onConfirm).toHaveBeenCalledWith('The PII is pseudonymised first.');
   });

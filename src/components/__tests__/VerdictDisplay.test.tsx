@@ -344,6 +344,43 @@ describe('VerdictDisplay — proof-carrying controls (V1.3)', () => {
     expect(screen.getByText(/patches: INV-DATA-01/i)).toBeInTheDocument();
   });
 
+  // R16-W W-7 (D-77): firm-level evidence scoped away from this graph's
+  // platform/vendor must not read VERIFIED, and the panel must say why.
+  it('TC-R16-W-51: evidence scoped by applies_to, with the graph outside that scope, reads UNVERIFIED and shows the "not for this tool" note instead of the detail line', () => {
+    const scopedPolicy = {
+      controls: [
+        {
+          id: 'CTRL-ENC-01',
+          name: 'Encryption in transit (TLS 1.3+)',
+          description: 'TLS 1.3+',
+          resolves: ['INV-DATA-01'],
+          burden: 1,
+          verification: 'manifest check',
+          verification_evidence: {
+            status: 'verified' as const,
+            detail: 'Platform pins TLS 1.3',
+            applies_to: { platforms: ['PLAT-X'] },
+          },
+        },
+      ],
+      platforms: [{ id: 'PLAT-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Platform' }],
+      hard_lines: [],
+      invariants: [],
+    } as unknown as Parameters<typeof VerdictDisplay>[0]['policy'];
+    const graph = {
+      id: 'g1', version: 1, intake_method: 'structured_form' as const, extracted_at: '2026-01-01T00:00:00.000Z',
+      jurisdictions: [], input_nodes: [], output_nodes: [], edges: [],
+      processing_nodes: [{ id: 'p1', label: 'p', model_type: 'llm' as const, autonomy_level: 1 as const, data_zone: 'Zone A' as const, vendor: 'an AI service you weren’t sure about', replaces_prior_model: false }],
+    };
+    const verdict = makeVerdict({ controls: ['CTRL-ENC-01'] });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={scopedPolicy} graph={graph} onCorrect={vi.fn()} />);
+
+    expect(screen.getByText('UNVERIFIED')).toBeInTheDocument();
+    expect(screen.queryByText('VERIFIED')).not.toBeInTheDocument();
+    expect(screen.queryByText(/platform pins TLS 1\.3/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Your firm's records show this for Firm Platform — not for this tool.")).toBeInTheDocument();
+  });
+
   // P8-C07 upstream fix. This asserted the plain id list, which said nothing
   // at all about evidence — and a reader cannot distinguish "we could not
   // check" from "there is nothing to show". §15.1a is explicit: where policy

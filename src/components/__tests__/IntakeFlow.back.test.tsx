@@ -35,7 +35,7 @@ describe('IntakeFlow — going back (FN-006)', () => {
     // Back to the description step, with what was typed still in the box.
     // Losing it here would make the control useless for the case that
     // prompted it — fixing a typo.
-    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     expect(box).toHaveValue(typed);
   });
 
@@ -87,37 +87,38 @@ describe('IntakeFlow — description boundaries (UC-1)', () => {
     sessionStorage.clear();
   });
 
-  it('an empty description leaves Read & extract disabled [TC-UC-1-03]', async () => {
+  it('an empty description leaves Next disabled [TC-UC-1-03]', async () => {
     render(<App />);
-    const btn = await screen.findByRole('button', { name: /read & extract/i });
+    const btn = await screen.findByRole('button', { name: /^next/i });
     expect(btn).toBeDisabled();
   });
 
   it('a five-sentence description is accepted and advances [TC-UC-1-02]', async () => {
     const user = userEvent.setup();
     render(<App />);
-    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.type(
       box,
       'We want an assistant that reads CRM notes. It summarises client activity. It recommends an action. It runs internally. The RM approves everything.',
     );
-    const btn = screen.getByRole('button', { name: /read & extract/i });
+    const btn = screen.getByRole('button', { name: /^next/i });
     expect(btn).toBeEnabled();
     await user.click(btn);
     // Advanced to the duplicate check — the description was accepted.
-    await screen.findAllByText(/duplicate check/i);
+    // R16-W §4 (D-74): tag renamed from "DUPLICATE CHECK".
+    await screen.findAllByText(/has this been checked before/i);
   });
 
   it('HTML in a description is literal text, never markup [TC-UC-1-04]', async () => {
     const user = userEvent.setup();
     const hostile = 'Ein Tool für Kundendaten — parses <img src=x onerror="alert(1)"> fields.';
     render(<App />);
-    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.click(box);
     await user.paste(hostile);
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
-    await screen.findAllByText(/duplicate check/i);
-    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await screen.findAllByText(/has this been checked before/i);
+    await user.click(await screen.findByRole('button', { name: /continue →/i }));
     // The guided form's own description field is prefilled from what was
     // typed; whatever renders it must render TEXT. No <img> may exist.
     expect(document.querySelector('img')).toBeNull();
@@ -137,14 +138,14 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     sessionStorage.clear();
   });
 
-  it('a description denying what the form declares blocks the skip to confirmation', async () => {
+  it('a description denying what the form declares blocks the skip to confirmation [TC-R16-W-57: a contradiction on the form path stops at contradiction_review, never passing through graph_review]', async () => {
     const user = userEvent.setup();
     render(<App />);
-    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.click(box);
     await user.paste('This tool processes no client data at all. A human approves every action, no autonomy.');
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
-    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }));
 
     // Declare the opposite of the description. R16-B: adapted to the new
     // questions — Client PII (contradicts "no client data") and autonomy
@@ -167,7 +168,9 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
     await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    // R16-W W-3 (D-69): the form path computes contradictions itself when
+    // it finds no questions, and goes straight to contradiction_review —
+    // there is no graph_review/Proceed step on this path to click through.
 
     // The old behaviour sailed to "Confirm and evaluate". The fix surfaces
     // the contradiction review instead — both statements, resolution required.
@@ -196,11 +199,11 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
   it('after resolution with no questions left, the flow reaches confirmation', async () => {
     const user = userEvent.setup();
     render(<App />);
-    const box = await screen.findByRole('textbox', { name: /describe your ai use case/i });
+    const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.click(box);
     await user.paste('This tool processes no client data at all.');
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
-    await user.click(await screen.findByRole('button', { name: /this is a new use case/i }));
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }));
 
     // R16-B: the field-by-field form this test drove is replaced by the
     // situational question set (build/prompts/R16.md §2.2) — adapted to the
@@ -224,7 +227,8 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     await user.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
     await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    // R16-W W-3 (D-69): see the earlier test's comment — no Proceed step
+    // on the form path any more.
 
     // Contradiction review appears; resolve it.
     const explain = await screen.findByRole('textbox', { name: /explain|resolution|why/i });

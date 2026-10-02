@@ -13,7 +13,7 @@ import type {
 import type { StructuredFormValues } from './build-graph-from-form';
 import { DATA_CLASS_RANK } from './envelope';
 import { ACCESS_SCOPE_CANONICAL_ORDER } from './access-scope';
-import { makeAssumption } from '../components/plain-copy';
+import { findQuestion, makeAssumption } from '../components/plain-copy';
 import type { Assumption, PlainAnswers, QuestionId } from '../components/plain-copy';
 
 // R16-B (build/prompts/R16.md v2.1 §2.1, §2.2). Pure (cross-cutting.md §7
@@ -31,6 +31,34 @@ const DATA_ZONE_ORDER: DataZone[] = ['Zone A', 'Zone B', 'Zone C'];
 function earliestZone(zones: DataZone[] | undefined): DataZone {
   if (!zones || zones.length === 0) return 'Zone B';
   return [...zones].sort((a, b) => DATA_ZONE_ORDER.indexOf(a) - DATA_ZONE_ORDER.indexOf(b))[0]!;
+}
+
+// W-9 (R16-W §1, D-79 — the UC-6b parity fix). Q3's platform option mapped
+// EVERY multi-zone platform to "the earliest letter among its allowed
+// zones" unconditionally: for PLAT-INTERNAL-ML (allowed Zone B and Zone C)
+// that is always Zone B, so a deal-memo tool that runs entirely on the
+// in-house platform got HL-002's "No" where the worked case (UC-6b) expects
+// it to pass. The §2.2 follow-up's three options are each fixed to one
+// zone; only WHICH of the three is offered depends on the platform's own
+// allowed set.
+const PLATFORM_ZONE_OPTION_ZONE: Record<string, DataZone> = {
+  'firm-systems': 'Zone C',
+  'outside-supplier': 'Zone B',
+  'outside-service': 'Zone A',
+};
+
+/** The §2.2 order (Zone C option, then Zone B, then Zone A) restricted to
+ *  the zones this platform actually allows, plus "Not sure" — always
+ *  offered, always last. Exported so StructuredForm.tsx renders exactly
+ *  the option set this mapping reads back, rather than re-deriving the
+ *  C/B/A ordering rule a second time (one implementation, same reason
+ *  `earliestZone` is exported below). */
+export function platformZoneOptionKeys(platform: RegistryEntry): string[] {
+  const allowed = new Set(platform.approved_envelope.data_zones ?? []);
+  const keys = (['firm-systems', 'outside-supplier', 'outside-service'] as const).filter((k) =>
+    allowed.has(PLATFORM_ZONE_OPTION_ZONE[k]!),
+  );
+  return [...keys, 'not-sure'];
 }
 
 function toArray(v: string | string[] | undefined): string[] {
@@ -93,12 +121,16 @@ export function plainAnswersToFormValues(
         }
         case 'personal-account':
           destinationZone = 'Zone A';
-          vendor = 'unregistered (personal account, no firm contract)';
+          // D-72: was 'unregistered (personal account, no firm contract)'
+          // — "unregistered" is engine vocabulary that reached the
+          // summary, the reviewer section and the audit trail verbatim.
+          vendor = 'a personal account (no contract with your firm)';
           break;
         case 'not-sure':
         default:
           destinationZone = 'Zone A';
-          vendor = 'unregistered (not sure which account)';
+          // D-72: was 'unregistered (not sure which account)'.
+          vendor = 'an AI assistant account you weren’t sure about';
           assume('3a', 'not-sure');
           break;
       }
@@ -117,13 +149,15 @@ export function plainAnswersToFormValues(
           break;
         }
         case 'dont-know':
-          vendor = 'unregistered (supplier not confirmed)';
+          // D-72: was 'unregistered (supplier not confirmed)'.
+          vendor = 'a supplier you weren’t sure of';
           assume('3supplier', 'dont-know');
           break;
         default: {
           // A supplier vendor id, picked from the dynamic list.
           const match = supplierVendors(policy).find((v) => v.id === q3supplier);
-          vendor = match ? match.id : 'unregistered (supplier not confirmed)';
+          // D-72: was 'unregistered (supplier not confirmed)'.
+          vendor = match ? match.id : 'a supplier you weren’t sure of';
         }
       }
       break;
@@ -135,19 +169,59 @@ export function plainAnswersToFormValues(
     case 'not-sure':
     case undefined:
       destinationZone = 'Zone A';
-      vendor = 'unregistered (where this AI comes from was not sure)';
+      // D-72: was 'unregistered (where this AI comes from was not sure)'.
+      vendor = 'an AI service you weren’t sure about';
       if (q3 === 'not-sure') assume('3', 'not-sure');
       break;
     default: {
       // A platform id, picked from the dynamic list (d).
       const matchedPlatform = (policy.platforms ?? []).find((p) => p.id === q3);
       if (matchedPlatform) {
-        destinationZone = earliestZone(matchedPlatform.approved_envelope.data_zones);
+        const allowedZones = matchedPlatform.approved_envelope.data_zones;
+        const earliest = earliestZone(allowedZones);
+        // W-9 (D-79): a platform allowed in only one zone keeps today's
+        // mapping with no follow-up — there is only one honest answer to
+        // "which zone does it actually run in" already.
+        if ((allowedZones?.length ?? 0) > 1) {
+          switch (str('3platformZone')) {
+            case 'firm-systems':
+              destinationZone = 'Zone C';
+              break;
+            case 'outside-supplier':
+              destinationZone = 'Zone B';
+              break;
+            case 'outside-service':
+              destinationZone = 'Zone A';
+              break;
+            case 'not-sure':
+            default:
+              destinationZone = earliest;
+              // The assumption text names which outside party the
+              // "Not sure" reading assumes, which depends on which zone is
+              // actually earliest for THIS platform's allowed set — built
+              // inline rather than through makeAssumption()/ASSUMPTION_TEXT
+              // (plain-copy.ts), because the wording is a runtime
+              // computation over the platform's envelope, not a fixed
+              // per-option string plain-copy.ts's code-free module (§2.4)
+              // could hold.
+              assumptions.push({
+                questionId: '3platformZone',
+                question: findQuestion('3platformZone')!.text,
+                assumption:
+                  earliest === 'Zone A'
+                    ? 'an outside website or service — the strictest case.'
+                    : 'it may pass your information to an outside supplier — the stricter case.',
+              });
+          }
+        } else {
+          destinationZone = earliest;
+        }
         vendor = matchedPlatform.vendor_id ?? 'internal';
         platform = matchedPlatform.id;
       } else {
         destinationZone = 'Zone A';
-        vendor = 'unregistered (where this AI comes from was not sure)';
+        // D-72: was 'unregistered (where this AI comes from was not sure)'.
+        vendor = 'an AI service you weren’t sure about';
       }
     }
   }

@@ -628,6 +628,17 @@ export interface Control {
     // evidence, rendered unchanged. Never affects the verdict.
     design?:    { status: 'effective' | 'deficient' | 'not_assessed'; detail?: string };
     operating?: { status: 'effective' | 'deficient' | 'not_assessed'; detail?: string };
+    // R16-W (W-7, D-77): scopes "verified" to the platforms/vendors it
+    // actually covers. Absent = applies everywhere (pre-W-7 behaviour,
+    // unchanged). At least one list must be non-empty when present (the
+    // Zod schema's `.refine`, src/store/policy.ts). View-model concern
+    // only (src/components/verdict-view-model.ts) — never changes which
+    // controls the engine requires, only how "verified" is DISPLAYED:
+    // when the processing node's platform/vendor is outside this scope,
+    // or the graph is unavailable to check, the safeguard shows as
+    // `outstanding`, not `verified` (never claimed, never silently
+    // dropped — counted in the first screen's headline N).
+    applies_to?: { platforms?: string[]; vendors?: string[] };
   };
   verification: string;
 }
@@ -1056,6 +1067,13 @@ standing alone and also covers `policy.downstream_reviews[]` conditions,
 which `loadPolicy`'s own structural check does not walk).
 
 **Amended 2026-10-02 (R16-A2).** When **no rule packs are loaded at all**, an unresolved `covers_reviews` id is reported as a **warning**, not an error: it may name a pack rule that simply isn't present, and "can't check" is the honest state. With packs loaded — every production load site — an id that matches nothing is a verified error. A `covers_reviews` id that matches nothing can only fail to fold a review into a safeguard, never hide one, so the softer zero-packs rule cannot hide an obligation.
+
+**Amended 2026-10-02 (R16-W, W-7, D-77).** Errors also include: a
+`verification_evidence.applies_to` id that is not a platform or vendor id
+registered on the SAME policy — always checkable (unlike `covers_reviews`,
+this never depends on whether packs are loaded, since platforms and
+vendors are both part of the policy file itself). This is what stops a
+firm from scoping evidence to a platform/vendor id that does not exist.
 
 Warnings (shown to the reviewer, never blocking): an unknown placeholder —
 anything in `{…}` other than `{audience}`/`{destination}`; an unknown `@`

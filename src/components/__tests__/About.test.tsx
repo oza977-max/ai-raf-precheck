@@ -22,7 +22,10 @@ describe('About — the app explains itself', () => {
   it('offers About in the sidebar, and it answers the three first questions', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByText(/about/i));
+    // R16-W §4 (D-74): the new subtitle ("Tell us about an AI tool...")
+    // also contains "about" — the exact sidebar label avoids the
+    // now-ambiguous substring match.
+    await user.click(screen.getByText('? About'));
     // What is it, who wrote the rules, is an AI deciding.
     expect(screen.getAllByText(/risk appetite/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/no AI (is )?in(volved in)? the decision/i).length).toBeGreaterThan(0);
@@ -52,7 +55,10 @@ describe('About — the app explains itself', () => {
     const user = userEvent.setup();
     render(<App />);
     expect(screen.getByText(/first time here/i).closest('.app-welcome')?.textContent).not.toMatch(/approved|rejected/i);
-    await user.click(screen.getByText(/about/i));
+    // R16-W §4 (D-74): the new subtitle ("Tell us about an AI tool...")
+    // also contains "about" — the exact sidebar label avoids the
+    // now-ambiguous substring match.
+    await user.click(screen.getByText('? About'));
     const main = document.querySelector('.app-main');
     expect(main?.textContent).not.toMatch(/approved|rejected/i);
   });

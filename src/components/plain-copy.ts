@@ -16,8 +16,19 @@
 // the dynamic options straight from the policy, using the registry entry's
 // own id as that option's key.
 
+import type {
+  ActionType,
+  DataClass,
+  DataZone,
+  DecisionBindingness,
+  DecisionType,
+  Exposure,
+  ModelType,
+  SystemAccessScope,
+} from '../engine/types';
+
 export type QuestionId =
-  | '1' | '2' | '3' | '3supplier' | '3supplierName' | '3model' | '3a' | '3aWhich'
+  | '1' | '2' | '3' | '3supplier' | '3supplierName' | '3model' | '3a' | '3aWhich' | '3platformZone'
   | '4' | '4a' | '5' | '6' | '6a' | '6b' | '7' | '8' | '8other' | '9' | '10'
   | '11' | '12' | '13' | '14';
 
@@ -142,6 +153,24 @@ export const PLAIN_QUESTIONS: PlainQuestion[] = [
     options: [
       // one option per `company_assistant` vendor — appended dynamically,
       // keyed by the vendor's own registry id.
+      { key: 'not-sure', text: 'Not sure' },
+    ],
+  },
+  // W-9 (R16-W §1, D-79): shown only for a Q3 platform option that allows
+  // more than one zone (StructuredForm filters these four options down to
+  // the ones plain-intake.ts's platformZoneOptionKeys() says the chosen
+  // platform allows, plus "Not sure" always). All four texts are static;
+  // only the SUBSET shown varies by platform.
+  {
+    id: '3platformZone',
+    text: 'Does your information stay on your firm’s own systems the whole time?',
+    help:
+      'Your firm’s platform can run some AI itself and pass other work to an outside supplier. If you ' +
+      'don’t know which happens here, choose "Not sure".',
+    options: [
+      { key: 'firm-systems', text: 'Yes — the platform runs the AI on the firm’s own systems' },
+      { key: 'outside-supplier', text: 'No — the platform passes it to an outside supplier’s AI' },
+      { key: 'outside-service', text: 'No — it goes out to a public website or service' },
       { key: 'not-sure', text: 'Not sure' },
     ],
   },
@@ -435,6 +464,9 @@ export const SUMMARY_LABELS = {
   destination: 'Where your information will go',
   dataClasses: 'The information it will use',
   behaviour: 'What it does and who sees it',
+  // R16-W §2 (D-71): new section — output_reversibility was computed and
+  // never shown on the submitter's own summary.
+  reversibility: 'If it gets something wrong',
   decisions: 'What it helps decide',
   scaleAndCountries: 'How widely it’s used, and where',
   agentReach: 'What it can reach by itself',
@@ -444,6 +476,166 @@ export const SUMMARY_LABELS = {
   detailsDisclosure: 'Show the details the rules use',
   changeAnswer: 'Change an answer',
 } as const;
+
+// ---------------------------------------------------------------------------
+// R16-W §2 — "Here's what we understood", in the form's own words (D-71).
+// Before this, the summary read the graph through the REVIEWER cards'
+// labels (field-copy.ts) — a different vocabulary, written for a 2LoD
+// reader, not the newcomer this screen is actually for ("Personal details
+// of clients" for "Information about people…", "via unregistered…" for the
+// supplier, no line at all for the kind of AI or whether a mistake can be
+// put right). SUMMARY_* below is graph value -> sentence, written from the
+// newcomer-tested QUESTION wording (§2.2) instead — still graph-based (one
+// truth: what gets evaluated), just a different, submitter-facing WORDING
+// of the same facts. The collapsed "Show the details the rules use" grid
+// keeps field-copy.ts's labels unchanged — that is the reviewer's own
+// vocabulary, on purpose (§3: "reviewer vocabulary stays there").
+
+export const SUMMARY_DESTINATION: Record<DataZone, string> = {
+  'Zone A': 'An outside website or service, outside your firm’s control.',
+  'Zone B': 'A supplier’s systems, outside your firm’s own.',
+  'Zone C': 'Your firm’s own systems.',
+};
+
+export const SUMMARY_DATA_CLASS: Record<DataClass, string> = {
+  'Client PII': 'Information about people — clients, applicants, staff or anyone else who can be identified',
+  MNPI: 'Price-sensitive information — anything that could move a share price',
+  Confidential: 'Confidential firm information',
+  Internal: 'Everyday work information, or only what you type in yourself',
+  Public: 'Only public information',
+};
+
+export const SUMMARY_MODEL_TYPE: Record<ModelType, string> = {
+  statistical: 'A score or forecast from fixed, written-down rules, like a scorecard',
+  'traditional-ml': 'A score, ranking or forecast whose builders can show what drove each result',
+  ml: 'A score, ranking or forecast whose builders can’t easily show why it gave a result',
+  'deep-learning': 'AI that recognises things in images, sound or documents',
+  llm: 'AI that reads, summarises, translates, writes or answers questions in words',
+  'generative-ai': 'AI that creates images, audio, video or code',
+  agentic: 'An AI agent that works through tasks on its own, using other tools or systems',
+};
+
+// §2 item 2 ("what happens with its output") — autonomy_level + action_type
+// (+ hitl), the same split §2.2's Q6/Q6a/Q6b already draws between acting
+// alone (autonomy >= 2) and supervised (autonomy <= 1). Each clause map
+// carries its own leading punctuation and spacing so the join in
+// summaryBehaviourLine is a plain concatenation, never a second place that
+// could get the separator wrong.
+const SUMMARY_AUTONOMOUS_BASE: Record<2 | 3 | 4, string> = {
+  2: 'It decides or acts by itself, and a person reviews afterwards',
+  3: 'It acts by itself within limits someone set, with no routine review',
+  4: 'It acts entirely by itself, with no person involved at any point',
+};
+const SUMMARY_AUTONOMOUS_ACTION_CLAUSE: Partial<Record<ActionType, string>> = {
+  trade: ' — it places or changes trades',
+  approve: ' — it makes yes-or-no decisions, like accepting an application',
+  execute: ' — it sends, books, updates records or deploys changes',
+};
+const SUMMARY_SUPERVISED_BASE: Partial<Record<ActionType, string>> = {
+  read: 'It finds or summarises things for people to read — nobody acts on it directly',
+  inform: 'It answers people’s questions directly, like a chat assistant',
+  draft: 'It creates a draft',
+  recommend: 'It suggests, ranks or flags things',
+  execute: 'It prepares an action',
+  trade: 'It prepares an action',
+  approve: 'It prepares an action',
+};
+const SUMMARY_SUPERVISED_HITL_CLAUSE: Partial<Record<ActionType, string>> = {
+  draft: ', and a person checks it before it’s used',
+  recommend: ', and a person decides what to do',
+  execute: ', and a person approves each one before it goes ahead',
+  trade: ', and a person approves each one before it goes ahead',
+  approve: ', and a person approves each one before it goes ahead',
+};
+
+/** §2 item 2: what happens with the output, in the newcomer-tested wording —
+ *  the same autonomy_level/action_type/hitl combination the engine's
+ *  invariants match on, never a second decision about what it means. */
+export function summaryBehaviourLine(
+  autonomyLevel: 0 | 1 | 2 | 3 | 4,
+  actionType: ActionType,
+  hitl: boolean | undefined,
+): string {
+  if (autonomyLevel >= 2) {
+    const base = SUMMARY_AUTONOMOUS_BASE[autonomyLevel as 2 | 3 | 4];
+    return base + (SUMMARY_AUTONOMOUS_ACTION_CLAUSE[actionType] ?? '');
+  }
+  const base = SUMMARY_SUPERVISED_BASE[actionType] ?? '';
+  return base + (hitl === true ? SUMMARY_SUPERVISED_HITL_CLAUSE[actionType] ?? '' : '');
+}
+
+export const SUMMARY_BINDINGNESS: Record<DecisionBindingness, string> = {
+  'non-binding': 'What it produces carries little weight — nobody makes an important decision from it',
+  advisory: 'What it produces is one input among several when someone decides',
+  material: 'What it produces is usually what a decision is based on',
+  binding: 'What it produces is acted on without a person deciding',
+};
+
+/** §2 item 3: the weight line shows only for inform/draft/recommend at
+ *  autonomy_level <= 1 — acting-alone output has no "weight" question left
+ *  to ask; §2.2 never asks Q6a there either. */
+export function summaryShowsWeight(actionType: ActionType, autonomyLevel: 0 | 1 | 2 | 3 | 4): boolean {
+  return autonomyLevel <= 1 && (actionType === 'inform' || actionType === 'draft' || actionType === 'recommend');
+}
+
+export const SUMMARY_EXPOSURE: Record<Exposure, string> = {
+  'internal-only': 'Only you or your own team see what it produces',
+  'internal-shared': 'Other teams in the firm see what it produces',
+  'client-facing': 'Clients or customers see what it produces',
+  'market-facing': 'The public, the market or regulators see what it produces',
+};
+
+export const SUMMARY_REVERSIBILITY: Record<'reversible' | 'irreversible' | 'unknown', string> = {
+  reversible: 'The mistake can be caught and put right before it does lasting harm',
+  irreversible: 'The mistake can’t be taken back once it happens',
+  unknown: 'Not known whether a mistake can be put right',
+};
+
+export const SUMMARY_DECISION_TYPE: Record<DecisionType, string> = {
+  'credit-decision': 'Whether to lend to someone, or on what terms',
+  'lending-decision': 'Whether to lend to someone, or on what terms',
+  hiring: 'Who to hire or promote',
+  pricing: 'What to charge a client, or how something is priced or valued',
+  trading: 'Buying or selling investments',
+  'fraud-detection': 'Spotting fraud or financial crime',
+  'regulatory-reporting': 'Figures or statements sent to a regulator',
+  operational: 'Nothing specific — it’s for day-to-day work',
+};
+
+/** §2 "What it helps decide": decision_type, then the free-typed
+ *  decision_type_other, then the "none" fallback — same precedence
+ *  UnderstoodSummary already applied, now with the "ask your AI risk team"
+ *  clause and the new fallback wording. */
+export function summaryDecisionLine(
+  decisionType: DecisionType | undefined,
+  decisionTypeOther: string | undefined,
+): string {
+  if (decisionType) return SUMMARY_DECISION_TYPE[decisionType];
+  if (decisionTypeOther) {
+    return `${decisionTypeOther} — not one of the kinds we have rules for, so your AI risk team will look at it`;
+  }
+  return 'Nothing in particular';
+}
+
+export const SUMMARY_SCALE: Record<'limited' | 'at_scale', string> = {
+  limited: 'Just you, or a small trial',
+  at_scale: 'Your team as part of normal work, or wider',
+};
+
+export const SUMMARY_NO_COUNTRIES = 'None of the listed countries — somewhere else, or not sure';
+
+export const SUMMARY_ACCESS_SCOPE: Record<SystemAccessScope, string> = {
+  none: 'Nothing beyond what it’s given for the task',
+  credentialed_systems: 'Its own logins, passwords or access tokens for other systems',
+  deployment_authority: 'It can change software or settings, or deploy updates, without a person',
+  shared_infrastructure: 'It runs on computers or servers shared with other automated tools',
+};
+
+export const SUMMARY_MULTI_INSTANCE: Record<'yes' | 'no' | 'unknown', string> = {
+  no: 'It works alone',
+  yes: 'Copies of it, or other AI agents, pass work or messages to each other',
+  unknown: 'Not known whether copies of it, or other AI agents, pass work to each other',
+};
 
 // Never-render rule (D-23): a platform or supplier without a plain_name gets
 // this neutral label instead of the bare [FIRM] placeholder or a raw

@@ -28,6 +28,15 @@ import type { DataFlowGraph, PolicyFile } from './types';
 // Every difference is asserted explicitly, with its reason, never silently
 // normalised away — see the per-case blocks below. The answers file and
 // plain-intake.ts are NEVER edited to make a case match.
+//
+// R16-W (D-72): three embedded downstream-review strings below changed
+// ONLY in wording, not in computation — the unresolved-vendor review text
+// used to interpolate the vendor string verbatim, and that string used to
+// read "unregistered (where this AI comes from was not sure)" (engine
+// vocabulary reaching an audit-trail string). It now reads "an AI service
+// you weren't sure about". Same rule firing, same case classification;
+// listed here once rather than annotated at each of the three sites,
+// since the change is identical and mechanical at all three.
 
 let policy: PolicyFile;
 let packs: ReturnType<typeof loadPacks>['packs'];
@@ -222,7 +231,7 @@ describe('R16-B parity (§2.3) — blind answers vs the worked-case predictions'
     );
     expect(blind.controls).toEqual([...original.controls, 'CTRL-BIAS-01', 'CTRL-TPRM-01'].sort());
     expect(blind.downstream_reviews).toEqual([
-      'Full vendor/platform risk assessment required — unregistered (where this AI comes from was not sure) is not on the approved list',
+      'Full vendor/platform risk assessment required — an AI service you weren’t sure about is not on the approved list',
       'Information security review',
       'Vendor risk assessment',
     ]);
@@ -265,7 +274,7 @@ describe('R16-B parity (§2.3) — blind answers vs the worked-case predictions'
       'CTRL-TPRM-01',
     ]);
     expect(blind.downstream_reviews).toEqual([
-      'Full vendor/platform risk assessment required — unregistered (where this AI comes from was not sure) is not on the approved list',
+      'Full vendor/platform risk assessment required — an AI service you weren’t sure about is not on the approved list',
       'Vendor risk assessment',
     ]);
   });
@@ -278,12 +287,23 @@ describe('R16-B parity (§2.3) — blind answers vs the worked-case predictions'
     expect(blind.downstream_reviews).toEqual([...original.downstream_reviews, 'Vendor risk assessment'].sort());
   });
 
-  it('TC-R16-B-22 (UC-6b): DIFFERS — the in-house platform’s "earliest letter among its allowed zones" rule (§2.2) resolves to Zone B (PLAT-INTERNAL-ML is approved for ["Zone B","Zone C"]), not the originally-recorded Zone C, so MNPI + Zone B trips HL-002 and the verdict flips to rejected where the original was approved-with-controls. This is the exact, contract-documented case (R16.md §2.3): "UC-6b’s in-house platform maps to Zone B under the earliest-letter rule, which may flip it to the HL-002 ‘No’." Not a bug: the form never asks "which zone does it run in" as an independent question (principle 1) — zone is DERIVED from the chosen platform, and the starter policy’s PLAT-INTERNAL-ML genuinely is approved for Zone B. A firm that wants its in-house platform read as Zone-C-only would set its own approved_envelope.data_zones accordingly.', () => {
+  it('TC-R16-B-22 (UC-6b): the LISTED (zone-driven) difference disappears — R16-W’s W-9 fix (D-79) adds a platform-zone follow-up when a platform allows more than one zone, so PLAT-INTERNAL-ML no longer defaults to "the earliest letter among its allowed zones" (Zone B) unconditionally; the worked case’s own narrative ("deal content never leaves firm-controlled infrastructure") answers the follow-up with the Zone C option, reproducing the originally-recorded Zone C exactly, so status/track/downstream_reviews now match and the rejected-vs-approved flip R16.md §2.3 documented is gone, as the R16-W contract requires. A SEPARATE, pre-existing difference surfaces now that status no longer short-circuits at a hard-line rejection: this worked case shares UC-6a’s Q8 answer ("Whether to lend to someone, or on what terms", decision_type credit-decision), which the simple ORIGINAL_GRAPHS fixture (no decisionType parameter at all, same gap UC-3/UC-5/UC-7/UC-8 already report) never modelled — so INV-FAIRNESS-01/CTRL-BIAS-01 now fire and tier reads Critical, not High. This is the same class of "the new answers capture more than the old fixture did" difference those other cases document, not a zone-mapping defect; reported per the contract’s "report why rather than adjusting expectations" instruction rather than silently matched away.', () => {
     const blind = blindResult('UC-6b');
     const original = evalNamedSubset(ORIGINAL_GRAPHS['UC-6b']!);
     expect(original.status).toBe('approved_with_controls');
-    expect(blind.status).toBe('rejected');
-    expect(blind.binding).toBe('HL-002');
+    expect(original.tier).toBe('High');
+    expect(original.binding).toBe('INV-HALLUC-01');
+    // The zone fix: status, track and downstream reviews now match exactly.
+    expect(blind.status).toBe(original.status);
+    expect(blind.track).toBe(original.track);
+    expect(blind.downstream_reviews).toEqual(original.downstream_reviews);
+    // The separate, pre-existing decision_type gap: tier/binding/controls
+    // differ because this blind answer set (unlike the simple fixture)
+    // actually declares a lending decision.
+    expect(blind.tier).toBe('Critical');
+    expect(blind.binding).toBe('INV-FAIRNESS-01');
+    expect(blind.tripped).toEqual([...original.tripped, 'INV-FAIRNESS-01'].sort());
+    expect(blind.controls).toEqual([...original.controls, 'CTRL-BIAS-01'].sort());
   });
 
   it('TC-R16-B-23 (UC-7): DIFFERS — three narrative-supported facts the old single-field recording never carried: (1) the named-but-unlisted supplier ("Claude Code", "Not on this list") resolves to an unregistered vendor (INV-VENDOR-01, CTRL-TPRM-01) where the recording left vendor unset ("internal"); (2) "it reads internal code repositories and data schemas" reads as "Confidential firm information" (Q5), not the recorded plain "Internal" — Confidential + Zone B (from the specialist-product answer) trips INV-CONFDATA-01 (CTRL-ENC-01); (3) the narrative’s own "needs some standing access" supports ticking "its own logins... for other systems" (Q13), which trips the CRITICAL-severity INV-AGENT-CRED-01 (CTRL-AGENT-CRED-01) — outranking INV-AGENT-01’s High severity, so it replaces it as the binding constraint. Status, tier and track are unaffected (Low / III, as originally).', () => {
@@ -335,7 +355,7 @@ describe('R16-B parity (§2.3) — blind answers vs the worked-case predictions'
       'CTRL-TPRM-01',
     ]);
     expect(blind.downstream_reviews).toEqual([
-      'Full vendor/platform risk assessment required — unregistered (where this AI comes from was not sure) is not on the approved list',
+      'Full vendor/platform risk assessment required — an AI service you weren’t sure about is not on the approved list',
       'Vendor risk assessment',
     ]);
   });

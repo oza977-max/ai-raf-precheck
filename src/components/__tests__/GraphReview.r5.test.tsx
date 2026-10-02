@@ -210,11 +210,11 @@ vi.mock('@anthropic-ai/sdk', () => ({
 async function reachGraphReview(user: ReturnType<typeof userEvent.setup>) {
   render(<IntakeFlow />);
   await user.type(
-    screen.getByLabelText(/describe your ai use case/i),
+    screen.getByLabelText(/what ai tool do you want to use/i),
     'Trains an open source model on internal credit risk data.',
   );
-  await user.click(screen.getByRole('button', { name: /read & extract/i }));
-  await user.click(await screen.findByRole('button', { name: /new use case/i }));
+  await user.click(screen.getByRole('button', { name: /^next/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByText(/confirm what we understood/i);
 }
 

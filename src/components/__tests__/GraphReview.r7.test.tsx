@@ -59,9 +59,9 @@ const DESCRIPTION = 'Answers risk analysts questions about internal credit risk 
 
 async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   render(<IntakeFlow />);
-  await user.type(screen.getByLabelText(/describe your ai use case/i), DESCRIPTION);
-  await user.click(screen.getByRole('button', { name: /read & extract/i }));
-  await user.click(await screen.findByRole('button', { name: /new use case/i }));
+  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
+  await user.click(screen.getByRole('button', { name: /^next/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByText(/confirm what we understood/i);
 }
 

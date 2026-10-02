@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { plainAnswersToFormValues } from './plain-intake';
+import { plainAnswersToFormValues, platformZoneOptionKeys } from './plain-intake';
 import type { PlainAnswers } from '../components/plain-copy';
 import type { PolicyFile } from './types';
 
@@ -109,6 +109,120 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
   it('a platform with no vendor_id defaults vendor to internal', () => {
     const { values } = plainAnswersToFormValues({ ...BASE, '3': 'PLAT-INTERNAL-ML' }, policy());
     expect(values.vendor).toBe('internal');
+  });
+
+  // R16-W W-9 (D-79, the UC-6b parity fix). PLAT-INTERNAL-ML allows both
+  // Zone B and Zone C — the follow-up decides which, instead of always
+  // defaulting to the earliest letter (Zone B).
+  describe('Q3platformZone — the multi-zone platform follow-up', () => {
+    it('TC-R16-W-01: "Yes — the platform runs the AI on the firm’s own systems" resolves to Zone C', () => {
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'firm-systems' },
+        policy(),
+      );
+      expect(values.processingDataZone).toBe('Zone C');
+      expect(assumptions).toEqual([]);
+    });
+
+    it('TC-R16-W-02: "No — the platform passes it to an outside supplier’s AI" resolves to Zone B', () => {
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'outside-supplier' },
+        policy(),
+      );
+      expect(values.processingDataZone).toBe('Zone B');
+      expect(assumptions).toEqual([]);
+    });
+
+    it('TC-R16-W-03: "No — it goes out to a public website or service" resolves to Zone A, for a platform that allows it', () => {
+      const multiZone = policy({
+        platforms: [
+          {
+            id: 'PLAT-ALL-ZONES',
+            name: 'All zones',
+            approved_envelope: { data_zones: ['Zone A', 'Zone B', 'Zone C'] },
+            satisfies_controls: [],
+            plain_name: 'A platform allowed in every zone',
+          },
+        ],
+      });
+      const { values } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-ALL-ZONES', '3platformZone': 'outside-service' },
+        multiZone,
+      );
+      expect(values.processingDataZone).toBe('Zone A');
+    });
+
+    it('TC-R16-W-04: "Not sure" on PLAT-INTERNAL-ML (earliest allowed = Zone B) resolves to Zone B, with the "outside supplier" assumption text', () => {
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'not-sure' },
+        policy(),
+      );
+      expect(values.processingDataZone).toBe('Zone B');
+      expect(assumptions).toHaveLength(1);
+      expect(assumptions[0]!.questionId).toBe('3platformZone');
+      expect(assumptions[0]!.assumption).toBe(
+        'it may pass your information to an outside supplier — the stricter case.',
+      );
+    });
+
+    it('TC-R16-W-05: leaving the follow-up unanswered behaves exactly like "Not sure" (the default branch), not like an unresolved platform', () => {
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-INTERNAL-ML' },
+        policy(),
+      );
+      expect(values.processingDataZone).toBe('Zone B');
+      expect(assumptions).toHaveLength(1);
+      expect(assumptions[0]!.questionId).toBe('3platformZone');
+    });
+
+    it('TC-R16-W-06: "Not sure" when the earliest allowed zone is A uses the "strictest case" wording instead', () => {
+      const allowsA = policy({
+        platforms: [
+          {
+            id: 'PLAT-ALL-ZONES',
+            name: 'All zones',
+            approved_envelope: { data_zones: ['Zone A', 'Zone C'] },
+            satisfies_controls: [],
+            plain_name: 'A platform allowed in two zones',
+          },
+        ],
+      });
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-ALL-ZONES', '3platformZone': 'not-sure' },
+        allowsA,
+      );
+      expect(values.processingDataZone).toBe('Zone A');
+      expect(assumptions[0]!.assumption).toBe('an outside website or service — the strictest case.');
+    });
+
+    it('TC-R16-W-07: a platform allowed in only one zone keeps the old mapping — no follow-up is read even if answered', () => {
+      // PLAT-CLOUD-LLM allows only Zone B — the follow-up should never be
+      // consulted even if a stray answer is present (e.g. left over from a
+      // previously-selected multi-zone platform).
+      const { values, assumptions } = plainAnswersToFormValues(
+        { ...BASE, '3': 'PLAT-CLOUD-LLM', '3platformZone': 'firm-systems' },
+        policy(),
+      );
+      expect(values.processingDataZone).toBe('Zone B');
+      expect(assumptions).toEqual([]);
+    });
+
+    it('TC-R16-W-08: platformZoneOptionKeys orders Zone C, Zone B, Zone A (filtered to what the platform allows), "not-sure" always last', () => {
+      const [, internal] = policy().platforms!;
+      expect(platformZoneOptionKeys(internal!)).toEqual(['firm-systems', 'outside-supplier', 'not-sure']);
+
+      const [allZones] = policy({
+        platforms: [
+          { id: 'x', name: 'x', approved_envelope: { data_zones: ['Zone A', 'Zone B', 'Zone C'] }, satisfies_controls: [] },
+        ],
+      }).platforms!;
+      expect(platformZoneOptionKeys(allZones!)).toEqual([
+        'firm-systems',
+        'outside-supplier',
+        'outside-service',
+        'not-sure',
+      ]);
+    });
   });
 
   it('supplier-feature -> Zone B, and defers to Q3supplier for the vendor', () => {

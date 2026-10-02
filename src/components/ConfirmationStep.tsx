@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { DataFlowGraph, GraphCorrection, PolicyFile } from '../engine/types';
 import type { Assumption } from './plain-copy';
 import UnderstoodSummary from './UnderstoodSummary';
+import SimilarCases from './SimilarCases';
+import type { EnrichedPrecedent } from './SimilarCases';
 
 // UC-6 (intake-flow.md §9). Rule 4 (cross-cutting.md §7): presentation-only.
 // This click is the attestation point — writing the graph_confirmed audit
@@ -21,6 +23,13 @@ interface ConfirmationStepProps {
   assumptions?: Assumption[];
   /** Description path (UC-12): node ids the extractor could not verify. */
   uncertainNodeIds?: string[];
+  /** W-3 (R16-W §1): similar decided cases, computed by the caller — on the
+   *  description path only when the graph came from the guided form (the
+   *  form path's own graph_review equivalent no longer exists, so this is
+   *  the only screen left to show them on). Rendered after the summary,
+   *  before the optional note, same collapsed panel and posture line as
+   *  graph_review's. */
+  precedents?: EnrichedPrecedent[];
   /** "Change an answer" on the summary — navigates back to the question
    *  (form path) or into the existing correction flow (description path,
    *  UC-7). Not a write; the one write stays onConfirm below. */
@@ -40,6 +49,7 @@ export default function ConfirmationStep({
   policy,
   assumptions,
   uncertainNodeIds,
+  precedents,
   onChangeAnswer,
   onConfirm,
 }: ConfirmationStepProps) {
@@ -48,14 +58,14 @@ export default function ConfirmationStep({
   return (
     <section aria-label="Confirm and evaluate">
       <h2>Confirm and evaluate</h2>
-      {/* design-review round 4 (Panel G — Intake: Confirmation, Important):
-          the Back button silently disappears on this step with zero
-          explanation, and "attestation" alone was asked to carry the whole
-          weight of "this is final." Now stated in plain words, in the one
-          sentence a reader can't miss on this screen. */}
+      {/* R16-W §3 (D-73): replaces "This is your last chance to review
+          before scoring…" — says plainly what becomes permanent, and that
+          a later correction is still possible (and is itself recorded),
+          rather than implying this is the one and only chance. */}
       <p className="confirmation__notice">
-        This is your last chance to review before scoring — you won&rsquo;t be able to come back and
-        change these answers afterward. Confirming is timestamped and permanently recorded.
+        Check this carefully. When you confirm, your answers are recorded with the date and time and
+        can&rsquo;t be edited. If something turns out to be wrong later, you can correct it — the
+        correction is recorded too.
       </p>
 
       <UnderstoodSummary
@@ -66,6 +76,18 @@ export default function ConfirmationStep({
         onChangeAnswer={onChangeAnswer}
       />
 
+      {/* R16-W W-3 (§1): same collapsed panel and posture line graph_review
+          renders — the form path no longer passes through that screen, so
+          this is the only place left to show them before attestation. */}
+      {precedents && precedents.length > 0 && (
+        <details className="similar-cases-collapse">
+          <summary>
+            {precedents.length} similar decided case{precedents.length === 1 ? '' : 's'} — show
+          </summary>
+          <SimilarCases matches={precedents} />
+        </details>
+      )}
+
       {corrections.length > 0 && (
         <p className="confirmation__corrections">
           {corrections.length} correction{corrections.length === 1 ? '' : 's'} made. Original extraction and
@@ -74,12 +96,16 @@ export default function ConfirmationStep({
       )}
 
       <label htmlFor="confirm-reviewer-note" className="confirmation__note-label">
-        Anything the reviewer should know? (optional)
+        Anything your AI risk team should know? (optional)
       </label>
+      {/* R16-W §3 (D-73): replaces "Context the questions could not
+          capture…". Names who actually reads it (your AI risk team, not a
+          generic "reviewer") and restates — in the same sentence a reader
+          can't miss — that it never feeds the result. */}
       <p className="field-help">
-        Context the questions could not capture — &ldquo;the personal data is pseudonymised before the
-        model sees it&rdquo;, &ldquo;this replaces a manual process&rdquo;. This is read by the reviewer
-        who signs off, not by the rules: the verdict is computed only from the answers above.
+        For example: &ldquo;the personal details are removed before the AI sees them&rdquo;, or
+        &ldquo;this replaces a manual process&rdquo;. Your AI risk team reads this when they review it.
+        It doesn&rsquo;t change the result — that comes only from your answers above.
       </p>
       <textarea
         id="confirm-reviewer-note"
@@ -89,8 +115,12 @@ export default function ConfirmationStep({
         placeholder="Optional — recorded with your attestation"
       />
 
+      {/* R16-W §3 (D-73): replaces "By confirming, you attest the data-flow
+          graph above is accurate…" — "data-flow graph" is engine
+          vocabulary (principle 1); this says the same thing about the
+          submitter's own answers instead. */}
       <p className="confirmation__attest-line">
-        By confirming, you attest the data-flow graph above is accurate to the best of your knowledge.
+        By confirming, you&rsquo;re saying these answers are accurate, as far as you know.
       </p>
 
       <button type="button" onClick={() => onConfirm(note.trim() || undefined)}>

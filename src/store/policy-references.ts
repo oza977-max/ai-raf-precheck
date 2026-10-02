@@ -96,6 +96,29 @@ function coversReviewsErrors(controlId: string, coversReviews: string[] | undefi
     .map((id) => `${controlId} covers_reviews: no review with id '${id}'.`);
 }
 
+// W-7 (R16-W §5, D-77): referential, like covers_reviews — an applies_to id
+// that doesn't resolve against the policy's OWN platform/vendor registries
+// is always checkable here (unlike covers_reviews, which may name a pack
+// rule id that only exists once packs are loaded), so this is always an
+// error, never a warning.
+function appliesToErrors(
+  controlId: string,
+  appliesTo: { platforms?: string[]; vendors?: string[] } | undefined,
+  policy: PolicyFile,
+): string[] {
+  if (!appliesTo) return [];
+  const validPlatformIds = new Set((policy.platforms ?? []).map((p) => p.id));
+  const validVendorIds = new Set((policy.vendors ?? []).map((v) => v.id));
+  return [
+    ...(appliesTo.platforms ?? [])
+      .filter((id) => !validPlatformIds.has(id))
+      .map((id) => `${controlId} verification_evidence.applies_to: no platform with id '${id}'.`),
+    ...(appliesTo.vendors ?? [])
+      .filter((id) => !validVendorIds.has(id))
+      .map((id) => `${controlId} verification_evidence.applies_to: no vendor with id '${id}'.`),
+  ];
+}
+
 function registryPlainNameWarnings(kind: 'platform' | 'vendor', entries: RegistryEntry[] | undefined): string[] {
   return sortedById(entries ?? [])
     .filter((e) => !e.plain_name)
@@ -137,6 +160,7 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
   const validCoversReviewsTargets = new Set([...firmReviewIds, ...packReviewRuleIds, ...REVIEW_SENTINELS]);
 
   for (const control of sortedById(policy.controls)) {
+    errors.push(...appliesToErrors(control.id, control.verification_evidence?.applies_to, policy));
     const unresolved = coversReviewsErrors(control.id, control.covers_reviews, validCoversReviewsTargets);
     if (packs.length > 0) {
       errors.push(...unresolved);

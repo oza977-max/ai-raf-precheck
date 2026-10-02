@@ -9,6 +9,21 @@
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
 # CHANGE LOG
+#   1.8 (2026-10-02) — R16-W (walkthrough fixes): presentation text and
+#       evidence scope only — no condition, tier, track or invariant
+#       change; the backtest predictions and every engine test pass
+#       unchanged apart from version strings. DR-VENDOR-01's plain_name
+#       "the supplier is assessed" -> "a supplier assessment" (W-6: review
+#       plain names must be noun phrases — they are read inside "Doing
+#       this also completes …" and "Checks other teams run: …", and the
+#       old clause-shaped text broke the former). CTRL-CONDUCT-01's
+#       plain_owner_with "compliance" -> "your compliance team" (W-8: "…
+#       with compliance)" read as "in compliance"). CTRL-ENC-01 gains
+#       verification_evidence.applies_to, scoped to every platform and
+#       vendor id this starter policy registers (W-7: the stored evidence
+#       is firm-level — about the firm's own allow-listed platforms/
+#       suppliers — and must not be claimed for a tool outside that list,
+#       e.g. a personal account the firm has no contract with).
 #   1.7 (2026-10-02) — R16 chunk A2: plain-language text only, no verdict
 #       changes (presentation fields the engine does not read). Added
 #       plain_action/plain_owner/plain_owner_with/covers_reviews to every
@@ -144,7 +159,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.7"
+version: "1.8"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -885,7 +900,12 @@ downstream_reviews:
     # a different question and a different team.
     condition:
       vendor: { not_in: ["internal"] }
-    plain_name: "the supplier is assessed"
+    # W-6 (R16-W §5/§6, D-76): was "the supplier is assessed" — a clause,
+    # not a noun phrase, which broke the "(Doing this also completes …)"
+    # sentence when a safeguard covers this review (grounding/
+    # PACK-AUTHORING.md's reviewer-checklist rule: review plain names must
+    # be noun phrases).
+    plain_name: "a supplier assessment"
     plain_owner: "your vendor-risk team"
 
   # ⚠ NOT WRITTEN — "Cloud security approval", triggered by processing outside
@@ -914,6 +934,15 @@ controls:
       detail: "Platform allow-list pins TLS 1.3; platform attestation on file"
       attested_by: "[FIRM] — Platform Engineering"
       attested_at: "[DATE]"
+      # W-7 (R16-W §5, D-77): this evidence is about the firm's OWN
+      # allow-listed platforms and suppliers — it proves nothing about a
+      # tool outside that list (e.g. a personal account the firm has no
+      # contract with). Scoped to every platform and vendor id this
+      # starter policy registers (the allow-list the evidence describes).
+      # [FIRM] MUST REVIEW this list alongside its own platforms/vendors.
+      applies_to:
+        platforms: ["PLAT-INTERNAL-ML", "PLAT-CLOUD-LLM"]
+        vendors: ["VENDOR-APPROVED-LLM"]
       # R10-CE: optional design/operating effectiveness axes (COSO wording).
       # Legacy evidence without these axes remains valid and renders as before.
       design:
@@ -1133,7 +1162,9 @@ controls:
     verification: "Conduct test results and transcript audit sampling on file"
     plain_action: "It's tested before launch, and regularly after, to make sure what it produces treats people fairly and doesn't mislead or harm them — including checking a sample of what it actually produced."
     plain_owner: "@submitter"
-    plain_owner_with: "compliance"
+    # W-8 (R16-W §5, D-78): was "compliance" — "…responsible for this
+    # use), with compliance" read as "in compliance", not as naming a team.
+    plain_owner_with: "your compliance team"
 
 
 kri_thresholds:

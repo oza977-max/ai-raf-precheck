@@ -441,6 +441,44 @@ describe('ControlSchema — verification_evidence (V1.3)', () => {
     const result = loadPolicy(badStatus);
     expect(result.valid).toBe(false);
   });
+
+  // R16-W W-7 (D-77). Absent applies_to = unscoped (unchanged); present
+  // must name at least one platform or vendor id — an applies_to with
+  // both lists empty would silently scope the evidence to nothing, which
+  // is never what a policy author means by writing it.
+  it('TC-R16-W-52: accepts verification_evidence.applies_to with only platforms, only vendors, or both', () => {
+    const withPlatforms = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      applies_to:\n        platforms: ["PLAT-X"]',
+    );
+    expect(loadPolicy(withPlatforms).valid).toBe(true);
+
+    const withVendors = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      applies_to:\n        vendors: ["VENDOR-X"]',
+    );
+    expect(loadPolicy(withVendors).valid).toBe(true);
+
+    const withBoth = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      applies_to:\n        platforms: ["PLAT-X"]\n        vendors: ["VENDOR-X"]',
+    );
+    expect(loadPolicy(withBoth).valid).toBe(true);
+  });
+
+  it('TC-R16-W-53: rejects verification_evidence.applies_to with both lists empty (or absent) — it must name at least one platform or vendor', () => {
+    const emptyLists = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      applies_to:\n        platforms: []\n        vendors: []',
+    );
+    expect(loadPolicy(emptyLists).valid).toBe(false);
+
+    const neitherList = VALID_YAML.replace(
+      'verification: "manual check"',
+      'verification: "manual check"\n    verification_evidence:\n      status: "verified"\n      applies_to: {}',
+    );
+    expect(loadPolicy(neitherList).valid).toBe(false);
+  });
 });
 
 // R12 schema additions (TC-R12-SCHEMA; ADR-PS-R12-1).

@@ -1115,17 +1115,35 @@ function FirstScreen({
                   {s.ownerText && (
                     <p className="verdict__first-safeguard-owner">
                       Who: {s.ownerText}
-                      {s.yours && <span className="verdict__first-yours-chip">yours</span>}
+                      {/* W-8 (R16-W §5, D-78): a literal space text node before
+                          the chip — "…with compliance" immediately followed by
+                          a "yours" <span> with no space between them
+                          concatenates to "complianceyours" for anything that
+                          reads the element's text content (assistive tech
+                          included). JSX drops an all-whitespace line between
+                          two expression children entirely rather than
+                          collapsing it to one space, so an explicit {' '} is
+                          required here, not just source formatting. */}
+                      {s.yours && (
+                        <>
+                          {' '}
+                          <span className="verdict__first-yours-chip">yours</span>
+                        </>
+                      )}
                     </p>
                   )}
                   {s.plainReasons.length > 0 && (
                     <p className="verdict__first-safeguard-reason">Because {s.plainReasons.join('; ')}</p>
                   )}
-                  {s.coveredReviews.map((r, i) => (
-                    <p key={`${r.baseId}-${i}`} className="verdict__first-also-covers">
-                      (This also covers {r.plainName} — one piece of work.)
-                    </p>
-                  ))}
+                  {/* W-6 (R16-W §5, D-76): one note per safeguard, not one
+                      per covered review — a safeguard covering two reviews
+                      used to print two notes, and the old per-review
+                      template broke on clause-shaped names ("This also
+                      covers the supplier is assessed"). alsoCompletesNote
+                      is the view-model's one computed sentence. */}
+                  {s.alsoCompletesNote && (
+                    <p className="verdict__first-also-covers">{s.alsoCompletesNote}</p>
+                  )}
                   {s.yours && (
                     <button type="button" className="verdict__first-go-to" onClick={() => onGoToSafeguard(s.id)}>
                       Go to this safeguard
@@ -1327,7 +1345,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         const verified = safeguard?.status === 'verified';
         const attested = safeguard?.status === 'attested';
         const attestation = attested ? controlAttestations?.[id] : undefined;
-        return { id, control, evidence, verified, attested, attestation };
+        // W-7 (D-77): the one case this panel adds — scoped evidence that
+        // does not cover THIS tool. Only ever set by the view-model when
+        // it is the reason `verified` came back false.
+        return { id, control, evidence, verified, attested, attestation, evidenceScopeNote: safeguard?.evidenceScopeNote };
       })
     : [];
 
@@ -1753,7 +1774,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               {new Date(verdict.attested_at).toLocaleDateString()}.
             </p>
             <ul>
-              {controlEvidenceStates.map(({ id, control, evidence, verified, attested, attestation }) => {
+              {controlEvidenceStates.map(({ id, control, evidence, verified, attested, attestation, evidenceScopeNote }) => {
                 return (
                   <li key={id}>
                     <div className="verdict__control-head">
@@ -1799,6 +1820,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                         {evidence.attested_by ? ` — attested by ${evidence.attested_by}` : ''}
                         {evidence.attested_at ? ` (${evidence.attested_at})` : ''}
                       </p>
+                    )}
+                    {/* W-7 (R16-W §5, D-77): the policy's evidence IS marked
+                        verified, but its applies_to scope doesn't cover (or
+                        can't be checked against) this tool — say exactly
+                        that, rather than either claiming it or going silent. */}
+                    {!verified && evidenceScopeNote && (
+                      <p className="verdict__control-evidence verdict__control-evidence--scope">{evidenceScopeNote}</p>
                     )}
                     {/* F8: the reviewer's on-the-record claim, shown beside the
                         chip — never merged with the machine-VERIFIED evidence

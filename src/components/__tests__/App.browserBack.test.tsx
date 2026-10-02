@@ -59,7 +59,7 @@ describe('Browser Back button actually navigates within the app (explore-010 D-0
 
     goBack();
     await waitFor(() => {
-      expect(screen.getByText(/describe your ai use case/i)).toBeInTheDocument();
+      expect(screen.getByText(/what ai tool do you want to use/i)).toBeInTheDocument();
     });
   });
 
@@ -100,7 +100,7 @@ describe('Browser Back button actually navigates within the app (explore-010 D-0
 
     goBack();
     await waitFor(() => {
-      expect(screen.getByText(/describe your ai use case/i)).toBeInTheDocument();
+      expect(screen.getByText(/what ai tool do you want to use/i)).toBeInTheDocument();
     });
   });
 

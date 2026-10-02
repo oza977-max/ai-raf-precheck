@@ -1,54 +1,69 @@
+import { graphSummaryRows, dataClassesBySeverity } from './graph-summary';
 import {
-  ACTION_TYPE_LABELS,
-  BINDINGNESS_LABELS,
-  DATA_CLASS_LABELS,
-  DECISION_TYPE_LABELS,
-  EXPOSURE_LABELS,
-  MULTI_INSTANCE_LABELS,
-  SCALE_LABELS,
-  SYSTEM_ACCESS_LABELS,
-} from './field-copy';
-import { graphSummaryRows, destinationDescription, dataClassesBySeverity } from './graph-summary';
-import { SUMMARY_LABELS } from './plain-copy';
+  SUMMARY_LABELS,
+  SUMMARY_DESTINATION,
+  SUMMARY_DATA_CLASS,
+  SUMMARY_MODEL_TYPE,
+  SUMMARY_BINDINGNESS,
+  SUMMARY_EXPOSURE,
+  SUMMARY_REVERSIBILITY,
+  SUMMARY_SCALE,
+  SUMMARY_NO_COUNTRIES,
+  SUMMARY_ACCESS_SCOPE,
+  SUMMARY_MULTI_INSTANCE,
+  summaryBehaviourLine,
+  summaryShowsWeight,
+  summaryDecisionLine,
+} from './plain-copy';
 import type { Assumption } from './plain-copy';
 import { Fold } from './Fold';
 import type { DataFlowGraph, PolicyFile, SystemAccessScope } from '../engine/types';
 
-// R16-C (UC-9, UC-12; build/prompts/R16.md v2.1 §3). Rule 4
-// (cross-cutting.md §7): presentation-only — every value is read off the
-// graph via graph-summary.ts's pure helpers or passed in as a prop; nothing
-// here decides a verdict or writes anything.
+// R16-C (UC-9, UC-12; build/prompts/R16.md v2.1 §3), rewritten for R16-W §2
+// (D-71). Rule 4 (cross-cutting.md §7): presentation-only — every value is
+// read off the graph via graph-summary.ts's pure helpers, plain-copy.ts's
+// SUMMARY_* lookups, or passed in as a prop; nothing here decides a verdict
+// or writes anything.
 //
 // Principle 1 (§0) applies here exactly as it does to the questions: no
 // data class, zone letter, model-type name, autonomy level or bindingness
-// code reaches this screen. Each *_LABELS map imported above carries its
-// plain phrase before the parenthesised code (e.g. "Writes a first draft
-// for a person to check and edit (draft)"); `plainPhrase()` below strips
-// the code, the same extraction field-copy.ts's own (private) shortPhrase()
-// does for plainWithCode() — kept local rather than exported from
-// field-copy.ts so this chunk's screen never depends on a change to a
-// different chunk's file.
-function plainPhrase(fullLabel: string | undefined): string {
-  // Defensive only: every *_LABELS map used below is declared with the
-  // exact type union the graph field itself carries, so this is never
-  // actually undefined at runtime — just how TS's noUncheckedIndexedAccess
-  // sees a Record<SomeUnion, string> lookup.
-  if (!fullLabel) return '';
-  const withoutCode = fullLabel.replace(/\s*\([^()]*\)\s*$/, '');
-  const dashIndex = withoutCode.indexOf('—');
-  return (dashIndex === -1 ? withoutCode : withoutCode.slice(0, dashIndex)).trim();
-}
+// code reaches this screen. D-71 found this screen reading the graph
+// through the REVIEWER cards' own labels (field-copy.ts) instead — a
+// different vocabulary, written for a 2LoD reader ("Personal details of
+// clients" for "Information about people…", "via unregistered…" for the
+// supplier, no line at all for the kind of AI or whether a mistake can be
+// put right). Every value below now reads from plain-copy.ts's SUMMARY_*
+// maps — the newcomer-tested QUESTION wording (§2.2) — never field-copy.ts.
+// The collapsed "Show the details the rules use" grid below keeps
+// field-copy.ts's labels unchanged: that is the reviewer's own vocabulary,
+// on purpose (§3: "reviewer vocabulary stays there").
 
-function supplierDisplayName(vendor: string | undefined, policy?: PolicyFile): string | undefined {
-  if (!vendor || vendor === 'internal') return undefined;
+/** §2 "Through: {name}." / the unregistered-vendor second line (D-71). A
+ *  registry match (platform or vendor) renders its plain_name, or the
+ *  neutral fallback if it has none — never the raw `name`, which may carry
+ *  the bare [FIRM] placeholder. An unmatched vendor string is already the
+ *  plain, human-written text plain-intake.ts constructed for every
+ *  unregistered case (D-72) — safe to show as-is, and flagged unassessed. */
+function throughSupplierLine(
+  vendor: string | undefined,
+  policy: PolicyFile | undefined,
+): { through?: string; unregistered: boolean } {
+  if (!vendor || vendor === 'internal') return { unregistered: false };
   const registry = [...(policy?.platforms ?? []), ...(policy?.vendors ?? [])];
   const match = registry.find((r) => r.id === vendor);
-  // A registry match uses its plain_name (never the raw `name`, which may
-  // carry the bare [FIRM] placeholder). An unmatched vendor string is
-  // already the plain, human-written text plain-intake.ts constructed for
-  // every unregistered case (e.g. "An unlisted supplier (not on your
-  // firm's list)") — safe to show as-is.
-  return match ? (match.plain_name ?? vendor) : vendor;
+  if (match) {
+    return { through: `Through: ${match.plain_name ?? 'a supplier on your firm’s list'}.`, unregistered: false };
+  }
+  return { through: `Through: ${vendor}.`, unregistered: true };
+}
+
+/** §2 "Runs on: {platform plain_name}." (D-71). Falls back to a neutral
+ *  phrase, never the bare registry id, if the recorded platform id no
+ *  longer resolves against today's policy (principle 1, D-20). */
+function runsOnLine(platformId: string | undefined, policy: PolicyFile | undefined): string | undefined {
+  if (!platformId) return undefined;
+  const match = policy?.platforms?.find((p) => p.id === platformId);
+  return `Runs on: ${match?.plain_name ?? 'your firm’s platform'}.`;
 }
 
 interface UnderstoodSummaryProps {
@@ -74,7 +89,8 @@ export default function UnderstoodSummary({
   const processing = graph.processing_nodes[0];
   const output = graph.output_nodes[0];
   const dataClasses = dataClassesBySeverity(graph);
-  const supplierName = supplierDisplayName(processing?.vendor, policy);
+  const through = throughSupplierLine(processing?.vendor, policy);
+  const runsOn = runsOnLine(processing?.platform, policy);
   const countryNames = graph.jurisdictions.map(
     (code) => policy?.jurisdictions.find((j) => j.code === code)?.name ?? code,
   );
@@ -93,10 +109,10 @@ export default function UnderstoodSummary({
       {processing && (
         <section className="understood-summary__section">
           <h3>{SUMMARY_LABELS.destination}</h3>
-          <p>
-            {destinationDescription(processing.data_zone)}
-            {supplierName ? ` — via ${supplierName}` : ''}
-          </p>
+          <p>{SUMMARY_DESTINATION[processing.data_zone]}</p>
+          {through.through && <p>{through.through}</p>}
+          {through.unregistered && <p>Your firm hasn’t assessed this supplier yet.</p>}
+          {runsOn && <p>{runsOn}</p>}
         </section>
       )}
 
@@ -105,33 +121,37 @@ export default function UnderstoodSummary({
           <h3>{SUMMARY_LABELS.dataClasses}</h3>
           <ul>
             {dataClasses.map((c) => (
-              <li key={c}>{plainPhrase(DATA_CLASS_LABELS[c])}</li>
+              <li key={c}>{SUMMARY_DATA_CLASS[c]}</li>
             ))}
+          </ul>
+        </section>
+      )}
+
+      {output && processing && (
+        <section className="understood-summary__section">
+          <h3>{SUMMARY_LABELS.behaviour}</h3>
+          <ul>
+            <li>{SUMMARY_MODEL_TYPE[processing.model_type]}</li>
+            <li>{summaryBehaviourLine(processing.autonomy_level, output.action_type, output.hitl)}</li>
+            {summaryShowsWeight(output.action_type, processing.autonomy_level) && (
+              <li>{SUMMARY_BINDINGNESS[output.decision_bindingness]}</li>
+            )}
+            <li>{SUMMARY_EXPOSURE[output.exposure]}</li>
           </ul>
         </section>
       )}
 
       {output && (
         <section className="understood-summary__section">
-          <h3>{SUMMARY_LABELS.behaviour}</h3>
-          <ul>
-            <li>{plainPhrase(ACTION_TYPE_LABELS[output.action_type])}</li>
-            <li>{plainPhrase(BINDINGNESS_LABELS[output.decision_bindingness])}</li>
-            <li>{plainPhrase(EXPOSURE_LABELS[output.exposure])}</li>
-          </ul>
+          <h3>{SUMMARY_LABELS.reversibility}</h3>
+          <p>{SUMMARY_REVERSIBILITY[output.output_reversibility]}</p>
         </section>
       )}
 
       {output && (
         <section className="understood-summary__section">
           <h3>{SUMMARY_LABELS.decisions}</h3>
-          <p>
-            {output.decision_type
-              ? plainPhrase(DECISION_TYPE_LABELS[output.decision_type])
-              : output.decision_type_other
-                ? output.decision_type_other
-                : 'Nothing in particular'}
-          </p>
+          <p>{summaryDecisionLine(output.decision_type, output.decision_type_other)}</p>
         </section>
       )}
 
@@ -139,8 +159,8 @@ export default function UnderstoodSummary({
         <section className="understood-summary__section">
           <h3>{SUMMARY_LABELS.scaleAndCountries}</h3>
           <ul>
-            <li>{plainPhrase(SCALE_LABELS[output.scale])}</li>
-            <li>{countryNames.length > 0 ? countryNames.join(', ') : 'No countries specified'}</li>
+            <li>{SUMMARY_SCALE[output.scale]}</li>
+            <li>{countryNames.length > 0 ? countryNames.join(', ') : SUMMARY_NO_COUNTRIES}</li>
             <li>
               {processing.replaces_prior_model
                 ? 'It replaces something you already use.'
@@ -158,7 +178,7 @@ export default function UnderstoodSummary({
               ? processing.system_access_scope
               : [processing.system_access_scope]
             ).map((v: SystemAccessScope) => (
-              <li key={v}>{plainPhrase(SYSTEM_ACCESS_LABELS[v])}</li>
+              <li key={v}>{SUMMARY_ACCESS_SCOPE[v]}</li>
             ))}
           </ul>
         </section>
@@ -167,7 +187,7 @@ export default function UnderstoodSummary({
       {processing?.multi_instance_coordination !== undefined && (
         <section className="understood-summary__section">
           <h3>{SUMMARY_LABELS.agentCoordination}</h3>
-          <p>{plainPhrase(MULTI_INSTANCE_LABELS[processing.multi_instance_coordination])}</p>
+          <p>{SUMMARY_MULTI_INSTANCE[processing.multi_instance_coordination]}</p>
         </section>
       )}
 

@@ -547,6 +547,223 @@ describe('intakeReducer — a correction pass cannot step backwards out of itsel
   });
 });
 
+// R16-W W-3/W-4 (§1, D-69/D-70). FORM_SUBMITTED replaces GRAPH_EXTRACTED on
+// the form path only — graph_review (the field-card screen) is engine
+// vocabulary the form path has no business showing, since the person typed
+// every value themselves.
+describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
+  const formState = (overrides: Partial<Extract<IntakeState, { step: 'graph_extraction' }>> = {}): IntakeState => ({
+    step: 'graph_extraction',
+    description: 'd',
+    method: 'form',
+    ...overrides,
+  });
+  const plainAnswers = { '1': 'Test tool' };
+  const assumptions = [{ questionId: '9' as const, question: 'Q?', assumption: 'a' }];
+
+  it('TC-R16-W-18: is refused from any step other than graph_extraction(form)', () => {
+    const llmState: IntakeState = { step: 'graph_extraction', description: 'd', method: 'llm' };
+    const next = intakeReducer(llmState, {
+      type: 'FORM_SUBMITTED',
+      graph: graph(),
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers,
+      assumptions,
+      questions: [],
+      contradictions: [],
+    });
+    expect(next).toBe(llmState);
+  });
+
+  it('TC-R16-W-19: with questions present, goes to questionnaire — never graph_review', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const questions = [
+      { id: 'Q1', text: 'x?', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
+    ];
+    const next = intakeReducer(formState(), {
+      type: 'FORM_SUBMITTED',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers,
+      assumptions,
+      questions,
+      contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+    });
+    expect(next).toEqual({
+      step: 'questionnaire',
+      description: 'd',
+      graph: g,
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+      questions,
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+    });
+  });
+
+  it('TC-R16-W-20: with no questions but a contradiction, goes straight to contradiction_review (never through questionnaire)', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const contradictions = [{ statement1: 'a', statement2: 'b', field: 'data_class' }];
+    const next = intakeReducer(formState(), {
+      type: 'FORM_SUBMITTED',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers,
+      assumptions,
+      questions: [],
+      contradictions,
+    });
+    expect(next).toEqual({
+      step: 'contradiction_review',
+      description: 'd',
+      graph: g,
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+      questions: [],
+      answers: [],
+      contradictions,
+      resolutionNotes: [],
+      corrections: [],
+    });
+  });
+
+  it('TC-R16-W-21: with neither questions nor contradictions, goes straight to confirmation', () => {
+    const g = graph({ intake_method: 'structured_form', version: 3 });
+    const next = intakeReducer(formState(), {
+      type: 'FORM_SUBMITTED',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers,
+      assumptions,
+      questions: [],
+      contradictions: [],
+    });
+    expect(next).toEqual({
+      step: 'confirmation',
+      description: 'd',
+      graph: g,
+      graphVersion: 3,
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+    });
+  });
+});
+
+describe('intakeReducer — plainAnswers/assumptions carry through the form path (R16-W W-4, D-70)', () => {
+  const g = graph({ intake_method: 'structured_form' });
+  const plainAnswers = { '1': 'Test tool' };
+  const assumptions = [{ questionId: '9' as const, question: 'Q?', assumption: 'a' }];
+  const questionnaireState = (): IntakeState => ({
+    step: 'questionnaire',
+    description: 'd',
+    graph: g,
+    questions: [],
+    answers: [],
+    resolutionNotes: [],
+    corrections: [],
+    useCaseId: 'uc-1',
+    plainAnswers,
+    assumptions,
+  });
+
+  it('TC-R16-W-22: STEP_BACK from questionnaire on a form-path graph returns to the form, filled in — not graph_review', () => {
+    const next = intakeReducer(questionnaireState(), { type: 'STEP_BACK' });
+    expect(next).toEqual({
+      step: 'graph_extraction',
+      description: 'd',
+      method: 'form',
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+    });
+  });
+
+  it('TC-R16-W-23: STEP_BACK from questionnaire on a description-path graph still returns to graph_review (unaffected)', () => {
+    const llmGraph = graph({ intake_method: 'llm' });
+    const state: IntakeState = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: llmGraph,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+    };
+    const next = intakeReducer(state, { type: 'STEP_BACK' });
+    expect(next.step).toBe('graph_review');
+  });
+
+  it('TC-R16-W-24: CONTRADICTIONS_DETECTED carries plainAnswers/assumptions into contradiction_review', () => {
+    const next = intakeReducer(questionnaireState(), {
+      type: 'CONTRADICTIONS_DETECTED',
+      contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+    });
+    expect('plainAnswers' in next && next.plainAnswers).toEqual(plainAnswers);
+    expect('assumptions' in next && next.assumptions).toEqual(assumptions);
+  });
+
+  it('TC-R16-W-25: CONTRADICTION_RESOLVED carries plainAnswers/assumptions back into questionnaire', () => {
+    const contradictionState: IntakeState = {
+      step: 'contradiction_review',
+      description: 'd',
+      graph: g,
+      questions: [],
+      answers: [],
+      contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+    };
+    const next = intakeReducer(contradictionState, { type: 'CONTRADICTION_RESOLVED', explanation: 'resolved' });
+    expect('plainAnswers' in next && next.plainAnswers).toEqual(plainAnswers);
+    expect('assumptions' in next && next.assumptions).toEqual(assumptions);
+  });
+
+  it('TC-R16-W-26: PROCEED_TO_CONFIRMATION carries plainAnswers/assumptions into confirmation', () => {
+    const next = intakeReducer(questionnaireState(), { type: 'PROCEED_TO_CONFIRMATION' });
+    expect('plainAnswers' in next && next.plainAnswers).toEqual(plainAnswers);
+    expect('assumptions' in next && next.assumptions).toEqual(assumptions);
+  });
+
+  it('TC-R16-W-27: CHANGE_ANSWER from confirmation on a form-path graph carries plainAnswers/assumptions/useCaseId back to the form', () => {
+    const confirmationState: IntakeState = {
+      step: 'confirmation',
+      description: 'd',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+    };
+    const next = intakeReducer(confirmationState, { type: 'CHANGE_ANSWER' });
+    expect(next).toEqual({
+      step: 'graph_extraction',
+      description: 'd',
+      method: 'form',
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+    });
+  });
+});
+
 // v0.7.1 — the questionnaire's two new reducer guarantees.
 describe('intakeReducer — v0.7.1 questionnaire guards', () => {
   const base = (): Extract<IntakeState, { step: 'questionnaire' }> => ({

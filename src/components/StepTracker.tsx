@@ -10,17 +10,20 @@ import type { IntakeState } from './intake-state';
 // the user's goal of "get a fast, fair answer." Renamed where the old
 // label was jargon; left alone where it already read as a goal (Describe,
 // Confirm, Verdict).
+// R16-W §4 (D-74): "Check overlap" / "Review details" / "Verdict" ->
+// "Similar checks" / "Your answers" / "Result" — the three labels the
+// plain-language redesign had not yet reached.
 const STEPS: Array<{ key: string; label: string; matches: (s: IntakeState['step']) => boolean }> = [
   { key: 'describe', label: 'Describe', matches: (s) => s === 'description_entry' },
-  { key: 'duplicates', label: 'Check overlap', matches: (s) => s === 'duplicate_check' },
-  { key: 'graph', label: 'Review details', matches: (s) => s === 'graph_extraction' || s === 'graph_review' },
+  { key: 'duplicates', label: 'Similar checks', matches: (s) => s === 'duplicate_check' },
+  { key: 'graph', label: 'Your answers', matches: (s) => s === 'graph_extraction' || s === 'graph_review' },
   {
     key: 'questions',
     label: 'Questions',
     matches: (s) => s === 'questionnaire' || s === 'contradiction_review',
   },
   { key: 'confirm', label: 'Confirm', matches: (s) => s === 'confirmation' },
-  { key: 'verdict', label: 'Verdict', matches: (s) => s === 'evaluation_pending' || s === 'verdict' },
+  { key: 'verdict', label: 'Result', matches: (s) => s === 'evaluation_pending' || s === 'verdict' },
 ];
 
 const ORDER = [

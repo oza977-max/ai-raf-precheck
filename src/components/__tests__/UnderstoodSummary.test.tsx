@@ -99,9 +99,168 @@ describe('UnderstoodSummary — every kind of information, most sensitive first 
     const items = within(section).getAllByRole('listitem').map((li) => li.textContent ?? '');
     expect(items.some((t) => /price-sensitive/i.test(t))).toBe(true);
     const mnpiIndex = items.findIndex((t) => /price-sensitive/i.test(t));
-    const internalIndex = items.findIndex((t) => /everyday business information/i.test(t));
+    // R16-W §2 (D-71): the reviewer-card wording ("Everyday business
+    // information — nothing sensitive") is replaced by the newcomer-tested
+    // SUMMARY_DATA_CLASS text for Internal.
+    const internalIndex = items.findIndex((t) => /everyday work information/i.test(t));
     expect(internalIndex).toBeGreaterThan(mnpiIndex);
     expect(section.textContent).not.toMatch(/\(MNPI\)/);
+  });
+});
+
+describe('UnderstoodSummary — R16-W §2: the form’s own words (D-71)', () => {
+  it('TC-R16-W-28: "Through: {name}." renders the registry plain_name for a registered, non-internal vendor', () => {
+    const g = graph({
+      processing_nodes: [{ ...graph().processing_nodes[0]!, vendor: 'VENDOR-X' }],
+    });
+    render(
+      <UnderstoodSummary
+        graph={g}
+        policy={{ vendors: [{ id: 'VENDOR-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Acme Supplier' }] } as never}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Through: Acme Supplier.')).toBeInTheDocument();
+    expect(screen.queryByText(/your firm hasn.t assessed this supplier yet/i)).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-W-29: an unregistered vendor renders the recorded string plus the "hasn’t assessed" second line', () => {
+    const g = graph({
+      processing_nodes: [{ ...graph().processing_nodes[0]!, vendor: 'a personal account (no contract with your firm)' }],
+    });
+    render(<UnderstoodSummary graph={g} onChangeAnswer={vi.fn()} />);
+    expect(screen.getByText('Through: a personal account (no contract with your firm).')).toBeInTheDocument();
+    expect(screen.getByText(/your firm hasn.t assessed this supplier yet/i)).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-30: "Runs on: {platform plain_name}." renders when the processing node names a policy platform', () => {
+    const g = graph({
+      processing_nodes: [{ ...graph().processing_nodes[0]!, vendor: 'internal', platform: 'PLAT-X' }],
+    });
+    render(
+      <UnderstoodSummary
+        graph={g}
+        policy={{ platforms: [{ id: 'PLAT-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Platform' }] } as never}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Runs on: Firm Platform.')).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-31: the kind of AI now renders, in plain words', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({ processing_nodes: [{ ...graph().processing_nodes[0]!, model_type: 'agentic' }] })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/an ai agent that works through tasks on its own/i)).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-32: autonomy_level >= 2 renders the acting-alone line plus its action-type clause', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({
+          processing_nodes: [{ ...graph().processing_nodes[0]!, autonomy_level: 4 }],
+          output_nodes: [{ ...graph().output_nodes[0]!, action_type: 'trade', decision_bindingness: 'binding' }],
+        })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/it acts entirely by itself, with no person involved at any point — it places or changes trades/i),
+    ).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-33: a supervised, hitl action appends the person-checks clause', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({
+          processing_nodes: [{ ...graph().processing_nodes[0]!, autonomy_level: 1 }],
+          output_nodes: [{ ...graph().output_nodes[0]!, action_type: 'draft', hitl: true, decision_bindingness: 'material' }],
+        })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/it creates a draft, and a person checks it before it.s used/i)).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-34: the weight line shows only for inform/draft/recommend at autonomy_level <= 1', () => {
+    const { rerender } = render(
+      <UnderstoodSummary
+        graph={graph({
+          processing_nodes: [{ ...graph().processing_nodes[0]!, autonomy_level: 1 }],
+          output_nodes: [{ ...graph().output_nodes[0]!, action_type: 'draft', decision_bindingness: 'material' }],
+        })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/what it produces is usually what a decision is based on/i)).toBeInTheDocument();
+
+    rerender(
+      <UnderstoodSummary
+        graph={graph({
+          processing_nodes: [{ ...graph().processing_nodes[0]!, autonomy_level: 0 }],
+          output_nodes: [{ ...graph().output_nodes[0]!, action_type: 'read', decision_bindingness: 'non-binding' }],
+        })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/what it produces carries little weight/i)).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-W-35: "If it gets something wrong" renders the reversibility line (new section)', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({ output_nodes: [{ ...graph().output_nodes[0]!, output_reversibility: 'irreversible' }] })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/if it gets something wrong/i)).toBeInTheDocument();
+    expect(screen.getByText(/the mistake can.t be taken back once it happens/i)).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-36: an unclassified decision_type_other adds the "ask your AI risk team" clause', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({ output_nodes: [{ ...graph().output_nodes[0]!, decision_type_other: 'Collections triage' }] })}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/Collections triage — not one of the kinds we have rules for, so your AI risk team will look at it/i),
+    ).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-37: no jurisdictions renders the plain "none of the listed countries" fallback, not "No countries specified"', () => {
+    render(<UnderstoodSummary graph={graph({ jurisdictions: [] })} onChangeAnswer={vi.fn()} />);
+    expect(screen.getByText(/none of the listed countries — somewhere else, or not sure/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no countries specified/i)).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-W-38: no rendered summary text contains "unregistered", "Zone", "(draft)" or a bare field code', () => {
+    const g = graph({
+      processing_nodes: [
+        {
+          ...graph().processing_nodes[0]!,
+          model_type: 'agentic',
+          autonomy_level: 4,
+          system_access_scope: ['shared_infrastructure', 'credentialed_systems'],
+          multi_instance_coordination: 'unknown',
+          vendor: 'an AI service you weren’t sure about',
+        },
+      ],
+      output_nodes: [{ ...graph().output_nodes[0]!, action_type: 'approve', decision_bindingness: 'binding', output_reversibility: 'unknown' }],
+    });
+    render(<UnderstoodSummary graph={g} assumptions={ASSUMPTIONS_FOR_RESERVED_TEST} onChangeAnswer={vi.fn()} />);
+    // Scoped to the PLAIN sections only — the collapsed "Show the details
+    // the rules use" grid is deliberately coded (§3) and must be excluded.
+    const plainSections = screen.getAllByText(/^(where your information will go|the information it will use|what it does and who sees it|if it gets something wrong|what it helps decide|how widely it.s used, and where|what it can reach by itself|whether copies of it work together)$/i).map((h) => h.closest('section')!.textContent ?? '');
+    const plainText = plainSections.join(' ');
+    expect(plainText).not.toMatch(/unregistered/i);
+    expect(plainText).not.toMatch(/Zone [ABC]/);
+    expect(plainText).not.toMatch(/\(draft\)/);
+    expect(plainText).not.toMatch(/\bllm\b/i);
   });
 });
 

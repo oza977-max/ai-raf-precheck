@@ -316,6 +316,163 @@ describe('StructuredForm — required-field markers (adapted from R3-JU-5)', () 
   });
 });
 
+describe('StructuredForm — W-1: question 2 pre-fill (R16-W §1, D-67)', () => {
+  it('TC-R16-W-09: initialDescription pre-fills question 2 when it has no draft/initialAnswers value yet', () => {
+    render(<StructuredForm policy={policy()} initialDescription="Drafts client emails." onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/in a sentence or two/i)).toHaveValue('Drafts client emails.');
+  });
+
+  it('TC-R16-W-10: editing question 2 is what is carried forward — a later edit is not overwritten by initialDescription on re-render', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <StructuredForm policy={policy()} initialDescription="Original description." onSubmit={vi.fn()} />,
+    );
+    const q2 = screen.getByLabelText(/in a sentence or two/i);
+    await user.clear(q2);
+    await user.type(q2, 'Edited description.');
+    rerender(<StructuredForm policy={policy()} initialDescription="Original description." onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/in a sentence or two/i)).toHaveValue('Edited description.');
+  });
+
+  it('TC-R16-W-11: initialAnswers already holding a question-2 value takes precedence over initialDescription', () => {
+    render(
+      <StructuredForm
+        policy={policy()}
+        initialDescription="From the first screen."
+        initialAnswers={{ '2': 'From a previous form submission.' }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText(/in a sentence or two/i)).toHaveValue('From a previous form submission.');
+  });
+});
+
+describe('StructuredForm — W-2: one introduction (R16-W §1, D-68)', () => {
+  it('TC-R16-W-12: the retired "Guided intake — answer the fields below…" paragraph is gone; the approved intro is followed by the new sentence', () => {
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    expect(screen.queryByText(/guided intake — answer the fields below/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/new pre-check — tell us about the ai you want to use/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no ai reads your answers or makes the decision, so the same answers always get the same result/i),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('StructuredForm — W-4: initialAnswers reopens the form filled in (R16-W §1, D-70)', () => {
+  it('TC-R16-W-13: initialAnswers pre-fills the form when there is no in-progress draft', () => {
+    render(
+      <StructuredForm
+        policy={policy()}
+        initialAnswers={{ '1': 'Carried-over name', '3': 'firm-built' }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText(/what do you want to call it/i)).toHaveValue('Carried-over name');
+    expect(screen.getByRole('radio', { name: /something a team in your firm built for this job/i })).toBeChecked();
+  });
+
+  it('TC-R16-W-14: an in-progress draft wins over initialAnswers (strictly newer information)', () => {
+    sessionStorage.setItem('aigate:intake-form-draft:v2', JSON.stringify({ '1': 'Draft name' }));
+    render(
+      <StructuredForm policy={policy()} initialAnswers={{ '1': 'Stale carried-over name' }} onSubmit={vi.fn()} />,
+    );
+    expect(screen.getByLabelText(/what do you want to call it/i)).toHaveValue('Draft name');
+    sessionStorage.clear();
+  });
+});
+
+describe('StructuredForm — W-9: the platform-zone follow-up (R16-W §1, D-79)', () => {
+  it('TC-R16-W-15: shown only for a platform allowed in more than one zone, with the required marker', async () => {
+    const user = userEvent.setup();
+    render(
+      <StructuredForm
+        policy={policy({
+          platforms: [
+            {
+              id: 'PLAT-MULTI',
+              name: 'Multi',
+              approved_envelope: { data_zones: ['Zone B', 'Zone C'] },
+              satisfies_controls: [],
+              plain_name: 'Multi-zone platform',
+            },
+            {
+              id: 'PLAT-SINGLE',
+              name: 'Single',
+              approved_envelope: { data_zones: ['Zone B'] },
+              satisfies_controls: [],
+              plain_name: 'Single-zone platform',
+            },
+          ],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/does your information stay on your firm.s own systems/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: /single-zone platform/i }));
+    expect(screen.queryByText(/does your information stay on your firm.s own systems/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: /multi-zone platform/i }));
+    expect(screen.getByText(/does your information stay on your firm.s own systems/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+  });
+
+  it('TC-R16-W-16: only the zones the platform allows are offered, plus "Not sure"', async () => {
+    const user = userEvent.setup();
+    render(
+      <StructuredForm
+        policy={policy({
+          platforms: [
+            {
+              id: 'PLAT-MULTI',
+              name: 'Multi',
+              approved_envelope: { data_zones: ['Zone B', 'Zone C'] },
+              satisfies_controls: [],
+              plain_name: 'Multi-zone platform',
+            },
+          ],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('radio', { name: /multi-zone platform/i }));
+    const group = screen.getByRole('group', { name: /does your information stay on your firm.s own systems/i });
+    expect(within(group).getByRole('radio', { name: /the platform runs the AI on the firm.s own systems/i })).toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: /the platform passes it to an outside supplier/i })).toBeInTheDocument();
+    expect(within(group).queryByRole('radio', { name: /it goes out to a public website or service/i })).not.toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: /^not sure$/i })).toBeInTheDocument();
+  });
+
+  it('TC-R16-W-17: switching Q3 away clears the follow-up answer and removes it from the DOM', async () => {
+    const user = userEvent.setup();
+    render(
+      <StructuredForm
+        policy={policy({
+          platforms: [
+            {
+              id: 'PLAT-MULTI',
+              name: 'Multi',
+              approved_envelope: { data_zones: ['Zone B', 'Zone C'] },
+              satisfies_controls: [],
+              plain_name: 'Multi-zone platform',
+            },
+          ],
+        })}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('radio', { name: /multi-zone platform/i }));
+    await user.click(screen.getByRole('radio', { name: /the platform runs the AI on the firm.s own systems/i }));
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    expect(screen.queryByText(/does your information stay on your firm.s own systems/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: /multi-zone platform/i }));
+    expect(
+      screen.getAllByRole('radio', { name: /the platform runs the AI on the firm.s own systems|the platform passes it to an outside supplier|^not sure$/i }).every((r) => !(r as HTMLInputElement).checked),
+    ).toBe(true);
+  });
+});
+
 describe('StructuredForm — draft persistence under the new versioned key (R16-B, D-41)', () => {
   it('TC-R16-B-14: round-trips answers across a remount', async () => {
     const user = userEvent.setup();

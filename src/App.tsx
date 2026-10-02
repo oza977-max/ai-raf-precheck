@@ -333,9 +333,17 @@ export default function App() {
           )}
           {view === 'intake' && !welcomeDismissed && (
             <div className="app-welcome" role="note">
-              <strong>First time here?</strong> This is a pre-check gate: describe an AI use case and a
-              deterministic rule engine — no AI in the decision — tells you whether it sits inside your
-              firm&rsquo;s risk appetite, and what would bring it inside.{' '}
+              {/* R16-W §4 (D-74): replaces "This is a pre-check gate:
+                  describe an AI use case and a deterministic rule engine —
+                  no AI in the decision — tells you whether it sits inside
+                  your firm's risk appetite, and what would bring it
+                  inside." — "pre-check gate", "deterministic rule engine"
+                  and "risk appetite" are all engine vocabulary on the very
+                  first card a newcomer sees. Both buttons unchanged. */}
+              <strong>First time here?</strong> Describe an AI tool you want to use and answer a few
+              questions. You&rsquo;ll find out whether you can go ahead and what needs doing first. The
+              decision comes from your firm&rsquo;s written rules, not from AI, so the same answers
+              always get the same result.{' '}
               <button type="button" className="about-panel__link" onClick={() => navigate('about')}>
                 Two-minute overview →
               </button>{' '}

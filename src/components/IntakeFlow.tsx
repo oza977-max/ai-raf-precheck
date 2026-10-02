@@ -36,7 +36,7 @@ import { intakeReducer } from './intake-state';
 import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
-import type { Assumption } from './plain-copy';
+import type { Assumption, PlainAnswers } from './plain-copy';
 import GraphView from './GraphView';
 import StepTracker from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
@@ -79,9 +79,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // key, so clearing the reducer draft alone left the abandoned answers to
     // reappear on the next visit to the form step.
     clearFormDraft();
-    // R16-C: a fresh run must never inherit the previous run's assumptions.
-    setFormAssumptions([]);
     setShowResumed(false);
+    // The confirm guard is deliberately left set after a SUCCESSFUL
+    // confirm (that flow never returns to its confirmation step). A fresh
+    // intake must release it, or the next case's "Confirm and evaluate"
+    // silently does nothing until a page reload — "+ New pre-check" lands
+    // here without remounting this component. Found by the R16-W
+    // walkthrough's second submission in one tab.
+    confirmInFlight.current = false;
     // RESTART, not DESCRIPTION_CHANGED — the latter is discarded by the
     // reducer from every step but description_entry, so the banner hid
     // itself and the screen never moved.
@@ -146,15 +151,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // R5-GR-2: the proceed-gate refusal message. State, not derived, so it
   // appears only after an attempted Proceed rather than scolding upfront.
   const [reviewGateError, setReviewGateError] = useState<string | null>(null);
-  // R16-C (§3, UC-9): every "Not sure" answer from the guided form, carried
-  // forward from StructuredForm's submit to the summary/confirmation
-  // screen. Kept in local component state rather than IntakeState/the
-  // reducer — the contract scopes this round to "keep the assumptions in
-  // IntakeFlow state for now; persisting them for the verdict screen is
-  // chunk D2's job". Reset wherever a genuinely NEW run's extraction begins
-  // (handleStartOver, handleConfirmNewUseCase) so a stale value from an
-  // earlier form-path run can never leak into a later llm-path one.
-  const [formAssumptions, setFormAssumptions] = useState<Assumption[]>([]);
+  // R16-W W-4 (§1, D-70): derived from the reducer state rather than its
+  // own useState — the B+C chunk's `formAssumptions` useState was silently
+  // lost on refresh, because the intake draft only ever persists
+  // IntakeState. Reading it off `state.assumptions` means the draft's
+  // existing persistence covers it for free, and a fresh run naturally has
+  // none (RESTART/NO_DUPLICATE_FOUND land on a state shape with no
+  // `assumptions` field at all) — no explicit reset needed.
+  const formAssumptions: Assumption[] = 'assumptions' in state ? state.assumptions ?? [] : [];
+  // R16-W W-4: StructuredForm's own `initialAnswers` prop — present only on
+  // a resubmission (CHANGE_ANSWER or the form-path STEP_BACK set it).
+  const formInitialAnswers: PlainAnswers | undefined = 'plainAnswers' in state ? state.plainAnswers : undefined;
   // R16-C (§3, UC-12): node ids the LLM path flagged uncertain/guessed,
   // captured while on graph_review (where state.guessedFields lives) and
   // frozen at whatever it was when the user left that step — confirmation
@@ -338,16 +345,16 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   const confirmNewInFlight = useRef(false);
   // code-review-004 F17: fresh ref — must reset independently of the others.
   const retryExtractionInFlight = useRef(false);
+  // R16-W W-3/W-4 (§1): the form's own Continue click writes use_case_created
+  // on a FIRST submission (never on a resubmission — see "one use case, one
+  // creation event" below) — same append-only-trail guard class as every
+  // other audit-writing handler in this file.
+  const formSubmitInFlight = useRef(false);
 
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;
     if (confirmNewInFlight.current) return;
     confirmNewInFlight.current = true;
-    // R16-C: this is the one place EVERY new run's extraction begins
-    // (llm or form) — clear the previous run's assumptions here so a
-    // leftover form-path value can never attach itself to a later
-    // llm-path run sharing the same mounted IntakeFlow.
-    setFormAssumptions([]);
     try {
 
     // UC-2 / TC-UC-2-03. Dismissing a surfaced match is a decision about the
@@ -624,6 +631,96 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     }
   }
 
+  // R16-W W-3/W-4 (§1, D-69/D-70). The form's own Continue — replaces the
+  // old GRAPH_EXTRACTED dispatch that routed every form submission through
+  // graph_review, which is engine vocabulary a path where the person typed
+  // every value themselves has no business showing (principle 1). Mirrors
+  // handleProceedFromGraphReview's reference-check/questions/contradiction
+  // logic exactly: a form-built graph clears the identical gates a
+  // description-built one does — only the SCREEN it skips differs.
+  //
+  // Unlike confirmInFlight below, this guard DOES reset in `finally` on
+  // every path, including success: a legitimate resubmission (Change an
+  // answer, fill in again, Continue) must be able to re-enter this handler
+  // a second time for the SAME mounted IntakeFlow, where confirmInFlight's
+  // sibling pattern never needs to (that flow leaves confirmation for good
+  // on success; CORRECT_VERDICT is its own, explicit re-arm). The
+  // double-click race this guard exists for is still closed: a second,
+  // near-simultaneous click reads the ref before the first call's
+  // `await appendAuditEvent` has resolved, every time.
+  async function handleFormSubmitted(graph: DataFlowGraph, assumptions: Assumption[], plainAnswers: PlainAnswers) {
+    if (state.step !== 'graph_extraction' || state.method !== 'form') return;
+    if (formSubmitInFlight.current) return;
+    formSubmitInFlight.current = true;
+    try {
+      // Both checks run BEFORE the creation write below: stopping on the
+      // form after use_case_created was written would leave the next
+      // Continue (no useCaseId carried yet) to mint a second, orphaned one.
+      if (!policyResult.valid) {
+        throw new Error(
+          `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
+        );
+      }
+      // Same gentler reviewGateError path as handleProceedFromGraphReview,
+      // for the same reason: a reference error is expected-to-happen-
+      // during-editing, not a reason to break the app. Stay on the form
+      // and show the message — do not dispatch (§1).
+      const referenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
+      if (referenceCheck.errors.length > 0) {
+        setReviewGateError(
+          `Policy file invalid — ${referenceCheck.errors.join(' ')} Evaluation is disabled until this is resolved.`,
+        );
+        return;
+      }
+      setReviewGateError(null);
+
+      // W-1 (R16-W §1, D-67): question 2 starts with the first screen's
+      // words, and whatever the person leaves there is THE description
+      // from here on — the trail, the contradiction check, the register
+      // node and the memo all read it. The first screen's text is only the
+      // fallback for an empty answer (question 2 is required, so this is
+      // defensive).
+      const answeredDescription = typeof plainAnswers['2'] === 'string' ? plainAnswers['2'].trim() : '';
+      const description = answeredDescription || state.description;
+      setSubmittedDescription(description);
+
+      // "One use case, one creation event" (§1, W-4): a resubmission
+      // already minted a useCaseId on the FIRST submission — carried on
+      // graph_extraction's own state by CHANGE_ANSWER/the form-path
+      // STEP_BACK. Reuse it and skip the write; writing use_case_created
+      // again would leave an orphaned creation event on the append-only
+      // trail for what is still, to the register, one use case.
+      const isResubmission = Boolean(state.useCaseId);
+      const useCaseId = state.useCaseId ?? crypto.randomUUID();
+      if (!isResubmission) {
+        await appendAuditEvent({
+          event_id: crypto.randomUUID(),
+          use_case_id: useCaseId,
+          event_type: 'use_case_created',
+          occurred_at: new Date().toISOString(),
+          actor: getRole(),
+          payload: { type: 'use_case_created', description, intake_method: 'structured_form' },
+        });
+      }
+
+      // Computed from the graph IN HAND, never from stale state (§1).
+      const questions = generateQuestions(graph, policyResult.policy, []);
+      const contradictions = detectContradictions(description, [], graph);
+      dispatch({
+        type: 'FORM_SUBMITTED',
+        graph,
+        useCaseId,
+        description,
+        plainAnswers,
+        assumptions,
+        questions,
+        contradictions,
+      });
+    } finally {
+      formSubmitInFlight.current = false;
+    }
+  }
+
   // explore-001 D-001 (Critical). The step check below is necessary but NOT
   // sufficient: dispatch() is asynchronous, so two synchronous clicks both
   // read the same render's closure, both observe step === 'confirmation',
@@ -656,11 +753,22 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
   // R8-SC-1/-3: precedents = decided register entries ranked by the pure
   // engine helper; controls enriched from each match's own trail.
+  //
+  // R16-W W-3 (§1): also computed on `confirmation` when the graph came
+  // from the guided form — that path no longer passes through
+  // `graph_review` on the way to confirmation (FORM_SUBMITTED skips it),
+  // so if a form-path submitter is ever to see similar decided cases
+  // before attesting, this is the only step left to compute them on.
   useEffect(() => {
-    if (state.step !== 'graph_review') {
+    const isGraphReview = state.step === 'graph_review';
+    const isFormConfirmation = state.step === 'confirmation' && state.graph.intake_method === 'structured_form';
+    if (!isGraphReview && !isFormConfirmation) {
       setPrecedents([]);
       return;
     }
+    const currentGraph = state.graph;
+    const currentDescription = state.description;
+    const currentUseCaseId = state.useCaseId;
     let cancelled = false;
     void (async () => {
       const rows = await getUseCases('all');
@@ -676,11 +784,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           decided_at: r.last_evaluated_at,
           policy_version: r.policy_version_at_evaluation,
         }));
-      const subjectLabel = state.graph.input_nodes[0]?.label ?? '';
+      const subjectLabel = currentGraph.input_nodes[0]?.label ?? '';
       const matches = findPrecedents(
-        { label: subjectLabel, description: state.description },
+        { label: subjectLabel, description: currentDescription },
         candidates,
-        state.useCaseId,
+        currentUseCaseId,
       );
       const enriched: EnrichedPrecedent[] = [];
       for (const m of matches) {
@@ -695,10 +803,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       cancelled = true;
     };
     // Delta review 005 finding 1: a correction updates the graph while the
-    // step stays graph_review — the version in the dep re-runs the search
-    // so the precedent list always reflects the graph on screen.
+    // step stays graph_review (or, now, confirmation) — the version in the
+    // dep re-runs the search so the precedent list always reflects the
+    // graph on screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.step, state.step === 'graph_review' ? state.graphVersion : -1]);
+  }, [state.step, state.step === 'graph_review' || state.step === 'confirmation' ? state.graphVersion : -1]);
 
   async function handleConfirmAndEvaluate(reviewerNote?: string) {
     if (state.step !== 'confirmation') return;
@@ -1093,9 +1202,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       <div className="intake-flow__title-row">
         <h1>New pre-check</h1>
       </div>
+      {/* R16-W §4 (D-74): replaces "Describe the AI use case in plain
+          language. The engine reads what it can, asks only what it must,
+          and returns a defensible verdict." — engine vocabulary
+          ("the engine", "verdict" as a process word) on the very first
+          thing a newcomer reads. */}
       <p className="intake-flow__subtitle">
-        Describe the AI use case in plain language. The engine reads what it can, asks only what it must,
-        and returns a defensible verdict.
+        Tell us about an AI tool you want to use. We&rsquo;ll check it against your firm&rsquo;s rules and
+        tell you whether you can go ahead, and what needs doing first.
       </p>
 
       {showResumed && state.step !== 'description_entry' && (
@@ -1123,22 +1237,26 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'description_entry' && (
           <div>
-            <label htmlFor="description-input">Describe your AI use case</label>
+            {/* R16-W §4 (D-74): label/placeholder/button/help all replaced —
+                "Describe your AI use case" / "Read & extract →" were the
+                tool's own internal-process words ("extract"), not the
+                submitter's question. */}
+            <label htmlFor="description-input">What AI tool do you want to use, and what will it do for you?</label>
             <textarea
               id="description-input"
               value={state.description}
               onChange={(e) => dispatch({ type: 'DESCRIPTION_CHANGED', description: e.target.value })}
-              placeholder="What does this AI tool do? What data does it touch, and what does it decide or action?"
+              placeholder='e.g. "Use ChatGPT to turn my client meeting notes into follow-up emails, which I check before sending."'
             />
             <button type="button" onClick={handleSubmitDescription} disabled={!state.description.trim()}>
-              Read &amp; extract →
+              Next →
             </button>
             {/* design-review round 4 (Panel G — Intake: Describe, Important):
                 the button never said what happens after clicking, or that
                 nothing is final yet. */}
             <p className="field-help">
-              We&rsquo;ll turn this into a summary you can check and correct before anything is scored
-              — nothing here is final yet.
+              You can check and change everything before anything is decided — nothing here is final
+              yet.
             </p>
           </div>
         )}
@@ -1148,39 +1266,49 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             {/* NF-11 (design-review round 4, Panel A): "UC-2" was the
                 internal requirements-doc ID for this screen, rendered bare
                 with no reader-facing purpose. Dropped, not glossed — there
-                is nothing here a reader needs the code for. */}
-            <div className="questionnaire__tag">CLASSIFICATION ADOPTED</div>
+                is nothing here a reader needs the code for.
+                R16-W §4 (D-74): tag and both paragraphs replaced — "tier
+                and track"/"verdict" were engine vocabulary on a screen a
+                newcomer reaches with no questions of their own. */}
+            <div className="questionnaire__tag">EARLIER RESULT USED</div>
             <p>
-              <strong>Classification adopted from {adoptedFrom}.</strong> This use case is on the
-              register with that tier and track, and no intake questions were asked.
+              Earlier result used from {adoptedFrom}. This is on the register with the same risk
+              level and review route, and no questions were asked.
             </p>
             <p className="dup-gate__clear">
-              Nothing was evaluated for this record, so it carries no verdict of its own — its
-              sign-off page says so, and the audit trail records where the classification came from.
-              If the two use cases turn out to differ, run a fresh pre-check rather than editing this
-              one.
+              Nothing was checked for this record, so it has no result of its own — its sign-off
+              page says so, and the record shows where it came from. If the two turn out to differ,
+              start a fresh pre-check rather than editing this one.
             </p>
           </section>
         )}
 
         {state.step === 'duplicate_check' && !adoptedFrom && (
           <section aria-label="Duplicate check" className="dup-gate">
-            <div className="questionnaire__tag">DUPLICATE CHECK</div>
-            {/* design-review round 4 (Panel G, Important): the screen never
-                said why this check runs. It exists so similar use cases get
-                consistent tier/track decisions, and so you don't answer the
-                same questions twice for the same underlying risk. */}
-            <p className="field-help">
-              Checking whether a similar use case already has a classification, so this one gets a
-              consistent answer instead of a fresh set of questions for the same underlying risk.
-            </p>
+            {/* R16-W §4 (D-74): the no-match and match-found cases are
+                treated as two distinct screens with their own copy — the
+                match-found screen gets a plain-language TITLE instead of
+                the "HAS THIS BEEN CHECKED BEFORE?" tag, which belongs to
+                the no-match screen only. */}
+            {duplicateCheckDone && duplicateMatch ? (
+              <p className="duplicate-card__title">Something similar has been checked before</p>
+            ) : (
+              <>
+                <div className="questionnaire__tag">HAS THIS BEEN CHECKED BEFORE?</div>
+                {/* design-review round 4 (Panel G, Important): the screen
+                    never said why this check runs. */}
+                <p className="field-help">
+                  We look for a similar tool your firm has already checked, so similar uses get the
+                  same answer.
+                </p>
+              </>
+            )}
             {!duplicateCheckDone ? (
-              <p>Checking the existing inventory for similar use cases…</p>
+              <p>Looking through earlier checks…</p>
             ) : (
               <>
                 {duplicateMatch ? (
                   <div className="duplicate-card" role="alert">
-                    <p className="duplicate-card__title">One similar use case exists in the register</p>
                     {/* BC-V12C-02: the matched label stays redacted for 1LoD
                         — unchanged by this fix. design-review round 4
                         (Panel G — Intake: Duplicate check, Critical #1/#2):
@@ -1190,44 +1318,43 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                         — the words and the only clickable thing on the
                         screen disagreed. Fixed by describing what the button
                         actually does, for both roles, instead of claiming a
-                        gate that doesn't exist. */}
+                        gate that doesn't exist. R16-W §4 (D-74): the 1LoD
+                        text now drops the tier entirely (no tier claim on a
+                        redacted card); the 2LoD text is unchanged. */}
                     {getRole() === '2LoD' ? (
                       <p>
                         Overlapping use case: <strong>{duplicateMatch.label}</strong>
                         {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier}` : ''}.
                       </p>
                     ) : (
-                      <p>
-                        A use case with overlapping characteristics
-                        {duplicateMatch.tier ? ` — tier ${duplicateMatch.tier} —` : ''} is already on
-                        record. Full detail is visible to the 2nd Line of Defence.
-                      </p>
+                      <p>A similar use is already on your firm&rsquo;s register. Your AI risk team can see its details.</p>
                     )}
                     <p className="dup-gate__clear">
-                      Adopting skips the questions and graph review below — this record goes straight
-                      onto the register with that tier and track, and carries no verdict of its own. If
-                      the two use cases turn out to differ, run a fresh pre-check rather than editing
-                      this one afterward.
+                      Using the earlier result skips the questions: this goes onto the register with
+                      the same risk level and review route as the earlier one, without a check of its
+                      own. If the two turn out to differ, start a fresh pre-check rather than editing
+                      this one.
                     </p>
                   </div>
                 ) : (
                   <p className="dup-gate__clear">
-                    No similar use case found — checked {registerRows.length} register{' '}
-                    {registerRows.length === 1 ? 'entry' : 'entries'} for overlapping characteristics.
+                    Nothing similar found — we looked through {registerRows.length} earlier check
+                    {registerRows.length === 1 ? '' : 's'}.
                   </p>
                 )}
                 <div className="dup-gate__actions">
                   {/* UC-2: both decisions, side by side. Only "new use case"
                       existed, so the requirement's other half — adopt — was
                       unreachable and the fit criterion unmet. Adopt appears
-                      only when there IS a match to adopt from. */}
+                      only when there IS a match to adopt from. R16-W §4
+                      (D-74): both buttons renamed. */}
                   {duplicateMatch && (
                     <button type="button" onClick={() => void handleAdoptClassification()}>
-                      Adopt this classification
+                      Use the earlier result
                     </button>
                   )}
                   <button type="button" onClick={() => void handleConfirmNewUseCase()}>
-                    This is a new use case →
+                    {duplicateMatch ? 'Mine is different — continue →' : 'Continue →'}
                   </button>
                 </div>
               </>
@@ -1268,40 +1395,19 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         )}
 
         {state.step === 'graph_extraction' && state.method === 'form' && (
-          <StructuredForm
-            policy={policyResult.valid ? policyResult.policy : EMPTY_POLICY_FALLBACK}
-            onSubmit={async (graph, assumptions) => {
-              setFormAssumptions(assumptions);
-              const useCaseId = crypto.randomUUID();
-              // App-run vs seeded trail comparison (2026-08-17) found the
-              // form path never wrote use_case_created — the submitter's
-              // original description and intake method were missing from
-              // the trail on the MOST-USED path, while the LLM path wrote
-              // them. Same event, same shape, written at the same moment
-              // the use case gains its id.
-              // explore-007 D-001 fix (round 8): this was fire-and-forget
-              // (`void appendAuditEvent(...)`) — pre-existing, silent
-              // because the write used to be fast enough that the flow
-              // advancing before it landed rarely mattered. The hash chain
-              // makes every append do real work (read the trail, hash it),
-              // which was enough to expose the race. Every other
-              // appendAuditEvent call in this file already awaits before
-              // dispatching; matched that established pattern here too.
-              await appendAuditEvent({
-                event_id: crypto.randomUUID(),
-                use_case_id: useCaseId,
-                event_type: 'use_case_created',
-                occurred_at: new Date().toISOString(),
-                actor: getRole(),
-                payload: {
-                  type: 'use_case_created',
-                  description: 'description' in state ? state.description : '',
-                  intake_method: 'structured_form',
-                },
-              });
-              dispatch({ type: 'GRAPH_EXTRACTED', graph, useCaseId });
-            }}
-          />
+          <>
+            {reviewGateError && (
+              <p role="alert" className="intake-flow__gate-error">
+                {reviewGateError}
+              </p>
+            )}
+            <StructuredForm
+              policy={policyResult.valid ? policyResult.policy : EMPTY_POLICY_FALLBACK}
+              initialDescription={state.description}
+              initialAnswers={formInitialAnswers}
+              onSubmit={(graph, assumptions, plainAnswers) => void handleFormSubmitted(graph, assumptions, plainAnswers)}
+            />
+          </>
         )}
 
         {state.step === 'graph_review' && (
@@ -1506,6 +1612,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             policy={policyResult.valid ? policyResult.policy : undefined}
             assumptions={formAssumptions}
             uncertainNodeIds={uncertainNodeIds}
+            precedents={precedents}
             onChangeAnswer={() => dispatch({ type: 'CHANGE_ANSWER' })}
             onConfirm={(note) => void handleConfirmAndEvaluate(note)}
           />
@@ -1526,18 +1633,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             knowledgeLensMatches={knowledgeLensMatches}
           />
         )}
+        {/* R16-W W-5 (§5, D-75): collapsed by default on the intake verdict
+            screen — "Risk-knowledge awareness… curated by project
+            maintainer (2LoD practitioner)…" was sitting unfolded on a
+            newcomer's FIRST screen, outside the collapsed reviewer section
+            (VD-9: everything beyond the nine first-screen items is
+            collapsed). RegisterDetail (the reviewer's own page) renders
+            this panel unchanged — unaffected by this wrap. */}
         {state.step === 'verdict' && verdict && knowledgeLensMatches.length > 0 && (
-          <KnowledgeLensPanel
-            matches={knowledgeLensMatches}
-            meta={knowledgeLensMeta}
-            // R13-UI-3: the intake verdict screen has no filing action (that
-            // is a reviewer act on the register page), but if a filing
-            // already exists on the trail it still shows as Filed.
-            filedRiskDomains={verdictAuditEvents
-              .filter((e) => e.payload.type === 'rule_dissent_filed')
-              .map((e) => (e.payload.type === 'rule_dissent_filed' ? e.payload.rule_id : ''))
-              .filter(Boolean)}
-          />
+          <details className="intake-flow__knowledge-lens-collapse">
+            <summary>What outside research says about this kind of AI use (for your AI risk team)</summary>
+            <KnowledgeLensPanel
+              matches={knowledgeLensMatches}
+              meta={knowledgeLensMeta}
+              // R13-UI-3: the intake verdict screen has no filing action
+              // (that is a reviewer act on the register page), but if a
+              // filing already exists on the trail it still shows as Filed.
+              filedRiskDomains={verdictAuditEvents
+                .filter((e) => e.payload.type === 'rule_dissent_filed')
+                .map((e) => (e.payload.type === 'rule_dissent_filed' ? e.payload.rule_id : ''))
+                .filter(Boolean)}
+            />
+          </details>
         )}
       </div>
     </div>

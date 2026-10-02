@@ -887,6 +887,61 @@ ever could), not mapping defects. `backtest-parity-nonblind.test.ts`
 covers UC-9..13, which have recorded field values but no narrative to stay
 blind to.
 
+## 22. Round 16-W — Walkthrough Fixes (the form path skips graph_review, Q2 pre-fill, one creation event, the summary's own words, opening screens)
+
+Spec for `build/prompts/R16-W.md`, written against a live owner-side walkthrough of the committed §21 build. Every item below was observed on the running app, not inferred; principle 1 (`build/prompts/R16.md` §0 — no engine vocabulary on any screen a submitter sees) applies unchanged.
+
+**W-1/D-67 — Q2 pre-fill.** `StructuredForm` takes `initialDescription?: string`. Question 2 starts with it (editable) unless the form's own in-progress draft, or `initialAnswers` (W-4), already holds a question-2 value — precedence: draft → `initialAnswers` → `initialDescription` → blank. Once the person edits Q2, THAT text is the description carried forward from then on — the reducer state, the register node's description, the summary. `handleFormSubmitted` reads it from `plainAnswers['2']` (the first screen's text only as a fallback for an empty answer) and uses it for `use_case_created`, the contradiction check, `FORM_SUBMITTED` and the memo. The policy and reference checks run before the `use_case_created` write, so stopping on the form never leaves a creation event the next Continue would duplicate. Starting a fresh intake (`handleStartOver`, which "+ New pre-check" reaches without remounting `IntakeFlow`) releases the confirm guard — it is deliberately left set after a successful confirm, and without the release the next case's "Confirm and evaluate" silently did nothing until a reload (TC-R16-W-66, -67).
+
+**W-2/D-68 — one introduction.** The form rendered two stacked intros (a retired "Guided intake — answer the fields below…" paragraph, with its own Settings parenthetical, above the approved R16 intro). The retired paragraph is deleted; the approved intro keeps its exact words, with one new sentence appended as its own paragraph: *"No AI reads your answers or makes the decision, so the same answers always get the same result."*
+
+**W-3/D-69 — the form path skips `graph_review`.** Before this round, every form submission dispatched `GRAPH_EXTRACTED` and landed on `graph_review` — the field-card screen (`DATA_ZONE`, `MODEL_TYPE`…, each flagged "not found in your text" even though the person picked every value) — which is engine vocabulary principle 1 bans from a path the person typed themselves through.
+
+A new reducer action, valid only from `graph_extraction` with `method: 'form'`:
+```typescript
+type FormSubmitted = {
+  type: 'FORM_SUBMITTED';
+  graph: DataFlowGraph;
+  useCaseId: string;
+  description: string;
+  plainAnswers: PlainAnswers;   // src/components/plain-copy.ts
+  assumptions: Assumption[];
+  questions: IntakeQuestion[];
+  contradictions: Contradiction[];
+};
+```
+The caller (`IntakeFlow.tsx`) computes, from the graph in hand — never from stale state — three things before dispatching: the reference check (`checkPolicyReferences(policy, loadedPacks)`; on an error, stay on the form and show the existing gate message, do not dispatch), `questions = generateQuestions(graph, policy, [])`, and `contradictions = detectContradictions(description, [], graph)`. The reducer is pure (no audit write) and picks the destination by the same priority `handleProceedFromGraphReview` already applies to every other graph: questions present → `questionnaire`; else contradictions present → `contradiction_review` (built the way `CONTRADICTIONS_DETECTED` builds it); else → `confirmation` directly.
+
+`GRAPH_EXTRACTED` is now the description/LLM path's own action only — unchanged for that path, and its reducer case was not touched (a form-path dispatch of it would still be accepted by the reducer's existing step guard; the fix is that `IntakeFlow.tsx` never sends one for the form path any more, not a new reducer-level refusal).
+
+`STEP_BACK` from `questionnaire` on a form-path graph (`graph.intake_method === 'structured_form'`) returns to the form (`graph_extraction`, method `'form'`, with `plainAnswers` — W-4) instead of `graph_review`, mirroring the branch `CHANGE_ANSWER` already used from `confirmation`. `EVALUATION_FAILED` and `CORRECT_VERDICT` still land on `graph_review` for every graph, form-built or not — out of scope for this round; correcting a form-path verdict is a later chunk's job.
+
+Similar decided cases (R8-SC, §18) were computed only on `graph_review`. They are now also computed on `confirmation` when the graph came from the form (same effect, same precedent-search dependency array extended to `graphVersion` on either step), rendered via the same collapsed `SimilarCases` panel and posture line, positioned after `UnderstoodSummary` and before `ConfirmationStep`'s own optional note. The description path is unchanged.
+
+**W-4/D-70 — changing an answer reopens the form filled in.** `plainAnswers` (the `PlainAnswers` object, §21's `ADR-IF-R16-1`) and `assumptions` are now carried on the reducer state itself — optional on `graph_extraction` (form), `questionnaire`, `contradiction_review` and `confirmation` — set by `FORM_SUBMITTED`, preserved through every transition between those four steps, and returned to `graph_extraction` by `CHANGE_ANSWER` and the form-path `STEP_BACK`. The intake draft already persists the whole reducer state, so a refresh keeps both — closing two defects found live: "Change an answer" (and Back) reopened a blank form, and a refresh on confirmation lost the "Not sure" list (the B+C chunk's `formAssumptions` lived in a component `useState`, which the draft never persisted). `IntakeFlow.tsx` now derives both as plain reads of `state` instead of holding its own copy.
+
+`StructuredForm` takes `initialAnswers?: PlainAnswers` (W-1's precedence note above).
+
+**One use case, one creation event.** Every form submit used to mint a new `useCaseId` and append a new `use_case_created` unconditionally — so "Change an answer" then Continue left an orphaned creation event on the append-only trail for what the register still treats as one use case. On a resubmission — the `graph_extraction` state already holds a `useCaseId` from this intake (set by the first `FORM_SUBMITTED`, carried by `CHANGE_ANSWER`/`STEP_BACK`) — the handler reuses it and does not write `use_case_created` again.
+
+**W-9/D-79 — the UC-6b parity fix: which zone a firm platform actually runs in.** Q3's platform option mapped the destination zone to "the earliest letter among the platform's allowed zones" (§21's resolution table) unconditionally. For a platform allowed in more than one zone (e.g. `PLAT-INTERNAL-ML`, Zone B and Zone C) that is always the earliest of the two — Zone B — even when the use case genuinely never leaves the firm's own systems, which is exactly `backtest/use-cases.md`'s UC-6b ("deal content never leaves firm-controlled infrastructure"): the old mapping sent it to HL-002's "No" where the worked case expects approval-with-controls.
+
+A new follow-up, `3platformZone`, shown only when the chosen platform's `approved_envelope.data_zones` has more than one entry: *"Does your information stay on your firm's own systems the whole time?"*, three zone-fixed options (Zone C/B/A, in that order, filtered to the zones the platform actually allows) plus "Not sure" (always offered), mapping straight to that zone. "Not sure" resolves to the same earliest-letter default as before — the assumption text names the specific outside party that default implies ("it may pass your information to an outside supplier" when the earliest allowed zone is B; "an outside website or service" when it is A), computed inline in `plain-intake.ts` rather than through the fixed per-option `ASSUMPTION_TEXT` table (`plain-copy.ts`), because the wording depends on the platform's own envelope at call time, not a fixed string per option key. A platform allowed in only one zone keeps the pre-W-9 mapping with no follow-up — there is only one honest answer already. `plain-intake.ts` exports `platformZoneOptionKeys(platform)` so `StructuredForm.tsx` renders exactly the option subset the mapping reads back, never re-deriving the zone-ordering rule.
+
+`backtest/worked-case-answers.json`'s UC-6b entry gains the new question's answer — the Zone C option ("Yes — the platform runs the AI on the firm's own systems") — decided from the narrative alone, per §21's blind-answers discipline; no other worked case names a multi-zone platform, so no other answer changes.
+
+### 22.1 "Here's what we understood" — the form's own words (D-71)
+
+§21's `UnderstoodSummary` read the graph through the reviewer cards' own labels (`field-copy.ts`) — a 2LoD-facing vocabulary, not the newcomer-tested question wording the form itself uses. `plain-copy.ts` gains a parallel set of graph-value → sentence lookups (`SUMMARY_DESTINATION`, `SUMMARY_DATA_CLASS`, `SUMMARY_MODEL_TYPE`, `summaryBehaviourLine()`, `SUMMARY_BINDINGNESS` + `summaryShowsWeight()`, `SUMMARY_EXPOSURE`, `SUMMARY_REVERSIBILITY`, `SUMMARY_DECISION_TYPE` + `summaryDecisionLine()`, `SUMMARY_SCALE` + `SUMMARY_NO_COUNTRIES`, `SUMMARY_ACCESS_SCOPE`, `SUMMARY_MULTI_INSTANCE`) and `UnderstoodSummary.tsx` is rewritten to read from them instead — still graph-based (one truth: what gets evaluated), only the WORDING changes. The collapsed "Show the details the rules use" grid keeps `field-copy.ts`'s labels unchanged (§3's "reviewer vocabulary stays there" rule).
+
+New content the old summary never rendered at all: the kind of AI (`model_type`), a new "If it gets something wrong" section (`output_reversibility`), and — for a registered vendor/platform — a "Through: {supplier}." / "Runs on: {platform}." line resolved against the registry's own `plain_name` (neutral fallback when a matched entry has none; the vendor string as recorded, flagged "Your firm hasn't assessed this supplier yet.", for an unregistered one).
+
+**Supplier strings at the source (D-72).** `plain-intake.ts` recorded unregistered vendors as `unregistered (…)` — "unregistered" is engine vocabulary that reached the summary, the reviewer section and the audit trail verbatim. The four distinct strings are reworded to plain sentence fragments (e.g. "a personal account (no contract with your firm)"); the three D-64 strings (`"{text} (not on your firm's list)"` etc.) are unchanged. No code anywhere detected an unregistered vendor by the literal `"unregistered"` prefix — the engine already resolves this by registry lookup — so this is a pure text change with no logic to migrate.
+
+### 22.2 Confirmation step and opening-screen copy (D-73, D-74)
+
+`ConfirmationStep`'s notice, optional-note label/help, and attestation line are reworded (exact text in `build/prompts/R16-W.md` §3) — the button keeps its label. `IntakeFlow.tsx`'s subtitle, the describe step (label/placeholder/button — "Next →" replaces "Read & extract →" — /help), the duplicate-check screen (now two distinct no-match/match-found compositions: tag "HAS THIS BEEN CHECKED BEFORE?" + help + "Looking through earlier checks…" + result text + "Continue →" for no match; title "Something similar has been checked before" + a tier-free 1LoD line + explanation + "Use the earlier result" / "Mine is different — continue →" for a match, 2LoD's own line unchanged), the adopted screen (tag "EARLIER RESULT USED" + two reworded paragraphs), and `App.tsx`'s first-time welcome note are all reworded to the exact text in `build/prompts/R16-W.md` §4 — every one of them a screen a newcomer passes before reaching the (already reworded) guided form. `StepTracker`'s labels: "Check overlap" → "Similar checks", "Review details" → "Your answers", "Verdict" → "Result".
+
 ## 14. Changelog
 
 | Date | Change |
@@ -899,3 +954,4 @@ blind to.
 | 2026-08-17 | §19 added — round 9 review-screen recomposition (ADR-IF-R9-1: aggregation and priority, never deletion; R5-GR-1 criterion amended with approval). |
 | 2026-08-17 | §20 added — round 11 model governance + knowledge advisory (ADR-IF-R11-MG-1: model is graph data, the engine gates it, not intake; ADR-IF-R11-KL-1: knowledge panel reuses the existing dissent-filing write path). |
 | 2026-10-02 | §21 added — round 16 chunks B/C, plain-language guided form and understood summary (ADR-IF-R16-1: situational answers map to canonical fields through one pure, documented function; ADR-IF-R16-2: the summary reads the graph once, shared with the verdict screen, "Change an answer" is its own reducer action rather than a repurposed STEP_BACK). §5 amended to mark its field-by-field table as historical. |
+| 2026-10-02 | §22 added — round 16-W walkthrough fixes: the form path skips `graph_review` via a new `FORM_SUBMITTED` reducer action (W-3); `plainAnswers`/`assumptions` carried on reducer state, not a component `useState`, closing two found-live defects (W-4); Q2 pre-fill and one introduction (W-1/W-2); the platform-zone follow-up that fixes UC-6b's parity mismatch (W-9); the summary's own words, replacing the reviewer-card vocabulary it read before (§22.1); confirmation and every opening screen reworded (§22.2). |

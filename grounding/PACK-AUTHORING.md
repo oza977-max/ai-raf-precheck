@@ -70,6 +70,14 @@ condition (vocabulary mismatch, multi-node path, boundary value). Both tests com
 control's action also satisfies that review — check it like any other condition when reviewing
 the rule.
 
+**Reviewer checklist addition (R16-W §5, D-76): a review's `plain_name` must be a noun phrase.**
+It is read inside two sentences this product renders verbatim — "Doing this also completes
+{list} — one piece of work." and "Checks other teams run: {name} — {owner}." — and a clause
+("the supplier is assessed") breaks the first of those grammatically, the way "Doing this also
+completes the supplier is assessed" reads. This is not machine-checkable (grammar is not a
+condition), so it is a rule-review line, not a loader check — hold every `plain_name`, in the
+starter policy and in every pack, against this test when reviewing it.
+
 **6. Sign.**
 `reviewer_name` (real name), `reviewer_role`, `sign_off_date`, against the source hash.
 Validation rejects `[FIRM]` placeholders — an unsigned rule produces provisional verdicts (NF-7).
@@ -94,7 +102,7 @@ practice — stop building, write the finding up.
   everything else carries forward with existing sign-off.
 - Quarterly attestation: "corpus checked against current sources as of [date]" (NF-9 cadence; also
   a reporting line for the 2LoD function).
-- Pre-loaded dates: OSFI E-23 effective Jan 2027 · EU AI Act Annex III obligations Dec 2027 ·
+- Pre-loaded dates: OSFI E-23 (revised, final 11 Sep 2025) effective 1 May 2027 · EU AI Act Annex III obligations Dec 2027 ·
   Art. 50(2) transparency Dec 2026 · SR 26-2 RFI outcome pending.
 
 ---
@@ -105,7 +113,7 @@ practice — stop building, write the finding up.
 |---|---|---|---|
 | 1 | Home-regulator pack · most demanding applicable ceiling (e.g. SS1/23) · one further pack the pilot use cases touch | Now — internal pilot | 4–6 weeks part-time; first pack slowest (method-building), then faster |
 | 2 | MAS FEAT · EU AI Act · DORA | First pilot use case touching SG/EU entities | Per need |
-| 3 | OSFI E-23 | Canadian exposure, before Jan 2027 effective date | Per need |
+| 3 | OSFI E-23 | Canadian exposure, before the 1 May 2027 effective date | Per need |
 
 ---
 

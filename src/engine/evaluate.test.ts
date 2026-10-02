@@ -780,8 +780,8 @@ describe('evaluate — policy v1.6 (2026-09-28)', () => {
     expect(reachesBeyond.ok && reachesBeyond.value.controls).toContain('CTRL-REDTEAM-01');
   });
 
-  it('TC-R17-PV-04: the shipped policy version is current — 1.7 since R16-A2 added plain-language text (1.6 carried the rule changes)', () => {
-    expect(policy.version).toBe('1.7'); // 1.7 = R16-A2 plain-language text, no verdict changes
+  it('TC-R17-PV-04: the shipped policy version is current — 1.8 since R16-W scoped CTRL-ENC-01\'s evidence and reworded two plain-language fields (1.7 added the plain-language text; 1.6 carried the rule changes)', () => {
+    expect(policy.version).toBe('1.8'); // 1.8 = R16-W text/evidence-scope only, no verdict changes
   });
 });
 

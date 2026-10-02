@@ -86,6 +86,69 @@ describe('VerdictDisplay — R16-D1 first screen: headline and word guards', () 
   });
 });
 
+describe('VerdictDisplay — R16-W W-6: one "also completes" note per safeguard, in grammatical English (D-76)', () => {
+  it('TC-R16-W-49: a safeguard covering two reviews renders ONE note, not two — and it is grammatical even when a covered review’s name used to be a clause', () => {
+    const policy = {
+      controls: [
+        {
+          id: 'CTRL-TPRM-01',
+          name: 'Vendor assessment',
+          description: 'd',
+          resolves: [],
+          burden: 1,
+          verification: 'v',
+          covers_reviews: ['DR-VENDOR-01', 'PV-UNREGISTERED'],
+        },
+      ],
+      hard_lines: [],
+      invariants: [],
+      downstream_reviews: [
+        { id: 'DR-VENDOR-01', review: 'Vendor risk assessment', condition: {}, plain_name: 'a supplier assessment', plain_owner: 'your vendor-risk team' },
+      ],
+    } as unknown as PolicyFile;
+    const verdict = makeVerdict({
+      controls: ['CTRL-TPRM-01'],
+      downstream_reviews: ['Vendor risk assessment', 'Unapproved component: Zapier'],
+      downstream_review_sources: [
+        { review: 'Vendor risk assessment', rule_id: 'DR-VENDOR-01' },
+        { review: 'Unapproved component: Zapier', rule_id: 'PV-UNREGISTERED:Zapier' },
+      ],
+    });
+    render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} registerStage="pre_checked" onCorrect={vi.fn()} />);
+    const firstScreen = document.querySelector<HTMLElement>('.verdict__first-screen')!;
+    const notes = within(firstScreen).getAllByText(/Doing this also completes/i);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]!.textContent).toBe(
+      "(Doing this also completes a supplier assessment and adding the supplier to your firm's list — one piece of work.)",
+    );
+    // Never the old, grammatically-broken per-review template.
+    expect(firstScreen.textContent).not.toMatch(/This also covers/i);
+  });
+});
+
+describe('VerdictDisplay — R16-W W-8: a real space before the "yours" chip (D-78)', () => {
+  it('TC-R16-W-50: the owner text and the "yours" chip never concatenate into one run-together word', () => {
+    const policy = makePolicy([
+      {
+        id: 'CTRL-CONDUCT-01',
+        name: 'Conduct testing',
+        description: 'd',
+        resolves: [],
+        burden: 1,
+        verification: 'v',
+        plain_action: 'Test conduct.',
+        plain_owner: '@submitter',
+        plain_owner_with: 'your compliance team',
+      },
+    ]);
+    render(<VerdictDisplay verdict={makeVerdict({ controls: ['CTRL-CONDUCT-01'] })} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
+    const ownerLine = document.querySelector('.verdict__first-safeguard-owner')!;
+    expect(ownerLine.textContent).not.toMatch(/compliance teamyours/i);
+    expect(ownerLine.textContent).toContain('your compliance team');
+    expect(ownerLine.textContent).toMatch(/your compliance team\s+yours/);
+  });
+});
+
 describe('VerdictDisplay — R16-D1: the reviewer section defaults closed for the submitter, open for 2LoD', () => {
   it('TC-R16-D1-15: with reasoningDefaultOpen omitted (the submitter path, e.g. IntakeFlow), the reviewer section starts closed', () => {
     render(<VerdictDisplay verdict={makeVerdict()} auditEvents={[]} onCorrect={vi.fn()} />);

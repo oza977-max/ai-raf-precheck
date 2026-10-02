@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { INTRO_TEXT, findQuestion, neutralPlatformLabel, neutralSupplierLabel } from './plain-copy';
 import type { Assumption, PlainAnswers, PlainOption, QuestionId } from './plain-copy';
-import { plainAnswersToFormValues } from '../engine/plain-intake';
+import { plainAnswersToFormValues, platformZoneOptionKeys } from '../engine/plain-intake';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import { saveFormDraft, loadFormDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
 import type { DataFlowGraph, PolicyFile } from '../engine/types';
@@ -29,7 +29,19 @@ import type { DataFlowGraph, PolicyFile } from '../engine/types';
 
 interface StructuredFormProps {
   policy: PolicyFile;
-  onSubmit: (graph: DataFlowGraph, assumptions: Assumption[]) => void;
+  // W-1 (R16-W §1, D-67): the description typed on the very first screen.
+  // Question 2 starts with it (editable) unless the form's own in-progress
+  // draft or `initialAnswers` (W-4) already holds a question-2 value — see
+  // the precedence comment on the Q2 FreeText render below.
+  initialDescription?: string;
+  // W-4 (R16-W §1, D-70): "Change an answer" and the form-path Back both
+  // need the form to reopen FILLED IN, not blank. Precedence on mount: the
+  // form's own saved draft (in-progress edits) -> initialAnswers -> blank.
+  initialAnswers?: PlainAnswers;
+  // W-4: the raw answers travel with the graph/assumptions so the caller
+  // (IntakeFlow) can carry them on the reducer state — plainAnswersToFormValues()
+  // is already computed here; passing `answers` back avoids recomputing it.
+  onSubmit: (graph: DataFlowGraph, assumptions: Assumption[], answers: PlainAnswers) => void;
 }
 
 function toArray(v: string | string[] | undefined): string[] {
@@ -67,6 +79,13 @@ interface QuestionProps {
    *  this index into `question.options` instead of prepended, so the
    *  rendered order matches the newcomer-tested a/b/c/d/e/f sequence. */
   extraOptionsAtIndex?: number;
+  /** W-9 (R16-W §1, D-79): restricts a STATIC option list down to a subset
+   *  by key, in the question's own declared order — Q3platformZone's four
+   *  options are all static text; only WHICH of them show depends on the
+   *  chosen platform's allowed zones (plain-intake.ts's
+   *  platformZoneOptionKeys()). Undefined (every other question) renders
+   *  the full static list, unfiltered — the pre-existing behaviour. */
+  restrictToKeys?: string[];
   requiredIds: QuestionId[];
   answers: PlainAnswers;
   onSingle: (id: QuestionId, key: string) => void;
@@ -80,10 +99,19 @@ function mergeOptions(base: PlainOption[], extra: PlainOption[], atIndex?: numbe
   return [...base.slice(0, atIndex), ...extra, ...base.slice(atIndex)];
 }
 
-function SingleSelect({ id, extraOptions = [], extraOptionsAtIndex, requiredIds, answers, onSingle }: QuestionProps) {
+function SingleSelect({
+  id,
+  extraOptions = [],
+  extraOptionsAtIndex,
+  restrictToKeys,
+  requiredIds,
+  answers,
+  onSingle,
+}: QuestionProps) {
   const question = findQuestion(id);
   if (!question) return null;
-  const options = mergeOptions(question.options, extraOptions, extraOptionsAtIndex);
+  const baseOptions = restrictToKeys ? question.options.filter((o) => restrictToKeys.includes(o.key)) : question.options;
+  const options = mergeOptions(baseOptions, extraOptions, extraOptionsAtIndex);
   return (
     <fieldset className="plain-form__question" aria-required={requiredIds.includes(id) || undefined}>
       <legend>
@@ -156,7 +184,7 @@ function FreeText({
   );
 }
 
-export default function StructuredForm({ policy, onSubmit }: StructuredFormProps) {
+export default function StructuredForm({ policy, initialDescription, initialAnswers, onSubmit }: StructuredFormProps) {
   const platformOptions = dynamicOptions(policy.platforms ?? [], neutralPlatformLabel);
   const supplierOptions = dynamicOptions(
     (policy.vendors ?? []).filter((v) => (v.kind ?? 'supplier') === 'supplier'),
@@ -178,9 +206,25 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
   if (legacyRef.current === null) legacyRef.current = probeLegacyFormDraft();
   const [legacyDraftFound] = useState(legacyRef.current);
 
+  // W-1/W-4 (R16-W §1, D-67/D-70). Precedence on mount: the form's own
+  // saved draft (in-progress edits a person is actively making) ->
+  // initialAnswers (a resubmission via "Change an answer" or Back) ->
+  // blank. The draft wins over initialAnswers because it is STRICTLY newer
+  // information about what the person was doing on this exact screen —
+  // initialAnswers is a snapshot from the moment they last left it.
   const restoredRef = useRef<PlainAnswers | null>(null);
-  if (restoredRef.current === null) restoredRef.current = loadFormDraft<PlainAnswers>() ?? {};
-  const [answers, setAnswers] = useState<PlainAnswers>(restoredRef.current);
+  if (restoredRef.current === null) {
+    const draft = loadFormDraft<PlainAnswers>();
+    restoredRef.current = draft ?? initialAnswers ?? {};
+  }
+  const [answers, setAnswers] = useState<PlainAnswers>(() => {
+    // W-1: question 2 starts with the description typed on the very first
+    // screen, UNLESS the restored value (draft or initialAnswers) already
+    // holds one — editing Q2 from then on is what carries the description
+    // forward (the form's own words, not the first screen's, once edited).
+    if (restoredRef.current!['2'] !== undefined || !initialDescription) return restoredRef.current!;
+    return { ...restoredRef.current!, '2': initialDescription };
+  });
 
   useEffect(() => {
     saveFormDraft(answers);
@@ -197,6 +241,9 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
         delete next['3aWhich'];
         delete next['3supplier'];
         delete next['3supplierName'];
+        // W-9: a platform-zone answer for one platform must never survive
+        // onto a different Q3 answer, including a different platform.
+        delete next['3platformZone'];
       }
       if (id === '3a') {
         delete next['3aWhich'];
@@ -251,6 +298,12 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
   const showQ3a = q3 === 'outside-assistant';
   const show3supplierName = answers['3supplier'] === 'not-on-list';
   const show3aWhich = answers['3a'] === 'firm-account' && companyAssistantOptions.length > 1;
+  // W-9 (D-79): the matched platform, if Q3's answer is one of the dynamic
+  // platform ids rather than a static option key. A platform allowing only
+  // one zone keeps today's mapping with no follow-up.
+  const matchedPlatform = (policy.platforms ?? []).find((p) => p.id === q3);
+  const showQ3platformZone = Boolean(matchedPlatform) && (matchedPlatform!.approved_envelope.data_zones?.length ?? 0) > 1;
+  const q3platformZoneKeys = matchedPlatform ? platformZoneOptionKeys(matchedPlatform) : [];
   const q4 = typeof answers['4'] === 'string' ? (answers['4'] as string) : undefined;
   const showQ4a = q4 === 'score';
   const isAgentic = q4 === 'agentic' || q4 === 'not-sure';
@@ -269,6 +322,7 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
 
   const requiredIds: QuestionId[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
   if (showQ3Supplier) requiredIds.push('3supplier');
+  if (showQ3platformZone) requiredIds.push('3platformZone');
   if (showQ3a) requiredIds.push('3a');
   if (show3aWhich) requiredIds.push('3aWhich');
   if (showQ4a) requiredIds.push('4a');
@@ -283,7 +337,7 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
     if (!isComplete) return;
     const { values, assumptions } = plainAnswersToFormValues(answers, policy);
     clearFormDraft();
-    onSubmit(buildGraphFromForm(values), assumptions);
+    onSubmit(buildGraphFromForm(values), assumptions, answers);
   }
 
   // Bundles the props every question renderer needs, so each call site below
@@ -292,13 +346,16 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
 
   return (
     <section aria-label="Structured intake form">
-      <p role="status">
-        Guided intake — answer the fields below to describe your use case. No AI is involved in
-        reading your answers or in the decision that follows, so the same answers always produce the
-        same outcome. (Configuring a model in Settings unlocks an optional plain-English alternative
-        to this form; it changes how the description is read in, not how it is scored.)
-      </p>
+      {/* W-2 (R16-W §1, D-68): the old "Guided intake — answer the fields
+          below…" paragraph (and its Settings parenthetical) duplicated the
+          approved R16 intro below it — two stacked introductions on a
+          newcomer's first screen of the form. Deleted; the approved intro
+          keeps its exact words, with one new sentence added after it. */}
       <p className="plain-form__intro">{INTRO_TEXT}</p>
+      <p className="plain-form__intro">
+        No AI reads your answers or makes the decision, so the same answers always get the same
+        result.
+      </p>
       {legacyDraftFound && (
         <p role="status" className="plain-form__legacy-draft">
           Your saved draft was from an older version of this form and couldn&rsquo;t be reused — please
@@ -315,6 +372,7 @@ export default function StructuredForm({ policy, onSubmit }: StructuredFormProps
       <fieldset className="structured-form__section">
         <legend>Where it comes from</legend>
         <SingleSelect id="3" extraOptions={platformOptions} extraOptionsAtIndex={3} {...qp} />
+        {showQ3platformZone && <SingleSelect id="3platformZone" restrictToKeys={q3platformZoneKeys} {...qp} />}
         {showQ3Supplier && <SingleSelect id="3supplier" extraOptions={supplierOptions} {...qp} />}
         {show3supplierName && <FreeText id="3supplierName" {...qp} />}
         {showQ3Model && <FreeText id="3model" {...qp} />}

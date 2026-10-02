@@ -243,9 +243,9 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
   it('TC-R6-QN-1-03: end to end — guessed model_type and vendor are asked; answering writes graph_corrected on attestation', async () => {
     const user = userEvent.setup();
     render(<IntakeFlow />);
-    await user.type(screen.getByLabelText(/describe your ai use case/i), DESCRIPTION);
-    await user.click(screen.getByRole('button', { name: /read & extract/i }));
-    await user.click(await screen.findByRole('button', { name: /new use case/i }));
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText(/confirm what we understood/i);
 
     // p1 has guessed fields → no confirm button on it; i1 and o1 are fully
@@ -261,7 +261,10 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
     // DIFFERENT value than extracted (llm → traditional-ml), with context.
     await screen.findByText(/what type of ai\/ml model is this/i);
     await user.type(
-      screen.getByLabelText(/anything the reviewer should know/i),
+      // NOT the R16-W-reworded ConfirmationStep label — this is
+      // QuestionnaireStep's own PER-ANSWER context field, unrelated and
+      // unchanged by R16-W (which only reworded ConfirmationStep's note).
+      screen.getByLabelText(/anything the reviewer should know about this answer/i),
       'Confirmed with the platform team.',
     );
     // v0.7.1: option buttons now carry the shared plain-English labels.

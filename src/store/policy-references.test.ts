@@ -79,6 +79,37 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(result.warnings.join(' ')).toMatch(/CTRL-INDEP-VAL-01 covers_reviews: no review with id 'SS1-UK-REV-01'.*no rule packs are loaded/);
   });
 
+  // R16-W W-7 (D-77). Unlike covers_reviews, an applies_to id is ALWAYS
+  // checkable (platforms/vendors are part of this same policy file, never
+  // a pack), so it is always an error — never gated on packs being loaded.
+  it('TC-R16-W-54: applies_to accepts a registered platform or vendor id, with no packs loaded', () => {
+    const policy = basePolicy({
+      platforms: [{ id: 'PLAT-X', name: 'n', approved_envelope: {}, satisfies_controls: [] }],
+      vendors: [{ id: 'VENDOR-X', name: 'n', approved_envelope: {}, satisfies_controls: [] }],
+      controls: [
+        control({ id: 'CTRL-A', verification_evidence: { status: 'verified', applies_to: { platforms: ['PLAT-X'] } } }),
+        control({ id: 'CTRL-B', verification_evidence: { status: 'verified', applies_to: { vendors: ['VENDOR-X'] } } }),
+      ],
+    });
+    expect(checkPolicyReferences(policy, []).errors).toEqual([]);
+  });
+
+  it("TC-R16-W-55: applies_to with an unregistered platform id is always an error, in the contract's own message shape", () => {
+    const policy = basePolicy({
+      controls: [control({ id: 'CTRL-ENC-01', verification_evidence: { status: 'verified', applies_to: { platforms: ['PLAT-GHOST'] } } })],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.errors).toContain("CTRL-ENC-01 verification_evidence.applies_to: no platform with id 'PLAT-GHOST'.");
+  });
+
+  it('TC-R16-W-56: applies_to with an unregistered vendor id is always an error', () => {
+    const policy = basePolicy({
+      controls: [control({ id: 'CTRL-ENC-01', verification_evidence: { status: 'verified', applies_to: { vendors: ['VENDOR-GHOST'] } } })],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.errors).toContain("CTRL-ENC-01 verification_evidence.applies_to: no vendor with id 'VENDOR-GHOST'.");
+  });
+
   it('TC-R16-A1-53: covers_reviews accepts a firm review id', () => {
     const policy = basePolicy({
       downstream_reviews: [{ id: 'DR-VENDOR-01', review: 'Vendor risk assessment', condition: {} }],

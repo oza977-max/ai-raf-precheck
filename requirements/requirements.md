@@ -361,6 +361,8 @@ requirement and a schema change, not a bug fix.
 
 **Amended 2026-09-28 (code review 005).** RG-8 (hand-off bundle) and RG-9 (control-evidence attestation) were first built and committed under the labels "RG-6" and "RG-7" (commits `b484d83` and `6023103`). Those labels collided with the existing, unrelated RG-6 (blast-radius queries) and RG-7 (periodic sampling cadence) defined above — both V2+, neither built. The code has been relabelled to RG-8/RG-9 to match this entry; the two commit messages are permanent history and keep the old labels.
 
+**Amended 2026-10-02 (round 16-W, W-7).** A live walkthrough found `CTRL-ENC-01`'s stored evidence — firm-level ("platform allow-list pins TLS 1.3") — claimed "in place" against a personal account the firm has no contract with, which the firm's records say nothing about. RG-9 is amended: stored evidence that a safeguard is in place counts for a use case only when it covers that use case's platform or supplier, or states no scope. When it doesn't cover it, or that can't be checked, the safeguard is shown as still to do and the evidence panel says why.
+
 ---
 
 ### OB — Observed Reality Binding

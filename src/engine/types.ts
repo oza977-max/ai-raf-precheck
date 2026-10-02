@@ -685,6 +685,17 @@ export interface ControlVerificationEvidence {
   // UI shows both. They refine the evidence — they never change a verdict.
   design?: ControlEffectivenessAssessment;
   operating?: ControlEffectivenessAssessment;
+  // W-7 (R16-W §5, D-77): scopes "verified" evidence to the platforms/
+  // vendors it actually covers — firm-level evidence (e.g. "platform
+  // allow-list pins TLS 1.3") does not prove anything about a tool running
+  // outside that allow-list. Absent = applies to every use case (the
+  // pre-W-7 behaviour, unchanged). Present = applies only when the
+  // processing node's platform id is in `platforms` or its vendor id is in
+  // `vendors`; at least one of the two lists must be non-empty
+  // (store/policy.ts's zod schema enforces this). This is a view-model
+  // concern only (src/components/verdict-view-model.ts) — it never changes
+  // which controls the engine requires, only how "verified" is DISPLAYED.
+  applies_to?: { platforms?: string[]; vendors?: string[] };
 }
 
 export interface ControlEffectivenessAssessment {
