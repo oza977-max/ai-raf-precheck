@@ -142,7 +142,10 @@ describe('seedAigateSelfAssessment refuses to seed on a policy reference error (
       ],
     };
 
-    await seedFresh(badPolicy);
+    // Packs loaded, as in production: an unmatched id is a verified error
+    // (with no packs at all it would only be a warning — TC-R16-A2-12).
+    const { getPackSources } = await import('../store/pack-source');
+    await seedFresh(badPolicy, loadPacks(getPackSources()).packs);
     expect(await getUseCaseFresh(idFresh)).toBeUndefined();
   });
 });

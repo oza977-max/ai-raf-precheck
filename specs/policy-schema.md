@@ -1055,6 +1055,8 @@ rule above, reusing the same field set and predicate, so it is correct
 standing alone and also covers `policy.downstream_reviews[]` conditions,
 which `loadPolicy`'s own structural check does not walk).
 
+**Amended 2026-10-02 (R16-A2).** When **no rule packs are loaded at all**, an unresolved `covers_reviews` id is reported as a **warning**, not an error: it may name a pack rule that simply isn't present, and "can't check" is the honest state. With packs loaded — every production load site — an id that matches nothing is a verified error. A `covers_reviews` id that matches nothing can only fail to fold a review into a safeguard, never hide one, so the softer zero-packs rule cannot hide an obligation.
+
 Warnings (shown to the reviewer, never blocking): an unknown placeholder —
 anything in `{…}` other than `{audience}`/`{destination}`; an unknown `@`
 token in a `plain_owner` field other than `@submitter`/`@model_owner`; a

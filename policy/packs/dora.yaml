@@ -8,8 +8,17 @@
 # party, which most useful AI is. The concentration-risk angle is the one that
 # actually bites: several critical use cases on one model vendor is a DORA
 # problem before it is an AI problem.
+#
+# Change log:
+#   0.3-draft (2026-10-02) — R16 chunk A2: added plain_name/plain_owner to
+#   DORA-EU-REV-01's required_review effect (owner-approved text,
+#   build/prompts/R16.md v2.1 §1.6). Presentation only — no change to
+#   source.text, condition, effect type/review wording, or basis, so
+#   PACK-AUTHORING.md's re-review/re-sign rule (RA-10: only rules citing a
+#   CHANGED SECTION need re-review) is not triggered; sign-off status is
+#   unchanged (still pending firm adoption, per sign_off_date below).
 pack_id: "DORA"
-version: "0.2-draft"
+version: "0.3-draft"
 jurisdiction: "EU"
 regulator: "European Supervisory Authorities"
 document: "Regulation (EU) 2022/2554 (DORA)"
@@ -36,6 +45,8 @@ rules:
     effect:
       type: "required_review"
       review: "ICT third-party concentration review (DORA Art. 28/29)"
+      plain_name: "a check that the firm isn't relying too heavily on this one supplier (an EU requirement)"
+      plain_owner: "your vendor-risk team"
     condition:
       data_zone: { in: ["Zone B"] }
     # Zone B (vendor-hosted) is used as the proxy for "supported by an ICT

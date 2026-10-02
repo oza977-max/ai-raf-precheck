@@ -137,7 +137,20 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
   const validCoversReviewsTargets = new Set([...firmReviewIds, ...packReviewRuleIds, ...REVIEW_SENTINELS]);
 
   for (const control of sortedById(policy.controls)) {
-    errors.push(...coversReviewsErrors(control.id, control.covers_reviews, validCoversReviewsTargets));
+    const unresolved = coversReviewsErrors(control.id, control.covers_reviews, validCoversReviewsTargets);
+    if (packs.length > 0) {
+      errors.push(...unresolved);
+    } else {
+      // No packs loaded at all: an id that is not a firm review or an engine
+      // sentinel may name a pack rule, and absence of evidence is not evidence
+      // of a typo — "can't check" is the honest state, not "invalid". With
+      // packs loaded (every production load site), an id matching nothing is
+      // a verified error. A covers entry that matches nothing can only fail
+      // to fold a review, never hide one, so this cannot hide an obligation.
+      warnings.push(
+        ...unresolved.map((e) => `${e.replace(/\.$/, '')} among the firm's own reviews — no rule packs are loaded, so it could not be checked against them.`),
+      );
+    }
     warnings.push(...placeholderWarnings(`${control.id} plain_action`, control.plain_action));
     warnings.push(...placeholderWarnings(`${control.id} plain_owner`, control.plain_owner));
     warnings.push(...ownerTokenWarnings(`${control.id} plain_owner`, control.plain_owner));

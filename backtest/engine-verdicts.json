@@ -1,5 +1,5 @@
 {
-  "policy_version": "1.6",
+  "policy_version": "1.7",
   "verdicts": {
     "A-01": {
       "title": "Daily VaR and IRC commentary",

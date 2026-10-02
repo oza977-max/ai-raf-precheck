@@ -9,6 +9,17 @@
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
 # CHANGE LOG
+#   1.7 (2026-10-02) — R16 chunk A2: plain-language text only, no verdict
+#       changes (presentation fields the engine does not read). Added
+#       plain_action/plain_owner/plain_owner_with/covers_reviews to every
+#       control, plain_reason to every invariant, plain_reason/plain_change
+#       to every hard line, plain_name/plain_owner to the three downstream
+#       review rules, plain_name (+ vendor_id on PLAT-CLOUD-LLM) to both
+#       platforms, and plain_name + kind to VENDOR-APPROVED-LLM — all
+#       owner-approved text from build/prompts/R16.md v2.1 §1.6. The new
+#       platform->vendor_id link is declarative only: resolveInheritance()
+#       does not read vendor_id today (that mapping is chunk B's form work),
+#       so this adds no engine effect and the backtest is unchanged.
 #   1.6 (2026-09-28) — three owner-approved narrowing/description fixes.
 #       INV-DISCLOSE-01 and INV-ESCALATE-01 matched on client-facing exposure
 #       alone, so an email a relationship manager edits and sends under their
@@ -133,7 +144,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.6"
+version: "1.7"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -158,6 +169,8 @@ hard_lines:
       exposure: { in: ["client-facing", "market-facing"] }
     reason: "Fully autonomous irreversible action reaching a client or the market leaves no point of human control before harm is done."
     regulatory_basis: "SS1/23 §3.8; SR 26-2 §IV"
+    plain_reason: "it would take actions by itself that can't be undone, in front of clients or the market, with no person involved"
+    plain_change: "Have a person approve each action before it happens, or make sure every action can be undone."
 
   - id: "HL-002"
     description: "Price-sensitive information processed outside the controlled zone"
@@ -170,6 +183,8 @@ hard_lines:
       data_zone: { not_in: ["Zone C"] }
     reason: "MNPI outside Zone C violates market abuse prevention requirements."
     regulatory_basis: "MAR Article 8; MiFID II"
+    plain_reason: "price-sensitive information would leave your firm's own systems"
+    plain_change: "Keep price-sensitive information out of it, or use an AI service that runs entirely inside your firm's own systems."
 
   - id: "HL-003"
     description: "Autonomous credit or lending decision with no human in the loop"
@@ -179,6 +194,8 @@ hard_lines:
       hitl: false
     reason: "A lending decision taken with no human review removes the accountable decision-maker the regulation assumes exists."
     regulatory_basis: "EU AI Act Annex III §5(b); Consumer Credit Directive 2023/2225"
+    plain_reason: "it would decide who gets credit entirely by itself, with no person involved"
+    plain_change: "Have a person approve each lending decision before it takes effect."
 
   - id: "HL-004"
     description: "Autonomous trading execution"
@@ -187,6 +204,8 @@ hard_lines:
       decision_type: { in: ["trading"] }
     reason: "Autonomous market execution can move positions faster than any human control can intervene."
     regulatory_basis: "RAF §5 rule; MiFID II Article 17"
+    plain_reason: "it would trade entirely by itself"
+    plain_change: "Have a person approve each trade before it's placed."
 
   # NOTE: the id HL-005 is RETIRED, not reused. It named "irreversible action
   # above autonomy L1", which oracle round 001 demoted to INV-IRREV-01 because a
@@ -204,6 +223,8 @@ hard_lines:
       decision_bindingness: { in: ["binding"] }
     reason: "An agent that both chooses its own actions and binds the firm to them has no point at which a human ratifies the decision."
     regulatory_basis: "SR 26-2 §III.C (agentic AI); OSFI E-23 §4.3"
+    plain_reason: "an AI agent would make final decisions entirely by itself"
+    plain_change: "Have a person approve its decisions before they take effect, or limit what it can decide on its own."
 
 # ------------------------------------------------------------------------------
 # TRACKS — governance route. MUST BE TOTAL over model_type x bindingness.
@@ -361,6 +382,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-ENC-01"]
     regulatory_basis: "GDPR Art. 32(1)(a)"
+    plain_reason: "it sends personal details about people to {destination}"
 
   # v1.5 (2026-08-31). Coverage sweep (4.23M-combination enumeration against
   # every hard line and invariant) found this gap: MNPI outside Zone C is a
@@ -395,6 +417,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-ENC-01"]
     regulatory_basis: "GDPR Art. 32(1)(a); RAF §4 — information classification"
+    plain_reason: "it sends confidential firm information to {destination}"
 
   # INV-ZONE-01 is RETIRED (oracle round 002), not merely unused.
   #
@@ -436,6 +459,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-DISCLOSE-01"]
     regulatory_basis: "EU AI Act Art. 50(1) — applies from 2026-08-02, NOT postponed by the Digital Omnibus"
+    plain_reason: "{audience} deal with it directly — it answers them or takes actions"
 
   - id: "INV-SYNTHMARK-01"
     description: "AI-generated content leaving the firm must be machine-readably marked as artificially generated"
@@ -450,6 +474,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-SYNTHMARK-01"]
     regulatory_basis: "EU AI Act Art. 50(2) (applies from 2 August 2026)"
+    plain_reason: "what it creates will leave the firm"
 
   - id: "INV-TRACK2-01"
     description: "AI model versions must be pinned and outputs monitored for silent substitution"
@@ -459,6 +484,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-FINGERPRINT-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §5 — Track II baseline; zero tolerance for unmonitored vendor model change"
+    plain_reason: "people use what it says, and a new version could change how it behaves"
 
   - id: "INV-HALLUC-01"
     description: "Generative output informing a material decision must be grounded in retrievable source material"
@@ -471,6 +497,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-GROUND-01"]
     regulatory_basis: "RAF §9 — grounding verification mode"
+    plain_reason: "decisions will rest on what it produces, and AI like this can state things confidently that aren't true"
 
   - id: "INV-CITE-01"
     description: "Text generated by an AI system and presented to a human must carry resolvable citations to its sources"
@@ -490,6 +517,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-CITE-01"]
     regulatory_basis: "RAF §9 — grounding minimum requirements"
+    plain_reason: "people will read and rely on what it writes"
 
   - id: "INV-AGENT-01"
     description: "Agentic systems must log every tool call and expose an immediate stop control"
@@ -498,6 +526,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-LOG-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls"
+    plain_reason: "it takes steps on its own in other systems"
 
   # v1.5 (2026-08-31). Coverage sweep found this gap: INV-AGENT-01 above
   # only fires on model_type = agentic. A traditional-ML or plain-ML system
@@ -521,6 +550,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-LOG-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls"
+    plain_reason: "it acts without a person approving each action first"
 
   # --- v1.4 agentic infrastructure-access rules ------------------------------
   # Grounded verbatim in grounding/proposed-rules/agentic-infrastructure-
@@ -552,6 +582,7 @@ invariants:
     severity: "Critical"
     required_controls: ["CTRL-AGENT-ISO-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls; incident evidence: OpenAI HF Technical Report (2026-08), METR/Redwood investigation (2026-08-26)"
+    plain_reason: "it runs on servers shared with other automated tools"
 
   - id: "INV-AGENT-CRED-01"
     description: "An agentic system holding credentials beyond its task, or with deployment access, must have task-scoped credentials and a human gate on any deployment action"
@@ -565,6 +596,7 @@ invariants:
     severity: "Critical"
     required_controls: ["CTRL-AGENT-CRED-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls; incident evidence: OpenAI HF Technical Report (2026-08) §III.B"
+    plain_reason: "it has its own logins to other systems or can deploy changes by itself"
 
   - id: "INV-AGENT-COORD-01"
     # code-review-004 F12: the rendered description now says out loud that
@@ -587,6 +619,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-AGENT-EXTLOG-01"]
     regulatory_basis: "RAF §6 — agentic / tool-use controls; incident evidence: METR/Redwood investigation (2026-08-26) — transcript tampering findings"
+    plain_reason: "copies of it can pass work to each other, or it isn't known whether they can"
 
   - id: "INV-AUTONOMY-01"
     description: "A system acting independently on a material or binding decision must have a human decision gate or a bounded authority envelope"
@@ -619,6 +652,7 @@ invariants:
     severity: "Critical"
     required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
     regulatory_basis: "RAF §7 — autonomy ceiling"
+    plain_reason: "it acts by itself on decisions that matter"
 
   - id: "INV-AUTONOMY-02"
     description: "A system acting independently in front of a client must have a bounded authority envelope"
@@ -636,6 +670,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-AUTONOMY-BOUND-01", "CTRL-HITL-02"]
     regulatory_basis: "OSFI E-23 §4.3; FCA Consumer Duty PRIN 2A"
+    plain_reason: "it acts by itself in ways {audience} see"
 
   - id: "INV-IRREV-01"
     description: "An irreversible action taken with limited human oversight must have a reversal window before it commits"
@@ -649,6 +684,7 @@ invariants:
     severity: "Critical"
     required_controls: ["CTRL-REVERSAL-01"]
     regulatory_basis: "SS1/23 §3.8; GDPR Art. 5(1)(e)"
+    plain_reason: "it acts by itself and some of its mistakes can't be undone"
 
   - id: "INV-CONDUCT-01"
     description: "Client-facing and market-facing AI must be conduct-tested before launch and periodically after"
@@ -657,6 +693,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-CONDUCT-01"]
     regulatory_basis: "RAF §4 — conduct & fairness"
+    plain_reason: "{audience} will see what it produces"
 
   - id: "INV-FAIRNESS-01"
     description: "AI informing a decision about a person must be tested for disparate outcomes across protected groups"
@@ -672,6 +709,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-BIAS-01"]
     regulatory_basis: "EU AI Act Annex III §5(b) and §4(a); ECOA/Reg B; FCA Consumer Duty PRIN 2A"
+    plain_reason: "it helps decide things about people — lending, hiring, pricing or fraud checks"
 
   - id: "INV-ESCALATE-01"
     description: "Client-facing AI that clients deal with directly — it answers them or takes actions — must offer a route to a human"
@@ -696,6 +734,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-ESCALATE-01"]
     regulatory_basis: "RAF §4 — client harm / escalation"
+    plain_reason: "{audience} deal with it directly — it answers them or takes actions"
 
   - id: "INV-DRIFT-01"
     description: "A model informing a material or binding decision must be monitored for performance drift"
@@ -709,6 +748,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-DRIFT-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §8 — drift signals; SS1/23 §3.4"
+    plain_reason: "decisions rest on it, and models can quietly get worse over time"
 
   - id: "INV-EXPLAIN-01"
     description: "A model informing a material or binding decision must be able to explain a single outcome"
@@ -719,6 +759,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-EXPLAIN-01", "CTRL-INDEP-VAL-01"]
     regulatory_basis: "RAF §5 — Track II transparency"
+    plain_reason: "decisions rest on it, so each single result must be explainable"
 
   - id: "INV-SEC-01"
     description: "A deep-learning, generative or agentic model whose output reaches people beyond the team running it must be adversarially tested"
@@ -738,6 +779,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-REDTEAM-01"]
     regulatory_basis: "RAF §9 — adversarial verification mode"
+    plain_reason: "this kind of AI can be tricked by what it's given, and its output reaches people beyond your own team"
 
   - id: "INV-VENDOR-01"
     description: "A third-party component outside the firm's registry must have a third-party risk assessment"
@@ -754,6 +796,7 @@ invariants:
     severity: "High"
     required_controls: ["CTRL-TPRM-01"]
     regulatory_basis: "DORA Art. 28-30; OSFI B-10"
+    plain_reason: "it comes from a supplier your firm hasn't assessed yet"
 
   - id: "INV-SAMPLE-01"
     description: "Recommendations issued at scale must be sampled and reviewed against outcomes"
@@ -763,6 +806,7 @@ invariants:
     severity: "Medium"
     required_controls: ["CTRL-SAMPLE-01"]
     regulatory_basis: "RAF §9 — behavioural verification mode"
+    plain_reason: "it makes suggestions as a routine part of work"
 
 # ------------------------------------------------------------------------------
 # CONTROL LIBRARY
@@ -821,12 +865,16 @@ downstream_reviews:
     # different part of the graph.
     condition:
       data_class: { in: ["MNPI"] }
+    plain_name: "an information-security review"
+    plain_owner: "your information-security team"
 
   - id: "DR-INFOSEC-02"
     review: "Information security review"
     # Client personal data. Same field, same guarantee.
     condition:
       data_class: { in: ["Client PII"] }
+    plain_name: "an information-security review"
+    plain_owner: "your information-security team"
 
   - id: "DR-VENDOR-01"
     review: "Vendor risk assessment"
@@ -837,6 +885,8 @@ downstream_reviews:
     # a different question and a different team.
     condition:
       vendor: { not_in: ["internal"] }
+    plain_name: "the supplier is assessed"
+    plain_owner: "your vendor-risk team"
 
   # ⚠ NOT WRITTEN — "Cloud security approval", triggered by processing outside
   # the firm's estate, is the obvious fourth rule and CS-3 names it. It cannot
@@ -872,6 +922,8 @@ controls:
       operating:
         status: "not_assessed"
         detail: "No operating-effectiveness test performed yet in this starter file"
+    plain_action: "The connection to the AI service is encrypted, so information can't be read on the way."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-DISCLOSE-01"
     name: "AI interaction disclosure"
@@ -879,6 +931,8 @@ controls:
     resolves: ["INV-DISCLOSE-01"]
     burden: 1
     verification: "Screenshot or interface copy showing the disclosure at first contact"
+    plain_action: "People are told clearly, before they start, that they're dealing with an AI."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-SYNTHMARK-01"
     name: "Synthetic content marking"
@@ -886,6 +940,8 @@ controls:
     resolves: ["INV-SYNTHMARK-01"]
     burden: 3
     verification: "Output carries provenance metadata (e.g. C2PA) detectable by a third party"
+    plain_action: "Anything it creates that leaves the firm is labelled as AI-made, in a way software can detect."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-FINGERPRINT-01"
     name: "Output fingerprinting + version pinning"
@@ -893,6 +949,8 @@ controls:
     resolves: ["INV-TRACK2-01"]
     burden: 2
     verification: "Probe set and baseline fingerprints on file; alert on step-change in aggregate grounding confidence"
+    plain_action: "The AI is locked to one version, and it's checked regularly that the supplier hasn't changed it without saying."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-INDEP-VAL-01"
     name: "Independent validation (2LoD)"
@@ -903,6 +961,9 @@ controls:
     resolves: ["INV-TRACK2-01", "INV-DRIFT-01", "INV-EXPLAIN-01"]
     burden: 5
     verification: "Signed independent validation report naming the validator and the date"
+    plain_action: "A team that didn't build or buy it checks it — how well it works, its limits and how it will be monitored — and signs a report before anyone uses it."
+    plain_owner: "your firm's model validation team"
+    covers_reviews: ["SS1-UK-REV-01"]
 
   - id: "CTRL-CITE-01"
     name: "Resolvable citations"
@@ -910,6 +971,8 @@ controls:
     resolves: ["INV-CITE-01"]
     burden: 2
     verification: "Sampled outputs show citations that resolve to the cited passage"
+    plain_action: "Every statement it writes links to the source it came from, so readers can check it."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-ESCALATE-01"
     name: "Human escalation route"
@@ -917,6 +980,8 @@ controls:
     resolves: ["INV-ESCALATE-01"]
     burden: 2
     verification: "Escalation path documented and exercised in test"
+    plain_action: "Clients can reach a real person at any point, and can see how without having to ask."
+    plain_owner: "@submitter"
 
   - id: "CTRL-LOG-01"
     name: "Action logging + stop control"
@@ -929,6 +994,8 @@ controls:
     resolves: ["INV-AGENT-01", "INV-ACT-LOG-01"]
     burden: 3
     verification: "Log sample showing actions and arguments; stop control exercised in test"
+    plain_action: "Every action it takes is recorded, there's a stop button that works immediately, and it has only the access it needs."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   # --- v1.4 agentic infrastructure-access controls ---------------------------
   # One control per failure mode observed in the 2026 incident, so the verdict
@@ -940,6 +1007,8 @@ controls:
     resolves: ["INV-AGENT-INFRA-01"]
     burden: 3
     verification: "Isolation attestation naming the shared services reviewed; a cross-instance write attempted and shown blocked in test"
+    plain_action: "Each copy of it is kept separate from other AI tools — no shared storage or messages — and this is re-checked whenever the servers change."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-AGENT-CRED-01"
     name: "Task-scoped credentials + human deployment gate"
@@ -947,6 +1016,8 @@ controls:
     resolves: ["INV-AGENT-CRED-01"]
     burden: 4
     verification: "Credential inventory showing scope and expiry; a deployment attempted without the human step and shown blocked in test"
+    plain_action: "It gets only temporary logins for each task, and any code push or deployment needs a separate, recorded go-ahead from a person."
+    plain_owner: "your information-security team"
 
   - id: "CTRL-AGENT-EXTLOG-01"
     name: "Action log held outside the agent's reach"
@@ -954,6 +1025,8 @@ controls:
     resolves: ["INV-AGENT-COORD-01"]
     burden: 3
     verification: "Log store access policy showing the agent identity has no path to it; a log-write from the agent's own credentials attempted and shown blocked in test"
+    plain_action: "Its activity record is kept somewhere it can't read or change itself."
+    plain_owner: "your information-security team"
 
   - id: "CTRL-AUTONOMY-BOUND-01"
     name: "Bounded authority envelope + sampled post-hoc review"
@@ -965,6 +1038,9 @@ controls:
     resolves: ["INV-AUTONOMY-01", "INV-AUTONOMY-02"]
     burden: 4
     verification: "Authority envelope document with limits; stop control exercised in test; post-hoc review sampling rate and results on file"
+    plain_action: "There's a written list of what it may do on its own, with hard limits; anything outside them stops for a person; there's a stop button; and a sample of what it did is checked afterwards."
+    plain_owner: "@submitter"
+    plain_owner_with: "your AI risk team"
 
   - id: "CTRL-HITL-02"
     name: "Human decision gate on every action"
@@ -972,6 +1048,8 @@ controls:
     resolves: ["INV-AUTONOMY-01", "INV-AUTONOMY-02"]
     burden: 5
     verification: "Workflow evidence showing no action executes without a recorded human decision"
+    plain_action: "A person signs off every action before it takes effect."
+    plain_owner: "@submitter"
 
   - id: "CTRL-REVERSAL-01"
     name: "Reversal window before irreversible commit"
@@ -979,6 +1057,8 @@ controls:
     resolves: ["INV-IRREV-01"]
     burden: 3
     verification: "Window length documented; a reversal exercised end-to-end in test; reconciliation report on file"
+    plain_action: "Each action is held for a set time where it can still be undone, checked, and only then made final — with a practice mode to test it first."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-DRIFT-01"
     name: "Drift monitoring"
@@ -986,6 +1066,8 @@ controls:
     resolves: ["INV-DRIFT-01"]
     burden: 3
     verification: "Monitoring dashboard and breach escalation history"
+    plain_action: "How well it performs is watched over time against set limits, with a named person who acts if it slips."
+    plain_owner: "@model_owner"
 
   - id: "CTRL-EXPLAIN-01"
     name: "Single-outcome explanation"
@@ -993,6 +1075,8 @@ controls:
     resolves: ["INV-EXPLAIN-01"]
     burden: 3
     verification: "Worked explanation for a sampled individual outcome"
+    plain_action: "For any single result, it can show the factors that led to it, in words the affected person could follow."
+    plain_owner: "@model_owner"
 
   - id: "CTRL-REDTEAM-01"
     name: "Adversarial testing"
@@ -1000,6 +1084,8 @@ controls:
     resolves: ["INV-SEC-01"]
     burden: 3
     verification: "Red-team report with findings and their remediation"
+    plain_action: "It's tested against people trying to trick or misuse it — hidden instructions, fake documents — before launch and after big changes."
+    plain_owner: "your information-security team"
 
   - id: "CTRL-TPRM-01"
     name: "Third-party risk assessment"
@@ -1007,6 +1093,9 @@ controls:
     resolves: ["INV-VENDOR-01"]
     burden: 4
     verification: "Completed third-party assessment and a signed exit plan on file"
+    plain_action: "The supplier is assessed — security, reliability, how they handle data, and how the firm would leave them — before use, and regularly after."
+    plain_owner: "your vendor-risk team (they assess suppliers)"
+    covers_reviews: ["DR-VENDOR-01", "PV-UNREGISTERED"]
 
   - id: "CTRL-BIAS-01"
     name: "Disparate outcome testing"
@@ -1014,6 +1103,9 @@ controls:
     resolves: ["INV-FAIRNESS-01"]
     burden: 4
     verification: "Disparity test results against kri_thresholds.conduct.bias_disparity_pct, with the population and method stated"
+    plain_action: "Its results are tested to make sure they aren't unfair to any group of people protected by law — for example by sex, age or ethnicity — before launch and regularly after."
+    plain_owner: "@model_owner"
+    plain_owner_with: "your AI risk team"
 
   - id: "CTRL-SAMPLE-01"
     name: "Outcome sampling"
@@ -1021,6 +1113,8 @@ controls:
     resolves: ["INV-SAMPLE-01"]
     burden: 2
     verification: "Sampling rate documented and review results on file"
+    plain_action: "Someone regularly checks a sample of its suggestions against what actually happened — you choose the share and how often, write it down, and keep the results."
+    plain_owner: "@submitter"
 
   - id: "CTRL-GROUND-01"
     name: "Retrieval grounding + confidence reporting"
@@ -1028,6 +1122,8 @@ controls:
     resolves: ["INV-HALLUC-01"]
     burden: 4
     verification: "Retrieval logs showing sources per output; abstention behaviour exercised in test"
+    plain_action: "It answers only from agreed source material, and says when it isn't sure instead of guessing."
+    plain_owner: "your IT team (or whoever sets the tool up)"
 
   - id: "CTRL-CONDUCT-01"
     name: "Conduct testing + transcript audit"
@@ -1035,6 +1131,9 @@ controls:
     resolves: ["INV-CONDUCT-01"]
     burden: 4
     verification: "Conduct test results and transcript audit sampling on file"
+    plain_action: "It's tested before launch, and regularly after, to make sure what it produces treats people fairly and doesn't mislead or harm them — including checking a sample of what it actually produced."
+    plain_owner: "@submitter"
+    plain_owner_with: "compliance"
 
 
 kri_thresholds:
@@ -1183,6 +1282,7 @@ platforms:
       - "CTRL-ENC-01"
       - "CTRL-FINGERPRINT-01"
       - "CTRL-DRIFT-01"
+    plain_name: "Your firm's in-house model platform"
 
   - id: "PLAT-CLOUD-LLM"
     name: "[FIRM] approved cloud LLM service"
@@ -1199,6 +1299,16 @@ platforms:
     satisfies_controls:
       - "CTRL-ENC-01"
       - "CTRL-FINGERPRINT-01"
+    plain_name: "Your firm's cloud AI assistant"
+    # R16 chunk A2 (§1.6): the supplier behind this platform. Declarative
+    # only — resolveInheritance() (src/engine/evaluate.ts) does not read
+    # vendor_id today, so this adds no engine effect; the form mapping that
+    # would use it to also claim the supplier's envelope is chunk B's work
+    # (flagged for the owner per R16.md D-61: when that lands, the
+    # reviewer section's inheritance panel will need to label each
+    # dimension row by source — "platform" vs "supplier" — instead of
+    # showing the same dimension twice unlabelled).
+    vendor_id: "VENDOR-APPROVED-LLM"
 
 # APPROVED VENDOR / MODEL REGISTRY (PV-2) — [FIRM] MUST REPLACE
 # A model not on this registry is treated as a new vendor and inherits
@@ -1212,6 +1322,8 @@ vendors:
       data_zones: ["Zone B"]
     satisfies_controls:
       - "CTRL-ENC-01"
+    plain_name: "Your firm's company AI assistant account"
+    kind: "company_assistant"
 
 # APPROVED-MODEL REGISTRY (R11-MG-1) — [FIRM] MUST REPLACE
 # A model absent from this registry, or present with is_approved: false,

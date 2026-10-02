@@ -80,7 +80,9 @@ describe('seedIbPortfolio refuses to seed on a policy reference error (R16-A1)',
       ],
     };
 
-    const seeded = await seedFresh(badPolicy);
+    // Packs loaded, as in production: an unmatched id is a verified error
+    // (with no packs at all it would only be a warning — TC-R16-A2-12).
+    const seeded = await seedFresh(badPolicy, loadPacks(getPackSources()).packs);
     expect(seeded).toBe(0);
     expect((await getRowsFresh('all')).filter((r) => r.use_case_id.startsWith(IB_PREFIX))).toHaveLength(0);
   });

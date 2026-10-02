@@ -60,8 +60,23 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     const policy = basePolicy({
       controls: [control({ id: 'CTRL-TPRM-01', covers_reviews: ["DR-VENDR-01"] })],
     });
-    const result = checkPolicyReferences(policy, []);
+    // With packs loaded (every production load site), an unknown id is a
+    // verified error. Any loaded pack will do — it just has to exist.
+    const anyPack: JurisdictionPack = {
+      pack_id: 'P', version: '1', jurisdiction: 'UK', regulator: 'r', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01', rules: [],
+    };
+    const result = checkPolicyReferences(policy, [anyPack]);
     expect(result.errors).toContain("CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'.");
+  });
+
+  it("TC-R16-A2-12: with no rule packs loaded at all, an unresolved covers_reviews id is a warning, not an error — it can't be checked, and an id matching nothing can only fail to fold a review, never hide one", () => {
+    const policy = basePolicy({
+      controls: [control({ id: 'CTRL-INDEP-VAL-01', covers_reviews: ['SS1-UK-REV-01'] })],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.join(' ')).toMatch(/CTRL-INDEP-VAL-01 covers_reviews: no review with id 'SS1-UK-REV-01'.*no rule packs are loaded/);
   });
 
   it('TC-R16-A1-53: covers_reviews accepts a firm review id', () => {

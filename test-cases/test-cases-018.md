@@ -164,9 +164,71 @@ them) loads unchanged — asserted directly in both `policy.test.ts` and
 suite three times via `npm test`. `npx tsc --noEmit` and `npm run build`
 both clean.
 
+## Chunk A2 — plain-language text (owner-approved)
+
+Fills the CF-6 schema fields chunk A1 added, with the exact text approved in
+`build/prompts/R16.md` v2.1 §1.6: `plain_action`/`plain_owner`/
+`plain_owner_with`/`covers_reviews` on all 22 controls, `plain_reason` on all
+23 invariants, `plain_reason`/`plain_change` on all 5 hard lines,
+`plain_name`/`plain_owner` on the firm's three downstream review rules and on
+the three pack `required_review` rules this reaches (`SS1-UK-REV-01`,
+`DORA-EU-REV-01`, `SR262-US-REV-01`), `plain_name` (+ `vendor_id` on
+`PLAT-CLOUD-LLM`) on both platforms, and `plain_name` + `kind` on
+`VENDOR-APPROVED-LLM`. Presentation text only — `reason`, `description`,
+`condition` and `regulatory_basis` are untouched, and nothing this chunk
+writes is read by the engine yet (chunk D1 renders it). Policy `version`
+1.6 → 1.7; each of the three edited packs' own `version` bumped too, with a
+dated change-log note — `grounding/PACK-AUTHORING.md`'s "on change" rule
+(RA-10) requires re-review/re-sign only for rules citing a CHANGED SECTION,
+which is none of these (no `source.text`, `condition`, effect type/review
+wording, or `basis` changed), so sign-off status is unchanged.
+`grounding/PACK-AUTHORING.md` also gains a reviewer-checklist line (R16
+§1.4, D-51): a `covers_reviews` entry is a claim the control's action
+satisfies that review, to be checked like any other condition.
+
+Test file: `src/store/plain-language-coverage.test.ts`, reading the shipped
+`policy/appetite.yaml` and `policy/packs/*.yaml` directly off disk.
+
+| ID | Asserts |
+|---|---|
+| TC-R16-A2-01 | Every control in the shipped policy has `plain_action` and `plain_owner` set — `plain-language-coverage.test.ts` |
+| TC-R16-A2-02 | Every invariant in the shipped policy has `plain_reason` set — `plain-language-coverage.test.ts` |
+| TC-R16-A2-03 | Every hard line in the shipped policy has `plain_reason` and `plain_change` set — `plain-language-coverage.test.ts` |
+| TC-R16-A2-04 | The firm's three downstream review rules (DR-INFOSEC-01, DR-INFOSEC-02, DR-VENDOR-01) each have `plain_name` and `plain_owner` — `plain-language-coverage.test.ts` |
+| TC-R16-A2-05 | The three pack `required_review` rules this chunk reaches (SS1-UK-REV-01, DORA-EU-REV-01, SR262-US-REV-01) each have `plain_name` and `plain_owner` — `plain-language-coverage.test.ts` |
+| TC-R16-A2-06 | Both platforms have `plain_name`; PLAT-CLOUD-LLM carries `vendor_id: VENDOR-APPROVED-LLM` and PLAT-INTERNAL-ML carries none — `plain-language-coverage.test.ts` |
+| TC-R16-A2-07 | Vendor VENDOR-APPROVED-LLM has `plain_name` and `kind: company_assistant` — `plain-language-coverage.test.ts` |
+| TC-R16-A2-08 | `covers_reviews` is set exactly where the contract specifies (`CTRL-INDEP-VAL-01` → `[SS1-UK-REV-01]`, `CTRL-TPRM-01` → `[DR-VENDOR-01, PV-UNREGISTERED]`) and on no other control — `plain-language-coverage.test.ts` |
+| TC-R16-A2-09 | `checkPolicyReferences` on the shipped policy + packs returns no errors and no warnings at all (stronger than "no missing-plain_name warnings") — `plain-language-coverage.test.ts` |
+| TC-R16-A2-10 | No plain-language field in the shipped policy or its packs contains "approved", "rejected" or "fired" — `plain-language-coverage.test.ts` |
+| TC-R16-A2-11 | The shipped policy's `version` is `"1.7"` — `plain-language-coverage.test.ts` |
+| TC-R16-A2-12 | With no rule packs loaded at all, an unresolved `covers_reviews` id is a warning, not an error (it can't be checked, and an id matching nothing can only fail to fold a review, never hide one); with packs loaded it stays an error (TC-R16-A1-52) — `policy-references.test.ts` |
+
+### Backtest (byte-identical check)
+
+`backtest-predictions.test.ts` and `backtest-corpus.test.ts` were re-run
+unedited against the new policy/pack text. `git diff backtest/engine-
+verdicts.json` shows exactly one line changed — `policy_version: "1.6"` →
+`"1.7"` — no verdict, controls list, downstream_reviews, tripped invariant,
+or applied override differs for any of the 31 corpus cases. The new
+`PLAT-CLOUD-LLM.vendor_id` link has no engine effect: `resolveInheritance()`
+(`src/engine/evaluate.ts`) resolves `platform`/`vendor` only from the
+graph's own declared ids and never reads a platform's `vendor_id` — that
+mapping is chunk B's form work — confirmed by grep before editing and by
+the unchanged backtest after.
+
+### Verification (chunk A2)
+
+Touched test run individually three times consecutively via `npm test --
+src/store/plain-language-coverage.test.ts`, then the full suite three times
+via `npm test`. `npx tsc --noEmit`, `npm run build`,
+`python3 scripts/spec-parity-check.py` and `python3 scripts/trace-check.py`
+all clean. `npm run docs:rules` regenerated (policy version line only).
+
 | Date | Change |
 |---|---|
 | 2026-10-02 | Written for R16 chunk A1 (schema, engine, loader). |
+| 2026-10-02 | Written for R16 chunk A2 (plain-language policy text). |
 
 ---
 

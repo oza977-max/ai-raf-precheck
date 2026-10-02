@@ -5,7 +5,7 @@
 > change.** Conditions are rendered in plain English; the YAML is the
 > authority.
 
-Policy version **1.6** · 5 hard lines · 6 tracks · 4 tiers · 23 invariants · 22 controls · 7 pack rules
+Policy version **1.7** · 5 hard lines · 6 tracks · 4 tiers · 23 invariants · 22 controls · 7 pack rules
 6 jurisdictions declared · 3 with an assessed pack (EU, UK, US) · 3 declared with no pack
 
 ---
@@ -322,7 +322,7 @@ control, add a review, or prohibit outright. See
 
 ### DORA · EU — Regulation (EU) 2022/2554 (DORA)
 
-_v0.2-draft · in force 2025-01-17 · sign-off: [FIRM] — Technology Risk ([DATE]) · text retrieved, awaiting human review_
+_v0.3-draft · in force 2025-01-17 · sign-off: [FIRM] — Technology Risk ([DATE]) · text retrieved, awaiting human review_
 
 **`DORA-EU-REV-01`** — Third-party AI concentration risk must be assessed
 
@@ -365,7 +365,7 @@ _v0.2-draft · in force 2024-08-01 · sign-off: [FIRM] — Legal/Compliance ([DA
 
 ### SR-26-2 · US — SR 26-2 — Revised Guidance on Model Risk Management
 
-_v0.2-draft · in force 2026-04-17 · sign-off: [FIRM] — Model Risk ([DATE]) · text retrieved, awaiting human review_
+_v0.3-draft · in force 2026-04-17 · sign-off: [FIRM] — Model Risk ([DATE]) · text retrieved, awaiting human review_
 
 **`SR262-US-REV-01`** — Generative and agentic AI are outside MRM scope — governed elsewhere, not ungoverned
 
@@ -376,7 +376,7 @@ _v0.2-draft · in force 2026-04-17 · sign-off: [FIRM] — Model Risk ([DATE]) �
 
 ### SS1-23 · UK — SS1/23 — Model risk management principles for banks
 
-_v0.2-draft · in force 2024-05-17 · sign-off: [FIRM] — Model Risk ([DATE]) · text retrieved, awaiting human review_
+_v0.3-draft · in force 2024-05-17 · sign-off: [FIRM] — Model Risk ([DATE]) · text retrieved, awaiting human review_
 
 **`SS1-UK-REV-01`** — Quantitative models informing decisions are in scope regardless of technique
 

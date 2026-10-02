@@ -10,8 +10,17 @@
 # ordinary model-risk appetite already covers most of it. The one thing worth
 # encoding is the scope point people get wrong — that an ML model used for
 # scoring is a model, and inherits the full validation obligation.
+#
+# Change log:
+#   0.3-draft (2026-10-02) — R16 chunk A2: added plain_name/plain_owner to
+#   SS1-UK-REV-01's required_review effect (owner-approved text,
+#   build/prompts/R16.md v2.1 §1.6). Presentation only — no change to
+#   source.text, condition, effect type/review wording, or basis, so
+#   PACK-AUTHORING.md's re-review/re-sign rule (RA-10: only rules citing a
+#   CHANGED SECTION need re-review) is not triggered; sign-off status is
+#   unchanged (still pending firm adoption, per sign_off_date below).
 pack_id: "SS1-23"
-version: "0.2-draft"
+version: "0.3-draft"
 jurisdiction: "UK"
 regulator: "Bank of England / Prudential Regulation Authority"
 document: "SS1/23 — Model risk management principles for banks"
@@ -38,6 +47,8 @@ rules:
     effect:
       type: "required_review"
       review: "Independent model validation (2LoD)"
+      plain_name: "an independent check of the model by your firm's model validation team"
+      plain_owner: "your firm's model validation team"
     condition:
       decision_bindingness: { in: ["material", "binding"] }
     # The quote defines what a model IS; it does not itself say "validate

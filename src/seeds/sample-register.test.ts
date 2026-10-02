@@ -126,7 +126,12 @@ describe('seedSampleRegister refuses to seed on a policy reference error (R16-A1
       ],
     };
 
-    const seeded = await seedFresh(badPolicy);
+    // With packs loaded (as every production caller passes them), an id that
+    // matches nothing is a verified error, so seeding refuses. With no packs
+    // at all it would only be a warning (TC-R16-A2-12).
+    const { loadPacks } = await import('../store/packs');
+    const { getPackSources } = await import('../store/pack-source');
+    const seeded = await seedFresh(badPolicy, loadPacks(getPackSources()).packs);
     expect(seeded).toBe(0);
     expect((await getRowsFresh('all')).filter((r) => r.use_case_id.startsWith(SAMPLE_PREFIX))).toHaveLength(0);
   });

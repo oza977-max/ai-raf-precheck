@@ -208,7 +208,8 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     // Review fix, pass 1: EU declares TWO packs — both must be visible in
     // the secondary detail line.
     expect(
-      screen.getByText(/EU-AIACT v0\.2-draft \+ DORA v0\.2-draft|DORA v0\.2-draft \+ EU-AIACT v0\.2-draft/),
+      // DORA's pack went to v0.3-draft in R16-A2 (plain names on its review; presentation only).
+      screen.getByText(/EU-AIACT v0\.2-draft \+ DORA v0\.3-draft|DORA v0\.3-draft \+ EU-AIACT v0\.2-draft/),
     ).toBeInTheDocument();
     // "fired" remains a per-verdict concept (the RA-9 chain), never a
     // static pack state.

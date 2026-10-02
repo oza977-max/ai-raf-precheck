@@ -12,8 +12,17 @@
 # "not a model" as "not governed".
 #
 # The exclusion is described as temporary. Re-check on each SR update.
+#
+# Change log:
+#   0.3-draft (2026-10-02) — R16 chunk A2: added plain_name/plain_owner to
+#   SR262-US-REV-01's required_review effect (owner-approved text,
+#   build/prompts/R16.md v2.1 §1.6). Presentation only — no change to
+#   source.text, condition, effect type/review wording, or basis, so
+#   PACK-AUTHORING.md's re-review/re-sign rule (RA-10: only rules citing a
+#   CHANGED SECTION need re-review) is not triggered; sign-off status is
+#   unchanged (still pending firm adoption, per sign_off_date below).
 pack_id: "SR-26-2"
-version: "0.2-draft"
+version: "0.3-draft"
 jurisdiction: "US"
 regulator: "Federal Reserve / FDIC / OCC"
 document: "SR 26-2 — Revised Guidance on Model Risk Management"
@@ -40,6 +49,8 @@ rules:
     effect:
       type: "required_review"
       review: "AI Governance review (outside MRM scope per SR 26-2)"
+      plain_name: "an AI governance review (a US requirement for AI outside the usual model checks)"
+      plain_owner: "your AI risk team"
     condition:
       model_type: { in: ["generative-ai", "llm", "agentic"] }
     # The quote states an exclusion. It does NOT say "therefore run an AI

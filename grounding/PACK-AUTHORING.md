@@ -66,6 +66,10 @@ near-miss where it must not. Reviewer actively tries to construct a graph that d
 condition (vocabulary mismatch, multi-node path, boundary value). Both tests committed to
 `test-cases/` and traced to the rule ID.
 
+**Reviewer checklist addition (R16 §1.4, D-51):** a `covers_reviews` entry is a claim that this
+control's action also satisfies that review — check it like any other condition when reviewing
+the rule.
+
 **6. Sign.**
 `reviewer_name` (real name), `reviewer_role`, `sign_off_date`, against the source hash.
 Validation rejects `[FIRM]` placeholders — an unsigned rule produces provisional verdicts (NF-7).
