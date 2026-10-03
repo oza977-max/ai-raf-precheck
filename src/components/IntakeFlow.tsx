@@ -34,7 +34,7 @@ import KnowledgeLensPanel from './KnowledgeLensPanel';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
-import { intakeReducer, nextReviewStep, contradictionKey } from './intake-state';
+import { intakeReducer, nextReviewStep, contradictionKey, planCorrectionWrites } from './intake-state';
 import { saveDraft, loadDraft, loadDraftInfo, clearDraft, clearDraftIfCase, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
@@ -92,32 +92,8 @@ const CONFIRMATION_REFUSAL_MESSAGE: Record<ConfirmationRefusal, string> = {
 const POLICY_PROBLEM_MESSAGE =
   'Your firm’s rules file has a problem, so this can’t be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen.';
 
-// CR7-21. A correction already on this case's trail since its last result is
-// not written again. A retry after a failed evaluation re-runs the whole
-// confirm; on the form path `formCorrections` mints a NEW id for each
-// correction every time the form is resubmitted, so by id the retry would look
-// new and double the record — an append-only trail cannot be cleaned up
-// afterwards. Matched by what the correction SAYS (node, field, both values,
-// source), within the events since the last verdict_produced/verdict_corrected
-// (a correction made after a result is a new act). `?? null` on both sides:
-// older events stored an absent value as undefined (CR7-30).
-function correctionsNotOnTrail(corrections: GraphCorrection[], events: AuditEvent[]): GraphCorrection[] {
-  let lastDecided = -1;
-  events.forEach((e, i) => {
-    if (e.payload.type === 'verdict_produced' || e.payload.type === 'verdict_corrected') lastDecided = i;
-  });
-  const written: GraphCorrection[] = [];
-  for (const e of events.slice(lastDecided + 1)) {
-    if (e.payload.type === 'graph_corrected') written.push(e.payload.correction);
-  }
-  const same = (a: GraphCorrection, b: GraphCorrection) =>
-    a.node_id === b.node_id &&
-    a.field === b.field &&
-    a.correction_source === b.correction_source &&
-    JSON.stringify(a.original_value ?? null) === JSON.stringify(b.original_value ?? null) &&
-    JSON.stringify(a.corrected_value ?? null) === JSON.stringify(b.corrected_value ?? null);
-  return corrections.filter((c) => !written.some((w) => same(w, c)));
-}
+// CR7-21/22 and the count of corrections on the trail: planCorrectionWrites
+// (intake-state.ts, pure and unit-tested).
 
 export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?: number } = {}) {
   // explore-001 D-002/D-003: restore any in-flight draft so a refresh,
@@ -631,6 +607,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // await is ever added back.
   const formSubmitInFlight = useRef(false);
 
+  // CR7-28 (M-1): the migration notice belongs to the review screen it
+  // explains; once the person leaves it, it must not come back on return.
+  useEffect(() => {
+    if (state.step !== 'graph_review') setShowMigrated(false);
+  }, [state.step]);
+
   // CR7-01 (BC-004: a restored draft). A draft saved while the description was
   // being read — `graph_extraction` on the LLM path — restores to "Reading your
   // description…" with nothing running and no control on screen: the extractor
@@ -640,6 +622,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // through the retry handler (which has its own synchronous in-flight guard,
   // so StrictMode's double-invoked effect still makes exactly one call, and
   // which shows the Try again panel if the key or local model has since gone).
+  // Known and accepted: if the component is REMOUNTED while that extraction is
+  // still in flight (a trip to the Register and back), the new mount starts a
+  // second call; the first one's result is orphaned and discarded by the
+  // attempt token / unmounted state, never dispatched into the new mount.
   // It must NOT fire on the ordinary path: there handleConfirmNewUseCase
   // dispatches NO_DUPLICATE_FOUND and then calls extractGraph itself.
   useEffect(() => {
@@ -1388,7 +1374,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // returns `corrections: []`, so a failed evaluation would lose them for
     // good if they waited for a result.
     const existingEvents = await getAuditEvents(useCaseId);
-    const correctionsToWrite = correctionsNotOnTrail(corrections, existingEvents);
+    const plan = planCorrectionWrites(corrections, existingEvents);
+    const correctionsToWrite = plan.toWrite;
+    // M-4: what the trail holds for THIS attempt (written now, or already there
+    // from a failed attempt before it) — never `corrections.length`, which a
+    // retry after a failed evaluation resets to zero while the events remain.
+    const correctionsOnTrail = plan.sinceLastResult;
     const writeCorrections = async () => {
       // BC-P5C01-02: one graph_corrected event per individual
       // GraphCorrection, matching the spec's singular payload shape.
@@ -1456,7 +1447,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           type: 'graph_confirmed',
           graph_id: graph.id,
           graph_version: graph.version,
-          corrections_count: corrections.length,
+          corrections_count: correctionsOnTrail,
           // Spread-if-present, not `submitter_note: reviewerNote` — the audit
           // trail is append-only and permanent, and a record carrying
           // `submitter_note: undefined` serialises as a field somebody could
@@ -1584,7 +1575,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           // wrote — a zero-correction resubmission writes none, and
           // eventDetail (RegisterDetail.tsx) reads this to render it as a
           // re-check rather than implying something changed.
-          corrections_count: corrections.length,
+          corrections_count: correctionsOnTrail,
           // F-4 (DR7-12, DR7-16): same spread-if-present discipline as
           // graph_confirmed below — a correction keeps what the person
           // typed, instead of dropping it the way only writing it on a
@@ -2026,10 +2017,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           screen. Says only what is true: what changed, and what to do. */}
       {showMigrated && state.step === 'graph_review' && (
         <div className="intake-flow__resumed" role="status">
-          Your unfinished pre-check was saved by an earlier version of this tool, so it has been
-          taken back to the check of what we read from your description. Please check each card and
-          the countries again before you continue — your answers to the follow-up questions weren&rsquo;t
-          kept.
+          This was saved by an earlier version of this tool. The values from your earlier answers are
+          on the cards below — please check each one.
         </div>
       )}
 
@@ -2378,7 +2367,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                     <input
                       type="checkbox"
                       checked={state.graph.jurisdictions.includes(j.code)}
-                      disabled={state.jurisdictionsConfirmed}
+                      /* FX7-1 review pass 1 (I-1): never locked. A re-entered
+                         review (Change an answer, a failed evaluation) shows
+                         this panel already checked, and the person must still
+                         be able to change a country; the edit goes through
+                         JURISDICTIONS_SET with its correction, as on a first
+                         reading. */
                       onChange={(e) => {
                         const next = e.target.checked
                           ? [...state.graph.jurisdictions, j.code]

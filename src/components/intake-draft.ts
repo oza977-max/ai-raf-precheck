@@ -37,7 +37,10 @@ function worthPersisting(state: IntakeState): boolean {
 // in-progress work (description, graph, answers, corrections) is kept.
 // Bumping the whole key, the way FORM_KEY does, would throw all of that
 // away for an incompatibility that affects one optional field.
-const DRAFT_VERSION = 2;
+// FX7-1 review pass 1 (M-2): 3. Version 3 is the first to carry the back
+// snapshot (backGraph …) a questionnaire needs for Back; an older description-path
+// questions draft has none and is migrated (see migrateOldQuestionnaire).
+const DRAFT_VERSION = 3;
 
 interface DraftEnvelope {
   version: number;
@@ -99,6 +102,9 @@ function migrateOldQuestionnaire(state: IntakeState): IntakeState | null {
   if (state.step !== 'questionnaire' && state.step !== 'contradiction_review') return null;
   if (state.plainAnswers !== undefined) return null;
   if (state.graph?.intake_method === 'structured_form') return null;
+  // A draft that already carries its back snapshot was saved by a build that
+  // can step back from it correctly (version 2 drafts never have one).
+  if (state.backGraph !== undefined) return null;
   const nodes = [...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes];
   return {
     step: 'graph_review',
@@ -110,6 +116,9 @@ function migrateOldQuestionnaire(state: IntakeState): IntakeState | null {
     ...(state.originalVerdictId ? { originalVerdictId: state.originalVerdictId } : {}),
     unconfirmedNodeIds: nodes.map((n) => n.id),
     jurisdictionsConfirmed: false,
+    // M-1: what the old draft held and the person already said stays.
+    ...(state.assumptions ? { assumptions: state.assumptions } : {}),
+    ...(state.uncertainNodeIds ? { uncertainNodeIds: state.uncertainNodeIds } : {}),
   };
 }
 

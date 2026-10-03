@@ -3,6 +3,7 @@
 // React Testing Library (Dan Vanderkam: typed discriminated unions).
 import type { Contradiction, DataFlowGraph, GraphCorrection, IntakeQuestion, QuestionAnswer } from '../engine/types';
 import type { Assumption, PlainAnswers } from './plain-copy';
+import type { AuditEvent } from '../store/types';
 
 export type { Contradiction, IntakeQuestion, QuestionAnswer };
 
@@ -217,6 +218,16 @@ export type IntakeState =
       // (Change an answer -> Continue -> Back) is still marked as revisited;
       // dropping it would bring back every "no basis" label.
       reentry?: boolean;
+      // FX7-1 review pass 1 (I-2, I-3). The rest of what the review screen
+      // held when the questions were generated, for the same reason as
+      // backGraph: Back must put the person exactly where they were. The
+      // assumptions of an EARLIER round stay (their strict values are on the
+      // restored graph; dropping them would present those values as firmer than
+      // they are), the ones given in this round are re-asked; and a review
+      // re-entered after a failed evaluation stays one (Back from it is refused).
+      backAssumptions?: Assumption[];
+      backUncertainNodeIds?: string[];
+      backAfterFailedEvaluation?: boolean;
     }
   | {
       step: 'contradiction_review';
@@ -252,6 +263,10 @@ export type IntakeState =
       backCorrections?: GraphCorrection[];
       askedGuessedFields?: Record<string, string[]>;
       reentry?: boolean;
+      // FX7-1 review pass 1: see the questionnaire variant's comment.
+      backAssumptions?: Assumption[];
+      backUncertainNodeIds?: string[];
+      backAfterFailedEvaluation?: boolean;
     }
   | {
       step: 'confirmation';
@@ -493,6 +508,55 @@ export function contradictionKey(c: Contradiction): string {
   return `${c.field ?? ''}|${c.statement1}`;
 }
 
+/** CR7-21/22, FX7-1 review pass 1 (M-3, M-4). Decides what a confirm writes to
+ *  the trail for its corrections, and how many corrections the trail then holds
+ *  for this attempt. Pure: the caller reads the events inside the case lock.
+ *
+ *  The window is the events since the last verdict_produced/verdict_corrected.
+ *  A correction already written in it (same node, field, both values, source;
+ *  `?? null` on both sides because older events stored an absent value as
+ *  undefined) is not written again — a retry re-mints ids for the same change.
+ *  Unless something later in the window changed that field BACK (a written
+ *  correction for the same node and field whose new value is this one's
+ *  original value): then this correction is a new act (A->B, failure, B->A,
+ *  A->B must put all three on the trail).
+ *
+ *  `sinceLastResult` = the graph_corrected events in the window plus those about
+ *  to be written: what graph_confirmed/verdict_corrected should call its
+ *  `corrections_count`, so the number always matches the events. */
+export function planCorrectionWrites(
+  corrections: GraphCorrection[],
+  events: AuditEvent[],
+): { toWrite: GraphCorrection[]; sinceLastResult: number } {
+  let lastDecided = -1;
+  events.forEach((e, i) => {
+    if (e.payload.type === 'verdict_produced' || e.payload.type === 'verdict_corrected') lastDecided = i;
+  });
+  const written: GraphCorrection[] = [];
+  for (const e of events.slice(lastDecided + 1)) {
+    if (e.payload.type === 'graph_corrected') written.push(e.payload.correction);
+  }
+  const norm = (v: unknown) => JSON.stringify(v ?? null);
+  const same = (a: GraphCorrection, b: GraphCorrection) =>
+    a.node_id === b.node_id &&
+    a.field === b.field &&
+    a.correction_source === b.correction_source &&
+    norm(a.original_value) === norm(b.original_value) &&
+    norm(a.corrected_value) === norm(b.corrected_value);
+  const toWrite = corrections.filter((c) => {
+    let at = -1;
+    written.forEach((w, i) => {
+      if (same(w, c)) at = i;
+    });
+    if (at === -1) return true;
+    const reversed = written
+      .slice(at + 1)
+      .some((w) => w.node_id === c.node_id && w.field === c.field && norm(w.corrected_value) === norm(c.original_value));
+    return reversed;
+  });
+  return { toWrite, sinceLastResult: written.length + toWrite.length };
+}
+
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
   switch (action.type) {
     case 'DESCRIPTION_CHANGED':
@@ -578,6 +642,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           // given this time. A questionnaire saved before the snapshot existed
           // has none (`backGraph` absent): it steps back as it did before.
           const backGraph = state.backGraph ?? state.graph;
+          const hasSnapshot = state.backGraph !== undefined;
           return {
             step: 'graph_review',
             description: carriedDescription(state),
@@ -599,12 +664,21 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             // the gate reappearing non-empty/false.
             guessedFields: state.askedGuessedFields ?? state.guessedFields,
             ...(state.reentry ? { reentry: true } : {}),
+            // FX7-1 review pass 1 (I-2, I-3): back to what the review held. An
+            // earlier round's assumptions return with their strict values; this
+            // round's are re-asked. Without a snapshot (an older draft) none.
+            ...(hasSnapshot && state.backAssumptions ? { assumptions: state.backAssumptions } : {}),
+            ...(hasSnapshot && state.backAfterFailedEvaluation ? { afterFailedEvaluation: true } : {}),
             provenance: state.provenance,
             unconfirmedNodeIds: state.unconfirmedNodeIds,
             jurisdictionsConfirmed: state.jurisdictionsConfirmed,
             // M-2: the notice and the frozen record both survive the trip.
             ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
-            ...(state.uncertainNodeIds ? { uncertainNodeIds: state.uncertainNodeIds } : {}),
+            // The frozen record (M-2, FX-2): what the first generation derived
+            // from the guessed list; the snapshot only matters if it differs.
+            ...((state.backUncertainNodeIds ?? state.uncertainNodeIds)
+              ? { uncertainNodeIds: state.backUncertainNodeIds ?? state.uncertainNodeIds }
+              : {}),
           };
         default:
           return state;
@@ -822,6 +896,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         backGraph: state.graph,
         backCorrections: state.corrections,
         askedGuessedFields: state.guessedFields,
+        backAssumptions: state.assumptions,
+        backUncertainNodeIds: state.uncertainNodeIds,
+        ...(state.afterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'ANSWER_SUBMITTED': {
@@ -975,6 +1052,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         backCorrections: state.backCorrections,
         askedGuessedFields: state.askedGuessedFields,
         ...(state.reentry ? { reentry: true } : {}),
+        backAssumptions: state.backAssumptions,
+        backUncertainNodeIds: state.backUncertainNodeIds,
+        ...(state.backAfterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -1015,6 +1095,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         backCorrections: state.backCorrections,
         askedGuessedFields: state.askedGuessedFields,
         ...(state.reentry ? { reentry: true } : {}),
+        backAssumptions: state.backAssumptions,
+        backUncertainNodeIds: state.backUncertainNodeIds,
+        ...(state.backAfterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'PROCEED_TO_CONFIRMATION':
@@ -1147,7 +1230,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // Review 004 finding 2: the failure most likely to land here is
         // jurisdiction/track-driven — the panel to FIX it must render.
         // Confirmed=true (it was confirmed before evaluation; re-entry is
-        // not a fresh attestation, the R5 rule), editable via the panel.
+        // not a fresh attestation, the R5 rule). The panel stays editable: a
+        // tick after this goes back through JURISDICTIONS_SET with its correction.
         jurisdictionsConfirmed: true,
         // F-2 (DR7-04): a re-entry after a genuine failure, not a fresh
         // submission — STEP_BACK must not walk out of it, mirroring the
