@@ -87,3 +87,84 @@ describe('engine/screen boundary (cross-cutting.md §7 Rule 1, CLAUDE.md)', () =
     expect(componentImports(sample)).toEqual(['../components/plain-copy', '../components/verdict-view-model']);
   });
 });
+
+// ENG-ID (2026-10-03). The same Rule 1 made mechanical for the other half of
+// the island: no clock, no randomness, no id minting. build-graph-from-form.ts
+// called crypto.randomUUID() for two full review rounds after the rule was
+// written, and B-15 found its `new Date()` only by reading — nothing would
+// have failed. This reads every production file's syntax tree (so comments
+// that NAME these calls, which several engine files do on purpose, are not
+// flagged) and lists every forbidden call it finds.
+//
+// Forbidden: Date.now(), new Date() with no arguments, Math.random(),
+// performance.now(), and any use of `crypto` (randomUUID, getRandomValues).
+// `new Date(Date.UTC(...))` — date arithmetic on a value passed in, as
+// attestation.ts does — is deterministic and stays allowed.
+function nonDeterministicCalls(text: string): string[] {
+  const source = ts.createSourceFile('x.ts', text, ts.ScriptTarget.Latest, true);
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isPropertyAccessExpression(node)) {
+      const owner = node.expression.getText(source);
+      const name = node.name.text;
+      if (
+        (owner === 'Date' && name === 'now') ||
+        (owner === 'Math' && name === 'random') ||
+        (owner === 'performance' && name === 'now')
+      ) {
+        found.push(`${owner}.${name}`);
+      }
+    }
+    if (ts.isIdentifier(node) && node.text === 'crypto') found.push('crypto');
+    if (
+      ts.isNewExpression(node) &&
+      node.expression.getText(source) === 'Date' &&
+      (node.arguments === undefined || node.arguments.length === 0)
+    ) {
+      found.push('new Date()');
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+describe('engine purity (cross-cutting.md §7 Rule 1, NF-1)', () => {
+  it('TC-ENG-ID-04: no production file under src/engine/ reads a clock, draws a random number or mints an id', () => {
+    const offenders: string[] = [];
+    for (const file of listProductionSourceFiles(ENGINE_DIR)) {
+      for (const call of nonDeterministicCalls(readFileSync(file, 'utf-8'))) {
+        offenders.push(`${file}: ${call}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('TC-ENG-ID-05: the scan would flag each forbidden call, and ignores comments and date arithmetic on a passed-in value', () => {
+    const flagged = [
+      'const a = Date.now();',
+      'const b = new Date();',
+      'const c = new Date;',
+      'const d = Math.random();',
+      'const e = crypto.randomUUID();',
+      'const f = globalThis.crypto.getRandomValues(buf);',
+      'const g = performance.now();',
+    ].join('\n');
+    expect(nonDeterministicCalls(flagged)).toEqual([
+      'Date.now',
+      'new Date()',
+      'new Date()',
+      'Math.random',
+      'crypto',
+      'crypto',
+      'performance.now',
+    ]);
+
+    const allowed = [
+      '// no Date.now(), no Math.random(), no crypto.randomUUID() here',
+      'const last = new Date(Date.UTC(y, m, 0)).getUTCDate();',
+      "const label = 'crypto';",
+    ].join('\n');
+    expect(nonDeterministicCalls(allowed)).toEqual([]);
+  });
+});

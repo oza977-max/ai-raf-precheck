@@ -24,6 +24,13 @@ const VALID_VALUES: StructuredFormValues = {
 // depend on the removed internal clock.
 const TS = '2026-01-01T00:00:00.000Z';
 
+// ENG-ID: the engine no longer mints ids — callers pass an id source. A
+// counter makes every graph in this file fully predictable.
+function sequentialIds(prefix = 'id'): () => string {
+  let n = 0;
+  return () => `${prefix}-${++n}`;
+}
+
 describe('buildGraphFromForm', () => {
   // R16-A1 (PE-9 §1.1): buildGraphFromForm accepts a list for
   // systemAccessScope and runs it through normaliseAccessScope — the single
@@ -112,4 +119,45 @@ describe('buildGraphFromForm', () => {
     const c = buildGraphFromForm(VALID_VALUES, ts);
     expect(c.extracted_at).toBe(a.extracted_at);
   });
+
+  // ENG-ID (2026-10-03): the last non-deterministic call in the engine. Ids
+  // were minted with crypto.randomUUID() inside this function, so two builds
+  // from the same answers never produced the same graph. The caller now
+  // passes an id source; the engine only draws from it, in a fixed order.
+  it('TC-ENG-ID-01: identical values, timestamp and id source build a byte-identical graph', () => {
+    const values: StructuredFormValues = {
+      ...VALID_VALUES,
+      inputDataClasses: ['Client PII', 'Public', 'Internal'],
+      systemAccessScope: ['deployment_authority', 'shared_infrastructure'],
+    };
+    const a = buildGraphFromForm(values, TS, sequentialIds());
+    const b = buildGraphFromForm(values, TS, sequentialIds());
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  it('TC-ENG-ID-02: every id in the graph comes from the id source, drawn in a fixed order (graph, processing, output, then each input), and the edges use them', () => {
+    const graph = buildGraphFromForm(
+      { ...VALID_VALUES, inputDataClasses: ['Client PII', 'Public'] },
+      TS,
+      sequentialIds(),
+    );
+    expect(graph.id).toBe('id-1');
+    expect(graph.processing_nodes.map((n) => n.id)).toEqual(['id-2']);
+    expect(graph.output_nodes.map((n) => n.id)).toEqual(['id-3']);
+    expect(graph.input_nodes.map((n) => n.id)).toEqual(['id-4', 'id-5']);
+    expect(graph.edges).toEqual([
+      { from: 'id-4', to: 'id-2' },
+      { from: 'id-5', to: 'id-2' },
+      { from: 'id-2', to: 'id-3' },
+    ]);
+  });
+
+  it('TC-ENG-ID-03: a different id source changes only the ids — every other field is the same', () => {
+    const a = buildGraphFromForm(VALID_VALUES, TS, sequentialIds('a'));
+    const b = buildGraphFromForm(VALID_VALUES, TS, sequentialIds('b'));
+    expect(a.id).not.toBe(b.id);
+    const swap = (g: typeof a) => JSON.stringify(g).replace(/"[ab]-(\d+)"/g, '"x-$1"');
+    expect(swap(a)).toBe(swap(b));
+  });
 });
+
