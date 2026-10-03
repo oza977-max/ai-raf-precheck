@@ -610,10 +610,23 @@ export function planCorrectionWrites(
   const latest = new Map<string, GraphCorrection>();
   for (const w of written) latest.set(key(w), w);
 
-  const toWrite = corrections.filter((c) => {
-    const last = latest.get(key(c));
-    return !(last && norm(last.corrected_value) === norm(c.corrected_value));
-  });
+  // CR8-06 (P1 — for every (node, field) the latest graph_corrected value on
+  // the trail since the last result equals the evaluated graph's value, after
+  // ANY sequence of edits, retries and reversals). The pending batch is walked
+  // IN ORDER against a RUNNING map seeded from the trail: a correction is
+  // skipped only if it equals the latest value written so far for its field —
+  // by the trail OR by an earlier entry of this same batch. Comparing every
+  // entry against the trail alone skipped the second of [B->C, C->B] over a
+  // trail ending at B (C->B looked "already there"), leaving the trail at C
+  // while the graph said B.
+  const running = new Map(latest);
+  const toWrite: GraphCorrection[] = [];
+  for (const c of corrections) {
+    const last = running.get(key(c));
+    if (last && norm(last.corrected_value) === norm(c.corrected_value)) continue;
+    toWrite.push(c);
+    running.set(key(c), c);
+  }
 
   if (ctx) {
     const covered = new Set(corrections.map(key));
