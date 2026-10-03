@@ -1977,3 +1977,127 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(planCorrectionWrites([corr('9', 'A', 'B')], events).sinceLastResult).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// FX8-1 (CR8-fixes.md) — CR8-01 (P2): an assumption is listed back only while
+// the graph still holds the value it assumed. BC-004 converse: every action
+// that can make a carried assumption untrue must remove or narrow it.
+// ---------------------------------------------------------------------------
+describe('intakeReducer — a card edit narrows or removes the assumption it makes untrue (CR8-01, P2)', () => {
+  const corrected = (node_id: string, field: string): GraphCorrection => ({
+    correction_id: `c-${field}`,
+    graph_version_before: 1,
+    graph_version_after: 2,
+    node_id,
+    field,
+    original_value: 'x',
+    corrected_value: 'y',
+    corrected_by: '1LoD',
+    corrected_at: '2026-01-01T00:00:00.000Z',
+  });
+  const A_REV: Assumption = {
+    questionId: 'field:output_reversibility',
+    question: 'Can the mistake be put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case.',
+    fields: ['output_reversibility'],
+  };
+  const A_Q6: Assumption = {
+    questionId: '6',
+    question: 'What does it do with what it produces?',
+    shortLabel: 'what it does with what it produces',
+    assumption: 'it acts on its own.',
+    fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'],
+  };
+  const A_Q3: Assumption = {
+    questionId: '3',
+    question: 'Where does the AI come from?',
+    shortLabel: 'where the AI comes from',
+    assumption: 'an outside supplier, information leaves the firm.',
+    fields: ['data_zone', 'vendor'],
+  };
+  const A_JUR: Assumption = {
+    questionId: '11',
+    question: 'Which countries?',
+    shortLabel: 'which countries it reaches',
+    assumption: 'it reaches countries beyond the ones listed.',
+    fields: ['jurisdictions'],
+  };
+  const confirmation = (assumptions: Assumption[]): IntakeState => ({
+    step: 'confirmation',
+    description: 'd',
+    graph: graph(),
+    graphVersion: 1,
+    corrections: [],
+    answers: [],
+    resolutionNotes: [],
+    useCaseId: 'uc-1',
+    assumptions,
+  });
+  /** review -> edit a card -> Continue -> (no questions) -> confirmation. */
+  const editThenConfirm = (review: IntakeState, node: string, field: string): IntakeState => {
+    let s = intakeReducer(review, { type: 'CORRECTION_APPLIED', correction: corrected(node, field), updatedGraph: graph({ version: 2 }) });
+    s = intakeReducer(s, { type: 'QUESTIONS_GENERATED', questions: [] });
+    return intakeReducer(s, { type: 'PROCEED_TO_CONFIRMATION' });
+  };
+  const listed = (s: IntakeState) => ('assumptions' in s ? s.assumptions ?? [] : []);
+  const viaChangeAnswer = () => intakeReducer(confirmation([A_REV, A_Q6, A_Q3]), { type: 'CHANGE_ANSWER' });
+  const viaFailedEvaluation = () =>
+    intakeReducer(intakeReducer(confirmation([A_REV, A_Q6, A_Q3]), { type: 'CONFIRMED' }), { type: 'EVALUATION_FAILED' });
+  const viaCorrectVerdict = () =>
+    intakeReducer(
+      { step: 'verdict', verdictId: 'v1' },
+      { type: 'CORRECT_VERDICT', graph: graph(), useCaseId: 'uc-1', originalVerdictId: 'v1', assumptions: [A_REV, A_Q6, A_Q3] },
+    );
+
+  it('TC-CR8-01a: Change an answer -> edit the assumed field\'s card -> Confirm: that assumption is gone from what the confirmation carries (and so from graph_confirmed and the result)', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'o1', 'output_reversibility');
+    expect(out.step).toBe('confirmation');
+    expect(listed(out).map((a) => a.questionId)).not.toContain('field:output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01b: the same after a failed evaluation', () => {
+    const out = editThenConfirm(viaFailedEvaluation(), 'o1', 'output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01c: the same via a correction from the result (CORRECT_VERDICT)', () => {
+    const out = editThenConfirm(viaCorrectVerdict(), 'o1', 'output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01d: a countries edit removes the jurisdictions assumption (CR7-23) and leaves the others', () => {
+    const review = intakeReducer(confirmation([A_JUR, A_REV]), { type: 'CHANGE_ANSWER' });
+    const after = intakeReducer(review, {
+      type: 'JURISDICTIONS_SET',
+      correction: corrected('graph', 'jurisdictions'),
+      updatedGraph: graph({ version: 2, jurisdictions: ['UK'] }),
+    });
+    expect(listed(after).map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+  });
+
+  it('TC-CR8-01e: an edit to a DIFFERENT field keeps the assumption, with its fields untouched', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'label');
+    expect(listed(out)).toEqual([A_REV, A_Q6, A_Q3]);
+  });
+
+  it('TC-CR8-01f: a Q6 assumption plus ONE autonomy edit keeps the other three fields listed', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'autonomy_level');
+    const q6 = listed(out).find((a) => a.questionId === '6');
+    expect(q6?.fields).toEqual(['action_type', 'decision_bindingness', 'hitl']);
+  });
+
+  it('TC-CR8-01g: a Q3 assumption plus a vendor edit keeps data_zone listed', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'vendor');
+    const q3 = listed(out).find((a) => a.questionId === '3');
+    expect(q3?.fields).toEqual(['data_zone']);
+  });
+
+  it('TC-CR8-01h: an assumption from an older draft with no fields cannot be matched, so any card edit drops it', () => {
+    const old = { questionId: 'x', question: 'q', shortLabel: 's', assumption: 'a' } as unknown as Assumption;
+    const review = intakeReducer(confirmation([old, A_REV]), { type: 'CHANGE_ANSWER' });
+    const out = editThenConfirm(review, 'p1', 'label');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+  });
+});
