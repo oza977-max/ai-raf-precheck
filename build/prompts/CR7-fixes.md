@@ -1,6 +1,6 @@
 # Build contract: CR7 fixes — code review 007 findings, under full GVM build discipline
 
-**Status:** v2.1 (2026-10-03) — v1 corrected after an independent plan check (24 problems, all applied; see the changelog).
+**Status:** v2.2 (2026-10-03) — v1 corrected after an independent plan check (24 problems, all applied; see the changelog).
 Owner triage recorded in `code-review/code-review-007.html`: fix all 12 Important and all 28 Minor. CR7-23 (owner, two
 decisions): keep the listed country when "Somewhere else, or not sure" is also ticked, and list the unknown country back as
 an assumption — the result is NOT marked provisional on that account. The 5 stub flags are allowlisted (`.stub-allowlist`,
@@ -236,6 +236,14 @@ Files owned: `src/engine/plain-intake.ts`, `src/store/policy-references.ts` (bui
   omit") and drop it in `parseExtraction` when `decision_type` is set. The engine side (provisional.ts:63-69) is deliberately
   untouched. **Test:** TC-CR7-31.
 
+- **CR7-41 (new, from the UNSIGNED-MODEL review; investigate first) — model ids matched exactly, no family fallback.**
+  `src/engine/plain-intake.ts:282` and `src/store/register.ts:61` compare model ids exactly, while the engine resolves an
+  approved model by exact id OR matching family (2c93511's `resolveReviewPlain` does the same). **Do:** find what each
+  comparison decides and whether a model that belongs to a listed family (e.g. a typed name the engine would accept as part of
+  `gpt-4o-family`) reaches a wrong result, wrong wording or a wrong register link. If yes, use the engine's own resolver (no
+  copy) and add TC-CR7-41a/b; if no consumer is affected, report that and change nothing. `register.ts` is yours for this
+  item only.
+
 ## Wave 2 (after wave 1 is merged)
 
 ### FX7-4 — What renders
@@ -327,6 +335,7 @@ until a pass returns no Critical/Important; at pass 5 with no decrease, stop and
 ## Changelog
 | Date | Change |
 |---|---|
+| 2026-10-03 | v2.2: base is ba1062d (UNSIGNED-MODEL + CR7-35 on origin, CI green); CR7-41 added to FX7-3 (exact model-id matching, flagged by the UNSIGNED-MODEL review). |
 | 2026-10-03 | v2.1: FX7-6 test hardening added (owner instruction relayed by the CR6 session: one GVM pipeline; the paused "Harden load-sensitive intake tests" work joins this round). CR7-35's load-time warning stays with the CR6 session's UNSIGNED-MODEL work. |
 | 2026-10-03 | v2 after an independent plan check (24 problems, all applied): base moved to 2c93511 and CR7-35 marked done; test-case file 029; CR7-23 rewritten to the owner's second decision (list back, not provisional — the provisional mechanism cannot express a mixed answer); CR7-21 skips duplicates instead of moving writes after evaluate() (which would lose corrections); CR7-02 covers CORRECT_VERDICT, de-duplicates re-answered assumptions, fixes undo, adds the re-entry flag; CR7-03 snapshots graph/corrections/guessed list and threads them through every step; CR7-20 waits for success and resets the cached handle; CR7-05 uses a count hint, no schema bump; CR7-15 clears drafts from SettingsPanel (store must not import components); CR7-01 mount-only; CR7-09 one derivation from the tier workflow; CR7-36 counts the shipped policy; CR7-04 one shared predicate; CR7-25/38/14/27/28/16/30/13/34/19 corrected; citations verified; "Not in scope" list added. |
 | 2026-10-03 | v1 written from code review 007's verified findings and the owner's triage. |
