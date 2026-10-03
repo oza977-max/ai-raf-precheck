@@ -527,6 +527,32 @@ describe('extractGraph — B-9 (decision_type_other reaches the graph)', () => {
     expect(prop?.maxLength).toBe(200);
   });
 
+  // CR7-31. A model that fills decision_type_other with filler beside a listed
+  // decision_type made the verdict Provisional (provisional.ts reads it). The
+  // listed type wins; the filler is dropped, and the tool schema says when to
+  // use the field.
+  it('TC-CR7-31: decision_type_other is dropped when decision_type is set', async () => {
+    mockOutputNode({ decision_type: 'credit-decision', decision_type_other: 'n/a' });
+    const result = await extractGraph('ranks accounts for collections follow-up');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const node = result.value.graph.output_nodes[0];
+    expect(node?.decision_type).toBe('credit-decision');
+    expect(node?.decision_type_other).toBeUndefined();
+    expect(node && 'decision_type_other' in node).toBe(false);
+  });
+
+  it('TC-CR7-31: the tool schema tells the model to use decision_type_other only when no listed type fits', async () => {
+    mockOutputNode({ decision_type_other: 'collections prioritisation' });
+    await extractGraph('ranks accounts for collections follow-up');
+    const call = mockCreate.mock.calls[0]![0] as {
+      tools: { input_schema: { properties: { output_nodes: { items: { properties: Record<string, { description?: string }> } } } } }[];
+    };
+    const prop = call.tools[0]!.input_schema.properties.output_nodes.items.properties.decision_type_other;
+    expect(prop?.description).toMatch(/only when no listed decision type fits/i);
+    expect(prop?.description).toMatch(/omit/i);
+  });
+
   it('a decision_type_other longer than the bound fails the whole extraction (rejected), not silently truncated', async () => {
     mockOutputNode({ decision_type_other: 'x'.repeat(201) });
 

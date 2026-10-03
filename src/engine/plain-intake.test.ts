@@ -1207,3 +1207,22 @@ describe('CR7-23 — listed country kept alongside "Somewhere else, or not sure"
     expect(r.value.provisional_reasons).not.toContain('no_regulatory_basis');
   });
 });
+
+// CR7-41 investigation: plain-intake.ts compares the typed model name exactly
+// only to choose WHICH form field carries it (declaredModelId vs
+// declaredModelIdOther). buildGraphFromForm maps both to the same
+// declared_model_id, so a typed member of a listed family reaches the engine
+// unchanged and the engine's own family resolution accepts it. Pinned so a
+// future change cannot make the field choice matter.
+describe('CR7-41 — a typed family member reaches the graph as typed', () => {
+  it('TC-CR7-41c: a typed name the family would accept becomes declared_model_id exactly as typed', () => {
+    const p = policy({
+      approved_models: [
+        { model_id: 'gpt-4o-*', vendor: 'V', provenance_class: 'vendor_hosted', is_approved: true, is_family: true, version_pattern: 'gpt-4o-' },
+      ],
+    });
+    const { values } = plainAnswersToFormValues({ ...BASE, '3': 'outside-assistant', '3a': 'firm-account', '3model': 'gpt-4o-2024-08-06' }, p);
+    const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z', () => 'id');
+    expect(graph.processing_nodes[0]?.declared_model_id).toBe('gpt-4o-2024-08-06');
+  });
+});

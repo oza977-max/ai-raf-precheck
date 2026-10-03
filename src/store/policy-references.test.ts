@@ -188,6 +188,87 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(result.warnings.some((w) => /INV-02/.test(w))).toBe(false);
   });
 
+  // CR7-26. {audience}/{destination} are filled only in plain_reason and
+  // plain_change (verified: src/components/verdict-view-model.ts:257, :700,
+  // :715, :792). In any other plain-language field they print literally, so
+  // the checker must not call them "recognised" there.
+  it('TC-CR7-26: a placeholder in a field that is never filled warns that it prints literally, and never claims it is recognised', () => {
+    const policy = basePolicy({
+      controls: [control({ id: 'CTRL-01', plain_action: 'ask {audience} first', plain_owner_with: 'sent to {destination}' })],
+    });
+    const result = checkPolicyReferences(policy, []);
+    const w = result.warnings.filter((x) => /CTRL-01/.test(x));
+    expect(w.some((x) => /plain_action/.test(x) && /\{audience\}/.test(x) && /literally/.test(x))).toBe(true);
+    expect(w.some((x) => /plain_owner_with/.test(x) && /\{destination\}/.test(x))).toBe(true);
+    expect(w.some((x) => /recognised/.test(x) && /plain_action|plain_owner_with/.test(x))).toBe(false);
+  });
+
+  it('TC-CR7-26: in plain_reason and plain_change the message still names the recognised placeholders; they themselves do not warn', () => {
+    const policy = basePolicy({
+      invariants: [
+        { id: 'INV-01', description: 'd', condition: {}, required_controls: [], severity: 'High', plain_reason: 'it reaches {teams}' },
+      ],
+    });
+    const result = checkPolicyReferences(policy, []);
+    const w = result.warnings.find((x) => /INV-01/.test(x));
+    expect(w).toMatch(/only \{audience\} and \{destination\} are recognised/);
+  });
+
+  // CR7-27. Three id references the loader never resolved. Error level — a
+  // saved policy with a dangling reference stops evaluating until fixed — so
+  // each message names the bad reference.
+  it('TC-CR7-27a: errors — controls[].resolves names an id that is neither an invariant nor a hard line', () => {
+    const policy = basePolicy({
+      invariants: [{ id: 'INV-01', description: 'd', condition: {}, required_controls: [], severity: 'High' }],
+      hard_lines: [{ id: 'HL-001', description: 'd', condition: {}, reason: 'r' } as PolicyFile['hard_lines'][number]],
+      controls: [control({ id: 'CTRL-OK', resolves: ['INV-01', 'HL-001'] }), control({ id: 'CTRL-BAD', resolves: ['INV-99'] })],
+    });
+    const { errors } = checkPolicyReferences(policy, []);
+    expect(errors.filter((e) => /CTRL-OK/.test(e))).toEqual([]);
+    expect(errors.some((e) => /CTRL-BAD/.test(e) && /resolves/.test(e) && /INV-99/.test(e))).toBe(true);
+  });
+
+  it('TC-CR7-27b: errors — a platform or vendor satisfies_controls and coupled_clusters entry names a control that does not exist', () => {
+    const policy = basePolicy({
+      platforms: [
+        { id: 'PLAT-01', name: 'p', approved_envelope: {}, satisfies_controls: ['CTRL-01', 'CTRL-GONE'], coupled_clusters: [['CTRL-01', 'CTRL-LOST']] },
+      ],
+      vendors: [{ id: 'VENDOR-01', name: 'v', approved_envelope: {}, satisfies_controls: ['CTRL-NOPE'] }],
+    });
+    const { errors } = checkPolicyReferences(policy, []);
+    expect(errors.some((e) => /PLAT-01/.test(e) && /satisfies_controls/.test(e) && /CTRL-GONE/.test(e))).toBe(true);
+    expect(errors.some((e) => /PLAT-01/.test(e) && /coupled_clusters/.test(e) && /CTRL-LOST/.test(e))).toBe(true);
+    expect(errors.some((e) => /VENDOR-01/.test(e) && /satisfies_controls/.test(e) && /CTRL-NOPE/.test(e))).toBe(true);
+    expect(errors.some((e) => /'CTRL-01'/.test(e))).toBe(false);
+  });
+
+  it('TC-CR7-27c: errors — a pack required_control names a control the policy does not have (only when packs are loaded)', () => {
+    const pack: JurisdictionPack = {
+      pack_id: 'TEST-PACK', version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [
+        { id: 'TP-OK', title: 't', source: { document: 'd', section: 's', text: 't' }, effect: { type: 'required_control', control_id: 'CTRL-01' }, condition: {}, basis: 'verbatim' },
+        { id: 'TP-BAD', title: 't', source: { document: 'd', section: 's', text: 't' }, effect: { type: 'required_control', control_id: 'CTRL-MISSING' }, condition: {}, basis: 'verbatim' },
+      ],
+    };
+    const { errors } = checkPolicyReferences(basePolicy(), [pack]);
+    expect(errors.some((e) => /TP-BAD/.test(e) && /CTRL-MISSING/.test(e))).toBe(true);
+    expect(errors.some((e) => /TP-OK/.test(e))).toBe(false);
+    // no packs loaded: nothing to check
+    expect(checkPolicyReferences(basePolicy(), []).errors).toEqual([]);
+  });
+
+  it('TC-CR7-27d: the shipped policy and packs have none of these reference errors', () => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(yaml);
+    if (!result.valid) throw new Error('policy invalid');
+    const packResult = loadPacks(getPackSources());
+    expect(packResult.errors).toEqual([]);
+    const check = checkPolicyReferences(result.policy, packResult.packs);
+    expect(check.errors.filter((e) => /resolves|satisfies_controls|coupled_clusters|required_control/.test(e))).toEqual([]);
+    expect(check.errors).toEqual([]);
+  });
+
   it('TC-R16-A1-59: warnings — an unknown @ token in plain_owner; @submitter and @model_owner are recognised and do not warn', () => {
     const policy = basePolicy({
       controls: [
