@@ -2,6 +2,7 @@ import { openRegisterDb, createWriteQueue } from './db';
 import { appendWithinQueue, withAuditQueue, getAll as getAuditEvents } from './audit';
 import type { RegisterNode, RegisterEdge, UseCaseSummary, LifecycleStage, AuditEvent } from './types';
 import { isVerdictProvisional } from '../engine/provisional';
+import { resolveApprovedModel } from '../engine/evaluate';
 import { isSampledForReview } from '../engine/temporal';
 import type { PolicyFile, ProcessingNode } from '../engine/types';
 
@@ -58,7 +59,9 @@ export function addUseCaseModelLink(
     const existing = await db.get('register_nodes', modelNodeId);
 
     if (!existing) {
-      const entry = (policy.approved_models ?? []).find((m) => m.model_id === modelId);
+      // CR7-41: resolved the way the engine does (exact id, else a listed
+      // family), not an exact-id copy that filed family members as unknown.
+      const entry = resolveApprovedModel(policy.approved_models, modelId);
       await db.add('register_nodes', {
         node_id: modelNodeId,
         node_type: 'ai_model',

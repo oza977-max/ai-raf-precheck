@@ -44,12 +44,21 @@ function sortedById<T extends { id: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function placeholderWarnings(context: string, text: string | undefined): string[] {
+// CR7-26. {audience} and {destination} are filled in only plain_reason and
+// plain_change (verified: src/components/verdict-view-model.ts:257, :700,
+// :715, :792). `filled` says whether the field is one of those; in every
+// other plain-language field any {placeholder} prints literally, so the
+// message must not call even a known one "recognised" there.
+function placeholderWarnings(context: string, text: string | undefined, filled = false): string[] {
   if (!text) return [];
   const warnings: string[] = [];
   for (const m of text.matchAll(PLACEHOLDER_RE)) {
     const name = m[1] ?? '';
-    if (!KNOWN_PLACEHOLDERS.has(name)) {
+    if (!filled) {
+      warnings.push(
+        `${context}: "{${name}}" will render literally — placeholders are filled in only plain_reason and plain_change, not in this field`,
+      );
+    } else if (!KNOWN_PLACEHOLDERS.has(name)) {
       warnings.push(
         `${context}: unknown placeholder "{${name}}" — only {audience} and {destination} are recognised and will render literally`,
       );
@@ -110,6 +119,43 @@ function platformVendorIdErrors(policy: PolicyFile): string[] {
   return sortedById(policy.platforms ?? [])
     .filter((p) => p.vendor_id !== undefined && !validVendorIds.has(p.vendor_id))
     .map((p) => `platform ${p.id}: vendor_id '${p.vendor_id}' is not a registered vendor id.`);
+}
+
+// CR7-27. Three id references the loader never resolved. Error level, knowing
+// the effect: checkPolicyReferences is a hard gate, so a saved policy with a
+// dangling reference stops evaluating until it is fixed — every message names
+// the bad reference.
+function controlResolvesErrors(policy: PolicyFile): string[] {
+  const validTargets = new Set([...policy.invariants.map((i) => i.id), ...policy.hard_lines.map((h) => h.id)]);
+  return sortedById(policy.controls).flatMap((c) =>
+    (c.resolves ?? [])
+      .filter((id) => !validTargets.has(id))
+      .map((id) => `${c.id} resolves: no invariant or hard line with id '${id}'.`),
+  );
+}
+
+function registryControlReferenceErrors(kind: 'platform' | 'vendor', entries: RegistryEntry[] | undefined, validControlIds: Set<string>): string[] {
+  return sortedById(entries ?? []).flatMap((e) => [
+    ...(e.satisfies_controls ?? [])
+      .filter((id) => !validControlIds.has(id))
+      .map((id) => `${kind} ${e.id} satisfies_controls: no control with id '${id}'.`),
+    ...(e.coupled_clusters ?? [])
+      .flat()
+      .filter((id) => !validControlIds.has(id))
+      .map((id) => `${kind} ${e.id} coupled_clusters: no control with id '${id}'.`),
+  ]);
+}
+
+function packRequiredControlErrors(packs: JurisdictionPack[], validControlIds: Set<string>): string[] {
+  const out: string[] = [];
+  for (const pack of [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id))) {
+    for (const rule of sortedById(pack.rules)) {
+      if (rule.effect.type === 'required_control' && !validControlIds.has(rule.effect.control_id)) {
+        out.push(`${pack.pack_id}:${rule.id} required_control: no control with id '${rule.effect.control_id}'.`);
+      }
+    }
+  }
+  return out;
 }
 
 // C-5: a rule id is unique WITHIN one pack's own rules, never guaranteed
@@ -207,14 +253,14 @@ function modelPlainNameWarnings(models: PolicyFile['approved_models']): string[]
 
 function invariantWarnings(inv: Invariant): string[] {
   return [
-    ...placeholderWarnings(`${inv.id} plain_reason`, inv.plain_reason),
+    ...placeholderWarnings(`${inv.id} plain_reason`, inv.plain_reason, true),
   ];
 }
 
 function hardLineWarnings(hl: HardLine): string[] {
   return [
-    ...placeholderWarnings(`${hl.id} plain_reason`, hl.plain_reason),
-    ...placeholderWarnings(`${hl.id} plain_change`, hl.plain_change),
+    ...placeholderWarnings(`${hl.id} plain_reason`, hl.plain_reason, true),
+    ...placeholderWarnings(`${hl.id} plain_change`, hl.plain_change, true),
   ];
 }
 
@@ -238,6 +284,12 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
   const validCoversReviewsTargets = new Set([...firmReviewIds, ...packReviewRuleIds, ...REVIEW_SENTINELS]);
 
   errors.push(...platformVendorIdErrors(policy));
+  const validControlIds = new Set(policy.controls.map((c) => c.id));
+  errors.push(...controlResolvesErrors(policy));
+  errors.push(...registryControlReferenceErrors('platform', policy.platforms, validControlIds));
+  errors.push(...registryControlReferenceErrors('vendor', policy.vendors, validControlIds));
+  // Pack rules are only walked when packs are loaded, like covers_reviews.
+  errors.push(...packRequiredControlErrors(packs, validControlIds));
   warnings.push(...duplicatePackRuleIdWarnings(packs));
   warnings.push(...firmPackRuleIdWarnings(policy, packs));
 
@@ -305,8 +357,8 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
       // plain_change — a pack hard line's fields use the identical
       // {audience}/{destination} vocabulary.
       if (rule.effect.type === 'hard_line') {
-        warnings.push(...placeholderWarnings(`${rule.id} plain_reason`, rule.effect.plain_reason));
-        warnings.push(...placeholderWarnings(`${rule.id} plain_change`, rule.effect.plain_change));
+        warnings.push(...placeholderWarnings(`${rule.id} plain_reason`, rule.effect.plain_reason, true));
+        warnings.push(...placeholderWarnings(`${rule.id} plain_change`, rule.effect.plain_change, true));
       }
     }
   }

@@ -1161,13 +1161,13 @@ describe('CR7-04 — 3model is read only when the model question is shown', () =
     expect(q3ShowsModelQuestion({ ...BASE, '3': undefined } as unknown as PlainAnswers)).toBe(false);
   });
 
-  it('TC-CR7-04b: a stale 3model left behind after Q3 changed to firm-built names no model', () => {
+  it('TC-CR7-04c: a stale 3model left behind after Q3 changed to firm-built names no model', () => {
     const { values } = plainAnswersToFormValues({ ...BASE, '3': 'firm-built', '3model': 'gpt-4o-custom' }, policy());
     expect(values.declaredModelId).toBeUndefined();
     expect(values.declaredModelIdOther).toBeUndefined();
   });
 
-  it('TC-CR7-04b: the same 3model is read when Q3 is a supplier option', () => {
+  it('TC-CR7-04d: the same 3model is read when Q3 is a supplier option', () => {
     const { values } = plainAnswersToFormValues(
       { ...BASE, '3': 'supplier-feature', '3supplier': 'VENDOR-SUPPLIER-A', '3model': 'gpt-4o-custom' },
       policy(),
@@ -1193,7 +1193,7 @@ describe('CR7-23 — listed country kept alongside "Somewhere else, or not sure"
     expect(worded?.shortLabel).not.toBe(worded?.question);
   });
 
-  it('TC-CR7-23a: with the shipped policy and packs the UK pack applies and the result is not provisional for want of a regulatory basis', () => {
+  it('TC-CR7-23c: with the shipped policy and packs the UK pack applies and the result is not provisional for want of a regulatory basis', () => {
     const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
     const loaded = loadPolicy(yaml);
     if (!loaded.valid) throw new Error('policy invalid');

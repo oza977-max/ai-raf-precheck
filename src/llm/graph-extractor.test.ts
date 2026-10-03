@@ -542,7 +542,7 @@ describe('extractGraph — B-9 (decision_type_other reaches the graph)', () => {
     expect(node && 'decision_type_other' in node).toBe(false);
   });
 
-  it('TC-CR7-31: the tool schema tells the model to use decision_type_other only when no listed type fits', async () => {
+  it('TC-CR7-31b: the tool schema tells the model to use decision_type_other only when no listed type fits', async () => {
     mockOutputNode({ decision_type_other: 'collections prioritisation' });
     await extractGraph('ranks accounts for collections follow-up');
     const call = mockCreate.mock.calls[0]![0] as {

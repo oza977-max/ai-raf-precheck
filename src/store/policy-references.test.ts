@@ -203,7 +203,7 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(w.some((x) => /recognised/.test(x) && /plain_action|plain_owner_with/.test(x))).toBe(false);
   });
 
-  it('TC-CR7-26: in plain_reason and plain_change the message still names the recognised placeholders; they themselves do not warn', () => {
+  it('TC-CR7-26b: in plain_reason and plain_change the message still names the recognised placeholders; they themselves do not warn', () => {
     const policy = basePolicy({
       invariants: [
         { id: 'INV-01', description: 'd', condition: {}, required_controls: [], severity: 'High', plain_reason: 'it reaches {teams}' },

@@ -45,6 +45,19 @@ controls:
     burden: 1
     verification: "manual check"
 
+  # CR7-27: the shipped EU pack's required_control ids must exist in the policy.
+  - id: "CTRL-DISCLOSE-01"
+    name: "d"
+    description: "d"
+    resolves: []
+    burden: 1
+    verification: "v"
+  - id: "CTRL-SYNTHMARK-01"
+    name: "s"
+    description: "s"
+    resolves: []
+    burden: 1
+    verification: "v"
 kri_thresholds: {}
 
 jurisdictions: []
