@@ -1,6 +1,6 @@
 # Build contract: CR7 fixes — code review 007 findings, under full GVM build discipline
 
-**Status:** v2 (2026-10-03) — v1 corrected after an independent plan check (24 problems, all applied; see the changelog).
+**Status:** v2.1 (2026-10-03) — v1 corrected after an independent plan check (24 problems, all applied; see the changelog).
 Owner triage recorded in `code-review/code-review-007.html`: fix all 12 Important and all 28 Minor. CR7-23 (owner, two
 decisions): keep the listed country when "Somewhere else, or not sure" is also ticked, and list the unknown country back as
 an assumption — the result is NOT marked provisional on that account. The 5 stub flags are allowlisted (`.stub-allowlist`,
@@ -290,6 +290,18 @@ tests. Line numbers in verdict-view-model / GraphView / plain-copy shifted with 
   :606-607). **Fix:** "marked verified in your firm's policy file". **Test:** TC-CR7-40 (BC-005).
 - **O-9 (no severity)** ContradictionReview "Nothing is wrong with the use case" → "This isn't a result yet".
 
+### FX7-6 — Test hardening under load (after FX7-1 is merged; parallel with FX7-4)
+Files owned: the intake test files only (`src/components/__tests__/IntakeFlow*.test.tsx`, `WalkingSkeleton*.test.tsx`), no
+production code. Source: the paused hardening session's notes, copied to `build/handovers/TEST-HARDENING-notes.md`.
+Evidence: with 16 CPU-burner processes beside `npm test`, 7 then 17 of 1546 tests failed; CI hit two one-render-early reads
+(fixed in 345d96d). 19 failures are 5 s per-test timeouts in long flows that type long strings character by character
+(r16d2, r16w, r16f, cr6-fx2, WalkingSkeleton); three are 1 s `findBy`/`waitFor` timeouts — TC-CR6-02k, P5-C02, TC-CR6-15a
+(15a not yet inspected; the best candidate for a real early read). **Method:** wait for the specific state, never raise a
+global timeout; `user.paste` or a shorter typed text where the typing itself is not under test; a per-test timeout only
+with a written reason. **Acceptance:** reproduce first (the burner recipe in the notes), then 3 consecutive full runs under
+the same load with 0 failures, plus the normal ritual. **Tests:** no new TC ids — each changed test keeps its id; the
+commit lists each test and the cause found (slow vs early read).
+
 ### FX7-5 — Docs and spec text (main loop, after FX7-4)
 - **CR7-12 (Important) — docs describe the old form.** docs/try-these.md (:13, :37, :54-55, :135), docs/user-guide.md (:37),
   docs/user-guide.html (~:342). **Fix:** rewrite the run steps ("Next →", the form's own question wording) and each worked
@@ -315,5 +327,6 @@ until a pass returns no Critical/Important; at pass 5 with no decrease, stop and
 ## Changelog
 | Date | Change |
 |---|---|
+| 2026-10-03 | v2.1: FX7-6 test hardening added (owner instruction relayed by the CR6 session: one GVM pipeline; the paused "Harden load-sensitive intake tests" work joins this round). CR7-35's load-time warning stays with the CR6 session's UNSIGNED-MODEL work. |
 | 2026-10-03 | v2 after an independent plan check (24 problems, all applied): base moved to 2c93511 and CR7-35 marked done; test-case file 029; CR7-23 rewritten to the owner's second decision (list back, not provisional — the provisional mechanism cannot express a mixed answer); CR7-21 skips duplicates instead of moving writes after evaluate() (which would lose corrections); CR7-02 covers CORRECT_VERDICT, de-duplicates re-answered assumptions, fixes undo, adds the re-entry flag; CR7-03 snapshots graph/corrections/guessed list and threads them through every step; CR7-20 waits for success and resets the cached handle; CR7-05 uses a count hint, no schema bump; CR7-15 clears drafts from SettingsPanel (store must not import components); CR7-01 mount-only; CR7-09 one derivation from the tier workflow; CR7-36 counts the shipped policy; CR7-04 one shared predicate; CR7-25/38/14/27/28/16/30/13/34/19 corrected; citations verified; "Not in scope" list added. |
 | 2026-10-03 | v1 written from code review 007's verified findings and the owner's triage. |
