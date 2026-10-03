@@ -179,7 +179,7 @@ Engine functions never throw — they return `Result`. The UI layer handles `ok:
 LLM calls can fail (network, rate limit, invalid key). The `src/llm/client.ts` wraps all SDK calls in try/catch and returns `Result<T, LlmError>`. If any LLM call fails, the UI falls back to the structured form (UC-3a) or flags the error — it never propagates an unhandled exception.
 
 ### Policy load errors (CF-5)
-Policy validation errors are surfaced at startup via the `usePolicy` hook. If the policy is invalid, the hook returns `{ valid: false, errors: PolicyValidationError[] }` and the App renders an error screen naming each invalid field. Evaluation is disabled until the error is resolved.
+Policy validation errors are surfaced at startup via the `usePolicy` hook. If the policy is invalid, the hook returns `{ valid: false, errors: PolicyValidationError[] }` and the App renders a banner above whatever screen is showing (heading "Policy file invalid") naming each invalid field to the roles that can fix it. Evaluation is disabled until the error is resolved. CR8-13 changes who sees the field paths (§13b).
 
 ### UI errors
 React error boundaries at the route level. Each major view (intake, verdict, register) has its own error boundary. Errors are shown as user-readable messages, never as stack traces.
@@ -310,7 +310,7 @@ This is explicitly a governance-tool trust model: the tool trusts the user to se
 
 ## 13. Local data and the reasoning-trace call (CR7, 2026-10-04)
 
-**Clear all data (Settings, "Local data").** Everything Counterpoise stores lives in this browser. Clearing deletes the audit and register databases, the role, the hand-off sync marker, the welcome flag and the unsaved intake drafts. The drafts are cleared on an incomplete reset too, and the message for an incomplete reset says exactly what was and was not cleared. It keeps the model settings and the saved appetite framework, which are the firm's configuration rather than test data. A database delete that another tab's connection blocks waits up to 3 seconds for that connection to close before it reports the block, because this tab's own handles close a moment after the request (TC-CR7-15, 20).
+**Clear all data (Settings, "Local data").** Everything Counterpoise stores lives in this browser. Clearing deletes the audit and register databases, the role, the hand-off sync marker, the welcome flag and the unsaved intake drafts (CR8-16 spells out how the messages name these, §13b). The drafts are cleared on an incomplete reset too, and the message for an incomplete reset says exactly what was and was not cleared. It keeps the model settings and the saved appetite framework, which are the firm's configuration rather than test data. A database delete that another tab's connection blocks waits up to 3 seconds for that connection to close before it reports the block, because this tab's own handles close a moment after the request (TC-CR7-15, 20).
 
 **The reasoning-trace call.** It runs inside the case lock, so a stalled call would hold the case. The SDK call carries a 15 second timeout and no retries (TC-CR7-19).
 
@@ -320,10 +320,19 @@ This is explicitly a governance-tool trust model: the tool trusts the user to se
 
 **About page (CR7-36).** The sentence saying how many hard lines and appetite rules the app ships with is computed from the shipped `policy/appetite.yaml` (read at build time and loaded through `loadPolicy`), not typed in and not taken from the firm's edited policy: a firm that edits its own rules does not change what the page says it shipped with. If the shipped file cannot be loaded the sentence falls back to words with no number (TC-CR7-36, 36-1).
 
+## 13b. Clear-all wording, the policy banner and the header tagline (CR8, 2026-10-04)
+
+**Clear all data names everything (CR8-16).** The confirmation, and the message for an incomplete reset, now name everything the reset clears: every use case, verdict and audit event in this browser; any unsaved intake draft; the selected role (it goes back to 1LoD); the record of past hand-off syncs; and the welcome-panel dismissal (the welcome panel shows again). They also name what is kept: the model settings and the saved appetite framework. They say that a delete held up by another tab can be held up until that tab closes and may still finish afterwards (TC-CR8-16a, 16b). The localStorage keys `reset.ts` clears are exactly the ones the messages name; a test reads them both so they cannot drift (TC-CR8-16c). This extends §13, which said the incomplete message "says exactly what was and was not cleared" without listing the items.
+
+**The app-wide policy banner (CR8-13).** The banner keeps its heading "Policy file invalid — evaluation is disabled until this is resolved." on every screen and for every role. The raw field paths under it are shown only to the 2LoD role and on the Appetite framework screen, where the file is edited. Every other role on every other screen sees one plain sentence instead: "Your AI risk team needs to fix the firm's rules file before checks can run." The sentence has its own wording, so it never repeats the intake alert's policy sentence. TC-R16-A1-62 is re-scoped to the 2LoD role, TC-R16-A1-63 and TC-R16-F-59 assert the plain sentence in the default view and that the raw path is absent, and TC-CR8-13 checks a 1LoD submitter sees the plain message (§5, `intake-flow.md` §3).
+
+**The header tagline contrast (CR8-12).** The tagline chip in the header was coloured with `--ink-faint`, a dark grey chosen for light cards, on the near-black `--header-bg` (about 2.9 to 1). A new token `--header-muted` (`#b7b2a3`, about 8 to 1 on the header) now colours it, and the contrast test (`app-css.cr8-fx3.test.ts`) covers the header pairs: the tagline chip, the header text and the muted colour must each reach 4.5 to 1 on `--header-bg` (TC-CR8-12, 12-1). This extends §13a, whose token test covered only the card, page, cream and warning backgrounds.
+
 ## 14. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-04 | CR8 — code review 008 fixes (TC-CR8-*, `test-cases-030.md`). §5 amended and §13b added: the Clear all data messages name everything cleared and kept (CR8-16), the app-wide policy banner shows raw field paths only to 2LoD and on the Appetite framework screen (CR8-13), and the header tagline has its own contrast token `--header-muted` covered by the token test (CR8-12). |
 | 2026-10-04 | CR7 — wave 2 (TC-CR7-*, TC-FX7-*, `test-cases-029.md`). §5 notes where the policy-problem sentence lives (`POLICY_PROBLEM_MESSAGE`); §6 gains the long-intake-test conventions (single paste, `delay: null`, written-reason budgets `SLOW_FLOW_MS` and `DUP_CHECK_WAIT`, no global timeout change; FX7-6); §13a added (the contrast tokens and their token test, CR7-08; the About page counts computed from the shipped policy, CR7-36). |
 | 2026-10-04 | CR7 — code review 007 fixes, wave 1 (TC-CR7-*, `test-cases-029.md`). §5 gains the plain-sentence rule for policy problems shown to a submitter; §13 added (what Clear all data deletes and keeps, the 3 second wait on a blocked delete, the 15 second no-retry reasoning-trace call). |
 

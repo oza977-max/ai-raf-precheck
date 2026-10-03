@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round CR8 (code review 008 fixes) &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-a-card-edit-narrows-the-not-sure-assumptions-c">&sect;1 &mdash; A card edit narrows the "Not sure" assumptions (CR8-01)</a></li>
+                <li><a href="#2-sign-off-is-only-claimed-where-it-can-be-deter">&sect;2 &mdash; Sign-off is only claimed where it can be determined (CR8-02)</a></li>
+                <li><a href="#3-back-stays-refused-after-a-failed-evaluation-t">&sect;3 &mdash; Back stays refused after a failed evaluation, through the confirmation (CR8-03)</a></li>
+                <li><a href="#4-the-audit-chain-what-is-claimed-and-what-is-de">&sect;4 &mdash; The audit chain: what is claimed and what is detectable (CR8-04)</a></li>
+                <li><a href="#5-the-correction-planner-reads-the-latest-value-">&sect;5 &mdash; The correction planner reads the latest value written so far (CR8-06)</a></li>
+                <li><a href="#6-the-audit-tip-hint-is-checked-against-the-stor">&sect;6 &mdash; The audit tip hint is checked against the stored tip (CR8-07)</a></li>
+                <li><a href="#7-correct-from-the-result-shows-the-countries-pa">&sect;7 &mdash; Correct from the result shows the countries panel (CR8-08)</a></li>
+                <li><a href="#8-overlapping-policy-saves-queue-a-case-once-cr8">&sect;8 &mdash; Overlapping policy saves queue a case once (CR8-09)</a></li>
+                <li><a href="#9-a-half-seeded-case-is-completed-not-repeated-c">&sect;9 &mdash; A half-seeded case is completed, not repeated (CR8-10)</a></li>
+                <li><a href="#10-the-model-governance-review-sentence-is-one-w">&sect;10 &mdash; The model-governance review sentence is one whole, true sentence (CR8-11)</a></li>
+                <li><a href="#11-the-header-tagline-is-readable-cr8-12">&sect;11 &mdash; The header tagline is readable (CR8-12)</a></li>
+                <li><a href="#12-the-policy-banner-shows-raw-field-paths-only-">&sect;12 &mdash; The policy banner shows raw field paths only to whoever can fix the file (CR8-13)</a></li>
+                <li><a href="#13-the-failed-evaluation-alert-cr8-14">&sect;13 &mdash; The failed-evaluation alert (CR8-14)</a></li>
+                <li><a href="#14-clear-all-data-names-everything-cr8-16">&sect;14 &mdash; Clear all data names everything (CR8-16)</a></li>
+                <li><a href="#15-the-overdue-regulatory-line-counts-only-packs">&sect;15 &mdash; The overdue regulatory line counts only packs the result used (CR8-17)</a></li>
+                <li><a href="#amended-existing-cases">Amended existing cases</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round CR8 (code review 008 fixes)</h1>
+<p class="metadata">4 October 2026 &middot; Generated from test-cases-030.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-04. Code review 008 found places where the screens said more than the code could prove or less than it did: a review-card edit left a stale "Not sure" disclosure behind, Back could still walk out of an attested case through the confirmation step, a result with no stage claimed nobody had to sign off, the audit chain was described as revealing every deletion, a model-review sentence was garbled, the "overdue" line counted packs the result never used, and a few stores could write twice or half a seed. The amended spec sections are marked "(CR8, 2026-10-04)" in <code>specs/intake-flow</code>, <code>specs/verdict-audit</code>, <code>specs/register-lifecycle</code> and <code>specs/cross-cutting</code>.</em></p>
+<p>Test files: <code>src/components/intake-state.test.ts</code>, <code>src/components/__tests__/IntakeFlow.cr7-fx1.test.tsx</code>, <code>src/components/__tests__/ConfirmationStep.test.tsx</code>, <code>src/components/verdict-view-model.cr8-fx3.test.ts</code>, <code>src/components/__tests__/VerdictDisplay.cr8-fx3.test.tsx</code>, <code>src/components/__tests__/RegisterDetail.cr8-fx3.test.tsx</code>, <code>src/components/__tests__/SettingsPanel.cr8.test.tsx</code>, <code>src/components/__tests__/App.r16a1.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16a1.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16f.test.tsx</code>, <code>src/components/__tests__/app-css.cr8-fx3.test.ts</code>, <code>src/store/cr8-store.test.ts</code>, <code>src/seeds/cr8-seed-recovery.test.ts</code>.</p>
+
+<section id="1-a-card-edit-narrows-the-not-sure-assumptions-c">
+<h2>&sect;1 &mdash; A card edit narrows the "Not sure" assumptions (CR8-01)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-01a</td><td>Change an answer, edit the assumed field's card, Confirm: that assumption is gone from what the confirmation carries, and so from the recorded confirmation and the result &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01b</td><td>The same after a failed evaluation &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01c</td><td>The same for a correction from the result (<code>CORRECT_VERDICT</code>) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01d</td><td>A countries edit keeps the "somewhere else, or not sure" assumption, because the panel cannot say "somewhere else", and leaves the other assumptions as they were &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01e</td><td>An edit to a different field keeps the assumption, with its fields untouched &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01f</td><td>A question-6 assumption plus one autonomy edit keeps the other three fields listed &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01g</td><td>A question-3 assumption plus a supplier edit keeps the data-zone field listed &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01h</td><td>An assumption from an older draft that lists no fields cannot be matched, so any card edit drops it &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01i</td><td>Not sure, Change an answer, edit the assumed field's card, Confirm: the recorded confirmation on the real trail carries no assumption for that field &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR8-01j</td><td>A different assumption that lists the countries field is still narrowed by a countries edit; only question 11 is exempt &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-sign-off-is-only-claimed-where-it-can-be-deter">
+<h2>&sect;2 &mdash; Sign-off is only claimed where it can be determined (CR8-02)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-02a</td><td>A required sign-off with none on record (past "pre-checked", no approving review): no next step says "you can start" &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02b</td><td>No valid policy and a stage past "pre-checked": no "you can start" and no "nobody" anywhere &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02c</td><td>No stage at all (the intake result before the save lands): no sign-off claim on any surface &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02d</td><td>A determined self-service case (explicit stage plus a self-service policy) still says it can start &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02e</td><td>A signed-off case is unaffected by a missing policy or stage, because the audit trail alone decides &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02f</td><td>Stage "approved" with no policy: the stage note, headline and who-signs-off line say nothing permissive &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-02g</td><td>No stage at all: nothing on the screen says the person can start or that nobody signs off &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-02h</td><td>Stages idea, exploring and retired make no sign-off claim even with a self-service policy &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-02i</td><td>Stages idea, exploring and retired make no sign-off claim; approved, in production and monitored may &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-02j</td><td>The can't-be-determined headline opens "Not yet confirmed." &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-back-stays-refused-after-a-failed-evaluation-t">
+<h2>&sect;3 &mdash; Back stays refused after a failed evaluation, through the confirmation (CR8-03)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-03a</td><td>Confirmed, evaluation fails, no questions, Continue to the confirmation, Change an answer, Back: refused &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-03b</td><td>On screen: failed evaluation, Continue, Change an answer: Back is not offered, and the case id is the same on the second Confirm &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR8-03c</td><td>The converse: a first-time confirmation (no failure), Change an answer, Back is allowed, because nothing is attested yet &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-03d</td><td>Over every step and action, from a state after a confirmed attestation, on a description graph and on a form graph: no sequence of actions other than Start over reaches the duplicate check or changes the case id &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="4-the-audit-chain-what-is-claimed-and-what-is-de">
+<h2>&sect;4 &mdash; The audit chain: what is claimed and what is detectable (CR8-04)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-04a</td><td>The confirmation notice no longer says a later change would show; it says an edit to an earlier entry would show, removing the newest entries would not, and there is no outside check &mdash; <code>ConfirmationStep.test.tsx</code></td></tr>
+<tr><td>TC-CR8-04b</td><td>Deleting the newest event leaves a chain that still verifies (the known limit, pinned) &mdash; <code>cr8-store.test.ts</code></td></tr>
+<tr><td>TC-CR8-04c</td><td>The register banner says only that no break was found in the events present, and the caveat names what cannot be detected &mdash; <code>RegisterDetail.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-04d</td><td>The register detail, the result's reviewer section and the About page carry no over-claim &mdash; <code>RegisterDetail.cr8-fx3.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="5-the-correction-planner-reads-the-latest-value-">
+<h2>&sect;5 &mdash; The correction planner reads the latest value written so far (CR8-06)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-06a</td><td>A trail holding A to B and a batch [B to C, C to B]: both are written, the net value is B and the count is 3 &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-06b</td><td>A plain form-path retry that re-mints A to B over a trail whose latest value is B is still skipped &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-06c</td><td>Over random sequences of edits, retries and reversals on one field, the net value on the trail always equals the graph value &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="6-the-audit-tip-hint-is-checked-against-the-stor">
+<h2>&sect;6 &mdash; The audit tip hint is checked against the stored tip (CR8-07)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-07</td><td>A hint taken at the same event count but over a different trail is not trusted &mdash; <code>cr8-store.test.ts</code></td></tr>
+<tr><td>TC-CR8-07b</td><td>Known limit: tampering that deletes an earlier event and then appends is not detected by the tip hint &mdash; <code>cr8-store.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="7-correct-from-the-result-shows-the-countries-pa">
+<h2>&sect;7 &mdash; Correct from the result shows the countries panel (CR8-08)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-08a</td><td><code>CORRECT_VERDICT</code> lands on a review whose countries are already checked, as Change an answer and a failed evaluation already do &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-08b</td><td>Correct from the result: the countries panel renders and a country can be ticked, recorded as a countries correction on the corrected verdict &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="8-overlapping-policy-saves-queue-a-case-once-cr8">
+<h2>&sect;8 &mdash; Overlapping policy saves queue a case once (CR8-09)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-09</td><td>Two policy-update calls in flight together queue each case once &mdash; <code>cr8-store.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="9-a-half-seeded-case-is-completed-not-repeated-c">
+<h2>&sect;9 &mdash; A half-seeded case is completed, not repeated (CR8-10)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-10a</td><td>Events written but no register row: re-seeding writes only the missing rows, no second set of events &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+<tr><td>TC-CR8-10b</td><td>The investment-bank portfolio recovers the stage its own scripted 2LoD events imply; an approved case stays approved &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+<tr><td>TC-CR8-10c</td><td>A case with events but no verdict is skipped and reported, and nothing is written &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+<tr><td>TC-CR8-10d</td><td>The self-assessment recovers its node, vendor, edge and model link without a second set of events &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+<tr><td>TC-CR8-10e</td><td>The use-case node is written last, so a run interrupted before it is completed by the next with no duplicate rows &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+<tr><td>TC-CR8-10f</td><td>Recovery points the node at the latest verdict, so a later corrected verdict wins &mdash; <code>cr8-seed-recovery.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="10-the-model-governance-review-sentence-is-one-w">
+<h2>&sect;10 &mdash; The model-governance review sentence is one whole, true sentence (CR8-11)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-11</td><td>The shipped local model (listed, not yet accepted) reads as one whole sentence at every place that prints it &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-11-1</td><td>A model the policy does not list says so, by the name as typed &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-11-2</td><td>The rejected-screen copy prints the same rewritten sentence &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-11-3</td><td>A family whose attestation has lapsed reads with the neutral wording, never "not current" &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-11-4</td><td>An entry the firm has since accepted reads with the neutral wording, never "not current" &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="11-the-header-tagline-is-readable-cr8-12">
+<h2>&sect;11 &mdash; The header tagline is readable (CR8-12)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-12</td><td>The header tagline chip is at least 4.5 to 1 against the header background &mdash; <code>app-css.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-12-1</td><td>The header text and the muted header colour are each at least 4.5 to 1 against the header background &mdash; <code>app-css.cr8-fx3.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="12-the-policy-banner-shows-raw-field-paths-only-">
+<h2>&sect;12 &mdash; The policy banner shows raw field paths only to whoever can fix the file (CR8-13)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-13</td><td>A 1LoD submitter sees the plain message in the banner list, not the raw field path &mdash; <code>App.r16a1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="13-the-failed-evaluation-alert-cr8-14">
+<h2>&sect;13 &mdash; The failed-evaluation alert (CR8-14)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-14</td><td>The alert keeps its prefix and the policy sentence, and no longer tells the person to check the details and try again &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="14-clear-all-data-names-everything-cr8-16">
+<h2>&sect;14 &mdash; Clear all data names everything (CR8-16)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-16a</td><td>The confirmation names the role, hand-off record, welcome flag and drafts it clears, and what it keeps &mdash; <code>SettingsPanel.cr8.test.tsx</code></td></tr>
+<tr><td>TC-CR8-16b</td><td>The incomplete message names the same cleared items and says a blocked delete may still complete &mdash; <code>SettingsPanel.cr8.test.tsx</code></td></tr>
+<tr><td>TC-CR8-16c</td><td>The browser-storage keys the reset clears are exactly the ones the messages name &mdash; <code>SettingsPanel.cr8.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="15-the-overdue-regulatory-line-counts-only-packs">
+<h2>&sect;15 &mdash; The overdue regulatory line counts only packs the result used (CR8-17)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR8-17</td><td>A stale pack the result did not use: no overdue line &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-17-1</td><td>A stale pack the result used: the line is shown &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-17-2</td><td>A legacy result with no record of packs used: no overdue line, since nothing says a pack was used &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+<tr><td>TC-CR8-17-3</td><td>Two stale packs, one used: only the used one is named; a legacy result shows no banner &mdash; <code>VerdictDisplay.cr8-fx3.test.tsx</code></td></tr>
+<tr><td>TC-CR8-17-4</td><td>The record names pack A while the stale source is pack B: no overdue line &mdash; <code>verdict-view-model.cr8-fx3.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="amended-existing-cases">
+<h2>Amended existing cases</h2>
+<p>These cases keep their ids. Their assertions or fixtures changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.</p>
+<table>
+<thead><tr><th>ID</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D1-01e</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-D1-01g</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-D1-01i</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-D1-09b</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-D1-08a</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-D1-13</td><td>Were built on a case with no stage or no valid policy and read "you can start" or "no sign-off needed". Now re-fixtured with an explicit stage and a self-service policy where the case is meant to be self-service, and the wording is cautious where the case cannot be determined (CR8-02) &mdash; <code>verdict-view-model.test.ts</code> (01e, 01g, 01i, 09b, 08a), <code>VerdictDisplay.r16d1.test.tsx</code> (13)</td></tr>
+<tr><td>TC-R16-A1-62</td><td>Was: any role sees the raw field path in the app-wide policy banner. Now re-scoped to the 2LoD role, who edits the file (CR8-13) &mdash; <code>App.r16a1.test.tsx</code></td></tr>
+<tr><td>TC-R16-A1-63</td><td>Were: the intake alert carried the raw field path. Now: the default view shows the plain policy sentence and the raw path is absent (CR8-13) &mdash; <code>IntakeFlow.r16a1.test.tsx</code>, <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-59</td><td>Were: the intake alert carried the raw field path. Now: the default view shows the plain policy sentence and the raw path is absent (CR8-13) &mdash; <code>IntakeFlow.r16a1.test.tsx</code>, <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>(exact-shape reducer tests, no TC id)</td><td>The expected shapes now include <code>afterFailedEvaluation: false</code> on the confirmation step and <code>jurisdictionsConfirmed: true</code> on the review a correction lands on (CR8-03, CR8-08) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR8-01d</td><td>The v2 plan had a countries edit drop the "somewhere else, or not sure" assumption. Corrected: it stays, because the countries panel cannot say "somewhere else", so the disclosure remains true &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-39</td><td>Their result fixtures now carry a record of the packs used (<code>pack_versions</code>), because the overdue line counts only stale sources from those packs (CR8-17) &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code> (39), <code>VerdictDisplay.cr7-fx4.test.tsx</code> (39-2), <code>VerdictDisplay.r12.test.tsx</code> (ST-1-01)</td></tr>
+<tr><td>TC-CR7-39-2</td><td>Their result fixtures now carry a record of the packs used (<code>pack_versions</code>), because the overdue line counts only stale sources from those packs (CR8-17) &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code> (39), <code>VerdictDisplay.cr7-fx4.test.tsx</code> (39-2), <code>VerdictDisplay.r12.test.tsx</code> (ST-1-01)</td></tr>
+<tr><td>TC-R12-ST-1-01</td><td>Their result fixtures now carry a record of the packs used (<code>pack_versions</code>), because the overdue line counts only stale sources from those packs (CR8-17) &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code> (39), <code>VerdictDisplay.cr7-fx4.test.tsx</code> (39-2), <code>VerdictDisplay.r12.test.tsx</code> (ST-1-01)</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
+</html>
