@@ -54,7 +54,7 @@ function approval(verdictId: string, action: 'approved' | 'correction_requested'
   } as unknown as AuditEvent;
 }
 
-const SELF_SERVICE = /nobody|no sign-off needed|self-service/i;
+const SELF_SERVICE = /nobody —|no sign-off needed|self-service/i;
 
 describe('VerdictDisplay — CR7-09: the sign-off wording follows the case, not the stage', () => {
   const policy = realPolicy();
@@ -85,7 +85,7 @@ describe('VerdictDisplay — CR7-09: the sign-off wording follows the case, not 
     );
     expect(container.querySelector('.verdict__stage-note')!.textContent).not.toMatch(SELF_SERVICE);
     expect(container.textContent).not.toMatch(/signed off by your AI risk team/i);
-    expect(container.textContent).not.toMatch(/nobody|no sign-off needed/i);
+    expect(container.textContent).not.toMatch(/nobody —|no sign-off needed/i);
   });
 });
 

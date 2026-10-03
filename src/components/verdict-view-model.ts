@@ -880,7 +880,7 @@ export function buildVerdictView(
   // 'approved' and used to read as "no sign-off needed". With no stage (the
   // intake screen before saving) nothing is claimed, as before.
   const signOffRequired =
-    stage === 'pre_checked' || (stage !== undefined && policy !== undefined && routeToWorkflow(verdict.tier, policy).lifecycle_stage === 'pre_checked');
+    stage === 'pre_checked' || (stage !== undefined && policy?.tier_workflow !== undefined && routeToWorkflow(verdict.tier, policy).lifecycle_stage === 'pre_checked');
   const signedOff =
     signOffRequired &&
     (options.auditEvents ?? []).some(

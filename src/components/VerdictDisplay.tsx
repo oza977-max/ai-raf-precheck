@@ -13,6 +13,7 @@ import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
+import { supplierDisplayName } from './plain-copy';
 import { Fold } from './Fold';
 // R16 chunk D1 (build/prompts/R16.md v2.1 §4.1): the one view-model behind
 // the verdict's first screen AND the four readers that need a safeguard's
@@ -135,6 +136,20 @@ const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
   approved: 'Saved to register — self-service final.',
   in_production: 'Saved to register — in production.',
 };
+
+// CR7-09 / BC-005. The 'approved' stage is reached by self-service AND by a
+// 2LoD sign-off, so its note is derived from what the case needed
+// (view.signOffRequired, from the tier's workflow) and what the trail shows
+// (view.signedOff, a twoloD_reviewed 'approved' event for THIS verdict) —
+// never a fixed "self-service final".
+function stageNote(stage: LifecycleStage, view: VerdictView): string | undefined {
+  if (stage === 'approved') {
+    if (view.signedOff) return 'Saved to register — signed off by your AI risk team.';
+    if (view.signOffRequired) return 'Saved to register — final; no sign-off from your AI risk team is recorded on this version.';
+    return STAGE_NOTE.approved;
+  }
+  return STAGE_NOTE[stage];
+}
 
 // Display labels for living_status — 'approved' maps to wording without the
 // word itself (see the comment at the render site).
@@ -956,7 +971,7 @@ function SignOffChecklist({
               ) : (
                 <>
                   {controls.length} control{controls.length === 1 ? '' : 's'} named · {outstanding} outstanding ·{' '}
-                  {addressed} addressed · evidence: {verified} machine-verified, {attested} attested by a
+                  {addressed} addressed · evidence: {verified} marked verified in your firm&rsquo;s policy file, {attested} attested by a
                   reviewer (not verified), {outstanding} outstanding
                 </>
               )}
@@ -1297,8 +1312,6 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
-  const needsSignOff = registerStage === 'pre_checked';
-
   // R16-D1 (§4.1): the one view-model behind the first screen below AND the
   // three existing readers (WhatToDo, SignOffChecklist, the evidence panel)
   // that need a safeguard's status — built once, per render, from the same
@@ -1307,7 +1320,10 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
     assumptions,
     packs,
     evidenceScope,
+    auditEvents,
   });
+  // CR7-09: ONE derivation, in the view model — the stage no longer decides it.
+  const needsSignOff = view.needsSignOff;
 
   // R16-D1: the reviewer section's own open/closed state, controlled (not
   // the Fold component's uncontrolled defaultOpen) so "Go to this safeguard"
@@ -1471,6 +1487,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           The full reasoning — every rule checked, the evidence, the sources, and the reviewer&rsquo;s actions
         </summary>
         <div className="verdict__reviewer-body">
+      {/* CR7-11 (UC-11 fit criterion, D-27). Derived from the graph's
+          processing nodes (declared_model_id); with no graph (the register
+          path does not keep it) nothing is claimed either way. */}
+      {graph && graph.processing_nodes.length > 0 && !graph.processing_nodes.some((n) => n.declared_model_id) && (
+        <p className="verdict__no-model-named">No model was named — your AI risk team may ask which one it uses.</p>
+      )}
       {/* R12-ST-1: an undismissable statement of fact, in the same honesty
           idiom as the PROVISIONAL banner but its own block — staleness never
           blocks a verdict, it just says the regulatory text behind it is
@@ -1600,6 +1622,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         {verdict.status !== 'rejected' &&
           needsSignOff &&
           ' Not final until a second-line reviewer (2LoD) signs off.'}
+        {verdict.status !== 'rejected' && view.signedOff && ' Signed off by your AI risk team.'}
       </p>
 
       {/* design-review round 3 (2026-08-31, Panels A+D — beat 1, "the
@@ -2163,7 +2186,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             <div className="verdict__chain-entry" key={entry.source}>
               <div className="verdict__chain-head">
                 <span className="verdict__chain-source">{INHERITANCE_SOURCE_LABEL[entry.source]}</span>
-                <code>{entry.declaredId}</code>
+                <code>{entry.declaredId.split(' + ').map((id) => supplierDisplayName(id, policy).name).join(' + ')}</code>
                 <span className={`verdict__conf verdict__conf--${entry.resolved ? 'registered' : 'unregistered'}`}>
                   {entry.unresolvedIds && entry.unresolvedIds.length > 0
                     ? entry.unresolvedIds.length === entry.declaredId.split(' + ').length
@@ -2187,7 +2210,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               )}
               {entry.unresolvedIds && entry.unresolvedIds.length > 0 && (
                 <p className="verdict__chain-derived">
-                  Not on the covered registry:&ensp;{entry.unresolvedIds.join(', ')}. A full
+                  Not on the covered registry:&ensp;{entry.unresolvedIds.map((id) => supplierDisplayName(id, policy).name).join(', ')}. A full
                   supplier and platform risk assessment is required for {entry.unresolvedIds.length === 1 ? 'it' : 'them'}.
                 </p>
               )}
@@ -2276,9 +2299,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         against its expiry conditions above. In this version it only changes at re-review.
       </p>
 
-      {registerStage && STAGE_NOTE[registerStage] && (
+      {registerStage && stageNote(registerStage, view) && (
         <p className="verdict__stage-note" role="status">
-          {STAGE_NOTE[registerStage]}
+          {stageNote(registerStage, view)}
         </p>
       )}
 

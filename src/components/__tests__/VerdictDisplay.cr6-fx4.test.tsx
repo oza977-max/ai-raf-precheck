@@ -51,8 +51,10 @@ describe('VerdictDisplay — CR6-11: platform AND supplier declared, no graph (t
     const entries = container.querySelectorAll('.verdict__chain-entry');
     expect(entries).toHaveLength(1);
     expect(entries[0]!.textContent).toMatch(/does not keep the two apart/i);
-    expect(entries[0]!.textContent).toContain('PLAT-CLOUD-LLM');
-    expect(entries[0]!.textContent).toContain('VENDOR-APPROVED-LLM');
+    // CR7-14: the plain names, never the raw ids.
+    expect(entries[0]!.textContent).toContain("Your firm's cloud AI assistant");
+    expect(entries[0]!.textContent).toContain("Your firm's company AI assistant account");
+    expect(entries[0]!.textContent).not.toMatch(/PLAT-CLOUD-LLM|VENDOR-APPROVED-LLM/);
     // The summary promised N inherited controls; the list shows them.
     expect(entries[0]!.textContent).toMatch(/Inherited:/);
   });
@@ -67,9 +69,9 @@ describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no
     const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
     const entry = container.querySelector('.verdict__chain-entry')!;
     expect(entry.textContent).toMatch(/Inherited:/);
-    expect(entry.textContent).toMatch(/Not on the covered registry:\s*VENDOR-NOT-LISTED/);
+    expect(entry.textContent).toMatch(/Not on the covered registry:\s*a supplier not on your firm.s list/);
     expect(entry.textContent).not.toMatch(/Nothing inherited/);
-    expect(entry.textContent).not.toMatch(/PLAT-CLOUD-LLM[^]*Not on the registry/);
+    expect(entry.textContent).not.toMatch(/cloud AI assistant[^]*Not on the registry/);
     const fold = container.textContent ?? '';
     expect(fold).not.toMatch(/not on the covered registry — nothing inherited/);
     expect(fold).toMatch(/1 declared component not on the covered registry/);
@@ -100,7 +102,7 @@ describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no
     const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
     const entry = container.querySelector('.verdict__chain-entry')!;
     expect(entry.textContent).toMatch(/Partly on the registry/);
-    expect(entry.textContent).toMatch(/Not on the covered registry:\s*VENDOR-NOT-LISTED/);
+    expect(entry.textContent).toMatch(/Not on the covered registry:\s*a supplier not on your firm.s list/);
     // Final review M-3: the engine can inherit nothing for more than one
     // reason (outside the envelope, no satisfies_controls, coupled clusters),
     // so the line claims only what is known — the approval does not cover it.
