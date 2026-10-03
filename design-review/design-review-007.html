@@ -362,6 +362,12 @@
       <p class="verdict-basis">As written: 10 Critical, 23 Important, 5 Minor after de-duplication — any Critical means not ready. Recorded after owner triage (2026-10-02): every finding is to be fixed; the R16-D2 and R16-E plans are rewritten with every fix and get a fix-verification pass before a build verdict is given.</p>
     </div>
 
+    <div class="verdict caveats">
+      <div class="verdict-label">Build verdict after fix verification &mdash; 2026-10-03</div>
+      <div class="verdict-text">Build with caveats</div>
+      <p class="verdict-basis">For the rewritten plans R16-D2 v2.2 and R16-E v2.2. Group 1 (DR7-01 to DR7-14) is built and verified (R16-F, commit 52b2edf). A fix-verification pass found DR7-15 to DR7-34 closed except DR7-34 (partial), plus 6 places a builder would have gone wrong and 21 out-of-date code citations; owner: &ldquo;apply all, then build&rdquo;; all applied. Caveats: build D2 before E (E reuses D2&rsquo;s assumption shape); the builder re-finds every cited line, since D2 moves code before E is built; the pass was one independent reviewer, not a full panel re-review. See <a href="#fix-verification">Fix Verification</a>.</p>
+    </div>
+
     <h2 id="executive-summary">Executive Summary</h2>
     <p><strong>Scope:</strong> R16-W (walkthrough fixes — built, retroactive DR-1 check), R16-D2 (the "No" screen — not yet built), R16-E (description-path plan — not yet built).</p>
     <p><strong>Review method:</strong> Round 3, strict criterion, dual review. Seven panels (A Requirements coverage, B Interface contracts, C Structural soundness, D Implementability, E Security, F1 Comprehension and operability, F2 Audit-trail integrity) were calibrated on prior rounds, then reviewed blind independently. Total: 14 Sonnet panels. Full depth across all three areas. Parity script run before dispatch — clean.</p>
@@ -772,6 +778,10 @@
       <li><strong>Pack-rule "No" (DR7-20):</strong> stating it as a known limitation was <em>not</em> approved — fix it in D2.</li>
     </ul>
     <p>No finding was deferred or dismissed.</p>
+
+    <h2 id="fix-verification">Fix Verification (2026-10-03)</h2>
+    <p><strong>Group 1 (built code).</strong> Fixed in R16-F and verified line by line against the diff, not the build report: tests &times;3 (1227), type check, build, spec parity, traceability, and a live walkthrough including a real two-tab confirmation refused in the second tab. Verification found five further defects inside the approved fixes &mdash; nested hand-off schemas still stripped unknown fields; the tick-all editor&rsquo;s single label ticked the wrong box; engine wording in a form alert; a test-case note claiming coverage through a stand-in; a duplicated &ldquo;Please double-check&rdquo; sentence that the build&rsquo;s own test had worked around &mdash; each fixed with a test (TC-R16-F-60 to -65). Handover: <code>build/handovers/R16-F.md</code>.</p>
+    <p><strong>Groups 2 and 3 (the plans).</strong> One independent, read-only reviewer checked R16-D2 v2.1 and R16-E v2.1 against every finding and against the code R16-F actually built. Result: 19 of the 20 findings (DR7-15 to DR7-34) closed, DR7-34 partial (the &ldquo;already in place&rdquo; line already carries a generic note, which the plan would have doubled). It also found 6 places a builder would have gone wrong &mdash; per-question focus credited to a mechanism that only fires on step changes; the extraction error&rsquo;s second call site; an older, opposite narrow-screen CSS rule; an unspecified method for each &ldquo;Not sure&rdquo; answer&rsquo;s fields; a contradiction between two sections about one function&rsquo;s inputs; two unnamed helper functions &mdash; plus 21 out-of-date code citations (19 wrong, 2 approximate) and 8 clarity items. Every claim was spot-checked against the code before it went to the owner. Owner, 2026-10-03: apply all, then build. All applied in v2.2; every corrected citation re-read at 52b2edf.</p>
 
     <p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
 

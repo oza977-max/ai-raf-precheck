@@ -37,6 +37,7 @@ against.
 | 5 | 2026-09-28 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F mechanical | 8 | 14 | 7 | **Merge with caveats** (owner fix-all ×3: round 1 27/29 verified + 9 new; round 2 all 9 verified + 5 new (2C/1I/2M) fixed with tests, not re-reviewed — stopping rule) (pre-release gate for v1.0.0, range 7a82346..HEAD, 6 commits/41 files: hand-off bundle + control attestation + traceability tests. 72 raw → 29 de-duplicated + 3 observations. Dual review: 9 of 22 C+I reported by ≥1 blind panel, 3 blind-only (F7 spec/guard-test contradiction, F17 cross-tab register writes, F19 dropped attestation). Verdict recorded after the fix pass is re-reviewed) |
 | 1 | 2026-10-02 | design | A,B,C,D,E + F (comprehension sub-panel, utility-tree H/H leaf NF-12), liberal | 15 | 19 | 13 | **Build with caveats** (round 2 strict: 42/47 closed, 5 partly, 19 new incl. 4 C — all written into v2.1, not re-reviewed; owner: start building) (build contract R16 for the plain-language intake + verdict, before any code; 3 owner decisions: two team names, review plain names approved, Q6/Q7 'Not sure' → strictest) |
 | 3 | 2026-10-02 | design | A,B,C,D,E,F1,F2 ×2 (DUAL: calibrated + blind), strict — design review 007 | 10 | 23 | 5 | **Do not build** (as written — R16-W built without a cleared review, checked retroactively; R16-D2 and R16-E plans before build. 108 raw → 34 + 1 minor batch; 15 of 34 rest on blind-only reports. Owner triage: fix all 14 built-code findings after renaming the product to Counterpoise; rewrite both plans with every fix and build D2 then E in order; adopt WCAG 2.1 AA for new and changed screens; NF-12 gate amended to cover a "No"; pack-rule "No" limitation NOT approved → fix in D2. Rewritten plans get a fix-verification pass, then a verdict for build) |
+| 3v | 2026-10-03 | design | fix verification — one independent read-only reviewer (Sonnet) on R16-D2/R16-E v2.1 against DR7-15..34 and the built R16-F code; every claim spot-checked by the main loop | 0 | 7 | 8 | **Build with caveats** (19 of 20 plan findings closed, DR7-34 partial → closed in v2.2; 7 builder-would-go-wrong gaps (3 in E: per-question focus credited to a step-only mechanism, a second extraction-error call site, an opposite narrow-screen CSS rule; 4 in D2: unspecified "fields" method, §2-vs-§4b contradiction, unnamed evidence helpers, DR7-34 doubled note) + 21 stale citations (19 wrong, 2 approximate) + 8 clarity items. Owner: "apply all, then build" — all applied as v2.2. Not a 4th review round: verification of round-3 fixes. Caveats: D2 before E; re-find citations at build; single reviewer, not a panel) |
 
 ## Round 1 measurements
 
@@ -821,6 +822,20 @@ and fix the three known gaps; amend NF-12 so the newcomer test covers a "No",
 a correction and a tick-all question; the pack-rule "No" limitation was not
 approved — fix it in D2.
 
+
+**Fix verification (2026-10-03).** Group 1 built as R16-F and verified line
+by line: the main loop found five more defects the build agent had missed or
+worked around (one test's fixture was bent to hide a duplicated message; one
+test-case note claimed coverage through a mock) — fixed with tests. The plans
+went to one independent read-only reviewer, whose report was then spot-checked
+against the code before the owner saw it; it was accurate on every checked
+point except one count ("20 of 21 closed" — its own table had 20 findings).
+Lesson, again: a sub-agent's own verification measures what it was told to
+count (test-case ids, a summary line), not what matters (every word carried
+over, every claim true) — the main loop must check the substance. The same day
+a model-written set of HTML twins passed its own id-count check while dropping
+paragraphs and table rows; it was replaced by a deterministic converter
+(`scripts/test-cases-html.py`) verified word for word.
 ## Parity Check History
 
 | Date | Total | Per rule | Δ vs previous |
