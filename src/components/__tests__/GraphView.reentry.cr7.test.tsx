@@ -49,6 +49,7 @@ describe('IntakeFlow — a revisited review screen carries no "no basis" badge (
   it('TC-CR7-02g-3: Change an answer (real reducer) -> restored review screen shows no "Not in your description" badge', async () => {
     const confirmation: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A tool that drafts client emails',
       graph: llmGraph(),
       graphVersion: 1,

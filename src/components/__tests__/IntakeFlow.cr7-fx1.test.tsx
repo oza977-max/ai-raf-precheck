@@ -14,6 +14,7 @@ import { getAll } from '../../store/audit';
 import { setRole } from '../../store/role';
 import { loadDraft } from '../intake-draft';
 import type { Assumption } from '../plain-copy';
+import { engineErrorMessage } from '../plain-copy';
 import { intakeReducer } from '../intake-state';
 import type { IntakeState } from '../intake-state';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
@@ -37,6 +38,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 // CR7-17: the seed wait is the one seam this file lets a test make fail.
 let seedOverride: (() => Promise<unknown>) | null = null;
+// EBT exception (owner-accepted, code review 006/008): fault injection — lets CR7-17 make the self-assessment seed wait reject; otherwise the real seed runs
 vi.mock('../../seeds/aigate-self-assessment', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../seeds/aigate-self-assessment')>();
   return {
@@ -216,6 +218,7 @@ async function failNextEvaluation() {
     },
     { timeout: 10000 },
   );
+  // EBT exception (owner-accepted, code review 006/008): fault injection — makes ONE evaluation fail the way a gap in the firm's rules would; the real evaluate runs every other time
   vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({
     ok: false,
     error: { kind: 'no-track-match' },
@@ -461,6 +464,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
 
   it('TC-CR7-01a-1: the extractor is called exactly once and the review screen appears', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     extractingDraft();
     render(<App />);
@@ -471,6 +475,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
   it('TC-CR7-01a-2 (StrictMode): still exactly one call when mounted twice', async () => {
     const { StrictMode } = await import('react');
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     extractingDraft();
     render(
@@ -492,6 +497,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
 
   it('TC-CR7-01c: a fresh, non-restored description path calls the extractor exactly once', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     const user = userEvent.setup({ delay: null });
     await reachReview(user, NSDESC);
@@ -739,6 +745,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
       }),
     );
     const gate = held<void>();
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const traceSpy = vi.spyOn(traceModule, 'generateReasoningTraceForVerdict').mockImplementationOnce(async () => {
       await gate.promise;
       return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
@@ -776,6 +783,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     // Spied only now: App's own demo seeding also calls addNode, and a spy
     // installed earlier would be consumed by (and hold up) that instead.
     const realAddNode = registerModule.addNode;
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
     addNodeSpy.mockImplementationOnce(async (...args) => {
       await gate.promise;
@@ -1294,5 +1302,107 @@ describe('CR7-41 (register snapshot) — a lapsed family is not filed as accepte
     const graph = await getGraph(mine.use_case_id);
     const model = graph.nodes.find((n) => n.node_type === 'ai_model');
     expect(model?.metadata).toMatchObject({ model_id: 'gpt-4o-2024-08-06', is_approved: false });
+  }, 30000);
+});
+
+// FX8-1 (CR8-fixes.md). CR8-03 (P3): once a case has a confirmed attestation,
+// no navigation can start a new case id for it.
+describe('CR8-03 — the Back guard survives the confirmation (P3)', () => {
+  it('TC-CR8-03b: failed evaluation -> Continue -> Change an answer: Back is not offered, and the case id is the same on the second Confirm', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await failNextEvaluation();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText(/something went wrong working out the result/i);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    const before = (loadDraft() as unknown as { useCaseId: string }).useCaseId;
+
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Check what we read from your description');
+    expect(screen.queryAllByRole('button', { name: /back/i })).toHaveLength(0);
+    expect((loadDraft() as unknown as { useCaseId: string }).useCaseId).toBe(before);
+
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    // Both confirmations (the failed attempt and this one) are on ONE case.
+    expect(await eventsOfType('graph_confirmed')).toHaveLength(2);
+  }, 30000);
+});
+
+// CR8-08: correcting from the result hides the countries panel.
+describe('CR8-08 — correcting from the result shows the countries panel', () => {
+  it('TC-CR8-08b: Correct from the result -> the countries panel renders and a country can be ticked, recorded as a jurisdictions correction on the corrected verdict', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    await screen.findByText('Check what we read from your description');
+    expect(screen.getByText('Which countries does it involve?')).toBeInTheDocument();
+    const box = document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!;
+    expect(box.disabled).toBe(false);
+    await user.click(box);
+    expect(document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!.checked).toBe(true);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(async () => expect(await eventsOfType('verdict_corrected')).toHaveLength(1), { timeout: 5000 });
+    const hit = (await eventsOfType('graph_corrected'))
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction)
+      .find((c) => c.field === 'jurisdictions');
+    expect(hit).toBeDefined();
+  }, 30000);
+});
+
+// CR8-14: the plain policy sentence is not followed by a line that blames the
+// person's details for a gap in the firm's rules.
+describe('CR8-14 — a failed evaluation on the review screen carries no blaming suffix', () => {
+  it('TC-CR8-14: the alert keeps its prefix and the policy sentence, and no longer tells the person to check the details and try again', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await failNextEvaluation();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/something went wrong working out the result/i);
+    expect(alert).not.toHaveTextContent(/check the details below/i);
+    expect(alert).not.toHaveTextContent(/try again/i);
+    // Exact text: the policy sentence already ends with a full stop, so none is added (no "..").
+    expect((alert.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      `Something went wrong working out the result: ${engineErrorMessage('no-track-match')}`,
+    );
+  }, 30000);
+});
+
+// CR8-01 (P2), whole-app: the assumption is listed back only while the graph
+// still holds the value it assumed.
+describe('CR8-01 — a card edit removes the assumption it makes untrue (end to end)', () => {
+  it('TC-CR8-01i: Not sure -> Change an answer -> edit the assumed field\'s card -> Confirm: graph_confirmed on the real trail carries no assumption for that field', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    expect(screen.getAllByText(/the strictest case/i).length).toBeGreaterThan(0);
+
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Check what we read from your description');
+    await user.click(document.querySelector<HTMLButtonElement>('#card-o1 .graph-node__edit')!);
+    const select = screen.getByRole('combobox', { name: /client notifications — whether a mistake can be put right/i });
+    await user.selectOptions(select, 'reversible');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    // The summary no longer lists the assumption either.
+    expect(screen.queryByText(/the strictest case/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+
+    const confirmed = (await eventsOfType('graph_confirmed')).pop()!.payload as unknown as {
+      assumptions?: AssumptionLike[];
+    };
+    const mentioning = (confirmed.assumptions ?? []).filter(
+      (a) => a.questionId === 'field:output_reversibility' || a.fields.includes('output_reversibility'),
+    );
+    expect(mentioning).toEqual([]);
   }, 30000);
 });

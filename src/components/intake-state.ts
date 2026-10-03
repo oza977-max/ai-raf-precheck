@@ -294,6 +294,18 @@ export type IntakeState =
       // IntakeFlow now reads directly for UnderstoodSummary's "uncertain"
       // list, replacing the component `useState` of the same name.
       uncertainNodeIds?: string[];
+      // CR8-03 (P3 — once a case has a confirmed attestation, no navigation can
+      // start a new case id for it). REQUIRED, so a transition that builds a
+      // confirmation and forgets it fails to compile. True when this case has
+      // already been through a failed evaluation (graph_confirmed is on its
+      // trail): CHANGE_ANSWER hands it back to the review screen, whose Back
+      // is then refused (STEP_BACK) exactly as it was before the confirmation.
+      // Source at PROCEED_TO_CONFIRMATION: the questionnaire's own
+      // `backAfterFailedEvaluation` (the questionnaire has no
+      // afterFailedEvaluation). A draft saved by a build before this fix has no
+      // flag here and reads as false — accepted: the window is a confirmation
+      // draft saved after a failure and restored by an older tab.
+      afterFailedEvaluation: boolean;
     }
   | {
       step: 'evaluation_pending';
@@ -598,10 +610,23 @@ export function planCorrectionWrites(
   const latest = new Map<string, GraphCorrection>();
   for (const w of written) latest.set(key(w), w);
 
-  const toWrite = corrections.filter((c) => {
-    const last = latest.get(key(c));
-    return !(last && norm(last.corrected_value) === norm(c.corrected_value));
-  });
+  // CR8-06 (P1 — for every (node, field) the latest graph_corrected value on
+  // the trail since the last result equals the evaluated graph's value, after
+  // ANY sequence of edits, retries and reversals). The pending batch is walked
+  // IN ORDER against a RUNNING map seeded from the trail: a correction is
+  // skipped only if it equals the latest value written so far for its field —
+  // by the trail OR by an earlier entry of this same batch. Comparing every
+  // entry against the trail alone skipped the second of [B->C, C->B] over a
+  // trail ending at B (C->B looked "already there"), leaving the trail at C
+  // while the graph said B.
+  const running = new Map(latest);
+  const toWrite: GraphCorrection[] = [];
+  for (const c of corrections) {
+    const last = running.get(key(c));
+    if (last && norm(last.corrected_value) === norm(c.corrected_value)) continue;
+    toWrite.push(c);
+    running.set(key(c), c);
+  }
 
   if (ctx) {
     const covered = new Set(corrections.map(key));
@@ -628,6 +653,42 @@ export function planCorrectionWrites(
     }
   }
   return { toWrite, sinceLastResult: written.length + toWrite.length };
+}
+
+/** CR8-01 (P2 — an assumption is listed back only while the graph still holds
+ *  the value it assumed). Called when the person edits `field` on the review
+ *  screen (CORRECTION_APPLIED, JURISDICTIONS_SET): the edited field is removed
+ *  from each assumption's `fields`, and an assumption is dropped only when no
+ *  field is left — a Q6 assumption covering four fields keeps the other three
+ *  when one is edited (narrow, don't drop).
+ *  - An assumption with absent/empty `fields` (a draft saved by an older build)
+ *    cannot be matched to a field, so any edit drops it: the safe direction.
+ *  - Accepted limit: a description-path assumption carries no node id, so an
+ *    edit of that field on one node narrows the assumption for any node. It is
+ *    only over-removal when the field exists on more than one node; the
+ *    honest direction (we list less, never a stale claim). A node id is NOT
+ *    added to Assumption — the hand-off schema would strip it (BC-002).
+ *  - `keepQuestionIds`: assumptions the edit cannot make untrue. The countries
+ *    panel cannot express "somewhere else", so a countries edit keeps the
+ *    CR7-23 question-11 assumption ("it reaches countries beyond the ones
+ *    listed"): its disclosure stays true.
+ *  - ANSWER_SUBMITTED removes only the exact `field:X` id of the question just
+ *    answered; that is a different action and is deliberately left as it is.
+ *  - The Undo snapshot is questionnaire-only, so Undo cannot resurrect an
+ *    assumption this removes on the review screen. */
+function narrowAssumptions(
+  assumptions: Assumption[] | undefined,
+  field: string,
+  keepQuestionIds: readonly string[] = [],
+): Assumption[] | undefined {
+  if (!assumptions) return assumptions;
+  return assumptions.flatMap((a) => {
+    if (keepQuestionIds.includes(a.questionId)) return [a];
+    if (!a.fields || a.fields.length === 0) return [];
+    if (!a.fields.includes(field)) return [a];
+    const rest = a.fields.filter((f) => f !== field);
+    return rest.length === 0 ? [] : [{ ...a, fields: rest }];
+  });
 }
 
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
@@ -767,6 +828,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'GRAPH_EXTRACTED':
       if (state.step !== 'graph_extraction') return state;
+      // CR8-03 (P3), defence in depth: GRAPH_EXTRACTED is the description path's
+      // exit and mints the case id; a form-method step (reached by a failed
+      // evaluation, Change an answer or a correction, carrying the attested
+      // case) must never take it. Narrowed to a step that already carries a case
+      // id: a bare form step (no id yet) is the one existing, pinned shape
+      // (TC-R5-GR-2-03) and holds no attested case to protect.
+      if (state.method === 'form' && state.useCaseId !== undefined) return state;
       return {
         step: 'graph_review',
         description: carriedDescription(state),
@@ -815,7 +883,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       const carried = {
         description: action.description,
         graph: action.graph,
-        useCaseId: action.useCaseId,
+        // CR8-03 (P3), defence in depth: a form step that already carries a case
+        // id (a retry, a correction) keeps it; the action's id is only for a
+        // fresh submission.
+        useCaseId: state.useCaseId ?? action.useCaseId,
         plainAnswers: action.plainAnswers,
         assumptions: action.assumptions,
         // R16-D2 §5: carried from THIS state (the correction's start), not
@@ -863,6 +934,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             corrections: action.corrections,
             answers: [],
             resolutionNotes: [],
+            // CR8-03 (P3): the form path never reaches a Back-able review
+            // screen (CHANGE_ANSWER/EVALUATION_FAILED return it to the form),
+            // so the guard has nothing to guard here.
+            afterFailedEvaluation: false,
           };
       }
     }
@@ -874,6 +949,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
+        // CR8-01 (P2): the edited field no longer holds the assumed value.
+        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, action.correction.field) } : {}),
         // R5-GR-2: a correction is stronger evidence of review than a
         // Confirm click — the human read the value closely enough to
         // change it. The corrected node needs no second confirmation.
@@ -919,6 +996,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
+        // CR8-01 (P2): the countries were just set by the person — the
+        // CR7-23 "elsewhere, not sure" assumption about them no longer holds.
+        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, 'jurisdictions', ['11']) } : {}),
         ...(state.jurisdictionsConfirmed !== undefined ? { jurisdictionsConfirmed: true } : {}),
       };
 
@@ -1194,6 +1274,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         assumptions: state.assumptions,
         // F-7: threaded forward, never re-derived.
         uncertainNodeIds: state.uncertainNodeIds,
+        // CR8-03 (P3): the Back guard a failed evaluation set on the review
+        // screen travels through the questions to here. Never dropped.
+        afterFailedEvaluation: state.backAfterFailedEvaluation === true,
       };
 
     case 'CHANGE_ANSWER':
@@ -1241,6 +1324,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             uncertainNodeIds: state.uncertainNodeIds,
             jurisdictionsConfirmed: true,
             reentry: true,
+            // CR8-03 (P3): restored — see the confirmation type's comment. A
+            // first-time confirmation (no failure) leaves it off, so Back from
+            // here is still allowed: nothing is attested yet.
+            ...(state.afterFailedEvaluation ? { afterFailedEvaluation: true } : {}),
           };
 
     case 'CONFIRMED':
@@ -1331,6 +1418,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // CR7-02 (BC-004): what the verdict being corrected was based on.
         ...(action.assumptions ? { assumptions: action.assumptions } : {}),
         ...(action.uncertainNodeIds ? { uncertainNodeIds: action.uncertainNodeIds } : {}),
+        // CR8-08: the countries were confirmed before the verdict being
+        // corrected (same reasoning as CHANGE_ANSWER / EVALUATION_FAILED): the
+        // panel must still render, editable, without re-gating the person.
+        jurisdictionsConfirmed: true,
         reentry: true,
       };
 

@@ -24,6 +24,15 @@ import { fillText, SLOW_FLOW_MS, DUP_CHECK_WAIT } from './fillText';
 // identical timing-control needs (confirmationPrecondition,
 // generateReasoningTraceForVerdict); this file follows the same precedent
 // for extractGraph / confirmSemanticDuplicate / addNode.
+//
+// CR8 (EBT labels): the same holds for the other app modules spied below —
+// the reasoning trace (generateReasoningTraceForVerdict), the register
+// (addNode) and the audit trail (append). Each spy is one of three kinds and
+// carries its own one-line "EBT exception (owner-accepted, code review
+// 006/008)" label saying which: call-count observation only (the real
+// function still runs), hold in flight (the call is kept open across a click),
+// or fault injection (a failure the real module cannot be made to produce on
+// demand).
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class MockAnthropic {
     messages = { create: vi.fn() };
@@ -118,6 +127,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
     localStorage.setItem('aigate:api-key', 'test-key');
     const first = held<ExtractResult>();
     const second = held<ExtractResult>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     spy.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => second.promise);
 
@@ -190,6 +200,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
       },
     });
     const first = held<boolean>();
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const spy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockImplementationOnce(() => first.promise);
     // Exact-text match with the seeded row above — the duplicate check will
     // find it as a candidate and hold on the (mocked) LLM confirm.
@@ -229,6 +240,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
   it('TC-CR6-02c: "Try again" works on the new case after Start over, even though the abandoned case\'s own retry was still pending', async () => {
     localStorage.setItem('aigate:api-key', 'test-key');
     const abandonedRetry = held<ExtractResult>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     spy
       .mockResolvedValueOnce({ ok: false, error: { kind: 'network-error', message: 'first case initial failure' } })
@@ -312,6 +324,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
         track: null,
       },
     });
+    // EBT exception (owner-accepted, code review 006/008): fault injection — forces the match result so the test needs no network or model
     const spy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockResolvedValue(true);
 
     try {
@@ -347,6 +360,7 @@ describe('CR6-14: a stale extraction error does not leak onto the next case', ()
   it('TC-CR6-14: after Start over, a new case\'s pending extraction shows "Reading your description…", never the abandoned case\'s old error', async () => {
     localStorage.setItem('aigate:api-key', 'test-key');
     const secondCall = held<ExtractResult>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     spy
       .mockResolvedValueOnce({ ok: false, error: { kind: 'network-error', message: 'first case failure' } })
@@ -462,6 +476,7 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const spy = vi.spyOn(traceModule, 'generateReasoningTraceForVerdict').mockImplementationOnce(async () => {
       await gate;
       return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
@@ -503,6 +518,7 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(traceModule, 'generateReasoningTraceForVerdict');
     try {
       render(<App />);
@@ -574,6 +590,7 @@ describe('CR6-15: navigating away mid-confirm leaves no stale confirmation scree
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const spy = vi.spyOn(traceModule, 'generateReasoningTraceForVerdict').mockImplementationOnce(async () => {
       await gate;
       return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
@@ -919,6 +936,7 @@ describe('I-5: going Back mid duplicate check abandons that check', () => {
     localStorage.setItem('aigate:api-key', 'test-key');
     await seedProbeUseCase();
     const first = held<boolean>();
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const spy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockImplementationOnce(() => first.promise);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: REGISTERED_PROBE }));
     try {
@@ -948,6 +966,7 @@ describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can le
   it('TC-CR6-02g: while "Use the earlier result" is held, Back, the step-tracker back, Start over and both gate buttons are disabled, and exactly one addNode happens', async () => {
     await seedProbeUseCase('Adopt guard probe assistant');
     const a = held<void>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
     addNodeSpy.mockImplementationOnce(() => a.promise as never);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt guard probe assistant' }));
@@ -985,6 +1004,7 @@ describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can le
   it('TC-CR6-02h: Back is unusable during a held adoption, so no second adoption can follow; exactly one classification_adopted event', async () => {
     await seedProbeUseCase('Adopt back probe assistant');
     const a = held<void>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
     addNodeSpy.mockImplementationOnce(() => a.promise as never);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt back probe assistant' }));
@@ -1010,6 +1030,7 @@ describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can le
   it('TC-CR6-02h (dismiss): while "Mine is different" is writing its dismissal, Back / Start over / both buttons are disabled', async () => {
     await seedProbeUseCase('Dismiss probe assistant');
     const d = held<void>();
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const auditSpy = vi.spyOn(auditModule, 'append');
     auditSpy.mockImplementationOnce(() => d.promise as never);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Dismiss probe assistant' }));
@@ -1064,7 +1085,9 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
     await seedProbeUseCase('Lock owner probe assistant');
     localStorage.setItem('aigate:api-key', 'test-key');
     const oldExtraction = held<ExtractResult>();
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const extractSpy = vi.spyOn(graphExtractorModule, 'extractGraph').mockImplementationOnce(() => oldExtraction.promise);
+    // EBT exception (owner-accepted, code review 006/008): fault injection — forces the match result so the test needs no network or model
     const semanticSpy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockResolvedValue(true);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Lock owner probe assistant' }));
     const newDismissal = held<void>();
@@ -1079,6 +1102,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
       // New attempt reaches the same match; its own dismissal write is held.
       await fillText(user, await screen.findByLabelText(/what ai tool do you want to use/i), 'Lock owner probe assistant');
       await user.click(screen.getByRole('button', { name: /^next/i }));
+      // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
       const appendSpy = vi.spyOn(auditModule, 'append').mockImplementationOnce(() => newDismissal.promise as never);
       await user.click(await screen.findByRole('button', { name: /mine is different/i }));
       expect(screen.getByRole('button', { name: /use the earlier result/i })).toBeDisabled();
@@ -1116,6 +1140,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
 
   it('TC-CR6-02l: a failed "Use the earlier result" save shows a plain message that sends the person to the register first', async () => {
     await seedProbeUseCase('Failed adopt probe assistant');
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const addNodeSpy = vi.spyOn(registerModule, 'addNode').mockRejectedValueOnce(new Error('simulated storage fault'));
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Failed adopt probe assistant' }));
     try {
@@ -1133,6 +1158,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
 
   it('TC-CR6-02l (dismiss): a failed "Mine is different" save shows a plain message and the choice can be made again', async () => {
     await seedProbeUseCase('Failed dismiss probe assistant');
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const appendSpy = vi.spyOn(auditModule, 'append').mockRejectedValueOnce(new Error('simulated storage fault'));
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Failed dismiss probe assistant' }));
     try {
@@ -1151,6 +1177,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
 describe('Final review M-1: a failed-save message belongs to its own case', () => {
   it('TC-CR6-02m: after a failed "Mine is different" save, Start over and a new description show no leftover "could not be saved"', async () => {
     await seedProbeUseCase('Leftover message probe assistant');
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const appendSpy = vi.spyOn(auditModule, 'append').mockRejectedValueOnce(new Error('simulated storage fault'));
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Leftover message probe assistant' }));
     try {

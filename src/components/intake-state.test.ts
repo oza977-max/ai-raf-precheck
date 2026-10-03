@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fc from 'fast-check';
 import { intakeReducer, planCorrectionWrites, graphValueResolver } from './intake-state';
 import type { IntakeState } from './intake-state';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
@@ -266,6 +267,7 @@ describe('intakeReducer', () => {
       resolutionNotes: [],
       originalVerdictId: undefined,
       useCaseId: 'uc-1',
+      afterFailedEvaluation: false, // CR8-03: deliberate expectation change — every confirmation carries the flag
     });
   });
 
@@ -273,6 +275,7 @@ describe('intakeReducer', () => {
     const g = graph({ version: 1 });
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A tool that drafts client emails.',
       graph: g,
       graphVersion: 1,
@@ -328,6 +331,9 @@ describe('intakeReducer', () => {
       corrections: [],
       useCaseId: 'uc-1',
       originalVerdictId: 'verdict-abc',
+      // CR8-08: deliberate expectation change — the countries are already
+      // checked on a correction pass, so the panel renders.
+      jurisdictionsConfirmed: true,
       // CR7-02 (6): a revisited screen, not a first reading.
       reentry: true,
     });
@@ -494,6 +500,7 @@ describe('intakeReducer — STEP_BACK (FN-006)', () => {
   it('does not step back out of confirmation — the attestation boundary holds', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: typed,
       graph: graph(),
       graphVersion: 1,
@@ -680,6 +687,7 @@ describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-
     const g = graph({ intake_method: 'structured_form' });
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'x',
       graph: g,
       graphVersion: 1,
@@ -879,6 +887,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       corrections: [],
       answers: [],
       resolutionNotes: [],
+      afterFailedEvaluation: false, // CR8-03: deliberate expectation change — every confirmation carries the flag
     });
   });
 });
@@ -994,6 +1003,7 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
   it('TC-R16-W-27: CHANGE_ANSWER from confirmation on a form-path graph carries plainAnswers/assumptions/useCaseId back to the form', () => {
     const confirmationState: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'd',
       graph: g,
       graphVersion: 1,
@@ -1021,6 +1031,7 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
     const original = graph({ intake_method: 'structured_form', version: 1 });
     const confirmationState: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'd',
       graph: g,
       graphVersion: 1,
@@ -1137,6 +1148,7 @@ describe('R16-D2 §5 (v2.1): a correction without its form answers never returns
   it('TC-R16-D2-59: "Change an answer" in a review-screen correction of a form-built case returns to the review screen, keeping the correction', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A form-built tool.',
       graph: formBuilt,
       graphVersion: 2,
@@ -1189,6 +1201,7 @@ describe('R16-D2 §5 (v2.1): a correction without its form answers never returns
   it('a fresh form-built case (no correction) still returns to the form, as before', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A form-built tool.',
       graph: formBuilt,
       graphVersion: 2,
@@ -1589,6 +1602,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
   };
   const confirmation = (overrides: Partial<Extract<IntakeState, { step: 'confirmation' }>> = {}): IntakeState => ({
     step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
     description: 'd',
     graph: graph(),
     graphVersion: 1,
@@ -1838,6 +1852,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
   const Q = { id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' as const };
   const confirmation: IntakeState = {
     step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
     description: 'd',
     graph: graph(),
     graphVersion: 1,
@@ -1975,5 +1990,369 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(planCorrectionWrites([], events).sinceLastResult).toBe(1);
     expect(planCorrectionWrites([corr('2', 'C', 'D')], events).sinceLastResult).toBe(2);
     expect(planCorrectionWrites([corr('9', 'A', 'B')], events).sinceLastResult).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX8-1 (CR8-fixes.md) — CR8-01 (P2): an assumption is listed back only while
+// the graph still holds the value it assumed. BC-004 converse: every action
+// that can make a carried assumption untrue must remove or narrow it.
+// ---------------------------------------------------------------------------
+describe('intakeReducer — a card edit narrows or removes the assumption it makes untrue (CR8-01, P2)', () => {
+  const corrected = (node_id: string, field: string): GraphCorrection => ({
+    correction_id: `c-${field}`,
+    graph_version_before: 1,
+    graph_version_after: 2,
+    node_id,
+    field,
+    original_value: 'x',
+    corrected_value: 'y',
+    corrected_by: '1LoD',
+    corrected_at: '2026-01-01T00:00:00.000Z',
+  });
+  const A_REV: Assumption = {
+    questionId: 'field:output_reversibility',
+    question: 'Can the mistake be put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case.',
+    fields: ['output_reversibility'],
+  };
+  const A_Q6: Assumption = {
+    questionId: '6',
+    question: 'What does it do with what it produces?',
+    shortLabel: 'what it does with what it produces',
+    assumption: 'it acts on its own.',
+    fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'],
+  };
+  const A_Q3: Assumption = {
+    questionId: '3',
+    question: 'Where does the AI come from?',
+    shortLabel: 'where the AI comes from',
+    assumption: 'an outside supplier, information leaves the firm.',
+    fields: ['data_zone', 'vendor'],
+  };
+  const A_JUR: Assumption = {
+    questionId: '11',
+    question: 'Which countries?',
+    shortLabel: 'which countries it reaches',
+    assumption: 'it reaches countries beyond the ones listed.',
+    fields: ['jurisdictions'],
+  };
+  const confirmation = (assumptions: Assumption[]): IntakeState => ({
+    step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
+    description: 'd',
+    graph: graph(),
+    graphVersion: 1,
+    corrections: [],
+    answers: [],
+    resolutionNotes: [],
+    useCaseId: 'uc-1',
+    assumptions,
+  });
+  /** review -> edit a card -> Continue -> (no questions) -> confirmation. */
+  const editThenConfirm = (review: IntakeState, node: string, field: string): IntakeState => {
+    let s = intakeReducer(review, { type: 'CORRECTION_APPLIED', correction: corrected(node, field), updatedGraph: graph({ version: 2 }) });
+    s = intakeReducer(s, { type: 'QUESTIONS_GENERATED', questions: [] });
+    return intakeReducer(s, { type: 'PROCEED_TO_CONFIRMATION' });
+  };
+  const listed = (s: IntakeState) => ('assumptions' in s ? s.assumptions ?? [] : []);
+  const viaChangeAnswer = () => intakeReducer(confirmation([A_REV, A_Q6, A_Q3]), { type: 'CHANGE_ANSWER' });
+  const viaFailedEvaluation = () =>
+    intakeReducer(intakeReducer(confirmation([A_REV, A_Q6, A_Q3]), { type: 'CONFIRMED' }), { type: 'EVALUATION_FAILED' });
+  const viaCorrectVerdict = () =>
+    intakeReducer(
+      { step: 'verdict', verdictId: 'v1' },
+      { type: 'CORRECT_VERDICT', graph: graph(), useCaseId: 'uc-1', originalVerdictId: 'v1', assumptions: [A_REV, A_Q6, A_Q3] },
+    );
+
+  it('TC-CR8-01a: Change an answer -> edit the assumed field\'s card -> Confirm: that assumption is gone from what the confirmation carries (and so from graph_confirmed and the result)', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'o1', 'output_reversibility');
+    expect(out.step).toBe('confirmation');
+    expect(listed(out).map((a) => a.questionId)).not.toContain('field:output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01b: the same after a failed evaluation', () => {
+    const out = editThenConfirm(viaFailedEvaluation(), 'o1', 'output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01c: the same via a correction from the result (CORRECT_VERDICT)', () => {
+    const out = editThenConfirm(viaCorrectVerdict(), 'o1', 'output_reversibility');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
+  });
+
+  it('TC-CR8-01d: a countries edit KEEPS the CR7-23 "somewhere else" assumption (the panel cannot say "somewhere else", so the disclosure stays true) and leaves the others', () => {
+    const review = intakeReducer(confirmation([A_JUR, A_REV]), { type: 'CHANGE_ANSWER' });
+    const after = intakeReducer(review, {
+      type: 'JURISDICTIONS_SET',
+      correction: corrected('graph', 'jurisdictions'),
+      updatedGraph: graph({ version: 2, jurisdictions: ['UK'] }),
+    });
+    expect(listed(after)).toEqual([A_JUR, A_REV]);
+  });
+
+  it('TC-CR8-01j: a different assumption that lists the jurisdictions field is still narrowed by a countries edit (only question 11 is exempt)', () => {
+    const other: Assumption = { ...A_JUR, questionId: 'x-other', fields: ['jurisdictions', 'scale'] };
+    const review = intakeReducer(confirmation([other, A_JUR]), { type: 'CHANGE_ANSWER' });
+    const after = intakeReducer(review, {
+      type: 'JURISDICTIONS_SET',
+      correction: corrected('graph', 'jurisdictions'),
+      updatedGraph: graph({ version: 2, jurisdictions: ['UK'] }),
+    });
+    expect(listed(after).map((a) => [a.questionId, a.fields])).toEqual([
+      ['x-other', ['scale']],
+      ['11', ['jurisdictions']],
+    ]);
+  });
+
+  it('TC-CR8-01e: an edit to a DIFFERENT field keeps the assumption, with its fields untouched', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'label');
+    expect(listed(out)).toEqual([A_REV, A_Q6, A_Q3]);
+  });
+
+  it('TC-CR8-01f: a Q6 assumption plus ONE autonomy edit keeps the other three fields listed', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'autonomy_level');
+    const q6 = listed(out).find((a) => a.questionId === '6');
+    expect(q6?.fields).toEqual(['action_type', 'decision_bindingness', 'hitl']);
+  });
+
+  it('TC-CR8-01g: a Q3 assumption plus a vendor edit keeps data_zone listed', () => {
+    const out = editThenConfirm(viaChangeAnswer(), 'p1', 'vendor');
+    const q3 = listed(out).find((a) => a.questionId === '3');
+    expect(q3?.fields).toEqual(['data_zone']);
+  });
+
+  it('TC-CR8-01h: an assumption from an older draft with no fields cannot be matched, so any card edit drops it', () => {
+    const old = { questionId: 'x', question: 'q', shortLabel: 's', assumption: 'a' } as unknown as Assumption;
+    const review = intakeReducer(confirmation([old, A_REV]), { type: 'CHANGE_ANSWER' });
+    const out = editThenConfirm(review, 'p1', 'label');
+    expect(listed(out).map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX8-1 — CR8-03 (P3): once a case has a confirmed attestation, no navigation
+// can start a new case id for it. The guard (afterFailedEvaluation) used to be
+// dropped by PROCEED_TO_CONFIRMATION and not restored by CHANGE_ANSWER.
+// Test graphs are NON-form (intake_method 'llm'): a structured_form graph
+// returns to the form instead (returnsToForm) and never reaches STEP_BACK.
+// ---------------------------------------------------------------------------
+describe('intakeReducer — the Back guard survives the confirmation (CR8-03, P3)', () => {
+  const confirmationFirstTime = (): IntakeState => ({
+    step: 'confirmation',
+    description: 'd',
+    graph: graph({ intake_method: 'llm' }),
+    graphVersion: 1,
+    corrections: [],
+    answers: [],
+    resolutionNotes: [],
+    useCaseId: 'uc-1',
+    afterFailedEvaluation: false,
+  });
+  const failedReview = (): IntakeState =>
+    intakeReducer(intakeReducer(confirmationFirstTime(), { type: 'CONFIRMED' }), { type: 'EVALUATION_FAILED' });
+
+  it('TC-CR8-03a (reducer): CONFIRMED -> EVALUATION_FAILED -> QUESTIONS_GENERATED(none) -> PROCEED_TO_CONFIRMATION -> CHANGE_ANSWER -> STEP_BACK is refused', () => {
+    let s = failedReview();
+    expect(s).toMatchObject({ step: 'graph_review', afterFailedEvaluation: true });
+    s = intakeReducer(s, { type: 'QUESTIONS_GENERATED', questions: [] });
+    s = intakeReducer(s, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect(s).toMatchObject({ step: 'confirmation', afterFailedEvaluation: true });
+    s = intakeReducer(s, { type: 'CHANGE_ANSWER' });
+    expect(s).toMatchObject({ step: 'graph_review', afterFailedEvaluation: true });
+    expect(intakeReducer(s, { type: 'STEP_BACK' })).toBe(s);
+  });
+
+  it('TC-CR8-03c (reducer, converse): a first-time confirmation (no failure) -> CHANGE_ANSWER -> Back IS allowed (nothing is attested yet)', () => {
+    let s = intakeReducer(confirmationFirstTime(), { type: 'CHANGE_ANSWER' });
+    expect('afterFailedEvaluation' in s && s.afterFailedEvaluation).toBeFalsy();
+    s = intakeReducer(s, { type: 'STEP_BACK' });
+    expect(s.step).toBe('duplicate_check');
+  });
+
+  it('TC-CR8-03d (reducer, P3 over the whole step x action table): from a state after a confirmed attestation — on a description graph AND a form graph — no sequence of actions (RESTART excluded: Start over is a deliberate exit) reaches duplicate_check or carries a different useCaseId', () => {
+    const corr = (id: string): GraphCorrection => ({
+      correction_id: id, graph_version_before: 1, graph_version_after: 2, node_id: 'n1', field: 'scale',
+      original_value: 'a', corrected_value: 'b', corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z',
+    });
+    const Qs = [{ id: 'Q1', field: 'scale', node_id: 'n1', triggered_by: [], answer_type: 'text' as const }];
+    const formStart = (): IntakeState => ({
+      step: 'confirmation',
+      description: 'd',
+      graph: graph({ intake_method: 'structured_form' }),
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'Test tool' },
+      assumptions: [],
+      afterFailedEvaluation: false,
+    });
+    // `NEW` stands for a brand-new case id a caller could hand to an action that
+    // mints a case. The reducer must never let it replace the attested one.
+    const NEW = 'uc-NEW';
+    const explore = (g: DataFlowGraph, start: IntakeState) => {
+      const actions: Array<Parameters<typeof intakeReducer>[1]> = [
+        { type: 'STEP_BACK' },
+        { type: 'SUBMIT_DESCRIPTION' },
+        { type: 'DESCRIPTION_CHANGED', description: 'other' },
+        { type: 'NO_DUPLICATE_FOUND', method: 'llm' },
+        { type: 'NO_DUPLICATE_FOUND', method: 'form' },
+        { type: 'SWITCH_TO_FORM' },
+        { type: 'GRAPH_EXTRACTED', graph: graph({ intake_method: 'llm' }), useCaseId: NEW },
+        {
+          type: 'FORM_SUBMITTED',
+          graph: graph({ intake_method: 'structured_form' }),
+          useCaseId: NEW,
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+          questions: [],
+          contradictions: [],
+          corrections: [],
+        },
+        {
+          type: 'FORM_SUBMITTED',
+          graph: graph({ intake_method: 'structured_form' }),
+          useCaseId: NEW,
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+          questions: Qs,
+          contradictions: [],
+          corrections: [],
+        },
+        { type: 'QUESTIONS_GENERATED', questions: [] },
+        { type: 'QUESTIONS_GENERATED', questions: Qs },
+        { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'x' } },
+        { type: 'ANSWER_UNDONE' },
+        { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] },
+        { type: 'CONTRADICTION_RESOLVED', explanation: 'because' },
+        { type: 'PROCEED_TO_CONFIRMATION' },
+        { type: 'CHANGE_ANSWER' },
+        { type: 'CONFIRMED' },
+        { type: 'EVALUATION_FAILED' },
+        { type: 'VERDICT_READY' },
+        { type: 'CORRECTION_APPLIED', correction: corr('c1'), updatedGraph: g },
+        { type: 'JURISDICTIONS_SET', correction: corr('c2'), updatedGraph: g },
+        { type: 'NODE_CONFIRMED', nodeId: 'n1' },
+        { type: 'JURISDICTIONS_CONFIRMED' },
+        // The caller of a correction passes the case being corrected (the
+        // original id); those two cannot mint a new one by themselves.
+        { type: 'CORRECT_VERDICT', graph: g, useCaseId: 'uc-1', originalVerdictId: 'v1' },
+        {
+          type: 'CORRECT_VERDICT_WITH_FORM',
+          originalGraph: g,
+          useCaseId: 'uc-1',
+          originalVerdictId: 'v1',
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+        },
+      ];
+      const attested = intakeReducer(start, { type: 'CONFIRMED' }); // evaluation_pending: attested
+      const seen = new Set<string>([JSON.stringify(attested)]);
+      let frontier: IntakeState[] = [attested];
+      for (let depth = 0; depth < 7; depth++) {
+        const next: IntakeState[] = [];
+        for (const s of frontier) {
+          for (const a of actions) {
+            const n = intakeReducer(s, a);
+            expect(n.step, `${s.step} + ${a.type} reached duplicate_check`).not.toBe('duplicate_check');
+            const id = n.step === 'verdict' ? n.verdictId : 'useCaseId' in n ? n.useCaseId : undefined;
+            if (id !== undefined) expect(id, `${s.step} + ${a.type} changed the case id`).toBe('uc-1');
+            const k = JSON.stringify(n);
+            if (!seen.has(k)) {
+              seen.add(k);
+              next.push(n);
+            }
+          }
+        }
+        frontier = next;
+      }
+      return seen.size;
+    };
+    expect(explore(graph({ intake_method: 'llm' }), confirmationFirstTime())).toBeGreaterThan(20);
+    expect(explore(graph({ intake_method: 'structured_form' }), formStart())).toBeGreaterThan(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX8-1 — CR8-06 (P1): for every (node, field), the latest graph_corrected
+// value on the trail since the last result equals the evaluated graph's value,
+// after ANY sequence of edits, retries and reversals.
+// ---------------------------------------------------------------------------
+describe('planCorrectionWrites — P1: the trail ends at the graph value after any edits, retries and reversals (CR8-06)', () => {
+  const corr = (id: string, from: unknown, to: unknown): GraphCorrection => ({
+    correction_id: id, graph_version_before: 1, graph_version_after: 2, node_id: 'n1', field: 'scale',
+    original_value: from, corrected_value: to, corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z', correction_source: 'form',
+  });
+  const ev = (c: GraphCorrection) => ({ event_type: 'graph_corrected', payload: { type: 'graph_corrected', correction: c } }) as never;
+
+  it('TC-CR8-06a: a trail holding A->B and a batch [B->C, C->B]: BOTH are written, the net is B, and the count is 3', () => {
+    const plan = planCorrectionWrites([corr('2', 'B', 'C'), corr('3', 'C', 'B')], [ev(corr('1', 'A', 'B'))]);
+    expect(plan.toWrite.map((c) => c.correction_id)).toEqual(['2', '3']);
+    expect(plan.sinceLastResult).toBe(3);
+    expect(plan.toWrite[plan.toWrite.length - 1]!.corrected_value).toBe('B');
+  });
+
+  it('TC-CR8-06b: a plain form-path retry re-minting [A->B] over a trail whose latest is B is still skipped', () => {
+    const plan = planCorrectionWrites([corr('9', 'A', 'B')], [ev(corr('1', 'A', 'B'))]);
+    expect(plan.toWrite).toEqual([]);
+    expect(plan.sinceLastResult).toBe(1);
+  });
+
+  it('TC-CR8-06c (property): random sequences of edits, retries and reversals on one field always leave the net trail value equal to the graph value (P1)', () => {
+    const values = ['A', 'B', 'C', 'D'];
+    const original = 'A';
+    const op = fc.oneof(
+      fc.record({ kind: fc.constant('edit' as const), value: fc.constantFrom(...values) }),
+      fc.record({ kind: fc.constant('retry' as const) }),
+      fc.record({ kind: fc.constant('reverse' as const) }),
+    );
+    fc.assert(
+      fc.property(fc.array(op, { minLength: 1, maxLength: 14 }), (ops) => {
+        let graphValue: string = original;
+        let nextId = 0;
+        const trail: GraphCorrection[] = [];
+        // The form diffs the graph against the ORIGINAL: one correction when
+        // the value differs, none when it is back where it started. A retry
+        // re-mints that same correction with a fresh id.
+        const pending = (): GraphCorrection[] => (graphValue === original ? [] : [corr(`p${nextId++}`, original, graphValue)]);
+        const run = () => {
+          const ctx = {
+            resolve: () => ({ found: true as const, value: graphValue }),
+            version: 5,
+            newId: () => `s${nextId++}`,
+            now: () => '2026-02-02T00:00:00.000Z',
+            by: '1LoD',
+          };
+          const plan = planCorrectionWrites(pending(), trail.map(ev), ctx);
+          trail.push(...plan.toWrite);
+          const net = trail.length > 0 ? (trail[trail.length - 1]!.corrected_value as string) : original;
+          expect(net).toBe(graphValue);
+          expect(plan.sinceLastResult).toBe(trail.length);
+        };
+        for (const o of ops) {
+          if (o.kind === 'edit') graphValue = o.value;
+          else if (o.kind === 'reverse') graphValue = original;
+          run(); // every kind submits; a 'retry' changes nothing before it
+        }
+      }),
+      { seed: 20261004, numRuns: 300 },
+    );
+  });
+});
+
+describe('intakeReducer — correcting from the result keeps the countries panel (CR8-08)', () => {
+  it('TC-CR8-08a (reducer): CORRECT_VERDICT lands on a review whose countries are already checked (so the panel renders), as CHANGE_ANSWER and a failed evaluation already do', () => {
+    const next = intakeReducer(
+      { step: 'verdict', verdictId: 'v1' },
+      { type: 'CORRECT_VERDICT', graph: graph({ intake_method: 'llm' }), useCaseId: 'uc-1', originalVerdictId: 'v1' },
+    );
+    expect(next).toMatchObject({ step: 'graph_review', jurisdictionsConfirmed: true, originalVerdictId: 'v1' });
   });
 });
