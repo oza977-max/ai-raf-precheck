@@ -91,3 +91,26 @@ describe('FX8-3 CR8-02 — P4: nothing permissive when the sign-off is missing o
     expect(view.headline).toMatch(/signed it off/);
   });
 });
+
+// CR8-17: the overdue line counts only stale sources whose pack the verdict actually used —
+// derived from verdict.pack_versions (the engine's record of the active packs). stale_sources stays as recorded.
+describe('FX8-3 CR8-17 — overdue regulatory text counts only the packs this verdict used', () => {
+  const stale = (id: string) => ({ pack_id: id, retrieved_date: '2026-01-01', days_overdue: 5, max_staleness_days: 90 });
+  const overdue = (view: ReturnType<typeof buildVerdictView>) => view.couldStillChange.some((l) => /overdue/i.test(l));
+
+  it('TC-CR8-17: a stale pack the verdict did not use — no overdue line', () => {
+    const verdict = makeVerdict({ pack_versions: { 'US-PACK': '1' }, stale_sources: [stale('EU-PACK')] } as Partial<Verdict>);
+    expect(overdue(buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined))).toBe(false);
+  });
+
+  it('TC-CR8-17-1: a stale pack the verdict used — the line is shown', () => {
+    const verdict = makeVerdict({ pack_versions: { 'EU-PACK': '1' }, stale_sources: [stale('EU-PACK')] } as Partial<Verdict>);
+    expect(overdue(buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined))).toBe(true);
+  });
+
+  it('TC-CR8-17-2: a legacy verdict with no pack_versions at all — no overdue line (nothing to say it was used)', () => {
+    const verdict = makeVerdict({ stale_sources: [stale('EU-PACK')] } as Partial<Verdict>);
+    delete (verdict as { pack_versions?: unknown }).pack_versions;
+    expect(overdue(buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined))).toBe(false);
+  });
+});

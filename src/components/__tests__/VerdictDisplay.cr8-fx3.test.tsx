@@ -98,3 +98,22 @@ describe('VerdictDisplay — CR8-11: the model review sentence', () => {
     expect(container.textContent).not.toMatch(BAD);
   });
 });
+
+// CR8-17: the reviewer banner uses the same filter as the first screen's line.
+describe('VerdictDisplay — CR8-17: the Review overdue banner names only packs the verdict used', () => {
+  const stale = (id: string) => ({ pack_id: id, retrieved_date: '2026-01-01', days_overdue: 5, max_staleness_days: 90 });
+
+  it('TC-CR8-17-3: two stale packs, one used — only the used one is named; a legacy verdict shows no banner', () => {
+    const policy = realPolicy();
+    const base = verdictFrom(policy, { pack_versions: { 'UK-PACK': '1' }, stale_sources: [stale('UK-PACK'), stale('OTHER-PACK')] } as Partial<Verdict>);
+    const a = render(<VerdictDisplay verdict={base} auditEvents={[]} policy={policy} />);
+    const banner = a.container.querySelector('.verdict__stale-banner')!;
+    expect(banner.textContent).toContain('UK-PACK');
+    expect(banner.textContent).not.toContain('OTHER-PACK');
+    a.unmount();
+    const legacy = { ...base } as Record<string, unknown>;
+    delete legacy.pack_versions;
+    const c = render(<VerdictDisplay verdict={legacy as unknown as Verdict} auditEvents={[]} policy={policy} />);
+    expect(c.container.querySelector('.verdict__stale-banner')).toBeNull();
+  });
+});
