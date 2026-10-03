@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import fc from 'fast-check';
 import { intakeReducer, planCorrectionWrites, graphValueResolver } from './intake-state';
 import type { IntakeState } from './intake-state';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
@@ -2199,5 +2200,72 @@ describe('intakeReducer — the Back guard survives the confirmation (CR8-03, P3
       frontier = next;
     }
     expect(seen.size).toBeGreaterThan(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX8-1 — CR8-06 (P1): for every (node, field), the latest graph_corrected
+// value on the trail since the last result equals the evaluated graph's value,
+// after ANY sequence of edits, retries and reversals.
+// ---------------------------------------------------------------------------
+describe('planCorrectionWrites — P1: the trail ends at the graph value after any edits, retries and reversals (CR8-06)', () => {
+  const corr = (id: string, from: unknown, to: unknown): GraphCorrection => ({
+    correction_id: id, graph_version_before: 1, graph_version_after: 2, node_id: 'n1', field: 'scale',
+    original_value: from, corrected_value: to, corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z', correction_source: 'form',
+  });
+  const ev = (c: GraphCorrection) => ({ event_type: 'graph_corrected', payload: { type: 'graph_corrected', correction: c } }) as never;
+
+  it('TC-CR8-06a: a trail holding A->B and a batch [B->C, C->B]: BOTH are written, the net is B, and the count is 3', () => {
+    const plan = planCorrectionWrites([corr('2', 'B', 'C'), corr('3', 'C', 'B')], [ev(corr('1', 'A', 'B'))]);
+    expect(plan.toWrite.map((c) => c.correction_id)).toEqual(['2', '3']);
+    expect(plan.sinceLastResult).toBe(3);
+    expect(plan.toWrite[plan.toWrite.length - 1]!.corrected_value).toBe('B');
+  });
+
+  it('TC-CR8-06b: a plain form-path retry re-minting [A->B] over a trail whose latest is B is still skipped', () => {
+    const plan = planCorrectionWrites([corr('9', 'A', 'B')], [ev(corr('1', 'A', 'B'))]);
+    expect(plan.toWrite).toEqual([]);
+    expect(plan.sinceLastResult).toBe(1);
+  });
+
+  it('TC-CR8-06c (property): random sequences of edits, retries and reversals on one field always leave the net trail value equal to the graph value (P1)', () => {
+    const values = ['A', 'B', 'C', 'D'];
+    const original = 'A';
+    const op = fc.oneof(
+      fc.record({ kind: fc.constant('edit' as const), value: fc.constantFrom(...values) }),
+      fc.record({ kind: fc.constant('retry' as const) }),
+      fc.record({ kind: fc.constant('reverse' as const) }),
+    );
+    fc.assert(
+      fc.property(fc.array(op, { minLength: 1, maxLength: 14 }), (ops) => {
+        let graphValue: string = original;
+        let nextId = 0;
+        const trail: GraphCorrection[] = [];
+        // The form diffs the graph against the ORIGINAL: one correction when
+        // the value differs, none when it is back where it started. A retry
+        // re-mints that same correction with a fresh id.
+        const pending = (): GraphCorrection[] => (graphValue === original ? [] : [corr(`p${nextId++}`, original, graphValue)]);
+        const run = () => {
+          const ctx = {
+            resolve: () => ({ found: true as const, value: graphValue }),
+            version: 5,
+            newId: () => `s${nextId++}`,
+            now: () => '2026-02-02T00:00:00.000Z',
+            by: '1LoD',
+          };
+          const plan = planCorrectionWrites(pending(), trail.map(ev), ctx);
+          trail.push(...plan.toWrite);
+          const net = trail.length > 0 ? (trail[trail.length - 1]!.corrected_value as string) : original;
+          expect(net).toBe(graphValue);
+          expect(plan.sinceLastResult).toBe(trail.length);
+        };
+        for (const o of ops) {
+          if (o.kind === 'edit') graphValue = o.value;
+          else if (o.kind === 'reverse') graphValue = original;
+          run(); // every kind submits; a 'retry' changes nothing before it
+        }
+      }),
+      { seed: 20261004, numRuns: 300 },
+    );
   });
 });
