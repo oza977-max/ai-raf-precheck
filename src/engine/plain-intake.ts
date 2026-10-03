@@ -136,12 +136,19 @@ export function plainAnswersToFormValues(
             vendor = assistants[0]!.id;
           } else if (assistants.length > 1) {
             const which = str('3aWhich');
-            if (which === 'not-sure') {
+            const match = which === 'not-sure' ? undefined : assistants.find((v) => v.id === which);
+            if (match) {
+              vendor = match.id;
+            } else {
+              // CR6-06: "not-sure" AND a stale/unrecognised id (a company
+              // assistant removed from the registry since this was answered)
+              // take the exact same path — the strict reading, always
+              // listed as an assumption. Before this fix the stale-id case
+              // silently reused the "not confirmed" wording with NO
+              // assumption recorded, so a reviewer had no way to know the
+              // answer had been reinterpreted at all.
               vendor = 'your firm’s AI assistant (not confirmed which one)';
               assume('3aWhich', 'not-sure', ['vendor']);
-            } else {
-              const match = assistants.find((v) => v.id === which);
-              vendor = match ? match.id : 'your firm’s AI assistant (not confirmed which one)';
             }
           } else {
             // D-64 literal fallback: none registered at all.
@@ -186,8 +193,17 @@ export function plainAnswersToFormValues(
         default: {
           // A supplier vendor id, picked from the dynamic list.
           const match = supplierVendors(policy).find((v) => v.id === q3supplier);
-          // D-72: was 'unregistered (supplier not confirmed)'.
-          vendor = match ? match.id : 'a supplier you weren’t sure of';
+          if (match) {
+            vendor = match.id;
+          } else {
+            // CR6-06: a stale/unrecognised supplier id (removed from the
+            // registry since this was answered) takes the SAME path as
+            // "I don't know" — same wording, same assumption. Before this
+            // fix it silently reused "I don't know"'s fallback text with no
+            // assumption recorded.
+            vendor = 'a supplier you weren’t sure of';
+            assume('3supplier', 'dont-know', ['vendor']);
+          }
         }
       }
       break;
@@ -246,9 +262,14 @@ export function plainAnswersToFormValues(
         vendor = matchedPlatform.vendor_id ?? 'internal';
         platform = matchedPlatform.id;
       } else {
+        // CR6-06: q3 is neither a static option key nor a CURRENT platform
+        // id — a stale/removed platform id, or any other unrecognised
+        // value — and takes the exact same path as the top-level "Not
+        // sure" case below, including its assumption. Before this fix it
+        // silently reused that case's values with no assumption recorded.
         destinationZone = 'Zone A';
-        // D-72: was 'unregistered (where this AI comes from was not sure)'.
         vendor = 'an AI service you weren’t sure about';
+        assume('3', 'not-sure', ['data_zone', 'vendor']);
       }
     }
   }
@@ -287,11 +308,14 @@ export function plainAnswersToFormValues(
       modelType = 'agentic';
       break;
     case 'not-sure':
+    default:
+      // CR6-06: "not-sure" and any unrecognised/stale value (an old option
+      // key a draft or an older build still has on file) take the same
+      // path — the strict reading, always listed as an assumption. Before
+      // this fix an unrecognised value silently fell through to 'llm' with
+      // no assumption recorded.
       modelType = 'agentic';
       assume('4', 'not-sure', ['model_type']);
-      break;
-    default:
-      modelType = 'llm';
   }
 
   // ---- Q5: information it uses (tick-all) -> inputDataClasses ----
@@ -411,16 +435,17 @@ export function plainAnswersToFormValues(
       outputActionType = resolve6b();
       break;
     case 'not-sure':
+    default:
+      // CR6-06: "not-sure" and any unrecognised/stale value take the same
+      // path — the strict reading, always listed as an assumption. Before
+      // this fix an unrecognised value silently fell through to the LEAST
+      // strict reading (read/level 0/non-binding) with no assumption
+      // recorded.
       outputActionType = 'execute';
       autonomyLevel = 4;
       hitl = false;
       decisionBindingness = 'binding';
       assume('6', 'not-sure', ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl']);
-      break;
-    default:
-      outputActionType = 'read';
-      autonomyLevel = 0;
-      decisionBindingness = 'non-binding';
   }
 
   // ---- Q7: who sees it -> exposure ----
@@ -435,13 +460,20 @@ export function plainAnswersToFormValues(
     case 'clients':
       outputExposure = 'client-facing';
       break;
+    case 'public-market':
+      // A real, current, definite answer — maps to the same value as
+      // "not-sure" below, but is a stated fact, not a guess, so no
+      // assumption is recorded.
+      outputExposure = 'market-facing';
+      break;
     case 'not-sure':
+    default:
+      // CR6-06: "not-sure" and any unrecognised/stale value take the same
+      // path — the strict reading, always listed as an assumption. Before
+      // this fix an unrecognised value silently fell through to the LEAST
+      // strict reading (internal-only) with no assumption recorded.
       outputExposure = 'market-facing';
       assume('7', 'not-sure', ['exposure']);
-      break;
-    case 'public-market':
-    default:
-      outputExposure = str('7') === 'public-market' ? 'market-facing' : 'internal-only';
   }
 
   // ---- Q8 / Q8other: decision type ----
@@ -507,13 +539,18 @@ export function plainAnswersToFormValues(
     case 'yes':
       replacesPriorModel = true;
       break;
+    case 'no':
+      replacesPriorModel = false;
+      break;
     case 'not-sure':
+    default:
+      // CR6-06: "not-sure" and any unrecognised/stale value take the same
+      // path — the strict reading, always listed as an assumption. Before
+      // this fix an unrecognised value silently fell through to the LESS
+      // strict reading (false — does not trigger TRACK-II-REPLACE) with no
+      // assumption recorded.
       replacesPriorModel = true;
       assume('12', 'not-sure', ['replaces_prior_model']);
-      break;
-    case 'no':
-    default:
-      replacesPriorModel = false;
   }
 
   // ---- Q13: agent access (tick-all) ----

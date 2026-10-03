@@ -326,12 +326,32 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   // must never silently count as answered here and reach the engine as
   // "not stated" — that was the DR7-08 bug.
   const q13Result = resolveAccessScopeAnswer(toArray(answers['13']));
+  // CR6-06: the current, valid key set for a single-select question — its
+  // own static options PLUS whatever policy-driven options this render
+  // actually spliced in (Q3's platforms, Q3supplier's suppliers, Q3aWhich's
+  // company assistants), or Q3platformZone's own platform-restricted subset.
+  // A value outside this set (a stale draft, a registry entry since
+  // renamed or removed, an option an older build offered) is not one of
+  // the choices on screen right now, so it must not count as answered.
+  function singleSelectValidKeys(id: QuestionId): string[] {
+    if (id === '3platformZone') return q3platformZoneKeys;
+    const staticKeys = findQuestion(id)?.options.map((o) => o.key) ?? [];
+    if (id === '3') return [...staticKeys, ...platformOptions.map((o) => o.key)];
+    if (id === '3supplier') return [...staticKeys, ...supplierOptions.map((o) => o.key)];
+    if (id === '3aWhich') return [...staticKeys, ...companyAssistantOptions.map((o) => o.key)];
+    return staticKeys;
+  }
   function isAnswered(id: QuestionId): boolean {
     if (id === '13') return q13Result.ok;
     const q = findQuestion(id);
     if (q?.multi) return toArray(answers[id]).length > 0;
     if (q?.freeText) return Boolean((answers[id] as string | undefined)?.trim());
-    return answers[id] !== undefined && answers[id] !== '';
+    const value = answers[id];
+    if (value === undefined || value === '') return false;
+    // F-8/DR7-08's sibling rule for single-select: counted only when the
+    // stored value names one of THIS render's current options — static or
+    // policy-driven — never merely "is a non-empty string".
+    return singleSelectValidKeys(id).includes(String(value));
   }
 
   const requiredIds: QuestionId[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -354,7 +374,11 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
     // R16-F §5 (DR7-06): the engine returns assumption REFERENCES; this is
     // the one, immediate conversion to the worded `Assumption[]` onSubmit's
     // callers (and the reducer state they carry) still expect.
-    onSubmit(buildGraphFromForm(values), describeAssumptions(assumptions), answers);
+    // B-15: the engine no longer mints its own timestamp — this component
+    // is presentation-only, not the engine, so minting it here (React/I-O
+    // territory) rather than inside src/engine/* is exactly where
+    // cross-cutting.md §7 Rule 1 puts it.
+    onSubmit(buildGraphFromForm(values, new Date().toISOString()), describeAssumptions(assumptions), answers);
   }
 
   // Bundles the props every question renderer needs, so each call site below
