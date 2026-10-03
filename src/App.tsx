@@ -16,6 +16,7 @@ import { loadPacks } from './store/packs';
 import { getPackSources } from './store/pack-source';
 import { seedAigateSelfAssessment } from './seeds/aigate-self-assessment';
 import BrandMark from './components/BrandMark';
+import { POLICY_PROBLEM_MESSAGE } from './components/plain-copy';
 import { seedIbPortfolio } from './seeds/ib-portfolio';
 import './fonts.css';
 import './App.css';
@@ -341,10 +342,15 @@ export default function App() {
           {startupPolicyErrors.length > 0 && (
             <div className="app-policy-invalid" role="alert">
               <strong>Policy file invalid</strong> — evaluation is disabled until this is resolved.
+              {/* CR8-13: the raw field paths are for whoever edits the file — the 2LoD role and the
+                  Appetite framework screen. Everyone else gets the one plain sentence (the same one
+                  the intake screen uses). The heading stays for every role. */}
               <ul>
-                {startupPolicyErrors.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
+                {role === '2LoD' || view === 'policyEditor' ? (
+                  startupPolicyErrors.map((e, i) => <li key={i}>{e}</li>)
+                ) : (
+                  <li>{POLICY_PROBLEM_MESSAGE}</li>
+                )}
               </ul>
             </div>
           )}
