@@ -2,10 +2,11 @@ import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
-import { addNode, getUseCase } from '../store/register';
+import { addNode } from '../store/register';
 import { withCaseLock } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
+import { planSeed } from './seed-recovery';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { JurisdictionPack, PolicyFile } from '../engine/types';
 import type { LifecycleStage } from '../store/types';
@@ -298,7 +299,31 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
   for (const ibCase of CASES) {
     // CR7-18: check-then-act under the per-case lock, re-checked inside it.
     await withCaseLock(ibCase.id, async () => {
-      if (await getUseCase(ibCase.id)) return;
+      // CR8-10: node exists -> skip; events but no node -> write only the node,
+      // at the stage the case's own scripted 2LoD events imply (an approved
+      // case has a lifecycle_stage_changed event; a correction-requested or
+      // pending one has none and takes the router's stage).
+      const plan = await planSeed(ibCase.id, policy);
+      if (plan.kind === 'skip') return;
+      if (plan.kind === 'recover') {
+        await addNode({
+          node_id: ibCase.id,
+          node_type: 'use_case',
+          label: ibCase.values.useCaseName,
+          created_at: plan.createdAt,
+          metadata: {
+            node_type: 'use_case',
+            description: ibCase.values.description,
+            submitted_by: '1LoD',
+            lifecycle_stage: plan.stage,
+            current_verdict_id: plan.verdict.id,
+            tier: plan.verdict.tier,
+            track: plan.verdict.track,
+          },
+        });
+        seeded += 1;
+        return;
+      }
 
       // B-15: the engine no longer mints its own timestamp — minted once here
       // (t0/at, moved above the graph build) so the graph's extracted_at
