@@ -1236,3 +1236,31 @@ describe('FX7-1 review pass 4 — reverse corrections on the real trail for a gr
     expectNetValueIsOriginal(corrections);
   }, 60000);
 });
+
+// CR7-41 follow-up (FX7-3 review pass 1, Minor 2; main loop). The register's
+// ai_model snapshot must judge acceptance the way the engine does — on the
+// policy AFTER applyReattestExpiry. A family past its reattest_by confers no
+// approval in evaluate(); the register used to snapshot it from the raw
+// policy and file the model as accepted.
+describe('CR7-41 (register snapshot) — a lapsed family is not filed as accepted', () => {
+  it('TC-CR7-41d: a model in a family past its reattest_by is snapshotted is_approved false, as the engine judged it', async () => {
+    const lapsed = appetiteYaml.replace(/reattest_by: "2027-02-23"/, 'reattest_by: "2020-01-01"');
+    expect(lapsed).not.toBe(appetiteYaml);
+    setCurrentPolicyYaml(lapsed);
+    const user = userEvent.setup();
+    await reachForm(user, 'A drafting helper inside software we already use.');
+    await fillMinimalForm(user, 'Lapsed family probe', 'A drafting helper inside software we already use.');
+    await user.click(screen.getByRole('radio', { name: /an ai feature inside software your firm already uses/i }));
+    await user.click(screen.getByRole('radio', { name: /i don.t know/i }));
+    await user.type(await screen.findByLabelText(/model name, if you know it/i), 'gpt-4o-2024-08-06');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+
+    const mine = (await getUseCases('all')).find((u) => u.label === 'Lapsed family probe')!;
+    const graph = await getGraph(mine.use_case_id);
+    const model = graph.nodes.find((n) => n.node_type === 'ai_model');
+    expect(model?.metadata).toMatchObject({ model_id: 'gpt-4o-2024-08-06', is_approved: false });
+  }, 30000);
+});

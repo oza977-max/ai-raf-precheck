@@ -611,3 +611,25 @@ describe('StructuredForm — draft persistence under the new versioned key (R16-
     sessionStorage.clear();
   });
 });
+
+// CR7-04 (main loop, at the FX7-1/FX7-3 merge). The form and the engine must
+// agree on when "Model name, if you know it" is on screen: the engine reads a
+// 3model answer only when q3ShowsModelQuestion says the question was asked, so
+// a form that showed it under a different rule would either lose a typed name
+// or keep a hidden one. One rule, pinned for every static Q3 option.
+describe('StructuredForm — CR7-04: one rule for the model question', () => {
+  it('TC-CR7-04e: for every Q3 option, the model question is on screen exactly when the engine would read it', async () => {
+    const { PLAIN_QUESTIONS } = await import('../plain-copy');
+    const { q3ShowsModelQuestion } = await import('../../engine/plain-intake');
+    const q3 = PLAIN_QUESTIONS.find((q) => q.id === '3')!;
+    expect(q3.options.length).toBeGreaterThan(0);
+    for (const option of q3.options) {
+      const user = userEvent.setup();
+      const { unmount } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+      await user.click(screen.getByRole('radio', { name: option.text }));
+      const shown = screen.queryByLabelText(/model name, if you know it/i) !== null;
+      expect({ key: option.key, shown }).toEqual({ key: option.key, shown: q3ShowsModelQuestion({ '3': option.key }) });
+      unmount();
+    }
+  });
+});
