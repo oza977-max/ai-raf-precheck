@@ -29,3 +29,25 @@ it('TC-CR7-05: two tabs appending in turn do not fork the chain', async () => {
   const times = all.map((e) => e.occurred_at);
   expect([...times].sort()).toEqual(times);
 });
+
+// A `blocking` close (another tab or a reset asking for the database) can land
+// while an append is between taking its handle and writing.
+it('TC-CR7-05b: an append whose database handle is closed mid-flight reopens and succeeds', async () => {
+  vi.resetModules();
+  const A = await import('./audit');
+  await A.append(mk('cr7-05b-1'));
+  const realDigest = crypto.subtle.digest.bind(crypto.subtle);
+  const spy = vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce(async (...args: Parameters<typeof realDigest>) => {
+    await new Promise<void>((resolve) => {
+      const req = indexedDB.deleteDatabase('aigate-audit'); // fires `blocking` on the open handle
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+    return realDigest(...args);
+  });
+  await expect(A.append(mk('cr7-05b-2'))).resolves.toBeUndefined();
+  spy.mockRestore();
+  const all = await A.getAllForExport();
+  expect(all.map((e) => e.event_id)).toEqual(['cr7-05b-2']);
+  expect((await A.verifyChain()).ok).toBe(true);
+});

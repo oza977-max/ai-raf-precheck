@@ -167,6 +167,8 @@ describe('PolicyEditor save (CR7-06)', () => {
     await user.paste(MINIMAL_VALID_POLICY_YAML);
     await user.click(screen.getByRole('button', { name: /^save$/i }));
     const alert = await screen.findByText(/did not finish/i);
+    // CR7-06c makes a retry safe, so the message says so
+    expect(alert.textContent).toMatch(/saving again is safe/i);
     expect(alert.closest('[role="alert"]')).not.toBeNull();
     expect(alert.textContent).not.toMatch(/disk full|Error:/);
     expect(onSaved).not.toHaveBeenCalled();
