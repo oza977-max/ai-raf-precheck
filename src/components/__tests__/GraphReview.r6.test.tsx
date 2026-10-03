@@ -15,7 +15,7 @@ import type { DataFlowGraph } from '../../engine/types';
 // questions; answers finally write back (ADR-IF-R6-3). Mock budget = 1
 // (the SDK), as always.
 
-const DESCRIPTION = 'Trains an open source model on internal credit risk data for risk analysts.';
+const DESCRIPTION = 'Trains an open source model on internal credit risk data for risk analysts, replacing no prior model.';
 
 // Quotes: data_class + data_zone genuine substrings; model_type FABRICATED
 // (not in the description); vendor empty. So: i1 fully quoted; p1 has
@@ -44,6 +44,7 @@ const MOCK_INPUT = {
         autonomy_level: 'risk analysts',
         data_zone: 'internal',
         vendor: '',
+        replaces_prior_model: 'replacing no prior model',
       },
     },
   ],

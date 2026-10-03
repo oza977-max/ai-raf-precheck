@@ -165,6 +165,13 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
+                basis_quotes: {
+                  model_type: 'deep learning image reader',
+                  autonomy_level: 'no autonomy',
+                  data_zone: 'our own systems',
+                  vendor: 'built in-house',
+                  replaces_prior_model: 'replacing no prior model',
+                },
               },
             ],
             output_nodes: [
@@ -176,6 +183,13 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
                 decision_bindingness: 'non-binding',
                 output_reversibility: 'reversible',
                 scale: 'limited',
+                basis_quotes: {
+                  action_type: 'It reads documents',
+                  exposure: 'internal only',
+                  decision_bindingness: 'non-binding',
+                  output_reversibility: 'reversible',
+                  scale: 'limited scale',
+                },
               },
             ],
             edges: [],
@@ -186,7 +200,9 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
     });
     const user = userEvent.setup();
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'No-track-match description probe.');
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), // BC-003: long enough that every quote in the mock reply is a verbatim
+      // substring of what is typed here.
+      'No-track-match description probe: a deep learning image reader built in-house, in our own systems, with no autonomy, replacing no prior model. It reads documents, internal only, non-binding, reversible, at limited scale.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('Check what we read from your description');
@@ -250,6 +266,7 @@ describe('R16-E BC-3: confirming the extractor\'s own access set writes no corre
                   autonomy_level: 'acts on its own',
                   data_zone: 'our own systems',
                   vendor: 'built in-house',
+                  replaces_prior_model: 'replaces no earlier model',
                   multi_instance_coordination: 'works alone',
                   // system_access_scope deliberately has no quote — guessed
                   // (and forced guessed anyway on an agentic node, §1).
@@ -285,7 +302,7 @@ describe('R16-E BC-3: confirming the extractor\'s own access set writes no corre
       user,
       'This in-house agent updates support tickets. It acts on its own. It works alone, with no coordination. ' +
         'It was built in-house, and runs entirely on our own systems. People can read the updates it makes. ' +
-        'Any mistake it makes can be corrected. It started as a small trial.',
+        'Any mistake it makes can be corrected. It started as a small trial. It replaces no earlier model.',
     );
 
     await screen.findByText(/what it can get into by itself/i);
@@ -325,7 +342,7 @@ describe('R16-E DR7-29: decision_type "Something else" follow-up, end to end', (
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
-                basis_quotes: { model_type: 'a model', autonomy_level: 'a person checks', data_zone: 'our own systems', vendor: 'built in-house' },
+                basis_quotes: { model_type: 'a model', autonomy_level: 'a person checks', data_zone: 'our own systems', vendor: 'built in-house', replaces_prior_model: 'replaces no earlier model' },
               },
             ],
             output_nodes: [
@@ -357,7 +374,7 @@ describe('R16-E DR7-29: decision_type "Something else" follow-up, end to end', (
     const user = userEvent.setup();
     await reachTargetedQuestion(
       user,
-      'A model flags items for review. A person checks each one. It was built in-house. It runs on our own systems.',
+      'A model flags items for review. A person checks each one. It was built in-house. It runs on our own systems. It replaces no earlier model.',
     );
 
     await screen.findByText(/which of these does it help decide/i);
@@ -397,7 +414,7 @@ describe('R16-E DR7-28: vendor "Not on this list", end to end', () => {
                 data_zone: 'Zone B',
                 vendor: 'a specialist supplier',
                 replaces_prior_model: false,
-                basis_quotes: { model_type: 'drafts text', autonomy_level: 'a person checks', data_zone: 'a specialist supplier tool', vendor: '' },
+                basis_quotes: { model_type: 'drafts text', autonomy_level: 'a person checks', data_zone: 'a specialist supplier tool', vendor: '', replaces_prior_model: 'replaces no earlier model' },
               },
             ],
             output_nodes: [
@@ -425,7 +442,7 @@ describe('R16-E DR7-28: vendor "Not on this list", end to end', () => {
       ],
     });
     const user = userEvent.setup();
-    await reachTargetedQuestion(user, 'A specialist supplier tool drafts text. A person checks each one.');
+    await reachTargetedQuestion(user, 'A specialist supplier tool drafts text. A person checks each one. It replaces no earlier model.');
 
     await screen.findByText(/which supplier is it/i);
     await user.click(screen.getByRole('button', { name: /^not on this list$/i }));
@@ -457,7 +474,7 @@ describe('R16-E: a "Not sure" answer on this path reaches the "No" screen\'s own
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
-                basis_quotes: { model_type: 'a model', autonomy_level: 'acts entirely on its own', data_zone: 'built in-house', vendor: 'built in-house' },
+                basis_quotes: { model_type: 'a model', autonomy_level: 'acts entirely on its own', data_zone: 'built in-house', vendor: 'built in-house', replaces_prior_model: 'replaces no earlier model' },
               },
             ],
             output_nodes: [
@@ -488,7 +505,7 @@ describe('R16-E: a "Not sure" answer on this path reaches the "No" screen\'s own
     await reachTargetedQuestion(
       user,
       'A model sends client updates. It acts entirely on its own. It was built in-house. Clients see these ' +
-        'updates directly, and they take effect immediately. It started as a small trial.',
+        'updates directly, and they take effect immediately. It started as a small trial. It replaces no earlier model.',
     );
 
     await screen.findByText(/can the mistake be caught and put right/i);
@@ -526,6 +543,7 @@ describe('R16-E §3: the multi-select answer reaches the graph in canonical orde
                   autonomy_level: 'acts on its own',
                   data_zone: 'our own systems',
                   vendor: 'built in-house',
+                  replaces_prior_model: 'replaces no earlier model',
                   multi_instance_coordination: 'works alone',
                 },
               },
@@ -557,7 +575,7 @@ describe('R16-E §3: the multi-select answer reaches the graph in canonical orde
     const user = userEvent.setup();
     await reachTargetedQuestion(
       user,
-      'An agent updates records. It acts on its own. It works alone. It was built in-house, and runs on our own systems, for our own team. Any mistake can be corrected.',
+      'An agent updates records. It acts on its own. It works alone. It was built in-house, and runs on our own systems, for our own team. Any mistake can be corrected. It replaces no earlier model.',
     );
 
     await screen.findByText(/what it can get into by itself/i);

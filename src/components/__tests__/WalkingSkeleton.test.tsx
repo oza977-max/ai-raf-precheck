@@ -32,6 +32,27 @@ async function confirmAllNodes(user: { click: (el: Element) => Promise<void> }) 
 // synchronous getByRole right after the loop returns can race it under load
 // (intermittent full-suite-only failure — CI flake fix, 2026-09-01).
 
+// BC-003: the mock reply carries quotes the real producer would write —
+// verbatim substrings of the description each test types (the typed text is
+// always `<unique phrase> + DETAIL`). A field with no verified quote is
+// "guessed" and becomes a question, which these flows do not expect.
+const DETAIL =
+  ' Traditional ML model, internal vendor, Zone C, no autonomy, replacing no prior model; recommends, internal only, material, reversible, limited scale.';
+const PROCESSING_QUOTES = {
+  model_type: 'traditional ML model',
+  autonomy_level: 'no autonomy',
+  data_zone: 'Zone C',
+  vendor: 'internal vendor',
+  replaces_prior_model: 'replacing no prior model',
+};
+const OUTPUT_QUOTES = {
+  action_type: 'recommends',
+  exposure: 'internal only',
+  decision_bindingness: 'material',
+  output_reversibility: 'reversible',
+  scale: 'limited scale',
+};
+
 const MOCK_GRAPH_INPUT = {
   input_nodes: [],
   processing_nodes: [
@@ -43,6 +64,7 @@ const MOCK_GRAPH_INPUT = {
       data_zone: 'Zone C',
       vendor: 'internal',
       replaces_prior_model: false,
+      basis_quotes: PROCESSING_QUOTES,
     },
   ],
   output_nodes: [
@@ -54,6 +76,7 @@ const MOCK_GRAPH_INPUT = {
       decision_bindingness: 'material',
       output_reversibility: 'reversible',
       scale: 'limited',
+      basis_quotes: OUTPUT_QUOTES,
     },
   ],
   edges: [],
@@ -85,7 +108,7 @@ describe('Walking Skeleton', () => {
 
     // Step 1: description entry
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'A tool that drafts client emails');
+    await user.type(input, 'A tool that drafts client emails for relationship managers, pulling recent meeting notes, pending requests, preferred greeting style, signature blocks, and followup reminders into a polished first draft' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
 
@@ -310,6 +333,7 @@ describe('Walking Skeleton', () => {
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
+                basis_quotes: PROCESSING_QUOTES,
               },
             ],
             output_nodes: [
@@ -321,6 +345,7 @@ describe('Walking Skeleton', () => {
                 decision_bindingness: 'material',
                 output_reversibility: 'reversible',
                 scale: 'limited',
+                basis_quotes: OUTPUT_QUOTES,
               },
             ],
             edges: [],
@@ -334,7 +359,7 @@ describe('Walking Skeleton', () => {
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Audit ordering check');
+    await user.type(input, 'Audit ordering check: verifies that confirmation events precede verdict events, replaying sequence numbers, timestamps, writer identities, and tie breaking behaviour across rapid consecutive submissions' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
@@ -397,6 +422,7 @@ describe('Walking Skeleton', () => {
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
+                basis_quotes: PROCESSING_QUOTES,
               },
             ],
             output_nodes: [
@@ -408,6 +434,7 @@ describe('Walking Skeleton', () => {
                 decision_bindingness: 'material',
                 output_reversibility: 'reversible',
                 scale: 'limited',
+                basis_quotes: OUTPUT_QUOTES,
               },
             ],
             edges: [{ from: 'p1', to: 'o1' }],
@@ -420,7 +447,7 @@ describe('Walking Skeleton', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Double click guard');
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Double click guard: protects the confirm button against impatient repeated presses, suppressing duplicate submissions, stray keyboard activations, and bouncing touchscreen taps during slow renders' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
@@ -466,6 +493,7 @@ describe('Walking Skeleton', () => {
                 data_zone: 'Zone C',
                 vendor: 'internal',
                 replaces_prior_model: false,
+                basis_quotes: PROCESSING_QUOTES,
               },
             ],
             output_nodes: [
@@ -477,6 +505,7 @@ describe('Walking Skeleton', () => {
                 decision_bindingness: 'material',
                 output_reversibility: 'reversible',
                 scale: 'limited',
+                basis_quotes: OUTPUT_QUOTES,
               },
             ],
             edges: [],
@@ -490,7 +519,7 @@ describe('Walking Skeleton', () => {
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Correction survival check');
+    await user.type(input, 'Correction survival check: carries a reviewer edited field through questionnaire, attestation, persistence, and ledger entry without losing that human override anywhere downstream' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
@@ -535,6 +564,7 @@ describe('Walking Skeleton', () => {
           data_zone: 'Zone C',
           vendor: 'internal',
           replaces_prior_model: false,
+          basis_quotes: PROCESSING_QUOTES,
         },
       ],
       output_nodes: [
@@ -546,6 +576,7 @@ describe('Walking Skeleton', () => {
           decision_bindingness: 'material',
           output_reversibility: 'reversible',
           scale: 'limited',
+          basis_quotes: OUTPUT_QUOTES,
         },
       ],
       edges: [],
@@ -560,7 +591,7 @@ describe('Walking Skeleton', () => {
 
     // First pass: reach a verdict normally.
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Quartz xylophone probe intake');
+    await user.type(input, 'Quartz xylophone probe intake: calibrates resonant percussion sensors, logging amplitude drift, harmonic distortion, bar temperature, mallet hardness, and tuning fork reference offsets nightly' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
@@ -767,7 +798,7 @@ describe('Walking Skeleton', () => {
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy');
+    await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy: projects pipe fitting, valve, gasket, solder, flange, and copper elbow stock levels per warehouse, seasonal demand, supplier lead times, and reorder cadence' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(/check what we read from your description/i)).toBeInTheDocument();

@@ -622,7 +622,7 @@ describe('R16-F review pass 3: a failed-check message does not outlive the attem
         resolutionNotes: [],
         useCaseId,
         plainAnswers: {
-          '1': 'Stale message probe', '2': 'A tool whose record check fails once.', '3': 'firm-built', '4': 'llm',
+          '1': 'Stale message probe', '2': 'A tool whose record check fails once.', '3': 'firm-built', '4': 'language',
           '5': ['everyday'], '6': 'read', '7': 'me-or-team', '8': 'operational', '9': 'yes',
           '10': 'small', '11': ['elsewhere-not-sure'], '12': 'no',
         },

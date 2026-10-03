@@ -172,7 +172,7 @@ describe('R5-GR-2 — the confirm gate (reducer)', () => {
 // ——— Flow-level: gate message and jurisdiction hygiene, SDK mocked ———
 
 const MOCK_GRAPH_INPUT = {
-  input_nodes: [{ id: 'i1', label: 'credit risk data', data_class: 'Client PII', data_zone: 'Zone C' }],
+  input_nodes: [{ id: 'i1', label: 'credit risk data', data_class: 'Client PII', data_zone: 'Zone C', basis_quotes: { data_class: 'client PII', data_zone: 'Zone C' } }],
   processing_nodes: [
     {
       id: 'p1',
@@ -182,6 +182,13 @@ const MOCK_GRAPH_INPUT = {
       data_zone: 'Zone C',
       vendor: 'open source',
       replaces_prior_model: false,
+      basis_quotes: {
+        model_type: 'large language model',
+        autonomy_level: 'supervised autonomy',
+        data_zone: 'Zone C',
+        vendor: 'open source',
+        replaces_prior_model: 'replaces no prior model',
+      },
     },
   ],
   output_nodes: [
@@ -193,6 +200,13 @@ const MOCK_GRAPH_INPUT = {
       decision_bindingness: 'advisory',
       output_reversibility: 'reversible',
       scale: 'limited',
+      basis_quotes: {
+        action_type: 'recommends',
+        exposure: 'internal-only',
+        decision_bindingness: 'advisory',
+        output_reversibility: 'reversible',
+        scale: 'limited scale',
+      },
     },
   ],
   edges: [
@@ -217,7 +231,9 @@ async function reachGraphReview(user: ReturnType<typeof userEvent.setup>) {
   render(<IntakeFlow />);
   await user.type(
     screen.getByLabelText(/what ai tool do you want to use/i),
-    'Trains an open source model on internal credit risk data.',
+    // BC-003: long enough that every quote in MOCK_GRAPH_INPUT.basis_quotes is
+    // a verbatim substring of what is typed here.
+    'Trains an open source model on internal credit risk data containing client PII. It is a large language model with supervised autonomy, running in Zone C, and it recommends advisory, reversible, internal-only answers at limited scale; it replaces no prior model.',
   );
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));

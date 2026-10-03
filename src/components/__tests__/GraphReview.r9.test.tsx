@@ -18,7 +18,8 @@ const MOCK_INPUT = {
     {
       id: 'p1', label: 'training pipeline', model_type: 'llm', autonomy_level: 2,
       data_zone: 'Zone C', vendor: 'open source', replaces_prior_model: false, uncertain: true,
-      basis_quotes: { model_type: '', autonomy_level: 'analysts', data_zone: 'internal', vendor: '' },
+      basis_quotes: { model_type: '', autonomy_level: 'analysts', data_zone: 'internal', vendor: '',
+        replaces_prior_model: 'replacing no prior model' },
     },
   ],
   output_nodes: [
@@ -44,7 +45,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }));
 
-const DESCRIPTION = 'Analysts ask questions about internal credit risk data.';
+const DESCRIPTION = 'Analysts ask questions about internal credit risk data, replacing no prior model.';
 
 async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   render(<IntakeFlow />);
