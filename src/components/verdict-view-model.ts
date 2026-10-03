@@ -630,8 +630,8 @@ function headlineText(status: Verdict['status'], needsSignOff: boolean, n: numbe
   if (signOffUnknown) {
     // CR8-02 (P4): whether a sign-off is required is not known on this screen — say nothing permissive.
     if (n === 0) return "We can't tell from this screen whether your AI risk team must sign this off — confirm with them before you start.";
-    if (n === 1) return "Not confirmed. We can't tell whether your AI risk team must sign this off, and 1 safeguard is still to put in place.";
-    return `Not confirmed. We can't tell whether your AI risk team must sign this off, and ${n} safeguards are still to put in place.`;
+    if (n === 1) return "Not yet confirmed. We can't tell whether your AI risk team must sign this off, and 1 safeguard is still to put in place.";
+    return `Not yet confirmed. We can't tell whether your AI risk team must sign this off, and ${n} safeguards are still to put in place.`;
   }
   if (n === 0) return 'Yes — you can start.';
   if (n === 1) return 'Nearly. You can start once 1 safeguard is in place — no sign-off needed.';
@@ -941,6 +941,10 @@ function buildNoScreen(
  *  readers that need a safeguard's status (WhatToDo, SignOffChecklist, the
  *  evidence panel, and the first screen itself). Pure: same inputs, same
  *  output, every time (NF-1's discipline extended to presentation). */
+// Review pass 1, M-2: the permissive self-service reading is only made at the stages a self-service case
+// actually occupies. At idea / exploring / retired nothing is claimed.
+const SELF_SERVICE_READABLE_STAGES: ReadonlySet<LifecycleStage> = new Set<LifecycleStage>(['approved', 'in_production', 'monitored']);
+
 export function buildVerdictView(
   verdict: Verdict,
   policy: PolicyFile | undefined,
@@ -973,7 +977,7 @@ export function buildVerdictView(
   // policy whose tier_workflow routes this tier to self-service. No stage, or no valid policy, and no approving
   // review: unknown, and every surface stays non-permissive. (The intake result has no stage until the save
   // lands, so a genuine self-service case reads cautiously for that moment — accepted.)
-  const signOffUnknown = !signOffRequired && !signedOff && (stage === undefined || policy?.tier_workflow === undefined);
+  const signOffUnknown = !signOffRequired && !signedOff && (stage === undefined || policy?.tier_workflow === undefined || !SELF_SERVICE_READABLE_STAGES.has(stage));
 
   // Rejected verdicts carry no safeguards, next steps or could-still-change
   // lines from THIS view-model — the headline still covers the rejected

@@ -159,9 +159,12 @@ function reviewWords(review: string, verdict: Verdict, policy: PolicyFile | unde
   const lead = 'Model governance review required — ';
   if (entry === undefined) return `${lead}${id} is not on your firm's model list`;
   const name = (entry.is_family ? entry.plain_name?.trim() || id : approvedModelBaseLabelFor(policy.approved_models, id)) ?? id;
-  // A listed model with is_approved true here is a family whose re-attestation date has lapsed
-  // (the engine applies that expiry when it evaluates) — say so rather than "not yet accepted".
-  return entry.is_approved === false ? `${lead}${name} is listed but not yet accepted by your firm` : `${lead}${name} is listed but your firm's acceptance of it is not current`;
+  // Review pass 1, I-1: this screen gets TODAY's policy, not the one the verdict was evaluated with.
+  // Only an exact entry that still reads not-accepted can honestly say "not yet accepted"; a family
+  // (it may have lapsed at evaluation) or an entry that reads accepted now gets wording that is always true.
+  return !entry.is_family && entry.is_approved === false
+    ? `${lead}${name} is listed but not yet accepted by your firm`
+    : `${lead}${name} is on your firm's model list, but a model review was required when this was checked`;
 }
 
 // CR7-09 / BC-005. The 'approved' stage is reached by self-service AND by a
