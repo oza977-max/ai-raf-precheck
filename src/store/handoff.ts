@@ -202,6 +202,51 @@ const graphCorrectionSchema = z
     corrected_by: z.string(),
     corrected_at: z.string(),
     reason: z.string().optional(),
+    // R16-D2 §5 (CB-4): which screen produced this correction. Optional —
+    // every pre-D2 correction predates it.
+    correction_source: z.enum(['form', 'review', 'question']).optional(),
+  })
+  .passthrough();
+
+// R16-D2 §1/§4 (D-95, DR7-19, EB-2/EC-5). The §1 Assumption shape, as
+// persisted on graph_confirmed/verdict_corrected. `questionId` is a known
+// form QuestionId OR a questionnaire field reference ('field:<graph
+// field>', R16-E, not yet built — the import schema accepts the shape
+// this chunk defines, not only the values this chunk's own UI produces).
+// `fields` is an array of known graph field names — the same vocabulary
+// condition.ts's collectFieldValues reads. The three free-text strings
+// are bounded (non-empty, <=500 chars) so an oversized or empty field is
+// rejected rather than rendering a blank/runaway reviewer line.
+const ASSUMPTION_QUESTION_IDS = [
+  '1', '2', '3', '3supplier', '3supplierName', '3model', '3a', '3aWhich', '3platformZone',
+  '4', '4a', '5', '6', '6a', '6b', '7', '8', '8other', '9', '10', '11', '12', '13', '14',
+] as const;
+const ASSUMPTION_GRAPH_FIELDS = [
+  'data_class', 'data_zone', 'model_type', 'autonomy_level', 'vendor', 'platform',
+  'declared_model_id', 'replaces_prior_model', 'system_access_scope',
+  'multi_instance_coordination', 'action_type', 'exposure', 'decision_bindingness',
+  'output_reversibility', 'scale', 'decision_type', 'decision_type_other', 'hitl',
+  'jurisdictions',
+] as const;
+const boundedText = (max: number) => z.string().min(1).max(max);
+const assumptionSchema = z
+  .object({
+    questionId: z.union([z.enum(ASSUMPTION_QUESTION_IDS), z.string().regex(/^field:[a-z_]+$/)]),
+    question: boundedText(500),
+    shortLabel: boundedText(500),
+    assumption: boundedText(500),
+    fields: z.array(z.enum(ASSUMPTION_GRAPH_FIELDS)),
+  })
+  .passthrough();
+
+// R16-D2 §4b (D-97). The processing node's platform/vendor at evaluation,
+// carried beside the verdict. Both optional — written spread-if-present
+// (absent entirely when the processing node declared neither); each
+// string bounded like the assumption strings above, for the same reason.
+const evidenceScopeSchema = z
+  .object({
+    platform: boundedText(200).optional(),
+    vendor: boundedText(200).optional(),
   })
   .passthrough();
 
@@ -245,12 +290,16 @@ const auditPayloadSchema = z.discriminatedUnion('type', [
     submitter_note: z.string().optional(),
     contradiction_resolutions: z.array(z.string()).optional(),
     answer_contexts: z.array(z.string()).optional(),
+    // R16-D2 §1/§4 (D-95, D-81): see assumptionSchema's own comment above.
+    assumptions: z.array(assumptionSchema).optional(),
   }).passthrough(),
   z.object({
     type: z.literal('verdict_produced'),
     verdict: verdictSchema,
     reasoning_trace: z.string().optional(),
     knowledge_lens_matched_entry_ids: z.array(z.string()).optional(),
+    // R16-D2 §4b (D-97): see evidenceScopeSchema's own comment above.
+    evidence_scope: evidenceScopeSchema.optional(),
   }).passthrough(),
   z.object({
     type: z.literal('graph_corrected'),
@@ -266,6 +315,12 @@ const auditPayloadSchema = z.discriminatedUnion('type', [
     submitter_note: z.string().optional(),
     contradiction_resolutions: z.array(z.string()).optional(),
     answer_contexts: z.array(z.string()).optional(),
+    // R16-D2 §1/§4/§4b/§8: same fields as graph_confirmed/verdict_produced
+    // above, plus how many graph_corrected events this pass wrote
+    // (F2C-6's zero-correction "Re-checked" rendering).
+    assumptions: z.array(assumptionSchema).optional(),
+    evidence_scope: evidenceScopeSchema.optional(),
+    corrections_count: z.number().optional(),
   }).passthrough(),
   z.object({
     type: z.literal('lifecycle_stage_changed'),

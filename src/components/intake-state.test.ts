@@ -599,7 +599,7 @@ describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-
       useCaseId: 'uc-1',
       description: 'A form-built tool.',
       plainAnswers: { '1': 'Tool name', '2': 'A form-built tool.' },
-      assumptions: [{ questionId: '9', question: 'q?', assumption: 'a' }],
+      assumptions: [{ questionId: '9', question: 'q?', shortLabel: 'q?', assumption: 'a', fields: ['output_reversibility'] }],
     };
     expect(intakeReducer(state, { type: 'EVALUATION_FAILED' })).toEqual({
       step: 'graph_extraction',
@@ -607,7 +607,33 @@ describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-
       method: 'form',
       useCaseId: 'uc-1',
       plainAnswers: { '1': 'Tool name', '2': 'A form-built tool.' },
-      assumptions: [{ questionId: '9', question: 'q?', assumption: 'a' }],
+      assumptions: [{ questionId: '9', question: 'q?', shortLabel: 'q?', assumption: 'a', fields: ['output_reversibility'] }],
+    });
+  });
+
+  // R16-D2 §5 (v2.1). Before this fix, a form-path EVALUATION_FAILED during
+  // a CORRECTION dropped originalVerdictId/originalGraph — the re-confirm
+  // then ran as a fresh confirm and the F-1 precondition refused it as
+  // "already has a result" (safe, but a dead end).
+  it('TC-R16-D2-52: a form-path EVALUATION_FAILED during a CORRECTION carries originalVerdictId and originalGraph back to the form', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const original = graph({ intake_method: 'structured_form', version: 1 });
+    const state: IntakeState = {
+      step: 'evaluation_pending',
+      graph: g,
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
+      description: 'A form-built tool.',
+      plainAnswers: { '1': 'Tool name' },
+      assumptions: [],
+    };
+    const next = intakeReducer(state, { type: 'EVALUATION_FAILED' });
+    expect(next).toMatchObject({
+      step: 'graph_extraction',
+      method: 'form',
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
     });
   });
 
@@ -734,7 +760,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
     ...overrides,
   });
   const plainAnswers = { '1': 'Test tool' };
-  const assumptions = [{ questionId: '9' as const, question: 'Q?', assumption: 'a' }];
+  const assumptions = [{ questionId: '9' as const, question: 'Q?', shortLabel: 'Q?', assumption: 'a', fields: ['output_reversibility'] }];
 
   it('TC-R16-W-18: is refused from any step other than graph_extraction(form)', () => {
     const llmState: IntakeState = { step: 'graph_extraction', description: 'd', method: 'llm' };
@@ -747,6 +773,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       assumptions,
       questions: [],
       contradictions: [],
+      corrections: [],
     });
     expect(next).toBe(llmState);
   });
@@ -765,6 +792,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       assumptions,
       questions,
       contradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+      corrections: [],
     });
     expect(next).toEqual({
       step: 'questionnaire',
@@ -792,6 +820,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       assumptions,
       questions: [],
       contradictions,
+      corrections: [],
     });
     expect(next).toEqual({
       step: 'contradiction_review',
@@ -819,6 +848,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       assumptions,
       questions: [],
       contradictions: [],
+      corrections: [],
     });
     expect(next).toEqual({
       step: 'confirmation',
@@ -838,7 +868,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
 describe('intakeReducer — plainAnswers/assumptions carry through the form path (R16-W W-4, D-70)', () => {
   const g = graph({ intake_method: 'structured_form' });
   const plainAnswers = { '1': 'Test tool' };
-  const assumptions = [{ questionId: '9' as const, question: 'Q?', assumption: 'a' }];
+  const assumptions = [{ questionId: '9' as const, question: 'Q?', shortLabel: 'Q?', assumption: 'a', fields: ['output_reversibility'] }];
   const questionnaireState = (): IntakeState => ({
     step: 'questionnaire',
     description: 'd',
@@ -861,6 +891,35 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
       useCaseId: 'uc-1',
       plainAnswers,
       assumptions,
+    });
+  });
+
+  // R16-D2 §5 (judgment call beyond the contract's explicit v2.1 list:
+  // CHANGE_ANSWER/EVALUATION_FAILED are named there, but STEP_BACK from
+  // questionnaire is the SAME "orphaned correction" hazard reached by a
+  // different control — fixed for the identical reason).
+  it('TC-R16-D2-53: STEP_BACK from questionnaire during a CORRECTION carries originalVerdictId and originalGraph back to the form too', () => {
+    const original = graph({ intake_method: 'structured_form', version: 1 });
+    const correctionState: IntakeState = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: g,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
+    };
+    const next = intakeReducer(correctionState, { type: 'STEP_BACK' });
+    expect(next).toMatchObject({
+      step: 'graph_extraction',
+      method: 'form',
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
     });
   });
 
@@ -937,6 +996,75 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
       assumptions,
     });
   });
+
+  // R16-D2 §5 (v2.1's documented fix — see the handover's "Known, carried
+  // forward" note for the dead end this closes).
+  it('TC-R16-D2-54: CHANGE_ANSWER from confirmation during a CORRECTION carries originalVerdictId and originalGraph back to the form', () => {
+    const original = graph({ intake_method: 'structured_form', version: 1 });
+    const confirmationState: IntakeState = {
+      step: 'confirmation',
+      description: 'd',
+      graph: g,
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers,
+      assumptions,
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
+    };
+    const next = intakeReducer(confirmationState, { type: 'CHANGE_ANSWER' });
+    expect(next).toMatchObject({
+      step: 'graph_extraction',
+      method: 'form',
+      originalVerdictId: 'v-being-corrected',
+      originalGraph: original,
+    });
+  });
+});
+
+// R16-D2 §5 (D-82, DR7-17). The form-path counterpart to CORRECT_VERDICT.
+describe('intakeReducer — CORRECT_VERDICT_WITH_FORM (R16-D2 §5, D-82)', () => {
+  it('TC-R16-D2-55: from the verdict step, enters graph_extraction(form) carrying originalVerdictId, originalGraph, and the last-confirmed plainAnswers/assumptions', () => {
+    const original = graph({ intake_method: 'structured_form', version: 3 });
+    const state: IntakeState = { step: 'verdict', verdictId: 'uc-1' };
+    const assumption = { questionId: '9', question: 'q?', shortLabel: 'q?', assumption: 'a', fields: ['output_reversibility'] };
+    const next = intakeReducer(state, {
+      type: 'CORRECT_VERDICT_WITH_FORM',
+      originalGraph: original,
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-1',
+      description: 'The confirmed description.',
+      plainAnswers: { '1': 'Tool' },
+      assumptions: [assumption],
+    });
+    expect(next).toEqual({
+      step: 'graph_extraction',
+      description: 'The confirmed description.',
+      method: 'form',
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'Tool' },
+      assumptions: [assumption],
+      originalVerdictId: 'v-1',
+      originalGraph: original,
+    });
+  });
+
+  it('TC-R16-D2-56: is refused from any step other than verdict', () => {
+    const state: IntakeState = { step: 'description_entry', description: 'd' };
+    const next = intakeReducer(state, {
+      type: 'CORRECT_VERDICT_WITH_FORM',
+      originalGraph: graph(),
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-1',
+      description: 'd',
+      plainAnswers: {},
+      assumptions: [],
+    });
+    expect(next).toBe(state);
+  });
 });
 
 // v0.7.1 — the questionnaire's two new reducer guarantees.
@@ -977,5 +1105,82 @@ describe('intakeReducer — v0.7.1 questionnaire guards', () => {
     expect(undone.step === 'questionnaire' && undone.corrections).toHaveLength(0);
     // Once: a second undo with no snapshot changes nothing.
     expect(intakeReducer(undone, { type: 'ANSWER_UNDONE' })).toBe(undone);
+  });
+});
+
+// Found verifying R16-D2: the contract's "never to an empty form" guard was
+// not built. A correction that came through the REVIEW screen (CORRECT_VERDICT
+// — no form answers, no original graph) of a form-built case used to go back
+// to an EMPTY form; resubmitting it would rebuild the case from blank answers
+// and, with no original graph to diff against, record "no answers changed".
+describe('R16-D2 §5 (v2.1): a correction without its form answers never returns to an empty form', () => {
+  const formBuilt = graph({ intake_method: 'structured_form', version: 2 });
+
+  it('TC-R16-D2-59: "Change an answer" in a review-screen correction of a form-built case returns to the review screen, keeping the correction', () => {
+    const state: IntakeState = {
+      step: 'confirmation',
+      description: 'A form-built tool.',
+      graph: formBuilt,
+      graphVersion: 2,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-being-corrected',
+    };
+    expect(intakeReducer(state, { type: 'CHANGE_ANSWER' })).toMatchObject({
+      step: 'graph_review',
+      originalVerdictId: 'v-being-corrected',
+      useCaseId: 'uc-1',
+    });
+  });
+
+  it('TC-R16-D2-60: an evaluation failure in a review-screen correction of a form-built case returns to the review screen, keeping the correction', () => {
+    const state: IntakeState = {
+      step: 'evaluation_pending',
+      graph: formBuilt,
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-being-corrected',
+      description: 'A form-built tool.',
+    };
+    expect(intakeReducer(state, { type: 'EVALUATION_FAILED' })).toMatchObject({
+      step: 'graph_review',
+      originalVerdictId: 'v-being-corrected',
+      afterFailedEvaluation: true,
+    });
+  });
+
+  it('TC-R16-D2-61: Back from the questions in a review-screen correction of a form-built case returns to the review screen, keeping the correction', () => {
+    const state: IntakeState = {
+      step: 'questionnaire',
+      description: 'A form-built tool.',
+      graph: formBuilt,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-being-corrected',
+    };
+    expect(intakeReducer(state, { type: 'STEP_BACK' })).toMatchObject({
+      step: 'graph_review',
+      originalVerdictId: 'v-being-corrected',
+    });
+  });
+
+  it('a fresh form-built case (no correction) still returns to the form, as before', () => {
+    const state: IntakeState = {
+      step: 'confirmation',
+      description: 'A form-built tool.',
+      graph: formBuilt,
+      graphVersion: 2,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'Tool name' },
+      assumptions: [],
+    };
+    expect(intakeReducer(state, { type: 'CHANGE_ANSWER' })).toMatchObject({ step: 'graph_extraction', method: 'form' });
   });
 });

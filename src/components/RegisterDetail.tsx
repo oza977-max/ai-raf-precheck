@@ -3,8 +3,10 @@ import { getUseCase, updateLifecycleStage, findLatestVerdictEvent } from '../sto
 import { getAll as getAuditEvents, append as appendAuditEvent, verifyChain } from '../store/audit';
 import type { ChainVerification } from '../store/audit';
 import VerdictDisplay from './VerdictDisplay';
-import type { AuditEvent, UseCaseSummary } from '../store/types';
+import type { AssumptionRecord, AuditEvent, UseCaseSummary } from '../store/types';
 import type { PolicyFile } from '../engine/types';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
 import type { Verdict } from '../types/verdict';
 import { TIER_MEANINGS, TRACK_MEANINGS, STAGE_LABELS, ACTION_LABEL, STATUS_LABEL } from './field-copy';
 import { findRuleDescription } from '../engine/find-rule-description';
@@ -44,7 +46,7 @@ export function eventDetail(event: AuditEvent): string {
     case 'use_case_created':
       return `${p.description} (intake: ${p.intake_method})`;
     case 'graph_confirmed':
-      return `Attested. Graph v${p.graph_version}, ${p.corrections_count} correction${p.corrections_count === 1 ? '' : 's'}.${
+      return `Attested. Graph v${p.graph_version}, ${p.corrections_count} correction${p.corrections_count === 1 ? '' : 's'}.${assumptionsCountClause(p.assumptions)}${
         p.contradiction_resolutions && p.contradiction_resolutions.length > 0
           ? ` ${p.contradiction_resolutions.length} contradiction${p.contradiction_resolutions.length === 1 ? '' : 's'} resolved: ${p.contradiction_resolutions.map((n) => `“${n}”`).join(' · ')}`
           : ''
@@ -56,9 +58,13 @@ export function eventDetail(event: AuditEvent): string {
         p.verdict.binding_constraint ? ` Binding: ${p.verdict.binding_constraint}.` : ''
       } Policy v${p.verdict.policy_version}.`;
     case 'verdict_corrected':
-      return `${STATUS_LABEL[p.new_verdict.status] ?? p.new_verdict.status} · ${p.new_verdict.tier} · Track ${
-        p.new_verdict.track
-      }. Supersedes verdict ${p.original_verdict_id.slice(0, 8)}…`;
+      // R16-D2 §8 (F2C-6): a zero-correction resubmission wrote no
+      // graph_corrected events — say so, rather than let the status line
+      // alone imply something had changed. `=== 0`, never `!p.corrections_count`:
+      // a pre-D2 event lacking the field is honestly unknown, not zero.
+      return `${p.corrections_count === 0 ? 'Re-checked — no answers changed. ' : ''}${
+        STATUS_LABEL[p.new_verdict.status] ?? p.new_verdict.status
+      } · ${p.new_verdict.tier} · Track ${p.new_verdict.track}. Supersedes verdict ${p.original_verdict_id.slice(0, 8)}…${assumptionsCountClause(p.assumptions)}`;
     case 'lifecycle_stage_changed':
       // design-review-003 (Panel B): this used to print the raw enum
       // ("pre_checked → approved") while the stage chip two sections above,
@@ -111,6 +117,16 @@ function unrecognisedEventLine(type: unknown): string {
   return `Unrecognised event type “${String(type)}” — it is on the record, but this version of Counterpoise can’t display it.`;
 }
 
+// R16-D2 §4 (D-81). Shared by graph_confirmed and verdict_corrected's own
+// eventDetail lines — a count of how many of this attestation's own
+// answers were "Not sure", shown only when present and non-empty (an
+// older event, or one with no assumptions at all, adds nothing).
+function assumptionsCountClause(assumptions: AssumptionRecord[] | undefined): string {
+  if (!assumptions || assumptions.length === 0) return '';
+  const n = assumptions.length;
+  return ` ${n} answer${n === 1 ? '' : 's'} ${n === 1 ? 'was' : 'were'} “Not sure”.`;
+}
+
 // F-4 (DR7-12, DR7-16). Before this, only the first attestation
 // (graph_confirmed) ever wrote submitter_note/contradiction_resolutions/
 // answer_contexts, and this page read them only from that same event — so
@@ -127,6 +143,10 @@ export function currentVerdictAttestationFields(events: AuditEvent[]): {
   submitter_note?: string;
   contradiction_resolutions?: string[];
   answer_contexts?: string[];
+  // R16-D2 §4 (D-81, DR7-16): added through this SAME helper, as the
+  // comment above already anticipated — the case's "Not sure" answers,
+  // read from whichever event recorded the CURRENT verdict.
+  assumptions?: AssumptionRecord[];
 } {
   const reversed = [...events].reverse();
   const latestCorrection = reversed.find((e) => e.payload.type === 'verdict_corrected');
@@ -136,6 +156,7 @@ export function currentVerdictAttestationFields(events: AuditEvent[]): {
       submitter_note: p.submitter_note,
       contradiction_resolutions: p.contradiction_resolutions,
       answer_contexts: p.answer_contexts,
+      assumptions: p.assumptions,
     };
   }
   const confirmed = reversed.find((e) => e.payload.type === 'graph_confirmed');
@@ -145,6 +166,7 @@ export function currentVerdictAttestationFields(events: AuditEvent[]): {
       submitter_note: p.submitter_note,
       contradiction_resolutions: p.contradiction_resolutions,
       answer_contexts: p.answer_contexts,
+      assumptions: p.assumptions,
     };
   }
   return {};
@@ -202,6 +224,32 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
     if (!payload) return null;
     return payload.type === 'verdict_produced' ? payload.verdict : payload.new_verdict;
   }, [events]);
+
+  // R16-D2 §4b (D-97, W-7). Read from the SAME event findLatestVerdictEvent
+  // already resolves above — the register's own substitute for `graph`
+  // (not persisted on the register entry), so a scoped "already verified"
+  // safeguard can still be told from an outstanding one here, agreeing
+  // with what the intake result screen showed. Absent on a legacy event,
+  // which renders the honest "we couldn't check" note, same as today.
+  const evidenceScope = useMemo(() => {
+    const payload = findLatestVerdictEvent(events);
+    return payload?.evidence_scope;
+  }, [events]);
+
+  // R16-D2 §2/§8. Loaded independently of `policy` (a prop, owned by
+  // App.tsx) the same way IntakeFlow.tsx loads its own copy — packs are
+  // needed only to resolve a pack hard line's plain_reason/plain_change
+  // and jurisdiction name on a "No" screen, never to re-decide anything
+  // evaluate() already settled.
+  const loadedPacks = useMemo(() => loadPacks(getPackSources()).packs, []);
+
+  // R16-D2 §6 (DR7-09, D2 part). How many times this case has been
+  // corrected — every version stays in the record below; this just makes
+  // repeated re-answering visible to the person who signs off.
+  const correctionCount = useMemo(
+    () => events.filter((e) => e.payload.type === 'verdict_corrected').length,
+    [events],
+  );
 
   // The rules a challenge can point at: the ones THIS verdict relied on,
   // read from its own explanation — never recomputed against today's policy
@@ -1025,6 +1073,13 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
               below keeps every prior assignment; reassign if still current.
             </p>
           )}
+          {/* R16-D2 §6 (DR7-09, D2 part). */}
+          {correctionCount > 0 && (
+            <p className="register-detail__correction-count" role="note">
+              Corrected {correctionCount} time{correctionCount === 1 ? '' : 's'} by the submitter — each
+              version is in the record below.
+            </p>
+          )}
           <VerdictDisplay
             verdict={latestVerdict}
             auditEvents={events}
@@ -1033,6 +1088,14 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             memoLabel={summary.label}
             memoDescription={summary.description}
             knowledgeLensMatches={knowledgeLensMatches}
+            // R16-D2 §2/§3/§4b: this case's own assumptions (read through
+            // currentVerdictAttestationFields, the same correction-aware
+            // precedence F-4 already established), the loaded packs, and
+            // the persisted evidence_scope — RegisterDetail never passes
+            // `graph` (ADR-RL-R3-1), so these are its substitutes.
+            assumptions={currentVerdictAttestationFields(events).assumptions}
+            packs={loadedPacks}
+            evidenceScope={evidenceScope}
             // R15-C2 (proposal §3.1, S2): same condition the action bar
             // below already renders on — 2LoD role, stage awaiting sign-off.
             showSignOffChecklist={showActionBar}

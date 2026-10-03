@@ -17,18 +17,20 @@ describe('describeAssumptions', () => {
 
   it('TC-R16-F-04: a generic reference resolves to the exact worded assumption and question text (moved from plain-intake.test.ts)', () => {
     const refs: AssumptionRef[] = [
-      { questionId: '4', optionKey: 'not-sure' },
-      { questionId: '6', optionKey: 'not-sure' },
-      { questionId: '7', optionKey: 'not-sure' },
-      { questionId: '9', optionKey: 'not-sure' },
+      { questionId: '4', optionKey: 'not-sure', fields: ['model_type'] },
+      { questionId: '6', optionKey: 'not-sure', fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'] },
+      { questionId: '7', optionKey: 'not-sure', fields: ['exposure'] },
+      { questionId: '9', optionKey: 'not-sure', fields: ['output_reversibility'] },
     ];
     const out = describeAssumptions(refs);
     expect(out).toHaveLength(4);
     expect(out[0]).toEqual({
       questionId: '4',
       question: 'What kind of AI is it? If more than one fits — for example, something that turns speech into text and writes a summary of it — pick the one nearest the bottom of this list.',
+      shortLabel: 'what kind of AI it is',
       assumption:
         'an AI agent that can work on its own — the strictest case, because agents need the most safeguards. Change it if you can.',
+      fields: ['model_type'],
     });
     expect(out[1]!.assumption).toBe(
       'it acts entirely by itself with no person involved at any point — the strictest case. This changes the result a lot; change it if you can.',
@@ -41,30 +43,36 @@ describe('describeAssumptions', () => {
   it('TC-R16-F-05: a reference with no ASSUMPTION_TEXT entry is dropped silently, same as makeAssumption()', () => {
     // '4':'score' is a real question/option, but not a "Not sure" one —
     // no assumption text exists for it.
-    const out = describeAssumptions([{ questionId: '4', optionKey: 'score' }]);
+    const out = describeAssumptions([{ questionId: '4', optionKey: 'score', fields: ['model_type'] }]);
     expect(out).toEqual([]);
   });
 
   it('TC-R16-F-06: the 3platformZone case with earliestZone Zone B resolves to the "outside supplier" sentence', () => {
-    const out = describeAssumptions([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' }]);
+    const out = describeAssumptions([
+      { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B', fields: ['data_zone'] },
+    ]);
     expect(out).toEqual([
       {
         questionId: '3platformZone',
         question: 'Does your information stay on your firm’s own systems the whole time?',
+        shortLabel: 'whether your information stays on your firm’s systems',
         assumption: 'it may pass your information to an outside supplier — the stricter case.',
+        fields: ['data_zone'],
       },
     ]);
   });
 
   it('TC-R16-F-07: the 3platformZone case with earliestZone Zone A resolves to the "outside website or service" sentence', () => {
-    const out = describeAssumptions([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone A' }]);
+    const out = describeAssumptions([
+      { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone A', fields: ['data_zone'] },
+    ]);
     expect(out[0]!.assumption).toBe('an outside website or service — the strictest case.');
   });
 
   it('a mix of generic and platform-zone references resolves each correctly, in order', () => {
     const out = describeAssumptions([
-      { questionId: '9', optionKey: 'not-sure' },
-      { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' },
+      { questionId: '9', optionKey: 'not-sure', fields: ['output_reversibility'] },
+      { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B', fields: ['data_zone'] },
     ]);
     expect(out.map((a) => a.questionId)).toEqual(['9', '3platformZone']);
   });

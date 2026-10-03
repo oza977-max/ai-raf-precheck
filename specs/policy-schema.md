@@ -1022,6 +1022,13 @@ type PackRuleEffect =
   | { type: 'required_review'; review: string; plain_name?: string; plain_owner?: string }
   | ...;
 
+// Amended 2026-10-03 (R16-D2 §2, DR7-20). The hard_line variant gains the
+// identical pair HardLine already has above — why the answer is no, and
+// what would change it. Both optional; absent falls back to `reason` +
+// the §4.4 pointer line (verdict-audit.md §5.9 renders the fallback).
+type PackRuleEffectHardLine =
+  { type: 'hard_line'; reason: string; plain_reason?: string; plain_change?: string };
+
 // RegistryEntry backs BOTH platforms[] and vendors[]:
 interface RegistryEntry {
   // ...existing fields unchanged...
@@ -1079,6 +1086,13 @@ Warnings (shown to the reviewer, never blocking): an unknown placeholder —
 anything in `{…}` other than `{audience}`/`{destination}`; an unknown `@`
 token in a `plain_owner` field other than `@submitter`/`@model_owner`; a
 platform or vendor registry entry with no `plain_name`.
+
+**Amended 2026-10-03 (R16-D2 §2, DR7-20).** A pack `hard_line` effect's
+`plain_reason`/`plain_change` are scanned for unknown placeholders too —
+the EXACT same check a firm `HardLine`'s own pair already gets
+(`hardLineWarnings`), since both use the identical `{audience}`/
+`{destination}` vocabulary. Warning, not error, like every other
+plain-language placeholder check on this page.
 
 The check is referential only — a `covers_reviews` id that resolves to a
 real review is not itself proof the control's action satisfies that

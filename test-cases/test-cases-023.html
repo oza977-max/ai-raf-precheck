@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round R16-D2 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-one-assumption-shape-carrying-its-own-fields-d">&sect;1 &mdash; One assumption shape, carrying its own fields (D-95)</a></li>
+                <li><a href="#2-the-no-screen-vd-10-2">&sect;2 &mdash; The "No" screen (VD-10, &sect;2)</a></li>
+                <li><a href="#2-item-7-7-the-reviewer-section-lists-every-assu">&sect;2 item 7 / &sect;7 &mdash; The reviewer section lists every assumption; evidence claims name their tool</a></li>
+                <li><a href="#3-4-assumptions-survive-to-the-result-screen-the">&sect;3/&sect;4 &mdash; Assumptions survive to the result screen, the register, and the hand-off bundle (D-96, D-81, DR7-15/16/19)</a></li>
+                <li><a href="#4b-the-register-s-already-in-place-agrees-with-t">&sect;4b &mdash; The register's "already in place" agrees with the result screen's (D-97, W-7)</a></li>
+                <li><a href="#5-correcting-a-form-path-verdict-through-the-for">&sect;5 &mdash; Correcting a form-path verdict through the form (D-82, DR7-17/DR7-22)</a></li>
+                <li><a href="#6-what-a-reviewer-sees-about-re-tries-dr7-09-d2-">&sect;6 &mdash; What a reviewer sees about re-tries (DR7-09, D2 part)</a></li>
+                <li><a href="#8-zero-correction-resubmission-renders-as-a-re-c">&sect;8 &mdash; Zero-correction resubmission renders as a re-check (F2C-6)</a></li>
+                <li><a href="#untested-behaviours">Untested behaviours</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round R16-D2</h1>
+<p class="metadata">3 October 2026 &middot; Generated from test-cases-023.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-03. <code>build/prompts/R16-D2.md</code> v2.2 &mdash; the "No" screen (VD-10), saved assumptions carried to the result screen and the register, correcting a form-built verdict through the form, and the register's "already in place" lines agreeing with the result screen's. Built on top of R16-F (commit <code>52b2edf</code>).</em></p>
+<p>Test files: <code>src/engine/plain-intake.test.ts</code>, <code>src/components/plain-copy.test.ts</code>, <code>src/components/verdict-view-model.test.ts</code>, <code>src/components/form-corrections.test.ts</code>, <code>src/components/intake-state.test.ts</code>, <code>src/components/__tests__/VerdictDisplay.r16d2.test.tsx</code>, <code>src/components/__tests__/RegisterDetail.test.tsx</code>, <code>src/components/__tests__/RegisterDetail.eventDetail.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16d2.test.tsx</code>, <code>src/store/handoff.test.ts</code>, <code>src/store/packs.test.ts</code>, <code>src/store/policy-references.test.ts</code>.</p>
+
+<section id="1-one-assumption-shape-carrying-its-own-fields-d">
+<h2>&sect;1 &mdash; One assumption shape, carrying its own fields (D-95)</h2>
+<p><code>AssumptionRef</code>/<code>Assumption</code> gain <code>fields: string[]</code> (the graph fields a "Not sure" branch sets) and the worded <code>Assumption</code> also gains <code>shortLabel</code>. The guard test proves the mapping's own reported <code>fields</code> can never silently drift from what the graph actually shows, for any of the 14 questions that offer "Not sure" (or, for 3supplier, its "dont-know" equivalent).</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-19</td><td>For every one of the 14 "Not sure"/"dont-know" assumptions, the union of graph fields that differ between the "Not sure" graph and each of the question's other answers equals the mapping's own reported <code>fields</code> &mdash; <code>plain-intake.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-the-no-screen-vd-10-2">
+<h2>&sect;2 &mdash; The "No" screen (VD-10, &sect;2)</h2>
+<p><code>buildVerdictView</code>'s <code>no</code> block, computed for every rejected verdict: <code>kind</code>, <code>reason</code>, <code>change</code>, <code>contributingAssumptions</code>, <code>otherAssumptionCount</code>. Pack hard-line plain fields (<code>plain_reason</code>/ <code>plain_change</code>) and their loader-check placeholder scan are a prerequisite this section's pack tests also cover.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-01</td><td>A firm hard line with <code>plain_reason</code>/<code>plain_change</code> &mdash; exact "Why"/"What would change" text, with the hard-line coda &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-02</td><td>A firm hard line with neither field falls back to its description + the &sect;4.4 pointer, for both reason and change &mdash; the description closed as a sentence and the pointer AFTER the whole sentence, never spliced into it (corrected while verifying the build) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-03</td><td>A pack hard line with plain fields names the pack's own jurisdiction in the reason &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-04</td><td>A pack hard line with neither field names the jurisdiction in the fallback reason, plus the pointer line &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-62</td><td>A pack's jurisdiction is named in words from the policy's own list &mdash; "the European Union", but "Canada" &mdash; and a code the policy does not list is never shown (found while verifying: the first build printed the code, and its tests passed only because their sample packs spelled codes out as words) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-05</td><td>CS-2 (unsatisfiable invariant), no <code>plain_reason</code> &mdash; the invariant's description + pointer, plus the no-safeguard clause and the CS-2 change text, with no stray period-comma &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-05b</td><td>CS-2 with a <code>plain_reason</code> present uses it, still with the no-safeguard clause &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-06</td><td>An id found nowhere loaded never renders the bare id, and offers no "what would change" line (<code>change</code> is <code>undefined</code>) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-07</td><td>An assumption contributes when any of its <code>fields</code> appears in the binding hard line's own condition keys; a non-matching assumption does not &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-07b</td><td>No assumptions at all &mdash; <code>contributingAssumptions</code> empty, <code>otherAssumptionCount</code> zero &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-08</td><td>For a pack hard line, the PACK rule's own condition is checked for contribution, not the firm's &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-26</td><td>A pack <code>hard_line</code> effect with <code>plain_reason</code>/<code>plain_change</code> loads and carries both &mdash; <code>packs.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-27</td><td>A pack <code>hard_line</code> effect with neither field still loads &mdash; both optional, same as a firm <code>HardLine</code> &mdash; <code>packs.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-28</td><td>A pack <code>hard_line</code> effect's <code>plain_reason</code>/<code>plain_change</code> are scanned for unknown placeholders, exactly as a firm hard line's are &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-28b</td><td><code>{audience}</code>/<code>{destination}</code> in a pack hard line's plain fields are recognised and do not warn &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-29</td><td>A firm hard line's Why/change/"who to talk to" all render on the first screen; no safeguards list, no next steps, no who-signs-off; no reserved word &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-30</td><td>Exactly one correction control renders on a "No" &mdash; the first screen's own, reworded; the reviewer section's second one does not render &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-31</td><td>On a non-rejected verdict, both correction controls still render with their usual, unreworded text &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-32</td><td>The contributing-assumptions line appears only when a case assumption meets the binding rule's condition, joined "a, b and c", with the pointer clause when other assumptions exist &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-33</td><td>No contributing assumption &mdash; the line does not render, even though the case has (non-contributing) assumptions &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-34</td><td>A pack hard line resolves against the loaded <code>packs</code> prop, naming the jurisdiction, on the real rendered component &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-35</td><td>An id found nowhere loaded renders the generic fallback, never the bare id, on the first screen &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-36</td><td>The "already in place" note names the platform this case uses, once, never doubled (DR7-34) &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-item-7-7-the-reviewer-section-lists-every-assu">
+<h2>&sect;2 item 7 / &sect;7 &mdash; The reviewer section lists every assumption; evidence claims name their tool</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-37</td><td>Every assumption the case has renders in the reviewer section, contributing or not, for a REJECTED verdict &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-38</td><td>The same list also renders for a NON-rejected verdict with assumptions &mdash; a case fact, not "No"-specific &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-39</td><td>No assumptions at all &mdash; the fold does not render &mdash; <code>VerdictDisplay.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-09a</td><td>No scoped in-place safeguard at all &mdash; <code>inPlaceScopeName</code> undefined, note stays generic &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-09b</td><td>A scoped, matched in-place safeguard names the platform &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-09c</td><td>Scoped to both platform and vendor, both match &mdash; the platform's name wins &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-09d</td><td>Vendor-only match names the vendor &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-63</td><td>A matched platform with no plain name leaves the "already in place" note generic &mdash; never its internal id on the first screen (found while verifying) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-64</td><td>A safeguard with no plain wording and no description reads "{name}. {pointer}" &mdash; a missing description degrades, never crashes the page (found in the verification ritual, where the first version of the full-stop fix crashed 37 sign-off-page tests) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-65</td><td>A registry plain name written to start a line ("Your firm's &hellip;") is lower-cased mid-sentence in the "already in place" note; a proper name is left alone (found in the walkthrough) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-09e</td><td>No graph (the register path) falls back to <code>options.evidenceScope</code> and still names the match &mdash; register and intake agree &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-09f</td><td>No graph and no <code>evidenceScope</code> &mdash; a legacy event still renders, with the existing "we couldn't check" note, and no scope name &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-4-assumptions-survive-to-the-result-screen-the">
+<h2>&sect;3/&sect;4 &mdash; Assumptions survive to the result screen, the register, and the hand-off bundle (D-96, D-81, DR7-15/16/19)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-20</td><td>A bundle whose <code>graph_confirmed</code> carries valid assumptions imports successfully and keeps them &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-21</td><td>A bundle whose <code>graph_confirmed</code> has no <code>assumptions</code> field at all (pre-D2) still imports &mdash; absence is legacy, not malformed &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-22</td><td>A bundle whose <code>graph_confirmed</code> assumption is malformed (unknown questionId; unknown graph field; empty or oversized shortLabel) is rejected, nothing imported &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-23</td><td>A bundle whose <code>verdict_corrected</code> carries assumptions, evidence_scope and corrections_count imports successfully and keeps all three &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-25</td><td><code>correction_source</code> rides through a <code>graph_corrected</code> event's correction &mdash; a valid value imports, an invalid one is rejected &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-43</td><td>An uncorrected case shows its confirmation's own assumptions in the reviewer section &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-44</td><td>A corrected case shows the CORRECTION's assumptions, not the original confirmation's &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-57</td><td><code>eventDetail</code> on <code>graph_confirmed</code> with two assumptions says "2 answers were 'Not sure'." &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-57b</td><td><code>eventDetail</code> on <code>graph_confirmed</code> with exactly one assumption uses the singular "1 answer was" &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-57c</td><td><code>eventDetail</code> on <code>graph_confirmed</code> with no assumptions at all adds nothing &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-58</td><td><code>eventDetail</code> on <code>verdict_corrected</code> with assumptions also adds the count &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="4b-the-register-s-already-in-place-agrees-with-t">
+<h2>&sect;4b &mdash; The register's "already in place" agrees with the result screen's (D-97, W-7)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-24</td><td>A bundle whose <code>verdict_produced</code> carries an <code>evidence_scope</code> with an empty platform string is rejected &mdash; <code>handoff.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-46</td><td>A scoped control whose <code>evidence_scope</code> matches renders "already in place", naming the platform &mdash; the same text the intake screen shows for the same case &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-47</td><td>A legacy <code>verdict_produced</code> with no <code>evidence_scope</code> still renders, with the existing "we couldn't check" note &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="5-correcting-a-form-path-verdict-through-the-for">
+<h2>&sect;5 &mdash; Correcting a form-path verdict through the form (D-82, DR7-17/DR7-22)</h2>
+<p><code>src/components/form-corrections.ts</code>'s pure diff, the reducer's <code>CORRECT_VERDICT_WITH_FORM</code>/<code>originalGraph</code> threading, and the real, end-to-end flow.</p>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-10</td><td>Two identical submissions produce no corrections at all &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-11</td><td>A changed processing-node field is recorded against the ORIGINAL node id, not the rebuilt graph's fresh one &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-12</td><td>A changed output-node field is recorded against the original output node id &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-13</td><td>A cleared optional field (<code>declared_model_id</code>) is recorded with <code>corrected_value: null</code>, never <code>undefined</code> &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-13b</td><td>A field set FROM absent is recorded with <code>original_value: null</code> (symmetric with clearing) &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-14</td><td>Inputs are diffed as ONE correction on node id <code>inputs</code>, field <code>data_classes</code> &mdash; the sorted set, not a per-node id &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-14b</td><td>Ticking the same input classes in a different order is not a correction (sorted comparison) &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-15</td><td>Jurisdictions are diffed as one correction on node id <code>graph</code>, field <code>jurisdictions</code> &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-15b</td><td>The same jurisdictions ticked in a different order is not a correction &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-16</td><td>Several changed fields across processing, output, inputs and jurisdictions each produce their own correction, all against the same graph-version pair &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-17</td><td>Never diffs node ids &mdash; two submissions differing only because <code>buildGraphFromForm</code> minted fresh ids produce no spurious correction &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-18</td><td>Every <code>ProcessingNode</code> key (bar <code>id</code>) is diffed when changed alone &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-18b</td><td>Every <code>OutputNode</code> key (bar <code>id</code>) is diffed when changed alone &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-18c</td><td>Changing every key on both nodes at once reports exactly one correction per key &mdash; no cross-talk &mdash; <code>form-corrections.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-52</td><td>A form-path <code>EVALUATION_FAILED</code> during a correction carries <code>originalVerdictId</code>/<code>originalGraph</code> back to the form &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-53</td><td><code>STEP_BACK</code> from the questionnaire during a correction carries <code>originalVerdictId</code>/<code>originalGraph</code> back to the form too (closing the same hazard reached by a different control) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-54</td><td><code>CHANGE_ANSWER</code> from confirmation during a correction carries <code>originalVerdictId</code>/<code>originalGraph</code> back to the form &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-55</td><td><code>CORRECT_VERDICT_WITH_FORM</code> from the verdict step enters <code>graph_extraction(form)</code> carrying <code>originalVerdictId</code>, <code>originalGraph</code>, and the last-confirmed <code>plainAnswers</code>/<code>assumptions</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-56</td><td><code>CORRECT_VERDICT_WITH_FORM</code> is refused from any step other than <code>verdict</code> &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-59</td><td>"Change an answer" in a REVIEW-screen correction of a form-built case (no form answers in hand) returns to the review screen, keeping the correction &mdash; never to an empty form (the contract's v2.1 guard, missing from the first build) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-60</td><td>An evaluation failure in the same situation returns to the review screen, keeping the correction &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-61</td><td>Back from the questions in the same situation returns to the review screen, keeping the correction &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-48</td><td>"Correct" re-opens the FORM filled in, with the correction note; resubmitting with a changed answer writes form-sourced <code>graph_corrected</code> events (<code>correction_source: 'form'</code>) against the original case, numbered one version above the original (v1 &rarr; v2, added while verifying), then <code>verdict_corrected</code> &mdash; never a second <code>use_case_created</code> &mdash; <code>IntakeFlow.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-49</td><td>Resubmitting the form with nothing changed writes <code>verdict_corrected</code> with zero <code>graph_corrected</code> events and <code>corrections_count: 0</code> (F2C-6) &mdash; <code>IntakeFlow.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-50</td><td>"Change an answer" during a form correction keeps the correction &mdash; the eventual re-confirm still writes <code>verdict_corrected</code>, never refused as "already has a result" &mdash; <code>IntakeFlow.r16d2.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-51</td><td>A double-click on "Confirm and evaluate" during a form correction writes exactly one <code>verdict_corrected</code> &mdash; <code>IntakeFlow.r16d2.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="6-what-a-reviewer-sees-about-re-tries-dr7-09-d2-">
+<h2>&sect;6 &mdash; What a reviewer sees about re-tries (DR7-09, D2 part)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-45</td><td>"Corrected N times by the submitter &mdash; each version is in the record below." renders only once a correction exists, naming the count &mdash; <code>RegisterDetail.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="8-zero-correction-resubmission-renders-as-a-re-c">
+<h2>&sect;8 &mdash; Zero-correction resubmission renders as a re-check (F2C-6)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-D2-40</td><td><code>corrections_count: 0</code> on <code>verdict_corrected</code> renders "Re-checked &mdash; no answers changed." ahead of the usual status line &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-41</td><td><code>corrections_count &gt; 0</code> renders the usual status line, with no "Re-checked" wording &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+<tr><td>TC-R16-D2-42</td><td>A legacy event with no <code>corrections_count</code> field at all renders the usual status line, never claimed as a re-check &mdash; <code>RegisterDetail.eventDetail.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="untested-behaviours">
+<h2>Untested behaviours</h2>
+<ul>
+<li><code>handleCorrectVerdict</code>'s fallback to <code>CORRECT_VERDICT</code> (the review screen) for a form-built verdict whose form answers are not in hand. No path through the live UI reaches it in one session (every form confirm sets the answers); it exists for a verdict confirmed before this chunk. What happens AFTER that fallback is tested at the reducer level (TC-R16-D2-59 to -61); the dispatch choice itself is checked by reading the code, not by a test.</li>
+</ul>
+</section>
+
+<section id="changelog">
+<h2>Changelog</h2>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-03</td><td>Written for R16-D2 (the "No" screen, saved assumptions, correcting a form answer).</td></tr>
+<tr><td>2026-10-03</td><td>Verification pass: TC-R16-D2-59 to -65 added (a correction without its form answers never returns to an empty form; country names in words; no internal id in the evidence note); TC-R16-D2-02 and -48 strengthened.</td></tr>
+</tbody>
+</table>
+</section>
+<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+</main>
+</div>
+</body>
+</html>

@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { plainAnswersToFormValues, platformZoneOptionKeys } from './plain-intake';
+import { buildGraphFromForm } from './build-graph-from-form';
 // R16-F §5 (DR7-06): PlainAnswers is engine-owned (ids/keys only) —
 // imported from its real source rather than round-tripping through the
 // component layer's re-export.
 import type { PlainAnswers } from './plain-questions';
-import type { PolicyFile } from './types';
+import type { DataFlowGraph, PolicyFile } from './types';
 
 // R16-B (§2.1, §2.2). Pure engine module — no React, no I/O, no Date.now,
 // no Math.random (cross-cutting.md §7 Rule 1). buildGraphFromForm stays the
@@ -164,7 +165,11 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
       // R16-F §5 (DR7-06): the engine returns a REFERENCE — the worded
       // "outside supplier" sentence is asserted on describeAssumptions()
       // instead (src/components/plain-copy.test.ts).
-      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' }]);
+      // R16-D2 §1 (D-95): the reference now also carries `fields` — the
+      // graph fields THIS "Not sure" branch sets (here, just the zone).
+      expect(assumptions).toEqual([
+        { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B', fields: ['data_zone'] },
+      ]);
     });
 
     it('TC-R16-W-05: leaving the follow-up unanswered behaves exactly like "Not sure" (the default branch), not like an unresolved platform', () => {
@@ -173,7 +178,9 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
         policy(),
       );
       expect(values.processingDataZone).toBe('Zone B');
-      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B' }]);
+      expect(assumptions).toEqual([
+        { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone B', fields: ['data_zone'] },
+      ]);
     });
 
     it('TC-R16-W-06: "Not sure" when the earliest allowed zone is A carries earliestZone Zone A instead', () => {
@@ -193,7 +200,9 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
         allowsA,
       );
       expect(values.processingDataZone).toBe('Zone A');
-      expect(assumptions).toEqual([{ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone A' }]);
+      expect(assumptions).toEqual([
+        { questionId: '3platformZone', optionKey: 'not-sure', earliestZone: 'Zone A', fields: ['data_zone'] },
+      ]);
     });
 
     it('TC-R16-W-07: a platform allowed in only one zone keeps the old mapping — no follow-up is read even if answered', () => {
@@ -378,7 +387,7 @@ describe('plainAnswersToFormValues — Q4 / Q4a (kind of AI)', () => {
     // text — the exact wording is asserted on describeAssumptions()
     // instead (src/components/plain-copy.test.ts).
     const a = assumptions.find((x) => x.questionId === '4');
-    expect(a).toEqual({ questionId: '4', optionKey: 'not-sure' });
+    expect(a).toEqual({ questionId: '4', optionKey: 'not-sure', fields: ['model_type'] });
   });
 
   it('Q13/Q14 answers are read through when present, regardless of how Q4 was answered (agentic or Not sure)', () => {
@@ -495,7 +504,11 @@ describe('plainAnswersToFormValues — Q6 / Q6a / Q6b (what happens with the out
     expect(values.hitl).toBe(false);
     expect(values.decisionBindingness).toBe('binding');
     const a = assumptions.find((x) => x.questionId === '6');
-    expect(a).toEqual({ questionId: '6', optionKey: 'not-sure' });
+    expect(a).toEqual({
+      questionId: '6',
+      optionKey: 'not-sure',
+      fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'],
+    });
   });
 
   it('Q6a "Not sure" -> material, listed as an assumption', () => {
@@ -523,7 +536,7 @@ describe('plainAnswersToFormValues — Q7 (who sees it)', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '7': 'not-sure' }, policy());
     expect(values.outputExposure).toBe('market-facing');
     const a = assumptions.find((x) => x.questionId === '7');
-    expect(a).toEqual({ questionId: '7', optionKey: 'not-sure' });
+    expect(a).toEqual({ questionId: '7', optionKey: 'not-sure', fields: ['exposure'] });
   });
 });
 
@@ -564,7 +577,7 @@ describe('plainAnswersToFormValues — Q9 (can it be undone)', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '9': 'not-sure' }, policy());
     expect(values.outputReversibility).toBe('irreversible');
     const a = assumptions.find((x) => x.questionId === '9');
-    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure' });
+    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure', fields: ['output_reversibility'] });
   });
 });
 
@@ -650,7 +663,11 @@ describe('plainAnswersToFormValues — Q13 (agent access, tick-all)', () => {
       expect.arrayContaining(['shared_infrastructure', 'credentialed_systems', 'deployment_authority']),
     );
     expect(values.systemAccessScope).toHaveLength(3);
-    expect(assumptions.find((a) => a.questionId === '13')).toEqual({ questionId: '13', optionKey: 'not-sure' });
+    expect(assumptions.find((a) => a.questionId === '13')).toEqual({
+      questionId: '13',
+      optionKey: 'not-sure',
+      fields: ['system_access_scope'],
+    });
   });
 
   it('Q13 unanswered (not an agent) leaves systemAccessScope unstated', () => {
@@ -689,11 +706,275 @@ describe('plainAnswersToFormValues — basics', () => {
   it('every assumption reference carries a questionId and an optionKey (R16-F §5: the worded text is a describeAssumptions() concern, not this module\'s)', () => {
     const { assumptions } = plainAnswersToFormValues({ ...BASE, '9': 'not-sure' }, policy());
     const a = assumptions.find((x) => x.questionId === '9');
-    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure' });
+    expect(a).toEqual({ questionId: '9', optionKey: 'not-sure', fields: ['output_reversibility'] });
   });
 
   it('no assumptions are recorded when nothing was "Not sure"', () => {
     const { assumptions } = plainAnswersToFormValues(BASE, policy());
     expect(assumptions).toEqual([]);
+  });
+});
+
+// R16-D2 §1 (D-95). The guard test: no hand-kept table of "which fields
+// does this 'Not sure' answer set" survives unchecked. For every question
+// that offers "Not sure" (or, for 3supplier, its "dont-know" equivalent),
+// build the graph from the "Not sure" answer and from each of the
+// question's other answers (all other questions held fixed), and assert
+// the UNION of graph fields whose value differs from the "Not sure" graph
+// equals the `fields` the mapping itself reported for that assumption —
+// two independently-derived things, compared against each other, not
+// against a hand-typed expectation this test could drift from the way
+// the production table it replaces could have.
+describe('plainAnswersToFormValues — TC-R16-D2-19: the "Not sure" fields guard (§1, D-95)', () => {
+  // Every graph field any node or the graph itself carries (engine/types.ts
+  // InputNode/ProcessingNode/OutputNode/DataFlowGraph) — the same universe
+  // condition.ts#collectFieldValues can ever be asked about.
+  const CANDIDATE_GRAPH_FIELDS = [
+    'data_class', 'data_zone', 'model_type', 'autonomy_level', 'vendor', 'platform',
+    'declared_model_id', 'replaces_prior_model', 'system_access_scope',
+    'multi_instance_coordination', 'action_type', 'exposure', 'decision_bindingness',
+    'output_reversibility', 'scale', 'decision_type', 'decision_type_other', 'hitl',
+    'jurisdictions',
+  ];
+
+  // Mirrors condition.ts#collectFieldValues's own flattening (deliberately
+  // re-implemented, not imported: this test must hold even if that
+  // function's internals change, since it is checking a PRODUCT claim —
+  // "fields names what a condition can match on" — not that function's
+  // implementation).
+  function fieldValues(graph: DataFlowGraph, field: string): unknown[] {
+    const values: unknown[] = [];
+    const nodes = [...graph.input_nodes, ...graph.processing_nodes, ...graph.output_nodes] as unknown as Array<
+      Record<string, unknown>
+    >;
+    for (const node of nodes) {
+      if (field in node) {
+        const v = node[field];
+        if (Array.isArray(v)) values.push(...v);
+        else values.push(v);
+      }
+    }
+    if (field === 'jurisdictions') values.push(...graph.jurisdictions);
+    return values;
+  }
+
+  function differingFields(a: DataFlowGraph, b: DataFlowGraph): string[] {
+    return CANDIDATE_GRAPH_FIELDS.filter(
+      (field) => JSON.stringify([...fieldValues(a, field)].sort()) !== JSON.stringify([...fieldValues(b, field)].sort()),
+    );
+  }
+
+  function graphFor(answers: PlainAnswers, pol: PolicyFile): DataFlowGraph {
+    return buildGraphFromForm(plainAnswersToFormValues(answers, pol).values);
+  }
+
+  // Every question fully answered with a definite, non-"Not sure" value —
+  // the shared base every case below overrides just the question under
+  // test on top of.
+  const BASE_FULL: PlainAnswers = {
+    '1': 'Tool',
+    '2': 'Desc.',
+    '3': 'PLAT-CLOUD-LLM',
+    '4': 'score',
+    '4a': 'rules',
+    '5': ['everyday'],
+    '6': 'drafts',
+    '6a': 'little',
+    '7': 'me-or-team',
+    '8': 'operational',
+    '9': 'yes',
+    '10': 'small',
+    '11': ['UK'],
+    '12': 'no',
+    '13': ['none'],
+    '14': 'no',
+  };
+
+  const basePolicy = policy();
+  // 3aWhich is only ever asked when more than one company-assistant
+  // vendor is registered — a policy variant just for that one case.
+  const twoAssistantsPolicy = policy({
+    vendors: [
+      { id: 'CA-1', name: 'A', approved_envelope: {}, satisfies_controls: [], kind: 'company_assistant' },
+      { id: 'CA-2', name: 'B', approved_envelope: {}, satisfies_controls: [], kind: 'company_assistant' },
+    ],
+  });
+
+  interface GuardCase {
+    label: string;
+    questionId: string;
+    optionKey: string;
+    pol?: PolicyFile;
+    notSure: PlainAnswers;
+    alternates: PlainAnswers[];
+  }
+
+  const CASES: GuardCase[] = [
+    {
+      label: '3:not-sure — where the AI comes from',
+      questionId: '3',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '3': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '3': 'firm-built' },
+        { ...BASE_FULL, '3': 'outside-assistant', '3a': 'firm-account' },
+        { ...BASE_FULL, '3': 'supplier-feature', '3supplier': 'VENDOR-SUPPLIER-A' },
+        { ...BASE_FULL, '3': 'specialist-product', '3supplier': 'VENDOR-SUPPLIER-A' },
+      ],
+    },
+    {
+      label: '3supplier:dont-know — which supplier it is',
+      questionId: '3supplier',
+      optionKey: 'dont-know',
+      notSure: { ...BASE_FULL, '3': 'supplier-feature', '3supplier': 'dont-know' },
+      alternates: [
+        { ...BASE_FULL, '3': 'supplier-feature', '3supplier': 'not-on-list', '3supplierName': 'Foo' },
+        { ...BASE_FULL, '3': 'supplier-feature', '3supplier': 'VENDOR-SUPPLIER-A' },
+      ],
+    },
+    {
+      label: '3a:not-sure — which account you use',
+      questionId: '3a',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '3': 'outside-assistant', '3a': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '3': 'outside-assistant', '3a': 'firm-account' },
+        { ...BASE_FULL, '3': 'outside-assistant', '3a': 'personal-account' },
+      ],
+    },
+    {
+      label: '3aWhich:not-sure — which company assistant it is',
+      questionId: '3aWhich',
+      optionKey: 'not-sure',
+      pol: twoAssistantsPolicy,
+      notSure: { ...BASE_FULL, '3': 'outside-assistant', '3a': 'firm-account', '3aWhich': 'not-sure' },
+      alternates: [{ ...BASE_FULL, '3': 'outside-assistant', '3a': 'firm-account', '3aWhich': 'CA-2' }],
+    },
+    {
+      label: '3platformZone:not-sure — whether information stays on firm systems',
+      questionId: '3platformZone',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'firm-systems' },
+        { ...BASE_FULL, '3': 'PLAT-INTERNAL-ML', '3platformZone': 'outside-supplier' },
+      ],
+    },
+    {
+      label: '4:not-sure — what kind of AI it is',
+      questionId: '4',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '4': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '4': 'score', '4a': 'rules' },
+        { ...BASE_FULL, '4': 'perception' },
+        { ...BASE_FULL, '4': 'language' },
+        { ...BASE_FULL, '4': 'generative' },
+        { ...BASE_FULL, '4': 'agentic' },
+      ],
+    },
+    {
+      label: '5:not-sure — what information it uses',
+      questionId: '5',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '5': ['not-sure'] },
+      alternates: [
+        { ...BASE_FULL, '5': ['people'] },
+        { ...BASE_FULL, '5': ['price-sensitive'] },
+        { ...BASE_FULL, '5': ['confidential'] },
+        { ...BASE_FULL, '5': ['everyday'] },
+        { ...BASE_FULL, '5': ['public'] },
+      ],
+    },
+    {
+      label: '6:not-sure — what it does with what it produces',
+      questionId: '6',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '6': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '6': 'read' },
+        { ...BASE_FULL, '6': 'answers', '6a': 'little' },
+        { ...BASE_FULL, '6': 'drafts', '6a': 'little' },
+        { ...BASE_FULL, '6': 'suggests', '6a': 'little' },
+        { ...BASE_FULL, '6': 'prepares' },
+        { ...BASE_FULL, '6': 'acts-reviewed', '6b': 'trades' },
+        { ...BASE_FULL, '6': 'acts-bounded', '6b': 'yes-no-decision' },
+        { ...BASE_FULL, '6': 'acts-alone', '6b': 'something-else' },
+      ],
+    },
+    {
+      label: '6a:not-sure — how much weight what it produces carries',
+      questionId: '6a',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '6': 'drafts', '6a': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '6': 'drafts', '6a': 'little' },
+        { ...BASE_FULL, '6': 'drafts', '6a': 'one-input' },
+        { ...BASE_FULL, '6': 'drafts', '6a': 'usually-basis' },
+      ],
+    },
+    {
+      label: '7:not-sure — who sees what it produces',
+      questionId: '7',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '7': 'not-sure' },
+      alternates: [
+        { ...BASE_FULL, '7': 'me-or-team' },
+        { ...BASE_FULL, '7': 'other-teams' },
+        { ...BASE_FULL, '7': 'clients' },
+        { ...BASE_FULL, '7': 'public-market' },
+      ],
+    },
+    {
+      label: '9:not-sure — whether a mistake can be put right',
+      questionId: '9',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '9': 'not-sure' },
+      alternates: [{ ...BASE_FULL, '9': 'yes' }, { ...BASE_FULL, '9': 'no' }],
+    },
+    {
+      label: '12:not-sure — whether it replaces something you use',
+      questionId: '12',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '12': 'not-sure' },
+      alternates: [{ ...BASE_FULL, '12': 'yes' }, { ...BASE_FULL, '12': 'no' }],
+    },
+    {
+      label: '13:not-sure — what it can get into by itself',
+      questionId: '13',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '13': ['not-sure'] },
+      alternates: [
+        { ...BASE_FULL, '13': ['none'] },
+        { ...BASE_FULL, '13': ['credentialed'] },
+        { ...BASE_FULL, '13': ['deployment'] },
+        { ...BASE_FULL, '13': ['shared'] },
+        { ...BASE_FULL, '13': ['credentialed', 'shared'] },
+      ],
+    },
+    {
+      label: '14:not-sure — whether copies of it work together',
+      questionId: '14',
+      optionKey: 'not-sure',
+      notSure: { ...BASE_FULL, '14': 'not-sure' },
+      alternates: [{ ...BASE_FULL, '14': 'no' }, { ...BASE_FULL, '14': 'yes' }],
+    },
+  ];
+
+  it('TC-R16-D2-19: every "Not sure"/"dont-know" assumption\'s reported `fields` equals the union of graph fields that actually differ from each of the question\'s other answers', () => {
+    expect(CASES).toHaveLength(14); // §1's own enumeration — all 14, none dropped silently.
+    for (const c of CASES) {
+      const pol = c.pol ?? basePolicy;
+      const { assumptions } = plainAnswersToFormValues(c.notSure, pol);
+      const reported = assumptions.find((a) => a.questionId === c.questionId && a.optionKey === c.optionKey);
+      expect(reported, `${c.label}: no assumption reference was recorded at all`).toBeDefined();
+
+      const notSureGraph = graphFor(c.notSure, pol);
+      const union = new Set<string>();
+      for (const alt of c.alternates) {
+        for (const field of differingFields(notSureGraph, graphFor(alt, pol))) union.add(field);
+      }
+      expect([...union].sort(), c.label).toEqual([...reported!.fields].sort());
+    }
   });
 });

@@ -107,8 +107,11 @@ export function plainAnswersToFormValues(
   policy: PolicyFile,
 ): { values: StructuredFormValues; assumptions: AssumptionRef[] } {
   const assumptions: AssumptionRef[] = [];
-  function assume(id: QuestionId, optionKey: string): void {
-    assumptions.push({ questionId: id, optionKey });
+  // R16-D2 §1 (D-95): `fields` names the GRAPH fields THIS branch sets —
+  // passed by every call site below, never re-derived here. See
+  // AssumptionRef's own comment (plain-questions.ts) for why.
+  function assume(id: QuestionId, optionKey: string, fields: string[]): void {
+    assumptions.push({ questionId: id, optionKey, fields });
   }
 
   const str = (id: QuestionId): string | undefined => {
@@ -135,7 +138,7 @@ export function plainAnswersToFormValues(
             const which = str('3aWhich');
             if (which === 'not-sure') {
               vendor = 'your firm’s AI assistant (not confirmed which one)';
-              assume('3aWhich', 'not-sure');
+              assume('3aWhich', 'not-sure', ['vendor']);
             } else {
               const match = assistants.find((v) => v.id === which);
               vendor = match ? match.id : 'your firm’s AI assistant (not confirmed which one)';
@@ -158,7 +161,7 @@ export function plainAnswersToFormValues(
           destinationZone = 'Zone A';
           // D-72: was 'unregistered (not sure which account)'.
           vendor = 'an AI assistant account you weren’t sure about';
-          assume('3a', 'not-sure');
+          assume('3a', 'not-sure', ['data_zone', 'vendor']);
           break;
       }
       break;
@@ -178,7 +181,7 @@ export function plainAnswersToFormValues(
         case 'dont-know':
           // D-72: was 'unregistered (supplier not confirmed)'.
           vendor = 'a supplier you weren’t sure of';
-          assume('3supplier', 'dont-know');
+          assume('3supplier', 'dont-know', ['vendor']);
           break;
         default: {
           // A supplier vendor id, picked from the dynamic list.
@@ -198,7 +201,7 @@ export function plainAnswersToFormValues(
       destinationZone = 'Zone A';
       // D-72: was 'unregistered (where this AI comes from was not sure)'.
       vendor = 'an AI service you weren’t sure about';
-      if (q3 === 'not-sure') assume('3', 'not-sure');
+      if (q3 === 'not-sure') assume('3', 'not-sure', ['data_zone', 'vendor']);
       break;
     default: {
       // A platform id, picked from the dynamic list (d).
@@ -230,7 +233,12 @@ export function plainAnswersToFormValues(
               // plain-copy.ts's code-free module (§2.4) could hold on its
               // own. `describeAssumptions()` (plain-copy.ts) resolves this
               // exact case to the same two sentences as before.
-              assumptions.push({ questionId: '3platformZone', optionKey: 'not-sure', earliestZone: earliest });
+              assumptions.push({
+                questionId: '3platformZone',
+                optionKey: 'not-sure',
+                earliestZone: earliest,
+                fields: ['data_zone'],
+              });
           }
         } else {
           destinationZone = earliest;
@@ -280,7 +288,7 @@ export function plainAnswersToFormValues(
       break;
     case 'not-sure':
       modelType = 'agentic';
-      assume('4', 'not-sure');
+      assume('4', 'not-sure', ['model_type']);
       break;
     default:
       modelType = 'llm';
@@ -308,7 +316,7 @@ export function plainAnswersToFormValues(
         break;
       case 'not-sure':
         classSet.add('Confidential');
-        assume('5', 'not-sure');
+        assume('5', 'not-sure', ['data_class']);
         break;
     }
   }
@@ -334,7 +342,7 @@ export function plainAnswersToFormValues(
       case 'one-input':
         return 'advisory';
       case 'not-sure':
-        assume('6a', 'not-sure');
+        assume('6a', 'not-sure', ['decision_bindingness']);
         return 'material';
       case 'usually-basis':
       default:
@@ -407,7 +415,7 @@ export function plainAnswersToFormValues(
       autonomyLevel = 4;
       hitl = false;
       decisionBindingness = 'binding';
-      assume('6', 'not-sure');
+      assume('6', 'not-sure', ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl']);
       break;
     default:
       outputActionType = 'read';
@@ -429,7 +437,7 @@ export function plainAnswersToFormValues(
       break;
     case 'not-sure':
       outputExposure = 'market-facing';
-      assume('7', 'not-sure');
+      assume('7', 'not-sure', ['exposure']);
       break;
     case 'public-market':
     default:
@@ -474,7 +482,7 @@ export function plainAnswersToFormValues(
       break;
     case 'not-sure':
       outputReversibility = 'irreversible';
-      assume('9', 'not-sure');
+      assume('9', 'not-sure', ['output_reversibility']);
       break;
     case 'no':
       outputReversibility = 'irreversible';
@@ -501,7 +509,7 @@ export function plainAnswersToFormValues(
       break;
     case 'not-sure':
       replacesPriorModel = true;
-      assume('12', 'not-sure');
+      assume('12', 'not-sure', ['replaces_prior_model']);
       break;
     case 'no':
     default:
@@ -525,7 +533,7 @@ export function plainAnswersToFormValues(
     const resolved = resolveAccessScopeAnswer(ticks);
     if (resolved.ok) {
       systemAccessScope = (Array.isArray(resolved.value) ? resolved.value : [resolved.value]) as SystemAccessScope[];
-      if (ticks.includes('not-sure')) assume('13', 'not-sure');
+      if (ticks.includes('not-sure')) assume('13', 'not-sure', ['system_access_scope']);
     }
   }
 
@@ -540,7 +548,7 @@ export function plainAnswersToFormValues(
       break;
     case 'not-sure':
       multiInstanceCoordination = 'unknown';
-      assume('14', 'not-sure');
+      assume('14', 'not-sure', ['multi_instance_coordination']);
       break;
     default:
       multiInstanceCoordination = undefined;

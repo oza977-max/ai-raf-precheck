@@ -39,6 +39,7 @@ import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import type { Assumption, PlainAnswers } from './plain-copy';
+import { formCorrections } from './form-corrections';
 import GraphView from './GraphView';
 import StepTracker, { describeStep } from './StepTracker';
 import QuestionnaireStep from './QuestionnaireStep';
@@ -146,6 +147,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [verdictAuditEvents, setVerdictAuditEvents] = useState<AuditEvent[]>([]);
   const [lastGraph, setLastGraph] = useState<DataFlowGraph | null>(null);
+  // R16-D2 §3 (D-96, DR7-15). The reducer's `verdict` state is bare (just
+  // `verdictId`) — so the "No" screen's assumptions and the correction
+  // flow's "what were we last confirmed on" both need a carrier outside
+  // the reducer, set alongside `lastGraph` at the same two write sites
+  // (a fresh confirm and a correction) in runConfirmAndEvaluate. Lasts for
+  // the life of the page, same as lastGraph: a reload clears the intake
+  // draft at the verdict step (see the saveDraft/clearDraft effect below),
+  // and the register path (RegisterDetail) supplies the same facts from
+  // the audit trail instead.
+  const [lastConfirmed, setLastConfirmed] = useState<{ assumptions: Assumption[]; plainAnswers?: PlainAnswers } | null>(
+    null,
+  );
   // V1.2-C (UC-2/RG-2 leak fix, design-gap C1): the match is stored with
   // both tier and label, but the LABEL is only ever rendered for 2LoD —
   // 1LoD gets the redacted card (tier + "contact AI Risk").
@@ -599,6 +612,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       corrected_value: correctedValue,
       corrected_by: getRole(),
       corrected_at: new Date().toISOString(),
+      // R16-D2 §5 (CB-4): this is GraphView's own per-field editor.
+      correction_source: 'review',
     };
 
     dispatch({ type: 'CORRECTION_APPLIED', correction, updatedGraph });
@@ -710,10 +725,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // double-click race this guard exists for is still closed: a second,
   // near-simultaneous click reads the ref before the first call's
   // `await appendAuditEvent` has resolved, every time.
-  async function handleFormSubmitted(graph: DataFlowGraph, assumptions: Assumption[], plainAnswers: PlainAnswers) {
+  async function handleFormSubmitted(builtGraph: DataFlowGraph, assumptions: Assumption[], plainAnswers: PlainAnswers) {
     if (state.step !== 'graph_extraction' || state.method !== 'form') return;
     if (formSubmitInFlight.current) return;
     formSubmitInFlight.current = true;
+    // R16-D2 §5. A correction through the form rebuilds the graph from the
+    // answers, which starts at version 1 — numbered one above the original
+    // instead, so the correction records and the new verdict say "v1 → v2"
+    // like a review-screen correction does, never "v1 → v1".
+    const graph: DataFlowGraph = state.originalGraph
+      ? { ...builtGraph, version: state.originalGraph.version + 1 }
+      : builtGraph;
     try {
       // F-3 (DR7-05): no creation write happens on the form at all any
       // more (it moved to Confirm, inside the F-1 case lock — see
@@ -755,6 +777,16 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // Computed from the graph IN HAND, never from stale state (§1).
       const questions = generateQuestions(graph, policyResult.policy, []);
       const contradictions = detectContradictions(description, [], graph);
+      // R16-D2 §5 (D-82, DR7-22). `state.originalGraph` is present only on
+      // a correction of a form-built verdict (CORRECT_VERDICT_WITH_FORM,
+      // carried forward since). Diffed here, not inside intake-state.ts —
+      // this handler is where both graphs (the original, and this fresh
+      // one) are actually in hand; the result rides the same `corrections`
+      // field every other path already threads through to
+      // runConfirmAndEvaluate's existing per-correction write loop.
+      const corrections = state.originalGraph
+        ? formCorrections(state.originalGraph, graph, { by: getRole(), at: new Date().toISOString(), newId: () => crypto.randomUUID() })
+        : [];
       dispatch({
         type: 'FORM_SUBMITTED',
         graph,
@@ -764,6 +796,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         assumptions,
         questions,
         contradictions,
+        corrections,
       });
     } finally {
       formSubmitInFlight.current = false;
@@ -866,6 +899,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     const answerContexts: string[] =
       'answers' in state ? state.answers.map((a) => a.context).filter((c): c is string => Boolean(c)) : [];
     const typedDescription = 'description' in state ? state.description : undefined;
+    // R16-D2 §3 (D-96). Read out BEFORE the CONFIRMED dispatch, the same
+    // way resolutions/answerContexts above already are — confirmation's
+    // own assumptions/plainAnswers, for the "No" screen (via lastConfirmed,
+    // set in runConfirmAndEvaluate) and for graph_confirmed's new optional
+    // `assumptions` field.
+    const confirmedAssumptions: Assumption[] = 'assumptions' in state && state.assumptions ? state.assumptions : [];
+    const confirmedPlainAnswers: PlainAnswers | undefined = 'plainAnswers' in state ? state.plainAnswers : undefined;
 
     // F-1 (DR7-02, DR7-03). The whole confirm-and-evaluate sequence —
     // including the precondition read below and the CONFIRMED dispatch —
@@ -900,6 +940,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           resolutions,
           typedDescription,
           answerContexts,
+          confirmedAssumptions,
+          confirmedPlainAnswers,
         );
       } catch (err) {
         // A legitimate engine/policy failure (e.g. no-track-match) must not
@@ -924,6 +966,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     contradictionResolutions: string[] = [],
     typedDescription?: string,
     answerContexts: string[] = [],
+    confirmedAssumptions: Assumption[] = [],
+    confirmedPlainAnswers?: PlainAnswers,
   ) {
     // VD-3 (verdict-audit.md §6): a correction pass writes
     // graph_corrected/verdict_corrected instead of
@@ -997,6 +1041,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           ...(reviewerNote ? { submitter_note: reviewerNote } : {}),
           ...(contradictionResolutions.length > 0 ? { contradiction_resolutions: contradictionResolutions } : {}),
           ...(answerContexts.length > 0 ? { answer_contexts: answerContexts } : {}),
+          // R16-D2 §4 (D-81, DR7-16): the "Not sure" answers this
+          // confirmation was based on — written only when non-empty, same
+          // spread-if-present discipline as the three fields above.
+          ...(confirmedAssumptions.length > 0 ? { assumptions: confirmedAssumptions } : {}),
         },
       });
     }
@@ -1051,6 +1099,27 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     };
     setVerdict(fullVerdict);
     setLastGraph(graph);
+    // R16-D2 §3 (D-96). Set beside lastGraph, for the identical reason: the
+    // "No" screen's contributing-assumption check and a later "Correct"
+    // click both need what THIS confirmation was based on, which the bare
+    // `verdict` reducer state does not carry.
+    setLastConfirmed({ assumptions: confirmedAssumptions, plainAnswers: confirmedPlainAnswers });
+
+    // R16-D2 §4b (D-97, W-7). The processing node's platform/vendor at
+    // evaluation — carried beside the verdict (like
+    // knowledge_lens_matched_entry_ids below) so the register, which does
+    // not persist the graph, can still tell whether a scoped "already
+    // verified" safeguard applies to THIS case. Spread-if-present on the
+    // write below: absent when the node has neither, same discipline as
+    // submitter_note.
+    const processingNode = graph.processing_nodes[0];
+    const evidenceScope: { platform?: string; vendor?: string } | undefined =
+      processingNode?.platform !== undefined || processingNode?.vendor !== undefined
+        ? {
+            ...(processingNode?.platform !== undefined ? { platform: processingNode.platform } : {}),
+            ...(processingNode?.vendor !== undefined ? { vendor: processingNode.vendor } : {}),
+          }
+        : undefined;
 
     // VD-8 (verdict-audit.md §7) — best-effort: a trace failure (no key,
     // network error) must not block verdict storage (BC-P5C02-01).
@@ -1094,6 +1163,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           new_verdict: fullVerdict,
           reasoning_trace: reasoningTrace,
           knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIds,
+          // R16-D2 §8 (F2C-6): how many graph_corrected events this pass
+          // wrote — a zero-correction resubmission writes none, and
+          // eventDetail (RegisterDetail.tsx) reads this to render it as a
+          // re-check rather than implying something changed.
+          corrections_count: corrections.length,
           // F-4 (DR7-12, DR7-16): same spread-if-present discipline as
           // graph_confirmed below — a correction keeps what the person
           // typed, instead of dropping it the way only writing it on a
@@ -1101,6 +1175,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           ...(reviewerNote ? { submitter_note: reviewerNote } : {}),
           ...(contradictionResolutions.length > 0 ? { contradiction_resolutions: contradictionResolutions } : {}),
           ...(answerContexts.length > 0 ? { answer_contexts: answerContexts } : {}),
+          // R16-D2 §4 (D-81): same field as graph_confirmed's, on whichever
+          // event recorded THIS correction's own confirmation.
+          ...(confirmedAssumptions.length > 0 ? { assumptions: confirmedAssumptions } : {}),
+          // R16-D2 §4b (D-97): see the computation above.
+          ...(evidenceScope ? { evidence_scope: evidenceScope } : {}),
         },
       });
     } else {
@@ -1115,6 +1194,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           verdict: fullVerdict,
           reasoning_trace: reasoningTrace,
           knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIds,
+          // R16-D2 §4b (D-97): see the computation above.
+          ...(evidenceScope ? { evidence_scope: evidenceScope } : {}),
         },
       });
     }
@@ -1195,6 +1276,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // the correction path silently un-confirmable — caught by the P5-C01
     // test, which is why that test earns its keep.
     confirmInFlight.current = false;
+    // R16-D2 §5 (D-82, DR7-17). A form-built verdict whose confirmation
+    // answers are still in hand re-enters at the FORM itself — graph_review
+    // is engine vocabulary principle 1 bans from a path the person typed
+    // every value through themselves. Falls back to today's CORRECT_VERDICT
+    // (graph_review) when either is missing — an older verdict predating
+    // lastConfirmed, or a form-built graph last confirmed through the
+    // review screen rather than the form.
+    if (lastConfirmed?.plainAnswers && lastGraph.intake_method === 'structured_form') {
+      dispatch({
+        type: 'CORRECT_VERDICT_WITH_FORM',
+        originalGraph: lastGraph,
+        useCaseId: verdict.use_case_id,
+        originalVerdictId: verdict.id,
+        // DR7-17: the description from the confirmed state, not the first
+        // screen's typed text — submittedDescription is set from question
+        // 2's final text at every form confirm (handleFormSubmitted).
+        description: submittedDescription,
+        plainAnswers: lastConfirmed.plainAnswers,
+        assumptions: lastConfirmed.assumptions,
+      });
+      return;
+    }
     dispatch({
       type: 'CORRECT_VERDICT',
       graph: lastGraph,
@@ -1252,6 +1355,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           corrected_value: value,
           corrected_at: new Date().toISOString(),
           corrected_by: getRole(),
+          // R16-D2 §5 (CB-4): a questionnaire answer that write-backs onto
+          // the graph.
+          correction_source: 'question',
         };
       }
     }
@@ -1521,6 +1627,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
         {state.step === 'graph_extraction' && state.method === 'form' && (
           <>
+            {/* R16-D2 §5 (D-82). Orients a submitter who reached the form
+                via "Correct your answers" rather than a fresh pre-check —
+                set only when state.originalVerdictId is present. */}
+            {state.originalVerdictId && (
+              <p className="intake-flow__correction-note" role="status">
+                You&rsquo;re correcting your earlier answers. Change what was wrong, then continue —
+                the result will be worked out again and both versions are kept.
+              </p>
+            )}
             {/* F-2 (DR7-04): a form-path EVALUATION_FAILED now re-enters
                 HERE (not graph_review), carrying state.useCaseId so a
                 resubmission reuses the same case — the error must render
@@ -1672,6 +1787,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                             corrected_value: next,
                             corrected_at: new Date().toISOString(),
                             corrected_by: getRole(),
+                            // R16-D2 §5 (CB-4): part of the same graph_review
+                            // screen as GraphView's per-field editor.
+                            correction_source: 'review',
                           },
                         });
                         setReviewGateError(null);
@@ -1783,6 +1901,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             memoLabel={submittedDescription.slice(0, 80) || 'AI use case'}
             memoDescription={submittedDescription}
             knowledgeLensMatches={knowledgeLensMatches}
+            // R16-D2 §2/§3 (D-95, D-96): the "No" screen's contributing-
+            // assumption check needs this case's own assumptions and the
+            // loaded packs (for a pack hard line's plain_reason/plain_change
+            // and jurisdiction name) — lastConfirmed is set beside lastGraph
+            // in runConfirmAndEvaluate, for both a fresh confirm and a
+            // correction.
+            assumptions={lastConfirmed?.assumptions}
+            packs={loadedPacks}
           />
         )}
         {/* R16-W W-5 (§5, D-75): collapsed by default on the intake verdict

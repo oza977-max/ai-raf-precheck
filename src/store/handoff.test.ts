@@ -575,6 +575,206 @@ describe('RG-8 hand-off bundle — unknown-field passthrough (R16-F F-5, DR7-01)
   });
 });
 
+// R16-D2 §4/§4b (D-81, D-97, DR7-19, EB-2/EC-5). The §1 Assumption shape
+// and the §4b evidence_scope shape, as validated at the hand-off import
+// boundary — both optional (older trails/bundles must still verify and
+// import), both rejected when malformed rather than silently accepted.
+describe('RG-8 hand-off bundle — assumptions and evidence_scope (R16-D2 §4/§4b)', () => {
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  function validAssumption(overrides: Record<string, unknown> = {}) {
+    return {
+      questionId: '9',
+      question: 'Can the mistake be caught and put right?',
+      shortLabel: 'whether a mistake can be put right',
+      assumption: 'it can’t be undone — the strictest case',
+      fields: ['output_reversibility'],
+      ...overrides,
+    };
+  }
+
+  it('TC-R16-D2-20: a bundle whose graph_confirmed carries valid assumptions imports successfully and keeps them', async () => {
+    const useCaseId = 'uc-r16d2-assumptions-valid';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-confirmed`,
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0, assumptions: [validAssumption()] },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('imported_into_empty');
+    const imported = await getAllForExport();
+    const confirmed = imported.find((e) => e.event_type === 'graph_confirmed');
+    expect((confirmed!.payload as unknown as { assumptions: unknown[] }).assumptions).toEqual([validAssumption()]);
+  });
+
+  it('TC-R16-D2-21: a bundle whose graph_confirmed has no assumptions field at all (a pre-D2 event) still imports — absence is legacy, not malformed', async () => {
+    const useCaseId = 'uc-r16d2-assumptions-missing';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-confirmed`,
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0 },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('imported_into_empty');
+  });
+
+  it.each([
+    ['an unknown questionId', { questionId: 'not-a-real-question' }],
+    ['an unknown graph field name', { fields: ['not_a_real_field'] }],
+    ['an empty shortLabel', { shortLabel: '' }],
+    ['a shortLabel over 500 characters', { shortLabel: 'x'.repeat(501) }],
+  ])('TC-R16-D2-22: a bundle whose graph_confirmed assumption is malformed (%s) is rejected, with nothing imported', async (_label, override) => {
+    const useCaseId = 'uc-r16d2-assumptions-malformed';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-confirmed`,
+      use_case_id: useCaseId,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: 'g1',
+        graph_version: 1,
+        corrections_count: 0,
+        assumptions: [validAssumption(override)],
+      },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('invalid_format');
+    expect(await getAllForExport()).toHaveLength(0);
+  });
+
+  it('TC-R16-D2-23: a bundle whose verdict_corrected carries assumptions, evidence_scope and corrections_count imports successfully and keeps all three', async () => {
+    const useCaseId = 'uc-r16d2-corrected-fields';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-corrected`,
+      use_case_id: useCaseId,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: 'system',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: `${useCaseId}-v1`,
+        new_verdict: minimalVerdict(useCaseId, { id: `${useCaseId}-v2` }),
+        assumptions: [validAssumption()],
+        evidence_scope: { platform: 'PLAT-X' },
+        corrections_count: 0,
+      },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('imported_into_empty');
+    const imported = await getAllForExport();
+    const corrected = imported.find((e) => e.event_type === 'verdict_corrected');
+    const p = corrected!.payload as unknown as { assumptions: unknown[]; evidence_scope: unknown; corrections_count: number };
+    expect(p.assumptions).toEqual([validAssumption()]);
+    expect(p.evidence_scope).toEqual({ platform: 'PLAT-X' });
+    expect(p.corrections_count).toBe(0);
+  });
+
+  it('TC-R16-D2-24: a bundle whose verdict_produced carries an evidence_scope with an empty platform string is rejected', async () => {
+    const useCaseId = 'uc-r16d2-evidence-scope-malformed';
+    await addNode(useCaseNode(useCaseId, 'Hand-off fixture'));
+    await append({
+      event_id: `${useCaseId}-created`,
+      use_case_id: useCaseId,
+      event_type: 'use_case_created',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'use_case_created', description: 'd', intake_method: 'structured_form' },
+    });
+    await append({
+      event_id: `${useCaseId}-verdict`,
+      use_case_id: useCaseId,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-02T00:00:01.000Z',
+      actor: 'system',
+      payload: { type: 'verdict_produced', verdict: minimalVerdict(useCaseId), evidence_scope: { platform: '' } },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('invalid_format');
+    expect(await getAllForExport()).toHaveLength(0);
+  });
+
+  it('TC-R16-D2-25: correction_source rides through a graph_corrected event\'s correction — a valid value imports, an invalid one is rejected', async () => {
+    const useCaseId = 'uc-r16d2-correction-source';
+    await seedSubmitterCase(useCaseId);
+    await append({
+      event_id: `${useCaseId}-graph-corrected`,
+      use_case_id: useCaseId,
+      event_type: 'graph_corrected',
+      occurred_at: '2026-01-02T00:00:02.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'graph_corrected',
+        correction: {
+          correction_id: 'c1',
+          graph_version_before: 1,
+          graph_version_after: 2,
+          node_id: 'p1',
+          field: 'data_zone',
+          original_value: 'Zone A',
+          corrected_value: 'Zone C',
+          corrected_by: '1LoD',
+          corrected_at: '2026-01-02T00:00:02.000Z',
+          correction_source: 'form',
+        },
+      },
+    });
+    const bundle = await exportBundle(APP_VERSION);
+    await freshMachine();
+    const result = await importBundle(bundle);
+    expect(result.outcome).toBe('imported_into_empty');
+    const imported = await getAllForExport();
+    const graphCorrected = imported.find((e) => e.event_type === 'graph_corrected');
+    expect((graphCorrected!.payload as unknown as { correction: { correction_source: string } }).correction.correction_source).toBe('form');
+
+    await freshMachine();
+    const invalidBundle: HandoffBundle = {
+      ...bundle,
+      audit_events: bundle.audit_events.map((e) =>
+        e.event_type === 'graph_corrected'
+          ? ({ ...e, payload: { ...e.payload, correction: { ...(e.payload as { correction: object }).correction, correction_source: 'not-a-real-source' } } } as unknown as AuditEvent)
+          : e,
+      ) as AuditEvent[],
+    };
+    // Recompute the chain/seal so this is a KNOWN-field validation failure,
+    // not a tamper-detection one.
+    const rehashed = await __recomputeChainForTests(
+      invalidBundle.audit_events.map(({ prev_hash: _prevHash, hash: _hash, ...rest }) => rest as Omit<AuditEvent, 'prev_hash' | 'hash'>),
+    );
+    const seal = await computeSeal(invalidBundle.register, rehashed);
+    const result2 = await importBundle({ ...invalidBundle, audit_events: rehashed, seal });
+    expect(result2.outcome).toBe('invalid_format');
+  });
+});
+
 describe('RG-8 hand-off bundle — prefix merge and divergence (the ping-pong)', () => {
   beforeEach(async () => {
     await freshMachine();

@@ -231,6 +231,39 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(result.warnings.some((w) => /TP-01/.test(w) && /unknown_team/.test(w))).toBe(true);
   });
 
+  // R16-D2 §2 (DR7-20). A pack hard_line effect's plain_reason/plain_change
+  // get exactly the same placeholder scan as a firm HardLine's own
+  // (hardLineWarnings) — the "No" screen uses the identical
+  // {audience}/{destination} vocabulary for both.
+  it('TC-R16-D2-28: a pack hard_line effect\'s plain_reason/plain_change are scanned for unknown placeholders too', () => {
+    const pack: JurisdictionPack = {
+      pack_id: 'TEST-PACK', version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: 'TP-02', title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'hard_line', reason: 'r', plain_reason: 'it reaches {region}', plain_change: 'ask {some_team}' },
+        condition: {}, basis: 'verbatim',
+      }],
+    };
+    const result = checkPolicyReferences(basePolicy(), [pack]);
+    expect(result.warnings.some((w) => /TP-02/.test(w) && /region/.test(w))).toBe(true);
+    expect(result.warnings.some((w) => /TP-02/.test(w) && /some_team/.test(w))).toBe(true);
+  });
+
+  it('TC-R16-D2-28b: {audience} and {destination} in a pack hard_line\'s plain fields are recognised and do not warn', () => {
+    const pack: JurisdictionPack = {
+      pack_id: 'TEST-PACK', version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: 'TP-03', title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'hard_line', reason: 'r', plain_reason: 'it reaches {audience} via {destination}' },
+        condition: {}, basis: 'verbatim',
+      }],
+    };
+    const result = checkPolicyReferences(basePolicy(), [pack]);
+    expect(result.warnings.some((w) => /TP-03/.test(w))).toBe(false);
+  });
+
   // R16-F §6 (DR7-14). A review's plain_name must be a noun phrase — it is
   // read inside "Doing this also completes {list} — one piece of work."
   // and a clause breaks that sentence grammatically (the exact mistake W-6

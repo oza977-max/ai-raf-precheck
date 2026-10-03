@@ -358,7 +358,12 @@ export type PackRuleEffect =
   // Both optional; absent falls back to the formal `review` text (chunk D1
   // renders the fallback — this schema only makes the fields exist).
   | { type: 'required_review'; review: string; plain_name?: string; plain_owner?: string }
-  | { type: 'hard_line'; reason: string };
+  // R16-D2 §2 (DR7-20). Same pair as HardLine's own below: why the answer
+  // is no, and what would change it, in the submitter's own words. Both
+  // optional; absent falls back to `reason` + the §4.4 pointer line (the
+  // "No" screen's view-model renders the fallback — this schema only makes
+  // the fields exist).
+  | { type: 'hard_line'; reason: string; plain_reason?: string; plain_change?: string };
 
 export interface PackRule {
   id: string;
@@ -435,6 +440,13 @@ export interface GraphCorrection {
   corrected_by: string;
   corrected_at: string;
   reason?: string;
+  // R16-D2 §5 (CB-4). Which screen produced this correction: GraphView's
+  // per-field editor ('review'), a questionnaire write-back ('question'),
+  // or a form resubmission's diff against the original graph ('form',
+  // src/components/form-corrections.ts). Optional so every pre-D2 record
+  // stays valid — absence means the source predates this field, not that
+  // none exists.
+  correction_source?: 'form' | 'review' | 'question';
 }
 
 // Result<T, E> pattern (cross-cutting.md §5) — engine functions never throw.

@@ -1091,6 +1091,11 @@ type PackRuleEffect =
   | { type: 'required_review'; review: string; plain_name?: string; plain_owner?: string }
   | ...;
 
+// Amended 2026-10-03 (R16-D2 &sect;2, DR7-20). The hard_line variant gains
+// the identical pair HardLine already has above:
+type PackRuleEffectHardLine =
+  { type: 'hard_line'; reason: string; plain_reason?: string; plain_change?: string };
+
 // RegistryEntry backs BOTH platforms[] and vendors[]:
 interface RegistryEntry {
   // ...existing fields unchanged...
@@ -1117,6 +1122,7 @@ export function checkPolicyReferences(
     <p><strong>Amended 2026-10-02 (R16-W, W-7, D-77).</strong> Errors also include: a <code>verification_evidence.applies_to</code> id that is not a platform or vendor id registered on the SAME policy &mdash; always checkable (unlike <code>covers_reviews</code>, this never depends on whether packs are loaded, since platforms and vendors are both part of the policy file itself). This is what stops a firm from scoping evidence to a platform/vendor id that does not exist.</p>
 
     <p>Warnings (shown to the reviewer, never blocking): an unknown placeholder — anything in <code>{…}</code> other than <code>{audience}</code>/<code>{destination}</code>; an unknown <code>@</code> token in a <code>plain_owner</code> field other than <code>@submitter</code>/<code>@model_owner</code>; a platform or vendor registry entry with no <code>plain_name</code>.</p>
+    <p><strong>Amended 2026-10-03 (R16-D2 &sect;2, DR7-20).</strong> A pack <code>hard_line</code> effect's <code>plain_reason</code>/<code>plain_change</code> are scanned for unknown placeholders too — the same check a firm <code>HardLine</code>'s own pair already gets, since both use the identical <code>{audience}</code>/<code>{destination}</code> vocabulary. Warning, not error, like every other plain-language placeholder check here.</p>
 
     <p>The check is referential only — a <code>covers_reviews</code> id that resolves to a real review is not itself proof the control's action satisfies that review; that is a rule-review judgement a human makes (<code>grounding/PACK-AUTHORING.md</code>'s reviewer checklist gains a line for it).</p>
 

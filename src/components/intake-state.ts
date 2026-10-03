@@ -22,6 +22,17 @@ export type IntakeState =
       useCaseId?: string;
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
+      // R16-D2 §5 (D-82, DR7-17/DR7-22). Present only on a CORRECTION of a
+      // form-built verdict (`CORRECT_VERDICT_WITH_FORM`, carried forward by
+      // every return trip to this step — CHANGE_ANSWER, a form-path
+      // EVALUATION_FAILED, the questionnaire's own STEP_BACK). `useCaseId`
+      // above is reused the same way a plain resubmission already reuses
+      // it; these two name the correction itself: which verdict is being
+      // corrected, and the graph it was produced from, so a resubmission's
+      // `formCorrections()` diff is always against the ORIGINAL answers —
+      // never against a previous, never-attested resubmission attempt.
+      originalVerdictId?: string;
+      originalGraph?: DataFlowGraph;
     }
   | {
       step: 'graph_review';
@@ -81,6 +92,10 @@ export type IntakeState =
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
+      // R16-D2 §5: see graph_extraction's own comment above — carried
+      // forward only so a further "Change an answer"/STEP_BACK/evaluation
+      // failure during this correction can hand it back to the form.
+      originalGraph?: DataFlowGraph;
       // v0.7.1: single-level undo — the graph and corrections length as
       // they stood BEFORE the most recent answer. Cleared by the next
       // answer. Ephemeral review state; the trail records only what is
@@ -116,6 +131,8 @@ export type IntakeState =
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
+      // R16-D2 §5: see graph_extraction's own comment.
+      originalGraph?: DataFlowGraph;
       // W-3/W-4: see the questionnaire variant's comment above.
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
@@ -135,6 +152,8 @@ export type IntakeState =
       resolutionNotes: string[];
       useCaseId: string;
       originalVerdictId?: string;
+      // R16-D2 §5: see graph_extraction's own comment.
+      originalGraph?: DataFlowGraph;
       // W-3/W-4: see the questionnaire variant's comment above. This is
       // what IntakeFlow now reads directly for UnderstoodSummary's
       // assumptions list — replacing the `formAssumptions` useState the
@@ -152,6 +171,10 @@ export type IntakeState =
       graph: DataFlowGraph;
       useCaseId: string;
       originalVerdictId?: string;
+      // R16-D2 §5: see graph_extraction's own comment — carried here so a
+      // genuine evaluation failure during a form correction can still hand
+      // it back to the form (EVALUATION_FAILED, below).
+      originalGraph?: DataFlowGraph;
       // Review 004 finding 2: carried so a failed evaluation can restore a
       // WORKING review screen — description visible, jurisdictions editable.
       description?: string;
@@ -209,6 +232,14 @@ export type IntakeAction =
       assumptions: Assumption[];
       questions: IntakeQuestion[];
       contradictions: Contradiction[];
+      // R16-D2 §5 (D-82). Empty on a fresh submission; on a correction,
+      // the caller's `formCorrections(originalGraph, graph, …)` diff —
+      // computed in IntakeFlow.tsx's handleFormSubmitted, which has both
+      // graphs in scope (the one on `state.originalGraph`, and this one).
+      // Threaded onto the SAME `corrections` field every other path already
+      // uses, so `runConfirmAndEvaluate`'s existing per-correction write
+      // loop needs no change to also write these.
+      corrections: GraphCorrection[];
     }
   | { type: 'CORRECTION_APPLIED'; correction: GraphCorrection; updatedGraph: DataFlowGraph }
   // R5-GR-2: the human states a model-proposed node is right as shown.
@@ -241,6 +272,21 @@ export type IntakeAction =
   // VD-3 (verdict-audit.md §6): re-enters graph_review reusing the
   // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
   | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string }
+  // R16-D2 §5 (D-82, DR7-17). The form-path counterpart to CORRECT_VERDICT
+  // above: re-enters at the GUIDED FORM itself (graph_review is engine
+  // vocabulary a form-built case has no business showing, principle 1),
+  // filled in with what was last confirmed, carrying the id of the verdict
+  // being corrected and the graph it was produced from (so the eventual
+  // resubmission's formCorrections() diff is against the real original).
+  | {
+      type: 'CORRECT_VERDICT_WITH_FORM';
+      originalGraph: DataFlowGraph;
+      useCaseId: string;
+      originalVerdictId: string;
+      description: string;
+      plainAnswers: PlainAnswers;
+      assumptions: Assumption[];
+    }
   // R16-C (§3): "Change an answer" on the UnderstoodSummary. Deliberately
   // its OWN action rather than reusing STEP_BACK — STEP_BACK's existing
   // reducer case and canStepBack's UI gate stay exactly as they are
@@ -262,6 +308,25 @@ export function nextReviewStep(
   if (questions.length > 0) return 'questionnaire';
   if (contradictions.length > 0) return 'contradiction_review';
   return 'confirmation';
+}
+
+/** R16-D2 §5 (v2.1). Whether a step back, "Change an answer" or an
+ *  evaluation failure returns to the guided form. A form-built graph does —
+ *  EXCEPT in a correction whose form answers and original graph are not both
+ *  in hand (a correction that came through the review screen,
+ *  CORRECT_VERDICT): that goes back to the review screen instead. An empty
+ *  form in correction mode would rebuild the case from blank answers and,
+ *  with no original graph to diff against, record "no answers changed" — a
+ *  false record on the append-only trail. */
+function returnsToForm(state: {
+  graph: DataFlowGraph;
+  plainAnswers?: PlainAnswers;
+  originalVerdictId?: string;
+  originalGraph?: DataFlowGraph;
+}): boolean {
+  if (state.graph.intake_method !== 'structured_form') return false;
+  if (!state.originalVerdictId) return true;
+  return state.plainAnswers !== undefined && state.originalGraph !== undefined;
 }
 
 /** The submitted description, carried forward wherever the current step still
@@ -329,7 +394,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           // forward either (FORM_SUBMITTED skips straight past it). Same
           // intake_method branch CHANGE_ANSWER already uses from
           // confirmation, below.
-          if (state.graph.intake_method === 'structured_form') {
+          if (returnsToForm(state)) {
             return {
               step: 'graph_extraction',
               description: carriedDescription(state),
@@ -337,6 +402,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
               useCaseId: state.useCaseId,
               plainAnswers: state.plainAnswers,
               assumptions: state.assumptions,
+              // R16-D2 §5: a correction pass must stay a correction pass on
+              // the way back into the form too — dropping these here would
+              // reopen the identical "orphaned correction" dead end §5
+              // closes for CHANGE_ANSWER/EVALUATION_FAILED, just reached via
+              // Back from the questionnaire instead.
+              originalVerdictId: state.originalVerdictId,
+              originalGraph: state.originalGraph,
             };
           }
           return {
@@ -407,6 +479,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         useCaseId: action.useCaseId,
         plainAnswers: action.plainAnswers,
         assumptions: action.assumptions,
+        // R16-D2 §5: carried from THIS state (the correction's start), not
+        // from the action — a correction stays the same correction across
+        // however many times the form is resubmitted before Confirm.
+        originalVerdictId: state.originalVerdictId,
+        originalGraph: state.originalGraph,
       };
       // F-6 (DR7-13): the ONE routing rule, shared with
       // handleProceedFromGraphReview's dispatch choice (IntakeFlow.tsx) —
@@ -420,7 +497,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             questions: action.questions,
             answers: [],
             resolutionNotes: [],
-            corrections: [],
+            // R16-D2 §5: the caller's formCorrections() diff (empty on a
+            // fresh submission) — the SAME field the description path's
+            // node-level corrections already use, so runConfirmAndEvaluate
+            // writes them with no change of its own.
+            corrections: action.corrections,
           };
         case 'contradiction_review':
           return {
@@ -430,14 +511,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             answers: [],
             contradictions: action.contradictions,
             resolutionNotes: [],
-            corrections: [],
+            corrections: action.corrections,
           };
         case 'confirmation':
           return {
             step: 'confirmation',
             ...carried,
             graphVersion: action.graph.version,
-            corrections: [],
+            corrections: action.corrections,
             answers: [],
             resolutionNotes: [],
           };
@@ -569,6 +650,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // R16-D2 §5: threaded forward alongside originalVerdictId.
+        originalGraph: state.originalGraph,
         // W-4: carried so a form-path contradiction review still has them
         // once it returns to the questionnaire and on to confirmation.
         plainAnswers: state.plainAnswers,
@@ -592,6 +675,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // R16-D2 §5: threaded forward alongside originalVerdictId.
+        originalGraph: state.originalGraph,
         // W-4: see CONTRADICTIONS_DETECTED's comment above.
         plainAnswers: state.plainAnswers,
         assumptions: state.assumptions,
@@ -611,6 +696,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         resolutionNotes: state.resolutionNotes,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // R16-D2 §5: threaded forward alongside originalVerdictId.
+        originalGraph: state.originalGraph,
         // W-4: the one place a form-path intake reaches confirmation
         // without a question or a contradiction ever firing — still has
         // to carry these, same as FORM_SUBMITTED's own confirmation exit.
@@ -628,7 +715,15 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // case — see "One use case, one creation event" §1). The
       // description path returns to the existing correction flow
       // (GraphView, UC-7), unchanged.
-      return state.graph.intake_method === 'structured_form'
+      //
+      // R16-D2 §5 (v2.1): originalVerdictId/originalGraph carried on the
+      // FORM branch too — before this fix, "Change an answer" during a
+      // correction of a form-built case lost both, so the eventual
+      // re-confirm ran as a FRESH confirm and the F-1 precondition refused
+      // it as "already has a result": safe (nothing written) but a dead
+      // end. The graph_review branch below already carried
+      // originalVerdictId (the "CORRECT_VERDICT fallback" case) — unchanged.
+      return returnsToForm(state)
         ? {
             step: 'graph_extraction',
             description: state.description,
@@ -636,6 +731,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             useCaseId: state.useCaseId,
             plainAnswers: state.plainAnswers,
             assumptions: state.assumptions,
+            originalVerdictId: state.originalVerdictId,
+            originalGraph: state.originalGraph,
           }
         : {
             step: 'graph_review',
@@ -654,6 +751,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: state.graph,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
+        // R16-D2 §5: threaded forward alongside originalVerdictId, for the
+        // identical reason — EVALUATION_FAILED hands it straight back too.
+        originalGraph: state.originalGraph,
         description: state.description,
         // F-2 (DR7-04): carried so EVALUATION_FAILED can hand a form-path
         // graph straight back to the filled-in form.
@@ -676,7 +776,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // graph_confirmed attestation on the trail); the next Confirm
       // passes the F-1 precondition and writes a new one — a deliberate
       // second attestation.
-      if (state.graph.intake_method === 'structured_form') {
+      if (returnsToForm(state)) {
         return {
           step: 'graph_extraction',
           description: carriedDescription(state),
@@ -684,6 +784,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           useCaseId: state.useCaseId,
           plainAnswers: state.plainAnswers,
           assumptions: state.assumptions,
+          // R16-D2 §5 (v2.1): see CHANGE_ANSWER's identical fix above — a
+          // genuine evaluation failure during a form correction must not
+          // drop the correction context either.
+          originalVerdictId: state.originalVerdictId,
+          originalGraph: state.originalGraph,
         };
       }
       return {
@@ -716,6 +821,20 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: [],
         useCaseId: action.useCaseId,
         originalVerdictId: action.originalVerdictId,
+      };
+
+    // R16-D2 §5 (D-82). The form-path counterpart to CORRECT_VERDICT above.
+    case 'CORRECT_VERDICT_WITH_FORM':
+      if (state.step !== 'verdict') return state;
+      return {
+        step: 'graph_extraction',
+        description: action.description,
+        method: 'form',
+        useCaseId: action.useCaseId,
+        plainAnswers: action.plainAnswers,
+        assumptions: action.assumptions,
+        originalVerdictId: action.originalVerdictId,
+        originalGraph: action.originalGraph,
       };
 
     default:

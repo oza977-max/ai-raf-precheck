@@ -32,6 +32,15 @@ export type PlainAnswers = Partial<Record<QuestionId, string | string[]>>;
 // that computed zone alongside the same questionId/optionKey shape so
 // `describeAssumptions()` can still pick the right wording without the
 // engine ever holding the wording itself.
+//
+// R16-D2 §1 (D-95). Both variants carry `fields`: the GRAPH field names
+// (`data_zone`, `vendor`, `model_type`, … — the names condition.ts's
+// `collectFieldValues` reads, never a StructuredFormValues name) that THIS
+// "Not sure" branch sets. Computed once, at the call site that already
+// knows which fields a branch touches (plain-intake.ts), rather than kept
+// in a hand-maintained table beside the mapping that a later edit could
+// silently leave stale — the guard test in plain-intake.test.ts proves the
+// two can never drift by re-deriving the same set from the graph itself.
 export type AssumptionRef =
-  | { questionId: QuestionId; optionKey: string }
-  | { questionId: '3platformZone'; optionKey: 'not-sure'; earliestZone: DataZone };
+  | { questionId: QuestionId; optionKey: string; fields: string[] }
+  | { questionId: '3platformZone'; optionKey: 'not-sure'; earliestZone: DataZone; fields: string[] };

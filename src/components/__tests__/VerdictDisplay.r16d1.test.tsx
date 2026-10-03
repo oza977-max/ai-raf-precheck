@@ -235,10 +235,21 @@ describe('VerdictDisplay — R16-D1: the correction affordance is wired on every
     expect(screen.getByRole('button', { name: /^correct this classification\?$/i })).toBeInTheDocument();
   });
 
-  it('TC-R16-D1-21: on a rejected verdict, the first screen still offers it', async () => {
+  // R16-D2 §2 item 5 (DR7-21): on a rejected verdict this control's own
+  // TEXT changes — "think we got something wrong?" presumes there might
+  // be nothing wrong, which is not the question on a "No"; the control
+  // still renders and still calls onCorrect either way (item 8's own
+  // guarantee, unchanged).
+  it('TC-R16-D1-21: on a rejected verdict, the first screen still offers it, worded for a "No"', async () => {
     const onCorrect = vi.fn();
+    const user = userEvent.setup();
     render(<VerdictDisplay verdict={makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-002' })} auditEvents={[]} onCorrect={onCorrect} />);
-    expect(screen.getByRole('button', { name: /think we got something wrong/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /if we.ve misunderstood how you.d use it, correct your answers/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /think we got something wrong/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /if we.ve misunderstood/i }));
+    expect(onCorrect).toHaveBeenCalledTimes(1);
   });
 
   it('TC-R16-D1-22: with no onCorrect (a reviewer page), neither correction affordance renders', () => {

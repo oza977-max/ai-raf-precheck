@@ -21,7 +21,16 @@ const PackRuleEffectSchema = z.discriminatedUnion('type', [
     plain_name: z.string().optional(),
     plain_owner: z.string().optional(),
   }),
-  z.object({ type: z.literal('hard_line'), reason: z.string().min(1) }),
+  // R16-D2 §2 (DR7-20). Same optional pair as a firm hard line's (HardLineSchema,
+  // policy.ts) — why the answer is no, and what would change it, in the
+  // submitter's own words. Absent falls back to `reason` + the §4.4
+  // pointer line (the "No" screen's view-model renders the fallback).
+  z.object({
+    type: z.literal('hard_line'),
+    reason: z.string().min(1),
+    plain_reason: z.string().optional(),
+    plain_change: z.string().optional(),
+  }),
 ]);
 
 const PackRuleSchema = z.object({

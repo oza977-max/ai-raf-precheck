@@ -155,10 +155,10 @@ export interface AuditEvent {
 
 export type AuditEventPayload =
   | { type: 'use_case_created'; description: string; intake_method: 'llm' | 'structured_form' }
-  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[] } // R6-CX-1: answer contexts, human-read only
-  | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string }
+  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[]; assumptions?: Assumption[] } // R6-CX-1: answer contexts, human-read only. R16-D2 §1/§4 (D-95, D-81): assumptions — the case's own "Not sure" answers, written only when non-empty
+  | { type: 'verdict_produced'; verdict: Verdict; reasoning_trace?: string; evidence_scope?: { platform?: string; vendor?: string } } // R16-D2 §4b (D-97): the processing node's platform/vendor at evaluation — the register's substitute for the graph it does not persist
   | { type: 'graph_corrected'; correction: GraphCorrection }
-  | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[] } // R16-F F-4 (DR7-12, DR7-16): same shapes as graph_confirmed's own fields above — a correction no longer drops what the person typed
+  | { type: 'verdict_corrected'; original_verdict_id: string; new_verdict: Verdict; reasoning_trace?: string; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[]; assumptions?: Assumption[]; evidence_scope?: { platform?: string; vendor?: string }; corrections_count?: number } // R16-F F-4 (DR7-12, DR7-16): same shapes as graph_confirmed's own fields above — a correction no longer drops what the person typed. R16-D2 §1/§4/§4b/§8: assumptions/evidence_scope mirror graph_confirmed/verdict_produced; corrections_count is how many graph_corrected events THIS correction wrote (0 renders as a re-check, F2C-6)
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | {
       type: 'twoloD_reviewed';
@@ -259,6 +259,24 @@ unrelated RG-7 (periodic sampling cadence, V2+, unbuilt) — see
 `requirements/requirements.md`'s own amendment note for the matching RG-8
 (hand-off) relabelling. The commit message is permanent history and keeps
 the old label; every reference in this spec has been updated to RG-9.
+
+**Added by R16-D2 (§2/§4/§4b, D-95, D-81, D-97).** `assumptions` on
+`graph_confirmed`/`verdict_corrected` is the case's own "Not sure" answers
+(the §1 `Assumption` shape — `questionId`, `question`, `shortLabel`,
+`assumption`, `fields`) — written only when non-empty, same
+spread-if-present discipline as `submitter_note`. `evidence_scope` on
+`verdict_produced`/`verdict_corrected` is the processing node's
+`platform`/`vendor` at evaluation, riding beside the verdict exactly where
+`knowledge_lens_matched_entry_ids` does — the register's substitute for the
+graph it does not persist (ADR-RL-R3-1), so a safeguard whose evidence is
+scoped to a platform or vendor (W-7) still reads the same way on the
+sign-off page as it did on the intake result screen. `corrections_count` on
+`verdict_corrected` is how many `graph_corrected` events THIS correction
+pass wrote — a zero-correction resubmission writes none, and §6.5/F2C-6
+reads this to render the correction honestly as a re-check rather than
+implying something changed. All three are optional: an older event
+predates them, and absence is read as "unknown", never as "none" (the same
+discipline `provisional_reasons` already follows, §2.2).
 
 ### 4.4 AuditStore interface (`src/store/audit.ts`)
 
@@ -364,6 +382,14 @@ function buildVerdictView(
   ownership: ControlOwnership | undefined,
   attestations: ControlAttestations | undefined,
   stage: LifecycleStage | undefined,
+  // R16-D2 §2/§3/§4b. ONE trailing options object, not three more
+  // positional arguments — this is the only shape; §5.9 and this
+  // section's own "No"/evidence-scope text both refer to it.
+  options?: {
+    assumptions?: Assumption[];
+    packs?: JurisdictionPack[];
+    evidenceScope?: { platform?: string; vendor?: string };
+  },
 ): VerdictView
 ```
 
@@ -377,15 +403,15 @@ It is the one computation behind both the first screen and three existing reader
 
 It also resolves, once: the **headline** (four variants — rejected, sign-off-needed, self-service, each with singular/plural safeguard counts); **why** (the distinct plain reasons, binding constraint first, capped at two); **next steps** (sign-off, safeguard ownership, other teams' reviews, `no_regulatory_basis`, a closing "start" line, each step omitted when its condition is false); **reviews still owed** (not covered by any safeguard on this verdict, de-duplicated by plain name — so the firm's two information-security rules show once, D-04); **who signs off**; and **could still change** (gated on `isVerdictProvisional`, D-19, plus the independent RA-11 medium-confidence-caveat line from §5.3, which surfaces whether or not the verdict is otherwise provisional).
 
-A review's plain name resolves against `policy.downstream_reviews` for a firm rule id, a fixed pair of product-level strings for the two engine sentinels (`PV-UNREGISTERED`, `MODEL-REGISTRY`), or a generic "ask your AI risk team which" line for anything else (necessarily a pack rule id, by §1.3's four-source enumeration) — `buildVerdictView` has no `packs` parameter, so a pack rule's own `plain_name` cannot be resolved here by design; this is the §4.4 fallback, not a gap.
+A review's plain name resolves against `policy.downstream_reviews` for a firm rule id, a fixed pair of product-level strings for the two engine sentinels (`PV-UNREGISTERED`, `MODEL-REGISTRY`), or a generic "ask your AI risk team which" line for anything else (necessarily a pack rule id, by §1.3's four-source enumeration) — the safeguard/review resolution above never reads `options.packs` for this, so a pack rule's own `plain_name` still cannot be resolved there; this is the §4.4 fallback, not a gap. (`options.packs`, added by R16-D2, is read only by the "No" screen's own composition, §5.9 — a different concern: a pack HARD line's `plain_reason`/`plain_change`, not a pack review's `plain_name`.)
 
 A verdict with no `downstream_review_sources` at all (predating this round) folds nothing away: every review in `downstream_reviews` lists separately, per §4.4's "nothing folded away" rule.
 
-A rejected verdict returns a minimal view (headline only; every other field empty) — its own first-screen composition is VD-10/chunk D2's slice; this module deliberately does not fabricate it.
+A rejected verdict returns a minimal view: headline, and `no` (§5.9, VD-10/chunk D2) — every other field (safeguards, next steps, owed reviews, could-still-change) stays empty, since none of them apply to a "No".
 
 ### 5.6 The first screen (VD-9, VD-10)
 
-Rendered by a `FirstScreen` component at the top of `VerdictDisplay`, in `buildVerdictView`'s own order: headline; why; next steps (numbered); the safeguards that must be in place (outstanding, yours first — each with its plain action, "Who:", a "yours" chip where it applies, "Because …", and a "(This also covers …)" note per covered review; a yours-and-outstanding safeguard also gets a "Go to this safeguard" link); already-in-place and attested safeguards (summary lines, no action needed); checks other teams run; who signs off; could still change; and a correction link ("Think we got something wrong? Correct your answers and check again.") wired to the same `onCorrect` prop as the existing correction button, on every verdict (including rejected). No string here contains "approved" or "rejected" (the suite-wide single-match guard, BC-V12B-03 — the one allowed match is the formal status label inside the reviewer section).
+Rendered by a `FirstScreen` component at the top of `VerdictDisplay`, in `buildVerdictView`'s own order: headline; **why — on a rejected verdict, `view.no`'s own composition (§5.9) in place of the usual why/next-steps/safeguards/who-signs-off, since none of those apply to a "No"**; next steps (numbered); the safeguards that must be in place (outstanding, yours first — each with its plain action, "Who:", a "yours" chip where it applies, "Because …", and a "(This also covers …)" note per covered review; a yours-and-outstanding safeguard also gets a "Go to this safeguard" link); already-in-place (R16-D2 §7 extends this note — see §5.9) and attested safeguards (summary lines, no action needed); checks other teams run; who signs off; could still change; and a correction link wired to the same `onCorrect` prop as the existing correction button, on every verdict (including rejected) — the text itself is "Think we got something wrong? Correct your answers and check again." except on a "No", where R16-D2 §2 item 5 replaces it (§5.9). No string here contains "approved" or "rejected" (the suite-wide single-match guard, BC-V12B-03 — the one allowed match is the formal status label inside the reviewer section).
 
 "Go to this safeguard" opens the reviewer section, adds the control to `WhatToDo`'s per-control expanded set (lifted to `VerdictDisplay`'s own state so an external click can control it — D-26/D-63: an anchor alone would be closed again on the next render, since the disclosure is React-controlled), then scrolls to it.
 
@@ -408,6 +434,45 @@ A live walkthrough of the committed D1 build found four defects — none in `bui
 **W-7 — "already in place" only where the evidence covers this tool (D-77).** `CTRL-ENC-01`'s stored `verification_evidence` is firm-level ("platform allow-list pins TLS 1.3; platform attestation on file") — true about the firm's own allow-listed platforms and suppliers, not about every use case that happens to trip the control, including a personal ChatGPT account the firm has no contract with. `ControlVerificationEvidence` (policy-schema.md) gains `applies_to?: { platforms?: string[]; vendors?: string[] }`; `checkPolicyReferences` (policy-schema.md §loader checks) rejects an id that isn't a registered platform/vendor on the same policy. §5.5's safeguard-status resolution now takes this into account: `verified` only when `applies_to` is absent (unscoped, the pre-W-7 default) or the processing node's platform id is in `applies_to.platforms` or its vendor id is in `applies_to.vendors`; when the evidence is scoped away from this graph, or the graph is unavailable to check (a case reopened from the register with no graph persisted), the safeguard reads `outstanding` — counted in the headline's N like any other outstanding safeguard, never silently dropped. The evidence panel (§5.7's control-evidence fold) renders a new line in that case instead of the detail text: *"Your firm's records show this for {plain names} — not for this tool."* (scoped away) or *"…— we couldn't check whether that includes this tool."* (no graph). RG-9 is amended accordingly (requirements.md).
 
 **W-8 — owner wording and a rendering bug (D-78).** `CTRL-CONDUCT-01`'s `plain_owner_with: "compliance"` rendered "…responsible for this use), with compliance" — readable as "in compliance" rather than naming a team — changed to `"your compliance team"` (policy v1.8). Separately: the "yours" chip (§5.6) followed the owner text with no space in the JSX between two expression children on adjacent lines — JSX drops an all-whitespace line between them entirely rather than collapsing it to one space — so an owner ending in a word immediately before the chip read as one run-together word ("complianceyours") to anything reading the element's text content, assistive tech included. Fixed with an explicit `{' '}` text node before the chip.
+
+### 5.9 The "No" screen (VD-10, chunk R16-D2, §2)
+
+Chunk D1 left the rejected branch of `buildVerdictView` minimal by design (§5.5's own note). R16-D2 fills it in: `VerdictView.no?: NoScreenView` — present if and only if `isRejected` — carries everything `FirstScreen` needs in place of the usual why/next-steps/safeguards/who-signs-off, none of which apply to a "No":
+
+```typescript
+interface NoScreenView {
+  kind: 'hard_line' | 'pack_hard_line' | 'unsatisfiable' | 'other';
+  reason: string;   // the full "Why: …" sentence(s), coda included
+  change?: string;  // the full "What would change the answer: …" sentence(s) — absent only for `kind: 'other'`
+  contributingAssumptions: Assumption[];
+  otherAssumptionCount: number;
+}
+```
+
+**Which `kind`, and why.** `verdict.binding_constraint` is matched, in order, against: a firm hard line (`policy.hard_lines`) → `hard_line`; failing that, a `hard_line`-effect rule in any loaded pack (`options.packs`, matched by id across every pack — pack rule ids are not namespaced by pack) → `pack_hard_line`; failing that, an entry in `verdict.explanation.tripped_invariants` (the CS-2 unsatisfiable-invariant rejection path — the only one of the three rejection shapes `evaluate()` produces that populates this list at all) → `unsatisfiable`; failing all three, `other` — an id that resolves against nothing loaded, never rendered as the bare id.
+
+**`reason` and `change`, per kind** (`{audience}`/`{destination}` filled exactly as §5.5's safeguard reasons; a `plain_reason`/`plain_change` string never carries its own trailing period, so a fallback or coda is appended with exactly one, never a double period or a period directly followed by a comma):
+
+| kind | `reason` | `change` |
+|---|---|---|
+| `hard_line`, with `plain_reason`/`plain_change` | `{plain_reason}. That's a line your firm never crosses, and no safeguard can make up for it.` | `{plain_change} Then check again.` |
+| `hard_line`, without | `{description}. That's a line your firm never crosses, and no safeguard can make up for it. {pointer}` | `change how it would be used, then check again. {pointer}` |
+| `pack_hard_line`, with | `{plain_reason}. It's one of the rules your firm has adopted for {country}, and no safeguard can make up for it.` | `{plain_change} Then check again.` |
+| `pack_hard_line`, without | `one of the rules your firm has adopted for {country} rules this out. {pointer}` | `change how it would be used, then check again. {pointer}` |
+| `unsatisfiable` (CS-2) | `{the tripped invariant's plain_reason, or its description}, and your firm has no safeguard that resolves it.` — plus ` {pointer}` after the whole sentence when the description was used | `change how it would be used, or ask your AI risk team whether the firm can add a safeguard for this.` |
+| `other` | `one of your firm's rules rules this out. {pointer}` | *(absent — nothing honest can be said about what would change an answer to a rule that cannot even be identified)* |
+
+**The fallback pointer goes after the whole sentence; countries are named in words** (both corrected while verifying the build, 2026-10-03). When a rule has no plain wording, its formal description is closed as a sentence and the pointer follows the complete "Why" sentence — never spliced into its middle (the first build produced "…for this exposure Ask your AI risk team what this means for you, and your firm has no safeguard…"). `{country}` is the policy's own name for the pack's jurisdiction code (`policy.jurisdictions`), with "the" where English needs one ("the United Kingdom", "the European Union", but "Canada"); a code the policy does not list reads "the countries it involves" — the raw code never reaches the screen. The same closing full stop now applies to the older §4.4 fallbacks for a reason or a safeguard ("{description}. {pointer}").
+
+**Contributing assumptions (D-80).** An assumption contributes when any of its `fields` (§1's `Assumption` shape) appears among the BINDING rule's own condition keys (`Object.keys(condition)`) — for a pack hard line, the pack rule's own condition, never the firm's; for `other`, nothing (no condition is even known), so `contributingAssumptions` is always `[]` there. `otherAssumptionCount` is `options.assumptions.length` minus the contributing count — the case can have "Not sure" answers that did not drive this particular outcome, surfaced as a pointer to the full list rather than silently dropped.
+
+**Rendering (`FirstScreen`, VerdictDisplay.tsx), in order:** headline (unchanged, §4.2 item 1); `no.reason` under "Why:"; when `contributingAssumptions.length > 0`, *"This is based on answers you weren't sure about: {shortLabels joined "a" / "a and b" / "a, b and c"}. If any of them is wrong, change it and check again."*, plus, when `otherAssumptionCount > 0`, *"(You weren't sure about other answers too — they're listed in the full reasoning below.)"*; `no.change` under "What would change the answer:" when present; the SAME correction button every verdict has, but reworded on a "No" to *"If we've misunderstood how you'd use it, correct your answers and check again."* (DR7-21) — the reviewer section's OWN, second correction button (§5.7) does not render on a "No" at all, so there is exactly one; *"Who to talk to: your AI risk team — the independent team that checks how the firm uses AI — if you think this is wrong or want to discuss another way to do this."*, unconditional on every "No". No safeguards list, no next steps, no "who signs off" (all empty from `buildVerdictView`, per §5.9's own interaction with §5.5).
+
+**The reviewer section lists every assumption (§2 item 7).** Independent of `isRejected` — a case fact, not a "No"-specific one — the reviewer section (§5.7) renders a fold, *"Answers the submitter wasn't sure about"*, over the FULL `options.assumptions` list whenever it is non-empty: every "Not sure" answer the case has, contributing to a "No" or not.
+
+**Evidence claims name what they rely on (§7, DR7-34).** The first screen's existing in-place note (§4.2 item 4, *"Already in place: {safeguards} (your firm's records show this)"*) is EXTENDED, never duplicated: when at least one in-place (verified) safeguard's evidence is scoped (`applies_to`, W-7) and the scope matches this case's platform or vendor, the note becomes *"…(your firm's records show this for {plain name})"* — the registered platform's name when both a platform and a vendor match (one case has one of each, so this is the only tie that can occur). `VerdictView.inPlaceScopeName?: string` is the one computation (`resolveInPlaceScopeName`, verdict-view-model.ts); `FirstScreen` only renders it. Resolved from `graph` when present, else `options.evidenceScope` (§4b) — agreeing with `evidenceApplies`'s own fallback order below.
+
+**`evidenceApplies`/`safeguardStatus` gain the same fallback (§4b, D-97).** Both now take an optional trailing `fallbackScope?: { platform?: string; vendor?: string }`, read ONLY when `graph` itself is absent — with `graph` present this is byte-identical to the pre-D2 function, so the intake result screen (which always has the graph) is unaffected. No graph and no fallback scope (a legacy event) still reads `'cannot-check'`, exactly as before this option existed.
 
 ---
 
@@ -452,6 +517,23 @@ The fix has two independent parts:
 2. **`confirmationPrecondition(useCaseId, originalVerdictId?)` (`src/store/register.ts`).** A read-only check, called FIRST inside `withCaseLock`, before any write: a fresh confirm (no `originalVerdictId`) is `'already-decided'` when the trail already holds a `verdict_produced` for the case OR a register node already exists for it (checked independently of each other, since a register write can fail for a reason unrelated to this exact race while the trail already shows a verdict); a correction is `'corrected-elsewhere'` when the register's `current_verdict_id` no longer equals the verdict the correction was made against. Ordering (part 1) makes the second tab's whole sequence run strictly after the first tab's; this precondition, re-read fresh every time, is what turns that ordering into an actual refusal.
 
 On a refusal, `runConfirmAndEvaluate` writes nothing, releases the confirm in-flight guard, and `IntakeFlow.tsx` stays on `confirmation` showing a `role="alert"` message (already decided: *"This case already has a result — it was probably confirmed in another tab or window. Open it from the register to see it."*; corrected elsewhere: *"This result was corrected in another tab or window while you were working, so your correction wasn't saved. Open the case from the register to see the current result."*) and disables Confirm — retrying would read the identical, still-stale precondition. This is never routed through `EVALUATION_FAILED`: a refusal is not an engine/policy failure, and `CONFIRMED` is never dispatched for a refused attempt, so there is nothing to fail. An evaluation retry after a genuine failure (no verdict yet for the case) still passes the precondition and writes a new `graph_confirmed` — a deliberate second attestation, recorded honestly, not a repeat.
+
+### 6.5 Correcting a form-built verdict through the form (R16-D2 §5, D-82, DR7-17/DR7-22)
+
+Before this round, "Correct" on ANY verdict re-entered at `graph_review` (GraphView's per-field editor) — engine vocabulary a form-built case has no business showing (principle 1: the person typed every value themselves). `handleCorrectVerdict` (IntakeFlow.tsx) now dispatches `CORRECT_VERDICT_WITH_FORM` instead, when the last confirmation's `plainAnswers` are still in hand (`lastConfirmed`, §5.9/§3's carrier) AND the graph is form-built; otherwise it falls back to today's `CORRECT_VERDICT` (graph_review) — a verdict predating this chunk, or one whose graph is form-built but was itself last corrected through `graph_review` (so `lastConfirmed.plainAnswers` is unset), is never left with no way to correct it, just the older path.
+
+`CORRECT_VERDICT_WITH_FORM { originalGraph, useCaseId, originalVerdictId, description, plainAnswers, assumptions }` re-enters at `graph_extraction` (`method: 'form'`), filled in with what was last confirmed, carrying `originalVerdictId` and `originalGraph` — both new, optional fields on the `graph_extraction` state (and threaded, exactly parallel to `originalVerdictId`'s own existing path, through `questionnaire`/`contradiction_review`/`confirmation`/`evaluation_pending`, so a further "Change an answer", a genuine evaluation failure, or Back from the questionnaire during the SAME correction can all hand it back to the form again without losing the correction — see the table below). `description` is read from the confirmed state (`submittedDescription`), not the first screen's typed text (DR7-17) — the same discipline W-1 already applies to a fresh submission.
+
+On resubmission, `handleFormSubmitted` computes `formCorrections(state.originalGraph, graph, { by, at, newId })` (`src/components/form-corrections.ts`) — a pure diff, no React/store/clock of its own — and threads the result onto `FORM_SUBMITTED`'s own `corrections` field, the SAME field the description path's node-level corrections already use: `runConfirmAndEvaluate`'s existing per-correction write loop (§6.2) writes one `graph_corrected` per entry with no change of its own. `formCorrections` matches the processing and output nodes by ROLE against the ORIGINAL graph's node ids (never the rebuilt graph's — `buildGraphFromForm` mints fresh ids every call), diffs the union of each node's own keys (bar `id`), and records a cleared optional field as `corrected_value: null` (never the bare `undefined`, which an append-only hashed payload must not carry). Inputs and jurisdictions are not per-node: one correction each, on the sentinel node ids `inputs`/`graph` (the jurisdictions one shared with the existing jurisdictions-panel correction), comparing the SORTED set so a reorder alone is never a correction. Every correction this helper produces carries `correction_source: 'form'` — `GraphCorrection` gains this optional field (also set to `'review'` by `GraphView`'s per-field editor and the jurisdictions panel, `'question'` by a questionnaire write-back) so a reviewer can tell which screen produced which entry. A zero-change resubmission produces an empty `corrections` array: `verdict_corrected` is still written (a genuine, if unchanged, re-attestation), with no `graph_corrected` events at all and `corrections_count: 0` (§4.3) — `RegisterDetail.eventDetail` renders this as *"Re-checked — no answers changed."* rather than implying something changed (F2C-6).
+
+| Control, during a correction | Carries `originalVerdictId`/`originalGraph` back to the form? |
+|---|---|
+| `CHANGE_ANSWER` (confirmation → form) | Yes (R16-D2 fix — previously dropped both, the exact "dead end" the R16-F handover's "Known, carried forward" note named) |
+| A genuine evaluation failure (`EVALUATION_FAILED`, form-path branch) | Yes (R16-D2 fix, same reason) |
+| `STEP_BACK` from the questionnaire (→ form) | Yes (R16-D2 fix — the identical hazard, reached by a different control; not named in the R16-D2 contract's own v2.1 list, fixed for consistency) |
+| `STEP_BACK` from the form itself | N/A — already a no-op for EVERY `graph_extraction` state, correction or not (the reducer's `STEP_BACK` switch has no `graph_extraction` case; `canStepBack` excludes it); Back is already hidden there |
+
+The confirm in-flight guard is released on entry exactly as `handleCorrectVerdict` already does for `CORRECT_VERDICT`; the F-1 case lock and `confirmationPrecondition` (§6.4) apply unchanged — a correction whose case was corrected elsewhere is refused the same way regardless of which screen produced it.
 
 ---
 
@@ -870,6 +952,7 @@ The merge path (`importBundle`) is now ALSO one `withAuditQueue()` turn (its aud
 
 | Date | Change |
 |---|---|
+| 2026-10-03 | §5.9 added, §6.5 added, §4.3/§5.5/§5.6 amended — R16-D2 (the "No" screen, VD-10; saved assumptions; correcting a form-built verdict through the form). `buildVerdictView` gains one trailing options object (`assumptions`, `packs`, `evidenceScope`) and now computes `VerdictView.no`/`inPlaceScopeName` for a rejected verdict instead of leaving them for a later chunk. `graph_confirmed`/`verdict_corrected` gain optional `assumptions`; `verdict_produced`/`verdict_corrected` gain optional `evidence_scope`; `verdict_corrected` gains optional `corrections_count`. `GraphCorrection` gains optional `correction_source`. New reducer action `CORRECT_VERDICT_WITH_FORM`; `originalVerdictId`/`originalGraph` now thread through the form-path correction states the same way `plainAnswers`/`assumptions` already did (§6.5's table). |
 | 2026-10-02 | §6.4 added, §4.3/§16.3/§16.6 amended — R16-F (design-review-007.html Group 1). New: the per-case lock (`withCaseLock`) and the read-only `confirmationPrecondition`, which together refuse a repeat confirm or correction across tabs (F-1, DR7-02/DR7-03) — previously, the write queues only ordered same-store writes and this file (§16.6) overclaimed that a second tab was "locked out", corrected here. `verdict_corrected`'s payload gains `submitter_note`/`contradiction_resolutions`/`answer_contexts` (F-4, DR7-12/DR7-16), read via `RegisterDetail.tsx`'s `currentVerdictAttestationFields`. Every hand-off schema gains `.passthrough()` so an unknown field no longer makes an untouched bundle fail import as tampered (F-5, DR7-01). |
 | 2026-10-02 | §5 rewritten — R16 chunk D1 (VD-9, VD-10). The page is now a plain-language first screen (§5.6) over a collapsed reviewer section (§5.7) holding everything §5 described before this round, unchanged. New §5.5 documents the one view-model (`verdict-view-model.ts`) behind the first screen and the three existing readers (`WhatToDo`, `SignOffChecklist`, the control-evidence panel) that previously derived a safeguard's status independently. `describesSameObligation` (a text heuristic) is deleted, replaced by the referential `covers_reviews` field. The platform/vendor inheritance panel (§5.7) now labels each declared component by source ("Platform"/"Supplier", D-61). TC-VD-1-01 superseded (test-cases.md) — its "never behind a fold" criterion now describes the reviewer section, not the first screen. |
 | 2026-10-02 | §16.4/§16.8 amended — code review 005 round 3 (R3-1, R3-2, R3-4; R3-3/R3-5 are outside this file's scope). One new `ImportOutcome` value, `register_needs_finishing`: `importBundle`'s `up_to_date` branch now also compares the local register against the bundle's register and, on a mismatch, offers the same `finishRegisterReplace` recovery a still-pending `partially_replaced` finish would have — closing the gap where losing `RegisterView`'s in-memory finish state (a view switch, a reload) left the register silently, permanently wrong. The `partially_replaced` message no longer offers reload as a neutral alternative. "Import hand-off bundle" is now disabled, with a visible reason, for as long as a replace or finish is pending, closing a race where a second bundle could show two unrelated pending decisions (Keep vs. Finish) at once. §16.10 traceability row extended with `TC-RG-8-42` through `-48b`. |

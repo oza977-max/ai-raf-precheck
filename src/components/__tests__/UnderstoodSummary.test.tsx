@@ -312,7 +312,13 @@ describe('UnderstoodSummary — agent-specific sections, only when applicable', 
 
 describe('UnderstoodSummary — assumptions (form path) vs uncertain nodes (description path), UC-9', () => {
   const ASSUMPTIONS: Assumption[] = [
-    { questionId: '9', question: 'Can the mistake be caught?', assumption: 'it can’t be undone — the strictest case' },
+    {
+      questionId: '9',
+      question: 'Can the mistake be caught?',
+      shortLabel: 'whether a mistake can be put right',
+      assumption: 'it can’t be undone — the strictest case',
+      fields: ['output_reversibility'],
+    },
   ];
 
   it('TC-R16-C-07: form path — every assumption appears under "Things we assumed because you weren’t sure"', () => {
@@ -453,7 +459,13 @@ describe('UnderstoodSummary — reserved words (CLAUDE.md)', () => {
 });
 
 const ASSUMPTIONS_FOR_RESERVED_TEST: Assumption[] = [
-  { questionId: '6', question: 'What happens with the output?', assumption: 'it acts entirely by itself — the strictest case' },
+  {
+    questionId: '6',
+    question: 'What happens with the output?',
+    shortLabel: 'what it does with what it produces',
+    assumption: 'it acts entirely by itself — the strictest case',
+    fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'],
+  },
 ];
 
 describe('UnderstoodSummary — handles a sparse/hand-built graph without crashing', () => {

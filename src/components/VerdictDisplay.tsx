@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { DataFlowGraph, EnvelopeDimensionFit, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
+import type { DataFlowGraph, EnvelopeDimensionFit, JurisdictionPack, PolicyFile, RuleRationale, TrippedInvariantDetail, VerdictExplanation } from '../engine/types';
+import type { Assumption } from './plain-copy';
 import { findControlName, findRuleDescription } from '../engine/find-rule-description';
 import { fitsEnvelope, inheritableControls } from '../engine/envelope';
 import { graphSummaryRows } from './graph-summary';
@@ -17,7 +18,7 @@ import { Fold } from './Fold';
 // the verdict's first screen AND the four readers that need a safeguard's
 // status (this first screen, WhatToDo, SignOffChecklist, the evidence
 // panel below) — "one computation per fact" (principle 0.5).
-import { buildVerdictView, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
+import { buildVerdictView, joinWithAnd, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -79,6 +80,19 @@ interface VerdictDisplayProps {
   // Never used to hide or show anything else (G6 — no new role-conditional
   // rendering).
   hasRiskKnowledgeSection?: boolean;
+  // R16-D2 §2/§3/§4b (D-95, D-96, D-97). This case's own "Not sure"
+  // answers (for the "No" screen's contributing check, §2 item 3, and the
+  // reviewer section's full list, §2 item 7) and every loaded pack (for a
+  // pack hard line's plain_reason/plain_change and its jurisdiction's
+  // plain name, §2 item 2). Both optional: an older verdict, or a render
+  // path that predates this chunk, simply shows the §4.4 fallbacks.
+  assumptions?: Assumption[];
+  packs?: JurisdictionPack[];
+  // R16-D2 §4b (D-97, W-7). The processing node's platform/vendor, read
+  // from the event that recorded the current verdict — the register's own
+  // substitute for `graph`, which it does not persist. Ignored whenever
+  // `graph` itself is supplied (the intake result screen).
+  evidenceScope?: { platform?: string; vendor?: string };
   // design-review-003 (2026-08-31, Panel A/C/D/G — four independent panels
   // converged on this fix): "Why this verdict" was the one analytical panel
   // never wrapped in Fold, so its unfolded-by-default state (R9's original,
@@ -1086,6 +1100,34 @@ function FirstScreen({
     <div className="verdict__first-screen">
       <h2 className="verdict__first-headline">{view.headline}</h2>
 
+      {/* R16-D2 §2 (VD-10). The "No" screen's own slice — why, by the kind
+          of rule that said no; the "Not sure" answers that contributed;
+          what would change the answer; who to talk to. No safeguards list,
+          no next steps, no "who signs off" on a "No" (none of those render
+          below either, since view-model leaves them empty for a rejected
+          verdict). */}
+      {view.isRejected && view.no && (
+        <div className="verdict__no-screen">
+          <p className="verdict__first-why">
+            <strong>Why:</strong> {view.no.reason}
+          </p>
+          {view.no.contributingAssumptions.length > 0 && (
+            <p className="verdict__no-contributing">
+              This is based on answers you weren’t sure about:{' '}
+              {joinWithAnd(view.no.contributingAssumptions.map((a) => a.shortLabel))}. If any of them is
+              wrong, change it and check again.
+              {view.no.otherAssumptionCount > 0 &&
+                ' (You weren’t sure about other answers too — they’re listed in the full reasoning below.)'}
+            </p>
+          )}
+          {view.no.change && (
+            <p className="verdict__no-change">
+              <strong>What would change the answer:</strong> {view.no.change}
+            </p>
+          )}
+        </div>
+      )}
+
       {view.whyReasons.length > 0 && (
         <p className="verdict__first-why">
           <strong>Why:</strong> {view.whyReasons.join('; and ')}
@@ -1156,7 +1198,11 @@ function FirstScreen({
           {view.inPlaceSafeguards.length > 0 && (
             <p className="verdict__first-in-place">
               Already in place: {view.inPlaceSafeguards.map((s) => s.plainAction).join(', ')} (your firm&rsquo;s
-              records show this)
+              records show this
+              {/* R16-D2 §7 (DR7-34). Extends the existing note — never a
+                  second one — naming the platform/supplier this case uses
+                  that a scoped safeguard's evidence actually matched. */}
+              {view.inPlaceScopeName ? ` for ${view.inPlaceScopeName}` : ''})
             </p>
           )}
           {view.attestedSafeguards.map((s) => (
@@ -1197,14 +1243,28 @@ function FirstScreen({
 
       {showSubmitterAffordances && onCorrect && (
         <button type="button" className="verdict__first-correct" onClick={onCorrect}>
-          Think we got something wrong? Correct your answers and check again.
+          {/* R16-D2 §2 item 5 (DR7-21): on a "No" this control REPLACES its
+              usual wording — there is nothing else to "think" about, the
+              rule already said no; "misunderstood how you'd use it" names
+              the one thing that could change that. */}
+          {view.isRejected
+            ? 'If we’ve misunderstood how you’d use it, correct your answers and check again.'
+            : 'Think we got something wrong? Correct your answers and check again.'}
         </button>
+      )}
+
+      {/* R16-D2 §2 item 6. Every "No", regardless of kind. */}
+      {view.isRejected && (
+        <p className="verdict__no-who-to-talk-to">
+          <strong>Who to talk to:</strong> your AI risk team — the independent team that checks how the
+          firm uses AI — if you think this is wrong or want to discuss another way to do this.
+        </p>
       )}
     </div>
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, reasoningDefaultOpen = false, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, assumptions, packs, evidenceScope, reasoningDefaultOpen = false, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
@@ -1214,7 +1274,11 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // three existing readers (WhatToDo, SignOffChecklist, the evidence panel)
   // that need a safeguard's status — built once, per render, from the same
   // props every one of them already received.
-  const view: VerdictView = buildVerdictView(verdict, policy, graph, controlOwnership, controlAttestations, registerStage);
+  const view: VerdictView = buildVerdictView(verdict, policy, graph, controlOwnership, controlAttestations, registerStage, {
+    assumptions,
+    packs,
+    evidenceScope,
+  });
 
   // R16-D1: the reviewer section's own open/closed state, controlled (not
   // the Fold component's uncontrolled defaultOpen) so "Go to this safeguard"
@@ -2020,6 +2084,27 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         </div></Fold>
       )}
 
+      {/* R16-D2 §2 item 7. Every assumption the case has — contributing to
+          a "No" or not — so a reviewer can see the full set a submitter
+          was "Not sure" about, not only the ones the "No" screen singles
+          out as having driven the outcome. Renders for any verdict with
+          assumptions, not only a rejected one: the register and the
+          intake screen agree on this case's own facts either way. */}
+      {assumptions && assumptions.length > 0 && (
+        <Fold
+          title="Answers the submitter wasn’t sure about"
+          summary={`${assumptions.length} answer${assumptions.length === 1 ? '' : 's'} marked "Not sure"`}
+        >
+          <ul className="verdict__assumptions">
+            {assumptions.map((a) => (
+              <li key={a.questionId}>
+                <strong>{a.question}</strong> — we assumed {a.assumption.replace(/\.+$/, '')}.
+              </li>
+            ))}
+          </ul>
+        </Fold>
+      )}
+
       {verdict.inheritance && (
         <Fold
           title="Platform & vendor inheritance"
@@ -2140,8 +2225,12 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
           the reasoning trace: both are gated on showSubmitterAffordances
           (FN-004) because they're one concept — the submitter's own view of
           their record — not two independent controls that happen to share a
-          boolean. */}
-      {showSubmitterAffordances && onCorrect && (
+          boolean.
+          R16-D2 §2 item 5 (DR7-21): not rendered on a "No" — the first
+          screen's own correction control (FirstScreen, above) is the ONE
+          correction control there; this second one stays as it is on every
+          other verdict. */}
+      {showSubmitterAffordances && onCorrect && !view.isRejected && (
         <button type="button" onClick={onCorrect}>
           Correct this classification?
         </button>

@@ -839,6 +839,174 @@ describe('RegisterDetail — a correction keeps what the person typed (F-4, DR7-
   });
 });
 
+// R16-D2 §4 (D-81, DR7-16). currentVerdictAttestationFields() reads
+// assumptions through the same correction-aware precedence F-4 already
+// established for submitter_note/contradiction_resolutions/answer_contexts
+// — both directions tested: an uncorrected case shows its confirmation's
+// assumptions; a corrected case shows the correction's, not the original's.
+describe('RegisterDetail — assumptions follow the current verdict (R16-D2 §4, DR7-16)', () => {
+  const ASSUMPTION_ORIGINAL = {
+    questionId: '9',
+    question: 'Can the mistake be caught and put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case',
+    fields: ['output_reversibility'],
+  };
+  const ASSUMPTION_CORRECTED = {
+    questionId: '3platformZone',
+    question: 'Does your information stay on your firm’s own systems the whole time?',
+    shortLabel: 'whether your information stays on your firm’s systems',
+    assumption: 'it may pass your information to an outside supplier — the stricter case.',
+    fields: ['data_zone'],
+  };
+
+  it('TC-R16-D2-43: an uncorrected case shows its confirmation\'s own assumptions in the reviewer section', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T12:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0, assumptions: [ASSUMPTION_ORIGINAL] },
+    });
+    renderDetail(id);
+    await verdictRegion();
+    expect(await screen.findByText('Answers the submitter wasn’t sure about')).toBeInTheDocument();
+    expect(screen.getByText(/Can the mistake be caught and put right\?/)).toBeInTheDocument();
+  });
+
+  it('TC-R16-D2-44: a corrected case shows the CORRECTION\'s assumptions, not the original confirmation\'s', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-original', use_case_id: id }));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'graph_confirmed',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'graph_confirmed', graph_id: 'g1', graph_version: 1, corrections_count: 0, assumptions: [ASSUMPTION_ORIGINAL] },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: 'system',
+      payload: {
+        type: 'verdict_corrected',
+        original_verdict_id: 'v-original',
+        new_verdict: makeVerdict({ id: 'v-corrected', use_case_id: id }),
+        assumptions: [ASSUMPTION_CORRECTED],
+        corrections_count: 1,
+      },
+    });
+    renderDetail(id);
+    await verdictRegion();
+    expect(await screen.findByText('Answers the submitter wasn’t sure about')).toBeInTheDocument();
+    expect(screen.getByText(/Does your information stay on your firm’s own systems the whole time\?/)).toBeInTheDocument();
+    expect(screen.queryByText(/Can the mistake be caught and put right\?/)).not.toBeInTheDocument();
+  });
+
+  it('TC-R16-D2-45: "Corrected N times" renders only once a correction exists, naming the count', async () => {
+    const id = crypto.randomUUID();
+    await seed(id, makeVerdict({ id: 'v-original', use_case_id: id }));
+    renderDetail(id);
+    await verdictRegion();
+    expect(screen.queryByText(/Corrected \d+ time/)).not.toBeInTheDocument();
+
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: 'system',
+      payload: { type: 'verdict_corrected', original_verdict_id: 'v-original', new_verdict: makeVerdict({ id: 'v-corrected', use_case_id: id }), corrections_count: 0 },
+    });
+    renderDetail(id);
+    await verdictRegion();
+    expect(await screen.findByText(/Corrected 1 time by the submitter — each version is in the record below\./)).toBeInTheDocument();
+  });
+});
+
+// R16-D2 §4b (D-97, W-7). The register renders VerdictDisplay without a
+// graph (ADR-RL-R3-1) — evidence_scope, persisted beside the verdict, is
+// its substitute, so a scoped "already verified" safeguard still reads
+// the same way here as it did on the intake result screen
+// (VerdictDisplay.r16d2.test.tsx's TC-R16-D2-36 is the graph-based half of
+// this same claim).
+describe('RegisterDetail — "already in place" agrees with the intake result screen (R16-D2 §4b)', () => {
+  const SCOPED_POLICY = {
+    version: '1.3',
+    hard_lines: [],
+    invariants: [],
+    controls: [
+      {
+        id: 'CTRL-ENC-01',
+        name: 'Encryption in transit',
+        plain_action: 'Platform encrypts in transit',
+        resolves: [],
+        verification_evidence: { status: 'verified', detail: 'd', applies_to: { platforms: ['PLAT-X'] } },
+      },
+    ],
+    platforms: [{ id: 'PLAT-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Platform' }],
+  } as unknown as PolicyFile;
+
+  it('TC-R16-D2-46: a scoped control whose evidence_scope matches renders "already in place", naming the platform — the same text the intake screen shows for the same case', async () => {
+    const id = crypto.randomUUID();
+    await addNode(makeNode(id));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'use_case_created',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'use_case_created', description: 'd', intake_method: 'structured_form' },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: {
+        type: 'verdict_produced',
+        verdict: makeVerdict({ use_case_id: id, controls: ['CTRL-ENC-01'], single_covered_invariants: [] }),
+        evidence_scope: { platform: 'PLAT-X' },
+      },
+    });
+    renderDetail(id, SCOPED_POLICY);
+    await verdictRegion();
+    const note = await screen.findByText(/Already in place:/);
+    expect(note.textContent).toMatch(/your firm.s records show this for Firm Platform\)/);
+  });
+
+  it('TC-R16-D2-47: a legacy verdict_produced with no evidence_scope still renders, with the existing "we couldn\'t check" note', async () => {
+    const id = crypto.randomUUID();
+    await addNode(makeNode(id));
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'use_case_created',
+      occurred_at: '2026-01-01T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'use_case_created', description: 'd', intake_method: 'structured_form' },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: id,
+      event_type: 'verdict_produced',
+      occurred_at: '2026-01-02T00:00:00.000Z',
+      actor: '1LoD',
+      payload: { type: 'verdict_produced', verdict: makeVerdict({ use_case_id: id, controls: ['CTRL-ENC-01'], single_covered_invariants: [] }) },
+    });
+    renderDetail(id, SCOPED_POLICY);
+    await verdictRegion();
+    expect(await screen.findByText(/couldn.t check whether that includes this tool/)).toBeInTheDocument();
+  });
+});
+
 // code-review-005 round 2, N4. handoff.ts's import validation now rejects a
 // bundle whose verdict is missing confidence_caveats (see
 // src/store/handoff.test.ts's TC-RG-8-33), but a stored row can be corrupt

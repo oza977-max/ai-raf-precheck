@@ -236,6 +236,14 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
         warnings.push(...ownerTokenWarnings(`${rule.id} plain_owner`, rule.effect.plain_owner));
         warnings.push(...clauseLikePlainNameWarning(`${rule.id} plain_name`, rule.effect.plain_name));
       }
+      // R16-D2 §2 (DR7-20). Exactly the same two placeholder checks
+      // hardLineWarnings runs for a firm hard line's plain_reason/
+      // plain_change — a pack hard line's fields use the identical
+      // {audience}/{destination} vocabulary.
+      if (rule.effect.type === 'hard_line') {
+        warnings.push(...placeholderWarnings(`${rule.id} plain_reason`, rule.effect.plain_reason));
+        warnings.push(...placeholderWarnings(`${rule.id} plain_change`, rule.effect.plain_change));
+      }
     }
   }
 

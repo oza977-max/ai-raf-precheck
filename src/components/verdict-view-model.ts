@@ -9,11 +9,18 @@
 // rule: a control/review id that cannot be resolved against the loaded
 // policy NEVER reaches its output as the id itself — see the "Safeguard {n}"
 // and pack-review fallbacks below.
-import type { Control, DataFlowGraph, DownstreamReviewRule, Exposure, PolicyFile, TrippedInvariantDetail, DataZone } from '../engine/types';
+import type { Condition, Control, DataFlowGraph, DownstreamReviewRule, Exposure, JurisdictionPack, PackRule, PolicyFile, TrippedInvariantDetail, DataZone } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 import type { LifecycleStage } from '../store/types';
 import { isVerdictProvisional, type ProvisionalReason } from '../engine/provisional';
 import { maxBy } from '../engine/envelope';
+// R16-D2 §2/§3 (D-95). The "No" screen's contributing-assumption check
+// reads the worded Assumption shape (question/shortLabel/fields) — the
+// same component-layer type StructuredForm/UnderstoodSummary already
+// read. verdict-view-model.ts already sits in src/components/, so this is
+// a same-layer import, not a new boundary (unlike src/store/types.ts,
+// which declares its own copy rather than import from here — Rule 3).
+import type { Assumption } from './plain-copy';
 
 export type SafeguardStatus = 'verified' | 'attested' | 'outstanding' | 'unknown';
 
@@ -63,6 +70,47 @@ export interface OwedReviewView {
   baseId: string;
 }
 
+// R16-D2 §2 (VD-10, D-80). The "No" screen's own composition — undefined
+// unless the verdict is rejected.
+export interface NoScreenView {
+  /** Which kind of rule said no — decides which §4.4 fallback chain and
+   *  which fixed coda/"what would change" wording apply. */
+  kind: 'hard_line' | 'pack_hard_line' | 'unsatisfiable' | 'other';
+  /** The full "Why: …" sentence(s) — plain reason (or its fallback) plus
+   *  the kind-specific coda, already composed. */
+  reason: string;
+  /** The full "What would change the answer: …" sentence(s) — undefined
+   *  only for `kind: 'other'`, where nothing honest can be said about what
+   *  would change an answer to a rule that cannot even be identified. */
+  change?: string;
+  /** Assumptions ("Not sure" answers) whose `fields` meet the binding
+   *  rule's own condition keys — the ones named in "based on answers you
+   *  weren't sure about". */
+  contributingAssumptions: Assumption[];
+  /** Assumptions the case has that did NOT contribute — drives the "(you
+   *  weren't sure about other answers too…)" pointer to the reviewer
+   *  section. */
+  otherAssumptionCount: number;
+}
+
+// R16-D2 §2/§3/§4b. Optional inputs buildVerdictView did not need before
+// this chunk, arriving in ONE trailing options object rather than three
+// more positional arguments.
+export interface VerdictViewOptions {
+  /** The case's own assumptions (§3) — from `lastConfirmed` on the intake
+   *  path, or `currentVerdictAttestationFields()` on the register path. */
+  assumptions?: Assumption[];
+  /** Every loaded jurisdiction pack — needed only to resolve a pack hard
+   *  line's plain_reason/plain_change and its jurisdiction's plain name
+   *  (§2); never consulted for anything evaluate() already decided. */
+  packs?: JurisdictionPack[];
+  /** §4b (D-97, W-7). The processing node's platform/vendor, used only
+   *  when `graph` itself is unavailable (the register path, which does
+   *  not persist it) — falls back to `'cannot-check'` when neither this
+   *  nor `graph` says anything, exactly as before this option existed. */
+  evidenceScope?: { platform?: string; vendor?: string };
+}
+
 export interface VerdictView {
   isRejected: boolean;
   needsSignOff: boolean;
@@ -93,6 +141,15 @@ export interface VerdictView {
   whoSignsOff: string;
   /** Shown when isVerdictProvisional(verdict), plus the independent RA-11 medium-caveat line. Empty when neither applies. */
   couldStillChange: string[];
+  /** R16-D2 §2 (VD-10). The "No" screen's own composition — undefined
+   *  unless `isRejected`. */
+  no?: NoScreenView;
+  /** R16-D2 §7 (DR7-34). Set only when at least one in-place (verified)
+   *  safeguard's evidence is scoped (`applies_to`) and the scope matches
+   *  this case's platform or supplier — the name shown in the first
+   *  screen's "already in place" note. Undefined when no in-place
+   *  safeguard is scoped (the note stays generic, unchanged). */
+  inPlaceScopeName?: string;
 }
 
 export type ControlOwnership = Record<string, { owner_name: string; target_date: string }>;
@@ -177,10 +234,23 @@ function fillPlaceholders(text: string, graph: DataFlowGraph | undefined): strin
 // rather than re-read from today's policy, because the verdict is the record
 // of what was actually decided; only the plain_reason lookup itself needs
 // today's policy (plain-language text is presentation, re-editable later).
+/** A formal description used as a §4.4 fallback, closed as a sentence
+ *  before the pointer follows it — descriptions are written as titles with
+ *  no full stop ("Autonomous trading execution"), so the pointer used to run
+ *  straight on from them ("…execution Ask your AI risk team…"). */
+function asSentence(s: string | undefined): string {
+  // Tolerates a missing description: a stored control or rule can lack one
+  // (older data, hand-written fixtures), and this must never crash the page.
+  const t = (s ?? '').trim();
+  if (!t) return '';
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+}
+
 function invariantPlainReason(t: TrippedInvariantDetail, policy: PolicyFile | undefined, graph: DataFlowGraph | undefined): string {
   const plain = policy?.invariants.find((i) => i.id === t.id)?.plain_reason;
   if (plain) return fillPlaceholders(plain, graph);
-  return `${t.description} ${POINTER_MEANS_FOR_YOU}`;
+  const d = asSentence(t.description);
+  return d ? `${d} ${POINTER_MEANS_FOR_YOU}` : POINTER_MEANS_FOR_YOU;
 }
 
 function dedupeStrings(items: string[]): string[] {
@@ -207,7 +277,8 @@ function dedupeStrings(items: string[]): string[] {
 function safeguardPlainAction(control: Control | undefined, position: number): string {
   if (!control) return `Safeguard ${position + 1}. ${POINTER_INVOLVES}`;
   if (control.plain_action) return control.plain_action;
-  return `${control.name} — ${control.description} ${POINTER_MEANS_FOR_YOU}`;
+  const d = asSentence(control.description);
+  return d ? `${control.name} — ${d} ${POINTER_MEANS_FOR_YOU}` : `${control.name}. ${POINTER_MEANS_FOR_YOU}`;
 }
 
 /** §1.2 token rendering + register-assignment override. */
@@ -261,16 +332,72 @@ function resolveOwner(
 // everywhere (the pre-W-7 behaviour, unchanged).
 type EvidenceApplies = 'applies' | 'does-not-apply' | 'cannot-check';
 
+// R16-D2 §4b (D-97). `fallbackScope` is read only when `graph` itself is
+// absent (the register path, which does not persist the graph) — when
+// `graph` IS present this is byte-identical to the pre-D2 function, so
+// every existing caller (the intake result screen, which always has the
+// graph) is unaffected.
 function evidenceApplies(
   appliesTo: { platforms?: string[]; vendors?: string[] } | undefined,
   graph: DataFlowGraph | undefined,
+  fallbackScope?: { platform?: string; vendor?: string },
 ): EvidenceApplies {
   if (!appliesTo) return 'applies';
-  if (!graph) return 'cannot-check';
-  const node = graph.processing_nodes[0];
-  const platformMatches = node?.platform !== undefined && (appliesTo.platforms ?? []).includes(node.platform);
-  const vendorMatches = node?.vendor !== undefined && (appliesTo.vendors ?? []).includes(node.vendor);
-  return platformMatches || vendorMatches ? 'applies' : 'does-not-apply';
+  if (graph) {
+    const node = graph.processing_nodes[0];
+    const platformMatches = node?.platform !== undefined && (appliesTo.platforms ?? []).includes(node.platform);
+    const vendorMatches = node?.vendor !== undefined && (appliesTo.vendors ?? []).includes(node.vendor);
+    return platformMatches || vendorMatches ? 'applies' : 'does-not-apply';
+  }
+  if (fallbackScope) {
+    const platformMatches = fallbackScope.platform !== undefined && (appliesTo.platforms ?? []).includes(fallbackScope.platform);
+    const vendorMatches = fallbackScope.vendor !== undefined && (appliesTo.vendors ?? []).includes(fallbackScope.vendor);
+    return platformMatches || vendorMatches ? 'applies' : 'does-not-apply';
+  }
+  return 'cannot-check';
+}
+
+/** A registry plain name placed mid-sentence: the shipped names are labels
+ *  written to start a line ("Your firm's cloud AI assistant"), so a leading
+ *  "Your" is lower-cased — "…show this for your firm's cloud AI assistant".
+ *  Only that word: a proper name ("Microsoft Copilot") is left alone. */
+function nameInSentence(name: string): string {
+  return name.replace(/^Your\b/, 'your');
+}
+
+// R16-D2 §7 (DR7-34). Which registered platform or supplier's name covers
+// the first screen's "already in place" note — the one THIS case uses
+// that a scoped, verified safeguard's `applies_to` actually matched.
+// Platform wins when both would match (one case has one platform and one
+// supplier, so this is the only tie that can occur). An entry with no
+// plain_name gives no name — never its bare id on the first screen.
+function resolveInPlaceScopeName(
+  verdict: Verdict,
+  policy: PolicyFile | undefined,
+  safeguards: SafeguardView[],
+  graph: DataFlowGraph | undefined,
+  fallbackScope: { platform?: string; vendor?: string } | undefined,
+): string | undefined {
+  const scope = graph ? { platform: graph.processing_nodes[0]?.platform, vendor: graph.processing_nodes[0]?.vendor } : fallbackScope;
+  if (!scope) return undefined;
+  const verifiedScopedAppliesTo = verdict.controls
+    .filter((cid) => safeguards.find((s) => s.id === cid)?.status === 'verified')
+    .map((cid) => policy?.controls.find((c) => c.id === cid)?.verification_evidence)
+    .filter((e) => e?.status === 'verified' && e.applies_to)
+    .map((e) => e!.applies_to!);
+  if (verifiedScopedAppliesTo.length === 0) return undefined;
+  if (scope.platform !== undefined && verifiedScopedAppliesTo.some((a) => (a.platforms ?? []).includes(scope.platform!))) {
+    // No plain_name → undefined: the note stays generic rather than show an
+    // internal id on the first screen (the loader already warns about a
+    // registry entry without a plain_name).
+    const name = policy?.platforms?.find((p) => p.id === scope.platform)?.plain_name;
+    return name ? nameInSentence(name) : undefined;
+  }
+  if (scope.vendor !== undefined && verifiedScopedAppliesTo.some((a) => (a.vendors ?? []).includes(scope.vendor!))) {
+    const name = policy?.vendors?.find((v) => v.id === scope.vendor)?.plain_name;
+    return name ? nameInSentence(name) : undefined;
+  }
+  return undefined;
 }
 
 /** §5 "Reviewer evidence panel" text — only ever shown when the policy's
@@ -284,7 +411,7 @@ function evidenceScopeNote(
   const names = [
     ...(appliesTo.platforms ?? []).map((id) => policy?.platforms?.find((p) => p.id === id)?.plain_name ?? id),
     ...(appliesTo.vendors ?? []).map((id) => policy?.vendors?.find((v) => v.id === id)?.plain_name ?? id),
-  ];
+  ].map(nameInSentence);
   const joined = joinWithAnd(names);
   return applies === 'cannot-check'
     ? `Your firm's records show this for ${joined} — we couldn't check whether that includes this tool.`
@@ -296,12 +423,13 @@ function safeguardStatus(
   policy: PolicyFile | undefined,
   attestations: ControlAttestations | undefined,
   graph: DataFlowGraph | undefined,
+  fallbackScope?: { platform?: string; vendor?: string },
 ): SafeguardStatus {
   const attested = attestations?.[controlId] !== undefined;
   if (!policy) return attested ? 'attested' : 'unknown';
   const control = policy.controls.find((c) => c.id === controlId);
   if (control?.verification_evidence?.status === 'verified') {
-    if (evidenceApplies(control.verification_evidence.applies_to, graph) === 'applies') return 'verified';
+    if (evidenceApplies(control.verification_evidence.applies_to, graph, fallbackScope) === 'applies') return 'verified';
   }
   return attested ? 'attested' : 'outstanding';
 }
@@ -384,7 +512,11 @@ function headlineText(status: Verdict['status'], needsSignOff: boolean, n: numbe
   return `Nearly. You can start once ${n} safeguards are in place — no sign-off needed.`;
 }
 
-function joinWithAnd(items: string[]): string {
+// Exported so VerdictDisplay.tsx's "No" screen can join
+// `no.contributingAssumptions`' short labels the same way every other list
+// on this screen already is ("a" / "a and b" / "a, b and c") — one
+// implementation, not a second one living beside it in the component.
+export function joinWithAnd(items: string[]): string {
   if (items.length === 0) return '';
   if (items.length === 1) return items[0]!;
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -492,6 +624,150 @@ function buildCouldStillChange(verdict: Verdict): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// §2 (VD-10). The "No" screen's own composition.
+
+const HARD_LINE_CODA = "That's a line your firm never crosses, and no safeguard can make up for it.";
+
+/** A plain_reason never carries its own trailing period (policy authoring
+ *  convention — every `plain_reason` in the shipped policy is a clause,
+ *  not a sentence); its §4.4 FALLBACK does, because it ends in a complete
+ *  sentence of its own (the pointer line, shared with other callers that
+ *  use it standalone). Stripping a single trailing period before
+ *  appending a further clause or sentence is what keeps both cases
+ *  reading as one well-punctuated sentence rather than ".." or ".,". */
+function withoutTrailingPeriod(s: string): string {
+  return s.replace(/\.$/, '');
+}
+
+/** The core clause of a "Why:" sentence — the rule's plain_reason when it
+ *  has one, else its formal description (§4.4 fallback), flagged so the
+ *  pointer line follows the WHOLE sentence. (Verifying R16-D2: splicing the
+ *  pointer into the middle produced "…for this exposure Ask your AI risk
+ *  team what this means for you, and your firm has no safeguard…".) */
+function reasonCore(
+  plainReason: string | undefined,
+  description: string,
+  graph: DataFlowGraph | undefined,
+): { text: string; fallback: boolean } {
+  return plainReason
+    ? { text: withoutTrailingPeriod(fillPlaceholders(plainReason, graph).trim()), fallback: false }
+    : { text: withoutTrailingPeriod((description ?? '').trim()), fallback: true };
+}
+
+/** The finished "Why:" sentence, with the §4.4 pointer after it when the
+ *  core was a fallback. */
+function withPointerIfFallback(sentence: string, fallback: boolean): string {
+  return fallback ? `${sentence} ${POINTER_MEANS_FOR_YOU}` : sentence;
+}
+
+/** "What would change the answer: …" — shared by a firm and a pack hard
+ *  line (§2 item 4 draws no distinction between them here). */
+function hardLineChange(plainChange: string | undefined): string {
+  return plainChange
+    ? `${asSentence(plainChange)} Then check again.`
+    : `change how it would be used, then check again. ${POINTER_MEANS_FOR_YOU}`;
+}
+
+/** A pack's jurisdiction CODE ("EU") as words that read inside "the rules
+ *  your firm has adopted for …": the policy's own name for it, with "the"
+ *  where English needs one ("the United Kingdom", "the European Union",
+ *  but "Canada"). A code the policy does not list never reaches the screen
+ *  as itself. (Verifying R16-D2: the first build used the code, and its
+ *  tests passed only because their sample packs spelled the code as words.) */
+const NEEDS_THE = /^(United |European )|(Union|Kingdom|States|Republic|Islands|Emirates|Netherlands|Philippines)$/;
+function countryPhrase(code: string, policy: PolicyFile | undefined): string {
+  const name = policy?.jurisdictions.find((j) => j.code === code)?.name;
+  if (!name) return 'the countries it involves';
+  return NEEDS_THE.test(name) ? `the ${name}` : name;
+}
+
+/** A pack rule with a `hard_line` effect, found by binding_constraint id
+ *  across every loaded pack — the id space is flat (a pack rule id is not
+ *  namespaced by pack), so the first match across packs, in the packs
+ *  array's own order, is the rule; loadPacks() sorts packs by pack_id
+ *  (NF-1), so this is deterministic. */
+function findPackHardLineRule(
+  bindingConstraint: string,
+  packs: JurisdictionPack[],
+): { rule: PackRule; pack: JurisdictionPack } | undefined {
+  for (const pack of packs) {
+    const rule = pack.rules.find((r) => r.id === bindingConstraint && r.effect.type === 'hard_line');
+    if (rule) return { rule, pack };
+  }
+  return undefined;
+}
+
+/** D-80. An assumption "contributed" when any of its `fields` appears
+ *  among the binding rule's own condition keys — for a pack rule, the
+ *  PACK rule's condition, never the firm's. No condition at all (the
+ *  `other`/unknown-id kind) means nothing can honestly be said to have
+ *  contributed. */
+function contributingAssumptions(assumptions: Assumption[], condition: Condition | undefined): Assumption[] {
+  if (!condition) return [];
+  const keys = Object.keys(condition);
+  return assumptions.filter((a) => a.fields.some((f) => keys.includes(f)));
+}
+
+function buildNoScreen(
+  verdict: Verdict,
+  policy: PolicyFile | undefined,
+  packs: JurisdictionPack[],
+  assumptions: Assumption[],
+  graph: DataFlowGraph | undefined,
+): NoScreenView {
+  const bindingId = verdict.binding_constraint;
+  const firmHardLine = policy?.hard_lines.find((h) => h.id === bindingId);
+  const packMatch = findPackHardLineRule(bindingId, packs);
+  const trippedMatch = (verdict.explanation?.tripped_invariants ?? []).find((t) => t.id === bindingId);
+
+  let kind: NoScreenView['kind'];
+  let reason: string;
+  let change: string | undefined;
+  let condition: Condition | undefined;
+
+  if (firmHardLine) {
+    kind = 'hard_line';
+    const core = reasonCore(firmHardLine.plain_reason, firmHardLine.description, graph);
+    reason = withPointerIfFallback(`${core.text}. ${HARD_LINE_CODA}`, core.fallback);
+    change = hardLineChange(firmHardLine.plain_change);
+    condition = firmHardLine.condition;
+  } else if (packMatch && packMatch.rule.effect.type === 'hard_line') {
+    kind = 'pack_hard_line';
+    const country = countryPhrase(packMatch.pack.jurisdiction, policy);
+    const effect = packMatch.rule.effect;
+    reason = effect.plain_reason
+      ? `${withoutTrailingPeriod(fillPlaceholders(effect.plain_reason, graph).trim())}. It's one of the rules your firm has adopted for ${country}, and no safeguard can make up for it.`
+      : `one of the rules your firm has adopted for ${country} rules this out. ${POINTER_MEANS_FOR_YOU}`;
+    change = hardLineChange(effect.plain_change);
+    condition = packMatch.rule.condition;
+  } else if (trippedMatch) {
+    // CS-2: no control in the library resolves this tripped invariant.
+    kind = 'unsatisfiable';
+    const invariant = policy?.invariants.find((i) => i.id === bindingId);
+    const core = reasonCore(invariant?.plain_reason, trippedMatch.description, graph);
+    reason = withPointerIfFallback(`${core.text}, and your firm has no safeguard that resolves it.`, core.fallback);
+    change = 'change how it would be used, or ask your AI risk team whether the firm can add a safeguard for this.';
+    condition = policy?.invariants.find((i) => i.id === bindingId)?.condition;
+  } else {
+    // An id found nowhere loaded — never the bare id on the first screen,
+    // and nothing honest can be said about what would change it.
+    kind = 'other';
+    reason = `one of your firm's rules rules this out. ${POINTER_MEANS_FOR_YOU}`;
+    condition = undefined;
+  }
+
+  const contributing = contributingAssumptions(assumptions, condition);
+
+  return {
+    kind,
+    reason,
+    ...(change !== undefined ? { change } : {}),
+    contributingAssumptions: contributing,
+    otherAssumptionCount: assumptions.length - contributing.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 
 /** §4.1: the one view-model behind the verdict's first screen and the four
  *  readers that need a safeguard's status (WhatToDo, SignOffChecklist, the
@@ -504,15 +780,15 @@ export function buildVerdictView(
   ownership: ControlOwnership | undefined,
   attestations: ControlAttestations | undefined,
   stage: LifecycleStage | undefined,
+  options: VerdictViewOptions = {},
 ): VerdictView {
   const isRejected = verdict.status === 'rejected';
   const needsSignOff = stage === 'pre_checked';
 
   // Rejected verdicts carry no safeguards, next steps or could-still-change
-  // lines from THIS view-model — the "No" screen's own composition (VD-10,
-  // §4.3) is chunk D2's slice. The headline still covers the rejected case
-  // (§4.2 item 1 lists it explicitly) so the first screen never renders
-  // blank while D2 is unbuilt.
+  // lines from THIS view-model — the headline still covers the rejected
+  // case (§4.2 item 1 lists it explicitly) so the first screen never
+  // renders blank. The "No" screen's own composition (VD-10, §2) is `no`.
   if (isRejected) {
     return {
       isRejected: true,
@@ -530,6 +806,7 @@ export function buildVerdictView(
       coveredReviewFormalNames: [],
       whoSignsOff: '',
       couldStillChange: [],
+      no: buildNoScreen(verdict, policy, options.packs ?? [], options.assumptions ?? [], graph),
     };
   }
 
@@ -546,7 +823,7 @@ export function buildVerdictView(
 
   const safeguards: SafeguardView[] = verdict.controls.map((cid, position) => {
     const control = policy?.controls.find((c) => c.id === cid);
-    const status = safeguardStatus(cid, policy, attestations, graph);
+    const status = safeguardStatus(cid, policy, attestations, graph, options.evidenceScope);
     const { ownerText, yours } = resolveOwner(control, graph, ownership?.[cid]);
     const plainReasons = dedupeStrings(
       tripped.filter((t) => t.required_controls.includes(cid)).map((t) => invariantPlainReason(t, policy, graph)),
@@ -567,7 +844,7 @@ export function buildVerdictView(
     // have been verified but for the scope mismatch.
     const evidence = control?.verification_evidence;
     const appliesTo = evidence?.status === 'verified' ? evidence.applies_to : undefined;
-    const applies = appliesTo ? evidenceApplies(appliesTo, graph) : 'applies';
+    const applies = appliesTo ? evidenceApplies(appliesTo, graph, options.evidenceScope) : 'applies';
     return {
       id: cid,
       status,
@@ -589,6 +866,8 @@ export function buildVerdictView(
   const inPlaceSafeguards = safeguards.filter((s) => s.status === 'verified');
   const attestedSafeguards = safeguards.filter((s) => s.status === 'attested');
   const outstandingCount = outstandingAll.length;
+  // R16-D2 §7 (DR7-34).
+  const inPlaceScopeName = resolveInPlaceScopeName(verdict, policy, safeguards, graph, options.evidenceScope);
 
   const owedInstances = reviewInstances.filter((inst) => !coveredBaseIds.has(inst.baseId));
   const owedReviews: OwedReviewView[] = [];
@@ -645,5 +924,6 @@ export function buildVerdictView(
     coveredReviewFormalNames,
     whoSignsOff,
     couldStillChange: buildCouldStillChange(verdict),
+    ...(inPlaceScopeName ? { inPlaceScopeName } : {}),
   };
 }

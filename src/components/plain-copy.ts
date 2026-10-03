@@ -43,11 +43,44 @@ import type { AssumptionRef } from '../engine/plain-questions';
 export type { QuestionId, PlainAnswers } from '../engine/plain-questions';
 import type { QuestionId, PlainAnswers } from '../engine/plain-questions';
 
+// R16-D2 §1 (D-95). `questionId` is widened to `string` (not `QuestionId`)
+// because a questionnaire answer (chunk E, not yet built) will carry
+// `'field:<graph field>'`, which is not a form QuestionId — this module
+// never produces that form itself, but the shape has to allow it so E can
+// reuse it unchanged. `shortLabel` and `fields` are new: a short phrase for
+// use in a sentence ("answers you weren't sure about: {shortLabels}"), and
+// the graph fields this specific answer set, used by the "No" screen's
+// contributing-assumption check.
 export interface Assumption {
-  questionId: QuestionId;
+  questionId: string;
   question: string;
+  shortLabel: string;
   assumption: string;
+  fields: string[];
 }
+
+// R16-D2 §1. One short label per question that offers "Not sure" — used in
+// the "No" screen's "This is based on answers you weren't sure about: …"
+// sentence (D-17/D-18) so a reviewer or submitter reads a short phrase
+// rather than the full question text re-run into a list. Falls back to the
+// question's own text (below) for any questionId not listed here — never
+// undefined, so a sentence built from it is never literally blank.
+const ASSUMPTION_SHORT_LABEL: Partial<Record<QuestionId, string>> = {
+  '3': 'where the AI comes from',
+  '3supplier': 'which supplier it is',
+  '3a': 'which account you use',
+  '3aWhich': 'which company assistant it is',
+  '3platformZone': 'whether your information stays on your firm’s systems',
+  '4': 'what kind of AI it is',
+  '5': 'what information it uses',
+  '6': 'what it does with what it produces',
+  '6a': 'how much weight what it produces carries',
+  '7': 'who sees what it produces',
+  '9': 'whether a mistake can be put right',
+  '12': 'whether it replaces something you use',
+  '13': 'what it can get into by itself',
+  '14': 'whether copies of it work together',
+};
 
 export interface PlainOption {
   key: string;
@@ -467,11 +500,17 @@ export function assumptionText(id: QuestionId, optionKey: string): string | unde
   return ASSUMPTION_TEXT[`${id}:${optionKey}`];
 }
 
-export function makeAssumption(id: QuestionId, optionKey: string): Assumption | undefined {
+export function makeAssumption(id: QuestionId, optionKey: string, fields: string[]): Assumption | undefined {
   const text = assumptionText(id, optionKey);
   const question = findQuestion(id);
   if (!text || !question) return undefined;
-  return { questionId: id, question: question.text, assumption: text };
+  return {
+    questionId: id,
+    question: question.text,
+    shortLabel: ASSUMPTION_SHORT_LABEL[id] ?? question.text,
+    assumption: text,
+    fields,
+  };
 }
 
 // R16-F §5 (DR7-06). The component-layer counterpart to the engine's
@@ -494,14 +533,16 @@ export function describeAssumptions(refs: AssumptionRef[]): Assumption[] {
       out.push({
         questionId: ref.questionId,
         question: question.text,
+        shortLabel: ASSUMPTION_SHORT_LABEL[ref.questionId] ?? question.text,
         assumption:
           ref.earliestZone === 'Zone A'
             ? 'an outside website or service — the strictest case.'
             : 'it may pass your information to an outside supplier — the stricter case.',
+        fields: ref.fields,
       });
       continue;
     }
-    const a = makeAssumption(ref.questionId, ref.optionKey);
+    const a = makeAssumption(ref.questionId, ref.optionKey, ref.fields);
     if (a) out.push(a);
   }
   return out;

@@ -148,6 +148,59 @@ rules:
   });
 });
 
+// R16-D2 §2 (DR7-20). A pack hard_line effect gains the same optional
+// plain_reason/plain_change pair a firm HardLine already has (policy.ts's
+// HardLineSchema) — the "No" screen's pack-hard-line branch.
+describe('loadPacks — pack hard-line plain-language fields (R16-D2 §2, DR7-20)', () => {
+  function packYaml(effectBody: string): string {
+    return `
+pack_id: "PACK-HL-TEST"
+version: "1.0"
+jurisdiction: "the United Kingdom"
+regulator: "PRA"
+document: "Doc"
+effective_date: "2026-01-01"
+reviewer_name: "X"
+reviewer_role: "Y"
+sign_off_date: "2026-01-01"
+rules:
+  - id: "PACK-HL-01"
+    title: "T"
+    source: { document: "Doc", section: "S1", text: "T" }
+    effect:
+      type: "hard_line"
+      reason: "formal reason"
+${effectBody}
+    condition:
+      autonomy_level: { gte: 4 }
+    basis: "verbatim"
+`;
+  }
+
+  it('TC-R16-D2-26: a pack hard_line effect with plain_reason/plain_change loads and carries both', () => {
+    const yaml = packYaml(
+      '      plain_reason: "it would decide entirely by itself"\n      plain_change: "Add a human reviewer."',
+    );
+    const { packs, errors } = loadPacks({ 'pack-hl.yaml': yaml });
+    expect(errors).toEqual([]);
+    expect(packs).toHaveLength(1);
+    const effect = packs[0]!.rules[0]!.effect;
+    expect(effect).toEqual({
+      type: 'hard_line',
+      reason: 'formal reason',
+      plain_reason: 'it would decide entirely by itself',
+      plain_change: 'Add a human reviewer.',
+    });
+  });
+
+  it('TC-R16-D2-27: a pack hard_line effect with neither field still loads — both are optional, same as a firm HardLine', () => {
+    const { packs, errors } = loadPacks({ 'pack-hl.yaml': packYaml('') });
+    expect(errors).toEqual([]);
+    expect(packs).toHaveLength(1);
+    expect(packs[0]!.rules[0]!.effect).toEqual({ type: 'hard_line', reason: 'formal reason' });
+  });
+});
+
 // Traceability close-out (2026-08-15).
 describe('pack independence and the basis requirement', () => {
   const RULE = `

@@ -1,6 +1,21 @@
 import type { GraphCorrection } from '../engine/types';
 import type { Verdict } from '../types/verdict';
 
+// R16-D2 §1 (D-95). The persisted shape of src/components/plain-copy.ts's
+// `Assumption` — declared here rather than imported, because src/store/*
+// never imports from src/components/* (Rule 3, cross-cutting.md §7: the
+// store is persistence-only and does not depend on the presentation
+// layer that depends on it). The two are kept in sync by hand; a drift
+// would surface immediately as a type error at IntakeFlow.tsx's write
+// site, which passes a real `Assumption[]` into this field.
+export interface AssumptionRecord {
+  questionId: string;
+  question: string;
+  shortLabel: string;
+  assumption: string;
+  fields: string[];
+}
+
 // Full AuditEventType union per verdict-audit.md §4.3.
 export type AuditEventType =
   | 'use_case_created'
@@ -68,7 +83,22 @@ export type AuditEventPayload =
   // not a nice-to-have.
   // answer_contexts (R6-CX-1, 2026-08-16): optional context the submitter
   // typed on question answers. Human-read at sign-off; never engine input.
-  | { type: 'graph_confirmed'; graph_id: string; graph_version: number; corrections_count: number; submitter_note?: string; contradiction_resolutions?: string[]; answer_contexts?: string[] }
+  | {
+      type: 'graph_confirmed';
+      graph_id: string;
+      graph_version: number;
+      corrections_count: number;
+      submitter_note?: string;
+      contradiction_resolutions?: string[];
+      answer_contexts?: string[];
+      // R16-D2 §1/§4 (D-95, D-81, DR7-16, DR7-19). Every "Not sure" answer
+      // this confirmation was based on, in the §1 shape — written only
+      // when non-empty (spread-if-present, same discipline as
+      // submitter_note above). RegisterDetail.tsx's
+      // currentVerdictAttestationFields() is the one place that decides
+      // which event's assumptions a reader sees for the CURRENT verdict.
+      assumptions?: AssumptionRecord[];
+    }
   | {
       type: 'verdict_produced';
       verdict: Verdict;
@@ -85,6 +115,15 @@ export type AuditEventPayload =
       // against the graph cannot happen later, but the domain identity can
       // still be shown. Optional so every pre-R11-KL verdict stays valid.
       knowledge_lens_matched_entry_ids?: string[];
+      // R16-D2 §4b (D-97, W-7). The processing node's platform/vendor AT
+      // EVALUATION TIME — rides beside the verdict exactly like
+      // knowledge_lens_matched_entry_ids above, for the identical reason:
+      // the graph is not persisted on the register entry, so a safeguard
+      // whose evidence is scoped to a platform/vendor needs this to still
+      // tell "already in place" from "outstanding" once the graph is gone.
+      // Written spread-if-present (IntakeFlow.tsx): absent when the
+      // processing node declared neither.
+      evidence_scope?: { platform?: string; vendor?: string };
     }
   | { type: 'graph_corrected'; correction: GraphCorrection }
   | {
@@ -105,6 +144,18 @@ export type AuditEventPayload =
       submitter_note?: string;
       contradiction_resolutions?: string[];
       answer_contexts?: string[];
+      // R16-D2 §4 (D-81): same field as graph_confirmed's above, on
+      // whichever event recorded THIS correction's own confirmation.
+      assumptions?: AssumptionRecord[];
+      // R16-D2 §4b: same field as verdict_produced's above.
+      evidence_scope?: { platform?: string; vendor?: string };
+      // R16-D2 §5/§8 (F2C-6). How many graph_corrected events this
+      // correction pass wrote — a zero-correction resubmission writes
+      // none, and eventDetail (RegisterDetail.tsx) reads this to render
+      // "Re-checked — no answers changed." rather than implying something
+      // changed. Optional: a pre-D2 verdict_corrected predates the field,
+      // and an absent count is never read as zero (`=== 0`, not `!count`).
+      corrections_count?: number;
     }
   | { type: 'lifecycle_stage_changed'; from_stage: LifecycleStage; to_stage: LifecycleStage }
   | { type: 're_evaluation_queued'; policy_version: string }

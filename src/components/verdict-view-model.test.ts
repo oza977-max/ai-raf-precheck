@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildVerdictView } from './verdict-view-model';
-import type { DataFlowGraph, PolicyFile } from '../engine/types';
+import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
+import type { Assumption } from './plain-copy';
 
 // R16 chunk D1 (build/prompts/R16.md v2.1, §4.1/§4.2/§4.4). This is the ONE
 // pure computation behind the verdict's first screen AND the four existing
@@ -255,7 +256,7 @@ describe('buildVerdictView — TC-R16-D1-02: Why (plain reasons)', () => {
       },
     });
     const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
-    expect(view.whyReasons[0]).toBe('formal description Ask your AI risk team what this means for you.');
+    expect(view.whyReasons[0]).toBe('formal description. Ask your AI risk team what this means for you.');
   });
 
   it('TC-R16-D1-02f: falls back the same way with no policy loaded at all', () => {
@@ -267,7 +268,7 @@ describe('buildVerdictView — TC-R16-D1-02: Why (plain reasons)', () => {
       },
     });
     const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);
-    expect(view.whyReasons[0]).toBe('captured description Ask your AI risk team what this means for you.');
+    expect(view.whyReasons[0]).toBe('captured description. Ask your AI risk team what this means for you.');
   });
 });
 
@@ -978,5 +979,367 @@ describe('buildVerdictView — TC-R16-D1-12: rejected verdicts stay minimal (the
     expect(view.isRejected).toBe(true);
     expect(view.safeguards).toEqual([]);
     expect(view.outstandingSafeguards).toEqual([]);
+    expect(view.no).toBeDefined();
+  });
+});
+
+// R16-D2 §2 (VD-10, D-80). The "No" screen's own composition.
+function makeAssumption(overrides: Partial<Assumption> = {}): Assumption {
+  return {
+    questionId: '9',
+    question: 'If it gets something wrong, can the mistake be caught and put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case',
+    fields: ['output_reversibility'],
+    ...overrides,
+  };
+}
+
+// Real shape: a pack names its jurisdiction by CODE, and the policy maps codes
+// to names. (Verifying R16-D2: these sample packs used to spell the code out
+// as "the United Kingdom", which hid that the screen printed the raw code.)
+const COUNTRIES = [
+  { code: 'UK', name: 'United Kingdom', pack_files: [] },
+  { code: 'EU', name: 'European Union', pack_files: [] },
+  { code: 'CA', name: 'Canada', pack_files: [] },
+];
+
+function makePack(overrides: Partial<JurisdictionPack> = {}): JurisdictionPack {
+  return {
+    pack_id: 'PACK-UK',
+    version: '1.0',
+    jurisdiction: 'UK',
+    regulator: 'FCA',
+    document: 'doc',
+    effective_date: '2026-01-01',
+    reviewer_name: 'x',
+    reviewer_role: 'x',
+    sign_off_date: '2026-01-01',
+    rules: [],
+    ...overrides,
+  };
+}
+
+describe('buildVerdictView — TC-R16-D2-01..09: the "No" screen (VD-10, §2)', () => {
+  it('TC-R16-D2-01: a firm hard line with plain_reason/plain_change — exact reason and change text', () => {
+    const policy = makePolicy({
+      hard_lines: [
+        {
+          id: 'HL-002',
+          description: 'MNPI outside the controlled zone',
+          condition: { data_class: { in: ['MNPI'] }, data_zone: { not_in: ['Zone C'] } },
+          reason: 'r',
+          regulatory_basis: 'rb',
+          plain_reason: 'price-sensitive information would leave your firm’s own systems',
+          plain_change: 'Keep price-sensitive information out of it, or use a service that runs entirely inside your firm’s own systems.',
+        },
+      ],
+    });
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-002' });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.no?.kind).toBe('hard_line');
+    expect(view.no?.reason).toBe(
+      "price-sensitive information would leave your firm’s own systems. That's a line your firm never crosses, and no safeguard can make up for it.",
+    );
+    expect(view.no?.change).toBe(
+      'Keep price-sensitive information out of it, or use a service that runs entirely inside your firm’s own systems. Then check again.',
+    );
+  });
+
+  it('TC-R16-D2-02: a firm hard line with neither field falls back to its description + the §4.4 pointer, both for reason and change', () => {
+    const policy = makePolicy({
+      hard_lines: [
+        { id: 'HL-003', description: 'Autonomous lending decision with no human in the loop', condition: { autonomy_level: { gte: 4 } }, reason: 'r', regulatory_basis: 'rb' },
+      ],
+    });
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-003' });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.no?.kind).toBe('hard_line');
+    expect(view.no?.reason).toBe(
+      "Autonomous lending decision with no human in the loop. That's a line your firm never crosses, and no safeguard can make up for it. Ask your AI risk team what this means for you.",
+    );
+    expect(view.no?.change).toBe(
+      'change how it would be used, then check again. Ask your AI risk team what this means for you.',
+    );
+  });
+
+  it('TC-R16-D2-03: a pack hard line with plain fields names the pack\'s jurisdiction', () => {
+    const packs = [
+      makePack({
+        rules: [
+          {
+            id: 'SS1-UK-HL-01',
+            title: 't',
+            source: { document: 'SS1/23', section: '3.8', text: 'quoted text' },
+            effect: { type: 'hard_line', reason: 'r', plain_reason: 'it would decide entirely by itself with no person involved', plain_change: 'Add a human reviewer before it acts.' },
+            condition: { autonomy_level: { gte: 4 } },
+            basis: 'verbatim',
+          },
+        ],
+      }),
+    ];
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'SS1-UK-HL-01' });
+    const view = buildVerdictView(verdict, makePolicy({ jurisdictions: COUNTRIES }), undefined, undefined, undefined, undefined, { packs });
+    expect(view.no?.kind).toBe('pack_hard_line');
+    expect(view.no?.reason).toBe(
+      "it would decide entirely by itself with no person involved. It's one of the rules your firm has adopted for the United Kingdom, and no safeguard can make up for it.",
+    );
+    expect(view.no?.change).toBe('Add a human reviewer before it acts. Then check again.');
+  });
+
+  it('TC-R16-D2-04: a pack hard line with neither field names the jurisdiction in the fallback reason, plus the pointer line', () => {
+    const packs = [
+      makePack({
+        jurisdiction: 'EU',
+        rules: [
+          { id: 'EU-HL-01', title: 't', source: { document: 'd', section: 's', text: 't' }, effect: { type: 'hard_line', reason: 'r' }, condition: { autonomy_level: { gte: 4 } }, basis: 'verbatim' },
+        ],
+      }),
+    ];
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'EU-HL-01' });
+    const view = buildVerdictView(verdict, makePolicy({ jurisdictions: COUNTRIES }), undefined, undefined, undefined, undefined, { packs });
+    expect(view.no?.kind).toBe('pack_hard_line');
+    expect(view.no?.reason).toBe(
+      'one of the rules your firm has adopted for the European Union rules this out. Ask your AI risk team what this means for you.',
+    );
+    expect(view.no?.change).toBe(
+      'change how it would be used, then check again. Ask your AI risk team what this means for you.',
+    );
+  });
+
+  it('TC-R16-D2-05: CS-2 (unsatisfiable invariant, no plain_reason) uses the invariant\'s description + pointer, plus the no-safeguard clause and the CS-2 change text', () => {
+    const policy = makePolicy({ invariants: [{ id: 'INV-X', description: 'No alternative control exists for this exposure', condition: { exposure: { in: ['market-facing'] } }, required_controls: [], severity: 'High' }] });
+    const verdict = makeVerdict({
+      status: 'rejected',
+      controls: [],
+      binding_constraint: 'INV-X',
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 2,
+        invariants_checked: 1,
+        tripped_invariants: [{ id: 'INV-X', description: 'No alternative control exists for this exposure', severity: 'High', required_controls: [], graph_path: 'a -> b' }],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+      },
+    });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.no?.kind).toBe('unsatisfiable');
+    expect(view.no?.reason).toBe(
+      'No alternative control exists for this exposure, and your firm has no safeguard that resolves it. Ask your AI risk team what this means for you.',
+    );
+    expect(view.no?.change).toBe(
+      'change how it would be used, or ask your AI risk team whether the firm can add a safeguard for this.',
+    );
+  });
+
+  it('TC-R16-D2-05b: CS-2 with a plain_reason present uses it, still with the no-safeguard clause', () => {
+    const policy = makePolicy({ invariants: [{ id: 'INV-Y', description: 'd', condition: { exposure: { in: ['market-facing'] } }, required_controls: [], severity: 'High', plain_reason: 'what it produces reaches the public or the market' }] });
+    const verdict = makeVerdict({
+      status: 'rejected',
+      controls: [],
+      binding_constraint: 'INV-Y',
+      explanation: {
+        tier_rationale: null,
+        track_rationale: null,
+        hard_lines_checked: 2,
+        invariants_checked: 1,
+        tripped_invariants: [{ id: 'INV-Y', description: 'd', severity: 'High', required_controls: [], graph_path: 'a -> b' }],
+        binding_reason: null,
+        binding_regulatory_basis: null,
+      },
+    });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined);
+    expect(view.no?.reason).toBe('what it produces reaches the public or the market, and your firm has no safeguard that resolves it.');
+  });
+
+  it('TC-R16-D2-06: an id found nowhere loaded never renders the bare id, and offers no "what would change" line', () => {
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'SOME-UNKNOWN-ID' });
+    const view = buildVerdictView(verdict, makePolicy(), undefined, undefined, undefined, undefined);
+    expect(view.no?.kind).toBe('other');
+    expect(view.no?.reason).toBe("one of your firm's rules rules this out. Ask your AI risk team what this means for you.");
+    expect(view.no?.reason).not.toMatch(/SOME-UNKNOWN-ID/);
+    expect(view.no?.change).toBeUndefined();
+  });
+
+  it('TC-R16-D2-07: an assumption contributes when any of its fields appears in the binding hard line\'s own condition keys', () => {
+    const policy = makePolicy({
+      hard_lines: [{ id: 'HL-002', description: 'd', condition: { data_class: { in: ['MNPI'] }, data_zone: { not_in: ['Zone C'] } }, reason: 'r', regulatory_basis: 'rb' }],
+    });
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-002' });
+    const contributingOne = makeAssumption({ questionId: '3platformZone', shortLabel: 'whether your information stays on your firm’s systems', fields: ['data_zone'] });
+    const nonContributing = makeAssumption({ questionId: '9', shortLabel: 'whether a mistake can be put right', fields: ['output_reversibility'] });
+    const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, undefined, {
+      assumptions: [contributingOne, nonContributing],
+    });
+    expect(view.no?.contributingAssumptions).toEqual([contributingOne]);
+    expect(view.no?.otherAssumptionCount).toBe(1);
+  });
+
+  it('TC-R16-D2-08: for a pack hard line, the PACK rule\'s own condition is checked, not the firm\'s', () => {
+    const packs = [
+      makePack({
+        rules: [{ id: 'SS1-UK-HL-02', title: 't', source: { document: 'd', section: 's', text: 't' }, effect: { type: 'hard_line', reason: 'r' }, condition: { autonomy_level: { gte: 4 } }, basis: 'verbatim' }],
+      }),
+    ];
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'SS1-UK-HL-02' });
+    const a = makeAssumption({ questionId: '6', shortLabel: 'what it does with what it produces', fields: ['autonomy_level', 'action_type'] });
+    const view = buildVerdictView(verdict, makePolicy(), undefined, undefined, undefined, undefined, { packs, assumptions: [a] });
+    expect(view.no?.contributingAssumptions).toEqual([a]);
+  });
+
+  it('TC-R16-D2-07b: no assumptions at all — contributingAssumptions empty, otherAssumptionCount zero', () => {
+    const verdict = makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-002' });
+    const view = buildVerdictView(verdict, makePolicy({ hard_lines: [{ id: 'HL-002', description: 'd', condition: { data_class: { in: ['MNPI'] } }, reason: 'r', regulatory_basis: 'rb' }] }), undefined, undefined, undefined, undefined);
+    expect(view.no?.contributingAssumptions).toEqual([]);
+    expect(view.no?.otherAssumptionCount).toBe(0);
+  });
+});
+
+describe('buildVerdictView — TC-R16-D2-09: inPlaceScopeName (DR7-34, §7)', () => {
+  function policyWithScopedEvidence(appliesTo: { platforms?: string[]; vendors?: string[] }) {
+    return makePolicy({
+      controls: [
+        {
+          id: 'CTRL-ENC-01',
+          name: 'Encryption in transit',
+          description: 'd',
+          resolves: [],
+          burden: 1,
+          verification: 'v',
+          verification_evidence: { status: 'verified', detail: 'd', applies_to: appliesTo },
+        },
+      ],
+      platforms: [{ id: 'PLAT-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Platform' }],
+      vendors: [{ id: 'VENDOR-X', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: 'Firm Vendor' }],
+    });
+  }
+
+  it('TC-R16-D2-09a: no scoped in-place safeguard — undefined, and the note stays generic', () => {
+    const policy = makePolicy({ controls: [{ id: 'CTRL-ENC-01', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', verification_evidence: { status: 'verified' } }] });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.inPlaceScopeName).toBeUndefined();
+  });
+
+  it('TC-R16-D2-09b: a scoped, matched in-place safeguard names the platform', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, platform: 'PLAT-X' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.inPlaceScopeName).toBe('Firm Platform');
+  });
+
+  it('TC-R16-D2-09c: scoped to both platform and vendor, the graph matches both — the platform\'s name wins', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'], vendors: ['VENDOR-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, platform: 'PLAT-X', vendor: 'VENDOR-X' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.inPlaceScopeName).toBe('Firm Platform');
+  });
+
+  it('TC-R16-D2-09d: vendor-only match names the vendor', () => {
+    const policy = policyWithScopedEvidence({ vendors: ['VENDOR-X'] });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, vendor: 'VENDOR-X' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.inPlaceScopeName).toBe('Firm Vendor');
+  });
+
+  it('TC-R16-D2-09e: no graph (the register path) falls back to the options.evidenceScope and still names the match — register and intake agree', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, undefined, undefined, undefined, undefined, {
+      evidenceScope: { platform: 'PLAT-X' },
+    });
+    expect(view.safeguards[0]!.status).toBe('verified');
+    expect(view.inPlaceScopeName).toBe('Firm Platform');
+  });
+
+  it('TC-R16-D2-09f: no graph and no evidenceScope — a legacy event still renders, with the existing "we couldn\'t check" note, and no scope name', () => {
+    const policy = policyWithScopedEvidence({ platforms: ['PLAT-X'] });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('outstanding');
+    expect(view.safeguards[0]!.evidenceScopeNote).toBe(
+      "Your firm's records show this for Firm Platform — we couldn't check whether that includes this tool.",
+    );
+    expect(view.inPlaceScopeName).toBeUndefined();
+  });
+});
+
+// Found verifying R16-D2: the "No" screen printed a pack's jurisdiction CODE
+// ("EU") where the contract asks for its plain name, and the evidence note fell
+// back to a platform's internal id when it had no plain name.
+describe('R16-D2 verification — words a person reads, never codes', () => {
+  function packHardLine(jurisdiction: string, withPlainReason: boolean) {
+    return [
+      makePack({
+        jurisdiction,
+        rules: [
+          {
+            id: 'PACK-HL-01',
+            title: 't',
+            source: { document: 'd', section: 's', text: 't' },
+            effect: withPlainReason
+              ? { type: 'hard_line', reason: 'r', plain_reason: 'it would act with no person involved' }
+              : { type: 'hard_line', reason: 'r' },
+            condition: { autonomy_level: { gte: 4 } },
+            basis: 'verbatim',
+          },
+        ],
+      }),
+    ];
+  }
+  const rejected = () => makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'PACK-HL-01' });
+
+  it('TC-R16-D2-62: a pack country is named in words — "the" where English needs it, none where it does not, and an unlisted code is never shown', () => {
+    const policy = makePolicy({ jurisdictions: COUNTRIES });
+    const eu = buildVerdictView(rejected(), policy, undefined, undefined, undefined, undefined, { packs: packHardLine('EU', true) });
+    expect(eu.no?.reason).toContain('adopted for the European Union, and no safeguard');
+    const ca = buildVerdictView(rejected(), policy, undefined, undefined, undefined, undefined, { packs: packHardLine('CA', true) });
+    expect(ca.no?.reason).toContain('adopted for Canada, and no safeguard');
+    const unlisted = buildVerdictView(rejected(), policy, undefined, undefined, undefined, undefined, { packs: packHardLine('XX', false) });
+    expect(unlisted.no?.reason).toBe(
+      'one of the rules your firm has adopted for the countries it involves rules this out. Ask your AI risk team what this means for you.',
+    );
+    expect(unlisted.no?.reason).not.toMatch(/\bXX\b/);
+  });
+
+  it('TC-R16-D2-63: a matched platform with no plain name leaves the "already in place" note generic — never its internal id', () => {
+    const policy = makePolicy({
+      controls: [
+        { id: 'CTRL-ENC-01', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', verification_evidence: { status: 'verified', detail: 'd', applies_to: { platforms: ['PLAT-NONAME'] } } },
+      ],
+      platforms: [{ id: 'PLAT-NONAME', name: 'raw', approved_envelope: {}, satisfies_controls: [] }],
+    });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, platform: 'PLAT-NONAME' }] };
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policy, graph, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.status).toBe('verified');
+    expect(view.inPlaceScopeName).toBeUndefined();
+  });
+});
+
+// Found in the verification ritual: closing a description with a full stop
+// crashed the whole sign-off page for a stored control with no description
+// (37 tests failed). A missing description must degrade, never crash.
+describe('R16-D2 verification — a missing description never crashes the page', () => {
+  it('TC-R16-D2-64: a safeguard with no plain wording and no description reads "{name}. {pointer}"', () => {
+    const policy = makePolicy({
+      controls: [{ id: 'CTRL-NODESC', name: 'Access review', resolves: [], burden: 1, verification: 'v' } as unknown as PolicyFile['controls'][number]],
+    });
+    const view = buildVerdictView(makeVerdict({ controls: ['CTRL-NODESC'] }), policy, undefined, undefined, undefined, undefined);
+    expect(view.safeguards[0]!.plainAction).toBe('Access review. Ask your AI risk team what this means for you.');
+  });
+});
+
+describe('R16-D2 verification — a registry name reads naturally mid-sentence', () => {
+  it('TC-R16-D2-65: a plain name written to start a line ("Your firm\'s …") is lower-cased in the "already in place" note; a proper name is left alone', () => {
+    const policyFor = (plain: string) =>
+      makePolicy({
+        controls: [
+          { id: 'CTRL-ENC-01', name: 'n', description: 'd', resolves: [], burden: 1, verification: 'v', verification_evidence: { status: 'verified', detail: 'd', applies_to: { platforms: ['PLAT-C'] } } },
+        ],
+        platforms: [{ id: 'PLAT-C', name: 'raw', approved_envelope: {}, satisfies_controls: [], plain_name: plain }],
+      });
+    const graph = { ...makeGraph(), processing_nodes: [{ ...makeGraph().processing_nodes[0]!, platform: 'PLAT-C' }] };
+    const yours = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policyFor("Your firm's cloud AI assistant"), graph, undefined, undefined, undefined);
+    expect(yours.inPlaceScopeName).toBe("your firm's cloud AI assistant");
+    const proper = buildVerdictView(makeVerdict({ controls: ['CTRL-ENC-01'] }), policyFor('Microsoft Copilot'), graph, undefined, undefined, undefined);
+    expect(proper.inPlaceScopeName).toBe('Microsoft Copilot');
   });
 });
