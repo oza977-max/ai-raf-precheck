@@ -253,6 +253,7 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     };
     const { errors } = checkPolicyReferences(basePolicy(), [pack]);
     expect(errors.some((e) => /TP-BAD/.test(e) && /CTRL-MISSING/.test(e))).toBe(true);
+    expect(errors.some((e) => /CTRL-MISSING/.test(e) && e.endsWith(' — add a control with this id to your policy, or remove the pack.'))).toBe(true);
     expect(errors.some((e) => /TP-OK/.test(e))).toBe(false);
     // no packs loaded: nothing to check
     expect(checkPolicyReferences(basePolicy(), []).errors).toEqual([]);
