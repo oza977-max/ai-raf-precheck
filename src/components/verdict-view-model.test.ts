@@ -777,7 +777,8 @@ describe('buildVerdictView — R16-W W-7: evidence scoped to the platforms/vendo
 
 describe('buildVerdictView — TC-R16-D1-08: next steps (combinations and omission)', () => {
   it('TC-R16-D1-08a: self-service, nothing outstanding, nothing owed — only the "Then"-less finish line', () => {
-    const view = buildVerdictView(makeVerdict({ controls: [] }), undefined, undefined, undefined, undefined, 'approved');
+    // CR8-02 (deliberate change): re-fixtured with a self-service policy (undetermined otherwise).
+    const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy(), undefined, undefined, undefined, 'approved');
     expect(view.nextSteps).toEqual(["You can start. It's saved on your firm's register of AI uses, which your AI risk team can see."]);
   });
 
