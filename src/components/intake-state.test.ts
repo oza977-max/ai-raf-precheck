@@ -266,6 +266,7 @@ describe('intakeReducer', () => {
       resolutionNotes: [],
       originalVerdictId: undefined,
       useCaseId: 'uc-1',
+      afterFailedEvaluation: false, // CR8-03: deliberate expectation change — every confirmation carries the flag
     });
   });
 
@@ -273,6 +274,7 @@ describe('intakeReducer', () => {
     const g = graph({ version: 1 });
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A tool that drafts client emails.',
       graph: g,
       graphVersion: 1,
@@ -494,6 +496,7 @@ describe('intakeReducer — STEP_BACK (FN-006)', () => {
   it('does not step back out of confirmation — the attestation boundary holds', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: typed,
       graph: graph(),
       graphVersion: 1,
@@ -680,6 +683,7 @@ describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-
     const g = graph({ intake_method: 'structured_form' });
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'x',
       graph: g,
       graphVersion: 1,
@@ -879,6 +883,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       corrections: [],
       answers: [],
       resolutionNotes: [],
+      afterFailedEvaluation: false, // CR8-03: deliberate expectation change — every confirmation carries the flag
     });
   });
 });
@@ -994,6 +999,7 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
   it('TC-R16-W-27: CHANGE_ANSWER from confirmation on a form-path graph carries plainAnswers/assumptions/useCaseId back to the form', () => {
     const confirmationState: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'd',
       graph: g,
       graphVersion: 1,
@@ -1021,6 +1027,7 @@ describe('intakeReducer — plainAnswers/assumptions carry through the form path
     const original = graph({ intake_method: 'structured_form', version: 1 });
     const confirmationState: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'd',
       graph: g,
       graphVersion: 1,
@@ -1137,6 +1144,7 @@ describe('R16-D2 §5 (v2.1): a correction without its form answers never returns
   it('TC-R16-D2-59: "Change an answer" in a review-screen correction of a form-built case returns to the review screen, keeping the correction', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A form-built tool.',
       graph: formBuilt,
       graphVersion: 2,
@@ -1189,6 +1197,7 @@ describe('R16-D2 §5 (v2.1): a correction without its form answers never returns
   it('a fresh form-built case (no correction) still returns to the form, as before', () => {
     const state: IntakeState = {
       step: 'confirmation',
+      afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
       description: 'A form-built tool.',
       graph: formBuilt,
       graphVersion: 2,
@@ -1589,6 +1598,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
   };
   const confirmation = (overrides: Partial<Extract<IntakeState, { step: 'confirmation' }>> = {}): IntakeState => ({
     step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
     description: 'd',
     graph: graph(),
     graphVersion: 1,
@@ -1838,6 +1848,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
   const Q = { id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' as const };
   const confirmation: IntakeState = {
     step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
     description: 'd',
     graph: graph(),
     graphVersion: 1,
@@ -2025,6 +2036,7 @@ describe('intakeReducer — a card edit narrows or removes the assumption it mak
   };
   const confirmation = (assumptions: Assumption[]): IntakeState => ({
     step: 'confirmation',
+    afterFailedEvaluation: false, // CR8-03: required on every confirmation (type-only fixture change)
     description: 'd',
     graph: graph(),
     graphVersion: 1,

@@ -294,6 +294,18 @@ export type IntakeState =
       // IntakeFlow now reads directly for UnderstoodSummary's "uncertain"
       // list, replacing the component `useState` of the same name.
       uncertainNodeIds?: string[];
+      // CR8-03 (P3 — once a case has a confirmed attestation, no navigation can
+      // start a new case id for it). REQUIRED, so a transition that builds a
+      // confirmation and forgets it fails to compile. True when this case has
+      // already been through a failed evaluation (graph_confirmed is on its
+      // trail): CHANGE_ANSWER hands it back to the review screen, whose Back
+      // is then refused (STEP_BACK) exactly as it was before the confirmation.
+      // Source at PROCEED_TO_CONFIRMATION: the questionnaire's own
+      // `backAfterFailedEvaluation` (the questionnaire has no
+      // afterFailedEvaluation). A draft saved by a build before this fix has no
+      // flag here and reads as false — accepted: the window is a confirmation
+      // draft saved after a failure and restored by an older tab.
+      afterFailedEvaluation: boolean;
     }
   | {
       step: 'evaluation_pending';
@@ -890,6 +902,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             corrections: action.corrections,
             answers: [],
             resolutionNotes: [],
+            // CR8-03 (P3): the form path never reaches a Back-able review
+            // screen (CHANGE_ANSWER/EVALUATION_FAILED return it to the form),
+            // so the guard has nothing to guard here.
+            afterFailedEvaluation: false,
           };
       }
     }
@@ -1226,6 +1242,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         assumptions: state.assumptions,
         // F-7: threaded forward, never re-derived.
         uncertainNodeIds: state.uncertainNodeIds,
+        // CR8-03 (P3): the Back guard a failed evaluation set on the review
+        // screen travels through the questions to here. Never dropped.
+        afterFailedEvaluation: state.backAfterFailedEvaluation === true,
       };
 
     case 'CHANGE_ANSWER':
@@ -1273,6 +1292,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             uncertainNodeIds: state.uncertainNodeIds,
             jurisdictionsConfirmed: true,
             reentry: true,
+            // CR8-03 (P3): restored — see the confirmation type's comment. A
+            // first-time confirmation (no failure) leaves it off, so Back from
+            // here is still allowed: nothing is attested yet.
+            ...(state.afterFailedEvaluation ? { afterFailedEvaluation: true } : {}),
           };
 
     case 'CONFIRMED':
