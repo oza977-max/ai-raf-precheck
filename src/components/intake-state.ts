@@ -517,12 +517,21 @@ export type ValueResolver = (nodeId: string, field: string) => { found: true; va
  *  mints fresh ids every submission and formCorrections names the ORIGINAL
  *  graph's ids, so they are mapped by role — the original processing node id to
  *  processing_nodes[0], the original output node id to output_nodes[0], the
- *  sentinel `inputs|data_classes` to the sorted distinct input data classes. */
+ *  sentinel `inputs|data_classes` to the sorted distinct input data classes.
+ *
+ *  Assumption (M-3): the form builds exactly ONE processing node and ONE output
+ *  node (form-corrections.ts matches by the same rule). A multi-node form would
+ *  resolve nothing for the extra nodes — safe (nothing is written), but it would
+ *  drop their reverse corrections. */
 export function graphValueResolver(graph: DataFlowGraph, originalGraph?: DataFlowGraph): ValueResolver {
   const asRec = (n: unknown) => n as Record<string, unknown> | undefined;
   return (nodeId, field) => {
     if (nodeId === 'graph') {
-      return field in graph ? { found: true, value: (graph as unknown as Record<string, unknown>)[field] } : { found: false };
+      if (!(field in graph)) return { found: false };
+      const v = (graph as unknown as Record<string, unknown>)[field];
+      // Sorted, as formCorrections stores jurisdictions, so a synthesised
+      // correction and a form-diffed one read the same.
+      return { found: true, value: Array.isArray(v) && v.every((x) => typeof x === 'string') ? [...v].sort() : v };
     }
     let node: Record<string, unknown> | undefined;
     if (originalGraph) {
