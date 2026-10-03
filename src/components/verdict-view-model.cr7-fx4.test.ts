@@ -127,6 +127,39 @@ describe('CR7-09 — a signed-off case is not described as needing no sign-off',
     expect(view.whoSignsOff).not.toMatch(/signed off by/i);
   });
 
+  it('TC-CR7-09i: signed off, then the firm edits tier_workflow to self-service — the trail still says signed off, never "nobody"', () => {
+    const edited = { ...policy, tier_workflow: { ...policy.tier_workflow, High: 'self-service' } } as PolicyFile;
+    const verdict = makeVerdict({ tier: 'High', controls: [] });
+    const view = buildVerdictView(verdict, edited, undefined, undefined, undefined, 'approved', { auditEvents: [review('verdict-1', 'approved')] });
+    expect(view.signedOff).toBe(true);
+    expect(view.needsSignOff).toBe(false);
+    expect(view.whoSignsOff).toMatch(/signed off by your AI risk team/i);
+    for (const text of [view.headline, view.whoSignsOff, ...view.nextSteps]) expect(text).not.toMatch(SELF_SERVICE_WORDS);
+    expect(view.headline).toMatch(/signed it off/i);
+  });
+
+  it('TC-CR7-09j: no policy at all — an approving review on the trail still reads signed off, never "nobody"', () => {
+    const verdict = makeVerdict({ tier: 'High', controls: [] });
+    const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, 'approved', { auditEvents: [review('verdict-1', 'approved')] });
+    expect(view.signedOff).toBe(true);
+    expect(view.whoSignsOff).toMatch(/signed off by your AI risk team/i);
+    expect(view.headline).toMatch(/signed it off/i);
+    expect(view.whoSignsOff).not.toMatch(/^nobody/);
+  });
+
+  it('TC-CR7-09k: a later stage that needed a sign-off but has no approving review claims neither "pending" nor "nobody"', () => {
+    const verdict = makeVerdict({ tier: 'High', controls: [] });
+    for (const stage of ['approved', 'in_production', 'monitored'] as const) {
+      const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, stage, { auditEvents: [] });
+      expect(view.needsSignOff).toBe(false);
+      expect(view.signedOff).toBe(false);
+      expect(view.headline).not.toMatch(/^Not yet|signed it off|no sign-off needed/);
+      expect(view.whoSignsOff).toMatch(/no sign-off is recorded/i);
+      expect(view.whoSignsOff).not.toMatch(/^nobody|Until they do/);
+      expect(view.nextSteps.join(' ')).not.toMatch(/Send this result to your AI risk team|signed off/);
+    }
+  });
+
   it('TC-CR7-09e: a rejected review is not a sign-off either', () => {
     const verdict = makeVerdict({ tier: 'High', controls: [] });
     const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, 'pre_checked', {
