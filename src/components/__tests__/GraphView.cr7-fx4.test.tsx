@@ -32,7 +32,7 @@ function makeGraph(replaces = false): DataFlowGraph {
 }
 
 const NO_BASIS = 'Not in your description — please check this';
-const REPLACES_LABEL = QUESTIONNAIRE_COPY.replaces_prior_model.shortLabel;
+const REPLACES_LABEL = QUESTIONNAIRE_COPY.replaces_prior_model!.shortLabel;
 
 describe('GraphView — CR7-25: "replaces something you use?" has a row on the review card', () => {
   it('TC-CR7-25: the processing card shows the row with Yes / No, and a consequence line', async () => {
