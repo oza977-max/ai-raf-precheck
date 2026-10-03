@@ -755,6 +755,9 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
                 <button
                   type="button"
                   className="register-view__case-link"
+                  // M-4: a name that stays unique when labels repeat (tier and
+                  // stage are what tell two same-named cases apart).
+                  aria-label={`${row.label} — ${row.tier ?? 'no'} tier, ${STAGE_LABELS[row.lifecycle_stage]}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectRow(row.use_case_id);
