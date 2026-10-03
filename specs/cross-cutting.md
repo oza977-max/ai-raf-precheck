@@ -186,7 +186,7 @@ React error boundaries at the route level. Each major view (intake, verdict, reg
 
 **As built (CR6-04, 2026-10-03).** One boundary exists so far: `ErrorBoundary.tsx` wraps the intake flow in `App.tsx`, the view holding unfinished work that a stale saved draft could crash on every reload. A render-time crash there shows a plain message that claims only that anything already saved is on the register, and a "Start a fresh check" button that clears both saved drafts before remounting (TC-CR6-04c, 04d, 04e; `intake-flow.md` §3). The verdict and register views are not separately wrapped yet, so the sentence above is the target, not the current state. Engine failures shown on the intake screens use `engineErrorMessage(kind)` (`plain-copy.ts`): a plain sentence per engine error kind that blames the firm's rules or policy, never the person's answers (CR6-12).
 
-**User-facing error copy (CR7-37, 2026-10-04).** A policy problem is shown to a submitter as one plain sentence — "Your firm's rules file has a problem, so this can't be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen." — never as field paths or checker reasons. The detail goes to the console for whoever fixes the policy (`intake-flow.md` §3; TC-CR7-37).
+**User-facing error copy (CR7-37, 2026-10-04).** A policy problem is shown to a submitter as one plain sentence — "Your firm's rules file has a problem, so this can't be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen." — never as field paths or checker reasons. The detail goes to the console for whoever fixes the policy (`intake-flow.md` §3; TC-CR7-37). The sentence is one constant, `POLICY_PROBLEM_MESSAGE` in `plain-copy.ts`, beside `engineErrorMessage`; `IntakeFlow.tsx` imports it and keeps no copy (TC-CR7-37-place).
 
 ---
 
@@ -214,6 +214,8 @@ src/engine/evaluate.test.ts   ← same directory
 - Test the public interface, not internals — `evaluator.test.ts` tests `evaluate(graph, policy)`, not internal helper functions
 - No `any` in test assertions — typed assertions against typed results
 - `describe` block names describe the scenario; `it` names describe the expected behaviour
+
+**Long intake UI tests under load (FX7-6, CR7, 2026-10-04).** The intake UI tests re-render the whole app on every keystroke, so typing a long description made the long flows run past vitest's 5 second default on a loaded machine. Test files only; the global timeout is unchanged. Where typing is not what a test is about, it fills a long text with one paste (`fillText`, `src/components/__tests__/fillText.ts`) and uses userEvent `delay: null`. A per-test budget is allowed only with a written reason: `SLOW_FLOW_MS` (15 s) for the multi-screen flows, and `DUP_CHECK_WAIT` (5 s) for the wait after the duplicate check, which reads the whole register and is the first wait to watch if the register grows. No assertion was weakened and no test id changed (`build/handovers/FX7-6-results.md`).
 
 ---
 
@@ -312,10 +314,17 @@ This is explicitly a governance-tool trust model: the tool trusts the user to se
 
 **The reasoning-trace call.** It runs inside the case lock, so a stalled call would hold the case. The SDK call carries a 15 second timeout and no retries (TC-CR7-19).
 
+## 13a. Contrast tokens and the About page (CR7, 2026-10-04, wave 2)
+
+**Contrast (CR7-08).** The faint-text and warning-text colours were too light to read comfortably. In `App.css`, `--ink-faint` is now `#686253` and `--warn-text` is `#7a5a22`, and a new token `--control-border` (`#7d7869`) is the border of form controls. Small text must reach at least 4.5:1 against every background it sits on (the card, the page, the cream band and the warning band), and a form-control border at least 3:1 against the card and the page. A token test, `app-css.cr7-fx4.test.ts`, reads the `:root` tokens from `App.css` and fails if any pair drops below those ratios (TC-CR7-08).
+
+**About page (CR7-36).** The sentence saying how many hard lines and appetite rules the app ships with is computed from the shipped `policy/appetite.yaml` (read at build time and loaded through `loadPolicy`), not typed in and not taken from the firm's edited policy: a firm that edits its own rules does not change what the page says it shipped with. If the shipped file cannot be loaded the sentence falls back to words with no number (TC-CR7-36, 36-1).
+
 ## 14. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-04 | CR7 — wave 2 (TC-CR7-*, TC-FX7-*, `test-cases-029.md`). §5 notes where the policy-problem sentence lives (`POLICY_PROBLEM_MESSAGE`); §6 gains the long-intake-test conventions (single paste, `delay: null`, written-reason budgets `SLOW_FLOW_MS` and `DUP_CHECK_WAIT`, no global timeout change; FX7-6); §13a added (the contrast tokens and their token test, CR7-08; the About page counts computed from the shipped policy, CR7-36). |
 | 2026-10-04 | CR7 — code review 007 fixes, wave 1 (TC-CR7-*, `test-cases-029.md`). §5 gains the plain-sentence rule for policy problems shown to a submitter; §13 added (what Clear all data deletes and keeps, the 3 second wait on a blocked delete, the 15 second no-retry reasoning-trace call). |
 
 ---

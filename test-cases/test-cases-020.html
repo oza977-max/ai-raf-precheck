@@ -306,7 +306,7 @@
 <tr><td>TC-R16-D1-05a</td><td><code>@submitter</code> &rarr; "you or your manager (as the person responsible for this use)", <code>yours: true</code></td></tr>
 <tr><td>TC-R16-D1-05b</td><td><code>@model_owner</code> with a non-<code>'internal'</code> vendor on the processing node &rarr; "&hellip;working with the supplier", <code>yours: true</code></td></tr>
 <tr><td>TC-R16-D1-05c</td><td><code>@model_owner</code> with vendor <code>'internal'</code> &rarr; "the team that built the model", <code>yours: false</code></td></tr>
-<tr><td>TC-R16-D1-05d</td><td><code>@model_owner</code> with no graph at all &mdash; treated as <code>'internal'</code> (no vendor known), <code>yours: false</code></td></tr>
+<tr><td>TC-R16-D1-05d</td><td><code>@model_owner</code> with no graph at all (a case reopened from the register) &mdash; neither bought nor built is claimed: the owner reads "the team responsible for the model" (not "the team that built the model"), <code>yours: false</code> (amended CR7-33)</td></tr>
 <tr><td>TC-R16-D1-05e</td><td>Free-text <code>plain_owner</code> renders verbatim, <code>yours: false</code></td></tr>
 <tr><td>TC-R16-D1-05f</td><td><code>plain_owner_with</code> appends <code>", with {x}"</code> after a free-text or <code>@submitter</code> owner</td></tr>
 <tr><td>TC-R16-D1-05g</td><td><code>plain_owner_with</code> appends <code>" and {x}"</code> after the <code>@model_owner</code> "working with the supplier" branch specifically</td></tr>
@@ -331,7 +331,7 @@
 <tr><td>TC-R16-D1-07c</td><td>Two firm review instances sharing one plain name de-duplicate to one <code>owedReviews</code> entry (D-04)</td></tr>
 <tr><td>TC-R16-D1-07d</td><td>The <code>PV-UNREGISTERED</code> sentinel resolves to its fixed product copy, independent of the component name suffix</td></tr>
 <tr><td>TC-R16-D1-07e</td><td>The <code>MODEL-REGISTRY</code> sentinel resolves to its fixed product copy</td></tr>
-<tr><td>TC-R16-D1-07f</td><td>A pack-rule-sourced review with no local plain-name data falls back to the generic pack-review line (&sect;4.4) &mdash; <code>buildVerdictView</code> has no <code>packs</code> parameter</td></tr>
+<tr><td>TC-R16-D1-07f</td><td>A pack-rule-sourced review falls back to the generic pack-review line (&sect;4.4) when no pack data is passed (<code>options.packs</code> absent); with the real <code>ss1-23.yaml</code> passed in <code>options.packs</code>, it uses the pack rule's own plain name and owner (amended CR6-13, CR7-32)</td></tr>
 <tr><td>TC-R16-D1-07g</td><td>A firm review without <code>plain_name</code> falls back to its formal name + the pointer line (&sect;4.4)</td></tr>
 <tr><td>TC-R16-D1-07h</td><td>An older verdict with no <code>downstream_review_sources</code> at all lists every review separately &mdash; nothing folded away; <code>coveredReviewFormalNames</code> stays empty</td></tr>
 <tr><td>TC-R16-D1-07i</td><td><code>coveredReviewFormalNames</code> (WhatToDo's own filter, formal vocabulary) names a fully-covered formal review once</td></tr>

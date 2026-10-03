@@ -1,4 +1,4 @@
-# Counterpoise — Test Cases, Round CR7 (code review 007 fixes) — wave 1
+# Counterpoise — Test Cases, Round CR7 (code review 007 fixes) — waves 1 and 2
 
 *Written 2026-10-04. Code review 007 found that several screens and stores did
 less than the specs said, or said more than they did: a saved draft restored
@@ -302,3 +302,169 @@ These cases keep their ids. Their assertions changed because they pinned the old
 | TC-CR6-04b | Was: driven from the description path. Now: driven through the form-path questionnaire — `intake-draft.test.ts` |
 | TC-CR6-15a | Was: asserted straight after the confirm. Now: waits for the draft clear, because the clear is conditional on the draft still being this case's — `IntakeFlow.cr6-fx2.test.tsx` |
 | (plain-intake, "even alongside other ticks") | Was: "Somewhere else, or not sure" forces an empty jurisdictions list even alongside other ticks. Now: a listed country is kept and the unknown one becomes an assumption (TC-CR7-23a); the lone tick still gives an empty list (TC-CR7-23b) — `plain-intake.test.ts` |
+
+## Wave 2
+
+*Written 2026-10-04. The second wave of code review 007 fixes (CR7-02 (6), 07, 08, 09, 10c, 11, 14, 25, 29, 30b, 35e, 36, 37, 39, 40) and the FX7-4 review passes (O-9 and the model-lookup guard). The amended spec sections are marked "(CR7, 2026-10-04)" in `specs/verdict-audit`, `specs/register-lifecycle`, `specs/intake-flow` and `specs/cross-cutting`. The CR7-35a to 35d rows are in `test-cases-028`; CR7-35e is here because it is a result-screen case.*
+
+Test files: `src/components/verdict-view-model.cr7-fx4.test.ts`,
+`src/components/__tests__/VerdictDisplay.cr7-fx4.test.tsx`,
+`src/components/__tests__/RegisterDetail.cr7-fx4.test.tsx`,
+`src/components/__tests__/RegisterDetail.nomodel.cr7.test.tsx`,
+`src/components/__tests__/RegisterView.cr7-fx4.test.tsx`,
+`src/components/__tests__/ModelLinkFailure.cr7.test.tsx`,
+`src/components/__tests__/GraphView.cr7-fx4.test.tsx`,
+`src/components/__tests__/GraphView.reentry.cr7.test.tsx`,
+`src/components/__tests__/ContradictionReview.cr7-fx4.test.tsx`,
+`src/components/__tests__/About.cr7-fx4.test.tsx`,
+`src/components/__tests__/app-css.cr7-fx4.test.ts`.
+
+## §02 (wave 2) — A revisited review does not claim a value was missing from the description
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-02g | With `reentry` set, a confident-but-unquoted field carries no "Not in your description" badge — `GraphView.cr7-fx4.test.tsx` |
+| TC-CR7-02g-1 | The same graph on a first read (no `reentry`; a real extraction, provenance recorded, nothing quoted) still shows the badge — `GraphView.cr7-fx4.test.tsx` |
+| TC-CR7-02g-2 | `reentry` does not hide a field the reader still has to check: a guessed field keeps its badge — `GraphView.cr7-fx4.test.tsx` |
+| TC-CR7-02g-3 | Change an answer, through the real reducer, restores a review screen with no "Not in your description" badge — `GraphView.reentry.cr7.test.tsx` |
+| TC-CR7-02g-3b | The same graph on a first review (no re-entry) still shows the badge — `GraphView.reentry.cr7.test.tsx` |
+| TC-CR7-02h | With no provenance and no guessed list at all (a draft from an older build), no claim is made about the description; the badge says where the value came from wasn't saved — `GraphView.cr7-fx4.test.tsx` |
+
+## §07 — The case name in the register is a button
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-07 | The case name is a button; Tab reaches it and Enter opens the case — `RegisterView.cr7-fx4.test.tsx` |
+| TC-CR7-07-1 | Two cases with the same name get different accessible names, from their tier and stage — `RegisterView.cr7-fx4.test.tsx` |
+
+## §08 — Contrast tokens
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-08-ink-faint | `--ink-faint` is at least 4.5:1 on each of `--card-bg`, `--paper`, `--cream` and `--warn-bg` (four tests, one per background, each named `TC-CR7-08-ink-faint-on` plus the token) — `app-css.cr7-fx4.test.ts` |
+| TC-CR7-08-warn-text | `--warn-text` on `--warn-bg` is at least 4.5:1 — `app-css.cr7-fx4.test.ts` |
+| TC-CR7-08-control-border | The form-control border is at least 3:1 on the card and the page — `app-css.cr7-fx4.test.ts` |
+
+## §09 — The sign-off wording comes from the trail, the policy and the stage
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-09a | A signed-off Track II case (stage approved, a second-line review event) names the sign-off and never says self-service — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09b | A genuine self-service case (Low tier, stage approved) is unchanged: nobody signs off — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09c | A correction requested is not a sign-off: the case still needs one and never claims it was signed off — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09d | Signed off, then corrected: the new verdict is not "signed off" — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09e | A rejected review is not a sign-off either — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09i | Signed off, then the firm edits `tier_workflow` to self-service: the trail still says signed off, never "nobody" — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09j | With no policy at all, an approving review on the trail still reads signed off, never "nobody" — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09k | A later stage that needed a sign-off but has no approving review claims neither "pending" nor "nobody"; the headline says no sign-off is on record, with and without outstanding safeguards — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-09f | On the screen, a signed-off Track II case (stage approved) says it was signed off and never "self-service" or "nobody" — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-09g | On the screen, a genuine self-service case (Low tier, stage approved) keeps its self-service wording — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-09h | Stage approved for a case that needed a sign-off but has no approving review on this verdict: no "self-service" and no "signed off by" — `VerdictDisplay.cr7-fx4.test.tsx` |
+
+## §10 (wave 2) — The register's audit lines for another case's name
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-10c | A 1LoD view omits the matched label from both lines (`classification_adopted`, `duplicate_dismissed`); the 2LoD view keeps it — `RegisterDetail.cr7-fx4.test.tsx` |
+| TC-CR7-10c-1 | The rendered trail for a 1LoD viewer never carries the matched label (real component, real store) — `RegisterDetail.cr7-fx4.test.tsx` |
+
+## §11 — "No model was named" is said only when it can be proved
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-11a | Shown in the reviewer section when no processing node names a model — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-11b | Absent when a model is named (the false case) — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-11c | Absent when there is no graph to read, since the register path cannot say none was named — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-11d | On the register, a case with no `uses_model` edge shows the line — `RegisterDetail.nomodel.cr7.test.tsx` |
+| TC-CR7-11e | On the register, a case whose model was linked does not show it (real `addUseCaseModelLink`) — `RegisterDetail.nomodel.cr7.test.tsx` |
+| TC-CR7-11f | A case from before model links existed cannot be told apart from "none named", so nothing is claimed — `RegisterDetail.nomodel.cr7.test.tsx` |
+| TC-CR7-11g | A model named in a later correction (which writes no link): nothing is claimed — `RegisterDetail.nomodel.cr7.test.tsx` |
+| TC-CR7-11h | The link write fails: the case is still saved (no dead end), flagged `model_link_unrecorded`, and the register never claims "No model was named" — `ModelLinkFailure.cr7.test.tsx` |
+| TC-CR7-11h-1 | On success the link exists for the saved case; the change of write order loses nothing — `ModelLinkFailure.cr7.test.tsx` |
+| TC-CR7-11i | `model_link_unrecorded` means "cannot tell", never "no model was named" — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-11j | The link write and the flag write both reject: the verdict still shows and the case is saved — `ModelLinkFailure.cr7.test.tsx` |
+
+## §14 — The inheritance fold names components in plain words
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-14 | A firm-account case, with and without a graph, shows the plain platform and supplier names and never `VENDOR-APPROVED-LLM` or `PLAT-CLOUD-LLM`; the reserved-word single-match guard still holds (one test with a graph, named `TC-CR7-14-1`, and one without, `TC-CR7-14-2`) — `VerdictDisplay.cr7-fx4.test.tsx` |
+
+## §25 — The review screen shows whether it replaces something
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-25 | The processing card shows the row with Yes or No, and the "why these values matter" line carries its consequence — `GraphView.cr7-fx4.test.tsx` |
+| TC-CR7-25-1 | The row can be corrected: editing sends a boolean to `onCorrect` — `GraphView.cr7-fx4.test.tsx` |
+
+## §29 — A firm rule and a pack rule sharing an id
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-29 | When the verdict recorded the pack rule's review text, the pack's plain words show, not the firm's — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-29-1 | When the verdict recorded the firm rule's own review text, the firm's words still show — `verdict-view-model.cr7-fx4.test.ts` |
+
+## §30 (wave 2) — Correction values on the register read plainly
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-30b | A null original value reads "not stated" — `RegisterDetail.cr7-fx4.test.tsx` |
+| TC-CR7-30b-1 | An absent original value (an old record, or a JSON round trip that dropped `undefined`) reads "not stated", not "undefined" — `RegisterDetail.cr7-fx4.test.tsx` |
+| TC-CR7-30b-2 | Real values, including 0 and false, still show as themselves — `RegisterDetail.cr7-fx4.test.tsx` |
+
+## §35 (wave 2) — The reviewer section names a model by its plain name
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-35e | The model-governance review line reads with the model's plain name everywhere it is printed; the raw id appears only inside a quiet `<code>` — `VerdictDisplay.cr7-fx4.test.tsx` |
+| TC-CR7-35e-1 | A model the policy does not list is shown as written, since there is nothing to translate — `VerdictDisplay.cr7-fx4.test.tsx` |
+
+## §36 — The About page counts what the app ships with
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-36 | The sentence carries the shipped file's hard-line count and appetite-rule count — `About.cr7-fx4.test.tsx` |
+| TC-CR7-36-1 | A firm edit to its own policy (fewer rules) does not change what the page says it ships with — `About.cr7-fx4.test.tsx` |
+
+## §37 (wave 2) — The policy-problem sentence has one home
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-37-place | `POLICY_PROBLEM_MESSAGE` lives in `plain-copy.ts` as one plain sentence; `IntakeFlow.tsx` imports it and keeps no copy — `ContradictionReview.cr7-fx4.test.tsx` |
+
+## §39 — "Could still change" says when regulatory text is overdue
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-39 | `stale_sources` non-empty adds a "Could still change" line about overdue regulatory text — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-39-1 | No stale sources (absent or empty): no overdue line (the false case) — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-CR7-39-2 | On the screen, "Could still change" carries the overdue line when `stale_sources` is set, and not when it is empty — `VerdictDisplay.cr7-fx4.test.tsx` |
+
+## §40 — The checklist says what "verified" means
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-40 | The sign-off checklist says "marked verified in your firm's policy file" — `VerdictDisplay.cr7-fx4.test.tsx` |
+
+## FX7-4 — Review-pass guards
+
+| ID | Asserts |
+|---|---|
+| TC-FX7-4-MODEL-1 | A family member, an exact entry and an unlisted id resolve on this screen exactly as the engine resolves them — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-FX7-4-MODEL-2 | The view model calls the engine's `resolveApprovedModel` and keeps no copy of the rule — `verdict-view-model.cr7-fx4.test.ts` |
+| TC-FX7-4-O9 | On the contradiction screen the reassurance says this is not a result yet, and never "nothing is wrong" — `ContradictionReview.cr7-fx4.test.tsx` |
+
+## Amended existing cases (wave 2)
+
+These cases keep their ids. Their assertions changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.
+
+| ID | What changed |
+|---|---|
+| TC-R12-BD-1-02 | Was: a field with no quote and not guessed, rendered with no `provenance` prop, shows "Not in your description — please check this". Now: the test passes `provenance={{}}`, a real extraction with nothing quoted, because with no `provenance` prop at all (an older draft) the screen no longer makes that claim (TC-CR7-02h) — `GraphView.r12.test.tsx` |
+| TC-R16-E-44 | Was: a confident-but-unquoted field reads "Not in your description — please check this", rendered with no `provenance` prop. Now: the test passes `provenance={{}}` for the same reason — `GraphView.r16e.test.tsx` |
+| TC-CR6-11 | Was: the combined entry named the platform and supplier by their raw registry ids. Now: it shows their plain names and never the ids (CR7-14) — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-CR6-11b | Was: the unlisted supplier is named by its raw id. Now: it reads "a supplier not on your firm's list", never the raw id (CR7-14) — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-CR6-11c | Was: the unlisted supplier is named by its raw id. Now: it reads "a supplier not on your firm's list" (CR7-14) — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-RG-9-04 | Was: the checklist read "evidence: N machine-verified, …". Now: it reads "N marked verified in your firm's policy file" (CR7-40) — `VerdictDisplay.cr005.test.tsx` |
+| (control-evidence checklist, no TC id) | Was: "0 machine-verified". Now: "0 marked verified in your firm's policy file" (CR7-40) — `RegisterDetail.controlEvidence.test.tsx` |
+| (verdict-view-model fixture `makePolicy`) | Was: `tier_workflow` values `'x'`. Now: `'self-service'`, because the sign-off derivation now reads `tier_workflow` (CR7-09) and an unknown value fails safe to "needs sign-off", which the fixture's tests did not mean — `verdict-view-model.test.ts` |

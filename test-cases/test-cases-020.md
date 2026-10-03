@@ -67,7 +67,7 @@ Test files: `src/components/verdict-view-model.test.ts`,
 | TC-R16-D1-05a | `@submitter` → "you or your manager (as the person responsible for this use)", `yours: true` |
 | TC-R16-D1-05b | `@model_owner` with a non-`'internal'` vendor on the processing node → "…working with the supplier", `yours: true` |
 | TC-R16-D1-05c | `@model_owner` with vendor `'internal'` → "the team that built the model", `yours: false` |
-| TC-R16-D1-05d | `@model_owner` with no graph at all — treated as `'internal'` (no vendor known), `yours: false` |
+| TC-R16-D1-05d | `@model_owner` with no graph at all (a case reopened from the register) — neither bought nor built is claimed: the owner reads "the team responsible for the model" (not "the team that built the model"), `yours: false` (amended CR7-33) |
 | TC-R16-D1-05e | Free-text `plain_owner` renders verbatim, `yours: false` |
 | TC-R16-D1-05f | `plain_owner_with` appends `", with {x}"` after a free-text or `@submitter` owner |
 | TC-R16-D1-05g | `plain_owner_with` appends `" and {x}"` after the `@model_owner` "working with the supplier" branch specifically |
@@ -90,7 +90,7 @@ Test files: `src/components/verdict-view-model.test.ts`,
 | TC-R16-D1-07c | Two firm review instances sharing one plain name de-duplicate to one `owedReviews` entry (D-04) |
 | TC-R16-D1-07d | The `PV-UNREGISTERED` sentinel resolves to its fixed product copy, independent of the component name suffix |
 | TC-R16-D1-07e | The `MODEL-REGISTRY` sentinel resolves to its fixed product copy |
-| TC-R16-D1-07f | A pack-rule-sourced review with no local plain-name data falls back to the generic pack-review line (§4.4) — `buildVerdictView` has no `packs` parameter |
+| TC-R16-D1-07f | A pack-rule-sourced review falls back to the generic pack-review line (§4.4) when no pack data is passed (`options.packs` absent); with the real `ss1-23.yaml` passed in `options.packs`, it uses the pack rule's own plain name and owner (amended CR6-13, CR7-32) |
 | TC-R16-D1-07g | A firm review without `plain_name` falls back to its formal name + the pointer line (§4.4) |
 | TC-R16-D1-07h | An older verdict with no `downstream_review_sources` at all lists every review separately — nothing folded away; `coveredReviewFormalNames` stays empty |
 | TC-R16-D1-07i | `coveredReviewFormalNames` (WhatToDo's own filter, formal vocabulary) names a fully-covered formal review once |

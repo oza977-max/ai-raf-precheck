@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Round CR7 (code review 007 fixes) &mdash; wave 1 &middot; Counterpoise &mdash; Test Cases</title>
+<title>Round CR7 (code review 007 fixes) &mdash; waves 1 and 2 &middot; Counterpoise &mdash; Test Cases</title>
     <style>
         /* Tufte/Few Design System */
         * {
@@ -262,10 +262,28 @@
                 <li><a href="#41-the-register-snapshots-a-model-the-way-the-en">&sect;41 &mdash; The register snapshots a model the way the engine resolved it</a></li>
                 <li><a href="#o8-confirmation-step-wording">&sect;O8 &mdash; Confirmation step wording</a></li>
                 <li><a href="#amended-existing-cases">Amended existing cases</a></li>
+                <li><a href="#wave-2">Wave 2</a></li>
+                <li><a href="#02-wave-2-a-revisited-review-does-not-claim-a-va">&sect;02 (wave 2) &mdash; A revisited review does not claim a value was missing from the description</a></li>
+                <li><a href="#07-the-case-name-in-the-register-is-a-button">&sect;07 &mdash; The case name in the register is a button</a></li>
+                <li><a href="#08-contrast-tokens">&sect;08 &mdash; Contrast tokens</a></li>
+                <li><a href="#09-the-sign-off-wording-comes-from-the-trail-the">&sect;09 &mdash; The sign-off wording comes from the trail, the policy and the stage</a></li>
+                <li><a href="#10-wave-2-the-register-s-audit-lines-for-another">&sect;10 (wave 2) &mdash; The register's audit lines for another case's name</a></li>
+                <li><a href="#11-no-model-was-named-is-said-only-when-it-can-b">&sect;11 &mdash; "No model was named" is said only when it can be proved</a></li>
+                <li><a href="#14-the-inheritance-fold-names-components-in-plai">&sect;14 &mdash; The inheritance fold names components in plain words</a></li>
+                <li><a href="#25-the-review-screen-shows-whether-it-replaces-s">&sect;25 &mdash; The review screen shows whether it replaces something</a></li>
+                <li><a href="#29-a-firm-rule-and-a-pack-rule-sharing-an-id">&sect;29 &mdash; A firm rule and a pack rule sharing an id</a></li>
+                <li><a href="#30-wave-2-correction-values-on-the-register-read">&sect;30 (wave 2) &mdash; Correction values on the register read plainly</a></li>
+                <li><a href="#35-wave-2-the-reviewer-section-names-a-model-by-">&sect;35 (wave 2) &mdash; The reviewer section names a model by its plain name</a></li>
+                <li><a href="#36-the-about-page-counts-what-the-app-ships-with">&sect;36 &mdash; The About page counts what the app ships with</a></li>
+                <li><a href="#37-wave-2-the-policy-problem-sentence-has-one-ho">&sect;37 (wave 2) &mdash; The policy-problem sentence has one home</a></li>
+                <li><a href="#39-could-still-change-says-when-regulatory-text-">&sect;39 &mdash; "Could still change" says when regulatory text is overdue</a></li>
+                <li><a href="#40-the-checklist-says-what-verified-means">&sect;40 &mdash; The checklist says what "verified" means</a></li>
+                <li><a href="#fx7-4-review-pass-guards">FX7-4 &mdash; Review-pass guards</a></li>
+                <li><a href="#amended-existing-cases-wave-2">Amended existing cases (wave 2)</a></li>
 </ul></nav>
 <main class="main-content">
 <header>
-<h1>Counterpoise &mdash; Test Cases, Round CR7 (code review 007 fixes) &mdash; wave 1</h1>
+<h1>Counterpoise &mdash; Test Cases, Round CR7 (code review 007 fixes) &mdash; waves 1 and 2</h1>
 <p class="metadata">4 October 2026 &middot; Generated from test-cases-029.md &mdash; do not hand-edit</p>
 </header>
 <p><em>Written 2026-10-04. Code review 007 found that several screens and stores did less than the specs said, or said more than they did: a saved draft restored into a screen that could not finish, "Back" lost what the questions had changed, the audit trail could fork between two tabs, a policy with a dangling reference was saved and then stopped every evaluation, and a few messages told the person something the code could not back up. This is the first wave of fixes. The amended spec sections are marked "(CR7, 2026-10-04)" in <code>specs/intake-flow</code>, <code>specs/verdict-audit</code>, <code>specs/register-lifecycle</code>, <code>specs/policy-schema</code> and <code>specs/cross-cutting</code>. The CR7-35 rows (a model with no plain name) are in <code>test-cases-028</code> &mdash; another session wrote them.</em></p>
@@ -658,6 +676,229 @@
 <tr><td>TC-CR6-04b</td><td>Was: driven from the description path. Now: driven through the form-path questionnaire &mdash; <code>intake-draft.test.ts</code></td></tr>
 <tr><td>TC-CR6-15a</td><td>Was: asserted straight after the confirm. Now: waits for the draft clear, because the clear is conditional on the draft still being this case's &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
 <tr><td>(plain-intake, "even alongside other ticks")</td><td>Was: "Somewhere else, or not sure" forces an empty jurisdictions list even alongside other ticks. Now: a listed country is kept and the unknown one becomes an assumption (TC-CR7-23a); the lone tick still gives an empty list (TC-CR7-23b) &mdash; <code>plain-intake.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="wave-2">
+<h2>Wave 2</h2>
+<p><em>Written 2026-10-04. The second wave of code review 007 fixes (CR7-02 (6), 07, 08, 09, 10c, 11, 14, 25, 29, 30b, 35e, 36, 37, 39, 40) and the FX7-4 review passes (O-9 and the model-lookup guard). The amended spec sections are marked "(CR7, 2026-10-04)" in <code>specs/verdict-audit</code>, <code>specs/register-lifecycle</code>, <code>specs/intake-flow</code> and <code>specs/cross-cutting</code>. The CR7-35a to 35d rows are in <code>test-cases-028</code>; CR7-35e is here because it is a result-screen case.</em></p>
+<p>Test files: <code>src/components/verdict-view-model.cr7-fx4.test.ts</code>, <code>src/components/__tests__/VerdictDisplay.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/RegisterDetail.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/RegisterDetail.nomodel.cr7.test.tsx</code>, <code>src/components/__tests__/RegisterView.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/ModelLinkFailure.cr7.test.tsx</code>, <code>src/components/__tests__/GraphView.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/GraphView.reentry.cr7.test.tsx</code>, <code>src/components/__tests__/ContradictionReview.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/About.cr7-fx4.test.tsx</code>, <code>src/components/__tests__/app-css.cr7-fx4.test.ts</code>.</p>
+</section>
+
+<section id="02-wave-2-a-revisited-review-does-not-claim-a-va">
+<h2>&sect;02 (wave 2) &mdash; A revisited review does not claim a value was missing from the description</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-02g</td><td>With <code>reentry</code> set, a confident-but-unquoted field carries no "Not in your description" badge &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02g-1</td><td>The same graph on a first read (no <code>reentry</code>; a real extraction, provenance recorded, nothing quoted) still shows the badge &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02g-2</td><td><code>reentry</code> does not hide a field the reader still has to check: a guessed field keeps its badge &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02g-3</td><td>Change an answer, through the real reducer, restores a review screen with no "Not in your description" badge &mdash; <code>GraphView.reentry.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02g-3b</td><td>The same graph on a first review (no re-entry) still shows the badge &mdash; <code>GraphView.reentry.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02h</td><td>With no provenance and no guessed list at all (a draft from an older build), no claim is made about the description; the badge says where the value came from wasn't saved &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="07-the-case-name-in-the-register-is-a-button">
+<h2>&sect;07 &mdash; The case name in the register is a button</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-07</td><td>The case name is a button; Tab reaches it and Enter opens the case &mdash; <code>RegisterView.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-07-1</td><td>Two cases with the same name get different accessible names, from their tier and stage &mdash; <code>RegisterView.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="08-contrast-tokens">
+<h2>&sect;08 &mdash; Contrast tokens</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-08-ink-faint</td><td><code>--ink-faint</code> is at least 4.5:1 on each of <code>--card-bg</code>, <code>--paper</code>, <code>--cream</code> and <code>--warn-bg</code> (four tests, one per background, each named <code>TC-CR7-08-ink-faint-on</code> plus the token) &mdash; <code>app-css.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-08-warn-text</td><td><code>--warn-text</code> on <code>--warn-bg</code> is at least 4.5:1 &mdash; <code>app-css.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-08-control-border</td><td>The form-control border is at least 3:1 on the card and the page &mdash; <code>app-css.cr7-fx4.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="09-the-sign-off-wording-comes-from-the-trail-the">
+<h2>&sect;09 &mdash; The sign-off wording comes from the trail, the policy and the stage</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-09a</td><td>A signed-off Track II case (stage approved, a second-line review event) names the sign-off and never says self-service &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09b</td><td>A genuine self-service case (Low tier, stage approved) is unchanged: nobody signs off &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09c</td><td>A correction requested is not a sign-off: the case still needs one and never claims it was signed off &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09d</td><td>Signed off, then corrected: the new verdict is not "signed off" &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09e</td><td>A rejected review is not a sign-off either &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09i</td><td>Signed off, then the firm edits <code>tier_workflow</code> to self-service: the trail still says signed off, never "nobody" &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09j</td><td>With no policy at all, an approving review on the trail still reads signed off, never "nobody" &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09k</td><td>A later stage that needed a sign-off but has no approving review claims neither "pending" nor "nobody"; the headline says no sign-off is on record, with and without outstanding safeguards &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-09f</td><td>On the screen, a signed-off Track II case (stage approved) says it was signed off and never "self-service" or "nobody" &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-09g</td><td>On the screen, a genuine self-service case (Low tier, stage approved) keeps its self-service wording &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-09h</td><td>Stage approved for a case that needed a sign-off but has no approving review on this verdict: no "self-service" and no "signed off by" &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="10-wave-2-the-register-s-audit-lines-for-another">
+<h2>&sect;10 (wave 2) &mdash; The register's audit lines for another case's name</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-10c</td><td>A 1LoD view omits the matched label from both lines (<code>classification_adopted</code>, <code>duplicate_dismissed</code>); the 2LoD view keeps it &mdash; <code>RegisterDetail.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-10c-1</td><td>The rendered trail for a 1LoD viewer never carries the matched label (real component, real store) &mdash; <code>RegisterDetail.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="11-no-model-was-named-is-said-only-when-it-can-b">
+<h2>&sect;11 &mdash; "No model was named" is said only when it can be proved</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-11a</td><td>Shown in the reviewer section when no processing node names a model &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11b</td><td>Absent when a model is named (the false case) &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11c</td><td>Absent when there is no graph to read, since the register path cannot say none was named &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11d</td><td>On the register, a case with no <code>uses_model</code> edge shows the line &mdash; <code>RegisterDetail.nomodel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11e</td><td>On the register, a case whose model was linked does not show it (real <code>addUseCaseModelLink</code>) &mdash; <code>RegisterDetail.nomodel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11f</td><td>A case from before model links existed cannot be told apart from "none named", so nothing is claimed &mdash; <code>RegisterDetail.nomodel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11g</td><td>A model named in a later correction (which writes no link): nothing is claimed &mdash; <code>RegisterDetail.nomodel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11h</td><td>The link write fails: the case is still saved (no dead end), flagged <code>model_link_unrecorded</code>, and the register never claims "No model was named" &mdash; <code>ModelLinkFailure.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11h-1</td><td>On success the link exists for the saved case; the change of write order loses nothing &mdash; <code>ModelLinkFailure.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-11i</td><td><code>model_link_unrecorded</code> means "cannot tell", never "no model was named" &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-11j</td><td>The link write and the flag write both reject: the verdict still shows and the case is saved &mdash; <code>ModelLinkFailure.cr7.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="14-the-inheritance-fold-names-components-in-plai">
+<h2>&sect;14 &mdash; The inheritance fold names components in plain words</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-14</td><td>A firm-account case, with and without a graph, shows the plain platform and supplier names and never <code>VENDOR-APPROVED-LLM</code> or <code>PLAT-CLOUD-LLM</code>; the reserved-word single-match guard still holds (one test with a graph, named <code>TC-CR7-14-1</code>, and one without, <code>TC-CR7-14-2</code>) &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="25-the-review-screen-shows-whether-it-replaces-s">
+<h2>&sect;25 &mdash; The review screen shows whether it replaces something</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-25</td><td>The processing card shows the row with Yes or No, and the "why these values matter" line carries its consequence &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-25-1</td><td>The row can be corrected: editing sends a boolean to <code>onCorrect</code> &mdash; <code>GraphView.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="29-a-firm-rule-and-a-pack-rule-sharing-an-id">
+<h2>&sect;29 &mdash; A firm rule and a pack rule sharing an id</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-29</td><td>When the verdict recorded the pack rule's review text, the pack's plain words show, not the firm's &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-29-1</td><td>When the verdict recorded the firm rule's own review text, the firm's words still show &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="30-wave-2-correction-values-on-the-register-read">
+<h2>&sect;30 (wave 2) &mdash; Correction values on the register read plainly</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-30b</td><td>A null original value reads "not stated" &mdash; <code>RegisterDetail.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-30b-1</td><td>An absent original value (an old record, or a JSON round trip that dropped <code>undefined</code>) reads "not stated", not "undefined" &mdash; <code>RegisterDetail.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-30b-2</td><td>Real values, including 0 and false, still show as themselves &mdash; <code>RegisterDetail.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="35-wave-2-the-reviewer-section-names-a-model-by-">
+<h2>&sect;35 (wave 2) &mdash; The reviewer section names a model by its plain name</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-35e</td><td>The model-governance review line reads with the model's plain name everywhere it is printed; the raw id appears only inside a quiet <code>&lt;code&gt;</code> &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-35e-1</td><td>A model the policy does not list is shown as written, since there is nothing to translate &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="36-the-about-page-counts-what-the-app-ships-with">
+<h2>&sect;36 &mdash; The About page counts what the app ships with</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-36</td><td>The sentence carries the shipped file's hard-line count and appetite-rule count &mdash; <code>About.cr7-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR7-36-1</td><td>A firm edit to its own policy (fewer rules) does not change what the page says it ships with &mdash; <code>About.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="37-wave-2-the-policy-problem-sentence-has-one-ho">
+<h2>&sect;37 (wave 2) &mdash; The policy-problem sentence has one home</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-37-place</td><td><code>POLICY_PROBLEM_MESSAGE</code> lives in <code>plain-copy.ts</code> as one plain sentence; <code>IntakeFlow.tsx</code> imports it and keeps no copy &mdash; <code>ContradictionReview.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="39-could-still-change-says-when-regulatory-text-">
+<h2>&sect;39 &mdash; "Could still change" says when regulatory text is overdue</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-39</td><td><code>stale_sources</code> non-empty adds a "Could still change" line about overdue regulatory text &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-39-1</td><td>No stale sources (absent or empty): no overdue line (the false case) &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-CR7-39-2</td><td>On the screen, "Could still change" carries the overdue line when <code>stale_sources</code> is set, and not when it is empty &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="40-the-checklist-says-what-verified-means">
+<h2>&sect;40 &mdash; The checklist says what "verified" means</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-40</td><td>The sign-off checklist says "marked verified in your firm's policy file" &mdash; <code>VerdictDisplay.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="fx7-4-review-pass-guards">
+<h2>FX7-4 &mdash; Review-pass guards</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-FX7-4-MODEL-1</td><td>A family member, an exact entry and an unlisted id resolve on this screen exactly as the engine resolves them &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-FX7-4-MODEL-2</td><td>The view model calls the engine's <code>resolveApprovedModel</code> and keeps no copy of the rule &mdash; <code>verdict-view-model.cr7-fx4.test.ts</code></td></tr>
+<tr><td>TC-FX7-4-O9</td><td>On the contradiction screen the reassurance says this is not a result yet, and never "nothing is wrong" &mdash; <code>ContradictionReview.cr7-fx4.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="amended-existing-cases-wave-2">
+<h2>Amended existing cases (wave 2)</h2>
+<p>These cases keep their ids. Their assertions changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.</p>
+<table>
+<thead><tr><th>ID</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>TC-R12-BD-1-02</td><td>Was: a field with no quote and not guessed, rendered with no <code>provenance</code> prop, shows "Not in your description &mdash; please check this". Now: the test passes <code>provenance={{}}</code>, a real extraction with nothing quoted, because with no <code>provenance</code> prop at all (an older draft) the screen no longer makes that claim (TC-CR7-02h) &mdash; <code>GraphView.r12.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-44</td><td>Was: a confident-but-unquoted field reads "Not in your description &mdash; please check this", rendered with no <code>provenance</code> prop. Now: the test passes <code>provenance={{}}</code> for the same reason &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-CR6-11</td><td>Was: the combined entry named the platform and supplier by their raw registry ids. Now: it shows their plain names and never the ids (CR7-14) &mdash; <code>VerdictDisplay.cr6-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR6-11b</td><td>Was: the unlisted supplier is named by its raw id. Now: it reads "a supplier not on your firm's list", never the raw id (CR7-14) &mdash; <code>VerdictDisplay.cr6-fx4.test.tsx</code></td></tr>
+<tr><td>TC-CR6-11c</td><td>Was: the unlisted supplier is named by its raw id. Now: it reads "a supplier not on your firm's list" (CR7-14) &mdash; <code>VerdictDisplay.cr6-fx4.test.tsx</code></td></tr>
+<tr><td>TC-RG-9-04</td><td>Was: the checklist read "evidence: N machine-verified, &hellip;". Now: it reads "N marked verified in your firm's policy file" (CR7-40) &mdash; <code>VerdictDisplay.cr005.test.tsx</code></td></tr>
+<tr><td>(control-evidence checklist, no TC id)</td><td>Was: "0 machine-verified". Now: "0 marked verified in your firm's policy file" (CR7-40) &mdash; <code>RegisterDetail.controlEvidence.test.tsx</code></td></tr>
+<tr><td>(verdict-view-model fixture <code>makePolicy</code>)</td><td>Was: <code>tier_workflow</code> values <code>'x'</code>. Now: <code>'self-service'</code>, because the sign-off derivation now reads <code>tier_workflow</code> (CR7-09) and an unknown value fails safe to "needs sign-off", which the fixture's tests did not mean &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 </tbody>
 </table>
 </section>

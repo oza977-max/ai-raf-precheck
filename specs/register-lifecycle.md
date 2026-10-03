@@ -106,7 +106,7 @@ export interface RegisterNode {
 }
 
 export type RegisterNodeMetadata =
-  | { node_type: 'use_case'; submitted_by: string; lifecycle_stage: LifecycleStage; current_verdict_id: string | null; tier: Tier | null; track: Track | null }
+  | { node_type: 'use_case'; submitted_by: string; lifecycle_stage: LifecycleStage; current_verdict_id: string | null; tier: Tier | null; track: Track | null; model_link_unrecorded?: boolean /* CR7-11 */ }
   | { node_type: 'ai_model'; model_id: string; vendor: string; is_approved: boolean }
   | { node_type: 'platform'; platform_id: string; approved_envelope_summary: string }
   | { node_type: 'vendor'; vendor_name: string; approval_status: 'approved' | 'unapproved' | 'pending' }
@@ -433,6 +433,8 @@ Shows only the current user's use cases. Columns: Use Case Name, Tier, Track, St
 
 Shows all use cases across all teams. Columns: Use Case Name, Submitter, Tier, Track, Status, Stage, Last Evaluated, Policy Version, Flags. Filter chips: Tier, Track, Stage, Verdict Status. Search bar: full-text over use case name.
 
+**Opening a case (CR7-07, 2026-10-04).** In both views each case name is a `<button type="button">`, so the keyboard and a screen reader can open the case; its accessible name is "{label} — {tier} tier, {stage}" (for example "Repeated name — High tier, Awaiting 2LoD sign-off"), so two cases with the same name are told apart. Clicking anywhere on the row still opens the case (TC-CR7-07, TC-CR7-07-1).
+
 **R15-C1/S4 amendment (2026-08-25):** the Stale and Sampling columns are merged
 into a single "Flags" column, carrying a badge for each condition that is
 true (`stale_assessment: true` and/or `sampling_review_due: true`). A row
@@ -748,10 +750,17 @@ gatekeeper" framing.
 
 **Seeds run per case under the case lock.** Each seed (the sample register, the investment-bank portfolio and the Counterpoise self-assessment) takes `withCaseLock` for the case it writes and re-checks inside the lock whether the case already exists, so two module instances seeding at once write one set of events (TC-CR7-18).
 
+**CR7 wave 2 amendments (CR7, 2026-10-04): the model link and the "No model was named" line.**
+
+**Order of writes (CR7-11).** At the first confirmation the `use_case` node is written first, then the `uses_model` link (`addUseCaseModelLink`). The verdict is already on the audit trail by then, so a failure writing the link must not strand the case: if the link write fails, the case is still saved and flagged `model_link_unrecorded: true` (an optional field on the `use_case` metadata; the hand-off schema is passthrough on `use_case` metadata, so it travels in a bundle). The register then makes no "No model was named" claim for that case (`verdict-audit.md` §5.5). If the flag write also fails, both failures are logged and the confirm still completes; the residual is that the register may then say "No model was named" for a case whose model was named (TC-CR7-11h, 11h-1, 11i, 11j).
+
+**Audit lines (CR7-10, CR7-30).** The case page's trail shows another case's name (the matched label in `classification_adopted` and `duplicate_dismissed`) to a 2LoD view only, and a correction value that is null or absent reads "not stated" (`verdict-audit.md` §5.5; TC-CR7-10c, 30b).
+
 ## 17. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-04 | CR7 — wave 2 (TC-CR7-*, `test-cases-029.md`). §10.2 gains the case name as a button with an accessible name (CR7-07); §4.1 gains the optional `model_link_unrecorded` flag; §16 gains the write order (node first, then the model link; a failed link saves and flags the case) and the register audit-line rules (CR7-11, CR7-10, CR7-30). |
 | 2026-10-04 | CR7 — code review 007 fixes, wave 1 (TC-CR7-*, `test-cases-029.md`). §8 and §12 amended and §16 extended: a policy update queues each active case once until its next verdict and reports how many were already waiting; the `ai_model` register snapshot resolves by exact id, else by family, on the expiry-applied policy; seeds run per case under the case lock and re-check inside it. |
 | 2026-10-03 | CR6 — §15.1b amended: the reviewer's page shows a combined inheritance entry when no graph is available, names each correction's source, and words the lifecycle banner without the reserved verdict words (CR6-11, 10, 29). |
 | 2026-09-28 | §5 amended — code review 005 (F10). `RegisterStore` gains `importRegister` and `backupAndReplaceRegister` (RG-8 hand-off); `getUseCases`/`getUseCase` gain their real optional parameters; `updateUseCaseVerdictSummary`'s signature corrected to `Partial<UseCaseSummary>`; noted that `getUseCases` skips an unreadable row rather than failing the whole list. §13 gains an RG-8 traceability row. Full hand-off bundle spec added at `verdict-audit.md` §16. |
