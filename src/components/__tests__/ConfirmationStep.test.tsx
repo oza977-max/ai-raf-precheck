@@ -138,7 +138,7 @@ describe('ConfirmationStep — the notice says what the chain check cannot see (
   it('TC-CR8-04a: no "a later change … would show"; it says an edit to an earlier entry would show, removing the newest entries would not, and there is no outside check', () => {
     render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
     const notice = (document.querySelector('.confirmation__notice')!.textContent ?? '').replace(/\s+/g, ' ');
-    expect(notice).not.toMatch(/a later (change|edit)[^.]*would show/i);
+    expect(notice).not.toMatch(/a later change[^.]*would show/i);
     expect(notice).toMatch(/a later edit to an earlier entry would show as a break in the record/i);
     expect(notice).toMatch(/removing the newest entries would not/i);
     expect(notice).toMatch(/kept in this browser with no outside check/i);
