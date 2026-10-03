@@ -1135,6 +1135,7 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
     // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
     // real input reaches this branch, only this spy.
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a storage-level register failure cannot be produced from well-formed data.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       const result = await replaceWithBundle(bundle);
@@ -1162,6 +1163,7 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
     // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
     // real input reaches this branch, only this spy.
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a storage-level register failure cannot be produced from well-formed data.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     let partial: Awaited<ReturnType<typeof replaceWithBundle>>;
     try {
@@ -1189,6 +1191,7 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
     // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
     // real input reaches this branch, only this spy.
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a storage-level register failure cannot be produced from well-formed data.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');
@@ -1244,6 +1247,7 @@ describe('RG-8 hand-off bundle — recovering a lost partially_replaced via re-i
     // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
     // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
     // real input reaches this branch, only this spy.
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a storage-level register failure cannot be produced from well-formed data.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');

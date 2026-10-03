@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import SettingsPanel from '../SettingsPanel';
 import * as resetStore from '../../store/reset';
 
+// EBT exception (owner-accepted, code review 006/008): fault injection — a blocked database delete cannot be produced on demand; the real clearAllLocalData is wrapped.
 vi.mock('../../store/reset', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../store/reset')>();
   return { ...actual, clearAllLocalData: vi.fn(actual.clearAllLocalData) };
