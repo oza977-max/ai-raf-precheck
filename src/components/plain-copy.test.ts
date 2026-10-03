@@ -10,6 +10,7 @@ import {
   vendorNotOnListValue,
   extractionErrorMessage,
   EXTRACTION_ERROR_HELP,
+  engineErrorMessage,
   plausibilityMessageForForm,
   plausibilityMessageForDescription,
   GRAPH_REVIEW_CARD_TITLES,
@@ -267,6 +268,32 @@ describe('extractionErrorMessage (R16-E §5, D-104)', () => {
   it('TC-R16-E-54: the shared help line offers both recovery paths', () => {
     expect(EXTRACTION_ERROR_HELP).toMatch(/try again/i);
     expect(EXTRACTION_ERROR_HELP).toMatch(/answer the questions/i);
+  });
+});
+
+// CR6-12 (Minor). evaluate()'s EngineError.kind reached the screen as the
+// raw enum string ("Evaluation failed: no-track-match") inside a sentence
+// that then told the person to "review your answers" — every one of these
+// kinds is the firm's own rules or policy file, never something a
+// different answer would have avoided. One function, like
+// extractionErrorMessage above: a plain sentence per kind that never
+// blames the person's answers. Typed as the literal union rather than
+// importing EngineError from src/engine/types — same reason
+// extractionErrorMessage does not import LlmError from src/llm/*.
+describe('engineErrorMessage (CR6-12)', () => {
+  it('TC-CR6-12: every engine error kind reads as the firm\'s rules, never the person\'s answers, and never leaks the raw kind string', () => {
+    const kinds = ['policy-invalid', 'hard-line-tripped', 'no-control-set', 'jurisdiction-conflict', 'no-track-match'] as const;
+    for (const kind of kinds) {
+      const message = engineErrorMessage(kind);
+      expect(message, `kind: ${kind}`).not.toMatch(/review your answers/i);
+      expect(message, `kind: ${kind}`).not.toContain(kind);
+      expect(message, `kind: ${kind}`).toMatch(/firm.s (own )?rules|rules (file|don.t)/i);
+    }
+  });
+
+  it('a no-control-set / no-track-match gap reads as a gap in the rules, not a fault in the answers', () => {
+    expect(engineErrorMessage('no-control-set')).toMatch(/gap in the rules/i);
+    expect(engineErrorMessage('no-track-match')).toMatch(/gap in the rules/i);
   });
 });
 

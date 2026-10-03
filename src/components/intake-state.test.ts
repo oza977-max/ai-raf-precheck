@@ -1285,3 +1285,256 @@ describe('intakeReducer — ANSWER_SUBMITTED insertQuestions/assumption (R16-E �
     });
   });
 });
+
+// CR6-02's "Start over" fix relies on handleStartOver (IntakeFlow.tsx)
+// resetting state that lives outside the reducer entirely (the in-flight
+// refs, the duplicate-check trio, the attempt token) — nothing here for the
+// reducer itself to pin; covered by IntakeFlow.cr6-fx2.test.tsx instead.
+
+// CR6-03 (Critical). Back from the questionnaire used to rebuild graph_review
+// with guessedFields/provenance/unconfirmedNodeIds/jurisdictionsConfirmed all
+// dropped (undefined) — turning off the R5-GR-2/R7-JC gate on return and
+// losing track of which guessed fields still needed asking. Fixed by
+// carrying all four from graph_review onto questionnaire at
+// QUESTIONS_GENERATED (never re-derived — graph_review's own copies are
+// gone past that step, same discipline as F-7's uncertainNodeIds), and
+// restoring them on STEP_BACK. Because QUESTIONS_GENERATED's own guard
+// never lets a non-empty unconfirmedNodeIds or a false jurisdictionsConfirmed
+// through, what's carried is always either undefined (no gate — form path,
+// corrections, evaluation-failure re-entries) or the concrete "everything
+// already checked" values ([] / true) — never the gate itself reappearing.
+describe('intakeReducer — guessedFields/provenance/gate values survive Back from the questionnaire (CR6-03)', () => {
+  const reviewState = (overrides: Partial<Extract<IntakeState, { step: 'graph_review' }>> = {}): IntakeState => ({
+    step: 'graph_review',
+    description: 'd',
+    graph: graph(),
+    graphVersion: 1,
+    corrections: [],
+    useCaseId: 'uc-1',
+    unconfirmedNodeIds: [],
+    jurisdictionsConfirmed: true,
+    guessedFields: { n1: ['vendor', 'platform'] },
+    provenance: { n1: { data_class: 'the client file' } },
+    ...overrides,
+  });
+
+  it('TC-CR6-03a: QUESTIONS_GENERATED carries guessedFields/provenance/gate values onto the questionnaire, and STEP_BACK restores them on graph_review', () => {
+    const questionnaire = intakeReducer(reviewState(), {
+      type: 'QUESTIONS_GENERATED',
+      questions: [{ id: 'Q1', field: 'vendor', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' }],
+    });
+    expect(questionnaire).toMatchObject({
+      step: 'questionnaire',
+      guessedFields: { n1: ['vendor', 'platform'] },
+      provenance: { n1: { data_class: 'the client file' } },
+      unconfirmedNodeIds: [],
+      jurisdictionsConfirmed: true,
+    });
+
+    const back = intakeReducer(questionnaire, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({
+      step: 'graph_review',
+      guessedFields: { n1: ['vendor', 'platform'] },
+      provenance: { n1: { data_class: 'the client file' } },
+      unconfirmedNodeIds: [],
+      jurisdictionsConfirmed: true,
+    });
+  });
+
+  it('TC-CR6-03b: the review screen after Back still shows its quotes and its checked state (provenance and unconfirmedNodeIds both survive the round trip)', () => {
+    // A card already corrected (so it dropped out of unconfirmedNodeIds)
+    // before Continue was ever pressed — the restored graph_review must
+    // keep reporting it as checked, not re-show it as needing review.
+    const questionnaire = intakeReducer(
+      reviewState({ unconfirmedNodeIds: [], provenance: { n1: { data_zone: 'the internal network' } } }),
+      { type: 'QUESTIONS_GENERATED', questions: [] },
+    );
+    const back = intakeReducer(questionnaire, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({
+      step: 'graph_review',
+      unconfirmedNodeIds: [],
+      provenance: { n1: { data_zone: 'the internal network' } },
+    });
+  });
+
+  it('TC-CR6-03c: a guessed field that has been answered drops out of the carried guessedFields, so Back + Continue will not ask it again', () => {
+    const questionnaire = intakeReducer(reviewState(), {
+      type: 'QUESTIONS_GENERATED',
+      questions: [
+        { id: 'Q1', field: 'vendor', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' },
+        { id: 'Q2', field: 'platform', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' },
+      ],
+    });
+    const answered = intakeReducer(questionnaire, {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'acme' },
+      correction: {
+        correction_id: 'c1',
+        graph_version_before: 1,
+        graph_version_after: 1,
+        node_id: 'n1',
+        field: 'vendor',
+        original_value: undefined,
+        corrected_value: 'acme',
+        corrected_at: '2026-01-01T00:00:00.000Z',
+        corrected_by: '1LoD',
+      },
+    });
+    expect(answered).toMatchObject({ step: 'questionnaire', guessedFields: { n1: ['platform'] } });
+
+    const back = intakeReducer(answered, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({ step: 'graph_review', guessedFields: { n1: ['platform'] } });
+  });
+
+  it('TC-CR6-03d: a form-path (or gate-free correction) graph_review has no unconfirmedNodeIds/jurisdictionsConfirmed, and Back from its questionnaire keeps both undefined — "no gate" is unaffected (TC-R5-GR-2-03 stays green)', () => {
+    // The actual shape a correction-pass or form-built graph_review has —
+    // no unconfirmedNodeIds/jurisdictionsConfirmed at all.
+    const ungatedReview: IntakeState = {
+      step: 'graph_review',
+      description: 'd',
+      graph: graph({ intake_method: 'structured_form' }),
+      graphVersion: 1,
+      corrections: [],
+      useCaseId: 'uc-1',
+      originalVerdictId: 'v-1',
+    };
+    const questionnaire = intakeReducer(ungatedReview, { type: 'QUESTIONS_GENERATED', questions: [] });
+    expect(questionnaire.step).toBe('questionnaire');
+    expect((questionnaire as { unconfirmedNodeIds?: string[] }).unconfirmedNodeIds).toBeUndefined();
+    expect((questionnaire as { jurisdictionsConfirmed?: boolean }).jurisdictionsConfirmed).toBeUndefined();
+
+    const back = intakeReducer(questionnaire, { type: 'STEP_BACK' });
+    expect(back.step).toBe('graph_review');
+    expect((back as { unconfirmedNodeIds?: string[] }).unconfirmedNodeIds).toBeUndefined();
+    expect((back as { jurisdictionsConfirmed?: boolean }).jurisdictionsConfirmed).toBeUndefined();
+  });
+
+  it('F-7 unaffected by CR6-03: uncertainNodeIds still names a node even after its guessed field is answered and leaves guessedFields', () => {
+    const questionnaire = intakeReducer(reviewState(), {
+      type: 'QUESTIONS_GENERATED',
+      questions: [{ id: 'Q1', field: 'vendor', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' }],
+    });
+    expect(questionnaire).toMatchObject({ uncertainNodeIds: ['n1'] });
+    const answered = intakeReducer(questionnaire, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'acme' } });
+    expect(answered).toMatchObject({ uncertainNodeIds: ['n1'] });
+    expect((answered as { guessedFields?: Record<string, string[]> }).guessedFields).toBeUndefined();
+  });
+});
+
+// CR6-04 (Critical, BC-002). ANSWER_UNDONE read undo.questions and
+// undo.assumptionsLen unconditionally; a snapshot from before 9348882 (shape
+// then: { graph, correctionsLen }) has neither, and QuestionnaireStep indexes
+// questions[answeredCount] — undefined questions crashes it. Defensive
+// fallbacks here are the second of two layers (the first drops the whole
+// snapshot on an incompatible draft version, intake-draft.test.ts); this one
+// guards ANY malformed undo that still reaches the reducer.
+describe('intakeReducer — ANSWER_UNDONE defensive fallbacks for an undo snapshot missing newer fields (CR6-04, BC-002)', () => {
+  it('TC-CR6-04a: a pre-9348882-shaped undo ({ graph, correctionsLen } only) does not crash — falls back to the current questions/assumptions rather than undefined', () => {
+    const g1 = graph({ version: 1 });
+    const state: Extract<IntakeState, { step: 'questionnaire' }> = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: graph({ version: 2 }),
+      questions: [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' }],
+      answers: [{ questionId: 'Q1', value: 'x' }],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      assumptions: [{ questionId: 'f', question: 'q', shortLabel: 's', assumption: 'a', fields: ['f'] }],
+      // The old shape, exactly as it predates 9348882 — no `questions`, no
+      // `assumptionsLen`, cast past the current (stricter) undo type on
+      // purpose: this is what an ACTUAL old draft hands the reducer.
+      undo: { graph: g1, correctionsLen: 0 } as unknown as { graph: typeof g1; correctionsLen: number; questions: typeof state.questions; assumptionsLen: number },
+    };
+    const undone = intakeReducer(state, { type: 'ANSWER_UNDONE' });
+    expect(undone.step).toBe('questionnaire');
+    if (undone.step !== 'questionnaire') return;
+    // No crash, and nothing false is claimed: the current questions/
+    // assumptions are kept rather than being blanked to undefined.
+    expect(undone.questions).toEqual(state.questions);
+    expect(undone.assumptions).toEqual(state.assumptions);
+    expect(undone.graph).toBe(g1);
+    expect(undone.answers).toHaveLength(0);
+  });
+
+  it('a current-shaped undo is restored exactly as before (no regression from the fallback)', () => {
+    const g1 = graph({ version: 1 });
+    const originalQuestions = [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' as const }];
+    const state: Extract<IntakeState, { step: 'questionnaire' }> = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: graph({ version: 2 }),
+      questions: [...originalQuestions, { id: 'Q1-other', field: 'f2', triggered_by: [], answer_type: 'text' }],
+      answers: [{ questionId: 'Q1', value: 'x' }],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      assumptions: [
+        { questionId: 'f', question: 'q', shortLabel: 's', assumption: 'a', fields: ['f'] },
+        { questionId: 'f2', question: 'q2', shortLabel: 's2', assumption: 'a2', fields: ['f2'] },
+      ],
+      undo: { graph: g1, correctionsLen: 0, questions: originalQuestions, assumptionsLen: 0 },
+    };
+    const undone = intakeReducer(state, { type: 'ANSWER_UNDONE' });
+    expect(undone.step).toBe('questionnaire');
+    if (undone.step !== 'questionnaire') return;
+    expect(undone.questions).toEqual(originalQuestions);
+    expect(undone.assumptions).toEqual([]);
+  });
+});
+
+// C-3 (Minor). Undo is a single-level, one-use snapshot — once consumed it
+// must not keep offering itself. That is a UI concern (whether IntakeFlow
+// passes an onUndo handler to QuestionnaireStep at all), covered by
+// IntakeFlow.cr6-fx2.test.tsx; the reducer side (a second ANSWER_UNDONE with
+// no snapshot is a no-op) is already pinned above by TC-R71-06.
+
+// B-10 (Minor). FORM_SUBMITTED's questionnaire branch computed
+// action.contradictions (the submission-time check) and then discarded it —
+// a contradiction found at form submission was never shown if no SINGLE
+// questionnaire answer happened to re-trigger detectContradictions once the
+// questions ended. F-6's routing order (questions before contradictions)
+// is unchanged; what's fixed is that the submission-time contradictions are
+// no longer silently dropped.
+describe('intakeReducer — FORM_SUBMITTED carries submission-time contradictions onto the questionnaire (B-10)', () => {
+  it('TC-CR6-B10: with both questions and contradictions present, routes to questionnaire (F-6 unchanged) and keeps the contradictions on the new state', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const contradictions = [{ statement1: 'no client data', statement2: 'Client PII', field: 'data_class' }];
+    const questions = [{ id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const }];
+    const state: IntakeState = { step: 'graph_extraction', description: 'd', method: 'form' };
+    const next = intakeReducer(state, {
+      type: 'FORM_SUBMITTED',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers: {},
+      assumptions: [],
+      questions,
+      contradictions,
+      corrections: [],
+    });
+    // F-6 unchanged: questions present wins, same as TC-R16-W-19.
+    expect(next.step).toBe('questionnaire');
+    expect((next as { submissionContradictions?: typeof contradictions }).submissionContradictions).toEqual(
+      contradictions,
+    );
+  });
+
+  it('with no submission-time contradictions, carries nothing (no spurious field)', () => {
+    const g = graph({ intake_method: 'structured_form' });
+    const questions = [{ id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const }];
+    const state: IntakeState = { step: 'graph_extraction', description: 'd', method: 'form' };
+    const next = intakeReducer(state, {
+      type: 'FORM_SUBMITTED',
+      graph: g,
+      useCaseId: 'uc-1',
+      description: 'd',
+      plainAnswers: {},
+      assumptions: [],
+      questions,
+      contradictions: [],
+      corrections: [],
+    });
+    expect((next as { submissionContradictions?: unknown }).submissionContradictions).toBeUndefined();
+  });
+});

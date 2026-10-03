@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { addNode, updateUseCaseVerdictSummary } from '../../store/register';
@@ -735,7 +735,12 @@ describe('R16-F review pass 5: nothing can start a new case while the result is 
 
       releaseTrace();
       await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
-      expect(screen.getByRole('button', { name: /start over instead/i })).toBeEnabled();
+      // CI fix (run 37121363027): the verdict text and confirmPending's own
+      // clearing (a separate effect, keyed on state.step) land in different
+      // render passes — a slower runner can paint "Verdict" one tick before
+      // that effect has run. The behaviour is correct either way; wait for
+      // the state instead of asserting one render early.
+      await waitFor(() => expect(screen.getByRole('button', { name: /start over instead/i })).toBeEnabled());
     } finally {
       spy.mockRestore();
       sessionStorage.clear();

@@ -126,3 +126,81 @@ describe('legacy form-draft migration (R16-B, D-41)', () => {
     expect(loadFormDraft()).toBeNull();
   });
 });
+
+// CR6-04 (Critical, BC-002: "persisted state carries a version and is
+// migrated or refused on mismatch, never read as if current"). The MAIN
+// intake draft (unlike the form draft above) was never versioned at all —
+// ANSWER_UNDONE's `undo` snapshot gained `questions`/`assumptionsLen` at
+// 9348882, and a draft saved by an older build has neither. Reading it back
+// as current handed QuestionnaireStep an `undo.questions` of `undefined`,
+// which it indexes (`questions[answeredCount]`) and crashes on.
+//
+// The fix wraps what's actually written in sessionStorage in a small
+// {version, state} envelope. loadDraft() keeps returning a bare IntakeState
+// (its public shape is unchanged — every existing bare-JSON fixture in the
+// UI test suite, written before this fix existed, must keep restoring
+// exactly as before); only an INCOMPATIBLE version has its one unsafe piece
+// (the `undo` snapshot) dropped, never the whole draft — the rest of a
+// user's in-progress work is real and is kept.
+describe('intake draft versioning — an incompatible undo snapshot is dropped, not read as current (CR6-04, BC-002)', () => {
+  const DRAFT_KEY = 'aigate:intake-draft';
+  beforeEach(() => clearDraft());
+
+  it('TC-CR6-04b: a draft with no version envelope at all (the shape every build before this fix wrote) restores, but drops an undo snapshot on the questionnaire step', () => {
+    const bareOldDraft = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: { id: 'g1', version: 2, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' },
+      questions: [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' }],
+      answers: [{ questionId: 'Q1', value: 'x' }],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      // The pre-9348882 shape: no `questions`, no `assumptionsLen`.
+      undo: { graph: { id: 'g0', version: 1, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' }, correctionsLen: 0 },
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(bareOldDraft));
+
+    const restored = loadDraft();
+    expect(restored).not.toBeNull();
+    expect(restored!.step).toBe('questionnaire');
+    // The real work — description, graph, questions, answers — survives.
+    expect((restored as typeof bareOldDraft).answers).toEqual(bareOldDraft.answers);
+    expect((restored as typeof bareOldDraft).questions).toEqual(bareOldDraft.questions);
+    // The one incompatible piece is gone, not silently misread as current.
+    expect('undo' in (restored as object)).toBe(false);
+  });
+
+  it('a draft saved by the CURRENT build (with a real undo snapshot) round-trips its undo unchanged', () => {
+    const state = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: { id: 'g1', version: 2, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' },
+      questions: [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' }],
+      answers: [{ questionId: 'Q1', value: 'x' }],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      undo: { graph: { id: 'g0', version: 1, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' }, correctionsLen: 0, questions: [], assumptionsLen: 0 },
+    } as unknown as IntakeState;
+
+    saveDraft(state);
+    const restored = loadDraft();
+    expect(restored).toEqual(state);
+  });
+
+  it('a non-questionnaire old-shape draft (no undo to drop in the first place) is completely unaffected', () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ step: 'duplicate_check', description: 'A tool that drafts client emails' }),
+    );
+    expect(loadDraft()).toEqual({ step: 'duplicate_check', description: 'A tool that drafts client emails' });
+  });
+
+  it('still rejects a stale or corrupt shape — the version envelope does not weaken the existing guard', () => {
+    sessionStorage.setItem(DRAFT_KEY, '{"nonsense":true}');
+    expect(loadDraft()).toBeNull();
+    sessionStorage.setItem(DRAFT_KEY, 'not json at all');
+    expect(loadDraft()).toBeNull();
+  });
+});

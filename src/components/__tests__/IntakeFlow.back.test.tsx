@@ -53,7 +53,14 @@ describe('IntakeFlow — going back (FN-006)', () => {
           output_nodes: [],
           edges: [],
           jurisdictions: ['UK'],
-          intake_method: 'form',
+          // D-1 (Minor): the graph's own field is `intake_method`, and its
+          // real values are 'llm' | 'structured_form' (engine/types.ts) —
+          // 'form' is not one of them. This fixture used the invalid value
+          // for a long time with no test catching it (TS doesn't check an
+          // inline object literal handed to JSON.stringify against
+          // DataFlowGraph); fixed so this case actually exercises the
+          // structured-form branch its own name claims to.
+          intake_method: 'structured_form',
           extracted_at: '2026-01-01T00:00:00.000Z',
         },
         graphVersion: 1,
@@ -66,6 +73,46 @@ describe('IntakeFlow — going back (FN-006)', () => {
     render(<App />);
     await screen.findByRole('button', { name: /confirm and evaluate/i });
     expect(screen.queryByRole('button', { name: /^back$|← back/i })).toBeNull();
+  });
+
+  // D-1 (Minor). With the fixture above corrected to a real intake_method
+  // value, this case now actually exercises the form branch its name
+  // claims — "Change an answer" on a structured_form graph must return to
+  // the guided FORM itself (graph_extraction/method:'form'), never the
+  // retired field-card review screen the LLM path uses.
+  it('TC-CR6-D1: "Change an answer" on a structured_form case returns to the guided form, not the review screen', async () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A model that scores retail credit applications',
+        graph: {
+          id: 'g1',
+          version: 1,
+          input_nodes: [],
+          processing_nodes: [],
+          output_nodes: [],
+          edges: [],
+          jurisdictions: ['UK'],
+          intake_method: 'structured_form',
+          extracted_at: '2026-01-01T00:00:00.000Z',
+        },
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        useCaseId: 'uc-1',
+        plainAnswers: { '1': 'Retail credit scorer' },
+        assumptions: [],
+      }),
+    );
+
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: /change an answer/i }));
+
+    // The guided form reopens, filled in — never the review screen (which
+    // would show "Check what we read from your description" instead).
+    expect(await screen.findByLabelText(/what do you want to call it/i)).toHaveValue('Retail credit scorer');
+    expect(screen.queryByText(/check what we read from your description/i)).not.toBeInTheDocument();
   });
 
   it('the back control is reachable by its accessible name, not only by sight', async () => {
