@@ -40,3 +40,64 @@ section describing a component's contract without any such citation fails this
 check. Reviewers may challenge a citation by reading the cited line.
 
 **Last triggered:** design review 007, 2026-10-02 (four instances in the R16-D2/R16-E plans).
+
+---
+
+## BC-002 — Check and use data at a boundary in one and the same form
+
+**Class:** permanent (tier 1).
+**Promoted:** 2026-10-03, after code review 006 (systemic — three consecutive rounds).
+**Diagnosing framework:** Bratus, Patterson & Sassaman, LANGSEC ("Security Applications of Formal Language Theory", 2013) —
+recognise an input fully before acting on it, and never parse the same input twice with two different parsers; Kleppmann,
+*Designing Data-Intensive Applications* ch. 4 — data written by one version must stay readable by the next.
+
+**The defect class.** Data arrives from outside the code that will use it — a file from another person, a model reply, a
+saved session draft, a record written by an older build, a stored answer whose options have since changed — and is checked
+in one form but used in another: an integrity check computed over a re-serialised copy instead of the bytes as written; a
+schema that validates the outer object and lets nested fields through unchecked; a saved state restored with no version
+check; a stored value that no longer matches the current option set mapped to a default instead of the documented
+"Not sure" path.
+
+**Evidence of recurrence.**
+
+| Round | Instance |
+|---|---|
+| code review 005 (2026-09-28) | Hand-off import validated the outer shape only (F3, F4, F13, F20); the nested verdict's confidence_caveats unchecked though a reader dereferences them (N4). |
+| design review 007 (2026-10-02) | A bundle carrying an unknown record field reported as tampered — the schema stripped keys before the seal was recomputed; hand-off assumptions planned as "three strings"; the form's tick-all bypassing the single recogniser. |
+| code review 006 (2026-10-03) | Hand-off verifies the hash chain over schema-PARSED (re-ordered) events → every real case rejected as tampered (CR6-01); Undo on a session saved by an older build crashes (CR6-04); stale stored answers skip the stricter-reading rule (CR6-06); stale country codes shown raw (CR6-23). |
+
+**Acceptance criterion.** For every boundary the chunk touches: (1) integrity checks (hashes, seals) are computed over the
+data exactly as written and stored as written — never over a parser's re-built copy; (2) the recogniser that validates is
+the one whose output is used, at every nesting level a consumer reads; (3) persisted state carries a version and is
+migrated or refused on mismatch, never read as if current; (4) a stored value outside the current option set takes the
+documented "unknown" path. A chunk touching a boundary without a test of each applicable point fails this check.
+
+**Last triggered:** code review 006, 2026-10-03.
+
+---
+
+## BC-003 — Test a boundary with data the real producer wrote
+
+**Class:** permanent (tier 1).
+**Promoted:** 2026-10-03, after code review 006 (systemic — three consecutive rounds).
+**Diagnosing framework:** Kaner, *Lessons Learned in Software Testing* — realistic test data catches realistic bugs;
+Beck, *Test-Driven Development* — a test that cannot fail tests nothing; GVM TDD-3 (realistic-fixture variant).
+
+**The defect class.** A test of a boundary uses sample data typed by hand in the shape the consumer expects (the schema's
+key order, the values the screen already handles, a country spelled the way the formatter wants), so the test passes while
+the real producer's output fails — or a guard test checks a hand-copied list instead of the source it claims to mirror.
+
+**Evidence of recurrence.**
+
+| Round | Instance |
+|---|---|
+| code review 005 (2026-09-28) | 20 of 22 C+I findings in a feature tested only through its store API with well-formed synthetic bundles, never through its UI. |
+| design review 007 fix verification (2026-10-02/03) | A test fixture bent to hide a duplicated message; sample packs spelling "the European Union" when real packs say "EU"; tests pinning garbled fallback prose. |
+| code review 006 (2026-10-03) | Every hand-off test used a hand-typed verdict in the schema's own key order, so the total hand-off break stayed green for five days (CR6-01); TC-R16-E-11's "every field the generator can emit" list hand-typed (CR6-25); TC-R3-JU-5-01 checks fieldsets only (CR6-07). |
+
+**Acceptance criterion.** Each boundary a chunk touches has at least one test whose input was produced by the real producer
+(the app's own writer, evaluate(), the seed path, a real export) rather than typed in the consumer's shape — for the hand-off,
+an app-written case exported and imported end to end. A guard test that claims to mirror a source derives its list from that
+source at test time. A boundary test suite with only hand-shaped fixtures fails this check.
+
+**Last triggered:** code review 006, 2026-10-03.

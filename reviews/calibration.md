@@ -39,6 +39,7 @@ against.
 | 3 | 2026-10-02 | design | A,B,C,D,E,F1,F2 ×2 (DUAL: calibrated + blind), strict — design review 007 | 10 | 23 | 5 | **Do not build** (as written — R16-W built without a cleared review, checked retroactively; R16-D2 and R16-E plans before build. 108 raw → 34 + 1 minor batch; 15 of 34 rest on blind-only reports. Owner triage: fix all 14 built-code findings after renaming the product to Counterpoise; rewrite both plans with every fix and build D2 then E in order; adopt WCAG 2.1 AA for new and changed screens; NF-12 gate amended to cover a "No"; pack-rule "No" limitation NOT approved → fix in D2. Rewritten plans get a fix-verification pass, then a verdict for build) |
 | 3v | 2026-10-03 | design | fix verification — one independent read-only reviewer (Sonnet) on R16-D2/R16-E v2.1 against DR7-15..34 and the built R16-F code; every claim spot-checked by the main loop | 0 | 7 | 8 | **Build with caveats** (19 of 20 plan findings closed, DR7-34 partial → closed in v2.2; 7 builder-would-go-wrong gaps (3 in E: per-question focus credited to a step-only mechanism, a second extraction-error call site, an opposite narrow-screen CSS rule; 4 in D2: unspecified "fields" method, §2-vs-§4b contradiction, unnamed evidence helpers, DR7-34 doubled note) + 21 stale citations (19 wrong, 2 approximate) + 8 clarity items. Owner: "apply all, then build" — all applied as v2.2. Not a 4th review round: verification of round-3 fixes. Caveats: D2 before E; re-find citations at build; single reviewer, not a panel) |
 | — | 2026-10-03 | build loop | /gvm-build Hard Gate 3 — one fresh Sonnet reviewer per pass, per chunk (R16-F, R16-D2, R16-E); every finding re-checked by the main loop | 0 | 10 | 10 | R16-F `[(1,1),(2,1),(3,1),(4,1),(5,1)]` — stalled, stopped at pass 5, closed by owner decision after fixing pass 5; R16-D2 `[(1,0)]` — converged; R16-E `[(1,2),(2,1),(3,1),(4,1)]` — closed by owner decision after fixing pass 4. Every C/I fixed with a test shown failing without the fix. Two loops have no `(final, 0)` terminator — recorded as such, not padded; the multi-panel `/gvm-code-review` of the whole R16 range follows |
+| 6 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 6 fresh-context verifiers (gvm-graph) | 6 | 17 | 23 | **Do not merge** (whole R16 range b1e146b..9348882, 15 commits / 51 production files. 31 C/I claims verified: 20 confirmed, 10 partly, 1 disproven (dropped). Hand-off "tampered" Critical PROVEN by test and bisected to code-review-005 fix round 1 (3e4f119) — live since 2026-09-28. Capture-recapture ≈54% coverage → second full round. Owner triage: fix all 6 C; fix 16 I + accept EBT-1 as a labelled exception; fix every Minor + the stub flag; fixes under full GVM build discipline; then R2) |
 
 ## Round 1 measurements
 
@@ -884,6 +885,52 @@ own verification found more (R16-E: machine talk in a note, a button the guard
 missed, and a pre-existing output limit that made the description path fail
 on a three-sentence description with the real local model). The live
 walkthrough found the last of these; no test could have.
+
+## Code review round 6 (2026-10-03) — the whole R16 redesign
+
+**Scope and shape.** b1e146b..9348882 (15 commits, 51 production files, 73 test files). Strict criterion, dual review: six
+lenses (A–E plus G honesty/plain-language/accessibility), each calibrated and blind — 12 Sonnet panels; Panel F run with the
+mechanically assembled stub prompt; the EBT contract linter run with the shared helper. Then the gvm-graph verify step for the
+first time in this project: 6 fresh-context checkers received only claims and cited locations (no reviewer reasoning).
+Result: 6 Critical, 17 Important, 23 Minor, 5 observations; 1 claim disproven by its checker (CR6-28) and dropped; 10 claims
+corrected (severity or reachability). Before this round the chair had been verifying in the main loop only — the owner's
+"prompt-audit" request caught that, and the stub panel had been run as a home-made script rather than the assembled prompt.
+
+**Capture-recapture.** Calibrated vs blind per lens (EBT hits excluded — both twins were handed them): A 34%, B 56%, C 35%
+(no shared finding; Chapman), D 75%, E 100%, G 84%; pooled est. 80, found 43 → **~54%**. Below 80% → second full round
+recommended and chosen. 15 of 33 Critical/Important findings rest wholly on one blind panel.
+
+**Anchor examples:**
+- Worst, contracts (B blind only — the B calibrated twin listed the opposite as "verified sound"): the hand-off import verifies
+  the hash chain over the schema-PARSED events; zod rebuilds object keys in schema order; real verdicts are written in
+  evaluate()'s order → every real case rejected as "tampered" since code-review-005 fix round 1 (3e4f119). Proven by a real
+  export→import of the app's own self-assessment case; bisected (36c9a9b ✓, 498b8fd ✓, 3e4f119 ✗ … 9348882 ✗). Every test
+  used a hand-typed minimalVerdict in the schema's own key order.
+- Worst, logic (C calibrated): Back from the questions rebuilds the review step without guessedFields/provenance, so a
+  model-guessed value reaches the result unasked — an ordinary navigation switching off a safety gate.
+- Best, verification: the batch-6 checker disproved CR6-28 by finding the early return applies only to NON-corrections, and
+  the batch-3 checker corrected a contrast claim's background (3.20:1 on --paper, worse than reported).
+- Best, references (A calibrated): replaces_prior_model is required from the model but never in QUOTE_FIELDS, so a field that
+  short-circuits Track II is never asked on the description path — while a test claimed the generator could emit it.
+
+**Recurring / promotions (shared rule 21):**
+- **RF-6 → promoted to BC-002** (code review 005, design review 007, code review 006 — three consecutive rounds): data
+  crossing a boundary checked in one shape and used in another (hand-off key order; old saved-session shape; stale stored
+  answers; stale country codes).
+- **"Sample data shaped to pass" → promoted to BC-003** (code review 005 fixture-only hand-off tests; design review 007 fix
+  verification — a fixture bent to hide a duplicate, pack countries spelled as words; code review 006 schema-ordered hand-off
+  fixtures, a hand-typed coverage list, a test checking fieldsets only).
+- **NEW candidate RF-9 — a safety gate switched off by ordinary navigation** (R16-F build loop passes 2–5; this round CR6-02,
+  CR6-03, CR6-15). One more round → build check.
+- **NEW candidate RF-10 — computed but never consumed** (CR6-10 correction_source, CR6-13 pack review names; the CLAUDE.md
+  gotcha by name).
+- RF-3 (new vocabulary not propagated): **no instance this round** (D calibrated looked for it explicitly) — streak broken.
+- RF-5 (claim stated more strongly than the evidence): second code-round sighting — CR6-15's "probably confirmed in another
+  tab or window" for a same-tab completion.
+
+**Lesson.** A fix round re-reviewed only against schema-shaped fixtures shipped a total break of the feature it was fixing,
+and two later review rounds plus a design review did not see it. A mechanism that verifies integrity must be tested with data
+the real producer wrote, end to end — which is what BC-003 now requires.
 
 ## Parity Check History
 

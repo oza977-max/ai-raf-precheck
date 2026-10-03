@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counterpoise — Code Review 006</title>
+  <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+@media(prefers-color-scheme:dark){body{color:#e8e8e8;background:#1a1a18}}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+@media(prefers-color-scheme:dark){h2{border-bottom-color:#444}}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+@media(prefers-color-scheme:dark){.date{color:#999}}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+@media(prefers-color-scheme:dark){.subtitle{color:#aaa}}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+@media(prefers-color-scheme:dark){code{background:#2a2a28;color:#e8e8e8}}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+@media(prefers-color-scheme:dark){th{border-bottom-color:#666;color:#999}}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+@media(prefers-color-scheme:dark){td{border-bottom-color:#333}}
+tbody tr:nth-child(even){background:#faf9f3}
+@media(prefers-color-scheme:dark){tbody tr:nth-child(even){background:#1f1f1d}}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+@media(prefers-color-scheme:dark){.verdict{border-color:#666}}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.verdict-label{color:#999}}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+@media(prefers-color-scheme:dark){.verdict-basis{color:#aaa}}
+.verdict.caveats{border-color:#e67e22;background:#fef8f0}
+.verdict.caveats .verdict-text{color:#e67e22}
+@media(prefers-color-scheme:dark){.verdict.caveats{background:#3a2a1a;border-color:#d68a2c}}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+@media(prefers-color-scheme:dark){.issue.critical{background:#3a1d1a;border-left-color:#e55353}}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+@media(prefers-color-scheme:dark){.issue.important{background:#3a2a1a;border-left-color:#e8a84d}}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+@media(prefers-color-scheme:dark){.issue.minor{background:#1f1f1d;border-left-color:#8a8a8a}}
+.issue.observation{border-left-color:#95a5a6;background:#f5f5f3}
+@media(prefers-color-scheme:dark){.issue.observation{background:#1d1d1b;border-left-color:#666}}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-severity{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-severity{color:#888}}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-detail{color:#ccc}}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-location{color:#777}}
+.issue-disposition{font-size:.85rem;color:#666;border-top:1px solid rgba(0,0,0,.1);padding-top:.4rem;margin-top:.4rem;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-disposition{border-top-color:rgba(255,255,255,.1);color:#888}}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+.tally div{display:flex;flex-direction:column}
+.themes-section{background:#f9f9f4;padding:1rem 1.2rem;margin:1rem 0 1.5rem;border-left:3px solid #999}
+@media(prefers-color-scheme:dark){.themes-section{background:#1f1f1d;border-left-color:#666}}
+.theme-item{margin-bottom:1rem}
+.theme-title{font-weight:600;margin-bottom:.3rem}
+.coverage-table{font-size:.85rem;margin:1rem 0}
+.coverage-table td:first-child{font-weight:500}
+.coverage-table td:last-child{text-align:right}
+.minor-findings-table td{font-size:.88rem}
+.minor-findings-table td:nth-child(2){max-width:40ch}
+.panel-row{margin-bottom:.8rem;font-size:.88rem}
+.panel-name{font-weight:600;color:#333}
+@media(prefers-color-scheme:dark){.panel-name{color:#e8e8e8}}
+.expert-list{font-size:.88rem;line-height:1.5;margin:1rem 0}
+.gvm-attribution{font-size:.75rem;color:#999;font-style:italic;text-align:center;margin-top:3rem;max-width:none}
+@media(prefers-color-scheme:dark){.gvm-attribution{color:#666}}
+  </style>
+</head>
+<body>
+
+<main>
+
+<p class="date">3 October 2026 — Code Review 006</p>
+<h1>Counterpoise</h1>
+<p class="subtitle">Round 6 (strict), R16 plain-language redesign review. Commit range <code>b1e146b..9348882</code>, 15 commits, 51 production files. Dual review: 12 calibrated + 12 blind panels (6 fresh verifiers). Chair: Fable. Panels: Sonnet.</p>
+
+<div class="verdict not-ready">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text" id="verdict-text">Do not merge</div>
+  <p class="verdict-basis" id="verdict-basis">6 Critical and 17 Important findings (verified by fresh-context checkers; the hand-off defect proven by a test). Owner triage 2026-10-03: fix all 6 Critical; fix 16 Important and accept EBT-1 as a labelled deliberate exception; fix every Minor item and the stub flag; then a second full review round (coverage estimate ~50%). The verdict is re-decided after that round.</p>
+</div>
+
+<h2 id="summary">1. Summary</h2>
+<div class="tally">
+  <div><b>6</b> Critical</div>
+  <div><b>17</b> Important</div>
+  <div><b>23</b> Minor</div>
+  <div><b>5</b> Observations</div>
+  <div><b>1</b> Disproven</div>
+  <div><b>1</b> Stub flag</div>
+</div>
+
+<p><strong>Scope and verification.</strong> This round reviews the R16 plain-language redesign — form description parsing improvements, guessed-value confirmation, the Start over safety gap, intake-form state recovery, policy-gate error handling, and new WCAG 2.1 AA accessibility standards adopted 2026-10-02. 12 panels returned (calibrated + blind, strict criterion); all 6 verifier agents returned; 31 critical/important claims re-checked line-by-line against the code. Verifier outcomes: 20 confirmed, 10 partly confirmed (mostly reachability/severity refinements), 1 disproven (dropped).</p>
+
+<h2 id="headline">2. Headline</h2>
+<p>Moving a case to another machine (the hand-off) has rejected every real case as &quot;tampered&quot; since 2026-09-28 (code-review-005 fix round 1, commit 3e4f119). Proven: export &#8594; import of the app&rsquo;s own self-assessment case &#8594; &quot;The bundle&rsquo;s audit chain is broken… Nothing was imported.&quot; The import re-parses each event with a schema that rebuilds field order, then recomputes the hash over the rebuilt copy; real verdicts are written in a different field order. Every repo test used sample verdicts typed in the schema&rsquo;s own order, so all stayed green. Bisect: 36c9a9b adopted &#10003;, 498b8fd adopted &#10003;, 3e4f119 tampered &#10008; … 9348882 tampered &#10008;.</p>
+
+<h2 id="coverage">3. Coverage</h2>
+<p><em>Capture-recapture (calibrated vs blind per lens; EBT hits excluded as non-independent)</em></p>
+<table class="coverage-table">
+  <thead>
+    <tr><th>Lens</th><th>Calibrated</th><th>Blind</th><th>Shared</th><th>Est. total</th><th>Found</th><th>Coverage</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A references</td><td>4</td><td>8</td><td>1</td><td>32</td><td>11</td><td>34%</td></tr>
+    <tr><td>B contracts</td><td>2</td><td>9</td><td>1</td><td>18</td><td>10</td><td>56%</td></tr>
+    <tr><td>C logic</td><td>3</td><td>5</td><td>0</td><td>23 (Chapman)</td><td>8</td><td>35%</td></tr>
+    <tr><td>D naming/spec</td><td>2</td><td>2</td><td>1</td><td>4</td><td>3</td><td>75%</td></tr>
+    <tr><td>E timing</td><td>3</td><td>1</td><td>1</td><td>3</td><td>3</td><td>100%</td></tr>
+    <tr><td>G what renders</td><td>4</td><td>8</td><td>3</td><td>11</td><td>9</td><td>84%</td></tr>
+  </tbody>
+</table>
+<p><strong>Pooled: est. 80, found 43 &#8594; ~54%</strong> (sum of lenses ~49%). Below 80% &#8594; a second full round is recommended after fixes. Small overlaps &#8594; noisy estimate; direction is clear. Telling case: the hand-off Critical was found by one panel (B blind) while the other B panel listed &quot;a bundle this build exports will re-import into this build&quot; as verified sound.</p>
+
+<h2 id="reconciliation">4. Dual-review reconciliation</h2>
+<p>Blind-only findings merged as New: hand-off tampered (B), Undo crash (B), pack review names (B), raw model ids (G), contrast (G), raw engine error (G), stale answers (D/C blind), summary omission (C), policy-gate throw (C), country-code fallback (A), docs/rules.md (A), hand-typed coverage test (A). Confirmed by both: Start over guards (E), correction_source unread (B), required-fields not announced (G), result arrival silent (G), &quot;Approved&quot; banner (G), &quot;No&quot;-screen CSS (A), form/structured_form naming (D). Calibrated-only: Back drops guessed gate (C), replaces_prior_model never asked (A), inheritance empty list (B), evidence-scope CSS (A), extraction error stale (E), navigate-away message (E). <strong>15 of 33 Critical/Important rest wholly on one blind panel.</strong></p>
+
+<h2 id="themes">5. Themes</h2>
+<div class="themes-section">
+  <div class="theme-item">
+    <div class="theme-title">1. Data checked in one shape, used in another (RF-6, 3rd consecutive round &#8594; promote to build check)</div>
+    <p>Hand-off key order (CR6-01); old saved-session shape (CR6-04); stale stored answers (CR6-06); stale country codes (CR6-23).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">2. A safety gate switched off by ordinary navigation (the async-gap lesson, again)</div>
+    <p>Start over (CR6-02), Back (CR6-03), navigating away mid-confirm (CR6-15).</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">3. Decision inputs never shown back to the person (principle 3, &quot;listed back&quot;)</div>
+    <p>CR6-05, CR6-06, CR6-16.</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">4. Computed but never consumed (CLAUDE.md gotcha)</div>
+    <p>Correction_source (CR6-10), pack review names (CR6-13), NoScreenView.kind.</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">5. Accessibility on changed screens (WCAG 2.1 AA adopted 2026-10-02)</div>
+    <p>CR6-07, CR6-08, CR6-09.</p>
+  </div>
+  <div class="theme-item">
+    <div class="theme-title">6. Tests that prove less than they claim</div>
+    <p>Schema-ordered hand-off fixtures; TC-R16-E-11 hand-typed list; TC-R3-JU-5-01 checks fieldsets only; TC-R16-F-71 timing race failing CI on main.</p>
+  </div>
+</div>
+
+<h2 id="critical">6. Critical findings (CR6-01–06)</h2>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-01 — Critical</div>
+  <div class="issue-title">Hand-off import reports every real case as &quot;tampered&quot;</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/store/handoff.ts:698,733</code> (verifyChainOf on parsed events) + <code>audit.ts:79-81</code> (eventContent hashes JSON.stringify(payload)) vs <code>IntakeFlow.tsx:1229-1251</code> / evaluate() key order.</p>
+  <p class="issue-detail"><strong>Impact:</strong> The two-person/two-machine hand-off (RG-8) cannot move any real case, and tells the user the file was tampered with — a false integrity claim. Pre-existing since 3e4f119, 2026-09-28; live. Found by B blind; proven by chair test.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Validate shape with the schema but verify the hash chain and store the RAW events as written (never a re-serialised copy); add a round-trip test with an app-written case (real evaluate() verdict + verdict_corrected in writer order).</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix (release blocker).</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-01">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-02 — Critical</div>
+  <div class="issue-title">&quot;Start over&quot; leaves earlier work running</div>
+  <p class="issue-detail"><strong>File:</strong> <code>IntakeFlow.tsx:104-125</code> resets only confirmInFlight; dupCheckInFlight/confirmNewInFlight/retryExtractionInFlight/adoptInFlight stay set; duplicate-check effect has no cancellation (:370-415). The &quot;Start over instead&quot; banner stays visible on every step after a reload.</p>
+  <p class="issue-detail"><strong>Impact:</strong> Next case&rsquo;s Continue / Try again / Use the earlier result silently do nothing until the old call settles (local model up to 120 s; Anthropic minutes); an abandoned duplicate check&rsquo;s result can appear on the new case and could be adopted. (Chair: an abandoned extraction cannot land on the new case — the reducer only accepts it on the extraction step, which the new case can&rsquo;t reach while blocked.) Pre-existing refs, in a function this range edited.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Reset every in-flight guard in handleStartOver; cancellation flag on the duplicate-check effect (the precedents effect&rsquo;s pattern).</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-02">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-03 — Critical</div>
+  <div class="issue-title">Going Back from the questions removes the guessed-value safety check</div>
+  <p class="issue-detail"><strong>File:</strong> <code>intake-state.ts:438-448</code> rebuilds graph_review without guessedFields/unconfirmedNodeIds/provenance/jurisdictionsConfirmed/ignoredJurisdictions; <code>IntakeFlow.tsx:721</code> then regenerates questions with guessedFields ?? {}.</p>
+  <p class="issue-detail"><strong>Impact:</strong> A value the AI guessed (no quote from the description) can reach the result without the person ever being asked; the review screen also drops its quotes and confirm gate and labels every value &quot;Not in your description&quot;. Pre-existing gap in a case this range edited.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Carry those fields through Back (and EVALUATION_FAILED/CHANGE_ANSWER re-entries), or fail safe.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-03">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-04 — Critical</div>
+  <div class="issue-title">Undo crashes the app for a question session saved before today&rsquo;s update</div>
+  <p class="issue-detail"><strong>File:</strong> <code>intake-state.ts:683-694</code> reads undo.questions/assumptionsLen (new in 9348882); old drafts have {graph, correctionsLen}; <code>intake-draft.ts:39-50</code> checks only step; <code>QuestionnaireStep.tsx:118</code> indexes undefined; no error boundary. Reload does not clear the bad draft.</p>
+  <p class="issue-detail"><strong>Impact:</strong> User has a saved session in the browser from before today; they click Undo; app crashes. Found by B blind; V1 confirmed.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Default the missing fields on restore (one line) and add an error boundary.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-04">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-05 — Critical</div>
+  <div class="issue-title">&quot;Does it replace something you already use?&quot; is decided by the AI&rsquo;s unchecked guess on the description path</div>
+  <p class="issue-detail"><strong>File:</strong> <code>graph-extractor.ts:84</code> requires it; <code>QUOTE_FIELDS (:255-268)</code> omits it, so it is never marked guessed, never asked, never shown as assumed (<code>UnderstoodSummary.tsx:230-233</code> states it flatly) — yet <code>TRACK-II-REPLACE</code> (appetite.yaml:279-286, short_circuit) routes the case on it. The form asks it (Q12, Not sure &#8594; yes).</p>
+  <p class="issue-detail"><strong>Impact:</strong> A critical routing decision is never reviewed; the person approves a verdict routed by an unquoted guess. Pre-existing root, new false coverage claim. Found by A calibrated; V2 confirmed.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Add to QUOTE_FIELDS so an unquoted value becomes a question; test.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-05">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue critical">
+  <div class="issue-severity">CR6-06 — Critical</div>
+  <div class="issue-title">Saved answers that no longer match the current options skip the &quot;stricter reading, listed back&quot; rule</div>
+  <p class="issue-detail"><strong>File:</strong> <code>plain-intake.ts:143-144, 186-190, 247-251</code> (stale supplier/assistant/platform &#8594; &quot;weren&rsquo;t sure&quot; wording, no assumption; platform &#8594; Zone A); :293-295, 420-424, 442-445, 514-517 (Q4/Q6/Q7/Q12 unrecognised &#8594; least strict, no assumption); <code>StructuredForm.tsx:329-335</code> accepts any non-empty value.</p>
+  <p class="issue-detail"><strong>Impact:</strong> Reachable: edit the policy mid-case in the app&rsquo;s policy editor, or a saved form across a release that changes options. Found by D blind + C blind; V2 confirmed.</p>
+  <p class="issue-detail"><strong>Fix:</strong> Unrecognised values take the &quot;Not sure&quot; path (strictest + listed back); isAnswered validates against current options.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-06">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<h2 id="important">7. Important findings (CR6-07–29, EBT-1)</h2>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-07 — Important</div>
+  <div class="issue-title">Required questions not announced as required</div>
+  <p class="issue-detail"><strong>File:</strong> <code>StructuredForm.tsx:123,151</code> aria-required on fieldset — unsupported on group; free-text Q1/Q2 have none; Continue disabled with no reason.</p>
+  <p class="issue-detail">G cal + blind; V3. WCAG 3.3.2/4.1.2.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-07">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-08 — Important</div>
+  <div class="issue-title">The result arrives silently for screen-reader users</div>
+  <p class="issue-detail"><strong>File:</strong> <code>StepTracker.tsx:26</code> same label for evaluating/result; <code>IntakeFlow.tsx:1575-1587</code>; &quot;Evaluating…&quot; :2062 no live region.</p>
+  <p class="issue-detail">G cal + blind; V3 rated Critical. WCAG 4.1.3.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-08">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-09 — Important</div>
+  <div class="issue-title">Faint text below contrast minimum on 3 new styles</div>
+  <p class="issue-detail"><strong>File:</strong> <code>App.css:11,13,1448-1455,3539-3543,3604</code> .verdict__first-also-covers and access-scope legend 3.85:1 on card; .verdict__chain-source 3.20:1 on paper.</p>
+  <p class="issue-detail">G blind; V3 (corrected background). WCAG 1.4.3.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-09">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-10 — Important</div>
+  <div class="issue-title">Which screen a correction came from is recorded but never shown</div>
+  <p class="issue-detail"><strong>File:</strong> <code>RegisterDetail.tsx:54-55</code>; spec <code>verdict-audit.md:529</code>.</p>
+  <p class="issue-detail">B cal + blind; V4.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-10">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-11 — Important</div>
+  <div class="issue-title">Register view shows &quot;N controls inherited&quot; over an empty list when a case names both a platform and a supplier</div>
+  <p class="issue-detail"><strong>File:</strong> <code>VerdictDisplay.tsx:1049</code>; RegisterDetail never passes graph.</p>
+  <p class="issue-detail">B cal; V4 (&quot;bordering Critical&quot;).</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-11">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-13 — Important</div>
+  <div class="issue-title">A pack&rsquo;s own review name/owner is never shown; generic &quot;ask your AI risk team which&quot; instead</div>
+  <p class="issue-detail"><strong>File:</strong> <code>verdict-view-model.ts:461-487,823</code>; <code>ss1-23.yaml:50-51</code>.</p>
+  <p class="issue-detail">B blind; V4.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-13">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-14 — Important</div>
+  <div class="issue-title">Stale &quot;couldn&rsquo;t read your description&quot; shows on the next case after Start over</div>
+  <p class="issue-detail"><strong>File:</strong> <code>IntakeFlow.tsx:190,475,589,614,1763</code>.</p>
+  <p class="issue-detail">E cal; V1.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-14">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-15 — Important</div>
+  <div class="issue-title">Navigating away mid-confirm finishes the confirm in the background; returning, Confirm is refused &quot;probably confirmed in another tab or window&quot;</div>
+  <p class="issue-detail"><strong>File:</strong> <code>IntakeFlow.tsx:75</code>.</p>
+  <p class="issue-detail">E cal; V1.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-15">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-16 — Important</div>
+  <div class="issue-title">&quot;What we understood&quot; omits what an autonomous AI does for read/inform/draft/recommend</div>
+  <p class="issue-detail"><strong>File:</strong> <code>plain-copy.ts:1039-1043,1069-1072</code>; summaryBehaviourLine has no tests.</p>
+  <p class="issue-detail">C blind; V2.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-16">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-17 — Important</div>
+  <div class="issue-title">With an invalid policy, Continue (form) and Proceed (review) throw an uncaught error and do nothing</div>
+  <p class="issue-detail"><strong>File:</strong> <code>IntakeFlow.tsx:673-684,707,790</code>; a page-wide banner explains evaluation is off.</p>
+  <p class="issue-detail">C blind; V2 rated Critical.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-17">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-19 — Important</div>
+  <div class="issue-title">Description-path model buttons and &quot;Recorded:&quot; line show raw registry ids, e.g. &quot;VENDOR-LLM-v1&quot;</div>
+  <p class="issue-detail"><strong>File:</strong> <code>QuestionnaireStep.tsx:30-34,56</code>.</p>
+  <p class="issue-detail">G blind; V4.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-19">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-20 — Important</div>
+  <div class="issue-title">The &quot;evidence doesn&rsquo;t cover your tool&quot; caveat is styled exactly like verified evidence</div>
+  <p class="issue-detail"><strong>File:</strong> <code>VerdictDisplay.tsx:1899</code>; no CSS for --scope; the UNVERIFIED chip above is correct.</p>
+  <p class="issue-detail">A cal; V3.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-20">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-23 — Important</div>
+  <div class="issue-title">&quot;What we understood&quot; can show a bare country code after a policy edit with a saved draft</div>
+  <p class="issue-detail"><strong>File:</strong> <code>UnderstoodSummary.tsx:138-140</code>.</p>
+  <p class="issue-detail">A blind; V5.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-23">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-24 — Important</div>
+  <div class="issue-title">docs/rules.md says policy 1.7; the shipped policy is 1.8; README links it as regenerated</div>
+  <p class="issue-detail">A blind; V5.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-24">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-25 — Important</div>
+  <div class="issue-title">TC-R16-E-11&rsquo;s field list is hand-typed (not derived from QUOTE_FIELDS/policy as its comment claims) and includes a field the generator cannot emit</div>
+  <p class="issue-detail">A blind (+A cal); V5.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-25">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR6-29 — Important</div>
+  <div class="issue-title">&quot;Approved by 2LoD — lifecycle advanced to Approved&quot; and &quot;is rejected immediately&quot; render the reserved words, bypassing ACTION_LABEL</div>
+  <p class="issue-detail"><strong>File:</strong> <code>RegisterDetail.tsx:765</code>, <code>PolicyEditor.tsx:321</code>. Pre-existing.</p>
+  <p class="issue-detail">G cal (Minor) + G blind (Important); V6.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-CR6-29">Fix — owner decision, 2026-10-03</span></p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">EBT-1 — Important</div>
+  <div class="issue-title">VerdictDisplay.memo-download.test.tsx:65 spies on an owned pure module (EBT mock-budget)</div>
+  <p class="issue-detail">B cal + blind (Important); V6: Minor — deliberate fault-injection for the download error path, documented.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> accept and label as a deliberate exception.</p>
+  <p class="issue-disposition">Disposition: <span id="disp-EBT-1">Accepted by the owner as a deliberate, labelled exception (2026-10-03)</span></p>
+</div>
+
+<h2 id="minor">8. Minor findings</h2>
+<table class="minor-findings-table">
+  <thead>
+    <tr><th>ID</th><th>Finding</th><th>Recommendation</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CR6-12</td><td>Raw engine error text (&quot;Evaluation failed: no-track-match&quot;) + &quot;review your answers&quot; — latent: no engine error reachable with the shipped policy (track totality test)</td><td>Fix with a plain message — cheap</td></tr>
+    <tr><td>CR6-18</td><td>&quot;No&quot; screen sentence can start with &quot;. &quot; if a policy rule has an empty description and no plain_reason — latent</td><td>Fix</td></tr>
+    <tr><td>CR6-21</td><td>Questionnaire tick-all list unstyled (bold labels, native fieldset border)</td><td>Fix</td></tr>
+    <tr><td>CR6-22</td><td>&quot;No&quot; screen supporting paragraphs unstyled</td><td>Fix</td></tr>
+    <tr><td>CR6-26</td><td>build/prompts citations now point elsewhere — historical, pinned to named commits by design</td><td>Dismiss</td></tr>
+    <tr><td>CR6-27</td><td>Hand-off assumption field list closed — complete today</td><td>Add an invariant test</td></tr>
+    <tr><td>CR6-30</td><td>&quot;an Counterpoise hand-off bundle&quot; (handoff.ts:679,696; RegisterView.tsx:147; spec verdict-audit twins)</td><td>Fix</td></tr>
+    <tr><td>EBT-2</td><td>registerStore spies (8 lines) — genuine IndexedDB boundary; justified</td><td>Accept</td></tr>
+    <tr><td>EBT-3</td><td>console.error spy — platform API</td><td>Accept</td></tr>
+    <tr><td>B-8</td><td>basis_quotes optional in the schema that runs vs required in the tool schema</td><td>Fix: treat absent as all-guessed</td></tr>
+    <tr><td>B-9</td><td>decision_type_other / output &quot;uncertain&quot; unreachable from extraction</td><td>Defer</td></tr>
+    <tr><td>B-10</td><td>Form-submission contradiction shown only after the first answer</td><td>Fix</td></tr>
+    <tr><td>C-5</td><td>downstream_review_sources de-dup removed; rule-id uniqueness unchecked across packs (latent)</td><td>Fix: dedupe by rule_id</td></tr>
+    <tr><td>C-3</td><td>Undo button stays live after its one use; second click does nothing</td><td>Fix</td></tr>
+    <tr><td>D-1</td><td>&quot;form&quot; vs &quot;structured_form&quot; for the same concept; one test fixture uses the invalid value</td><td>Fix fixture; note</td></tr>
+    <tr><td>D-2</td><td>Reviewer panel says &quot;vendor and platform&quot; beside &quot;Platform/Supplier&quot; labels</td><td>Fix</td></tr>
+    <tr><td>G-7</td><td>supplierDisplayName falls back to the raw vendor value</td><td>Fix</td></tr>
+    <tr><td>G-8</td><td>&quot;Safeguards … before you start (0)&quot; above a non-empty &quot;Already in place&quot;</td><td>Fix</td></tr>
+    <tr><td>A-2</td><td>plain_change placeholders validated but never filled</td><td>Fix</td></tr>
+    <tr><td>A-5</td><td>platforms[].vendor_id not checked against vendors</td><td>Fix</td></tr>
+    <tr><td>A-6</td><td>Tests name TC ids with no rows (TC-R15-C1-01..09, TC-RG-8-49)</td><td>Fix rows</td></tr>
+    <tr><td>B-15</td><td>new Date() inside src/engine/build-graph-from-form.ts:154 — engine purity rule</td><td>Fix: pass time in</td></tr>
+    <tr><td>E-2</td><td>Stale comment in handleFormSubmitted</td><td>Fix</td></tr>
+  </tbody>
+</table>
+
+<h2 id="observations">9. Observations</h2>
+<div class="issue observation">
+  <div class="issue-severity">Observation 1</div>
+  <div class="issue-title">evidenceScopeNote bare-id fallback (not live)</div>
+  <p class="issue-detail">B-12. (B calibrated)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 2</div>
+  <div class="issue-title">NoScreenView.kind unread</div>
+  <p class="issue-detail">B-13. (B blind)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 3</div>
+  <div class="issue-title">Platform-name tie-break</div>
+  <p class="issue-detail">C-4. (C blind)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 4</div>
+  <div class="issue-title">&quot;First screen&quot; reused in a spec</div>
+  <p class="issue-detail">D-3. (D calibrated)</p>
+</div>
+
+<div class="issue observation">
+  <div class="issue-severity">Observation 5</div>
+  <div class="issue-title">Workflow comment drift</div>
+  <p class="issue-detail">A-9. (A blind)</p>
+</div>
+
+<h2 id="disproven">10. Disproven</h2>
+<p><strong>CR6-28.</strong> &quot;A correction reopens a blank form&quot; — returnsToForm&rsquo;s early return applies only when NOT a correction; a correction without form answers goes to the review screen (TC-R16-D2-59..61). Dropped.</p>
+
+<h2 id="stub-detection">11. Stub detection</h2>
+<p><strong>Panel F, honesty-triad: 1 mechanical match.</strong> <code>src/engine/evaluate.ts:638</code> emptyExplanation() — namespace_violation (Critical by rule). Chair: a default starting value overwritten on every return path, not a placeholder for unbuilt behaviour (since July). Recommend: dismiss as a false positive and inline the default into emptyResult() so the mechanical check stays clean (no behaviour change).</p>
+
+<h2 id="mechanical-checks">12. Mechanical checks</h2>
+<p><strong>EBT contract linter:</strong> 10 mock-budget hits, all in test lines written before this range (git blame d32e2bb, b1e146b, 3e4f119). <strong>Stub scan:</strong> 1 (above). <strong>spec-parity:</strong> clean. <strong>trace-check:</strong> clean. <strong>tsc:</strong> clean. <strong>CI:</strong> the last push (9348882) failed one test — TC-R16-F-71&rsquo;s final check ran one render early on CI&rsquo;s slower runner (passed 3× locally); site deploy succeeded. Recommend: fix (wait for the re-enable).</p>
+
+<h2 id="panels">13. Panels (one row each)</h2>
+<table>
+  <thead>
+    <tr><th>Panel</th><th>Findings</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A calibrated</td><td>4 (3 I, 1 M) — replaces_prior_model, scope CSS, tick-all CSS, "No" CSS</td></tr>
+    <tr><td>A blind</td><td>9 (5 I, 3 M, 1 O)</td></tr>
+    <tr><td>B calibrated</td><td>6 (2 I + EBT)</td></tr>
+    <tr><td>B blind</td><td>15 (2 C, 5 I, 4 M, 4 O)</td></tr>
+    <tr><td>C calibrated</td><td>5 (1 C, 1 I, 1 M, 2 O)</td></tr>
+    <tr><td>C blind</td><td>5 (4 I, 1 M)</td></tr>
+    <tr><td>D calibrated</td><td>3 (2 M, 1 O)</td></tr>
+    <tr><td>D blind</td><td>2 (1 I, 1 M)</td></tr>
+    <tr><td>E calibrated</td><td>4 (2 C, 2 I)</td></tr>
+    <tr><td>E blind</td><td>2 (1 C, 1 O)</td></tr>
+    <tr><td>G calibrated</td><td>4 (2 I, 2 M)</td></tr>
+    <tr><td>G blind</td><td>8 (6 I, 2 M)</td></tr>
+    <tr><td>Panel F (stub detection)</td><td>1 mechanical</td></tr>
+  </tbody>
+</table>
+
+<h2 id="higher-score">14. What prevents a higher score</h2>
+<p>The six Criticals are all fixable, none a deliberate ceiling. Coverage ~50% means more defects likely remain — a second full round after fixes is the structural fix. Recurring classes (input boundaries, gates switched off by navigation, computed-not-shown fields) say the build checks need strengthening, not just the code.</p>
+
+<h2 id="expert-panel">15. Expert panel</h2>
+<div class="expert-list">
+<p><strong>A:</strong> Hunt &amp; Thomas (Pragmatic Programmer), McConnell (Code Complete), Vanderkam (Effective TypeScript).</p>
+<p><strong>B:</strong> Keeling (Design It!), Clements (Documenting Software Architectures), Metz (POODR), Kleppmann (DDIA), Bratus/Patterson/Sassaman (LANGSEC), Vanderkam, Dodds (Testing Library).</p>
+<p><strong>C:</strong> Fagan, Beck (TDD by Example), McConnell, Martin (Clean Code), Beizer (Software Testing Techniques), Kaner (Lessons Learned in Software Testing).</p>
+<p><strong>D:</strong> Brooks (Mythical Man-Month), McConnell, Wiegers (Software Requirements), Vanderkam.</p>
+<p><strong>E:</strong> Goetz (Java Concurrency in Practice), Lamport (1978), React core team (react.dev), Kleppmann.</p>
+<p><strong>G:</strong> Krug (Don&rsquo;t Make Me Think), Cooper (About Face), Redish (Letting Go of the Words), Pickering + W3C WCAG 2.1, Anderson (Security Engineering).</p>
+<p><strong>Verification:</strong> gvm-graph fresh-context checkers.</p>
+</div>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main>
+
+</body>
+</html>
