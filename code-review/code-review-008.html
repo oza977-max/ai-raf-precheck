@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counterpoise — Code Review 008</title>
+  <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+@media(prefers-color-scheme:dark){body{color:#e8e8e8;background:#1a1a18}}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+@media(prefers-color-scheme:dark){h2{border-bottom-color:#444}}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+@media(prefers-color-scheme:dark){.date{color:#999}}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+@media(prefers-color-scheme:dark){.subtitle{color:#aaa}}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+@media(prefers-color-scheme:dark){code{background:#2a2a28;color:#e8e8e8}}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+@media(prefers-color-scheme:dark){th{border-bottom-color:#666;color:#999}}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+@media(prefers-color-scheme:dark){td{border-bottom-color:#333}}
+tbody tr:nth-child(even){background:#faf9f3}
+@media(prefers-color-scheme:dark){tbody tr:nth-child(even){background:#1f1f1d}}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+@media(prefers-color-scheme:dark){.verdict{border-color:#666}}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.verdict-label{color:#999}}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+@media(prefers-color-scheme:dark){.verdict-basis{color:#aaa}}
+.verdict.caveats{border-color:#e67e22;background:#fef8f0}
+.verdict.caveats .verdict-text{color:#e67e22}
+@media(prefers-color-scheme:dark){.verdict.caveats{background:#3a2a1a;border-color:#d68a2c}}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+@media(prefers-color-scheme:dark){.issue.critical{background:#3a1d1a;border-left-color:#e55353}}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+@media(prefers-color-scheme:dark){.issue.important{background:#3a2a1a;border-left-color:#e8a84d}}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+@media(prefers-color-scheme:dark){.issue.minor{background:#1f1f1d;border-left-color:#8a8a8a}}
+.issue.observation{border-left-color:#95a5a6;background:#f5f5f3}
+@media(prefers-color-scheme:dark){.issue.observation{background:#1d1d1b;border-left-color:#666}}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-severity{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-severity{color:#888}}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-detail{color:#ccc}}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-location{color:#777}}
+.issue-disposition{font-size:.85rem;color:#666;border-top:1px solid rgba(0,0,0,.1);padding-top:.4rem;margin-top:.4rem;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-disposition{border-top-color:rgba(255,255,255,.1);color:#888}}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+.tally div{display:flex;flex-direction:column}
+.themes-section{background:#f9f9f4;padding:1rem 1.2rem;margin:1rem 0 1.5rem;border-left:3px solid #999}
+@media(prefers-color-scheme:dark){.themes-section{background:#1f1f1d;border-left-color:#666}}
+.theme-item{margin-bottom:1rem}
+.theme-title{font-weight:600;margin-bottom:.3rem}
+.coverage-table{font-size:.85rem;margin:1rem 0}
+.coverage-table td:first-child{font-weight:500}
+.coverage-table td:last-child{text-align:right}
+.minor-findings-table td{font-size:.88rem}
+.minor-findings-table td:nth-child(2){max-width:40ch}
+.panel-row{margin-bottom:.8rem;font-size:.88rem}
+.panel-name{font-weight:600;color:#333}
+@media(prefers-color-scheme:dark){.panel-name{color:#e8e8e8}}
+.expert-list{font-size:.88rem;line-height:1.5;margin:1rem 0}
+.gvm-attribution{font-size:.75rem;color:#999;font-style:italic;text-align:center;margin-top:3rem;max-width:none}
+@media(prefers-color-scheme:dark){.gvm-attribution{color:#666}}
+  </style>
+</head>
+<body>
+
+<main>
+
+<p class="date">4 October 2026 — Code Review 008</p>
+<h1>Counterpoise</h1>
+<p class="subtitle">Round 8 (strict), review of the CR7 fix round. Commit range <code>bdb5d50..ea01a1a</code>, 80 commits, 34 production files, 52 test files. Chair: Opus 5.5. Panels and checkers: Sonnet.</p>
+
+<div class="verdict caveats">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text">Merge with caveats</div>
+  <p class="verdict-basis">0 Critical, 5 Important (within the 4&ndash;6 band), 15 Minor; every Important verified by fresh-context checkers, most proved by running the real code. <strong>Caveat:</strong> none of the five is accepted as-is &mdash; <strong>owner triage, 2026-10-04:</strong> fix all 4 Important code findings and all 15 Minor in a CR8 fix round under full GVM discipline before <code>/gvm-test</code>; CR8-05 &mdash; publish the user-docs draft with the two outcome corrections (case 10 Track II, case 7 two reviews); dismiss the 7 stub flags (intended code, allowlisted); accept the 37 test spies as labelled exceptions and label them in each file.</p>
+</div>
+
+<h2 id="summary">1. Summary</h2>
+<table>
+  <thead>
+    <tr><th>Critical</th><th>Important</th><th>Minor</th><th>Observations</th><th>Disproven</th><th>Stub flags</th><th>Test-design (EBT) hits</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td>5</td><td>15</td><td>12</td><td>0</td><td>7 (all intended code)</td><td>37</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Scope and method.</strong> Six defect-class lenses &mdash; A references and unconsumed data, B contracts, C logic, D naming/spec, E timing, G what renders &mdash; each run calibrated and blind (12 Sonnet panels), Panel F (assembled stub prompt), the EBT linter (script). All 13 returned. Seven code Critical/Important claims went to two fresh-context checkers that ran probe tests in scratch copies: four confirmed Important, three confirmed but downgraded to Minor, zero disproven. Every Important finding was proved by running the app&rsquo;s real code (reducer, view-model, audit store), most by two or more panels independently. One Important (CR8-05, user docs) was already known and is held for the owner.</p>
+
+<h2 id="headline">2. Headline</h2>
+
+<p>The CR7 fixes held where they were aimed; the defects found are in the edges of the new mechanisms. The &quot;Not sure&quot; assumptions now survive every way back to the review screen (CR7-02) &mdash; but editing that field&rsquo;s card on the revisited screen does not remove the now-false assumption, so the signed record says &quot;we assumed…&quot; about a value the person set (four panels). The non-permissive &quot;no sign-off on record&quot; headline (CR7-09) is contradicted by the next-steps list on the same screen (&quot;You can start&quot;). The Back guard after a failed evaluation (CR7-03) survives the questions but not a trip through the confirmation and &quot;Change an answer&quot; &mdash; Back can then orphan a case that already has a signed attestation. And the audit-trail wording added overnight (&quot;a later change … would show as a break&quot;) is not true for deleting the newest entries, which leave a chain that still verifies.</p>
+
+<h2 id="coverage">3. Coverage</h2>
+
+<p><em>Capture-recapture (calibrated vs blind, non-observation findings)</em></p>
+
+<table class="coverage-table">
+  <thead>
+    <tr><th>Lens</th><th>Calibrated</th><th>Blind</th><th>Shared</th><th>Est. total</th><th>Found</th><th>Coverage</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A references</td><td>2</td><td>2</td><td>0</td><td>11 (Chapman)</td><td>5</td><td>45%</td></tr>
+    <tr><td>B contracts</td><td>3</td><td>3</td><td>0</td><td>9</td><td>6</td><td>67%</td></tr>
+    <tr><td>C logic</td><td>2</td><td>2</td><td>2</td><td>2</td><td>2</td><td>100%</td></tr>
+    <tr><td>D naming/spec</td><td>3</td><td>2</td><td>0</td><td>12 (Chapman)</td><td>5</td><td>40%</td></tr>
+    <tr><td>E timing</td><td>3</td><td>3</td><td>0</td><td>10 (Chapman)</td><td>6</td><td>60%</td></tr>
+    <tr><td>G what renders</td><td>4</td><td>4</td><td>1</td><td>6</td><td>4</td><td>67%</td></tr>
+  </tbody>
+</table>
+
+<p>Pooled: estimated ~50, found 28 (before cross-lens de-duplication) &rarr; ≈52% (round 7: ~65%). Below the 80% line, so another round would still find more &mdash; mostly in contracts and spec/docs, where the two panels barely overlapped.</p>
+
+<h2 id="important">4. Important findings (CR8-01 &ndash; CR8-05), all verified</h2>
+
+<div class="issue important">
+  <div class="issue-severity">CR8-01 &mdash; Important</div>
+  <div class="issue-title">Editing an assumed field on a revisited review screen keeps the &quot;we assumed…&quot; line.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/intake-state.ts</code> ~870-935 (CORRECTION_APPLIED), ~945-955 (JURISDICTIONS_SET); written at <code>IntakeFlow.tsx</code> ~1245, ~1461.</p>
+  <p class="issue-detail"><strong>Impact:</strong> after &quot;Change an answer&quot;, a failed result or a correction from the result, a person who edits the card for a field they had answered &quot;Not sure&quot; still sees &quot;we assumed the strictest case&quot; for it on the confirmation and the result, and the permanent graph_confirmed / verdict_corrected record carries it. The &quot;No&quot; screen can blame that assumption. A false claim on append-only evidence (BC-005). New with CR7-02.</p>
+  <p class="issue-detail"><strong>Found by:</strong> C blind, A blind, B calibrated, C calibrated, D calibrated. <strong>Verified:</strong> V8-1 (probe).</p>
+  <p class="issue-detail"><strong>Fix:</strong> in CORRECTION_APPLIED drop assumptions whose fields include the corrected field; same in JURISDICTIONS_SET for jurisdictions. Test per re-entry path, asserting the graph_confirmed payload.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-04.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR8-02 &mdash; Important</div>
+  <div class="issue-title">&quot;No sign-off on record&quot; headline, but the next steps say &quot;You can start&quot;.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/verdict-view-model.ts</code> ~939 (signOffMissing), ~1057 (buildNextSteps call), ~700-704.</p>
+  <p class="issue-detail"><strong>Impact:</strong> for a case that needed sign-off and has none on record at a later stage, the headline says &quot;confirm with them before you start&quot; and the list directly under it says &quot;You can start. It&rsquo;s saved on your firm&rsquo;s register….&quot; Two opposite instructions on one screen; the permissive one is the actionable one.</p>
+  <p class="issue-detail"><strong>Found by:</strong> A calibrated. <strong>Verified:</strong> V8-2 (probe with the shipped policy).</p>
+  <p class="issue-detail"><strong>Fix:</strong> pass signOffMissing into buildNextSteps; a non-permissive step and finish line; assert &quot;you can start&quot; is absent from every next step.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-04.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR8-03 &mdash; Important</div>
+  <div class="issue-title">After a failed result, confirmation &rarr; &quot;Change an answer&quot; &rarr; Back can orphan the case.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/intake-state.ts</code> ~1176-1197 (PROCEED_TO_CONFIRMATION drops the flag), ~1199-1245 (CHANGE_ANSWER), ~681 (STEP_BACK guard); <code>IntakeFlow.tsx</code> ~228-247.</p>
+  <p class="issue-detail"><strong>Impact:</strong> the Back guard set after a failed evaluation is lost through the confirmation step, so Back walks out to the duplicate check and the next Continue mints a new case id &mdash; the first case&rsquo;s use_case_created and graph_confirmed stay on the append-only trail with no verdict. The CR7-03 fix covered Back from the questions only (RF-9 / BC-004 again).</p>
+  <p class="issue-detail"><strong>Found by:</strong> A calibrated, D calibrated (C calibrated as an observation). <strong>Verified:</strong> V8-2 (reducer probe; UI route by code).</p>
+  <p class="issue-detail"><strong>Fix:</strong> carry afterFailedEvaluation on confirmation (and evaluation_pending); CHANGE_ANSWER restores it. Reducer and UI test for the five-step sequence.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-04.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR8-04 &mdash; Important</div>
+  <div class="issue-title">The audit-trail wording claims more than the chain check proves.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/RegisterDetail.tsx</code> ~1403-1416 (&quot;a single altered or deleted event breaks the chain&quot;; &quot;Chain integrity verified … unbroken&quot;); <code>src/components/ConfirmationStep.tsx</code> ~88-91 (the confirm notice, written overnight); <code>src/store/audit.ts</code> ~410-413 (comment).</p>
+  <p class="issue-detail"><strong>Impact:</strong> deleting the NEWEST entries (e.g. a trailing sign-off or correction request) leaves a chain that still verifies &mdash; proved: append 3, delete the last, verifyChain ok. A reviewer reading &quot;verified … unbroken&quot; or a submitter reading &quot;a later change would show as a break&quot; is told more than the check can prove (NF-2 / BC-005).</p>
+  <p class="issue-detail"><strong>Found by:</strong> G blind. <strong>Verified:</strong> V8-1 (probe) &mdash; Important for the register banner, Minor for the confirm notice.</p>
+  <p class="issue-detail"><strong>Fix</strong> (wording only &mdash; no tail anchor exists): &quot;an edited event, or a deleted event with later events after it, breaks the chain; removing the newest events can&rsquo;t be detected from inside this browser&quot;; banner &quot;No break found in the N events present&quot;; confirm notice &quot;a later edit to an earlier entry would show as a break…&quot;; spec twins.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-04.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR8-05 &mdash; Important</div>
+  <div class="issue-title">User docs still describe the old form (CR7-12).</div>
+  <p class="issue-detail"><strong>File:</strong> <code>docs/try-these.md</code>, <code>docs/user-guide.md</code> + .html.</p>
+  <p class="issue-detail"><strong>Impact:</strong> &quot;Read &amp; extract&quot; no longer exists; worked cases can&rsquo;t be followed. Already drafted and re-verified on a separate branch (103ea3b), held for the owner; two outcome lines there were already stale against the engine (case 10 &rarr; Track II; case 7 &rarr; 2 reviews).</p>
+  <p class="issue-detail"><strong>Found by:</strong> D blind (D calibrated as an observation). Known.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> owner reads the draft; then publish with the two outcome corrections.</p>
+</div>
+
+<h2 id="minor">5. Minor findings (CR8-06 &ndash; CR8-20)</h2>
+<p><strong>Disposition (owner, 2026-10-04):</strong> fix all 15. CR8-05: publish the drafted user docs with the two outcome corrections.</p>
+<table class="minor-findings-table">
+  <thead>
+    <tr><th>ID</th><th>Finding</th><th>File</th><th>Recommend</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CR8-06</td><td>Correction planner: a pending batch B&rarr;C then C&rarr;B over a trail holding A&rarr;B writes only B&rarr;C — the trail ends at C while the graph holds B (checker: Minor — needs a failed evaluation then edit-and-revert)</td><td>intake-state.ts ~598-607</td><td>fix (running map)</td></tr>
+    <tr><td>CR8-07</td><td>Audit tip hint trusts an equal count: after another tab&rsquo;s Clear all data + re-seed to the same count, the stale tab&rsquo;s next append breaks the chain permanently (checker: Minor, borderline)</td><td>audit.ts ~62-72</td><td>fix (also check the tip event exists)</td></tr>
+    <tr><td>CR8-08</td><td>Correcting from the result hides the countries panel (CHANGE_ANSWER and failed evaluation show it); the spec says it shows</td><td>intake-state.ts ~1321-1336; specs/intake-flow ~745, ~1070</td><td>fix</td></tr>
+    <tr><td>CR8-09</td><td>Two overlapping policy saves (second tab, or remount mid-save) each queue every case — proved</td><td>policy.ts onPolicyUpdated</td><td>fix (per-case lock)</td></tr>
+    <tr><td>CR8-10</td><td>A reload mid first-load seeding can duplicate a sample case&rsquo;s audit events (node written last)</td><td>seeds/*.ts</td><td>fix</td></tr>
+    <tr><td>CR8-11</td><td>Model review sentence garbled: the plain name carries its &quot;— not yet accepted … extra check&quot; suffix into &quot;… is not on the firm&rsquo;s model registry&quot; (shipped qwen3:4b)</td><td>VerdictDisplay.tsx ~144-158</td><td>fix (bare name)</td></tr>
+    <tr><td>CR8-12</td><td>The darker faint-text colour made the small header tagline worse on the dark header (4.32 &rarr; 2.84:1)</td><td>App.css header badge</td><td>fix</td></tr>
+    <tr><td>CR8-13</td><td>The app-wide policy banner still shows raw field paths to submitters</td><td>App.tsx ~341-348</td><td>fix</td></tr>
+    <tr><td>CR8-14</td><td>After a failed result on the description path the plain policy sentence is wrapped in &quot;… Check the details below and try again.&quot;</td><td>IntakeFlow.tsx ~2295-2298</td><td>fix</td></tr>
+    <tr><td>CR8-15</td><td>register-lifecycle.html lacks the CR7 &sect;4.1/&sect;8/&sect;12 text the .md has, while its changelog says they were amended</td><td>specs/register-lifecycle.html</td><td>fix</td></tr>
+    <tr><td>CR8-16</td><td>Clear-all confirmation doesn&rsquo;t name the role it clears; the incomplete message doesn&rsquo;t name the welcome flag</td><td>SettingsPanel.tsx ~119, ~169-173</td><td>fix</td></tr>
+    <tr><td>CR8-17</td><td>The &quot;regulatory text is overdue&quot; line counts every loaded pack, not only those this verdict used (latent until 2027-01-22)</td><td>verdict-view-model.ts ~735-739</td><td>fix</td></tr>
+    <tr><td>CR8-18</td><td>&quot;machine-verified&quot; survives in README, tester guide and verdict-audit &sect;5.5 status definition</td><td>README.md:301; docs/tester-guide.md:199; specs/verdict-audit ~399</td><td>fix</td></tr>
+    <tr><td>CR8-19</td><td>corrections_count comments still describe the old meaning</td><td>store/types.ts ~152; handoff.ts ~319</td><td>fix</td></tr>
+    <tr><td>CR8-20</td><td>The 19 IntakeFlow.cr6-fx2 spies have a rationale header but not the accepted-exception label (EBT-3), and it doesn&rsquo;t cover the trace/register/audit spies</td><td>IntakeFlow.cr6-fx2.test.tsx header</td><td>fix (label)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="observations">6. Observations</h2>
+<ul>
+  <li>O-1 With no stage, the view model makes the self-service claim (&quot;you can start&quot;, &quot;nobody&quot;), contrary to its spec sentence; unreachable today (D cal).</li>
+  <li>O-2 With no valid policy, a High case past pre_checked with no approval reads &quot;Yes — you can start&quot; (G blind).</li>
+  <li>O-3 &quot;all signed off&quot; ignores rules whose source text is still a placeholder (G blind).</li>
+  <li>O-4 &quot;No model was named&quot; also shows for in-house tools where the form never asks (G blind).</li>
+  <li>O-5 A policy save that fails mid-queue doesn&rsquo;t refresh the app&rsquo;s in-memory policy (G cal).</li>
+  <li>O-6 Similar decided cases list still shows other people&rsquo;s case names to 1LoD — outside the range (G cal).</li>
+  <li>O-7 On a fresh form-path retry, question write-back corrections from a failed attempt name discarded node ids (B blind).</li>
+  <li>O-8 A test stub omits the engine error&rsquo;s <code>reason</code> field (B blind).</li>
+  <li>O-9 The pack required_control check runs over all shipped packs; &quot;remove the pack&quot; is not something a bank user can do (B cal).</li>
+  <li>O-10 A storage failure part-way through the correction writes loses the unwritten ones (C cal).</li>
+  <li>O-11 A &quot;blocked&quot; Clear-all-data delete can still complete later when the other tab closes (C blind, E cal, A cal).</li>
+  <li>O-12 A millisecond window after confirm where another tab could read &quot;No model was named&quot; (E cal, E blind).</li>
+</ul>
+
+<h2 id="stub-ebt">7. Stub flags and test-design hits</h2>
+
+<p><strong>Stub flags</strong> &mdash; 7 mechanical matches, all intended: four queue-tail handlers (db.ts 57, 58, 102, 103), two close-error swallows in the new blocking() handlers (db.ts 134, 175), selfAssessmentSeeded&rsquo;s already-done Promise.resolve(). The namespace rule rates them Critical regardless of the allowlist. Recommend: dismiss; add the two new handlers and the seed check to .stub-allowlist (now in the tooling&rsquo;s format — the round-7 file was malformed and has been corrected, 311e986).</p>
+
+<p><strong>EBT</strong> &mdash; 37 mock-budget hits: IntakeFlow.cr6-fx2 (19, EBT-3, see CR8-20), IntakeFlow.cr7-fx1 (9), ModelLinkFailure.cr7 (3), PolicyEditor.cr7 (3), SettingsPanel.cr7 (1), cr7-audit-tabs (1), cr7-policy-update (1). Panels B checked the seams: fault injection or pass-through counting, none hides a contract break. Recommend: accept as labelled exceptions (label them in each file).</p>
+
+<h2 id="expert-panel">8. Expert panel</h2>
+
+<p><strong>A:</strong> Hunt &amp; Thomas, McConnell, Vanderkam. <strong>B:</strong> Keeling, Clements, Metz, Kleppmann, LANGSEC, Dodds. <strong>C:</strong> Fagan, Beck, McConnell, Martin, Beizer, Kaner. <strong>D:</strong> Brooks, McConnell, Wiegers, Vanderkam. <strong>E:</strong> Goetz, Lamport, React team, Kleppmann. <strong>G:</strong> Krug, Cooper, Redish, Pickering + W3C WCAG 2.1, Anderson / OWASP. <strong>F:</strong> GVM stub heuristic. <strong>Verification:</strong> 2 gvm-graph fresh-context checkers.</p>
+
+<h2 id="higher-score">9. What prevents a higher score</h2>
+<ul>
+  <li>Each new mechanism was fixed path by path; its edges (card edits, the confirmation hop, the next-steps list) were not in any test list — the fix plan named paths, not the property each path must keep.</li>
+  <li>No tail anchor for the audit chain: integrity wording must stay modest until one exists (structural).</li>
+  <li>Cross-tab behaviour still has no real-lock harness (jsdom has no navigator.locks); two-instance probes are the stand-in.</li>
+  <li>Spec twins: the parity script reads .md only; one html twin drifted again (CR8-15).</li>
+</ul>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main>
+
+</body>
+</html>

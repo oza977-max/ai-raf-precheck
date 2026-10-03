@@ -42,6 +42,7 @@ against.
 | 6 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 6 fresh-context verifiers (gvm-graph) | 6 | 17 | 23 | **Do not merge** (whole R16 range b1e146b..9348882, 15 commits / 51 production files. 31 C/I claims verified: 20 confirmed, 10 partly, 1 disproven (dropped). Hand-off "tampered" Critical PROVEN by test and bisected to code-review-005 fix round 1 (3e4f119) — live since 2026-09-28. Capture-recapture ≈54% coverage → second full round. Owner triage: fix all 6 C; fix 16 I + accept EBT-1 as a labelled exception; fix every Minor + the stub flag; fixes under full GVM build discipline; then R2) |
 | 7 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 3 fresh-context verifiers (gvm-graph) | 0 | 12 | 28 | **Do not merge** (second full round of the R16 range b1e146b..9ecdee6 after the CR6 fixes and ENG-ID; 49 commits / 56 production files. 14 distinct C/I claims verified: 12 confirmed, 2 downgraded to Minor, 0 disproven; 6 proved by probe tests in a scratch copy. Capture-recapture ≈65% (round 6: ≈54%). Owner triage: fix all 12 I and all 28 M; CR7-23 keep the listed country; stub flags dismissed (allowlist); EBT-2/3 accepted as labelled exceptions, EBT-4 dismissed) |
 | — | 2026-10-04 | build loop | CR7 fix round — /gvm-build Hard Gate 3, fresh Sonnet reviewer per pass per chunk; plan checked before code (24 problems in v1) | 0 | 7 | — | FX7-1 `[(1,3),(2,1),(3,1),(4,0)]`; FX7-2 `[(1,1),(2,0)]`; FX7-3 `[(1,0)]`; FX7-4 `[(1,1),(2,1),(3,0)]`; FX7-6 `[(1,0)]` — every loop converged; all Minors fixed; 3 merge-time defects caught by the main loop (cross-builder fixture clash, reused test ids, register snapshot on the raw policy). Owner asleep: product questions took the cautious option, listed in build/handovers/CR7-fixes.md for confirmation. Next: review of the fix round, then /gvm-test |
+| 8 | 2026-10-04 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt, valid allowlist) + EBT linter + 2 fresh-context verifiers | 0 | 5 | 15 | **Merge with caveats** (review of the CR7 fix round bdb5d50..ea01a1a, 80 commits / 34 production files. 7 code C/I claims verified: 4 Important, 3 downgraded to Minor, 0 disproven; most proved by probes running the real reducer/view-model/audit store; capture-recapture ≈52%. Owner triage: fix all 4 Important + 15 Minor in a CR8 fix round before /gvm-test; publish the CR7-12 docs draft with 2 outcome corrections; stub flags dismissed; 37 test spies accepted and to be labelled) |
 
 ## Round 1 measurements
 
@@ -993,6 +994,38 @@ not only at the end; R7 should be widened.
 
 **Test hardening.** Under 16 CPU burners the intake suite went from 3–11 failures to 0 in three
 consecutive loaded runs; the cost driver was character-by-character typing (3–4× faster with paste).
+
+## Code review round 8 (2026-10-04) — review of the CR7 fix round
+
+**Shape.** bdb5d50..ea01a1a, strict, dual review (12 Sonnet panels), Panel F with the corrected
+allowlist (the round-7 `.stub-allowlist` was in a format the tooling rejects — found while assembling
+this round's prompt, fixed 311e986), EBT linter, 2 fresh checkers. 0 Critical, 5 Important (one the
+known docs item), 15 Minor, 12 observations; 3 claims downgraded, 0 disproven.
+
+**Capture-recapture.** A 45%, B 67%, C 100%, D 40%, E 60%, G 67% — pooled ≈52%. Five panels
+independently found the same stale-assumption defect (CR8-01); three proved the same planner defect
+(CR8-06).
+
+**Anchor examples:**
+- Worst, logic (five panels): CR7-02 carried the "Not sure" assumptions through every re-entry, but the
+  card-edit action on the revisited screen never removes one — the fix created the stage on which the
+  false claim plays. A fix that carries state forward must also say what removes it.
+- Worst, honesty (G blind, proved): the audit-trail wording written overnight ("a later change would
+  show as a break") is false for deleting the newest entries; the register banner says "verified …
+  unbroken". The chain has no tail anchor; integrity wording must stay modest.
+- Best, verification: checker V8-1 downgraded the planner and tip-hint claims on their preconditions
+  while still proving the mechanism, and split CR8-04 by surface (register banner Important, confirm
+  notice Minor).
+
+**Recurring / promotions.**
+- BC-004 (RF-9) fired again: CR8-01 (card edit), CR8-03 (the confirmation hop), CR8-08 (correction from
+  the result). The build check named paths; its acceptance criterion now needs the converse — for every
+  field a fix carries forward, the actions that must REMOVE or RESET it.
+- BC-005 (RF-5) fired again: CR8-02 (next steps contradict the headline), CR8-04 (chain wording), O-1/O-2.
+  Lesson: test every surface that renders the same fact, not only the one the fix touched.
+- RF-2 (twin drift): CR8-15 — the parity script still reads .md only.
+- New candidate: "a fix's own residual list understates reach" — CR8-07 was stated as a rare identical-
+  count case; it is the normal Clear-all-data + re-seed tester flow.
 
 ## Parity Check History
 
