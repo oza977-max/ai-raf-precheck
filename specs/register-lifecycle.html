@@ -263,6 +263,7 @@ const aiSystemNode: GraphNode = {
   outbound_edges: ['edge-001', 'edge-003'],
   inbound_edges: ['edge-005']
 };</code></pre>
+    <p>The <code>use_case</code> metadata (register node type <code>use_case</code>, see the <code>.md</code> &sect;4.1) carries one optional field, <code>model_link_unrecorded?: boolean</code> (CR7-11, 2026-10-04). It is set to <code>true</code> only when the <code>uses_model</code> link write failed at first confirmation: the case is still saved and flagged, and the register then makes no "No model was named" claim for it (<code>verdict-audit.md</code> &sect;5.5). The hand-off schema is passthrough on <code>use_case</code> metadata, so the flag travels in a bundle (&sect;16).</p>
 
     <h3 id="edge-types">Edge Types</h3>
     <pre><code>type EdgeType = 'consumes' | 'produces' | 'controls' | 'trains_on' | 'feeds' | 'depends_on';
@@ -591,6 +592,7 @@ interface TierRouting {
 
     <h2 id="re-evaluation-trigger">Re-evaluation Trigger</h2>
     <p>When a system's properties or data flows change, the register must re-run tier scoring and lifecycle checks. Triggers include data mutations, time thresholds, and manual requests.</p>
+    <p>When the policy file is updated (<code>src/store/policy.ts</code> saves a new version), a <code>re_evaluation_queued</code> audit event is appended for every active use case (any use case in <code>approved</code>, <code>in_production</code>, or <code>pre_checked</code> stage) that is not already waiting for one (CR7, 2026-10-04: a case with a <code>re_evaluation_queued</code> event newer than its latest verdict is skipped and counted as already waiting; the function returns <code>{ queuedCount, alreadyPendingCount }</code>; see &sect;16). <strong>The lifecycle stage does NOT change on policy save</strong> &mdash; it moves to <code>pre_checked</code> only when a human triggers re-run or the re-evaluation produces a changed verdict. The register view shows a "Policy updated &mdash; re-evaluation required" badge on affected records. This follows the policy: re-evaluation is triggered for all active cases; triage (LC-5 &mdash; determining which are affected vs unaffected by the specific changed provisions) is a V2 feature. In V1, all active cases are queued, once each until their next verdict (CR7, 2026-10-04).</p>
 
     <pre><code>// Re-evaluation event handler
 interface ReEvalTrigger {
@@ -910,6 +912,11 @@ async function runSelfAssessment(
           <td>Badge: "Offline; changes will sync when connection restored"</td>
         </tr>
         <tr>
+          <td><code>onPolicyUpdated()</code> fails mid-loop (e.g. quota exceeded)</td>
+          <td>Partial re-evaluation queue written. CR7, 2026-10-04: saving the policy again is safe, because it queues only the cases not already waiting.</td>
+          <td>The policy screen says so (<code>policy-schema.md</code> &sect;10d)</td>
+        </tr>
+        <tr>
           <td>Concurrent edits (optimistic lock)</td>
           <td>Use versioning (updated_at). On conflict, show diff and let user choose keep/discard/merge.</td>
           <td>Conflict dialog with old/new/merged options</td>
@@ -1191,6 +1198,7 @@ async function runSelfAssessment(
 
     <h2 id="changelog-r3">17. Changelog</h2>
     <table><thead><tr><th>Date</th><th>Change</th></tr></thead><tbody>
+        <tr><td>2026-10-04</td><td>CR8-15 &mdash; the html twin brought into line with the .md for &sect;4.1 (<code>model_link_unrecorded</code>), &sect;8 (queue once until the next verdict) and &sect;12 (re-save is safe).</td></tr>
         <tr><td>2026-10-04</td><td>CR7 &mdash; wave 2 (TC-CR7-*, <code>test-cases-029.md</code>). &sect;10.2 gains the case name as a button with an accessible name (CR7-07); &sect;4.1 gains the optional <code>model_link_unrecorded</code> flag; &sect;16 gains the write order (node first, then the model link; a failed link saves and flags the case) and the register audit-line rules (CR7-11, CR7-10, CR7-30).</td></tr>
         <tr><td>2026-10-04</td><td>CR7 — code review 007 fixes, wave 1 (TC-CR7-*, <code>test-cases-029.md</code>). §8 and §12 amended and §16 extended: a policy update queues each active case once until its next verdict and reports how many were already waiting; the <code>ai_model</code> register snapshot resolves by exact id, else by family, on the expiry-applied policy; seeds run per case under the case lock and re-check inside it.</td></tr>
         <tr><td>2026-10-03</td><td>CR6 &mdash; &sect;15.1b amended: the reviewer's page shows a combined inheritance entry when no graph is available, names each correction's source, and words the lifecycle banner without the reserved verdict words (CR6-11, 10, 29).</td></tr>
