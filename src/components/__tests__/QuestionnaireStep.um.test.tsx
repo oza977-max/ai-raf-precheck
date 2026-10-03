@@ -9,6 +9,7 @@ import { loadPolicy } from '../../store/policy';
 import { evaluate } from '../../engine/evaluate';
 import { buildGraphFromForm } from '../../engine/build-graph-from-form';
 import type { DataFlowGraph, IntakeQuestion, PolicyFile } from '../../engine/types';
+import { checkPolicyReferences } from '../../store/policy-references';
 import type { Verdict } from '../../types/verdict';
 
 // UNSIGNED-MODEL (owner-approved wording 2026-10-03): a model the firm lists
@@ -107,5 +108,76 @@ describe('UNSIGNED-MODEL', () => {
   it('TC-UM-05: the new strings contain neither "approved" nor "rejected"', () => {
     expect(SUFFIX).not.toMatch(/approved|rejected/i);
     expect(owedNames('qwen3:4b').join(' ')).not.toMatch(/approved|rejected/i);
+  });
+});
+
+// Code review 007 — CR7-35: a listed model with no plain_name never shows its
+// raw id; a typed id the policy does not list is shown as written.
+function withoutPlainNames(): PolicyFile {
+  return {
+    ...policy,
+    approved_models: (policy.approved_models ?? []).map((m) => {
+      if (m.is_family) return m;
+      const { plain_name: _drop, ...rest } = m;
+      return rest as typeof m;
+    }),
+  };
+}
+
+describe('CR7-35 — unnamed models', () => {
+  it('TC-CR7-35a: the reference check warns (never errors) for each non-family model with no plain_name, naming it; the real policy gives none', () => {
+    const bad = checkPolicyReferences(withoutPlainNames());
+    expect(bad.errors.filter((e) => /plain_name/.test(e) && /qwen3:4b/.test(e))).toEqual([]);
+    expect(bad.warnings.some((w) => w.includes('qwen3:4b') && /plain_name/.test(w))).toBe(true);
+    expect(bad.warnings.some((w) => w.includes('VENDOR-LLM-v1') && /plain_name/.test(w))).toBe(true);
+    const real = checkPolicyReferences(policy);
+    expect(real.warnings.filter((w) => /approved_models|model .*plain_name/i.test(w))).toEqual([]);
+  });
+
+  it('TC-CR7-35b: with no plain_name, button, Recorded line and review row show "Model n" (list order), keeping the suffix when not accepted; never the raw id', () => {
+    const p = withoutPlainNames();
+    const models = p.approved_models!.filter((m) => !m.is_family);
+    const labelOf = (id: string) => {
+      const i = models.findIndex((m) => m.model_id === id);
+      return `Model ${i + 1}` + (models[i]!.is_approved === false ? SUFFIX : '');
+    };
+    const { rerender, unmount } = render(<QuestionnaireStep questions={[question]} answeredCount={0} onAnswer={vi.fn()} policy={p} />);
+    for (const m of models) {
+      expect(screen.getByRole('button', { name: labelOf(m.model_id) })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: new RegExp(m.model_id) })).not.toBeInTheDocument();
+    }
+    rerender(
+      <QuestionnaireStep
+        questions={[question, { ...question, id: 'Q2', field: 'data_class', answer_type: 'select' }]}
+        answeredCount={1}
+        lastAnswer={{ questionId: 'Q1', value: 'qwen3:4b' }}
+        onAnswer={vi.fn()}
+        policy={p}
+      />,
+    );
+    const rec = screen.getByText(/^recorded:/i).closest('p')!;
+    expect(rec).toHaveTextContent(labelOf('qwen3:4b'));
+    expect(rec).not.toHaveTextContent('qwen3');
+    unmount();
+    render(<GraphView graph={graphWith('qwen3:4b')} policy={p} />);
+    expect(screen.getByText(labelOf('qwen3:4b'))).toBeInTheDocument();
+    expect(screen.queryByText('qwen3:4b')).not.toBeInTheDocument();
+  });
+
+  it('TC-CR7-35c: a declared model id not on the list is shown as written on the Recorded line and the review row', () => {
+    const { rerender, unmount } = render(
+      <QuestionnaireStep
+        questions={[question, { ...question, id: 'Q2', field: 'data_class', answer_type: 'select' }]}
+        answeredCount={1}
+        lastAnswer={{ questionId: 'Q1', value: 'some-new-model-7' }}
+        onAnswer={vi.fn()}
+        policy={policy}
+      />,
+    );
+    expect(screen.getByText(/^recorded:/i).closest('p')).toHaveTextContent('some-new-model-7');
+    rerender(<div />);
+    unmount();
+    render(<GraphView graph={graphWith('some-new-model-7')} policy={policy} />);
+    expect(screen.getByText('some-new-model-7')).toBeInTheDocument();
   });
 });
