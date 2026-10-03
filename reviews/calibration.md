@@ -41,6 +41,7 @@ against.
 | — | 2026-10-03 | build loop | /gvm-build Hard Gate 3 — one fresh Sonnet reviewer per pass, per chunk (R16-F, R16-D2, R16-E); every finding re-checked by the main loop | 0 | 10 | 10 | R16-F `[(1,1),(2,1),(3,1),(4,1),(5,1)]` — stalled, stopped at pass 5, closed by owner decision after fixing pass 5; R16-D2 `[(1,0)]` — converged; R16-E `[(1,2),(2,1),(3,1),(4,1)]` — closed by owner decision after fixing pass 4. Every C/I fixed with a test shown failing without the fix. Two loops have no `(final, 0)` terminator — recorded as such, not padded; the multi-panel `/gvm-code-review` of the whole R16 range follows |
 | 6 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 6 fresh-context verifiers (gvm-graph) | 6 | 17 | 23 | **Do not merge** (whole R16 range b1e146b..9348882, 15 commits / 51 production files. 31 C/I claims verified: 20 confirmed, 10 partly, 1 disproven (dropped). Hand-off "tampered" Critical PROVEN by test and bisected to code-review-005 fix round 1 (3e4f119) — live since 2026-09-28. Capture-recapture ≈54% coverage → second full round. Owner triage: fix all 6 C; fix 16 I + accept EBT-1 as a labelled exception; fix every Minor + the stub flag; fixes under full GVM build discipline; then R2) |
 | 7 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 3 fresh-context verifiers (gvm-graph) | 0 | 12 | 28 | **Do not merge** (second full round of the R16 range b1e146b..9ecdee6 after the CR6 fixes and ENG-ID; 49 commits / 56 production files. 14 distinct C/I claims verified: 12 confirmed, 2 downgraded to Minor, 0 disproven; 6 proved by probe tests in a scratch copy. Capture-recapture ≈65% (round 6: ≈54%). Owner triage: fix all 12 I and all 28 M; CR7-23 keep the listed country; stub flags dismissed (allowlist); EBT-2/3 accepted as labelled exceptions, EBT-4 dismissed) |
+| — | 2026-10-04 | build loop | CR7 fix round — /gvm-build Hard Gate 3, fresh Sonnet reviewer per pass per chunk; plan checked before code (24 problems in v1) | 0 | 7 | — | FX7-1 `[(1,3),(2,1),(3,1),(4,0)]`; FX7-2 `[(1,1),(2,0)]`; FX7-3 `[(1,0)]`; FX7-4 `[(1,1),(2,1),(3,0)]`; FX7-6 `[(1,0)]` — every loop converged; all Minors fixed; 3 merge-time defects caught by the main loop (cross-builder fixture clash, reused test ids, register snapshot on the raw policy). Owner asleep: product questions took the cautious option, listed in build/handovers/CR7-fixes.md for confirmation. Next: review of the fix round, then /gvm-test |
 
 ## Round 1 measurements
 
@@ -970,6 +971,28 @@ Spec/docs (D) and contracts (B) are where twins barely overlap — the next roun
 **Lesson.** A fix whose own text lists several paths ("Back, and the EVALUATION_FAILED/CHANGE_ANSWER re-entries") was
 closed on the first path only, and its review pass checked the path it was shown. The fix plan's path list must become the
 test list.
+
+## CR7 fix round (2026-10-04) — build review loops
+
+**What the loops caught that the plan and builders did not.** FX7-1's four passes each found a real
+defect in the previous pass's FIX (countries locked → Back after a re-entered review → correction
+de-duplication skipping A→B after A→C → a synthesised correction writing null because the form rebuilds
+node ids). The invariant "the trail's net value equals the evaluated graph" was only stated in pass 2;
+once stated, passes 3 and 4 attacked it directly. Lesson: state the invariant a fix must preserve in the
+fix instruction, and have the reviewer try to break it.
+
+**BC-004 and BC-005 worked as build checks.** Both new checks fired inside the loops before merge: BC-004
+on every re-entry path (FX7-1 pass 1), BC-005 on "you can start" with no sign-off on record (FX7-4 pass 2)
+and "the policy was saved" when storage refused it (FX7-2 pass 2).
+
+**Merge-time defects (main loop).** Three issues appeared only when wave-1 branches met: FX7-3's new
+reference check refused FX7-2's new test policy; builders reused test ids (the parity R7 rule only
+matches upper-case ids, so it missed `TC-CR7-02a`-style reuse); the register's model snapshot used the
+raw policy while the engine used the expiry-applied one. Lesson: run the full ritual after EVERY merge,
+not only at the end; R7 should be widened.
+
+**Test hardening.** Under 16 CPU burners the intake suite went from 3–11 failures to 0 in three
+consecutive loaded runs; the cost driver was character-by-character typing (3–4× faster with paste).
 
 ## Parity Check History
 
