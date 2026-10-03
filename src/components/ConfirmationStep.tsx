@@ -85,11 +85,15 @@ export default function ConfirmationStep({
           a later correction is still possible (and is itself recorded),
           rather than implying this is the one and only chance. */}
       <p className="confirmation__notice">
+        {/* CR8-04 (P5): derived from what the chain check really does
+            (audit.ts verifyChain) — linkage and hashes of the events present.
+            Editing an earlier event breaks it; removing the newest events
+            leaves a shorter chain that still verifies. */}
         Check this carefully. When you confirm, your answers are recorded with the date and time. A
-        later change to the record would show as a break in it, but the record is kept in this
-        browser with no outside check, so it can&rsquo;t rule out someone with access to this computer
-        rewriting all of it. If something turns out to be wrong later, you can correct it — the
-        correction is recorded too.
+        later edit to an earlier entry would show as a break in the record; removing the newest
+        entries would not, and the record is kept in this browser with no outside check, so it
+        can&rsquo;t rule out someone with access to this computer rewriting all of it. If something
+        turns out to be wrong later, you can correct it — the correction is recorded too.
       </p>
 
       <UnderstoodSummary
