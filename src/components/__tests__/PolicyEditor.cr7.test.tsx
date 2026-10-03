@@ -177,6 +177,54 @@ describe('PolicyEditor save (CR7-06)', () => {
   });
 });
 
+describe('PolicyEditor save — counts and storage failure (CR7-06)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    packHolder.rewrite = undefined;
+  });
+
+  it('TC-CR7-06d: after a retry the saved message says how many were already waiting', async () => {
+    vi.mocked(policyStore.onPolicyUpdated).mockResolvedValueOnce({ queuedCount: 1, alreadyPendingCount: 2 });
+    const user = await pasteAndOpen('cr7-06d');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(await screen.findByText(/1 active use case queued for re-evaluation \(2 already waiting\)/i)).toBeInTheDocument();
+  });
+
+  it('TC-CR7-06d: with nothing already waiting the message has no "already waiting" part', async () => {
+    vi.mocked(policyStore.onPolicyUpdated).mockResolvedValueOnce({ queuedCount: 2, alreadyPendingCount: 0 });
+    const user = await pasteAndOpen('cr7-06d2');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(await screen.findByText(/policy saved/i)).toBeInTheDocument();
+    expect(screen.queryByText(/already waiting/i)).not.toBeInTheDocument();
+  });
+
+  it('TC-CR7-06e: if the browser refuses to store the policy, the alert does not claim it was saved or that saving again is safe', async () => {
+    const onSaved = vi.fn();
+    const user = userEvent.setup();
+    render(<PolicyEditor onSaved={onSaved} />);
+    await openYamlEditor(user);
+    const textarea = screen.getByLabelText(/policy yaml/i);
+    await user.clear(textarea);
+    await user.paste(MINIMAL_VALID_POLICY_YAML);
+    vi.mocked(policyStore.onPolicyUpdated).mockClear();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
+    try {
+      await user.click(screen.getByRole('button', { name: /^save$/i }));
+      const alert = await screen.findByText(/could not be saved to this browser/i);
+      expect(alert.closest('[role="alert"]')).not.toBeNull();
+      expect(alert.closest('[role="alert"]')!.textContent).not.toMatch(/was saved|saving again is safe/i);
+    } finally {
+      setItem.mockRestore();
+    }
+    expect(policyStore.onPolicyUpdated).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(screen.queryByText(/policy saved/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled();
+  });
+});
+
 describe('PolicyEditor pack sign-off wording (CR7-38)', () => {
   beforeEach(() => {
     localStorage.clear();

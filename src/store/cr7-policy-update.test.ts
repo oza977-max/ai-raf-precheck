@@ -49,7 +49,10 @@ describe('onPolicyUpdated dedupe (CR7-06c)', () => {
 
     await expect(onPolicyUpdated('cr7-06c-v1')).rejects.toThrow('disk full');
     vi.mocked(audit.append).mockImplementation(real);
-    await onPolicyUpdated('cr7-06c-v1'); // the retry
+    const retry = await onPolicyUpdated('cr7-06c-v1'); // the retry
+    // TC-CR7-06d: the count says what the retry did and what was already waiting
+    expect(retry.alreadyPendingCount).toBeGreaterThanOrEqual(1);
+    expect(retry.queuedCount).toBeGreaterThanOrEqual(1);
 
     for (const id of IDS) expect(await queued(id)).toHaveLength(1);
 
