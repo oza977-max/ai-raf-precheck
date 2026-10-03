@@ -3762,3 +3762,16 @@ details input {
 .understood-summary__change {
   margin: 0.8rem 0 1.2rem;
 }
+
+/* CR7-07: the case name is a button that looks like the old plain text. */
+.register-view__case-link {
+  all: unset;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.register-view__case-link:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}

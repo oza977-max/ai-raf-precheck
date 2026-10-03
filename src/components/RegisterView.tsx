@@ -750,7 +750,18 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
               onClick={() => onSelectRow(row.use_case_id)}
             >
               <td>
-                {row.label}
+                {/* CR7-07: the row click needs a mouse; the case name is a real
+                    button so keyboard and screen-reader users can open a case. */}
+                <button
+                  type="button"
+                  className="register-view__case-link"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectRow(row.use_case_id);
+                  }}
+                >
+                  {row.label}
+                </button>
                 {isSelfAssessment && (
                   <span className="register-view__self-assessment-tag">self-assessment</span>
                 )}
