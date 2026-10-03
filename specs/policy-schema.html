@@ -821,7 +821,7 @@ export type PackRuleEffect =
   | { type: 'required_control'; control_id: string; condition: Condition }
   | { type: 'hard_line'; condition: Condition; reason: string }
   | { type: 'required_review'; review_type: string; condition: Condition };</code></pre>
-  <p><strong>Amended 2026-10-03 (CR6-19).</strong> <code>ApprovedModel</code> gains an optional <code>plain_name?: string</code>, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read <code>plain_name ?? model_id</code>, so a raw id such as <code>VENDOR-LLM-v1</code> no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). The shipped entries <code>VENDOR-LLM-v1</code> and <code>qwen3:4b</code> still need an owner-supplied <code>plain_name</code> (policy text is owner-authored; owner action).</p>
+  <p><strong>Amended 2026-10-03 (CR6-19).</strong> <code>ApprovedModel</code> gains an optional <code>plain_name?: string</code>, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read <code>plain_name ?? model_id</code>, so a raw id such as <code>VENDOR-LLM-v1</code> no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). MODEL-NAMES (2026-10-03, policy v1.9): the owner supplied the two shipped names — <code>VENDOR-LLM-v1</code> is “A licensed AI model from an outside company (example)” (a demo placeholder, hence “(example)”) and <code>qwen3:4b</code> is “A small open model running on your own computer” (TC-MN-01..04).</p>
 
     <h2 id="validation-rules">Validation Rules (src/store/policy.ts)</h2>
 

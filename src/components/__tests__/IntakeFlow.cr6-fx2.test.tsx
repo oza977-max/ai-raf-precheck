@@ -70,7 +70,7 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     controls: [],
     downstream_reviews: [],
     conditions: { hypotheses: [] },
-    policy_version: '1.8',
+    policy_version: '1.9',
     pack_versions: {},
     applied_overrides: [],
     confidence_caveats: [],
@@ -468,11 +468,14 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
 
       release();
       await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
-      const readyText = announcement();
-
+      // CI fix (run on b6ad4cc): the verdict paints one render before the
+      // announcement effect (keyed on state.step) runs; a slower runner read
+      // it in between. Wait for the state, as TC-R16-F-71 does — this still
+      // fails if the announcement never changes.
       // The two must differ — this is the whole fix. Pending text should
       // read as in-progress; ready text should read as done.
-      expect(readyText).not.toBe(pendingText);
+      await waitFor(() => expect(announcement()).not.toBe(pendingText));
+      const readyText = announcement();
       expect(pendingText).toMatch(/working out|evaluating/i);
       expect(readyText).toMatch(/ready|result/i);
     } finally {

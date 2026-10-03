@@ -5,7 +5,7 @@
 > change.** Conditions are rendered in plain English; the YAML is the
 > authority.
 
-Policy version **1.8** · 5 hard lines · 6 tracks · 4 tiers · 23 invariants · 22 controls · 7 pack rules
+Policy version **1.9** · 5 hard lines · 6 tracks · 4 tiers · 23 invariants · 22 controls · 7 pack rules
 6 jurisdictions declared · 3 with an assessed pack (EU, UK, US) · 3 declared with no pack
 
 ---

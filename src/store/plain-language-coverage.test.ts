@@ -153,7 +153,7 @@ describe('R16 chunk A2 — plain-language policy text (CF-6 fit)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('TC-R16-A2-11: the shipped policy version is 1.8 (R16-W bumped it from 1.7 — text/evidence-scope only)', () => {
-    expect(policy.version).toBe('1.8');
+  it('TC-R16-A2-11: the shipped policy version is 1.9 (MODEL-NAMES bumped it from 1.8 — presentation text only)', () => {
+    expect(policy.version).toBe('1.9');
   });
 });
