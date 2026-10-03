@@ -77,6 +77,7 @@ const ASSUMPTION_SHORT_LABEL: Partial<Record<QuestionId, string>> = {
   '6a': 'how much weight what it produces carries',
   '7': 'who sees what it produces',
   '9': 'whether a mistake can be put right',
+  '11': 'which other countries’ rules apply',
   '12': 'whether it replaces something you use',
   '13': 'what it can get into by itself',
   '14': 'whether copies of it work together',
@@ -958,6 +959,8 @@ export const ASSUMPTION_TEXT: Record<string, string> = {
   '6a:not-sure': 'usually what a decision is based on — the stricter case',
   '7:not-sure': 'the public or the market — the widest audience. Change it if the real audience is narrower.',
   '9:not-sure': 'it can’t be undone — the strictest case. Change it if a mistake can actually be caught and fixed.',
+  '11:elsewhere-not-sure':
+    'only the countries you listed apply — you also ticked “somewhere else, or not sure”, and no other country’s rules were checked.',
   '12:not-sure': 'it replaces something you already use — the stricter case. Change it if nothing is being replaced.',
   '13:not-sure':
     'it can reach other systems with its own logins, can deploy changes, and runs on shared infrastructure — the strictest case',
