@@ -221,7 +221,10 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     expect(screen.getByText(/hard lines — no control set can fix/i)).toBeInTheDocument();
     // design-review round 4 (Panel A, NF-11): the bare "(PE-4)" citation was
     // dropped — the sentence already says the same thing in plain words.
-    expect(screen.getByText(/rejected immediately/i)).toBeInTheDocument();
+    // TC-CR6-29: this pinned "rejected immediately" — a reserved word on a
+    // rendered screen. The panel now says "ruled out straight away".
+    expect(screen.getByText(/ruled out straight away/i)).toBeInTheDocument();
+    expect(screen.queryByText(/rejected/i)).not.toBeInTheDocument();
     expect(screen.getByText('HL-001')).toBeInTheDocument();
     expect(screen.getByText('HL-006')).toBeInTheDocument();
   });

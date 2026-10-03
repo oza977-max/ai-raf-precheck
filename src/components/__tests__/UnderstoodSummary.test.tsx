@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UnderstoodSummary from '../UnderstoodSummary';
-import type { DataFlowGraph } from '../../engine/types';
+import type { DataFlowGraph, PolicyFile } from '../../engine/types';
 import type { Assumption } from '../plain-copy';
 
 // The collapsed "Show the details the rules use" grid legitimately repeats
@@ -272,8 +272,20 @@ describe('UnderstoodSummary — behaviour, decisions, scale', () => {
   });
 
   it('shows the countries involved when the graph names jurisdictions', () => {
-    render(<UnderstoodSummary graph={graph({ jurisdictions: ['UK'] })} onChangeAnswer={vi.fn()} />);
-    expect(sectionFor(/how widely it.s used, and where/i).textContent).toMatch(/UK/);
+    // CR6-23: this used to pin the BARE code "UK" with no policy supplied;
+    // a code is now shown as the policy's own country name.
+    const policy = {
+      jurisdictions: [{ code: 'UK', name: 'United Kingdom', pack_files: [] }],
+    } as unknown as PolicyFile;
+    render(<UnderstoodSummary graph={graph({ jurisdictions: ['UK'] })} policy={policy} onChangeAnswer={vi.fn()} />);
+    expect(sectionFor(/how widely it.s used, and where/i).textContent).toMatch(/United Kingdom/);
+  });
+
+  it('TC-CR6-23: a country code the policy does not list is never shown bare', () => {
+    render(<UnderstoodSummary graph={graph({ jurisdictions: ['XX'] })} onChangeAnswer={vi.fn()} />);
+    const text = sectionFor(/how widely it.s used, and where/i).textContent ?? '';
+    expect(text).not.toMatch(/\bXX\b/);
+    expect(text).toMatch(/another country/i);
   });
 
   it('states plainly whether it replaces something', () => {

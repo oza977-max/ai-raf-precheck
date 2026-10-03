@@ -324,7 +324,11 @@ describe('RegisterDetail (V1.2-A)', () => {
     await user.type(screen.getByLabelText(/your name/i), 'Priya Nair');
     await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
-    expect(await screen.findByText(/lifecycle advanced to/i)).toBeInTheDocument();
+    const banner = await screen.findByText(/lifecycle advanced to/i);
+    expect(banner).toBeInTheDocument();
+    // TC-CR6-29: the success banner never renders the reserved words.
+    expect(banner.textContent).not.toMatch(/approved|rejected/i);
+    expect(banner.textContent).toMatch(/cleared by 2LoD/i);
 
     const { getAll } = await import('../../store/audit');
     const events = await getAll(node.node_id);

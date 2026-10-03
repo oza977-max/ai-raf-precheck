@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { loadPacks } from '../store/packs';
 import { buildVerdictView } from './verdict-view-model';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
 import type { Verdict } from '../types/verdict';
@@ -537,14 +540,21 @@ describe('buildVerdictView — TC-R16-D1-07: covered vs. owed reviews (covers_re
     expect(view.owedReviews[0]!.ownerText).toBe('your AI risk team');
   });
 
-  it('TC-R16-D1-07f: a pack-rule-sourced review with no local plain-name data falls back to the generic pack-review line (§4.4)', () => {
+  it('TC-R16-D1-07f: a pack-rule-sourced review with no pack data available falls back to the generic pack-review line (§4.4); with the real pack loaded it uses the rule\'s own words (CR6-13)', () => {
     const verdict = makeVerdict({
       controls: [],
       downstream_reviews: ['Independent model validation (2LoD)'],
       downstream_review_sources: [{ review: 'Independent model validation (2LoD)', rule_id: 'SS1-UK-REV-01' }],
     });
+    // No packs passed (a caller that cannot supply them): the generic line.
     const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);
     expect(view.owedReviews[0]!.plainName).toBe('a regulatory review required for this kind of use — ask your AI risk team which');
+    // CR6-13: the REAL pack file (BC-003), not a hand-made fixture.
+    const yaml = readFileSync(resolve(__dirname, '../../policy/packs/ss1-23.yaml'), 'utf-8');
+    const { packs } = loadPacks({ 'policy/packs/ss1-23.yaml': yaml });
+    const withPacks = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined, { packs });
+    expect(withPacks.owedReviews[0]!.plainName).toBe("an independent check of the model by your firm's model validation team");
+    expect(withPacks.owedReviews[0]!.ownerText).toBe("your firm's model validation team");
   });
 
   it('TC-R16-D1-07g: a firm review without plain_name falls back to its formal name + pointer (§4.4)', () => {
@@ -1368,5 +1378,105 @@ describe('R16-D2 review pass 1 — "the" before a country name', () => {
     expect(reasonFor('SA')).toContain('adopted for the Kingdom of Saudi Arabia,');
     expect(reasonFor('IM')).toContain('adopted for the Isle of Man,');
     expect(reasonFor('SG')).toContain('adopted for Singapore,');
+  });
+});
+
+describe('buildVerdictView — CR6-18 / A-2: the "No" screen composes cleanly', () => {
+  it('TC-CR6-18: with an empty core reason, no sentence starts with ". " or ", " and none carries a doubled stop', () => {
+    const noStrayPunctuation = (s: string | undefined) => {
+      expect(s).toBeTruthy();
+      expect(s).not.toMatch(/^[\s.,;]/);
+      expect(s).not.toMatch(/\.\s*\./);
+      expect(s).not.toMatch(/^\s*,|,\s*,/);
+    };
+    // Firm hard line: no plain_reason and a blank description.
+    const hl = makePolicy({
+      hard_lines: [{ id: 'HL-E', description: '', condition: {}, reason: 'r', regulatory_basis: 'rb' }],
+    });
+    const hlView = buildVerdictView(makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-E' }), hl, undefined, undefined, undefined, undefined);
+    expect(hlView.no?.kind).toBe('hard_line');
+    noStrayPunctuation(hlView.no?.reason);
+
+    // Unsatisfiable invariant: blank description, no plain_reason.
+    const inv = makePolicy({
+      invariants: [{ id: 'INV-E', description: '', severity: 'High', condition: {}, resolves_with: [] } as never],
+    });
+    const invView = buildVerdictView(
+      makeVerdict({
+        status: 'rejected',
+        controls: [],
+        binding_constraint: 'INV-E',
+        explanation: {
+          tier_rationale: null,
+          track_rationale: null,
+          hard_lines_checked: 1,
+          invariants_checked: 1,
+          tripped_invariants: [{ id: 'INV-E', description: '', severity: 'High', required_controls: [], graph_path: 'x' }],
+          binding_reason: null,
+          binding_regulatory_basis: null,
+        },
+      }),
+      inv,
+      undefined, undefined, undefined, undefined,
+    );
+    expect(invView.no?.kind).toBe('unsatisfiable');
+    noStrayPunctuation(invView.no?.reason);
+
+    // Pack hard line whose plain_reason is only whitespace.
+    const pack = makePack({
+      jurisdiction: 'UK',
+      rules: [
+        {
+          id: 'PACK-HL-E',
+          title: 't',
+          source: { document: 'd', section: 's', text: 't' },
+          effect: { type: 'hard_line', reason: 'r', plain_reason: '   ' },
+          condition: { autonomy_level: { gte: 4 } },
+          basis: 'verbatim',
+        },
+      ],
+    });
+    const packView = buildVerdictView(
+      makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'PACK-HL-E' }),
+      makePolicy(), undefined, undefined, undefined, undefined, { packs: [pack] },
+    );
+    expect(packView.no?.kind).toBe('pack_hard_line');
+    noStrayPunctuation(packView.no?.reason);
+  });
+
+  it('TC-CR6-A2: plain_change placeholders are filled like plain_reason, for a firm and a pack hard line', () => {
+    const policy = makePolicy({
+      hard_lines: [
+        {
+          id: 'HL-P',
+          description: 'd',
+          condition: {},
+          reason: 'r',
+          regulatory_basis: 'rb',
+          plain_reason: 'it sends things to {destination}',
+          plain_change: 'Stop sending things to {destination}, or keep it away from {audience}',
+        },
+      ],
+    });
+    const view = buildVerdictView(makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'HL-P' }), policy, undefined, undefined, undefined, undefined);
+    expect(view.no?.change).not.toMatch(/[{}]/);
+    const pack = makePack({
+      jurisdiction: 'UK',
+      rules: [
+        {
+          id: 'PACK-HL-P',
+          title: 't',
+          source: { document: 'd', section: 's', text: 't' },
+          effect: { type: 'hard_line', reason: 'r', plain_reason: 'x', plain_change: 'Keep it away from {audience}' },
+          condition: { autonomy_level: { gte: 4 } },
+          basis: 'verbatim',
+        },
+      ],
+    });
+    const packView = buildVerdictView(
+      makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'PACK-HL-P' }),
+      makePolicy(), undefined, undefined, undefined, undefined, { packs: [pack] },
+    );
+    expect(packView.no?.change).not.toMatch(/[{}]/);
   });
 });
