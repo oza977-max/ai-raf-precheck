@@ -314,7 +314,7 @@ describe('Confirm guard across intakes (found by the R16-W walkthrough)', () => 
     // FX7-6: this test is two complete form-to-verdict flows in one case
     // (the point of it); on a heavily loaded machine that stays past 5 s even
     // after the cheaper fill, so it gets 15 s — the only per-test timeout added here.
-  }, 15000);
+  }, SLOW_FLOW_MS);
 });
 
 describe('R16-W W-3 (D-69): similar decided cases on the form-path confirmation screen', () => {

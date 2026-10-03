@@ -198,12 +198,21 @@ type User = ReturnType<typeof userEvent.setup>;
 // with the fast fill it does not. So: wait for the seeding to settle, then arm
 // the one-shot failure. (A test-side ordering fix, not a product race — the
 // seeds and the user's case never share state.)
+// Budget: up to 10 s, which is inside the 30 s/60 s limit of every test that
+// calls this, so a seeding stall shows as this wait's own message, never as a
+// bare test timeout. Every caller runs on the default (valid) policy; the seed
+// returns early only on a policy reference error (seeds/aigate-self-assessment
+// runSeed), which none of these tests sets up — an invalid policy would show
+// here as "the register never filled", with the message below.
 async function failNextEvaluation() {
   await waitFor(
     async () => {
       const ids = (await getUseCases('all')).map((u) => u.use_case_id);
-      expect(ids.filter((id) => id.startsWith(IB_PREFIX)).length).toBe(ibCaseCount());
-      expect(ids).toContain(AIGATE_USE_CASE_ID);
+      expect(
+        ids.filter((id) => id.startsWith(IB_PREFIX)).length,
+        'demo-register seeding did not finish (an invalid policy makes the seed return early)',
+      ).toBe(ibCaseCount());
+      expect(ids, 'self-assessment seeding did not finish').toContain(AIGATE_USE_CASE_ID);
     },
     { timeout: 10000 },
   );

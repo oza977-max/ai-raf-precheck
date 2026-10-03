@@ -5,7 +5,7 @@ import App from '../../App';
 import { getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
 import type { GraphCorrection } from '../../engine/types';
-import { fillText, DUP_CHECK_WAIT } from './fillText';
+import { fillText, DUP_CHECK_WAIT, SLOW_FLOW_MS } from './fillText';
 
 // R16-D2 §5 (D-82, DR7-17/DR7-22). Integration-level coverage for
 // correcting a form-built verdict THROUGH THE FORM: the correction stays
@@ -96,7 +96,7 @@ async function confirmAndReachVerdict(user: ReturnType<typeof userEvent.setup>) 
 
 describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR7-17/DR7-22)', () => {
   // FX7-6: each test here is two complete form-to-verdict flows (the original
-  // and its correction) — the point of the file — so each gets 15 s instead
+  // and its correction) — the point of the file — so each gets SLOW_FLOW_MS (15 s) instead
   // of the 5 s default; a loaded machine ran them past 5 s even after the
   // cheaper fill. The same reason applies to the next three tests.
   it('TC-R16-D2-48: "Correct" re-opens the FORM filled in, with the correction note, writes form-sourced graph_corrected events against the original case, then verdict_corrected — never a second use_case_created', async () => {
@@ -172,7 +172,7 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
       expect(verdictCorrected!.payload.corrections_count).toBe(2);
       expect(verdictCorrected!.payload.new_verdict.graph_version).toBe(corrections[0]!.graph_version_after);
     }
-  }, 15000);
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-49 (F2C-6): resubmitting the form with NOTHING changed writes verdict_corrected with zero graph_corrected events', async () => {
     const user = userEvent.setup({ delay: null });
@@ -195,7 +195,7 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     if (verdictCorrected!.payload.type === 'verdict_corrected') {
       expect(verdictCorrected!.payload.corrections_count).toBe(0);
     }
-  }, 15000);
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-50: "Change an answer" during a form correction keeps the correction — the eventual re-confirm still writes verdict_corrected, never refused as "already has a result"', async () => {
     const user = userEvent.setup({ delay: null });
@@ -222,7 +222,7 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     expect(events.filter((e) => e.payload.type === 'verdict_corrected')).toHaveLength(1);
     // Never refused: the F-1 alert never appears.
     expect(screen.queryByText(/already has a result/i)).not.toBeInTheDocument();
-  }, 15000);
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-51: a double-click on "Confirm and evaluate" during a form correction writes exactly one verdict_corrected', async () => {
     const user = userEvent.setup({ delay: null });
@@ -246,5 +246,5 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
 
     const events = await getAll(useCase.use_case_id);
     expect(events.filter((e) => e.payload.type === 'verdict_corrected')).toHaveLength(1);
-  }, 15000);
+  }, SLOW_FLOW_MS);
 });

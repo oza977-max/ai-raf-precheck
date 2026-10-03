@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GraphView from '../GraphView';
 import IntakeFlow from '../IntakeFlow';
+import { fillText, DUP_CHECK_WAIT, SLOW_FLOW_MS } from './fillText';
 
 // Round 9 — the review screen recomposed (requirements-009, §19,
 // ADR-IF-R9-1): aggregation and priority, never deletion.
@@ -49,9 +50,9 @@ const DESCRIPTION = 'Analysts ask questions about internal credit risk data, rep
 
 async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   render(<IntakeFlow />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByText(/check what we read from your description/i);
 }
 
@@ -64,7 +65,7 @@ describe('R9-SC-1 — the review checklist', () => {
   });
 
   it('TC-R9-SC-1-01: lists exactly the outstanding obligations, and completing one removes its line', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachReview(user);
     const list = screen.getByText(/things? to check before you continue/i).parentElement!;
     // p1 is guessed (fix line), i1 and o1 confirmable, jurisdictions pending.
@@ -78,7 +79,7 @@ describe('R9-SC-1 — the review checklist', () => {
   });
 
   it('TC-R9-SC-1-02: zero obligations renders the done state', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachReview(user);
     for (;;) {
       const b = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })[0];
@@ -129,7 +130,7 @@ describe('R9-SC-3/-4 — one alarm per card, visible next step', () => {
   });
 
   it('TC-R9-SC-4-01: a guessed card offers "Fix the details we couldn’t tell" (opens the editor) and still no plain confirm', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <GraphView graph={guessedGraph()} editable onCorrect={vi.fn()} unconfirmedNodeIds={[]} onConfirmNode={vi.fn()} guessedFields={{ p1: ['model_type'] }} />,
     );
@@ -148,7 +149,7 @@ describe('R9-SC-4/-5 — actions before information; similar cases collapsed', (
   });
 
   it('TC-R9-SC-4-02: jurisdictions renders before similar cases in DOM order', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachReview(user);
     const jur = document.getElementById('jurisdictions-panel');
     expect(jur).not.toBeNull();
@@ -172,11 +173,11 @@ describe('form path — the trail records the birth event', () => {
   it('writes use_case_created with the typed description and structured_form method', async () => {
     localStorage.clear();
     sessionStorage.clear(); // no model configured → form path
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<IntakeFlow />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'A tool that sorts internal mail queues.');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A tool that sorts internal mail queues.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     // On the guided form now; fill the minimum and submit. R16-B: the
     // field-by-field form this used to drive (by label, with an sf-* id
     // fallback) is replaced by the situational question set — adapted to
@@ -185,8 +186,8 @@ describe('form path — the trail records the birth event', () => {
     // scale), same assertion below (use_case_created, structured_form).
     await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
     const { getAllForExport } = await import('../../store/audit');
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mail queue sorter');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Sorts internal mail queues.');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'Mail queue sorter');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Sorts internal mail queues.');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(screen.getByRole('radio', { name: /gives a score, ranking, flag, category or forecast/i }));
     await user.click(screen.getByRole('radio', { name: /no, or i don.t know/i }));
@@ -213,5 +214,5 @@ describe('form path — the trail records the birth event', () => {
     );
     expect(mine).toBeDefined();
     expect(mine!.payload.type === 'use_case_created' && mine!.payload.intake_method).toBe('structured_form');
-  });
+  }, SLOW_FLOW_MS);
 });
