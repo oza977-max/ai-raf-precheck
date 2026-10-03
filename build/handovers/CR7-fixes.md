@@ -74,6 +74,12 @@ until a pass found none.
   else" listed back; honest confirm notice; policy Save double-click → 19 events for 19 cases, re-save →
   "0 queued (19 already waiting)"; sign-off line "none signed off"; Clear all data → welcome back, drafts
   and marker gone, policy kept, register rebuilt; no console errors.
+- Live walkthrough (wave 2): register case opened by keyboard (Enter on the case-name button; accessible
+  name "{label} — {tier} tier, {stage}"); a High case awaiting sign-off reads "Not yet… once your AI
+  risk team has signed it off"; signed off as 2LoD (name required first) → "your AI risk team has signed
+  it off" in the headline, who-signs-off line and stage note, no "self-service"/"no sign-off needed";
+  a genuine Low self-service case still reads "nobody"; "No model was named" shown for a seed case
+  with no model; About shows "5 hard lines, 23 appetite rules"; no console errors.
 
 ## Decisions taken overnight (cautious option) — owner to confirm
 
