@@ -1,0 +1,304 @@
+# Counterpoise — Test Cases, Round CR7 (code review 007 fixes) — wave 1
+
+*Written 2026-10-04. Code review 007 found that several screens and stores did
+less than the specs said, or said more than they did: a saved draft restored
+into a screen that could not finish, "Back" lost what the questions had
+changed, the audit trail could fork between two tabs, a policy with a dangling
+reference was saved and then stopped every evaluation, and a few messages told
+the person something the code could not back up. This is the first wave of
+fixes. The amended spec sections are marked "(CR7, 2026-10-04)" in
+`specs/intake-flow`, `specs/verdict-audit`, `specs/register-lifecycle`,
+`specs/policy-schema` and `specs/cross-cutting`. The CR7-35 rows (a model with
+no plain name) are in `test-cases-028` — another session wrote them.*
+
+Test files: `src/components/__tests__/IntakeFlow.cr7-fx1.test.tsx`,
+`src/components/__tests__/PolicyEditor.cr7.test.tsx`,
+`src/components/__tests__/SettingsPanel.cr7.test.tsx`,
+`src/components/__tests__/StructuredForm.test.tsx`,
+`src/components/__tests__/ConfirmationStep.test.tsx`,
+`src/components/intake-state.test.ts`, `src/components/intake-draft.test.ts`,
+`src/engine/plain-intake.test.ts`, `src/llm/graph-extractor.test.ts`,
+`src/llm/reasoning-trace.test.ts`, `src/seeds/cr7-seeds.test.ts`,
+`src/store/cr7-audit-tabs.test.ts`, `src/store/cr7-policy-update.test.ts`,
+`src/store/cr7-reset.test.ts`, `src/store/policy-references.test.ts`,
+`src/store/register.model-nodes.test.ts`.
+
+## §1 — Restoring a saved draft at the extraction step restarts the extraction once
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-01a-1 | The extractor is called exactly once and the review screen appears — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-01a-2 | Still exactly one call when mounted twice — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-01b | Restored + the extraction fails -> the Try again panel shows — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-01c | A fresh, non-restored description path calls the extractor exactly once — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §2 — Re-entries into the review screen keep the "Not sure" assumptions
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-02-1 | STEP_BACK from the questionnaire carries NO assumptions — they are re-asked (CR7-03) — `intake-state.test.ts` |
+| TC-CR7-02-2 | A revisited review screen stays marked as revisited across a trip into the questions and Back (including a contradiction round trip) — `intake-state.test.ts` |
+| TC-CR7-02-3 | A first reading of the review screen is NOT marked as revisited, before or after a trip into the questions — `intake-state.test.ts` |
+| TC-CR7-02a-1 | Change an answer -> Continue -> Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02c | Change an answer -> Continue -> Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02a-2 | CHANGE_ANSWER on the description path carries the assumptions and the frozen uncertain list, marks the countries as already checked, and flags the re-entry — `intake-state.test.ts` |
+| TC-CR7-02b-1 | After a failed evaluation the re-entered review keeps the assumption through to the second graph_confirmed — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02b-2 | A failed evaluation hands the assumptions and uncertain list back to the review screen too — `intake-state.test.ts` |
+| TC-CR7-02c-edit | After Change an answer a country can be ticked; the graph changes, a jurisdictions correction is recorded and reaches the trail on Confirm — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02d-1 | Correcting from the result keeps the assumption in verdict_corrected — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02d-2 | CORRECT_VERDICT carries what the last confirmation was based on — `intake-state.test.ts` |
+| TC-CR7-02e-1 | "Not sure" again for a question that already has an assumption leaves exactly one — `intake-state.test.ts` |
+| TC-CR7-02e-2 | A definite answer for a question that had an assumption removes it (and leaves the others) — `intake-state.test.ts` |
+| TC-CR7-02f-1 | Undo after a replaced assumption restores the previous array — `intake-state.test.ts` |
+| TC-CR7-02f-2 | Undo of a first "Not sure" removes it again — `intake-state.test.ts` |
+| TC-CR7-02h-1 | Not sure -> confirmation -> Change an answer -> Continue (questions) -> Back -> Continue -> Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round) — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02h-2 | The same through a correction from the result — verdict_corrected keeps the earlier "Not sure" — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-02h-3 | Change an answer -> Continue (questions) -> a new "Not sure" -> Back: the earlier round's assumption is back, the new one is re-asked — `intake-state.test.ts` |
+| TC-CR7-02h-4 | The same round trip from a correction pass — `intake-state.test.ts` |
+
+## §3 — Back from the questions restores everything the questions changed
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-03-1 | QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list — `intake-state.test.ts` |
+| TC-CR7-03-2 | After an answer that trims the field and changes the graph, Back restores all three so the field is asked again — `intake-state.test.ts` |
+| TC-CR7-03-3 | The snapshot survives Undo, a contradiction round trip, and a second answer — `intake-state.test.ts` |
+| TC-CR7-03-4 | A questionnaire saved before this change (no snapshot) steps back exactly as it did before — `intake-state.test.ts` |
+| TC-CR7-03a | "Not sure" -> Back -> Continue asks the field again, the result lists the assumption once, and no duplicate graph_corrected events are written — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03e | "Not sure" -> Back -> Continue asks the field again, the result lists the assumption once, and no duplicate graph_corrected events are written — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03b | A vendor guess -> "Not on this list" -> Back -> Continue asks the supplier again, and the AI guess never reaches the result — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03c | A declared-model guess -> "Not on the list" -> Back -> Continue asks the model again — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03d | Decision type "Something else" -> Back -> Continue asks it again — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03f-1 | Failed evaluation -> questions -> Back: Back from the review is still refused, and the case id is unchanged — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-03f-2 | A review re-entered after a failed evaluation is still "after a failed evaluation" after a trip into the questions and Back, and Back from it is refused — `intake-state.test.ts` |
+| TC-CR7-03f-3 | A first reading is not marked as after a failed evaluation — `intake-state.test.ts` |
+
+## §4 — The optional model name is asked and read by one rule
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-04a | A model typed under "outside assistant", then Q3 switched to "built in your firm", never reaches the result or the register — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-04b | Q3ShowsModelQuestion is true for outside-assistant, supplier-feature, specialist-product only — `plain-intake.test.ts` |
+| TC-CR7-04c | A stale 3model left behind after Q3 changed to firm-built names no model — `plain-intake.test.ts` |
+| TC-CR7-04d | The same 3model is read when Q3 is a supplier option — `plain-intake.test.ts` |
+| TC-CR7-04e | For every Q3 option, the model question is on screen exactly when the engine would read it — `StructuredForm.test.tsx` |
+
+## §5 — Two tabs appending to the audit trail extend one chain
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-05 | Two tabs appending in turn do not fork the chain — `cr7-audit-tabs.test.ts` |
+| TC-CR7-05b | An append whose database handle is closed mid-flight reopens and succeeds — `cr7-audit-tabs.test.ts` |
+
+## §6 — Saving the policy is single-flight and says what happened
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-06a-1 | Two rapid clicks on Save queue each active case once (the real trail) — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-06a-2 | Save is disabled while the save is running — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-06b | A failing onPolicyUpdated shows a plain message, not a silent unhandled rejection — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-06c | A retry after a part-way failure queues each case exactly once, and a later save after a new verdict queues again — `cr7-policy-update.test.ts` |
+| TC-CR7-06d-1 | After a retry the saved message says how many were already waiting — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-06d-2 | With nothing already waiting the message has no "already waiting" part — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-06e | If the browser refuses to store the policy, the alert does not claim it was saved or that saving again is safe — `PolicyEditor.cr7.test.tsx` |
+
+## §10 — The adopted screen names the matched case only to the 2LoD view
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-10a | A 1LoD view that adopts never has the matched label in the DOM — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-10b | A 2LoD view still sees the matched label — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §13 — A policy problem no longer costs the person their answers
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-13 | An invalid policy -> Continue -> remount: the answers are still there — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §15 — Clear all data clears the drafts and the markers
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-15-1 | Clears the saved intake drafts (all three keys) and the hand-off marker, then reloads — `SettingsPanel.cr7.test.tsx` |
+| TC-CR7-15-2 | The confirmation says exactly what is cleared and what is kept (BC-005) — `SettingsPanel.cr7.test.tsx` |
+| TC-CR7-15-3 | An incomplete reset clears the drafts too, and its message says exactly what was and was not cleared — `SettingsPanel.cr7.test.tsx` |
+| TC-CR7-15-4 | Clears the hand-off sync marker and the welcome flag, keeps the policy and model settings — `cr7-reset.test.ts` |
+
+## §16 — A finished confirm or adopt clears only its own draft
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-16-1 | Clears when the stored draft carries this useCaseId — `intake-draft.test.ts` |
+| TC-CR7-16-2 | Clears when there is no stored draft (nothing to protect) — `intake-draft.test.ts` |
+| TC-CR7-16-3 | Leaves a draft with a different useCaseId — `intake-draft.test.ts` |
+| TC-CR7-16-4 | Leaves a draft with no useCaseId at all (a case just started) — `intake-draft.test.ts` |
+| TC-CR7-16-5 | An adopt (which mints its id inside the handler) also clears the duplicate-check draft it came from, and only that one — `intake-draft.test.ts` |
+| TC-CR7-16a | A confirm that finishes after the person left leaves a different case's draft alone — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-16b-1 | An adopt that finishes after the person left leaves a different case's draft alone — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-16b-2 | A finished adopt still clears its own saved draft — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §17 — A failing first-run seed does not block the duplicate check
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-17 | With the seed wait rejecting, a draft restored at the duplicate check still resolves it — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §18 — Seeds run once per case under the case lock
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-18-1 | Two module instances seeding the sample register at once write one set of events — `cr7-seeds.test.ts` |
+| TC-CR7-18-2 | Two module instances seeding the investment-bank portfolio at once write one set of events — `cr7-seeds.test.ts` |
+| TC-CR7-18-3 | Two module instances seeding the self-assessment at once write it once — `cr7-seeds.test.ts` |
+
+## §19 — The reasoning-trace call cannot hold the case lock
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-19 | The SDK call carries a 15 s timeout and no retries, so a stalled call cannot hold the case lock — `reasoning-trace.test.ts` |
+
+## §20 — A reset and a later write cope with each other
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-20a | Reset succeeds when this tab's own database connections are open — `cr7-reset.test.ts` |
+| TC-CR7-20b | A write after another instance's reset reopens the database instead of throwing — `cr7-reset.test.ts` |
+
+## §21 — Correction writes are planned against the trail
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-21a | A form-path correction -> failed evaluation -> retry writes one set of graph_corrected events — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21b | A description-path correction -> failed evaluation -> retry puts the correction on the trail exactly once — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21c-1 | A->B (failed), B->A, then A->B again: the third is NOT treated as already there — `intake-state.test.ts` |
+| TC-CR7-21c-2 | The same change retried with a fresh id IS skipped when nothing reversed it — `intake-state.test.ts` |
+| TC-CR7-21d-1 | A description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21d-2 | SinceLastResult counts the events in the window plus the ones about to be written, and ignores those before the last result — `intake-state.test.ts` |
+| TC-CR7-21e-1 | A->B, A->C, then A->B again: the third is written (the trail would otherwise end at C while the graph says B) — `intake-state.test.ts` |
+| TC-CR7-21e-2 | A pending correction equal to the latest written value for its field is skipped — `intake-state.test.ts` |
+| TC-CR7-21f-1 | A form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21f-2 | A->B was written, the field is back at A and nothing is pending: one B->A correction is written, same source, and the count includes it — `intake-state.test.ts` |
+| TC-CR7-21f-3 | When the trail already ends at the graph value nothing is synthesised — `intake-state.test.ts` |
+| TC-CR7-21g | List values compare as sets — a different order is the same correction — `intake-state.test.ts` |
+| TC-CR7-21h | A data class ticked, evaluation fails, it is unticked and resubmitted: the net trail value equals the original set — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21i-1 | A node the resolver cannot find writes NOTHING for that key — never a null on the trail — `intake-state.test.ts` |
+| TC-CR7-21i-2 | The form path resolver maps the ORIGINAL ids by role, and the inputs sentinel to the sorted distinct data classes — `intake-state.test.ts` |
+| TC-CR7-21i-3 | The resolver returns list values sorted, so a synthesised correction is stored the way formCorrections stores them — `intake-state.test.ts` |
+| TC-CR7-21j | A country ticked (and "somewhere else" unticked), evaluation fails, then put back: a reverse graph\|jurisdictions correction is on the trail — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-21k | An output-node answer (how widely it is used) changed, evaluation fails, then put back: the reverse correction is on the trail — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §22 — The confirmation count matches the trail
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-22 | The confirmation says "N corrections made … preserved in the audit trail" — and the trail holds exactly N graph_corrected events — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §23 — Countries panel: a listed country is kept beside "Somewhere else, or not sure"
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-23a | UK + elsewhere keeps UK and lists the unchecked country as an assumption — `plain-intake.test.ts` |
+| TC-CR7-23b | "Somewhere else, or not sure" on its own gives an empty jurisdictions list and no assumption — `plain-intake.test.ts` |
+| TC-CR7-23c | With the shipped policy and packs the UK pack applies and the result is not provisional for want of a regulatory basis — `plain-intake.test.ts` |
+
+## §24 — Back and Start over clear the previous screen's error line
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-24-1 | Back, then forward again, shows no stale gate error — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-24-2 | Start over, then a fresh case to the review screen, shows no stale gate error — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §26 — Placeholders outside the two filled fields warn
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-26 | A placeholder in a field that is never filled warns that it prints literally, and never claims it is recognised — `policy-references.test.ts` |
+| TC-CR7-26b | In plain_reason and plain_change the message still names the recognised placeholders; they themselves do not warn — `policy-references.test.ts` |
+
+## §27 — New error-level references in the policy
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-27a | Errors — controls[].resolves names an id that is neither an invariant nor a hard line — `policy-references.test.ts` |
+| TC-CR7-27b | Errors — a platform or vendor satisfies_controls and coupled_clusters entry names a control that does not exist — `policy-references.test.ts` |
+| TC-CR7-27c | Errors — a pack required_control names a control the policy does not have (only when packs are loaded) — `policy-references.test.ts` |
+| TC-CR7-27d | The shipped policy and packs have none of these reference errors — `policy-references.test.ts` |
+
+## §28 — Older saved question drafts restore as the review screen
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-28-1 | The review screen shows with every card to re-check, the countries unchecked, and the plain notice — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-28-2 | A draft the current build saved shows no such notice — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-28-3 | The notice is gone once the person leaves the review screen — `IntakeFlow.cr7-fx1.test.tsx` |
+| TC-CR7-28-4 | A bare (version 1) questions or contradiction-review draft on the description path restores as graph_review with every card to re-check, the countries unchecked, and nothing invented — `intake-draft.test.ts` |
+| TC-CR7-28-5 | LoadDraftInfo says the draft was migrated, so the screen can say so — `intake-draft.test.ts` |
+| TC-CR7-28-6 | A form-path questionnaire (plainAnswers present) is NOT migrated — `intake-draft.test.ts` |
+| TC-CR7-28-7 | A draft saved by the current build (an envelope at the current version) is never migrated — `intake-draft.test.ts` |
+| TC-CR7-28-8 | The migrated review keeps the assumptions and the frozen uncertain list the old draft held — `intake-draft.test.ts` |
+| TC-CR7-28b-1 | The current draft version is 3, and a version-2 description-path questions draft with no back snapshot is migrated like a version-1 one — `intake-draft.test.ts` |
+| TC-CR7-28b-2 | A version-2 draft that is on the form path, or that already has its back snapshot, is not migrated — `intake-draft.test.ts` |
+
+## §30 — A recorded correction never carries an undefined value
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-30a | A questionnaire answer for a field that had no value is recorded with original_value null, not undefined — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §31 — A listed decision type wins over the free-text one
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-31 | Decision_type_other is dropped when decision_type is set — `graph-extractor.test.ts` |
+| TC-CR7-31b | The tool schema tells the model to use decision_type_other only when no listed type fits — `graph-extractor.test.ts` |
+
+## §37 — The submitter-facing policy problem is one plain sentence
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-37 | An invalid policy on the form path shows no field path in the alert, and says who can fix it — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §38 — The policy screen's per-country sign-off line
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-38a | No pack signed off says none — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-38b | One of two EU packs signed off says N of M, and never "not yet signed off" or "all" — `PolicyEditor.cr7.test.tsx` |
+| TC-CR7-38c | Every EU pack signed off says all signed off, and never claims "not yet signed off" — `PolicyEditor.cr7.test.tsx` |
+
+## §41 — The register snapshots a model the way the engine resolved it
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-41a | A model that belongs to a listed family is snapshotted with the family vendor and acceptance — `register.model-nodes.test.ts` |
+| TC-CR7-41b | An exact entry still resolves to itself, and an id no entry covers stays unknown / not accepted — `register.model-nodes.test.ts` |
+| TC-CR7-41c | A typed name the family would accept becomes declared_model_id exactly as typed — `plain-intake.test.ts` |
+| TC-CR7-41d | A model in a family past its reattest_by is snapshotted is_approved false, as the engine judged it — `IntakeFlow.cr7-fx1.test.tsx` |
+
+## §O8 — Confirmation step wording
+
+| ID | Asserts |
+|---|---|
+| TC-CR7-O8 | Does not claim the record "can't be edited"; says a change would show, and that it is kept in this browser with no outside check — `ConfirmationStep.test.tsx` |
+
+## Amended existing cases
+
+These cases keep their ids. Their assertions changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.
+
+| ID | What changed |
+|---|---|
+| (V2-A "D2", no TC id) | Was: a pack with no signed-off rule reads "not yet signed off". Now: it reads "none signed off" (the line is "none / N of M / all signed off", counted per rule) — `PolicyEditor.test.tsx` |
+| TC-CR6-03c | Was: Back from the questions restores the trimmed guessed list. Now: Back restores the untrimmed list from the snapshot, so every guessed question is asked again — `intake-state.test.ts` |
+| TC-CR6-02c | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-02e | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-02g | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-02h | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-02i | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-02k | Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-17a | Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now…"); the detail goes to the console only — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-17b | Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now…"); the detail goes to the console only — `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-R16-F-67 | Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now…"); the detail goes to the console only — `IntakeFlow.r16f.test.tsx` |
+| TC-CR6-04a | Was: driven from the description path. Now: driven through the form-path questionnaire, which is where the behaviour lives — `intake-state.test.ts`, `IntakeFlow.cr6-fx2.test.tsx` |
+| TC-CR6-04b | Was: driven from the description path. Now: driven through the form-path questionnaire — `intake-draft.test.ts` |
+| TC-CR6-15a | Was: asserted straight after the confirm. Now: waits for the draft clear, because the clear is conditional on the draft still being this case's — `IntakeFlow.cr6-fx2.test.tsx` |
+| (plain-intake, "even alongside other ticks") | Was: "Somewhere else, or not sure" forces an empty jurisdictions list even alongside other ticks. Now: a listed country is kept and the unknown one becomes an assumption (TC-CR7-23a); the lone tick still gives an empty list (TC-CR7-23b) — `plain-intake.test.ts` |

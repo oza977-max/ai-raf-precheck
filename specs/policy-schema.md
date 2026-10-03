@@ -1086,7 +1086,7 @@ this never depends on whether packs are loaded, since platforms and
 vendors are both part of the policy file itself). This is what stops a
 firm from scoping evidence to a platform/vendor id that does not exist.
 
-Warnings (shown to the reviewer, never blocking): an unknown placeholder —
+Warnings (shown to the reviewer, never blocking; CR7, 2026-10-04: where a placeholder is filled in, see the paragraph on placeholders below): an unknown placeholder —
 anything in `{…}` other than `{audience}`/`{destination}`; an unknown `@`
 token in a `plain_owner` field other than `@submitter`/`@model_owner`; a
 platform or vendor registry entry with no `plain_name`.
@@ -1099,6 +1099,10 @@ the EXACT same check a firm `HardLine`'s own pair already gets
 plain-language placeholder check on this page.
 
 **Amended 2026-10-03 (CR6, A-5, C-5).** Errors also include a `platforms[].vendor_id` that is not a registered vendor id on the SAME policy: `vendor_id` names the supplier behind a platform, and an unregistered one is a referential error, always checkable like the `applies_to` check above, since platforms and vendors are both part of the policy file (TC-CR6-A5). Warnings also include two loaded packs that declare a rule with the same id, naming every pack that uses it (TC-CR6-C5b), and a firm `downstream_reviews` id equal to a loaded pack rule id, naming the pack (TC-CR6-C5d). These are the load-time signal for the condition `evaluation-engine.md` §15a now handles downstream (sources collapse only when identical in both `rule_id` and `review`).
+
+**Amended 2026-10-04 (CR7-26, CR7-27).** Placeholders: `{audience}` and `{destination}` are filled only in `plain_reason` and `plain_change` (the view-model, `verdict-view-model.ts`, fills nothing else). In any other plain-language field a placeholder prints literally, so the checker warns that it will, and never calls even a known one "recognised" there (TC-CR7-26). In `plain_reason` and `plain_change` the message still names the recognised placeholders, and a known one does not warn (TC-CR7-26b). New error-level references, all checkable against the policy itself: a `controls[].resolves` entry naming an id that is neither an invariant nor a hard line; a platform or vendor `satisfies_controls` or `coupled_clusters` entry naming a control id the policy does not have; and, only when packs are loaded, a pack `required_control` rule whose `control_id` is not a policy control (the message ends "— add a control with this id to your policy, or remove the pack.") (TC-CR7-27a..27d). Because `checkPolicyReferences` is a hard gate, a saved policy with a dangling reference stops evaluating until it is fixed; the shipped policy and packs have none.
+
+**The policy screen (CR7-06, CR7-38, 2026-10-04).** Save is single-flight: the button is disabled while a save is running, so two quick clicks queue each active case once (TC-CR7-06a). If the browser cannot store the policy, the screen says "The policy could not be saved to this browser." and queues nothing (TC-CR7-06e). If the policy is stored but the queuing then fails, it says the policy was saved, that queuing did not finish, and that saving again is safe because it queues only the cases not queued yet (TC-CR7-06b). The saved message reads "Policy saved — N active use cases queued for re-evaluation (M already waiting)", the bracket appearing only when M is more than zero (TC-CR7-06d). Each jurisdiction line reads "none signed off", "N of M signed off" or "all signed off", counted per rule with the engine's own `isUnsigned(rule, pack)`, so it never says "not yet signed off" about a pack that has some signed rules (TC-CR7-38a..38c; TC-V2-A D2 amended).
 
 The check is referential only — a `covers_reviews` id that resolves to a
 real review is not itself proof the control's action satisfies that
@@ -1152,6 +1156,14 @@ review; that is a rule-review judgement a human makes
 | TC-NF-10-01 | §3.1 translation_attestation |
 | TC-R16-A1-01..10, TC-R16-A1-28..41 | §10d list-valued attributes, CF-6 fields (`test-cases/test-cases-018.md`) |
 | TC-R16-A1-50..71 | §10d loader check (`test-cases/test-cases-018.md`) |
+
+---
+
+## 14. Changelog
+
+| Date | Change |
+|---|---|
+| 2026-10-04 | CR7 — code review 007 fixes, wave 1 (TC-CR7-*, `test-cases-029.md`). §10d loader check amended: placeholders are filled only in `plain_reason` and `plain_change` and warn elsewhere; error-level references added for `controls[].resolves`, `satisfies_controls`, `coupled_clusters` and pack `required_control`. §10d gains the policy-screen rules (single-flight Save, the three save outcomes, the per-country sign-off line). |
 
 ---
 

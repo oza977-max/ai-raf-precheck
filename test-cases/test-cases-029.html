@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round CR7 (code review 007 fixes) &mdash; wave 1 &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-restoring-a-saved-draft-at-the-extraction-step">&sect;1 &mdash; Restoring a saved draft at the extraction step restarts the extraction once</a></li>
+                <li><a href="#2-re-entries-into-the-review-screen-keep-the-not">&sect;2 &mdash; Re-entries into the review screen keep the "Not sure" assumptions</a></li>
+                <li><a href="#3-back-from-the-questions-restores-everything-th">&sect;3 &mdash; Back from the questions restores everything the questions changed</a></li>
+                <li><a href="#4-the-optional-model-name-is-asked-and-read-by-o">&sect;4 &mdash; The optional model name is asked and read by one rule</a></li>
+                <li><a href="#5-two-tabs-appending-to-the-audit-trail-extend-o">&sect;5 &mdash; Two tabs appending to the audit trail extend one chain</a></li>
+                <li><a href="#6-saving-the-policy-is-single-flight-and-says-wh">&sect;6 &mdash; Saving the policy is single-flight and says what happened</a></li>
+                <li><a href="#10-the-adopted-screen-names-the-matched-case-onl">&sect;10 &mdash; The adopted screen names the matched case only to the 2LoD view</a></li>
+                <li><a href="#13-a-policy-problem-no-longer-costs-the-person-t">&sect;13 &mdash; A policy problem no longer costs the person their answers</a></li>
+                <li><a href="#15-clear-all-data-clears-the-drafts-and-the-mark">&sect;15 &mdash; Clear all data clears the drafts and the markers</a></li>
+                <li><a href="#16-a-finished-confirm-or-adopt-clears-only-its-o">&sect;16 &mdash; A finished confirm or adopt clears only its own draft</a></li>
+                <li><a href="#17-a-failing-first-run-seed-does-not-block-the-d">&sect;17 &mdash; A failing first-run seed does not block the duplicate check</a></li>
+                <li><a href="#18-seeds-run-once-per-case-under-the-case-lock">&sect;18 &mdash; Seeds run once per case under the case lock</a></li>
+                <li><a href="#19-the-reasoning-trace-call-cannot-hold-the-case">&sect;19 &mdash; The reasoning-trace call cannot hold the case lock</a></li>
+                <li><a href="#20-a-reset-and-a-later-write-cope-with-each-othe">&sect;20 &mdash; A reset and a later write cope with each other</a></li>
+                <li><a href="#21-correction-writes-are-planned-against-the-tra">&sect;21 &mdash; Correction writes are planned against the trail</a></li>
+                <li><a href="#22-the-confirmation-count-matches-the-trail">&sect;22 &mdash; The confirmation count matches the trail</a></li>
+                <li><a href="#23-countries-panel-a-listed-country-is-kept-besi">&sect;23 &mdash; Countries panel: a listed country is kept beside "Somewhere else, or not sure"</a></li>
+                <li><a href="#24-back-and-start-over-clear-the-previous-screen">&sect;24 &mdash; Back and Start over clear the previous screen's error line</a></li>
+                <li><a href="#26-placeholders-outside-the-two-filled-fields-wa">&sect;26 &mdash; Placeholders outside the two filled fields warn</a></li>
+                <li><a href="#27-new-error-level-references-in-the-policy">&sect;27 &mdash; New error-level references in the policy</a></li>
+                <li><a href="#28-older-saved-question-drafts-restore-as-the-re">&sect;28 &mdash; Older saved question drafts restore as the review screen</a></li>
+                <li><a href="#30-a-recorded-correction-never-carries-an-undefi">&sect;30 &mdash; A recorded correction never carries an undefined value</a></li>
+                <li><a href="#31-a-listed-decision-type-wins-over-the-free-tex">&sect;31 &mdash; A listed decision type wins over the free-text one</a></li>
+                <li><a href="#37-the-submitter-facing-policy-problem-is-one-pl">&sect;37 &mdash; The submitter-facing policy problem is one plain sentence</a></li>
+                <li><a href="#38-the-policy-screen-s-per-country-sign-off-line">&sect;38 &mdash; The policy screen's per-country sign-off line</a></li>
+                <li><a href="#41-the-register-snapshots-a-model-the-way-the-en">&sect;41 &mdash; The register snapshots a model the way the engine resolved it</a></li>
+                <li><a href="#o8-confirmation-step-wording">&sect;O8 &mdash; Confirmation step wording</a></li>
+                <li><a href="#amended-existing-cases">Amended existing cases</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round CR7 (code review 007 fixes) &mdash; wave 1</h1>
+<p class="metadata">4 October 2026 &middot; Generated from test-cases-029.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-04. Code review 007 found that several screens and stores did less than the specs said, or said more than they did: a saved draft restored into a screen that could not finish, "Back" lost what the questions had changed, the audit trail could fork between two tabs, a policy with a dangling reference was saved and then stopped every evaluation, and a few messages told the person something the code could not back up. This is the first wave of fixes. The amended spec sections are marked "(CR7, 2026-10-04)" in <code>specs/intake-flow</code>, <code>specs/verdict-audit</code>, <code>specs/register-lifecycle</code>, <code>specs/policy-schema</code> and <code>specs/cross-cutting</code>. The CR7-35 rows (a model with no plain name) are in <code>test-cases-028</code> &mdash; another session wrote them.</em></p>
+<p>Test files: <code>src/components/__tests__/IntakeFlow.cr7-fx1.test.tsx</code>, <code>src/components/__tests__/PolicyEditor.cr7.test.tsx</code>, <code>src/components/__tests__/SettingsPanel.cr7.test.tsx</code>, <code>src/components/__tests__/StructuredForm.test.tsx</code>, <code>src/components/__tests__/ConfirmationStep.test.tsx</code>, <code>src/components/intake-state.test.ts</code>, <code>src/components/intake-draft.test.ts</code>, <code>src/engine/plain-intake.test.ts</code>, <code>src/llm/graph-extractor.test.ts</code>, <code>src/llm/reasoning-trace.test.ts</code>, <code>src/seeds/cr7-seeds.test.ts</code>, <code>src/store/cr7-audit-tabs.test.ts</code>, <code>src/store/cr7-policy-update.test.ts</code>, <code>src/store/cr7-reset.test.ts</code>, <code>src/store/policy-references.test.ts</code>, <code>src/store/register.model-nodes.test.ts</code>.</p>
+
+<section id="1-restoring-a-saved-draft-at-the-extraction-step">
+<h2>&sect;1 &mdash; Restoring a saved draft at the extraction step restarts the extraction once</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-01a-1</td><td>The extractor is called exactly once and the review screen appears &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-01a-2</td><td>Still exactly one call when mounted twice &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-01b</td><td>Restored + the extraction fails -&gt; the Try again panel shows &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-01c</td><td>A fresh, non-restored description path calls the extractor exactly once &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-re-entries-into-the-review-screen-keep-the-not">
+<h2>&sect;2 &mdash; Re-entries into the review screen keep the "Not sure" assumptions</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-02-1</td><td>STEP_BACK from the questionnaire carries NO assumptions &mdash; they are re-asked (CR7-03) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02-2</td><td>A revisited review screen stays marked as revisited across a trip into the questions and Back (including a contradiction round trip) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02-3</td><td>A first reading of the review screen is NOT marked as revisited, before or after a trip into the questions &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02a-1</td><td>Change an answer -&gt; Continue -&gt; Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02c</td><td>Change an answer -&gt; Continue -&gt; Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02a-2</td><td>CHANGE_ANSWER on the description path carries the assumptions and the frozen uncertain list, marks the countries as already checked, and flags the re-entry &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02b-1</td><td>After a failed evaluation the re-entered review keeps the assumption through to the second graph_confirmed &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02b-2</td><td>A failed evaluation hands the assumptions and uncertain list back to the review screen too &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02c-edit</td><td>After Change an answer a country can be ticked; the graph changes, a jurisdictions correction is recorded and reaches the trail on Confirm &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02d-1</td><td>Correcting from the result keeps the assumption in verdict_corrected &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02d-2</td><td>CORRECT_VERDICT carries what the last confirmation was based on &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02e-1</td><td>"Not sure" again for a question that already has an assumption leaves exactly one &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02e-2</td><td>A definite answer for a question that had an assumption removes it (and leaves the others) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02f-1</td><td>Undo after a replaced assumption restores the previous array &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02f-2</td><td>Undo of a first "Not sure" removes it again &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02h-1</td><td>Not sure -&gt; confirmation -&gt; Change an answer -&gt; Continue (questions) -&gt; Back -&gt; Continue -&gt; Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round) &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02h-2</td><td>The same through a correction from the result &mdash; verdict_corrected keeps the earlier "Not sure" &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-02h-3</td><td>Change an answer -&gt; Continue (questions) -&gt; a new "Not sure" -&gt; Back: the earlier round's assumption is back, the new one is re-asked &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-02h-4</td><td>The same round trip from a correction pass &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-back-from-the-questions-restores-everything-th">
+<h2>&sect;3 &mdash; Back from the questions restores everything the questions changed</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-03-1</td><td>QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-03-2</td><td>After an answer that trims the field and changes the graph, Back restores all three so the field is asked again &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-03-3</td><td>The snapshot survives Undo, a contradiction round trip, and a second answer &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-03-4</td><td>A questionnaire saved before this change (no snapshot) steps back exactly as it did before &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-03a</td><td>"Not sure" -&gt; Back -&gt; Continue asks the field again, the result lists the assumption once, and no duplicate graph_corrected events are written &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03e</td><td>"Not sure" -&gt; Back -&gt; Continue asks the field again, the result lists the assumption once, and no duplicate graph_corrected events are written &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03b</td><td>A vendor guess -&gt; "Not on this list" -&gt; Back -&gt; Continue asks the supplier again, and the AI guess never reaches the result &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03c</td><td>A declared-model guess -&gt; "Not on the list" -&gt; Back -&gt; Continue asks the model again &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03d</td><td>Decision type "Something else" -&gt; Back -&gt; Continue asks it again &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03f-1</td><td>Failed evaluation -&gt; questions -&gt; Back: Back from the review is still refused, and the case id is unchanged &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-03f-2</td><td>A review re-entered after a failed evaluation is still "after a failed evaluation" after a trip into the questions and Back, and Back from it is refused &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-03f-3</td><td>A first reading is not marked as after a failed evaluation &mdash; <code>intake-state.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="4-the-optional-model-name-is-asked-and-read-by-o">
+<h2>&sect;4 &mdash; The optional model name is asked and read by one rule</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-04a</td><td>A model typed under "outside assistant", then Q3 switched to "built in your firm", never reaches the result or the register &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-04b</td><td>Q3ShowsModelQuestion is true for outside-assistant, supplier-feature, specialist-product only &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-04c</td><td>A stale 3model left behind after Q3 changed to firm-built names no model &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-04d</td><td>The same 3model is read when Q3 is a supplier option &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-04e</td><td>For every Q3 option, the model question is on screen exactly when the engine would read it &mdash; <code>StructuredForm.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="5-two-tabs-appending-to-the-audit-trail-extend-o">
+<h2>&sect;5 &mdash; Two tabs appending to the audit trail extend one chain</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-05</td><td>Two tabs appending in turn do not fork the chain &mdash; <code>cr7-audit-tabs.test.ts</code></td></tr>
+<tr><td>TC-CR7-05b</td><td>An append whose database handle is closed mid-flight reopens and succeeds &mdash; <code>cr7-audit-tabs.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="6-saving-the-policy-is-single-flight-and-says-wh">
+<h2>&sect;6 &mdash; Saving the policy is single-flight and says what happened</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-06a-1</td><td>Two rapid clicks on Save queue each active case once (the real trail) &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-06a-2</td><td>Save is disabled while the save is running &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-06b</td><td>A failing onPolicyUpdated shows a plain message, not a silent unhandled rejection &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-06c</td><td>A retry after a part-way failure queues each case exactly once, and a later save after a new verdict queues again &mdash; <code>cr7-policy-update.test.ts</code></td></tr>
+<tr><td>TC-CR7-06d-1</td><td>After a retry the saved message says how many were already waiting &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-06d-2</td><td>With nothing already waiting the message has no "already waiting" part &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-06e</td><td>If the browser refuses to store the policy, the alert does not claim it was saved or that saving again is safe &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="10-the-adopted-screen-names-the-matched-case-onl">
+<h2>&sect;10 &mdash; The adopted screen names the matched case only to the 2LoD view</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-10a</td><td>A 1LoD view that adopts never has the matched label in the DOM &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-10b</td><td>A 2LoD view still sees the matched label &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="13-a-policy-problem-no-longer-costs-the-person-t">
+<h2>&sect;13 &mdash; A policy problem no longer costs the person their answers</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-13</td><td>An invalid policy -&gt; Continue -&gt; remount: the answers are still there &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="15-clear-all-data-clears-the-drafts-and-the-mark">
+<h2>&sect;15 &mdash; Clear all data clears the drafts and the markers</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-15-1</td><td>Clears the saved intake drafts (all three keys) and the hand-off marker, then reloads &mdash; <code>SettingsPanel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-15-2</td><td>The confirmation says exactly what is cleared and what is kept (BC-005) &mdash; <code>SettingsPanel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-15-3</td><td>An incomplete reset clears the drafts too, and its message says exactly what was and was not cleared &mdash; <code>SettingsPanel.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-15-4</td><td>Clears the hand-off sync marker and the welcome flag, keeps the policy and model settings &mdash; <code>cr7-reset.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="16-a-finished-confirm-or-adopt-clears-only-its-o">
+<h2>&sect;16 &mdash; A finished confirm or adopt clears only its own draft</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-16-1</td><td>Clears when the stored draft carries this useCaseId &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-16-2</td><td>Clears when there is no stored draft (nothing to protect) &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-16-3</td><td>Leaves a draft with a different useCaseId &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-16-4</td><td>Leaves a draft with no useCaseId at all (a case just started) &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-16-5</td><td>An adopt (which mints its id inside the handler) also clears the duplicate-check draft it came from, and only that one &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-16a</td><td>A confirm that finishes after the person left leaves a different case's draft alone &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-16b-1</td><td>An adopt that finishes after the person left leaves a different case's draft alone &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-16b-2</td><td>A finished adopt still clears its own saved draft &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="17-a-failing-first-run-seed-does-not-block-the-d">
+<h2>&sect;17 &mdash; A failing first-run seed does not block the duplicate check</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-17</td><td>With the seed wait rejecting, a draft restored at the duplicate check still resolves it &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="18-seeds-run-once-per-case-under-the-case-lock">
+<h2>&sect;18 &mdash; Seeds run once per case under the case lock</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-18-1</td><td>Two module instances seeding the sample register at once write one set of events &mdash; <code>cr7-seeds.test.ts</code></td></tr>
+<tr><td>TC-CR7-18-2</td><td>Two module instances seeding the investment-bank portfolio at once write one set of events &mdash; <code>cr7-seeds.test.ts</code></td></tr>
+<tr><td>TC-CR7-18-3</td><td>Two module instances seeding the self-assessment at once write it once &mdash; <code>cr7-seeds.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="19-the-reasoning-trace-call-cannot-hold-the-case">
+<h2>&sect;19 &mdash; The reasoning-trace call cannot hold the case lock</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-19</td><td>The SDK call carries a 15 s timeout and no retries, so a stalled call cannot hold the case lock &mdash; <code>reasoning-trace.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="20-a-reset-and-a-later-write-cope-with-each-othe">
+<h2>&sect;20 &mdash; A reset and a later write cope with each other</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-20a</td><td>Reset succeeds when this tab's own database connections are open &mdash; <code>cr7-reset.test.ts</code></td></tr>
+<tr><td>TC-CR7-20b</td><td>A write after another instance's reset reopens the database instead of throwing &mdash; <code>cr7-reset.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="21-correction-writes-are-planned-against-the-tra">
+<h2>&sect;21 &mdash; Correction writes are planned against the trail</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-21a</td><td>A form-path correction -&gt; failed evaluation -&gt; retry writes one set of graph_corrected events &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21b</td><td>A description-path correction -&gt; failed evaluation -&gt; retry puts the correction on the trail exactly once &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21c-1</td><td>A-&gt;B (failed), B-&gt;A, then A-&gt;B again: the third is NOT treated as already there &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21c-2</td><td>The same change retried with a fresh id IS skipped when nothing reversed it &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21d-1</td><td>A description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21d-2</td><td>SinceLastResult counts the events in the window plus the ones about to be written, and ignores those before the last result &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21e-1</td><td>A-&gt;B, A-&gt;C, then A-&gt;B again: the third is written (the trail would otherwise end at C while the graph says B) &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21e-2</td><td>A pending correction equal to the latest written value for its field is skipped &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21f-1</td><td>A form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21f-2</td><td>A-&gt;B was written, the field is back at A and nothing is pending: one B-&gt;A correction is written, same source, and the count includes it &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21f-3</td><td>When the trail already ends at the graph value nothing is synthesised &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21g</td><td>List values compare as sets &mdash; a different order is the same correction &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21h</td><td>A data class ticked, evaluation fails, it is unticked and resubmitted: the net trail value equals the original set &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21i-1</td><td>A node the resolver cannot find writes NOTHING for that key &mdash; never a null on the trail &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21i-2</td><td>The form path resolver maps the ORIGINAL ids by role, and the inputs sentinel to the sorted distinct data classes &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21i-3</td><td>The resolver returns list values sorted, so a synthesised correction is stored the way formCorrections stores them &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR7-21j</td><td>A country ticked (and "somewhere else" unticked), evaluation fails, then put back: a reverse graph|jurisdictions correction is on the trail &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-21k</td><td>An output-node answer (how widely it is used) changed, evaluation fails, then put back: the reverse correction is on the trail &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="22-the-confirmation-count-matches-the-trail">
+<h2>&sect;22 &mdash; The confirmation count matches the trail</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-22</td><td>The confirmation says "N corrections made &hellip; preserved in the audit trail" &mdash; and the trail holds exactly N graph_corrected events &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="23-countries-panel-a-listed-country-is-kept-besi">
+<h2>&sect;23 &mdash; Countries panel: a listed country is kept beside "Somewhere else, or not sure"</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-23a</td><td>UK + elsewhere keeps UK and lists the unchecked country as an assumption &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-23b</td><td>"Somewhere else, or not sure" on its own gives an empty jurisdictions list and no assumption &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-23c</td><td>With the shipped policy and packs the UK pack applies and the result is not provisional for want of a regulatory basis &mdash; <code>plain-intake.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="24-back-and-start-over-clear-the-previous-screen">
+<h2>&sect;24 &mdash; Back and Start over clear the previous screen's error line</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-24-1</td><td>Back, then forward again, shows no stale gate error &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-24-2</td><td>Start over, then a fresh case to the review screen, shows no stale gate error &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="26-placeholders-outside-the-two-filled-fields-wa">
+<h2>&sect;26 &mdash; Placeholders outside the two filled fields warn</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-26</td><td>A placeholder in a field that is never filled warns that it prints literally, and never claims it is recognised &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-CR7-26b</td><td>In plain_reason and plain_change the message still names the recognised placeholders; they themselves do not warn &mdash; <code>policy-references.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="27-new-error-level-references-in-the-policy">
+<h2>&sect;27 &mdash; New error-level references in the policy</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-27a</td><td>Errors &mdash; controls[].resolves names an id that is neither an invariant nor a hard line &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-CR7-27b</td><td>Errors &mdash; a platform or vendor satisfies_controls and coupled_clusters entry names a control that does not exist &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-CR7-27c</td><td>Errors &mdash; a pack required_control names a control the policy does not have (only when packs are loaded) &mdash; <code>policy-references.test.ts</code></td></tr>
+<tr><td>TC-CR7-27d</td><td>The shipped policy and packs have none of these reference errors &mdash; <code>policy-references.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="28-older-saved-question-drafts-restore-as-the-re">
+<h2>&sect;28 &mdash; Older saved question drafts restore as the review screen</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-28-1</td><td>The review screen shows with every card to re-check, the countries unchecked, and the plain notice &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-28-2</td><td>A draft the current build saved shows no such notice &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-28-3</td><td>The notice is gone once the person leaves the review screen &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+<tr><td>TC-CR7-28-4</td><td>A bare (version 1) questions or contradiction-review draft on the description path restores as graph_review with every card to re-check, the countries unchecked, and nothing invented &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28-5</td><td>LoadDraftInfo says the draft was migrated, so the screen can say so &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28-6</td><td>A form-path questionnaire (plainAnswers present) is NOT migrated &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28-7</td><td>A draft saved by the current build (an envelope at the current version) is never migrated &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28-8</td><td>The migrated review keeps the assumptions and the frozen uncertain list the old draft held &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28b-1</td><td>The current draft version is 3, and a version-2 description-path questions draft with no back snapshot is migrated like a version-1 one &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR7-28b-2</td><td>A version-2 draft that is on the form path, or that already has its back snapshot, is not migrated &mdash; <code>intake-draft.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="30-a-recorded-correction-never-carries-an-undefi">
+<h2>&sect;30 &mdash; A recorded correction never carries an undefined value</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-30a</td><td>A questionnaire answer for a field that had no value is recorded with original_value null, not undefined &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="31-a-listed-decision-type-wins-over-the-free-tex">
+<h2>&sect;31 &mdash; A listed decision type wins over the free-text one</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-31</td><td>Decision_type_other is dropped when decision_type is set &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-CR7-31b</td><td>The tool schema tells the model to use decision_type_other only when no listed type fits &mdash; <code>graph-extractor.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="37-the-submitter-facing-policy-problem-is-one-pl">
+<h2>&sect;37 &mdash; The submitter-facing policy problem is one plain sentence</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-37</td><td>An invalid policy on the form path shows no field path in the alert, and says who can fix it &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="38-the-policy-screen-s-per-country-sign-off-line">
+<h2>&sect;38 &mdash; The policy screen's per-country sign-off line</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-38a</td><td>No pack signed off says none &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-38b</td><td>One of two EU packs signed off says N of M, and never "not yet signed off" or "all" &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+<tr><td>TC-CR7-38c</td><td>Every EU pack signed off says all signed off, and never claims "not yet signed off" &mdash; <code>PolicyEditor.cr7.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="41-the-register-snapshots-a-model-the-way-the-en">
+<h2>&sect;41 &mdash; The register snapshots a model the way the engine resolved it</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-41a</td><td>A model that belongs to a listed family is snapshotted with the family vendor and acceptance &mdash; <code>register.model-nodes.test.ts</code></td></tr>
+<tr><td>TC-CR7-41b</td><td>An exact entry still resolves to itself, and an id no entry covers stays unknown / not accepted &mdash; <code>register.model-nodes.test.ts</code></td></tr>
+<tr><td>TC-CR7-41c</td><td>A typed name the family would accept becomes declared_model_id exactly as typed &mdash; <code>plain-intake.test.ts</code></td></tr>
+<tr><td>TC-CR7-41d</td><td>A model in a family past its reattest_by is snapshotted is_approved false, as the engine judged it &mdash; <code>IntakeFlow.cr7-fx1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="o8-confirmation-step-wording">
+<h2>&sect;O8 &mdash; Confirmation step wording</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-O8</td><td>Does not claim the record "can't be edited"; says a change would show, and that it is kept in this browser with no outside check &mdash; <code>ConfirmationStep.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="amended-existing-cases">
+<h2>Amended existing cases</h2>
+<p>These cases keep their ids. Their assertions changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.</p>
+<table>
+<thead><tr><th>ID</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>(V2-A "D2", no TC id)</td><td>Was: a pack with no signed-off rule reads "not yet signed off". Now: it reads "none signed off" (the line is "none / N of M / all signed off", counted per rule) &mdash; <code>PolicyEditor.test.tsx</code></td></tr>
+<tr><td>TC-CR6-03c</td><td>Was: Back from the questions restores the trimmed guessed list. Now: Back restores the untrimmed list from the snapshot, so every guessed question is asked again &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-CR6-02c</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-02e</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-02g</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-02h</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-02i</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-02k</td><td>Was: the adopted screen always names the matched case. Now: it names it only in the 2LoD view; any other view reads "An earlier result on your firm's register was used." &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-17a</td><td>Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now&hellip;"); the detail goes to the console only &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-17b</td><td>Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now&hellip;"); the detail goes to the console only &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-R16-F-67</td><td>Was: the submitter sees the policy checker's detail. Now: one plain sentence ("Your firm's rules file has a problem, so this can't be checked right now&hellip;"); the detail goes to the console only &mdash; <code>IntakeFlow.r16f.test.tsx</code></td></tr>
+<tr><td>TC-CR6-04a</td><td>Was: driven from the description path. Now: driven through the form-path questionnaire, which is where the behaviour lives &mdash; <code>intake-state.test.ts</code>, <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>TC-CR6-04b</td><td>Was: driven from the description path. Now: driven through the form-path questionnaire &mdash; <code>intake-draft.test.ts</code></td></tr>
+<tr><td>TC-CR6-15a</td><td>Was: asserted straight after the confirm. Now: waits for the draft clear, because the clear is conditional on the draft still being this case's &mdash; <code>IntakeFlow.cr6-fx2.test.tsx</code></td></tr>
+<tr><td>(plain-intake, "even alongside other ticks")</td><td>Was: "Somewhere else, or not sure" forces an empty jurisdictions list even alongside other ticks. Now: a listed country is kept and the unknown one becomes an assumption (TC-CR7-23a); the lone tick still gives an empty list (TC-CR7-23b) &mdash; <code>plain-intake.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
+</html>

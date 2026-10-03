@@ -331,7 +331,7 @@ For V1, "2LoD notification" means the register view shows a badge on the use cas
 
 ## 8. Re-evaluation Trigger (LC-4)
 
-When the policy file is updated (`src/store/policy.ts` saves a new version), a `re_evaluation_queued` audit event is appended for every active use case (any use case in `approved`, `in_production`, or `pre_checked` stage). **The lifecycle stage does NOT change on policy save** — it moves to `pre_checked` only when a human triggers re-run or the re-evaluation produces a changed verdict. The register view shows a "Policy updated — re-evaluation required" badge on affected records.
+When the policy file is updated (`src/store/policy.ts` saves a new version), a `re_evaluation_queued` audit event is appended for every active use case (any use case in `approved`, `in_production`, or `pre_checked` stage) that is not already waiting for one (CR7, 2026-10-04: a case with a `re_evaluation_queued` event newer than its latest verdict is skipped and counted as already waiting; the function returns `{ queuedCount, alreadyPendingCount }`; see §16). **The lifecycle stage does NOT change on policy save** — it moves to `pre_checked` only when a human triggers re-run or the re-evaluation produces a changed verdict. The register view shows a "Policy updated — re-evaluation required" badge on affected records.
 
 ```typescript
 // src/store/policy.ts — called when policy file is saved
@@ -363,7 +363,7 @@ export async function onPolicyUpdated(
 }
 ```
 
-This follows the policy: re-evaluation is triggered for all active cases; triage (LC-5 — determining which are affected vs unaffected by the specific changed provisions) is a V2 feature. In V1, all active cases are queued.
+This follows the policy: re-evaluation is triggered for all active cases; triage (LC-5 — determining which are affected vs unaffected by the specific changed provisions) is a V2 feature. In V1, all active cases are queued, once each until their next verdict (CR7, 2026-10-04).
 
 ---
 
@@ -477,7 +477,7 @@ The "Export JSON" button in the 2LoD view calls `register.exportAll()` and trigg
 | Case | Handling |
 |---|---|
 | `addNode()` with duplicate `node_id` | IndexedDB `add()` throws; caller catches and logs — idempotent seed calls must check before inserting |
-| `onPolicyUpdated()` fails mid-loop (e.g. quota exceeded) | Partial re-evaluation queue written; next app launch detects uncompleted queue via audit event scan |
+| `onPolicyUpdated()` fails mid-loop (e.g. quota exceeded) | Partial re-evaluation queue written. CR7, 2026-10-04: saving the policy again is safe, because it queues only the cases not already waiting; the policy screen says so (`policy-schema.md` §10d) |
 | Graph traversal on empty register | `getBlastRadius()` returns `[]`; UI shows "No use cases found using this component" |
 | Counterpoise self-assessment graph violates own gates | `evaluate()` returns `rejected`; the seed stores this result; the UI flags it as a governance alert: "Counterpoise does not satisfy its own controls — policy review required" |
 | 1LoD user has no submitted use cases | `getUseCases(actorId)` returns `[]`; RegisterView shows "No use cases submitted yet" with a link to start intake |
@@ -740,10 +740,19 @@ declared") on its processing node exactly as any other use case would —
 no special-cased write path, per the existing "the gate gates its
 gatekeeper" framing.
 
+**CR7 amendments (CR7, 2026-10-04): the policy-update queue, the model snapshot and the seeds.**
+
+**Policy update (LC-4, `onPolicyUpdated`).** It queues a re-evaluation for an active case only if that case has no `re_evaluation_queued` event newer than its latest verdict (the same rule the "Policy updated" banner uses). A retry after a part-way failure therefore queues each case once; a re-save after a newer verdict queues it again. It is not keyed on the version string, so a re-save of the same version with edited rules still queues. It returns how many cases it queued and how many were already waiting; a skipped case keeps its earlier queued event, which records the version it was queued under, since the case is still waiting and will be re-evaluated against the current policy whichever save queued it (TC-CR7-06c, 06d).
+
+**The `ai_model` register node.** Its `vendor` and `is_approved` snapshot resolves the model by exact id, else by listed family — the engine's own `resolveApprovedModel` — against the same expiry-applied policy the engine evaluated, so a family past its `reattest_by` is filed as not accepted, exactly as the verdict judged it. An id no entry covers stays vendor `unknown` and not accepted (TC-CR7-41a, 41b, 41d). This amends ADR-RL-R11-1, which read the registry by exact id only.
+
+**Seeds run per case under the case lock.** Each seed (the sample register, the investment-bank portfolio and the Counterpoise self-assessment) takes `withCaseLock` for the case it writes and re-checks inside the lock whether the case already exists, so two module instances seeding at once write one set of events (TC-CR7-18).
+
 ## 17. Changelog
 
 | Date | Change |
 |---|---|
+| 2026-10-04 | CR7 — code review 007 fixes, wave 1 (TC-CR7-*, `test-cases-029.md`). §8 and §12 amended and §16 extended: a policy update queues each active case once until its next verdict and reports how many were already waiting; the `ai_model` register snapshot resolves by exact id, else by family, on the expiry-applied policy; seeds run per case under the case lock and re-check inside it. |
 | 2026-10-03 | CR6 — §15.1b amended: the reviewer's page shows a combined inheritance entry when no graph is available, names each correction's source, and words the lifecycle banner without the reserved verdict words (CR6-11, 10, 29). |
 | 2026-09-28 | §5 amended — code review 005 (F10). `RegisterStore` gains `importRegister` and `backupAndReplaceRegister` (RG-8 hand-off); `getUseCases`/`getUseCase` gain their real optional parameters; `updateUseCaseVerdictSummary`'s signature corrected to `Partial<UseCaseSummary>`; noted that `getUseCases` skips an unreadable row rather than failing the whole list. §13 gains an RG-8 traceability row. Full hand-off bundle spec added at `verdict-audit.md` §16. |
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |

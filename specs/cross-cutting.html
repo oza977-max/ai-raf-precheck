@@ -603,6 +603,7 @@ type EngineError =
     <h3 id="ui-errors">UI Errors</h3>
     <p>React error boundaries at the route level. Each major view (intake, verdict, register) has its own error boundary. Errors are shown as user-readable messages, never as stack traces.</p>
     <p><strong>As built (CR6-04, 2026-10-03).</strong> One boundary exists so far: <code>ErrorBoundary.tsx</code> wraps the intake flow in <code>App.tsx</code>, the view holding unfinished work that a stale saved draft could crash on every reload. A render-time crash there shows a plain message that claims only that anything already saved is on the register, and a "Start a fresh check" button that clears both saved drafts before remounting (TC-CR6-04c, 04d, 04e; <code>intake-flow.md</code> &sect;3). The verdict and register views are not separately wrapped yet, so the sentence above is the target, not the current state. Engine failures shown on the intake screens use <code>engineErrorMessage(kind)</code> (<code>plain-copy.ts</code>): a plain sentence per engine error kind that blames the firm's rules or policy, never the person's answers (CR6-12).</p>
+  <p><strong>User-facing error copy (CR7-37, 2026-10-04).</strong> A policy problem is shown to a submitter as one plain sentence — "Your firm's rules file has a problem, so this can't be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen." — never as field paths or checker reasons. The detail goes to the console for whoever fixes the policy (<code>intake-flow.md</code> §3; TC-CR7-37).</p>
 
     <h2 id="testing-conventions">Testing Conventions</h2>
 
@@ -778,6 +779,18 @@ export default {
           <td>OQ-5 (Audit export format)</td>
           <td>JSON primary; CSV secondary (RG-5)</td>
         </tr>
+      </tbody>
+    </table>
+
+    <h2 id="local-data">13. Local data and the reasoning-trace call (CR7, 2026-10-04)</h2>
+    <p><strong>Clear all data (Settings, "Local data").</strong> Everything Counterpoise stores lives in this browser. Clearing deletes the audit and register databases, the role, the hand-off sync marker, the welcome flag and the unsaved intake drafts. The drafts are cleared on an incomplete reset too, and the message for an incomplete reset says exactly what was and was not cleared. It keeps the model settings and the saved appetite framework, which are the firm's configuration rather than test data. A database delete that another tab's connection blocks waits up to 3 seconds for that connection to close before it reports the block, because this tab's own handles close a moment after the request (TC-CR7-15, 20).</p>
+    <p><strong>The reasoning-trace call.</strong> It runs inside the case lock, so a stalled call would hold the case. The SDK call carries a 15 second timeout and no retries (TC-CR7-19).</p>
+
+    <h2 id="changelog">14. Changelog</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>2026-10-04</td><td>CR7 — code review 007 fixes, wave 1 (TC-CR7-*, <code>test-cases-029.md</code>). §5 gains the plain-sentence rule for policy problems shown to a submitter; §13 added (what Clear all data deletes and keeps, the 3 second wait on a blocked delete, the 15 second no-retry reasoning-trace call).</td></tr>
       </tbody>
     </table>
 
