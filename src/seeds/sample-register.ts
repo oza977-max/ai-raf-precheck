@@ -183,7 +183,7 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
     // and reused for the graph and every event below, so a sample's whole
     // audit trail agrees on when it was seeded.
     const now = new Date().toISOString();
-    const graph = buildGraphFromForm(sample.values, now);
+    const graph = buildGraphFromForm(sample.values, now, () => crypto.randomUUID());
     const evalResult = evaluate(graph, policy, packs);
     if (!evalResult.ok) continue; // a sample the current policy cannot classify is skipped, not faked
     const result = evalResult.value;

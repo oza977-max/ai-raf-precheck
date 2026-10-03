@@ -26,6 +26,7 @@ function verdictFor(platform: string | undefined, vendor: string | undefined, po
       replacesPriorModel: false, jurisdictions: [],
     },
     '2026-01-01T00:00:00.000Z',
+    () => crypto.randomUUID(),
   );
   if (platform) g.processing_nodes[0]!.platform = platform;
   if (vendor) g.processing_nodes[0]!.vendor = vendor;

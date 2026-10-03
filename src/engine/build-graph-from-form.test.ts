@@ -36,7 +36,7 @@ describe('buildGraphFromForm', () => {
   // systemAccessScope and runs it through normaliseAccessScope — the single
   // implementation of the validate/canonicalise rule.
   it('TC-R16-A1-18: a single systemAccessScope value is stored unchanged (shape preserved)', () => {
-    const graph = buildGraphFromForm({ ...VALID_VALUES, systemAccessScope: 'shared_infrastructure' }, TS);
+    const graph = buildGraphFromForm({ ...VALID_VALUES, systemAccessScope: 'shared_infrastructure' }, TS, sequentialIds());
     expect(graph.processing_nodes[0]?.system_access_scope).toBe('shared_infrastructure');
   });
 
@@ -44,29 +44,31 @@ describe('buildGraphFromForm', () => {
     const a = buildGraphFromForm(
       { ...VALID_VALUES, systemAccessScope: ['deployment_authority', 'shared_infrastructure'] },
       TS,
+      sequentialIds(),
     );
     const b = buildGraphFromForm(
       { ...VALID_VALUES, systemAccessScope: ['shared_infrastructure', 'deployment_authority'] },
       TS,
+      sequentialIds(),
     );
     expect(a.processing_nodes[0]?.system_access_scope).toEqual(['shared_infrastructure', 'deployment_authority']);
-    // Shuffled ticks produce a byte-identical graph on every field OTHER
-    // than the random id field buildGraphFromForm itself mints.
-    expect(a.processing_nodes[0]?.system_access_scope).toEqual(b.processing_nodes[0]?.system_access_scope);
+    // Shuffled ticks with the same id source produce a byte-identical graph
+    // (ENG-ID: the ids are no longer minted inside the engine).
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 
   it('TC-R16-A1-20: an invalid systemAccessScope (e.g. "none" combined with another value) is omitted, not fabricated', () => {
-    const graph = buildGraphFromForm({ ...VALID_VALUES, systemAccessScope: ['none', 'shared_infrastructure'] }, TS);
+    const graph = buildGraphFromForm({ ...VALID_VALUES, systemAccessScope: ['none', 'shared_infrastructure'] }, TS, sequentialIds());
     expect(graph.processing_nodes[0]?.system_access_scope).toBeUndefined();
   });
 
   it('omits systemAccessScope entirely when not stated (absence is not a claim)', () => {
-    const graph = buildGraphFromForm(VALID_VALUES, TS);
+    const graph = buildGraphFromForm(VALID_VALUES, TS, sequentialIds());
     expect('system_access_scope' in graph.processing_nodes[0]!).toBe(false);
   });
 
   it('TC-UC-3a-01: produces a valid DataFlowGraph with one node per category', () => {
-    const graph = buildGraphFromForm(VALID_VALUES, TS);
+    const graph = buildGraphFromForm(VALID_VALUES, TS, sequentialIds());
 
     expect(graph.input_nodes).toHaveLength(1);
     expect(graph.processing_nodes).toHaveLength(1);
@@ -78,17 +80,17 @@ describe('buildGraphFromForm', () => {
   });
 
   it('TC-UC-3a-02: sets intake_method to structured_form', () => {
-    const graph = buildGraphFromForm(VALID_VALUES, TS);
+    const graph = buildGraphFromForm(VALID_VALUES, TS, sequentialIds());
     expect(graph.intake_method).toBe('structured_form');
   });
 
   it('carries jurisdictions through unchanged', () => {
-    const graph = buildGraphFromForm({ ...VALID_VALUES, jurisdictions: ['UK', 'US'] }, TS);
+    const graph = buildGraphFromForm({ ...VALID_VALUES, jurisdictions: ['UK', 'US'] }, TS, sequentialIds());
     expect(graph.jurisdictions).toEqual(['UK', 'US']);
   });
 
   it('connects nodes with edges in input → processing → output order', () => {
-    const graph = buildGraphFromForm(VALID_VALUES, TS);
+    const graph = buildGraphFromForm(VALID_VALUES, TS, sequentialIds());
     const [inputId] = graph.input_nodes.map((n) => n.id);
     const [processingId] = graph.processing_nodes.map((n) => n.id);
     const [outputId] = graph.output_nodes.map((n) => n.id);
@@ -105,18 +107,16 @@ describe('buildGraphFromForm', () => {
   // mints it and passes it in.
   it('TC-CR6-B15: extracted_at is exactly the timestamp parameter, not the engine\'s own clock — identical inputs + timestamp produce an identical graph', () => {
     const ts = '2020-01-01T00:00:00.000Z';
-    const a = buildGraphFromForm(VALID_VALUES, ts);
+    const a = buildGraphFromForm(VALID_VALUES, ts, sequentialIds());
     expect(a.extracted_at).toBe(ts);
 
     const otherTs = '2031-06-15T12:00:00.000Z';
-    const b = buildGraphFromForm(VALID_VALUES, otherTs);
+    const b = buildGraphFromForm(VALID_VALUES, otherTs, sequentialIds());
     expect(b.extracted_at).toBe(otherTs);
 
     // Identical inputs + identical timestamp -> identical extracted_at
-    // (ids are still randomised per call, same as before this fix — only
-    // the timestamp's SOURCE changed, not the graph's other determinism
-    // properties).
-    const c = buildGraphFromForm(VALID_VALUES, ts);
+    // (whole-graph identity, ids included, is TC-ENG-ID-01 below).
+    const c = buildGraphFromForm(VALID_VALUES, ts, sequentialIds());
     expect(c.extracted_at).toBe(a.extracted_at);
   });
 
@@ -160,4 +160,3 @@ describe('buildGraphFromForm', () => {
     expect(swap(a)).toBe(swap(b));
   });
 });
-

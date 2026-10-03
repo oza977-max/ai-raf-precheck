@@ -254,7 +254,7 @@ describing a use case, not constructing a data structure.
 
 ### 5.3 Form output
 
-On submit, `StructuredForm.tsx` calls `buildGraphFromForm(formValues, extractedAt)` (CR6, B-15, 2026-10-03: the timestamp is a parameter, passed by every caller, so the engine reads no clock; identical values and timestamp build an identical graph, TC-CR6-B15) which constructs a `DataFlowGraph` object with `intake_method: 'structured_form'`. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.
+On submit, `StructuredForm.tsx` calls `buildGraphFromForm(formValues, extractedAt, newId)` (CR6, B-15, 2026-10-03: the timestamp is a parameter, passed by every caller, so the engine reads no clock, TC-CR6-B15; ENG-ID, 2026-10-03: the ids come from `newId`, an id source the caller passes — `() => crypto.randomUUID()` on the form — so identical values, timestamp and id sequence build a byte-identical graph, TC-ENG-ID-01) which constructs a `DataFlowGraph` object with `intake_method: 'structured_form'`. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.
 
 ---
 
@@ -832,9 +832,9 @@ policy)` (`src/engine/plain-intake.ts`) takes `PlainAnswers` — option
 *keys* against question ids, e.g. `{'6': 'drafts', '6a': 'little'}` — and
 returns `{ values: StructuredFormValues, assumptions: AssumptionRef[] }`.
 Pure (cross-cutting.md §7 Rule 1): no ids, no clock — `buildGraphFromForm`
-stays the only place ids are minted, and since CR6 (B-15) it takes its
-timestamp as a parameter rather than reading a clock (the graph id it still
-mints inside the engine is a separate, pending task). **Amended R16-F §5 (DR7-06):**
+stays the only place ids are assigned, and it reads neither a clock nor a
+random source: since CR6 (B-15) the timestamp is a parameter, and since
+ENG-ID (2026-10-03) every id is drawn from an id source the caller passes. **Amended R16-F §5 (DR7-06):**
 `assumptions` was originally specified (and first built) as worded
 `Assumption[]` — the engine resolving its own WORDED text, which required
 importing the words from the component layer and broke Rule 1
@@ -1170,6 +1170,7 @@ Spec for `build/prompts/R16-E.md` v2.2, built on top of §21–§24 above (after
 
 | Date | Change |
 |---|---|
+| 2026-10-03 | ENG-ID — §5.3 and ADR-IF-R16-1: `buildGraphFromForm` takes an id source (`newId`) from its caller instead of calling `crypto.randomUUID()`, closing the last non-deterministic call in the engine (TC-ENG-ID-01..05, `test-cases-026.md`). |
 | 2026-10-03 | CR6 — code review 006 fixes. §3 gains the attempt token, in-flight guards, decision lock (adoption is final), draft versioning, the crash-screen boundary and the saved-draft rules (CR6-02, 04, 14, 15, C-3); §7 (nothing carried from submission, explained contradictions remembered, B-10); §13.3 (required questions announced, CR6-07); §16.1/§16.3 (`replaces_prior_model` is a quote field, a missing quote object means every field guessed, `decision_type_other` bounded, CR6-05, B-8, B-9); §5.3/ADR-IF-R16-1 (the timestamp is a parameter, stale answers take the Not sure path, B-15, CR6-06); §22.1 (summary clauses, country and supplier fallbacks, CR6-16/23/G-7); §23 (plain engine errors, an invalid policy shown at the button, Back keeps the review gate, announcements, CR6-12/17/03/08); §25 (plain model names, CR6-19/21). |
 | 2026-10-03 | §25 added — round R16-E (the description-first path speaks the form's words). `QUESTIONNAIRE_COPY` (`plain-copy.ts`) drives both the targeted questionnaire and the review screen; `IntakeQuestion.text` retired from the engine type; `system_access_scope`/`multi_instance_coordination` join the extraction schema; `'multi_select'` answer type; the follow-up mechanism (`insertQuestions`/`assumption` on `ANSWER_SUBMITTED`) for decision-type/vendor/model; BC-3's content-based access-scope comparison; the review screen, the extraction-error screens (unified via `extractionErrorMessage()`, plus `SWITCH_TO_FORM`), and the contradiction screen all reworded; the narrow-window reflow rule; the summary's merged "couldn't tell" list. |
 | 2026-10-03 | §24 added — round R16-D2 (the "No" screen's intake-side plumbing; saved assumptions, D-95/D-96/D-81; the register's "already in place" parity, D-97; correcting a form-built verdict through the form, D-82). New reducer action `CORRECT_VERDICT_WITH_FORM`; `originalGraph` threads through the form-path correction states beside `originalVerdictId`; new pure module `src/components/form-corrections.ts`. The "No" screen's own composition (VD-10) is documented in `verdict-audit.md` §5.9, cross-referenced here rather than duplicated. |

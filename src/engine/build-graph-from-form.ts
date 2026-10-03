@@ -75,9 +75,23 @@ export interface StructuredFormValues {
 // Date.now() anywhere in the engine's call graph). Every caller mints the
 // timestamp itself and passes it in; see B-15's caller list in
 // build/prompts/CR6-fixes.md for the full sweep this fix required.
-export function buildGraphFromForm(values: StructuredFormValues, extractedAt: string): DataFlowGraph {
-  const processingId = crypto.randomUUID();
-  const outputId = crypto.randomUUID();
+//
+// ENG-ID (2026-10-03): the ids follow the same rule. This function used to
+// call crypto.randomUUID() for every id, so two builds from identical answers
+// never produced the same graph. The caller now passes `newId`, an id source
+// (production passes `() => crypto.randomUUID()`), and the engine only draws
+// from it — always in this order: the graph, the processing node, the output
+// node, then one per input node in the order the classes are listed. The
+// same values, timestamp and id sequence therefore build a byte-identical
+// graph. Every id drawn must be distinct; that is the id source's contract.
+export function buildGraphFromForm(
+  values: StructuredFormValues,
+  extractedAt: string,
+  newId: () => string,
+): DataFlowGraph {
+  const graphId = newId();
+  const processingId = newId();
+  const outputId = newId();
 
   // R16-B (UC-10): a distinct class per ticked kind of information becomes
   // its own input node, every one in the destination zone. Falls back to
@@ -89,14 +103,14 @@ export function buildGraphFromForm(values: StructuredFormValues, extractedAt: st
       ? values.inputDataClasses
       : [values.inputDataClass];
   const inputNodes = classes.map((dataClass, i) => ({
-    id: crypto.randomUUID(),
+    id: newId(),
     label: i === 0 ? `${values.useCaseName} — input` : `${values.useCaseName} — input ${i + 1}`,
     data_class: dataClass,
     data_zone: values.inputDataZone,
   }));
 
   return {
-    id: crypto.randomUUID(),
+    id: graphId,
     version: 1,
     input_nodes: inputNodes,
     processing_nodes: [

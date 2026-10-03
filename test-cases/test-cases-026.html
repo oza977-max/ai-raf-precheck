@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round ENG-ID (the engine mints no ids) &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-identical-inputs-build-an-identical-graph">&sect;1 &mdash; Identical inputs build an identical graph</a></li>
+                <li><a href="#2-nothing-in-the-engine-reads-a-clock-a-random-s">&sect;2 &mdash; Nothing in the engine reads a clock, a random source or mints an id</a></li>
+                <li><a href="#amended-existing-cases">Amended existing cases</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round ENG-ID (the engine mints no ids)</h1>
+<p class="metadata">3 October 2026 &middot; Generated from test-cases-026.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-03. The last non-deterministic call in the engine: <code>buildGraphFromForm</code> (<code>src/engine/build-graph-from-form.ts</code>) called <code>crypto.randomUUID()</code> for every node id and the graph id, so two builds from identical answers never produced the same graph. That broke the engine's "pure island" rule (<code>specs/cross-cutting</code> &sect;7 Rule 1) and left a hole in NF-1 (identical inputs, identical output). Code review 006 fix B-15 already moved the clock out by making the timestamp a parameter; this round does the same for ids. The caller now passes an id source; the form and the seed cases pass <code>() =&gt; crypto.randomUUID()</code>, so the product behaves exactly as before. Built on top of CR6 (commit <code>cc480da</code>). The amended spec sections are marked "ENG-ID" in <code>specs/cross-cutting</code>, <code>specs/intake-flow</code> and <code>specs/implementation-guide</code>.</em></p>
+<p>Test files: <code>src/engine/build-graph-from-form.test.ts</code>, <code>src/engine/engine-boundary.test.ts</code>.</p>
+
+<section id="1-identical-inputs-build-an-identical-graph">
+<h2>&sect;1 &mdash; Identical inputs build an identical graph</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-ENG-ID-01</td><td>The same values, timestamp and id source build a byte-identical graph, with several inputs and an access-scope list &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+<tr><td>TC-ENG-ID-02</td><td>Every id in the graph comes from the id source, drawn in a fixed order (graph, processing node, output node, then each input node), and the edges use those ids &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+<tr><td>TC-ENG-ID-03</td><td>A different id source changes only the ids; every other field is the same &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-nothing-in-the-engine-reads-a-clock-a-random-s">
+<h2>&sect;2 &mdash; Nothing in the engine reads a clock, a random source or mints an id</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-ENG-ID-04</td><td>No production file under <code>src/engine/</code> calls <code>Date.now()</code>, <code>new Date()</code> with no arguments, <code>Math.random()</code>, <code>performance.now()</code> or uses <code>crypto</code>, read from each file's syntax tree &mdash; <code>engine-boundary.test.ts</code></td></tr>
+<tr><td>TC-ENG-ID-05</td><td>The scan flags each of those calls, and does not flag a comment naming them, the word in a string, or date arithmetic on a passed-in value (<code>new Date(Date.UTC(...))</code>) &mdash; <code>engine-boundary.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="amended-existing-cases">
+<h2>Amended existing cases</h2>
+<p>These cases keep their ids. Their assertions changed because they pinned the old behaviour; each change is a deliberate part of this round, not a weakening.</p>
+<table>
+<thead><tr><th>ID</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-A1-19</td><td>Was: shuffled access-scope ticks give the same stored list, with the graph otherwise differing by its random ids. Now: with the same id source the two graphs are byte-identical &mdash; <code>build-graph-from-form.test.ts</code></td></tr>
+</tbody>
+</table>
+<p>Every other caller of <code>buildGraphFromForm</code> in the tests passes an id source and is otherwise unchanged; the back-test expected verdicts (<code>backtest/use-cases.md</code>, <code>src/engine/backtest-*.test.ts</code>) are unchanged.</p>
+</section>
+</main>
+</div>
+</body>
+</html>

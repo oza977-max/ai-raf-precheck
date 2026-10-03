@@ -425,8 +425,9 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
     // B-15: the engine no longer mints its own timestamp — this component
     // is presentation-only, not the engine, so minting it here (React/I-O
     // territory) rather than inside src/engine/* is exactly where
-    // cross-cutting.md §7 Rule 1 puts it.
-    onSubmit(buildGraphFromForm(values, new Date().toISOString()), describeAssumptions(assumptions), answers);
+    // cross-cutting.md §7 Rule 1 puts it. ENG-ID: the same goes for the ids —
+    // the engine draws every graph id from the source passed here.
+    onSubmit(buildGraphFromForm(values, new Date().toISOString(), () => crypto.randomUUID()), describeAssumptions(assumptions), answers);
   }
 
   // Bundles the props every question renderer needs, so each call site below

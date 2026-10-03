@@ -302,7 +302,7 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
     // agrees with the use_case_created event's own at(0) below.
     const t0 = Date.now();
     const at = (offsetSeconds: number) => new Date(t0 + offsetSeconds * 1000).toISOString();
-    const graph = buildGraphFromForm(ibCase.values, at(0));
+    const graph = buildGraphFromForm(ibCase.values, at(0), () => crypto.randomUUID());
     const evalResult = evaluate(graph, policy, packs);
     if (!evalResult.ok) continue; // never fake what the policy cannot classify
     const result = evalResult.value;

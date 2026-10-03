@@ -45,7 +45,7 @@ const base = { useCaseName: 'x', description: 'x', replacesPriorModel: false } a
 const TS = '2026-01-01T00:00:00.000Z';
 
 function run(v: StructuredFormValues) {
-  const r = evaluate(buildGraphFromForm(v, TS), policy, packs);
+  const r = evaluate(buildGraphFromForm(v, TS, () => crypto.randomUUID()), policy, packs);
   if (!r.ok) throw new Error(`engine error: ${JSON.stringify(r.error)}`);
   return r.value;
 }

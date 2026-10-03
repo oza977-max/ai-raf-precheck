@@ -100,13 +100,23 @@ describe('engine/screen boundary (cross-cutting.md §7 Rule 1, CLAUDE.md)', () =
 // performance.now(), and any use of `crypto` (randomUUID, getRandomValues).
 // `new Date(Date.UTC(...))` — date arithmetic on a value passed in, as
 // attestation.ts does — is deterministic and stays allowed.
+//
+// A tripwire for the accidental call, not a proof against a determined one:
+// aliasing (`const r = Math.random; r()`) is out of its reach. It does see
+// through a `globalThis.` prefix and bracket access (`Date['now']`).
 function nonDeterministicCalls(text: string): string[] {
   const source = ts.createSourceFile('x.ts', text, ts.ScriptTarget.Latest, true);
   const found: string[] = [];
+  const ownerOf = (e: ts.Expression): string => e.getText(source).replace(/^globalThis\./, '');
   const visit = (node: ts.Node): void => {
-    if (ts.isPropertyAccessExpression(node)) {
-      const owner = node.expression.getText(source);
-      const name = node.name.text;
+    const access =
+      ts.isPropertyAccessExpression(node)
+        ? { owner: ownerOf(node.expression), name: node.name.text }
+        : ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)
+          ? { owner: ownerOf(node.expression), name: node.argumentExpression.text }
+          : undefined;
+    if (access) {
+      const { owner, name } = access;
       if (
         (owner === 'Date' && name === 'now') ||
         (owner === 'Math' && name === 'random') ||
@@ -116,9 +126,14 @@ function nonDeterministicCalls(text: string): string[] {
       }
     }
     if (ts.isIdentifier(node) && node.text === 'crypto') found.push('crypto');
+    // `globalThis.crypto` is already caught as the name `crypto` above; only
+    // the bracket form hides the name inside a string.
+    if (ts.isElementAccessExpression(node) && access?.owner === 'globalThis' && access.name === 'crypto') {
+      found.push('crypto');
+    }
     if (
       ts.isNewExpression(node) &&
-      node.expression.getText(source) === 'Date' &&
+      ownerOf(node.expression) === 'Date' &&
       (node.arguments === undefined || node.arguments.length === 0)
     ) {
       found.push('new Date()');
@@ -149,6 +164,10 @@ describe('engine purity (cross-cutting.md §7 Rule 1, NF-1)', () => {
       'const e = crypto.randomUUID();',
       'const f = globalThis.crypto.getRandomValues(buf);',
       'const g = performance.now();',
+      'const h = globalThis.Date.now();',
+      "const i = Date['now']();",
+      "const j = globalThis['crypto'];",
+      'const k = new globalThis.Date();',
     ].join('\n');
     expect(nonDeterministicCalls(flagged)).toEqual([
       'Date.now',
@@ -158,6 +177,10 @@ describe('engine purity (cross-cutting.md §7 Rule 1, NF-1)', () => {
       'crypto',
       'crypto',
       'performance.now',
+      'Date.now',
+      'Date.now',
+      'crypto',
+      'new Date()',
     ]);
 
     const allowed = [

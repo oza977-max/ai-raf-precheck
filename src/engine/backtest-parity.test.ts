@@ -195,7 +195,7 @@ function blindResult(ucId: string): NamedSubset {
   // B-15: buildGraphFromForm's timestamp is now a parameter — the same
   // literal this file's graph fixtures already use, since extracted_at
   // feeds no condition any of these parity outcomes depend on.
-  const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z');
+  const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z', () => crypto.randomUUID());
   return evalNamedSubset(graph);
 }
 
@@ -378,7 +378,7 @@ function run(answers: PlainAnswers): {
   // B-15: buildGraphFromForm's timestamp is now a parameter — fixed here
   // since extracted_at feeds no condition these assumption-case outcomes
   // depend on.
-  const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z');
+  const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z', () => crypto.randomUUID());
   const r = evaluate(graph, policy, packs);
   if (!r.ok) throw new Error(`evaluate() failed: ${r.error.kind}`);
   return {

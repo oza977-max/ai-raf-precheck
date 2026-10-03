@@ -219,7 +219,9 @@ src/engine/evaluate.test.ts   ← same directory
 
 **Rule 1 — Engine is a pure island:** `src/engine/*` imports only from `src/engine/types.ts` and standard TypeScript types. No React, no idb, no Anthropic SDK, no browser APIs.
 
-**Amended 2026-10-03 (CR6, B-15).** `buildGraphFromForm` no longer reads a clock inside the engine: it takes the timestamp as a parameter and every caller (the form, the seed cases) passes it, so identical inputs and timestamp build an identical graph (TC-CR6-B15). It still mints the graph id inside the engine; moving that out is a separate, pending task.
+**Amended 2026-10-03 (CR6, B-15).** `buildGraphFromForm` no longer reads a clock inside the engine: it takes the timestamp as a parameter and every caller (the form, the seed cases) passes it, so identical inputs and timestamp build an identical graph (TC-CR6-B15).
+
+**Amended 2026-10-03 (ENG-ID).** The ids followed: `buildGraphFromForm(values, extractedAt, newId)` no longer calls `crypto.randomUUID()`. The caller passes `newId`, an id source (the form and the seed cases pass `() => crypto.randomUUID()`), and the engine draws from it in a fixed order — graph, processing node, output node, then each input node — so identical values, timestamp and id sequence build a byte-identical graph (TC-ENG-ID-01..03). No production file under `src/engine/` now reads a clock, draws a random number or mints an id, and `engine-boundary.test.ts` checks that mechanically by reading each file's syntax tree: `Date.now()`, `new Date()` with no arguments, `Math.random()`, `performance.now()` and any use of `crypto` fail the build (TC-ENG-ID-04/05). Date arithmetic on a value passed in, such as `new Date(Date.UTC(...))`, stays allowed.
 
 **Rule 2 — LLM boundary is isolated:** `src/llm/*` is the only place the Anthropic SDK is imported. Nothing in `src/engine/*` or `src/store/*` calls the LLM.
 

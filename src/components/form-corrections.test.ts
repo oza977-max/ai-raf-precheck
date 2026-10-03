@@ -40,7 +40,7 @@ function ctx() {
 const TS = '2026-01-01T00:00:00.000Z';
 
 function graph(overrides: Partial<StructuredFormValues> = {}): DataFlowGraph {
-  return buildGraphFromForm({ ...BASE_VALUES, ...overrides }, TS);
+  return buildGraphFromForm({ ...BASE_VALUES, ...overrides }, TS, () => crypto.randomUUID());
 }
 
 describe('formCorrections — TC-R16-D2-10..18 (D-82, DR7-22)', () => {

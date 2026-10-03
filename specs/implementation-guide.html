@@ -615,7 +615,7 @@ REGISTER TRACK
       <h4>Deliverables</h4>
       <ul>
         <li><code>src/components/StructuredForm.tsx</code> — all 12 fields from <code>intake-flow.md</code> §5.2; all select options from loaded policy (no hardcoded enums)</li>
-        <li><code>buildGraphFromForm(formValues, extractedAt): DataFlowGraph</code> — <code>intake_method: 'structured_form'</code>; the caller mints <code>extractedAt</code> (CR6 B-15, 2026-10-03: no clock inside the engine)</li>
+        <li><code>buildGraphFromForm(formValues, extractedAt, newId): DataFlowGraph</code> — <code>intake_method: 'structured_form'</code>; the caller mints <code>extractedAt</code> (CR6 B-15, 2026-10-03: no clock inside the engine) and passes <code>newId</code>, the id source the engine draws every id from (ENG-ID, 2026-10-03: no id minting inside the engine)</li>
         <li><code>usePolicy()</code> hook — <code>hasApiKey: boolean</code> drives path selection in <code>IntakeFlow.tsx</code></li>
         <li>"Guided intake" banner shown when no API key</li>
       </ul>

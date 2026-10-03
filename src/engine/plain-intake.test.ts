@@ -921,7 +921,7 @@ describe('plainAnswersToFormValues — TC-R16-D2-19: the "Not sure" fields guard
     // B-15: buildGraphFromForm's timestamp is now a parameter — fixed here
     // since extracted_at is not one of CANDIDATE_GRAPH_FIELDS and this
     // guard never compares it.
-    return buildGraphFromForm(plainAnswersToFormValues(answers, pol).values, '2026-01-01T00:00:00.000Z');
+    return buildGraphFromForm(plainAnswersToFormValues(answers, pol).values, '2026-01-01T00:00:00.000Z', () => crypto.randomUUID());
   }
 
   // Every question fully answered with a definite, non-"Not sure" value —
