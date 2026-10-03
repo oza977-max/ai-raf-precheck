@@ -75,7 +75,8 @@ describe('App — R16-A1 start-up gate (CF-5)', () => {
     expect(screen.getByText(/Policy file invalid/i)).toBeInTheDocument();
     expect(screen.getByText(/evaluation is disabled/i)).toBeInTheDocument();
     const list = document.querySelector('.app-policy-invalid ul')!;
-    expect(list.textContent).toContain(POLICY_PROBLEM_MESSAGE);
+    expect(list.textContent).toBe("Your AI risk team needs to fix the firm's rules file before checks can run.");
+    expect(list.textContent).not.toContain(POLICY_PROBLEM_MESSAGE);
     expect(document.querySelector('.app-policy-invalid')!.textContent).not.toMatch(/covers_reviews|DR-VENDR-01|CTRL-TPRM-01/);
   });
 

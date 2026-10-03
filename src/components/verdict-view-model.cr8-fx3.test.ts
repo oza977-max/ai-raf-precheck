@@ -114,3 +114,31 @@ describe('FX8-3 CR8-17 — overdue regulatory text counts only the packs this ve
     expect(overdue(buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined))).toBe(false);
   });
 });
+
+describe('FX8-3 review pass 1 follow-ups', () => {
+  it('TC-CR8-02i: stages idea / exploring / retired make no sign-off claim; approved / in_production / monitored may', () => {
+    for (const stage of ['idea', 'exploring', 'retired'] as const) {
+      const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy('self-service'), undefined, undefined, undefined, stage, { auditEvents: [] });
+      expect(view.signOffUnknown, stage).toBe(true);
+      for (const t of allText(view)) expect(t, stage).not.toMatch(PERMISSIVE);
+    }
+    for (const stage of ['approved', 'in_production', 'monitored'] as const) {
+      const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy('self-service'), undefined, undefined, undefined, stage, { auditEvents: [] });
+      expect(view.signOffUnknown, stage).toBe(false);
+    }
+  });
+
+  it('TC-CR8-02j: the unknown-case headline opens "Not yet confirmed."', () => {
+    const view = buildVerdictView(makeVerdict({ controls: ['C1'] }), makePolicy('self-service', { controls: [CTRL] }), undefined, undefined, undefined, undefined, { auditEvents: [] });
+    expect(view.headline).toMatch(/^Not yet confirmed\./);
+  });
+
+  it('TC-CR8-17-4: pack_versions holds pack A while the stale source is pack B — no overdue line', () => {
+    const verdict = makeVerdict({
+      pack_versions: { 'PACK-A': '1' },
+      stale_sources: [{ pack_id: 'PACK-B', retrieved_date: '2026-01-01', days_overdue: 5, max_staleness_days: 90 }],
+    } as Partial<Verdict>);
+    const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);
+    expect(view.couldStillChange.some((l) => /overdue/i.test(l))).toBe(false);
+  });
+});
