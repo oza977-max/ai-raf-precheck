@@ -89,7 +89,7 @@ describe('CR7-09 — a signed-off case is not described as needing no sign-off',
     for (const text of [view.headline, view.whoSignsOff, ...view.nextSteps]) {
       expect(text).not.toMatch(SELF_SERVICE_WORDS);
     }
-    expect(view.headline).toMatch(/signed off/i);
+    expect(view.headline).toMatch(/signed it off/i);
     // not the pending wording either
     expect(view.headline).not.toMatch(/^Not yet/);
   });
@@ -110,8 +110,9 @@ describe('CR7-09 — a signed-off case is not described as needing no sign-off',
     });
     expect(view.signedOff).toBe(false);
     expect(view.needsSignOff).toBe(true);
+    expect(view.headline).toMatch(/^Not yet/);
     for (const text of [view.headline, view.whoSignsOff, ...view.nextSteps]) {
-      expect(text).not.toMatch(/has signed|have signed|signed off by/i);
+      expect(text).not.toMatch(/signed off by your AI risk team|Your AI risk team has signed it off\./);
     }
   });
 

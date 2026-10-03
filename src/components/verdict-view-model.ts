@@ -11,7 +11,9 @@
 // and pack-review fallbacks below.
 import type { Condition, Control, DataFlowGraph, DownstreamReviewRule, Exposure, JurisdictionPack, PackRule, PolicyFile, TrippedInvariantDetail, DataZone } from '../engine/types';
 import type { Verdict } from '../types/verdict';
-import type { LifecycleStage } from '../store/types';
+import type { AuditEvent, LifecycleStage } from '../store/types';
+import { routeToWorkflow } from '../engine/workflow-router';
+import { resolveApprovedModel } from '../engine/evaluate';
 import { isVerdictProvisional, type ProvisionalReason } from '../engine/provisional';
 import { maxBy } from '../engine/envelope';
 // R16-D2 §2/§3 (D-95). The "No" screen's contributing-assumption check
@@ -110,11 +112,26 @@ export interface VerdictViewOptions {
    *  not persist it) — falls back to `'cannot-check'` when neither this
    *  nor `graph` says anything, exactly as before this option existed. */
   evidenceScope?: { platform?: string; vendor?: string };
+  /** CR7-09. The case's audit trail. Read only to find a `twoloD_reviewed`
+   *  event with action 'approved' for THIS verdict's id — that, and nothing
+   *  else, is what lets the screen say "signed off". Absent = no sign-off
+   *  event is known. */
+  auditEvents?: AuditEvent[];
 }
 
 export interface VerdictView {
   isRejected: boolean;
+  /** CR7-09. THE one answer: a sign-off is still OUTSTANDING (required by the
+   *  tier's workflow and no approving 2LoD review recorded on this verdict).
+   *  VerdictDisplay reads this; it no longer re-derives it from the stage. */
   needsSignOff: boolean;
+  /** CR7-09. The tier's workflow required a sign-off (derived from the
+   *  policy via the engine's routeToWorkflow, not from the stage). */
+  signOffRequired: boolean;
+  /** CR7-09. A `twoloD_reviewed` event with action 'approved' exists for
+   *  this verdict's id. A correction request or a later (corrected) verdict
+   *  does not count. */
+  signedOff: boolean;
   headline: string;
   /** At most two distinct plain reasons, binding constraint first. */
   whyReasons: string[];
@@ -491,19 +508,22 @@ function resolveReviewPlain(
     const modelId = ruleId !== undefined ? ruleId.slice(ruleId.indexOf(':') + 1) : undefined;
     // UNSIGNED-MODEL review: "listed" means the policy resolves the id the way
     // the engine does (exact non-family entry, else a family whose
-    // version_pattern prefixes it) — NOT "is_approved is false here". The
+    // version-pattern prefix matches it) — NOT "is_approved is false here". The
     // engine only owes this review for an unlisted or unaccepted model, and
     // this screen reads the policy as written: a family lapsed by its
     // reattest_by date still reads is_approved true, and a stored case keeps
     // owing the review after the firm later accepts the model.
-    const models = policy?.approved_models ?? [];
-    const listed =
-      modelId !== undefined &&
-      (models.some((m) => !m.is_family && m.model_id === modelId) ||
-        models.some((m) => m.is_family === true && m.version_pattern !== undefined && modelId.startsWith(m.version_pattern)));
+    // One rule, the engine's own (exported resolveApprovedModel) — no copy.
+    const listed = modelId !== undefined && resolveApprovedModel(policy?.approved_models, modelId) !== undefined;
     return listed ? MODEL_UNACCEPTED_PLAIN : MODEL_REGISTRY_PLAIN;
   }
-  const firmRule: DownstreamReviewRule | undefined = policy?.downstream_reviews?.find((r) => r.id === baseId);
+  // CR7-29: a firm rule and a pack rule may share an id. The firm's words are
+  // used only when the review text the verdict recorded is the firm rule's own
+  // (the engine writes `rule.review` for a firm rule); otherwise fall through
+  // to the pack loop. A legacy source with no review text matches by id alone.
+  const firmRule: DownstreamReviewRule | undefined = policy?.downstream_reviews?.find(
+    (r) => r.id === baseId && (formalReview === undefined || r.review === formalReview),
+  );
   if (firmRule) {
     return {
       name: firmRule.plain_name ?? `${firmRule.review} ${POINTER_MEANS_FOR_YOU}`,
@@ -547,8 +567,13 @@ function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, 
 // ---------------------------------------------------------------------------
 // §4.2 copy templates.
 
-function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number): string {
+function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number, signedOff = false): string {
   if (status === 'rejected') return 'No — not as described.';
+  if (signedOff) {
+    if (n === 0) return 'Yes — you can start. Your AI risk team has signed it off.';
+    if (n === 1) return 'Nearly. You can start once 1 safeguard is in place — your AI risk team has signed it off.';
+    return `Nearly. You can start once ${n} safeguards are in place — your AI risk team has signed it off.`;
+  }
   if (needsSignOff) {
     if (n === 0) return 'Not yet. You can start once your AI risk team has signed it off.';
     if (n === 1) return 'Not yet. You can start once your AI risk team has signed it off and 1 safeguard is in place.';
@@ -661,6 +686,13 @@ function buildCouldStillChange(verdict: Verdict): string[] {
     if (!reasons || reasons.length === 0) {
       lines.push('This result may still change — your AI risk team can tell you why.');
     }
+  }
+  // CR7-39: the review-overdue banner lives in the collapsed reasoning section;
+  // derived from verdict.stale_sources, so it is absent when there are none.
+  if ((verdict.stale_sources ?? []).length > 0) {
+    lines.push(
+      "Some of the regulatory text behind this result is overdue for a fresh look — it was last checked longer ago than your firm's window allows. Your AI risk team can tell you which.",
+    );
   }
   // RA-11: independent of provisional status — a medium caveat never makes a
   // verdict provisional (only 'low' does), but it must still surface.
@@ -843,7 +875,19 @@ export function buildVerdictView(
   options: VerdictViewOptions = {},
 ): VerdictView {
   const isRejected = verdict.status === 'rejected';
-  const needsSignOff = stage === 'pre_checked';
+  // CR7-09: whether a sign-off was required comes from the tier's workflow
+  // (the engine's router), not from the stage — a signed-off case moves on to
+  // 'approved' and used to read as "no sign-off needed". With no stage (the
+  // intake screen before saving) nothing is claimed, as before.
+  const signOffRequired =
+    stage === 'pre_checked' || (stage !== undefined && policy !== undefined && routeToWorkflow(verdict.tier, policy).lifecycle_stage === 'pre_checked');
+  const signedOff =
+    signOffRequired &&
+    (options.auditEvents ?? []).some(
+      (e) =>
+        e.payload.type === 'twoloD_reviewed' && e.payload.action === 'approved' && e.payload.verdict_id === verdict.id,
+    );
+  const needsSignOff = signOffRequired && !signedOff;
 
   // Rejected verdicts carry no safeguards, next steps or could-still-change
   // lines from THIS view-model — the headline still covers the rejected
@@ -853,6 +897,8 @@ export function buildVerdictView(
     return {
       isRejected: true,
       needsSignOff,
+      signOffRequired,
+      signedOff,
       headline: headlineText('rejected', needsSignOff, 0),
       whyReasons: [],
       whyHasMore: false,
@@ -957,20 +1003,24 @@ export function buildVerdictView(
   });
   const whyAll = dedupeStrings(byBindingFirst.map((t) => invariantPlainReason(t, policy, graph)));
 
-  const headline = headlineText(verdict.status, needsSignOff, outstandingCount);
+  const headline = headlineText(verdict.status, needsSignOff, outstandingCount, signedOff);
   const nextSteps = buildNextSteps({
     needsSignOff,
     outstandingSafeguards,
     owedReviews,
     provisionalReasons: verdict.provisional_reasons ?? [],
   });
-  const whoSignsOff = needsSignOff
+  const whoSignsOff = signedOff
+    ? 'your AI risk team — signed off by your AI risk team on this version of the result.'
+    : needsSignOff
     ? "your AI risk team. Until they do, this result isn't final."
     : "nobody — it's low-stakes enough for you to go ahead once the safeguard is in place.";
 
   return {
     isRejected: false,
     needsSignOff,
+    signOffRequired,
+    signedOff,
     headline,
     whyReasons: whyAll.slice(0, 2),
     whyHasMore: whyAll.length > 2,
