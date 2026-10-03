@@ -508,6 +508,36 @@ export function contradictionKey(c: Contradiction): string {
   return `${c.field ?? ''}|${c.statement1}`;
 }
 
+/** Where a correction's (node, field) lives on the graph being evaluated:
+ *  `{found:true, value}` or `{found:false}` (never guessed). */
+export type ValueResolver = (nodeId: string, field: string) => { found: true; value: unknown } | { found: false };
+
+/** Resolver for planCorrectionWrites. Description path: by node id (`graph` is
+ *  the graph itself). Form path (`originalGraph` given): buildGraphFromForm
+ *  mints fresh ids every submission and formCorrections names the ORIGINAL
+ *  graph's ids, so they are mapped by role — the original processing node id to
+ *  processing_nodes[0], the original output node id to output_nodes[0], the
+ *  sentinel `inputs|data_classes` to the sorted distinct input data classes. */
+export function graphValueResolver(graph: DataFlowGraph, originalGraph?: DataFlowGraph): ValueResolver {
+  const asRec = (n: unknown) => n as Record<string, unknown> | undefined;
+  return (nodeId, field) => {
+    if (nodeId === 'graph') {
+      return field in graph ? { found: true, value: (graph as unknown as Record<string, unknown>)[field] } : { found: false };
+    }
+    let node: Record<string, unknown> | undefined;
+    if (originalGraph) {
+      if (nodeId === 'inputs' && field === 'data_classes') {
+        return { found: true, value: [...new Set(graph.input_nodes.map((n) => n.data_class))].sort() };
+      }
+      if (originalGraph.processing_nodes[0]?.id === nodeId) node = asRec(graph.processing_nodes[0]);
+      else if (originalGraph.output_nodes[0]?.id === nodeId) node = asRec(graph.output_nodes[0]);
+    } else {
+      node = asRec([...graph.input_nodes, ...graph.processing_nodes, ...graph.output_nodes].find((n) => n.id === nodeId));
+    }
+    return node ? { found: true, value: node[field] } : { found: false };
+  };
+}
+
 /** CR7-21/22, FX7-1 review passes 1-2 (M-3, M-4, I-A, M-B). Decides what a
  *  confirm writes to the trail for its corrections, and how many corrections
  *  the trail then holds for this attempt. Pure: the caller reads the events
@@ -522,7 +552,7 @@ export function contradictionKey(c: Contradiction): string {
  *     for the same change). A->B, A->C, A->B writes the third: the form always
  *     diffs against the ORIGINAL graph, so "A->B" is new information once C is
  *     the latest.
- *   - With `ctx` (the graph being evaluated), a (node, field) the window has
+ *   - With `ctx` (a resolver for the graph being evaluated), a (node, field) the window has
  *     corrected whose latest value differs from the graph — and that nothing
  *     pending covers, e.g. a resubmit with the field back at its original value,
  *     where the form finds nothing to correct — gets one correction from the
@@ -535,7 +565,13 @@ export function contradictionKey(c: Contradiction): string {
 export function planCorrectionWrites(
   corrections: GraphCorrection[],
   events: AuditEvent[],
-  ctx?: { graph: DataFlowGraph; newId: () => string; now: () => string; by: string },
+  ctx?: {
+    resolve: ValueResolver;
+    version: number;
+    newId: () => string;
+    now: () => string;
+    by: string;
+  },
 ): { toWrite: GraphCorrection[]; sinceLastResult: number } {
   let lastDecided = -1;
   events.forEach((e, i) => {
@@ -559,23 +595,23 @@ export function planCorrectionWrites(
   });
 
   if (ctx) {
-    const g = ctx.graph;
-    const nodes = [...g.input_nodes, ...g.processing_nodes, ...g.output_nodes] as unknown as Array<Record<string, unknown>>;
-    const valueOnGraph = (nodeId: string, field: string): unknown =>
-      nodeId === 'graph' ? (g as unknown as Record<string, unknown>)[field] : nodes.find((n) => n.id === nodeId)?.[field];
     const covered = new Set(corrections.map(key));
     for (const [k, last] of latest) {
       if (covered.has(k)) continue;
-      const now = valueOnGraph(last.node_id, last.field);
-      if (norm(now) === norm(last.corrected_value)) continue;
+      // I-1 (review pass 3): a (node, field) that cannot be found on the graph
+      // writes NOTHING. A `null` for "not found" would be a false value on an
+      // append-only trail.
+      const found = ctx.resolve(last.node_id, last.field);
+      if (!found.found) continue;
+      if (norm(found.value) === norm(last.corrected_value)) continue;
       toWrite.push({
         correction_id: ctx.newId(),
         graph_version_before: last.graph_version_after,
-        graph_version_after: g.version,
+        graph_version_after: ctx.version,
         node_id: last.node_id,
         field: last.field,
         original_value: last.corrected_value ?? null,
-        corrected_value: now ?? null,
+        corrected_value: found.value ?? null,
         corrected_by: ctx.by,
         corrected_at: ctx.now(),
         ...(last.correction_source ? { correction_source: last.correction_source } : {}),

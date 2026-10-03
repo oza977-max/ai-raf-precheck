@@ -34,7 +34,7 @@ import KnowledgeLensPanel from './KnowledgeLensPanel';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
-import { intakeReducer, nextReviewStep, contradictionKey, planCorrectionWrites } from './intake-state';
+import { intakeReducer, nextReviewStep, contradictionKey, planCorrectionWrites, graphValueResolver } from './intake-state';
 import { saveDraft, loadDraft, loadDraftInfo, clearDraft, clearDraftIfCase, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
@@ -1231,7 +1231,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     confirmInFlight.current = true;
     setConfirmPending(true);
 
-    const { graph, corrections, useCaseId, originalVerdictId } = state;
+    const { graph, corrections, useCaseId, originalVerdictId, originalGraph } = state;
     // The confirmation step's state shape does not carry resolutionNotes —
     // they live on questionnaire/contradiction_review. By CONFIRMED time the
     // reducer has already folded them forward? It has NOT: confirmation's
@@ -1299,6 +1299,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             confirmedAssumptions,
             confirmedPlainAnswers,
             confirmedUncertainNodeIds,
+            originalGraph,
           );
         } catch (err) {
           // A legitimate engine/policy failure (e.g. no-track-match) must not
@@ -1335,6 +1336,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     confirmedAssumptions: Assumption[] = [],
     confirmedPlainAnswers?: PlainAnswers,
     confirmedUncertainNodeIds: string[] = [],
+    originalGraph?: DataFlowGraph,
   ) {
     // Policy checks come FIRST, before any write (R16-F review pass 1). They
     // used to run after use_case_created/graph_confirmed (or graph_corrected)
@@ -1375,7 +1377,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // good if they waited for a result.
     const existingEvents = await getAuditEvents(useCaseId);
     const plan = planCorrectionWrites(corrections, existingEvents, {
-      graph,
+      resolve: graphValueResolver(graph, originalGraph),
+      version: graph.version,
       newId: () => crypto.randomUUID(),
       now: () => new Date().toISOString(),
       by: getRole(),
