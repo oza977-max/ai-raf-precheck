@@ -136,6 +136,23 @@ function duplicatePackRuleIdWarnings(packs: JurisdictionPack[]): string[] {
     );
 }
 
+// C-5 (TC-CR6-C5d): the same collision between a FIRM downstream-review id
+// and a loaded pack rule id — both surface as `rule_id` on a verdict.
+function firmPackRuleIdWarnings(policy: PolicyFile, packs: JurisdictionPack[]): string[] {
+  const firmIds = new Set((policy.downstream_reviews ?? []).map((r) => r.id));
+  const out: string[] = [];
+  for (const pack of [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id))) {
+    for (const rule of sortedById(pack.rules)) {
+      if (firmIds.has(rule.id)) {
+        out.push(
+          `rule id '${rule.id}' is used by a firm downstream review and by pack ${pack.pack_id} — each rule's id should be unique across the firm policy and every pack loaded with it.`,
+        );
+      }
+    }
+  }
+  return out;
+}
+
 function appliesToErrors(
   controlId: string,
   appliesTo: { platforms?: string[]; vendors?: string[] } | undefined,
@@ -215,6 +232,7 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
 
   errors.push(...platformVendorIdErrors(policy));
   warnings.push(...duplicatePackRuleIdWarnings(packs));
+  warnings.push(...firmPackRuleIdWarnings(policy, packs));
 
   for (const control of sortedById(policy.controls)) {
     errors.push(...appliesToErrors(control.id, control.verification_evidence?.applies_to, policy));

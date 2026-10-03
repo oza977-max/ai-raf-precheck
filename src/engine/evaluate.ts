@@ -501,19 +501,23 @@ function sortedByModelId(items: ApprovedModel[]): ApprovedModel[] {
 // C-5: two different firm-loaded packs can reuse the same rule id by
 // coincidence — a rule id is unique WITHIN one pack's own rules, never
 // guaranteed unique ACROSS every pack a firm loads together (and
-// checkPolicyReferences now warns when it happens, src/store/policy-
-// references.ts). Without de-duplication both entries would reach the
-// verdict even though `rule_id` promises one review requirement 1:1 with
-// one rule. First occurrence wins, in the FIXED order `producers` is always
-// called with (never Set-based on the review TEXT — reviewStringsFrom
-// already de-duplicates text separately, and two rules that share an id
-// must collapse to one SOURCE, not merely one rendered line).
+// checkPolicyReferences warns when it happens, src/store/policy-
+// references.ts). Only entries identical in BOTH rule_id and review text
+// collapse (the same obligation arriving twice). A shared id with DIFFERENT
+// review text is two real obligations and both are kept — collapsing on id
+// alone silently dropped a review someone owes. Output is sorted by rule_id
+// then review text so the order never depends on producer/pack order (NF-1).
 function combineReviewSources(...producers: DownstreamReviewSource[][]): DownstreamReviewSource[] {
-  const byRuleId = new Map<string, DownstreamReviewSource>();
+  const byKey = new Map<string, DownstreamReviewSource>();
   for (const source of producers.flat()) {
-    if (!byRuleId.has(source.rule_id)) byRuleId.set(source.rule_id, source);
+    const key = JSON.stringify([source.rule_id, source.review]);
+    if (!byKey.has(key)) byKey.set(key, source);
   }
-  return [...byRuleId.values()].sort((a, b) => a.rule_id.localeCompare(b.rule_id));
+  return [...byKey.values()].sort((a, b) => {
+    const byId = a.rule_id.localeCompare(b.rule_id);
+    if (byId !== 0) return byId;
+    return a.review < b.review ? -1 : a.review > b.review ? 1 : 0;
+  });
 }
 
 function reviewStringsFrom(sources: DownstreamReviewSource[]): string[] {

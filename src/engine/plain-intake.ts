@@ -320,6 +320,7 @@ export function plainAnswersToFormValues(
 
   // ---- Q5: information it uses (tick-all) -> inputDataClasses ----
   const classSet = new Set<DataClass>();
+  let q5Assumed = false;
   for (const key of toArray(answers['5'])) {
     switch (key) {
       case 'people':
@@ -339,8 +340,16 @@ export function plainAnswersToFormValues(
         classSet.add('Public');
         break;
       case 'not-sure':
+      default:
+        // CR6-06e: "not-sure" and any unrecognised/stale tick (alone or
+        // mixed with real ones) take the same path — strictest reading,
+        // listed back once. Before this fix a stale key was ignored and
+        // the class silently fell back to 'Internal' with no assumption.
         classSet.add('Confidential');
-        assume('5', 'not-sure', ['data_class']);
+        if (!q5Assumed) {
+          q5Assumed = true;
+          assume('5', 'not-sure', ['data_class']);
+        }
         break;
     }
   }
@@ -365,11 +374,14 @@ export function plainAnswersToFormValues(
         return 'non-binding';
       case 'one-input':
         return 'advisory';
-      case 'not-sure':
-        assume('6a', 'not-sure', ['decision_bindingness']);
-        return 'material';
       case 'usually-basis':
+      case undefined:
+        return 'material';
+      case 'not-sure':
       default:
+        // CR6-06f: "not-sure" and any unrecognised/stale value take the
+        // same path — listed back as an assumption.
+        assume('6a', 'not-sure', ['decision_bindingness']);
         return 'material';
     }
   }
@@ -512,15 +524,18 @@ export function plainAnswersToFormValues(
     case 'yes':
       outputReversibility = 'reversible';
       break;
-    case 'not-sure':
-      outputReversibility = 'irreversible';
-      assume('9', 'not-sure', ['output_reversibility']);
-      break;
     case 'no':
       outputReversibility = 'irreversible';
       break;
-    default:
+    case undefined:
       outputReversibility = 'unknown';
+      break;
+    case 'not-sure':
+    default:
+      // CR6-06f: "not-sure" and any unrecognised/stale value take the same
+      // path — the strict reading, listed back as an assumption.
+      outputReversibility = 'irreversible';
+      assume('9', 'not-sure', ['output_reversibility']);
   }
 
   // ---- Q10: how widely used -> scale ----
@@ -583,12 +598,16 @@ export function plainAnswersToFormValues(
     case 'yes':
       multiInstanceCoordination = 'yes';
       break;
+    case undefined:
+    case '':
+      multiInstanceCoordination = undefined;
+      break;
     case 'not-sure':
+    default:
+      // CR6-06f: unanswered stays unset; "not-sure" and any unrecognised
+      // stored value take the same path, listed back as an assumption.
       multiInstanceCoordination = 'unknown';
       assume('14', 'not-sure', ['multi_instance_coordination']);
-      break;
-    default:
-      multiInstanceCoordination = undefined;
   }
 
   const values: StructuredFormValues = {

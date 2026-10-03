@@ -292,7 +292,12 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
           next = withoutNone.includes(key) ? withoutNone.filter((k) => k !== key) : [...withoutNone, key];
         }
       } else {
-        next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+        // CR6-06e: a stale tick can't be unticked (it isn't rendered), so
+        // any toggle drops keys that are no longer current options — the
+        // person re-picks from what is on screen.
+        const valid = multiSelectValidKeys(id);
+        const live = current.filter((k) => valid.includes(k));
+        next = live.includes(key) ? live.filter((k) => k !== key) : [...live, key];
       }
       return { ...prev, [id]: next };
     });
@@ -341,10 +346,22 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
     if (id === '3aWhich') return [...staticKeys, ...companyAssistantOptions.map((o) => o.key)];
     return staticKeys;
   }
+  // CR6-06e: a multi-select's current keys — its static options plus the
+  // policy-driven extras the render splices in (Q11's jurisdictions). Q13
+  // keeps its own checker (resolveAccessScopeAnswer).
+  function multiSelectValidKeys(id: QuestionId): string[] {
+    const staticKeys = findQuestion(id)?.options.map((o) => o.key) ?? [];
+    if (id === '11') return [...jurisdictionOptions.map((o) => o.key), ...staticKeys];
+    return staticKeys;
+  }
   function isAnswered(id: QuestionId): boolean {
     if (id === '13') return q13Result.ok;
     const q = findQuestion(id);
-    if (q?.multi) return toArray(answers[id]).length > 0;
+    if (q?.multi) {
+      const ticks = toArray(answers[id]);
+      const valid = multiSelectValidKeys(id);
+      return ticks.length > 0 && ticks.every((k) => valid.includes(k));
+    }
     if (q?.freeText) return Boolean((answers[id] as string | undefined)?.trim());
     const value = answers[id];
     if (value === undefined || value === '') return false;

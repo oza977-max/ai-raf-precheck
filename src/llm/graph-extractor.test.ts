@@ -517,6 +517,16 @@ describe('extractGraph — B-9 (decision_type_other reaches the graph)', () => {
     expect(result.value.graph.output_nodes[0]?.decision_type).toBeUndefined();
   });
 
+  it('TC-CR6-B9b: the tool schema declares the same 200-character bound on decision_type_other as the zod gate', async () => {
+    mockOutputNode({ decision_type_other: 'collections prioritisation' });
+    await extractGraph('ranks accounts for collections follow-up');
+    const call = mockCreate.mock.calls[0]![0] as {
+      tools: { input_schema: { properties: { output_nodes: { items: { properties: Record<string, { maxLength?: number }> } } } } }[];
+    };
+    const prop = call.tools[0]!.input_schema.properties.output_nodes.items.properties.decision_type_other;
+    expect(prop?.maxLength).toBe(200);
+  });
+
   it('a decision_type_other longer than the bound fails the whole extraction (rejected), not silently truncated', async () => {
     mockOutputNode({ decision_type_other: 'x'.repeat(201) });
 

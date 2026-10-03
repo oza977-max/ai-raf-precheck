@@ -960,7 +960,7 @@ describe('evaluate — R16-A1 review sources (§1.3)', () => {
   // pack's own rules, never guaranteed unique ACROSS every pack a firm
   // loads together. Before this fix, both entries reached the verdict even
   // though `rule_id` promises one review requirement 1:1 with one rule.
-  it('TC-CR6-C5a: two different packs sharing the same required_review rule id collapse to ONE source, keeping the first by the same deterministic pack order every other producer uses', () => {
+  it('TC-CR6-C5a: two different packs sharing a rule id but with DIFFERENT review text keep BOTH obligations, ordered by rule id then review text', () => {
     const sharedRule = (review: string) => ({
       id: 'SHARED-REV-01',
       title: 'Shared id review',
@@ -984,10 +984,36 @@ describe('evaluate — R16-A1 review sources (§1.3)', () => {
     if (!result.ok) return;
     const sources = result.value.downstream_review_sources ?? [];
     const shared = sources.filter((s) => s.rule_id === 'SHARED-REV-01');
-    expect(shared).toHaveLength(1);
-    // AAA-PACK sorts before ZZZ-PACK — the same pack_id order
-    // resolveActivePacks/applyJurisdictionOverrides already use — so its
-    // review is the one kept.
-    expect(shared[0]).toEqual({ review: 'Review from pack AAA', rule_id: 'SHARED-REV-01' });
+    // CR6 FX-3: a shared id with different review text is two real
+    // obligations, not a duplicate — dropping one silently lost a review a
+    // reader owes. Only identical id AND text collapse (TC-CR6-C5c).
+    expect(shared).toEqual([
+      { review: 'Review from pack AAA', rule_id: 'SHARED-REV-01' },
+      { review: 'Review from pack ZZZ', rule_id: 'SHARED-REV-01' },
+    ]);
+    expect(result.value.downstream_reviews).toEqual(
+      expect.arrayContaining(['Review from pack AAA', 'Review from pack ZZZ']),
+    );
+  });
+
+  it('TC-CR6-C5c: two packs sharing a rule id AND identical review text still collapse to one source', () => {
+    const rule = {
+      id: 'SHARED-REV-01',
+      title: 'Shared id review',
+      source: { document: 'Test Doc', section: 'S1', text: 'test' },
+      effect: { type: 'required_review' as const, review: 'Same review text' },
+      condition: { data_zone: { in: ['Zone C'] } },
+      basis: 'verbatim' as const,
+    };
+    const mk = (pack_id: string) => ({
+      pack_id, version: '0.1', jurisdiction: 'UK', regulator: 'r', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: '[FIRM]', reviewer_role: '[FIRM]', sign_off_date: '[DATE]',
+      rules: [rule],
+    });
+    const result = evaluate({ ...mnpiGraph(), jurisdictions: ['UK'] }, policy, [mk('AAA-PACK'), mk('ZZZ-PACK')]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const shared = (result.value.downstream_review_sources ?? []).filter((s) => s.rule_id === 'SHARED-REV-01');
+    expect(shared).toEqual([{ review: 'Same review text', rule_id: 'SHARED-REV-01' }]);
   });
 });

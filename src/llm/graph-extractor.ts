@@ -119,7 +119,7 @@ const EXTRACT_GRAPH_SCHEMA = {
           // fire from an LLM-extracted graph. Bounded like the hand-off's
           // free-text fields (src/store/handoff.ts's boundedText) — a
           // decision-type label is a short phrase, never a paragraph.
-          decision_type_other: { type: 'string' },
+          decision_type_other: { type: 'string', maxLength: 200 },
           hitl: { type: 'boolean' },
           basis_quotes: {
           type: 'object',

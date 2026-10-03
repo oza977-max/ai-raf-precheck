@@ -160,6 +160,22 @@ describe('StructuredForm — CR6-06 (a stale single-select answer reads as unans
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
   });
 
+  it('TC-CR6-06e: a stale stored multi-select tick (Q5) leaves Continue disabled until re-picked', async () => {
+    const user = userEvent.setup();
+    render(
+      <StructuredForm
+        policy={policy()}
+        initialAnswers={{ ...INITIAL_ANSWERS, '9': 'yes', '5': ['old-key'] }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    const group = screen.getByRole('group', { name: /information/i });
+    await user.click(within(group).getAllByRole('checkbox')[0]!);
+    // Re-picking from what is on screen drops the stale key and answers it.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+
   it('a stale stored answer is not pre-selected on any of the question\'s rendered options', () => {
     render(<StructuredForm policy={policy()} initialAnswers={INITIAL_ANSWERS} onSubmit={vi.fn()} />);
     const group = screen.getByRole('group', { name: /if it gets something wrong/i });

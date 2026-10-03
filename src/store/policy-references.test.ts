@@ -345,6 +345,26 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(warning).toMatch(/ZZZ-PACK/);
   });
 
+  it('TC-CR6-C5d: warns when a firm downstream-review id collides with a loaded pack rule id, naming the pack', () => {
+    const pack = {
+      pack_id: 'AAA-PACK', version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: 'DR-CLASH-01', title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'required_review' as const, review: 'r' },
+        condition: {}, basis: 'verbatim' as const,
+      }],
+    };
+    const result = checkPolicyReferences(
+      basePolicy({ downstream_reviews: [{ id: 'DR-CLASH-01', review: 'Firm review', condition: {} }] }),
+      [pack],
+    );
+    const warning = result.warnings.find((w) => /DR-CLASH-01/.test(w));
+    expect(warning, 'expected a warning naming the colliding id').toBeDefined();
+    expect(warning).toMatch(/AAA-PACK/);
+    expect(warning).toMatch(/firm/i);
+  });
+
   it('two different pack rule ids, even with identical content otherwise, never warn', () => {
     const pack = (packId: string, ruleId: string) => ({
       pack_id: packId, version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',

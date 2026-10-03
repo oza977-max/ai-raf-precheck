@@ -612,7 +612,7 @@ describe('plainAnswersToFormValues — Q12 (replaces something)', () => {
     expect(plainAnswersToFormValues({ ...BASE, '12': 'no' }, policy()).values.replacesPriorModel).toBe(false);
   });
 
-  it('TC-CR6-05b: "Not sure" -> true, recorded as an assumption and listed back — the same reading QUESTIONNAIRE_COPY.replaces_prior_model.notSure gives for the generated guessed-field question (plain-copy.ts:649-658)', () => {
+  it('form path: "Not sure" -> true, recorded as an assumption and listed back — the same reading QUESTIONNAIRE_COPY.replaces_prior_model.notSure gives for the generated guessed-field question (plain-copy.ts:649-658)', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '12': 'not-sure' }, policy());
     expect(values.replacesPriorModel).toBe(true);
     const a = assumptions.find((x) => x.questionId === '12');
@@ -712,6 +712,53 @@ describe('plainAnswersToFormValues — CR6-06 (stale/unrecognised stored answers
     const publicMarket = plainAnswersToFormValues({ ...BASE, '7': 'public-market' }, policy());
     expect(publicMarket.values.outputExposure).toBe('market-facing');
     expect(publicMarket.assumptions).toEqual([]);
+  });
+
+  it('TC-CR6-06e: a stale Q5 tick (alone or mixed with real ticks) takes the "Not sure" path — Confidential, listed as an assumption', () => {
+    for (const ticks of [['old-key'], ['public', 'old-key']]) {
+      const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '5': ticks }, policy());
+      expect(values.inputDataClasses).toContain('Confidential');
+      expect(assumptions.find((a) => a.questionId === '5')).toEqual({
+        questionId: '5',
+        optionKey: 'not-sure',
+        fields: ['data_class'],
+      });
+    }
+    // A clean, current tick stays unassumed.
+    expect(plainAnswersToFormValues({ ...BASE, '5': ['public'] }, policy()).assumptions.find((a) => a.questionId === '5')).toBeUndefined();
+  });
+
+  it('TC-CR6-06f: an unrecognised Q9 value takes the "Not sure" path — irreversible, listed as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '9': 'some-removed-option' }, policy());
+    expect(values.outputReversibility).toBe('irreversible');
+    expect(assumptions.find((a) => a.questionId === '9')).toEqual({
+      questionId: '9',
+      optionKey: 'not-sure',
+      fields: ['output_reversibility'],
+    });
+  });
+
+  it('TC-CR6-06f: an unrecognised Q14 value takes the "Not sure" path — unknown, listed as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '14': 'some-removed-option' }, policy());
+    expect(values.multiInstanceCoordination).toBe('unknown');
+    expect(assumptions.find((a) => a.questionId === '14')).toEqual({
+      questionId: '14',
+      optionKey: 'not-sure',
+      fields: ['multi_instance_coordination'],
+    });
+  });
+
+  it('TC-CR6-06f: an unrecognised Q6a value takes the "Not sure" path — material, listed as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues(
+      { ...BASE, '6': 'suggests', '6a': 'some-removed-option' },
+      policy(),
+    );
+    expect(values.decisionBindingness).toBe('material');
+    expect(assumptions.find((a) => a.questionId === '6a')).toEqual({
+      questionId: '6a',
+      optionKey: 'not-sure',
+      fields: ['decision_bindingness'],
+    });
   });
 
   it('an unrecognised Q12 value takes the "Not sure" path — true, listed as an assumption', () => {
