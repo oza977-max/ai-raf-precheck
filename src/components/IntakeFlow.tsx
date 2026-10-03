@@ -1234,7 +1234,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // there is no "partial re-evaluation".
     const evalResult = evaluate(graph, attestablePolicy, loadedPacks);
     if (!evalResult.ok) {
-      throw new Error(`Evaluation failed: ${evalResult.error.kind}`);
+      // CR6-12 (Minor): was `Evaluation failed: ${evalResult.error.kind}` —
+      // the raw internal enum string, shown to the person verbatim, inside
+      // a sentence that then told them to review their own answers. Every
+      // one of these kinds is the firm's own rules/policy/packs; never
+      // something a different answer would have avoided.
+      throw new Error(engineErrorMessage(evalResult.error.kind));
     }
     const result = evalResult.value;
 
@@ -1933,11 +1938,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                 resubmission reuses the same case — the error must render
                 here too, or a form-path failure would silently drop the
                 "why" the fix exists to preserve. */}
-            {evaluationError && (
-              <p role="alert">
-                Evaluation could not complete: {evaluationError}. Review your answers and try again.
-              </p>
-            )}
+            {/* CR6-12 (Minor): dropped "Review your answers and try
+                again." — evaluationError is, by construction, always
+                about the firm's own rules/policy (engineErrorMessage,
+                plain-copy.ts), never the person's answers, so the old
+                suffix blamed the wrong party on every single occurrence. */}
+            {evaluationError && <p role="alert">Evaluation could not complete: {evaluationError}</p>}
             {reviewGateError && (
               <p role="alert" className="intake-flow__gate-error">
                 {reviewGateError}
