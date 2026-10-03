@@ -331,6 +331,9 @@ describe('intakeReducer', () => {
       corrections: [],
       useCaseId: 'uc-1',
       originalVerdictId: 'verdict-abc',
+      // CR8-08: deliberate expectation change — the countries are already
+      // checked on a correction pass, so the panel renders.
+      jurisdictionsConfirmed: true,
       // CR7-02 (6): a revisited screen, not a first reading.
       reentry: true,
     });

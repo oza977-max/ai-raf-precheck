@@ -1399,6 +1399,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // CR7-02 (BC-004): what the verdict being corrected was based on.
         ...(action.assumptions ? { assumptions: action.assumptions } : {}),
         ...(action.uncertainNodeIds ? { uncertainNodeIds: action.uncertainNodeIds } : {}),
+        // CR8-08: the countries were confirmed before the verdict being
+        // corrected (same reasoning as CHANGE_ANSWER / EVALUATION_FAILED): the
+        // panel must still render, editable, without re-gating the person.
+        jurisdictionsConfirmed: true,
         reentry: true,
       };
 
