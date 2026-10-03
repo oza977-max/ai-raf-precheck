@@ -27,7 +27,7 @@ Test file: `src/components/__tests__/QuestionnaireStep.um.test.tsx` (real `polic
 
 | ID | Asserts |
 |---|---|
-| TC-CR7-35a | The reference check emits a warning (never an error) naming each non-family `approved_models` entry with no `plain_name`; the real policy gives none |
+| TC-CR7-35a | The reference check emits a warning (never an error) naming each non-family `approved_models` entry with no `plain_name`; the real policy gives none; a blank (whitespace-only) `plain_name` is warned about too |
 | TC-CR7-35b | With no `plain_name`, the button, "Recorded" line and review row show "Model n" (numbered among the unnamed, in list order, as suppliers are), keep the not-yet-accepted suffix when `is_approved` is false, and never show the raw id |
 | TC-CR7-35c | A declared model id not on the list is shown as written (the person typed it) |
 | TC-CR7-35d | In a mixed list (named, unnamed, blank-named) only the unnamed are numbered, in list order, and a blank `plain_name` counts as none — never a blank button |

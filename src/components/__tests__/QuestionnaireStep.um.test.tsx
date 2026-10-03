@@ -165,6 +165,13 @@ describe('CR7-35 — unnamed models', () => {
     expect(bad.warnings.some((w) => w.includes('VENDOR-LLM-v1') && /plain_name/.test(w))).toBe(true);
     const real = checkPolicyReferences(policy);
     expect(real.warnings.filter((w) => /approved_models|model .*plain_name/i.test(w))).toEqual([]);
+    // Pass 2: a blank plain_name counts as none here too (the label already
+    // treats it so, TC-CR7-35d) — removing the .trim() must fail this.
+    const blank = checkPolicyReferences({
+      ...policy,
+      approved_models: (policy.approved_models ?? []).map((m) => (m.model_id === 'qwen3:4b' ? { ...m, plain_name: '   ' } : m)),
+    });
+    expect(blank.warnings.some((w) => w.includes('qwen3:4b') && /plain_name/.test(w))).toBe(true);
   });
 
   it('TC-CR7-35b: with no plain_name, button, Recorded line and review row show "Model n" (list order), keeping the suffix when not accepted; never the raw id', () => {
