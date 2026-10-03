@@ -1677,7 +1677,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // otherwise write a second uses_model edge for the same use case.
       const declaredModelNode = graph.processing_nodes.find((n) => n.declared_model_id);
       if (declaredModelNode && policyResult.valid) {
-        await addUseCaseModelLink(useCaseId, declaredModelNode, policyResult.policy);
+        // CR7-41: the snapshot judges acceptance on the same expiry-applied
+        // policy evaluate() saw, so a family past its reattest_by is not filed
+        // as accepted while the verdict owes its review.
+        await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
       }
     }
     await refreshRegister();

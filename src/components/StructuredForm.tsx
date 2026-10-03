@@ -8,7 +8,7 @@ import {
   neutralSupplierLabel,
 } from './plain-copy';
 import type { Assumption, PlainAnswers, PlainOption, QuestionId } from './plain-copy';
-import { plainAnswersToFormValues, platformZoneOptionKeys, resolveAccessScopeAnswer } from '../engine/plain-intake';
+import { plainAnswersToFormValues, platformZoneOptionKeys, q3ShowsModelQuestion, resolveAccessScopeAnswer } from '../engine/plain-intake';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import { saveFormDraft, loadFormDraft, probeLegacyFormDraft } from './intake-draft';
 import type { DataFlowGraph, PolicyFile } from '../engine/types';
@@ -208,15 +208,13 @@ function FreeText({
   );
 }
 
-/** CR7-04. Whether the "Model name, if you know it" question is on screen for
- *  this Q3 answer: the outside assistant, or either supplier option. A LOCAL
- *  copy of the engine-side predicate FX7-3 exports (`q3ShowsModelQuestion` in
- *  engine/plain-intake.ts, which takes the whole answers object) — the main
- *  loop replaces this with that import at merge. The one rule, in one place
- *  for this component: it decides both what renders and what a Q3 change must
- *  clear. */
+/** CR7-04. Whether the "Model name, if you know it" question is on screen
+ *  for this Q3 answer. The rule lives in ONE place — the engine's
+ *  `q3ShowsModelQuestion`, which also decides whether a 3model answer is read
+ *  — so what renders, what a Q3 change clears and what the engine reads
+ *  cannot drift (pinned by TC-CR7-04e). */
 function q3KeyShowsModelQuestion(q3: string | undefined): boolean {
-  return q3 === 'outside-assistant' || q3 === 'supplier-feature' || q3 === 'specialist-product';
+  return q3 !== undefined && q3ShowsModelQuestion({ '3': q3 });
 }
 
 export default function StructuredForm({ policy, initialDescription, initialAnswers, onSubmit }: StructuredFormProps) {
