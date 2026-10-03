@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
-import { fillText } from './fillText';
+import { fillText, SLOW_FLOW_MS } from './fillText';
 
 // FN-006 — user-reported after the v0.1.0 tag: "after describing, if I go to
 // the next step it doesn't go back, there is no back option."
@@ -230,7 +230,7 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     // Both halves of the contradiction are stated, per UC-5.
     expect(screen.getAllByText(/no personal information is involved/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /confirm and evaluate/i })).toBeNull();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 // The second half of the same walk (2026-08-15): resolve the contradiction
@@ -286,5 +286,5 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     // The old behaviour stranded the user at "All questions answered." with
     // no control. The flow must reach the attestation.
     expect(await screen.findByRole('button', { name: /confirm and evaluate/i })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 });

@@ -5,7 +5,7 @@ import App from '../../App';
 import { addNode, getUseCases } from '../../store/register';
 import { append, getAll } from '../../store/audit';
 import type { Verdict } from '../../types/verdict';
-import { fillText } from './fillText';
+import { fillText, SLOW_FLOW_MS } from './fillText';
 
 // R16-W (build/prompts/R16-W.md) — the owner-side walkthrough fixes,
 // integration-level coverage. Unit-level coverage for the individual pieces
@@ -113,7 +113,7 @@ describe('R16-W W-3 (D-69): the form path never shows graph_review on the way to
     expect(document.querySelectorAll('.graph-node')).toHaveLength(0);
     // No bare engine field code anywhere on the summary screen.
     expect(document.body.textContent).not.toMatch(/\bDATA_ZONE\b|\bMODEL_TYPE\b/);
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('R16-W W-4 (D-70): changing an answer / stepping back reopens the form filled in', () => {
@@ -252,7 +252,7 @@ describe('R16-W W-4 (D-70): one use case, one creation event', () => {
     if (creations[0]!.payload.type === 'use_case_created') {
       expect(creations[0]!.payload.description).toBe('Checks the resubmission does not duplicate the creation event.');
     }
-  });
+  }, SLOW_FLOW_MS);
 });
 
 // R16-F F-3 (DR7-05): see TC-R16-W-62's comment above — the write moved to
@@ -278,7 +278,7 @@ describe('R16-W W-1 (D-67): the text left in question 2 is the description from 
     expect(created?.payload.type === 'use_case_created' ? created.payload.description : undefined).toBe(
       'Edited words in question two.',
     );
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('Confirm guard across intakes (found by the R16-W walkthrough)', () => {
@@ -366,7 +366,7 @@ describe('R16-W W-3 (D-69): similar decided cases on the form-path confirmation 
       expect(screen.getByText(/similar decided case.*— show/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/precedent informs, the rules decide/i)).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('R16-W W-5 (D-75): the knowledge-lens panel is collapsed on the intake verdict screen', () => {
@@ -410,7 +410,7 @@ describe('R16-W W-5 (D-75): the knowledge-lens panel is collapsed on the intake 
     const details = summary.closest('details')!;
     expect(details).not.toBeNull();
     expect(details.hasAttribute('open')).toBe(false);
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('R16-W §4 (D-74): the opening-screen copy', () => {

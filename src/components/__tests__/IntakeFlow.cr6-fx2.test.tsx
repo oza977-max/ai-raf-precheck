@@ -13,7 +13,7 @@ import { append as appendAuditEvent, getAll, getAllForExport } from '../../store
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import type { DataFlowGraph } from '../../engine/types';
 import type { Verdict } from '../../types/verdict';
-import { fillText } from './fillText';
+import { fillText, SLOW_FLOW_MS } from './fillText';
 
 // FX-2 (CR6-fixes.md v2) — abandoned work, navigation gates, announcements,
 // crash safety. TDD-2 mock budget would normally be 1 (the Anthropic SDK
@@ -540,7 +540,7 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
       spy.mockRestore();
       sessionStorage.clear();
     }
-  });
+  }, SLOW_FLOW_MS);
 });
 
 // CR6-15 (Important). The confirm-and-evaluate sequence keeps running (by
@@ -724,7 +724,7 @@ describe('CR6-17: an invalid policy shows a message at the button instead of fai
     // Never reached the summary — FORM_SUBMITTED was never dispatched.
     expect(screen.queryByText(/here.s what we understood/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-CR6-17b: on the review screen\'s own Continue, an invalid policy shows a message at the button and never silently does nothing', async () => {
     sessionStorage.setItem(

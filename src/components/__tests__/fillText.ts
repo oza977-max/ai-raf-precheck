@@ -14,3 +14,11 @@ export async function fillText(
   await user.click(field);
   await user.paste(text);
 }
+
+// FX7-6: per-test timeout for the long, multi-screen intake flows (a full
+// form of ~12 clicks, several confirmations, a verdict, often a second pass).
+// Each wait inside them is correct and the flow is ~1 s on an idle machine,
+// but on a heavily loaded one it can pass vitest's 5 s default. The global
+// testTimeout is untouched; only the flows measured above ~3 s under load
+// carry this.
+export const SLOW_FLOW_MS = 15000;

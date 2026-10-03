@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
-import { fillText } from './fillText';
+import { fillText, SLOW_FLOW_MS } from './fillText';
 
 // TDD-2 mock budget = 1: the only mock is the external boundary (Anthropic SDK).
 // Everything else — IndexedDB via fake-indexeddb, React rendering — is real.
@@ -150,7 +150,7 @@ describe('Walking Skeleton', () => {
     // raw 'pre_checked' enum.
     await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
     expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call [TC-NF-4-01]', async () => {
     localStorage.clear(); // no API key configured
@@ -230,7 +230,7 @@ describe('Walking Skeleton', () => {
     // Self-verifying, not just structurally implied: the LLM boundary was
     // never touched on the no-api-key path (review finding, pass 1).
     expect(mockCreate).not.toHaveBeenCalled();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C03: an uncertain node generates a real question, answering it reaches a verdict', async () => {
     mockCreate.mockResolvedValueOnce({
@@ -314,7 +314,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C04: writes graph_confirmed then verdict_produced to the audit trail, in order, before showing the verdict (TC-UC-6-01/02/03)', async () => {
     const uniqueLabel = 'audit ordering check model';
@@ -652,7 +652,7 @@ describe('Walking Skeleton', () => {
         originalVerdictEvent.payload.type === 'verdict_produced' ? originalVerdictEvent.payload.verdict.id : undefined,
       );
     }
-  });
+  }, SLOW_FLOW_MS);
 
   it('a genuine engine failure (no-track-match) shows an error and returns to graph_review instead of hanging on "Evaluating..." forever (live-found gap, now fixed)', async () => {
     localStorage.clear(); // no API key — structured form path, reproduces the exact scenario found live
@@ -726,7 +726,7 @@ describe('Walking Skeleton', () => {
     // this test used to check for "Confirm what we understood"
     // (graph_review's heading), which this path cannot reach.
     expect(await screen.findByLabelText(/what do you want to call it/i)).toHaveValue('No track match tool');
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-LC-2-02 (P6-C02): a High-tier verdict routes the register node to lifecycle_stage "pre_checked" pending 2LoD approval, not auto-approved', async () => {
     localStorage.clear(); // no API key — structured form path, deterministic tier
@@ -779,7 +779,7 @@ describe('Walking Skeleton', () => {
     // STAGE_LABELS plain word ("Awaiting 2LoD sign-off"), not the raw
     // 'pre_checked' enum — same assertion, updated text.
     expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P5-C02: the real LLM-generated reasoning trace renders in the verdict details section', async () => {
     // Distinguish calls by shape, not by queue order: extractGraph() and
@@ -1046,7 +1046,7 @@ describe('Register row naming (charter 004 D-004)', () => {
     // The register lists AI systems. Its row is the system's name.
     expect(await screen.findByText('Mortgage servicing assistant')).toBeInTheDocument();
     expect(screen.queryByText(/Mortgage servicing assistant — input/)).not.toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 // Round 4 — charter 004 D-001. The description was captured, used for
@@ -1102,5 +1102,5 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
 
     // R16-W W-3 (D-69): the form path reaches the summary directly.
     await screen.findByText(/here.s what we understood/i);
-  });
+  }, SLOW_FLOW_MS);
 });

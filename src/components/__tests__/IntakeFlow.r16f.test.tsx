@@ -11,7 +11,7 @@ import { loadDraft } from '../intake-draft';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { Verdict } from '../../types/verdict';
 import type { DataFlowGraph } from '../../engine/types';
-import { fillText } from './fillText';
+import { fillText, SLOW_FLOW_MS } from './fillText';
 
 // R16-F — design-review-007.html Group 1. Integration-level coverage for
 // the items that need the real App wiring to prove: F-1 (cross-tab
@@ -162,7 +162,7 @@ safety_margin: 0.1
     // Never reached the summary — FORM_SUBMITTED was never dispatched.
     expect(screen.queryByText(/here.s what we understood/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('§3 (DR7-10): focus moves and the step change is announced', () => {
@@ -391,7 +391,7 @@ describe('F-2 (DR7-04): an evaluation error never orphans the case', () => {
     const events = await getAll(draft.useCaseId);
     expect(events.map((e) => e.event_type)).toEqual(['use_case_created', 'graph_confirmed']);
     expect((await getUseCases('all')).find((r) => r.use_case_id === draft.useCaseId)).toBeUndefined();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 describe('F-3 (DR7-05): "Start over" before Confirm strands nothing', () => {
