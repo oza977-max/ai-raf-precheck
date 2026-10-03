@@ -167,3 +167,32 @@ describe('VerdictDisplay — CR7-39: a review-overdue source shows on the first 
     expect(b.container.querySelector('.verdict__first-could-change')?.textContent ?? '').not.toMatch(/overdue/i);
   });
 });
+
+describe('VerdictDisplay — M-3 (review pass 1): the reviewer section names a model by its plain name', () => {
+  it('TC-CR7-35e: the model-governance review line reads with the plain name; the raw id appears only inside a quiet <code>', () => {
+    const policy = realPolicy();
+    const g = graphFor(undefined, undefined);
+    g.processing_nodes[0]!.declared_model_id = 'qwen3:4b';
+    const verdict = verdictFrom(g, policy, { tier: 'High' });
+    expect(verdict.downstream_review_sources?.some((x) => x.rule_id === 'MODEL-REGISTRY:qwen3:4b')).toBe(true);
+    const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} graph={g} reasoningDefaultOpen />);
+    const plain = 'A small open model running on your own computer';
+    const body = container.querySelector('.verdict__reviewer-body')!;
+    // every place the review sentence is printed carries the plain name
+    expect(body.textContent).toContain(`Model governance review required — ${plain}`);
+    // strip every <code> and the raw id must be gone from the prose
+    const clone = body.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('code').forEach((c) => c.remove());
+    expect(clone.textContent).not.toContain('qwen3:4b');
+    expect(container.querySelector('.verdict__downstream-sources code')!.className).toContain('verdict__id-quiet');
+  });
+
+  it('TC-CR7-35e-1: a model the policy does not list is shown as written (nothing to translate)', () => {
+    const policy = realPolicy();
+    const g = graphFor(undefined, undefined);
+    g.processing_nodes[0]!.declared_model_id = 'my-typed-model';
+    const verdict = verdictFrom(g, policy, { tier: 'High' });
+    const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} graph={g} reasoningDefaultOpen />);
+    expect(container.querySelector('.verdict__reviewer-body')!.textContent).toContain('Model governance review required — my-typed-model');
+  });
+});
