@@ -221,7 +221,7 @@ const ASSUMPTION_QUESTION_IDS = [
   '1', '2', '3', '3supplier', '3supplierName', '3model', '3a', '3aWhich', '3platformZone',
   '4', '4a', '5', '6', '6a', '6b', '7', '8', '8other', '9', '10', '11', '12', '13', '14',
 ] as const;
-const ASSUMPTION_GRAPH_FIELDS = [
+export const ASSUMPTION_GRAPH_FIELDS = [
   'data_class', 'data_zone', 'model_type', 'autonomy_level', 'vendor', 'platform',
   'declared_model_id', 'replaces_prior_model', 'system_access_scope',
   'multi_instance_coordination', 'action_type', 'exposure', 'decision_bindingness',
