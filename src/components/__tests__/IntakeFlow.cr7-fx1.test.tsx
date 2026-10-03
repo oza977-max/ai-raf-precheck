@@ -1296,3 +1296,30 @@ describe('CR7-41 (register snapshot) — a lapsed family is not filed as accepte
     expect(model?.metadata).toMatchObject({ model_id: 'gpt-4o-2024-08-06', is_approved: false });
   }, 30000);
 });
+
+// FX8-1 (CR8-fixes.md). CR8-03 (P3): once a case has a confirmed attestation,
+// no navigation can start a new case id for it.
+describe('CR8-03 — the Back guard survives the confirmation (P3)', () => {
+  it('TC-CR8-03b: failed evaluation -> Continue -> Change an answer: Back is not offered, and the case id is the same on the second Confirm', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await failNextEvaluation();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText(/something went wrong working out the result/i);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    const before = (loadDraft() as unknown as { useCaseId: string }).useCaseId;
+
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Check what we read from your description');
+    expect(screen.queryAllByRole('button', { name: /back/i })).toHaveLength(0);
+    expect((loadDraft() as unknown as { useCaseId: string }).useCaseId).toBe(before);
+
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    // Both confirmations (the failed attempt and this one) are on ONE case.
+    expect(await eventsOfType('graph_confirmed')).toHaveLength(2);
+  }, 30000);
+});

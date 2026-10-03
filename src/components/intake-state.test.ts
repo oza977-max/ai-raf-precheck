@@ -2101,3 +2101,91 @@ describe('intakeReducer — a card edit narrows or removes the assumption it mak
     expect(listed(out).map((a) => a.questionId)).toEqual(['field:output_reversibility']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// FX8-1 — CR8-03 (P3): once a case has a confirmed attestation, no navigation
+// can start a new case id for it. The guard (afterFailedEvaluation) used to be
+// dropped by PROCEED_TO_CONFIRMATION and not restored by CHANGE_ANSWER.
+// Test graphs are NON-form (intake_method 'llm'): a structured_form graph
+// returns to the form instead (returnsToForm) and never reaches STEP_BACK.
+// ---------------------------------------------------------------------------
+describe('intakeReducer — the Back guard survives the confirmation (CR8-03, P3)', () => {
+  const confirmationFirstTime = (): IntakeState => ({
+    step: 'confirmation',
+    description: 'd',
+    graph: graph({ intake_method: 'llm' }),
+    graphVersion: 1,
+    corrections: [],
+    answers: [],
+    resolutionNotes: [],
+    useCaseId: 'uc-1',
+    afterFailedEvaluation: false,
+  });
+  const failedReview = (): IntakeState =>
+    intakeReducer(intakeReducer(confirmationFirstTime(), { type: 'CONFIRMED' }), { type: 'EVALUATION_FAILED' });
+
+  it('TC-CR8-03a (reducer): CONFIRMED -> EVALUATION_FAILED -> QUESTIONS_GENERATED(none) -> PROCEED_TO_CONFIRMATION -> CHANGE_ANSWER -> STEP_BACK is refused', () => {
+    let s = failedReview();
+    expect(s).toMatchObject({ step: 'graph_review', afterFailedEvaluation: true });
+    s = intakeReducer(s, { type: 'QUESTIONS_GENERATED', questions: [] });
+    s = intakeReducer(s, { type: 'PROCEED_TO_CONFIRMATION' });
+    expect(s).toMatchObject({ step: 'confirmation', afterFailedEvaluation: true });
+    s = intakeReducer(s, { type: 'CHANGE_ANSWER' });
+    expect(s).toMatchObject({ step: 'graph_review', afterFailedEvaluation: true });
+    expect(intakeReducer(s, { type: 'STEP_BACK' })).toBe(s);
+  });
+
+  it('TC-CR8-03c (reducer, converse): a first-time confirmation (no failure) -> CHANGE_ANSWER -> Back IS allowed (nothing is attested yet)', () => {
+    let s = intakeReducer(confirmationFirstTime(), { type: 'CHANGE_ANSWER' });
+    expect('afterFailedEvaluation' in s && s.afterFailedEvaluation).toBeFalsy();
+    s = intakeReducer(s, { type: 'STEP_BACK' });
+    expect(s.step).toBe('duplicate_check');
+  });
+
+  it('TC-CR8-03d (reducer, P3 over the whole step x action table): from a state after a confirmed attestation, no sequence of actions (RESTART excluded — Start over is a deliberate exit) reaches duplicate_check', () => {
+    const g = graph({ intake_method: 'llm', jurisdictions: [] });
+    const corr = (id: string): GraphCorrection => ({
+      correction_id: id, graph_version_before: 1, graph_version_after: 2, node_id: 'n1', field: 'scale',
+      original_value: 'a', corrected_value: 'b', corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z',
+    });
+    const Qs = [{ id: 'Q1', field: 'scale', node_id: 'n1', triggered_by: [], answer_type: 'text' as const }];
+    const actions: Array<Parameters<typeof intakeReducer>[1]> = [
+      { type: 'STEP_BACK' },
+      { type: 'QUESTIONS_GENERATED', questions: [] },
+      { type: 'QUESTIONS_GENERATED', questions: Qs },
+      { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'x' } },
+      { type: 'ANSWER_UNDONE' },
+      { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] },
+      { type: 'CONTRADICTION_RESOLVED', explanation: 'because' },
+      { type: 'PROCEED_TO_CONFIRMATION' },
+      { type: 'CHANGE_ANSWER' },
+      { type: 'CONFIRMED' },
+      { type: 'EVALUATION_FAILED' },
+      { type: 'VERDICT_READY' },
+      { type: 'CORRECTION_APPLIED', correction: corr('c1'), updatedGraph: g },
+      { type: 'JURISDICTIONS_SET', correction: corr('c2'), updatedGraph: g },
+      { type: 'NODE_CONFIRMED', nodeId: 'n1' },
+      { type: 'JURISDICTIONS_CONFIRMED' },
+      { type: 'CORRECT_VERDICT', graph: g, useCaseId: 'uc-1', originalVerdictId: 'v1' },
+    ];
+    const start = intakeReducer(confirmationFirstTime(), { type: 'CONFIRMED' }); // evaluation_pending: attested
+    const seen = new Set<string>([JSON.stringify(start)]);
+    let frontier: IntakeState[] = [start];
+    for (let depth = 0; depth < 9; depth++) {
+      const next: IntakeState[] = [];
+      for (const s of frontier) {
+        for (const a of actions) {
+          const n = intakeReducer(s, a);
+          expect(n.step, `${s.step} + ${a.type} reached duplicate_check`).not.toBe('duplicate_check');
+          const k = JSON.stringify(n);
+          if (!seen.has(k)) {
+            seen.add(k);
+            next.push(n);
+          }
+        }
+      }
+      frontier = next;
+    }
+    expect(seen.size).toBeGreaterThan(20);
+  });
+});
