@@ -3,6 +3,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
 import { addNode, getUseCase } from '../store/register';
+import { withCaseLock } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
@@ -177,65 +178,71 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
   let seeded = 0;
 
   for (const sample of SAMPLES) {
-    if (await getUseCase(sample.id)) continue;
+    // CR7-18: check-then-act under the per-case lock, re-checked INSIDE it —
+    // two tabs seeding at once are ordered, and the second finds the case
+    // already written (the audit trail is append-only; a duplicate cannot be
+    // cleaned up afterwards).
+    await withCaseLock(sample.id, async () => {
+      if (await getUseCase(sample.id)) return;
 
-    // B-15: the engine no longer mints its own timestamp — minted once here
-    // and reused for the graph and every event below, so a sample's whole
-    // audit trail agrees on when it was seeded.
-    const now = new Date().toISOString();
-    const graph = buildGraphFromForm(sample.values, now, () => crypto.randomUUID());
-    const evalResult = evaluate(graph, policy, packs);
-    if (!evalResult.ok) continue; // a sample the current policy cannot classify is skipped, not faked
-    const result = evalResult.value;
-    const verdict: Verdict = {
-      ...result,
-      id: crypto.randomUUID(),
-      use_case_id: sample.id,
-      living_status: 'approved',
-      living_status_updated_at: now,
-      attested_by: SAMPLE_SUBMITTER,
-      attested_at: now,
-      graph_version: graph.version,
-      corrections: [],
-    };
+      // B-15: the engine no longer mints its own timestamp — minted once here
+      // and reused for the graph and every event below, so a sample's whole
+      // audit trail agrees on when it was seeded.
+      const now = new Date().toISOString();
+      const graph = buildGraphFromForm(sample.values, now, () => crypto.randomUUID());
+      const evalResult = evaluate(graph, policy, packs);
+      if (!evalResult.ok) return; // a sample the current policy cannot classify is skipped, not faked
+      const result = evalResult.value;
+      const verdict: Verdict = {
+        ...result,
+        id: crypto.randomUUID(),
+        use_case_id: sample.id,
+        living_status: 'approved',
+        living_status_updated_at: now,
+        attested_by: SAMPLE_SUBMITTER,
+        attested_at: now,
+        graph_version: graph.version,
+        corrections: [],
+      };
 
-    await append({
-      event_id: crypto.randomUUID(),
-      use_case_id: sample.id,
-      event_type: 'graph_confirmed',
-      occurred_at: now,
-      actor: SAMPLE_SUBMITTER,
-      payload: { type: 'graph_confirmed', graph_id: graph.id, graph_version: graph.version, corrections_count: 0 },
-    });
-    await append({
-      event_id: crypto.randomUUID(),
-      use_case_id: sample.id,
-      event_type: 'verdict_produced',
-      occurred_at: now,
-      actor: 'system',
-      payload: {
-        type: 'verdict_produced',
-        verdict,
-        knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(graph, verdict),
-      },
-    });
+      await append({
+        event_id: crypto.randomUUID(),
+        use_case_id: sample.id,
+        event_type: 'graph_confirmed',
+        occurred_at: now,
+        actor: SAMPLE_SUBMITTER,
+        payload: { type: 'graph_confirmed', graph_id: graph.id, graph_version: graph.version, corrections_count: 0 },
+      });
+      await append({
+        event_id: crypto.randomUUID(),
+        use_case_id: sample.id,
+        event_type: 'verdict_produced',
+        occurred_at: now,
+        actor: 'system',
+        payload: {
+          type: 'verdict_produced',
+          verdict,
+          knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(graph, verdict),
+        },
+      });
 
-    const routed = routeToWorkflow(result.tier, policy);
-    await addNode({
-      node_id: sample.id,
-      node_type: 'use_case',
-      label: sample.values.useCaseName,
-      created_at: now,
-      metadata: {
+      const routed = routeToWorkflow(result.tier, policy);
+      await addNode({
+        node_id: sample.id,
         node_type: 'use_case',
-        submitted_by: SAMPLE_SUBMITTER,
-        lifecycle_stage: routed.lifecycle_stage,
-        current_verdict_id: verdict.id,
-        tier: result.tier,
-        track: result.track,
-      },
+        label: sample.values.useCaseName,
+        created_at: now,
+        metadata: {
+          node_type: 'use_case',
+          submitted_by: SAMPLE_SUBMITTER,
+          lifecycle_stage: routed.lifecycle_stage,
+          current_verdict_id: verdict.id,
+          tier: result.tier,
+          track: result.track,
+        },
+      });
+      seeded += 1;
     });
-    seeded += 1;
   }
 
   return seeded;

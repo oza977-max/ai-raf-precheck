@@ -15,6 +15,7 @@ import { loadPolicy } from '../store/policy';
 import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { clearAllLocalData } from '../store/reset';
+import { clearDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
 import { sampleCount, seedSampleRegister } from '../seeds/sample-register';
 import { ibCaseCount, seedIbPortfolio } from '../seeds/ib-portfolio';
 
@@ -112,6 +113,13 @@ export default function SettingsPanel() {
         );
         return;
       }
+      // CR7-15: the unsaved intake drafts (sessionStorage) are cleared here,
+      // not in the store — store/ must not import components. Only on a
+      // COMPLETE reset: a half-cleared reset keeps its drafts alongside the
+      // data they refer to.
+      clearDraft();
+      clearFormDraft();
+      probeLegacyFormDraft(); // removes the pre-R16 form key if present (its return value is not needed)
       // Reload rather than reset React state: src/store/db.ts caches its
       // open-database handles at module scope, so only a fresh page load
       // guarantees the app is really looking at empty databases.
@@ -157,9 +165,10 @@ export default function SettingsPanel() {
           {confirmingClear && (
             <div role="alert">
               <p>
-                This permanently deletes every use case, verdict and audit event in this browser.
-                Counterpoise has no server, so there is no copy to restore from. Export anything you want
-                to keep first. Your model settings are not affected.
+                This permanently deletes every use case, verdict and audit event in this browser, any
+                unsaved intake draft, and the record of past hand-off syncs. Counterpoise has no server,
+                so there is no copy to restore from. Export anything you want to keep first. Your model
+                settings and the appetite framework you saved here are not affected.
               </p>
               <button type="button" onClick={handleClearAll} disabled={busy !== 'none'}>
                 {busy === 'clearing' ? 'Clearing…' : 'Yes, delete everything'}

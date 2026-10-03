@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { loadPolicy, onPolicyUpdated } from '../store/policy';
 import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml, setCurrentPolicyYaml } from '../store/policy-source';
@@ -7,6 +7,7 @@ import { getPackSources } from '../store/pack-source';
 import { loadKnowledgeLens } from '../store/knowledge-lens-loader';
 import { getCurrentKnowledgeLensYaml } from '../store/knowledge-lens-source';
 import type { PolicyValidationError } from '../engine/types';
+import { isUnsigned } from '../engine/jurisdiction';
 import { Fold } from './Fold';
 
 interface PolicyEditorProps {
@@ -35,7 +36,15 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
     | { status: 'validated'; warnings: string[] }
     | { status: 'saved'; queuedCount: number }
     | { status: 'error'; errors: PolicyValidationError[] }
+    | { status: 'save-failed' }
   >({ status: 'idle' });
+  // CR7-06: Save writes permanent, append-only audit events (one
+  // re_evaluation_queued per active case), so a second click while the first
+  // save is running must not start a second one. A synchronous ref, not
+  // state — a state update lands after the second click's handler has already
+  // started (the same guard the 2LoD approve buttons use).
+  const saveInFlight = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   // V1.2-C (design-gap D1-D4): header/banner/packs/hard-lines panels
   // derive live from the CURRENT textarea content — loadPolicy is pure.
@@ -107,12 +116,25 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
       return;
     }
 
-    setCurrentPolicyYaml(yaml);
-    // BC-P7C03-01: a real call, queuing real re_evaluation_queued audit
-    // events for real active use cases — not a simulated message.
-    const { queuedCount } = await onPolicyUpdated(outcome.policy.version);
-    setResult({ status: 'saved', queuedCount });
-    onSaved?.();
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
+    setSaving(true);
+    try {
+      setCurrentPolicyYaml(yaml);
+      // BC-P7C03-01: a real call, queuing real re_evaluation_queued audit
+      // events for real active use cases — not a simulated message.
+      const { queuedCount } = await onPolicyUpdated(outcome.policy.version);
+      setResult({ status: 'saved', queuedCount });
+      onSaved?.();
+    } catch {
+      // The YAML itself WAS stored (setCurrentPolicyYaml ran first); only the
+      // queuing may be incomplete, and some events may already be written —
+      // so the message says exactly that and no more (BC-005).
+      setResult({ status: 'save-failed' });
+    } finally {
+      saveInFlight.current = false;
+      setSaving(false);
+    }
   }
 
   return (
@@ -191,8 +213,8 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
           <button type="button" onClick={handleValidate}>
             Validate
           </button>
-          <button type="button" onClick={() => void handleSave()}>
-            Save
+          <button type="button" onClick={() => void handleSave()} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
 
           {result.status === 'validated' && (
@@ -213,6 +235,15 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
               <p>
                 Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
                 re-evaluation.
+              </p>
+            </div>
+          )}
+
+          {result.status === 'save-failed' && (
+            <div role="alert">
+              <p>
+                The policy was saved, but queuing the re-evaluations did not finish, so some active use cases may
+                not show the &quot;Policy updated&quot; notice yet.
               </p>
             </div>
           )}
@@ -256,6 +287,16 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
               const fileNames = j.pack_files.map((pf) => pf.split('/').pop() ?? pf);
               const packError = packLoad.errors.find((e) => fileNames.some((fn) => e.file.endsWith(fn)));
               const totalRules = jurisdictionPacks.reduce((n, p) => n + p.rules.length, 0);
+              // CR7-38 (BC-005): derived from the engine's own per-RULE test
+              // (isUnsigned — a rule's own sign-off overrides its pack's), not
+              // a fixed string. The sentence says how many of the rules shown
+              // are signed off, so it is false for no pack state.
+              const signedRules = jurisdictionPacks.reduce(
+                (n, p) => n + p.rules.filter((r) => !isUnsigned(r, p)).length,
+                0,
+              );
+              const signOffText =
+                signedRules === 0 ? 'none signed off' : signedRules === totalRules ? 'all signed off' : `${signedRules} of ${totalRules} signed off`;
               return (
                 <li key={j.code}>
                   <code className="policy-view__pack-code">{j.code}</code>
@@ -263,7 +304,7 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
                   {jurisdictionPacks.length > 0 ? (
                     <span className="policy-view__pack-state policy-view__pack-state--loaded">
                       <span className="policy-view__pack-state-plain">
-                        {totalRules} rule{totalRules === 1 ? '' : 's'} applying — not yet signed off
+                        {totalRules} rule{totalRules === 1 ? '' : 's'} applying — {signOffText}
                       </span>
                       <span className="policy-view__pack-state-detail">
                         {jurisdictionPacks.map((p) => `${p.pack_id} v${p.version}`).join(' + ')}

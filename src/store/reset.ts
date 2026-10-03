@@ -1,3 +1,5 @@
+import { clearHandoffSyncMarker } from './handoff';
+
 // V2-D: "start over" for testers. Everything Counterpoise stores lives in this
 // browser (NF-3, no backend), so a reset is genuinely local and total —
 // there is no server copy to fall back on, which is exactly why the UI
@@ -15,12 +17,28 @@ type DeleteOutcome = 'deleted' | 'blocked' | 'error';
 // trail survived (another tab holding a connection blocks the delete). It
 // still never rejects — a reset that hangs is worse than one that reports —
 // but the caller now learns what actually happened.
+// CR7-20: `onblocked` fires whenever ANY connection is open when the delete
+// is requested — including this tab's own, which db.ts closes a moment later
+// (its `blocking` handler). Resolving on the first event reported "blocked" for
+// a delete that then succeeded. On `blocked` we now keep waiting for
+// `onsuccess` (the delete proceeds the moment the last handle closes) and
+// report 'blocked' only if nothing happens within BLOCKED_GRACE_MS — i.e.
+// another tab really is holding the database open and not closing it.
+const BLOCKED_GRACE_MS = 3000;
+
 function deleteDatabase(name: string): Promise<DeleteOutcome> {
   return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settle = (outcome: DeleteOutcome) => {
+      if (timer !== undefined) clearTimeout(timer);
+      resolve(outcome);
+    };
     const request = indexedDB.deleteDatabase(name);
-    request.onsuccess = () => resolve('deleted');
-    request.onerror = () => resolve('error');
-    request.onblocked = () => resolve('blocked');
+    request.onsuccess = () => settle('deleted');
+    request.onerror = () => settle('error');
+    request.onblocked = () => {
+      if (timer === undefined) timer = setTimeout(() => settle('blocked'), BLOCKED_GRACE_MS);
+    };
   });
 }
 
@@ -29,6 +47,20 @@ function deleteDatabase(name: string): Promise<DeleteOutcome> {
 // the delete until the module is re-evaluated.
 export async function clearAllLocalData(): Promise<{ complete: boolean; incomplete: string[] }> {
   localStorage.removeItem('aigate:role');
+  // CR7-15: "start over" also forgets that a hand-off ever synced (that marker
+  // changes which divergence message a later import shows) and that the
+  // welcome panel was dismissed. Deliberately KEPT: the saved appetite
+  // framework (aigate:policy-yaml) and the model settings — they are the
+  // firm's configuration, not test data, and re-entering them is work the
+  // tester cannot cheaply redo. The sessionStorage intake drafts live in
+  // components/intake-draft.ts and are cleared by the caller (SettingsPanel):
+  // the store must not import components.
+  clearHandoffSyncMarker();
+  try {
+    localStorage.removeItem('aigate:welcome-dismissed');
+  } catch {
+    /* storage unavailable — nothing to clear */
+  }
   const incomplete: string[] = [];
   for (const name of DATABASES) {
     const outcome = await deleteDatabase(name);
