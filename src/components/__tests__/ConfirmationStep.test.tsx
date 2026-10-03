@@ -110,3 +110,22 @@ describe('ConfirmationStep — plain-English attest grid, no internal-id tag (R1
     expect(screen.getByText('Drafting model · A chatbot or writing assistant · LLM')).toBeInTheDocument();
   });
 });
+
+// O-8 (FX7-1, BC-005). The confirm notice said the recorded answers "can't be
+// edited". The trail is append-only and hash-chained but client-side with no
+// external anchor (the verdict screen's own caveat, VerdictDisplay.tsx), so a
+// person with local access could still rewrite it — the notice now says what
+// the trail actually promises, in the same words as that caveat.
+describe('ConfirmationStep — the notice promises no more than the audit trail does (O-8)', () => {
+  it('TC-CR7-O8: does not claim the record "can\'t be edited"; says a change would show, and that it is kept in this browser with no outside check', () => {
+    render(<ConfirmationStep graph={g} corrections={[]} onChangeAnswer={vi.fn()} onConfirm={vi.fn()} />);
+    const notice = document.querySelector('.confirmation__notice')!.textContent ?? '';
+    expect(notice).not.toMatch(/can.t be edited/i);
+    expect(notice).toMatch(/recorded with the date and time/i);
+    expect(notice).toMatch(/change|altered|edit/i);
+    expect(notice).toMatch(/in this browser/i);
+    expect(notice).toMatch(/no outside check|no external/i);
+    // Still says a later correction is possible and recorded.
+    expect(notice).toMatch(/correct it/i);
+  });
+});

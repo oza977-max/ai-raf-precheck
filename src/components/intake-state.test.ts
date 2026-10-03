@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { intakeReducer } from './intake-state';
 import type { IntakeState } from './intake-state';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
+import type { Assumption } from './plain-copy';
 
 function graph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
   return {
@@ -1553,5 +1554,239 @@ describe('intakeReducer — FORM_SUBMITTED with questions AND contradictions (B-
     expect(next.step).toBe('questionnaire');
     expect(JSON.stringify(next)).not.toContain('no client data');
     expect('submissionContradictions' in next).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX7-1 (CR7-fixes.md) — BC-004: every way BACK into an earlier step keeps the
+// safety/honesty fields (the "Not sure" assumptions, the frozen uncertain
+// list), or rebuilds the step fail-safe (re-asks).
+// ---------------------------------------------------------------------------
+describe('intakeReducer — re-entries into graph_review keep the "Not sure" assumptions (CR7-02, BC-004)', () => {
+  const A1: Assumption = {
+    questionId: 'field:output_reversibility',
+    question: 'Can the mistake be put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case.',
+    fields: ['output_reversibility'],
+  };
+  const confirmation = (overrides: Partial<Extract<IntakeState, { step: 'confirmation' }>> = {}): IntakeState => ({
+    step: 'confirmation',
+    description: 'd',
+    graph: graph(),
+    graphVersion: 1,
+    corrections: [],
+    answers: [],
+    resolutionNotes: [],
+    useCaseId: 'uc-1',
+    assumptions: [A1],
+    uncertainNodeIds: ['o1'],
+    ...overrides,
+  });
+
+  it('TC-CR7-02a (reducer): CHANGE_ANSWER on the description path carries the assumptions and the frozen uncertain list, marks the countries as already checked, and flags the re-entry', () => {
+    const next = intakeReducer(confirmation(), { type: 'CHANGE_ANSWER' });
+    expect(next).toMatchObject({
+      step: 'graph_review',
+      assumptions: [A1],
+      uncertainNodeIds: ['o1'],
+      jurisdictionsConfirmed: true,
+      reentry: true,
+    });
+  });
+
+  it('TC-CR7-02b (reducer): a failed evaluation hands the assumptions and uncertain list back to the review screen too', () => {
+    const pending = intakeReducer(confirmation(), { type: 'CONFIRMED' });
+    const next = intakeReducer(pending, { type: 'EVALUATION_FAILED' });
+    expect(next).toMatchObject({
+      step: 'graph_review',
+      assumptions: [A1],
+      uncertainNodeIds: ['o1'],
+      jurisdictionsConfirmed: true,
+      reentry: true,
+      afterFailedEvaluation: true,
+    });
+  });
+
+  it('TC-CR7-02d (reducer): CORRECT_VERDICT carries what the last confirmation was based on', () => {
+    const next = intakeReducer(
+      { step: 'verdict', verdictId: 'v1' },
+      {
+        type: 'CORRECT_VERDICT',
+        graph: graph(),
+        useCaseId: 'uc-1',
+        originalVerdictId: 'v1',
+        assumptions: [A1],
+        uncertainNodeIds: ['o1'],
+      },
+    );
+    expect(next).toMatchObject({
+      step: 'graph_review',
+      originalVerdictId: 'v1',
+      assumptions: [A1],
+      uncertainNodeIds: ['o1'],
+      reentry: true,
+    });
+  });
+
+  it('QUESTIONS_GENERATED from a re-entered review keeps the assumptions on the questionnaire', () => {
+    const review = intakeReducer(confirmation(), { type: 'CHANGE_ANSWER' });
+    const next = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [] });
+    expect(next).toMatchObject({ step: 'questionnaire', assumptions: [A1], uncertainNodeIds: ['o1'] });
+  });
+
+  it('TC-CR7-02 (2): STEP_BACK from the questionnaire carries NO assumptions — they are re-asked (CR7-03)', () => {
+    const q: IntakeState = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: graph(),
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-1',
+      assumptions: [A1],
+    };
+    const back = intakeReducer(q, { type: 'STEP_BACK' });
+    expect(back.step).toBe('graph_review');
+    expect('assumptions' in back ? back.assumptions : undefined).toBeUndefined();
+  });
+});
+
+describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; Undo restores the previous list (CR7-02 (3)/(4))', () => {
+  const NOT_SURE: Assumption = {
+    questionId: 'field:output_reversibility',
+    question: 'Can the mistake be put right?',
+    shortLabel: 'whether a mistake can be put right',
+    assumption: 'it can’t be undone — the strictest case.',
+    fields: ['output_reversibility'],
+  };
+  const OTHER: Assumption = { ...NOT_SURE, questionId: 'field:scale', fields: ['scale'], assumption: 'wide' };
+  const base = (assumptions?: Assumption[]): IntakeState => ({
+    step: 'questionnaire',
+    description: 'd',
+    graph: graph(),
+    questions: [
+      { id: 'Q-rev', field: 'output_reversibility', node_id: 'o1', triggered_by: [], answer_type: 'single' },
+      { id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'single' },
+    ],
+    answers: [],
+    resolutionNotes: [],
+    corrections: [],
+    useCaseId: 'uc-1',
+    ...(assumptions ? { assumptions } : {}),
+  });
+
+  it('TC-CR7-02e: "Not sure" again for a question that already has an assumption leaves exactly one', () => {
+    const next = intakeReducer(base([NOT_SURE]), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q-rev', value: 'irreversible' },
+      assumption: NOT_SURE,
+    });
+    expect(next.step === 'questionnaire' && next.assumptions).toEqual([NOT_SURE]);
+  });
+
+  it('TC-CR7-02e: a definite answer for a question that had an assumption removes it (and leaves the others)', () => {
+    const next = intakeReducer(base([NOT_SURE, OTHER]), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q-rev', value: 'reversible' },
+    });
+    expect(next.step === 'questionnaire' && next.assumptions).toEqual([OTHER]);
+  });
+
+  it('TC-CR7-02f: Undo after a replaced assumption restores the previous array', () => {
+    const answered = intakeReducer(base([NOT_SURE, OTHER]), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q-rev', value: 'reversible' },
+    });
+    const undone = intakeReducer(answered, { type: 'ANSWER_UNDONE' });
+    expect(undone.step === 'questionnaire' && undone.assumptions).toEqual([NOT_SURE, OTHER]);
+  });
+
+  it('TC-CR7-02f: Undo of a first "Not sure" removes it again', () => {
+    const answered = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q-rev', value: 'irreversible' },
+      assumption: NOT_SURE,
+    });
+    expect(answered.step === 'questionnaire' && answered.assumptions).toEqual([NOT_SURE]);
+    const undone = intakeReducer(answered, { type: 'ANSWER_UNDONE' });
+    expect(undone.step === 'questionnaire' && (undone.assumptions ?? [])).toEqual([]);
+  });
+});
+
+describe('intakeReducer — Back from the questions restores the pre-questionnaire graph, corrections and guessed list (CR7-03, BC-004)', () => {
+  const g1 = graph({ version: 1 });
+  const g2 = graph({ version: 2 });
+  const c0: GraphCorrection = {
+    correction_id: 'c0', graph_version_before: 1, graph_version_after: 1, node_id: 'n9', field: 'scale',
+    original_value: 'a', corrected_value: 'b', corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z',
+  };
+  const c1: GraphCorrection = { ...c0, correction_id: 'c1', graph_version_before: 1, graph_version_after: 2, node_id: 'p1', field: 'vendor' };
+  const review: IntakeState = {
+    step: 'graph_review',
+    description: 'd',
+    graph: g1,
+    graphVersion: 1,
+    corrections: [c0],
+    useCaseId: 'uc-1',
+    unconfirmedNodeIds: [],
+    jurisdictionsConfirmed: true,
+    guessedFields: { p1: ['vendor'] },
+  };
+  const Q = { id: 'Q-vendor', field: 'vendor', node_id: 'p1', triggered_by: [], answer_type: 'single' as const };
+
+  it('TC-CR7-03 (reducer): QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list', () => {
+    const q = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
+    expect(q).toMatchObject({
+      step: 'questionnaire',
+      backGraph: g1,
+      backCorrections: [c0],
+      askedGuessedFields: { p1: ['vendor'] },
+    });
+  });
+
+  it('TC-CR7-03 (reducer): after an answer that trims the field and changes the graph, Back restores all three so the field is asked again', () => {
+    let s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
+    s = intakeReducer(s, {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q-vendor', value: 'dont-know' },
+      correction: c1,
+      updatedGraph: g2,
+    });
+    expect(s).toMatchObject({ graph: g2, corrections: [c0, c1] });
+    expect(s.step === 'questionnaire' && s.guessedFields).toEqual({});
+    const back = intakeReducer(s, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({ step: 'graph_review', graph: g1, corrections: [c0], guessedFields: { p1: ['vendor'] } });
+  });
+
+  it('TC-CR7-03 (reducer): the snapshot survives Undo, a contradiction round trip, and a second answer', () => {
+    let s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q, { ...Q, id: 'Q2', field: 'scale' }] });
+    s = intakeReducer(s, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q-vendor', value: 'dont-know' }, correction: c1, updatedGraph: g2 });
+    s = intakeReducer(s, { type: 'ANSWER_UNDONE' });
+    expect(s).toMatchObject({ backGraph: g1, backCorrections: [c0], askedGuessedFields: { p1: ['vendor'] } });
+    s = intakeReducer(s, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q-vendor', value: 'dont-know' }, correction: c1, updatedGraph: g2 });
+    s = intakeReducer(s, { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] });
+    expect(s).toMatchObject({ step: 'contradiction_review', backGraph: g1, backCorrections: [c0], askedGuessedFields: { p1: ['vendor'] } });
+    s = intakeReducer(s, { type: 'CONTRADICTION_RESOLVED', explanation: 'explained' });
+    expect(s).toMatchObject({ step: 'questionnaire', backGraph: g1, backCorrections: [c0], askedGuessedFields: { p1: ['vendor'] } });
+    const back = intakeReducer(s, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({ step: 'graph_review', graph: g1, corrections: [c0], guessedFields: { p1: ['vendor'] } });
+  });
+
+  it('TC-CR7-03 (reducer): a questionnaire saved before this change (no snapshot) steps back exactly as it did before', () => {
+    const old: IntakeState = {
+      step: 'questionnaire',
+      description: 'd',
+      graph: g2,
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [c0, c1],
+      useCaseId: 'uc-1',
+      guessedFields: {},
+    };
+    const back = intakeReducer(old, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({ step: 'graph_review', graph: g2, corrections: [c0, c1], guessedFields: {} });
   });
 });

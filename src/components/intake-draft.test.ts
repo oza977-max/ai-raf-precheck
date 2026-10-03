@@ -7,6 +7,8 @@ import {
   loadFormDraft,
   clearFormDraft,
   probeLegacyFormDraft,
+  clearDraftIfCase,
+  loadDraftInfo,
 } from './intake-draft';
 import type { IntakeState } from './intake-state';
 
@@ -146,11 +148,18 @@ describe('intake draft versioning — an incompatible undo snapshot is dropped, 
   const DRAFT_KEY = 'aigate:intake-draft';
   beforeEach(() => clearDraft());
 
+  // CR7-28 (FX7-1): a questionnaire draft on the DESCRIPTION path saved by an
+  // older build no longer restores as a questionnaire (it restores as the
+  // review screen — see the CR7-28 describe below), so this CR6-04 test, which
+  // pins "a version-1 questionnaire draft loses its unsafe undo but keeps its
+  // work", now uses the form path's questionnaire (plainAnswers present, the
+  // guided form's graph), which CR7-28 deliberately leaves alone.
   it('TC-CR6-04b: a draft with no version envelope at all (the shape every build before this fix wrote) restores, but drops an undo snapshot on the questionnaire step', () => {
     const bareOldDraft = {
       step: 'questionnaire',
       description: 'd',
-      graph: { id: 'g1', version: 2, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' },
+      plainAnswers: { '1': 'Tool' },
+      graph: { id: 'g1', version: 2, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'structured_form', extracted_at: '2026-01-01T00:00:00.000Z' },
       questions: [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' }],
       answers: [{ questionId: 'Q1', value: 'x' }],
       resolutionNotes: [],
@@ -202,5 +211,122 @@ describe('intake draft versioning — an incompatible undo snapshot is dropped, 
     expect(loadDraft()).toBeNull();
     sessionStorage.setItem(DRAFT_KEY, 'not json at all');
     expect(loadDraft()).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX7-1 (CR7-fixes.md)
+// ---------------------------------------------------------------------------
+describe('clearDraftIfCase — an abandoned confirm or adopt cannot wipe a newer case\'s draft (CR7-16)', () => {
+  beforeEach(() => clearDraft());
+  const reviewDraft = (useCaseId?: string) =>
+    ({
+      step: 'graph_review',
+      description: 'd',
+      graph: { id: 'g1', version: 1, input_nodes: [], processing_nodes: [], output_nodes: [], edges: [], jurisdictions: [], intake_method: 'llm', extracted_at: '2026-01-01T00:00:00.000Z' },
+      graphVersion: 1,
+      corrections: [],
+      ...(useCaseId ? { useCaseId } : {}),
+    }) as unknown as IntakeState;
+
+  it('TC-CR7-16: clears when the stored draft carries this useCaseId', () => {
+    saveDraft(reviewDraft('uc-1'));
+    clearDraftIfCase('uc-1');
+    expect(loadDraft()).toBeNull();
+  });
+
+  it('TC-CR7-16: clears when there is no stored draft (nothing to protect)', () => {
+    clearDraftIfCase('uc-1');
+    expect(loadDraft()).toBeNull();
+  });
+
+  it('TC-CR7-16: leaves a draft with a different useCaseId', () => {
+    saveDraft(reviewDraft('uc-other'));
+    clearDraftIfCase('uc-1');
+    expect(loadDraft()?.step).toBe('graph_review');
+  });
+
+  it('TC-CR7-16: leaves a draft with no useCaseId at all (a case just started)', () => {
+    saveDraft({ step: 'description_entry', description: 'something new' } as IntakeState);
+    clearDraftIfCase('uc-1');
+    expect(loadDraft()?.step).toBe('description_entry');
+  });
+
+  it('TC-CR7-16: an adopt (which mints its id inside the handler) also clears the duplicate-check draft it came from, and only that one', () => {
+    saveDraft({ step: 'duplicate_check', description: 'the adopted description' } as IntakeState);
+    clearDraftIfCase('uc-adopted', { duplicateCheckDescription: 'the adopted description' });
+    expect(loadDraft()).toBeNull();
+
+    saveDraft({ step: 'duplicate_check', description: 'a different, newer description' } as IntakeState);
+    clearDraftIfCase('uc-adopted', { duplicateCheckDescription: 'the adopted description' });
+    expect(loadDraft()?.step).toBe('duplicate_check');
+  });
+});
+
+describe('a questions draft saved before CR6 restores without the guessed list — so it restores as the review screen instead (CR7-28, BC-002)', () => {
+  const DRAFT_KEY = 'aigate:intake-draft';
+  beforeEach(() => clearDraft());
+  const node = (id: string) => ({ id, label: id });
+  const oldGraph = {
+    id: 'g1',
+    version: 3,
+    input_nodes: [node('i1')],
+    processing_nodes: [node('p1')],
+    output_nodes: [node('o1')],
+    edges: [],
+    jurisdictions: ['UK'],
+    intake_method: 'llm',
+    extracted_at: '2026-01-01T00:00:00.000Z',
+  };
+  const correction = { correction_id: 'c1', graph_version_before: 1, graph_version_after: 2, node_id: 'p1', field: 'vendor', original_value: 'a', corrected_value: 'b', corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z' };
+  const oldQuestionnaire = (step: 'questionnaire' | 'contradiction_review') => ({
+    step,
+    description: 'A description the person typed.',
+    graph: oldGraph,
+    questions: [{ id: 'Q1', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'single' }],
+    answers: [{ questionId: 'Q1', value: 'limited' }],
+    resolutionNotes: [],
+    ...(step === 'contradiction_review' ? { contradictions: [] } : {}),
+    corrections: [correction],
+    useCaseId: 'uc-old',
+    originalVerdictId: 'v-orig',
+  });
+
+  for (const step of ['questionnaire', 'contradiction_review'] as const) {
+    it(`TC-CR7-28: a bare (version 1) ${step} draft on the description path restores as graph_review with every card to re-check, the countries unchecked, and nothing invented`, () => {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(oldQuestionnaire(step)));
+      const restored = loadDraft() as unknown as Record<string, unknown>;
+      expect(restored).toMatchObject({
+        step: 'graph_review',
+        description: 'A description the person typed.',
+        graphVersion: 3,
+        corrections: [correction],
+        useCaseId: 'uc-old',
+        originalVerdictId: 'v-orig',
+        unconfirmedNodeIds: ['i1', 'p1', 'o1'],
+        jurisdictionsConfirmed: false,
+      });
+      expect('guessedFields' in restored).toBe(false);
+      expect('provenance' in restored).toBe(false);
+      expect('answers' in restored).toBe(false);
+    });
+  }
+
+  it('TC-CR7-28: loadDraftInfo says the draft was migrated, so the screen can say so', () => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(oldQuestionnaire('questionnaire')));
+    expect(loadDraftInfo()?.migratedFromOldBuild).toBe(true);
+  });
+
+  it('TC-CR7-28: a form-path questionnaire (plainAnswers present) is NOT migrated', () => {
+    const formDraft = { ...oldQuestionnaire('questionnaire'), plainAnswers: { '1': 'Tool' }, graph: { ...oldGraph, intake_method: 'structured_form' } };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formDraft));
+    expect(loadDraft()?.step).toBe('questionnaire');
+    expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
+  });
+
+  it('TC-CR7-28: a draft saved by the current build (an envelope at the current version) is never migrated', () => {
+    saveDraft(oldQuestionnaire('questionnaire') as unknown as IntakeState);
+    expect(loadDraft()?.step).toBe('questionnaire');
+    expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
   });
 });
