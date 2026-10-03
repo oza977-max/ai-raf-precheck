@@ -43,7 +43,17 @@ const CORRECTION_SOURCE_WORDS: Record<string, string> = {
   question: 'an answer to a question',
 };
 
-export function eventDetail(event: AuditEvent): string {
+// CR7-30b: a value that was never stated (null — what the writers record now —
+// or absent, which is how a JSON round-trip stores an old `undefined`) reads
+// "not stated"; every real value, including 0 and false, shows as itself.
+function valueWords(v: unknown): string {
+  return v === null || v === undefined ? 'not stated' : String(v);
+}
+
+// `viewerRole`: another case's name (the matched label in the duplicate /
+// adoption lines) is shown to 2LoD only (CR7-10c) — a 1LoD user is limited to
+// their own cases elsewhere, so the trail must not reveal another one's name.
+export function eventDetail(event: AuditEvent, viewerRole?: string): string {
   const p = event.payload as AuditEvent['payload'] | undefined | null;
   // code-review-005 F13: a damaged record can lack its payload entirely —
   // reading `.type` off it would crash the whole case page, not just one line.
@@ -60,7 +70,7 @@ export function eventDetail(event: AuditEvent): string {
     case 'graph_corrected':
       // CR6-10: where the correction was made, in plain words; nothing when
       // the record predates the field.
-      return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}${
+      return `${p.correction.field} corrected: ${valueWords(p.correction.original_value)} → ${valueWords(p.correction.corrected_value)}${
         p.correction.correction_source ? ` (from ${CORRECTION_SOURCE_WORDS[p.correction.correction_source] ?? 'an unrecorded place'})` : ''
       }`;
     case 'verdict_produced':
@@ -98,9 +108,11 @@ export function eventDetail(event: AuditEvent): string {
     case 'reasoning_trace_generated':
       return 'Plain-English reasoning trace generated and stored with the verdict.';
     case 'duplicate_dismissed':
-      return `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`;
+      return viewerRole === '2LoD'
+        ? `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`
+        : `Similar use case reviewed and dismissed (${p.candidate_use_case_id.slice(0, 8)}…).`;
     case 'classification_adopted':
-      return `Classification adopted from ${p.adopted_from_label} (${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
+      return `Classification adopted from ${viewerRole === '2LoD' ? `${p.adopted_from_label} ` : 'a similar use case '}(${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
         p.tier ?? '—'
       }, track ${p.track ?? '—'}. No evaluation was run for this record.`;
     case 'rule_dissent_filed':
@@ -1399,7 +1411,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
                   <span className="timeline__actor">{event.actor}</span>
                   <span className="timeline__time">{new Date(event.occurred_at).toLocaleString()}</span>
                 </div>
-                <p className="timeline__detail">{eventDetail(event)}</p>
+                <p className="timeline__detail">{eventDetail(event, role)}</p>
               </div>
             </li>
           ))}
