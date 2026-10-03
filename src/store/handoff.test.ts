@@ -1116,8 +1116,9 @@ describe('RG-8 hand-off bundle — concurrency (code-review-005 F5)', () => {
 // to — a direct self-contradiction, since the audit trail (also rendered on
 // the register screen) had in fact just been replaced. Forcing this failure
 // needs a real register-store error the fixture data itself cannot produce
-// (a well-formed, schema-valid bundle never fails backupAndReplaceRegister's
-// plain IndexedDB put()s) — vi.spyOn on register.ts's own export is the
+// (a well-formed, schema-valid bundle can never CAUSE backupAndReplaceRegister's
+// IndexedDB put()s to fail — only a storage-level fault (quota, a
+// broken database), simulated here, can) — vi.spyOn on register.ts's own export is the
 // narrowest way to inject exactly that one failure without touching
 // register.ts's source.
 describe('RG-8 hand-off bundle — partial replace and finishing it (code-review-005 round 2, N1)', () => {

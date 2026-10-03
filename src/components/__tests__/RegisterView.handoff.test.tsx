@@ -287,6 +287,16 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     }
   });
 
+  it('TC-CR6-30: a file that is not JSON at all gets the same corrected grammar ("a Counterpoise")', async () => {
+    await seedLocalDemoCase(crypto.randomUUID());
+    render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
+    await screen.findByText('Local demo case');
+
+    await userEvent.upload(await getImportInput(), new File(['{ not json'], 'bundle.json', { type: 'application/json' }));
+
+    expect(await screen.findByText('That file is not valid JSON — it is not a Counterpoise hand-off bundle.')).toBeInTheDocument();
+  });
+
   it('TC-RG-8-20: "Keep my register" cancels the pending replace at step 1', async () => {
     const user = userEvent.setup();
     const foreign = await buildForeignBundle(crypto.randomUUID());
