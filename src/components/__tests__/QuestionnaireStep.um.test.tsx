@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import QuestionnaireStep from '../QuestionnaireStep';
+import { approvedModelOptionList } from '../plain-copy';
 import GraphView from '../GraphView';
 import { buildVerdictView } from '../verdict-view-model';
 import { loadPolicy } from '../../store/policy';
@@ -41,9 +42,9 @@ function graphWith(modelId: string): DataFlowGraph {
   return g;
 }
 
-function owedNames(modelId: string): string[] {
+function owedNames(modelId: string, evalPolicy: PolicyFile = policy): string[] {
   const g = graphWith(modelId);
-  const e = evaluate(g, policy);
+  const e = evaluate(g, evalPolicy);
   if (!e.ok) throw new Error('eval failed');
   const verdict = {
     ...e.value, id: 'v', use_case_id: 'uc', living_status: 'approved' as const,
@@ -103,6 +104,38 @@ describe('UNSIGNED-MODEL', () => {
     const names = owedNames('some-new-model-7');
     expect(names).toContain("adding the model to your firm's list of known models");
     expect(names.join(' | ')).not.toContain('accepting this model');
+  });
+
+  // UNSIGNED-MODEL review, Important: the engine also owes MODEL-REGISTRY
+  // for a model matched by a FAMILY entry that is not (or no longer)
+  // accepted — e.g. gpt-4o-family after its reattest_by date, which
+  // IntakeFlow applies before evaluate() while the screen reads the policy
+  // as written. That model IS on the firm's list.
+  it('TC-UM-06: a family-matched model whose family is not accepted owes "accepting", never "adding … to your firm\'s list"', () => {
+    const lapsed: PolicyFile = {
+      ...policy,
+      approved_models: (policy.approved_models ?? []).map((m) => (m.is_family ? { ...m, is_approved: false } : m)),
+    };
+    const names = owedNames('gpt-4o-2026-08-01', lapsed);
+    expect(names).toContain('your AI risk team accepting this model');
+    expect(names.join(' | ')).not.toContain("adding the model to your firm's list");
+  });
+
+  it('TC-UM-07: an older case still owing the review keeps "accepting" after the firm later accepts the model', () => {
+    const later: PolicyFile = {
+      ...policy,
+      approved_models: (policy.approved_models ?? []).map((m) => (m.model_id === 'qwen3:4b' ? { ...m, is_approved: true } : m)),
+    };
+    const g = graphWith('qwen3:4b');
+    const e = evaluate(g, policy);
+    if (!e.ok) throw new Error('eval failed');
+    const verdict = {
+      ...e.value, id: 'v', use_case_id: 'uc', living_status: 'approved' as const,
+      living_status_updated_at: '2026-01-01T00:00:00Z', attested_by: '1LoD', attested_at: '2026-01-01T00:00:00Z',
+      graph_version: 1, corrections: [],
+    } as Verdict;
+    const names = buildVerdictView(verdict, later, g, undefined, undefined, 'pre_checked').owedReviews.map((r) => r.plainName);
+    expect(names).toContain('your AI risk team accepting this model');
   });
 
   it('TC-UM-05: the new strings contain neither "approved" nor "rejected"', () => {
@@ -179,5 +212,16 @@ describe('CR7-35 — unnamed models', () => {
     unmount();
     render(<GraphView graph={graphWith('some-new-model-7')} policy={policy} />);
     expect(screen.getByText('some-new-model-7')).toBeInTheDocument();
+  });
+});
+
+describe('UNSIGNED-MODEL review — mixed and blank names', () => {
+  it('TC-CR7-35d: in a mixed list (named, unnamed, blank-named) only the unnamed are numbered, in order, and a blank name is treated as unnamed', () => {
+    const opts = approvedModelOptionList([
+      { model_id: 'a', plain_name: 'Alpha model', is_approved: true },
+      { model_id: 'b', is_approved: true },
+      { model_id: 'c', plain_name: '   ', is_approved: true },
+    ]);
+    expect(opts.map((o) => o.label)).toEqual(['Alpha model', 'Model 1', 'Model 2']);
   });
 });

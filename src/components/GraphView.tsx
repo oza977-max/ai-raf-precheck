@@ -462,8 +462,9 @@ function NodeCard({
             <div className="graph-node__meaning-row">
               <dt>{questionnaireCopyForField('declared_model_id').shortLabel}</dt>
               <dd>
-                {/* TC-MN-05: the same plain name the questionnaire's button
-                    and Recorded line use (plain_name ?? model_id). */}
+                {/* TC-MN-05 / CR7-35: the same label the questionnaire's button
+                    and Recorded line use (one helper; never a listed model's
+                    raw id). An id the policy does not list is shown as typed. */}
                 <span className="graph-node__meaning">
                   {approvedModelLabelFor(policy?.approved_models, declaredModelId) ?? declaredModelId}
                 </span>

@@ -256,6 +256,8 @@
 <tr><td>TC-UM-03</td><td>A real <code>evaluate()</code> of a case declaring <code>qwen3:4b</code> owes "your AI risk team accepting this model", never "adding the model to your firm's list"</td></tr>
 <tr><td>TC-UM-04</td><td>A case declaring a model id not in the policy still owes "adding the model to your firm's list of known models"</td></tr>
 <tr><td>TC-UM-05</td><td>The new strings contain neither "approved" nor "rejected"</td></tr>
+<tr><td>TC-UM-06</td><td>A family-matched model whose family is not (or no longer) accepted &mdash; real policy, <code>gpt-4o-2026-08-01</code> with the gpt-4o family lapsed &mdash; owes "your AI risk team accepting this model", never "adding &hellip; to your firm's list" (found in the UNSIGNED-MODEL review)</td></tr>
+<tr><td>TC-UM-07</td><td>A stored case still owing the model review keeps "accepting this model" after the firm later accepts that model (the screen reads today's policy)</td></tr>
 </tbody>
 </table>
 </section>
@@ -268,6 +270,7 @@
 <tr><td>TC-CR7-35a</td><td>The reference check emits a warning (never an error) naming each non-family <code>approved_models</code> entry with no <code>plain_name</code>; the real policy gives none</td></tr>
 <tr><td>TC-CR7-35b</td><td>With no <code>plain_name</code>, the button, "Recorded" line and review row show "Model n" (numbered among the unnamed, in list order, as suppliers are), keep the not-yet-accepted suffix when <code>is_approved</code> is false, and never show the raw id</td></tr>
 <tr><td>TC-CR7-35c</td><td>A declared model id not on the list is shown as written (the person typed it)</td></tr>
+<tr><td>TC-CR7-35d</td><td>In a mixed list (named, unnamed, blank-named) only the unnamed are numbered, in list order, and a blank <code>plain_name</code> counts as none &mdash; never a blank button</td></tr>
 </tbody>
 </table>
 </section>

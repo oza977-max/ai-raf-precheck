@@ -489,7 +489,18 @@ function resolveReviewPlain(
     // The model id is everything after the first ":" (ids such as qwen3:4b
     // carry their own colon).
     const modelId = ruleId !== undefined ? ruleId.slice(ruleId.indexOf(':') + 1) : undefined;
-    const listed = modelId !== undefined && policy?.approved_models?.some((m) => !m.is_family && m.model_id === modelId && m.is_approved === false);
+    // UNSIGNED-MODEL review: "listed" means the policy resolves the id the way
+    // the engine does (exact non-family entry, else a family whose
+    // version_pattern prefixes it) — NOT "is_approved is false here". The
+    // engine only owes this review for an unlisted or unaccepted model, and
+    // this screen reads the policy as written: a family lapsed by its
+    // reattest_by date still reads is_approved true, and a stored case keeps
+    // owing the review after the firm later accepts the model.
+    const models = policy?.approved_models ?? [];
+    const listed =
+      modelId !== undefined &&
+      (models.some((m) => !m.is_family && m.model_id === modelId) ||
+        models.some((m) => m.is_family === true && m.version_pattern !== undefined && modelId.startsWith(m.version_pattern)));
     return listed ? MODEL_UNACCEPTED_PLAIN : MODEL_REGISTRY_PLAIN;
   }
   const firmRule: DownstreamReviewRule | undefined = policy?.downstream_reviews?.find((r) => r.id === baseId);

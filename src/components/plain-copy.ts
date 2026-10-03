@@ -1260,7 +1260,8 @@ export function approvedModelOptionList(
   return (models ?? [])
     .filter((m) => !m.is_family)
     .map((m) => {
-      const base = m.plain_name ?? neutralModelLabel(++neutralIndex);
+      // A blank plain_name counts as none (TC-CR7-35d) — never a blank button.
+      const base = m.plain_name?.trim() ? m.plain_name : neutralModelLabel(++neutralIndex);
       return { value: m.model_id, label: m.is_approved === false ? base + UNACCEPTED_MODEL_SUFFIX : base };
     });
 }

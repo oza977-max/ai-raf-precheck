@@ -201,7 +201,7 @@ function registryPlainNameWarnings(kind: 'platform' | 'vendor', entries: Registr
 // CR7-35a: a listed model with no plain_name is shown as "Model n", never its id.
 function modelPlainNameWarnings(models: PolicyFile['approved_models']): string[] {
   return (models ?? [])
-    .filter((m) => !m.is_family && !m.plain_name)
+    .filter((m) => !m.is_family && !m.plain_name?.trim())
     .map((m) => `approved_models ${m.model_id}: no plain_name set — shown as a neutral label ("Model" + a number) on the form until one is added`);
 }
 

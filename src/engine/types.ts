@@ -558,7 +558,8 @@ export interface GovernanceMappingEntry {
 export interface ApprovedModel {
   model_id: string;
   // CR6-19: the model in a submitter's own words, for screens that must not
-  // show a raw id. Optional; screens use `plain_name ?? model_id`.
+  // show a raw id. Optional; when absent, screens show a neutral "Model n"
+  // (CR7-35, src/components/plain-copy.ts approvedModelOptionList).
   plain_name?: string;
   vendor: string;
   provenance_class: 'vendor_hosted' | 'open_weights_self_hosted' | 'fine_tuned_in_house';

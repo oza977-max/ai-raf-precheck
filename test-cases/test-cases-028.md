@@ -20,6 +20,8 @@ Test file: `src/components/__tests__/QuestionnaireStep.um.test.tsx` (real `polic
 | TC-UM-03 | A real `evaluate()` of a case declaring `qwen3:4b` owes "your AI risk team accepting this model", never "adding the model to your firm's list" |
 | TC-UM-04 | A case declaring a model id not in the policy still owes "adding the model to your firm's list of known models" |
 | TC-UM-05 | The new strings contain neither "approved" nor "rejected" |
+| TC-UM-06 | A family-matched model whose family is not (or no longer) accepted — real policy, `gpt-4o-2026-08-01` with the gpt-4o family lapsed — owes "your AI risk team accepting this model", never "adding … to your firm's list" (found in the UNSIGNED-MODEL review) |
+| TC-UM-07 | A stored case still owing the model review keeps "accepting this model" after the firm later accepts that model (the screen reads today's policy) |
 
 ## Code review 007 — CR7-35
 
@@ -28,6 +30,7 @@ Test file: `src/components/__tests__/QuestionnaireStep.um.test.tsx` (real `polic
 | TC-CR7-35a | The reference check emits a warning (never an error) naming each non-family `approved_models` entry with no `plain_name`; the real policy gives none |
 | TC-CR7-35b | With no `plain_name`, the button, "Recorded" line and review row show "Model n" (numbered among the unnamed, in list order, as suppliers are), keep the not-yet-accepted suffix when `is_approved` is false, and never show the raw id |
 | TC-CR7-35c | A declared model id not on the list is shown as written (the person typed it) |
+| TC-CR7-35d | In a mixed list (named, unnamed, blank-named) only the unnamed are numbered, in list order, and a blank `plain_name` counts as none — never a blank button |
 
 ## Amended existing cases
 
