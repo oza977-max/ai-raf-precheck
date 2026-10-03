@@ -1,18 +1,20 @@
 import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
-import { addNode, addEdge, addUseCaseModelLink, getUseCase } from '../store/register';
-import { withCaseLock } from '../store/db';
+import { addNode, addEdge, addUseCaseModelLink } from '../store/register';
+import { withCaseLock, openRegisterDb } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
 import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
+import { planSeed } from './seed-recovery';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
 import type { DataFlowGraph, JurisdictionPack, PolicyFile } from '../engine/types';
+import type { LifecycleStage } from '../store/types';
 import type { Verdict } from '../types/verdict';
 
 // register-lifecycle.md §9 (LC-6). Counterpoise must appear in its own register
 // with a real, self-produced verdict — not a fixture.
 export const AIGATE_USE_CASE_ID = 'aigate-self-assessment';
-const AIGATE_VENDOR_NODE_ID = 'aigate-vendor-anthropic';
+export const AIGATE_VENDOR_NODE_ID = 'aigate-vendor-anthropic';
 
 // BC-P7C01-03: uses output_reversibility (the real OutputNode field —
 // src/engine/types.ts line 86), not §9's incorrect `reversibility` example.
@@ -123,7 +125,14 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
   // CR7-18: check-then-act under the per-case lock, re-checked inside it, so
   // two tabs seeding at once write the self-assessment once.
   await withCaseLock(AIGATE_USE_CASE_ID, async () => {
-    if (await getUseCase(AIGATE_USE_CASE_ID)) return;
+    // CR8-10: node exists -> skip; events but no node -> write only the
+    // register rows (use case, vendor, edge, model link), no new events.
+    const plan = await planSeed(AIGATE_USE_CASE_ID, policy);
+    if (plan.kind === 'skip') return;
+    if (plan.kind === 'recover') {
+      await writeRegisterRows(policy, plan.createdAt, plan.verdict.id, plan.verdict.tier, plan.verdict.track, plan.stage);
+      return;
+    }
 
     // P8-C04, review pass 2. This evaluated with NO packs while the graph
     // declares jurisdictions: ['UK'] — so Counterpoise's own self-assessment was
@@ -184,48 +193,65 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
     // special-casing this call, not by a bypass.
     const routedWorkflow = routeToWorkflow(result.tier, policy);
 
-    await addNode({
-      node_id: AIGATE_USE_CASE_ID,
-      node_type: 'use_case',
-      label: 'Counterpoise (self-assessment)',
-      created_at: now,
-      metadata: {
-        node_type: 'use_case',
-        submitted_by: 'system',
-        lifecycle_stage: routedWorkflow.lifecycle_stage,
-        current_verdict_id: verdict.id,
-        tier: result.tier,
-        track: result.track,
-      },
-    });
+    await writeRegisterRows(policy, now, verdict.id, result.tier, result.track, routedWorkflow.lifecycle_stage);
+  });
+}
 
-    // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
-    // workflow exists in this codebase.
-    await addNode({
-      node_id: AIGATE_VENDOR_NODE_ID,
+// The register half of the seed, written LAST (CR8-10: see seed-recovery.ts).
+async function writeRegisterRows(
+  policy: PolicyFile,
+  now: string,
+  verdictId: string,
+  tier: Verdict['tier'],
+  track: Verdict['track'],
+  stage: LifecycleStage,
+): Promise<void> {
+  // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
+  // workflow exists in this codebase.
+  // CR8-10: each row is written only if absent, so a run interrupted part-way
+  // is completed by the next. The use-case node goes LAST: it is what the seed's
+  // skip check looks at, so it must only exist once everything else does.
+  const db = await openRegisterDb();
+  if (!(await db.get('register_nodes', AIGATE_VENDOR_NODE_ID))) await addNode({
+    node_id: AIGATE_VENDOR_NODE_ID,
+    node_type: 'vendor',
+    label: 'Anthropic',
+    created_at: now,
+    metadata: {
       node_type: 'vendor',
-      label: 'Anthropic',
-      created_at: now,
-      metadata: {
-        node_type: 'vendor',
-        vendor_name: 'Anthropic',
-        approval_status: 'pending',
-      },
-    });
+      vendor_name: 'Anthropic',
+      approval_status: 'pending',
+    },
+  });
 
-    await addEdge({
-      edge_id: crypto.randomUUID(),
-      from_node_id: AIGATE_USE_CASE_ID,
-      to_node_id: AIGATE_VENDOR_NODE_ID,
-      edge_type: 'provided_by_vendor',
-      created_at: now,
-    });
+  const existingEdges = await db.getAllFromIndex('register_edges', 'by_from_node', AIGATE_USE_CASE_ID);
+  if (!existingEdges.some((e) => e.edge_type === 'provided_by_vendor')) await addEdge({
+    edge_id: crypto.randomUUID(),
+    from_node_id: AIGATE_USE_CASE_ID,
+    to_node_id: AIGATE_VENDOR_NODE_ID,
+    edge_type: 'provided_by_vendor',
+    created_at: now,
+  });
 
-    // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
-    // case's confirmation uses — no special-cased write.
-    const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
-    if (declaredModelNode) {
-      await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
-    }
+  // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
+  // case's confirmation uses — no special-cased write.
+  const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
+  if (declaredModelNode && !existingEdges.some((e) => e.edge_type === 'uses_model')) {
+    await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
+  }
+
+  await addNode({
+    node_id: AIGATE_USE_CASE_ID,
+    node_type: 'use_case',
+    label: 'Counterpoise (self-assessment)',
+    created_at: now,
+    metadata: {
+      node_type: 'use_case',
+      submitted_by: 'system',
+      lifecycle_stage: stage,
+      current_verdict_id: verdictId,
+      tier,
+      track,
+    },
   });
 }

@@ -9,6 +9,7 @@ import type { RegisterNode } from '../../store/types';
 
 // Real onPolicyUpdated by default (BC-003: the trail is the real producer);
 // individual tests make it fail through this spy.
+// EBT exception (owner-accepted, code review 006/008): fault injection / fixture variation — the real module is wrapped; tests make onPolicyUpdated fail, or rewrite the REAL bundled pack sources.
 vi.mock('../../store/policy', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../store/policy')>();
   return { ...actual, onPolicyUpdated: vi.fn(actual.onPolicyUpdated) };
@@ -17,6 +18,7 @@ vi.mock('../../store/policy', async (importOriginal) => {
 // CR7-38: the pack sign-off state is varied per test by rewriting the REAL
 // bundled pack sources (never hand-typed packs).
 const packHolder = vi.hoisted(() => ({ rewrite: undefined as undefined | ((s: Record<string, string>) => Record<string, string>) }));
+// EBT exception (owner-accepted, code review 006/008): fault injection / fixture variation — the real module is wrapped; tests make onPolicyUpdated fail, or rewrite the REAL bundled pack sources.
 vi.mock('../../store/pack-source', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../store/pack-source')>();
   return {

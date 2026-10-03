@@ -116,8 +116,8 @@ export default function SettingsPanel() {
         setBusy('none');
         setMessage(
           `Not everything could be deleted: ${result.incomplete.join(', ')}. ` +
-            'Your unsaved intake drafts, role and hand-off sync record were cleared; the data listed was not. ' +
-            'This usually means Counterpoise is open in another tab — close the others and try again.'
+            'Your unsaved intake drafts, selected role, hand-off sync record and welcome-panel dismissal were cleared; the data listed was not. ' +
+            'This usually means Counterpoise is open in another tab. Close the others and the delete may still finish on its own; if the data is still there afterwards, try again.'
         );
         return;
       }
@@ -167,10 +167,12 @@ export default function SettingsPanel() {
             <div role="alert">
               <p>
                 This permanently deletes every use case, verdict and audit event in this browser, any
-                unsaved intake draft, and the record of past hand-off syncs. The welcome panel will show again.
-                Counterpoise has no server,
+                unsaved intake draft, your selected role (it goes back to 1LoD) and the record of past
+                hand-off syncs. The welcome panel will show again. Counterpoise has no server,
                 so there is no copy to restore from. Export anything you want to keep first. Your model
-                settings and the appetite framework you saved here are not affected.
+                settings and the appetite framework you saved here are not affected. If Counterpoise is
+                open in another tab, the delete can be held up until you close it, and may still finish
+                afterwards.
               </p>
               <button type="button" onClick={handleClearAll} disabled={busy !== 'none'}>
                 {busy === 'clearing' ? 'Clearing…' : 'Yes, delete everything'}

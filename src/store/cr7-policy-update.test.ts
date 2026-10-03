@@ -8,6 +8,7 @@ import * as audit from './audit';
 import type { RegisterNode } from './types';
 
 // Real trail (BC-003); only `append` is wrapped so a test can fail it part-way.
+// EBT exception (owner-accepted, code review 006/008): hold in flight / fault injection — the real append is wrapped so a test can fail it part-way; the trail itself is real.
 vi.mock('./audit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./audit')>();
   return { ...actual, append: vi.fn(actual.append) };
