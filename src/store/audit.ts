@@ -14,15 +14,18 @@ import type { AuditEvent } from './types';
 // sequence, not events minutes apart).
 //
 // code-review-005 F15: `undefined` means "not yet restored from the DB this
-// session" — mirrors cachedLastHash below. A fresh page load used to start
+// session" — mirrors the tip hint below. A fresh page load used to start
 // this at 0, so on a machine whose clock trails the sender's, a new local
 // event could get a monotonic timestamp EARLIER than an imported event it
 // actually comes after, corrupting sort-by-time order (and, before this
-// round, the LIVE chain tip lookup too — see lastChainHash). clockFloor()
+// round, the LIVE chain tip lookup too — see freshTip). freshTip()
 // restores the true floor — the stored trail's own maximum occurred_at —
 // the first time it is needed after a fresh load, exactly like
-// lastChainHash() already did for the hash tip.
-let lastOccurredAtMs: number | undefined; // undefined = not yet loaded this session
+// it also restores the hash tip.
+//
+// CR7-05: the clock floor, the chain-tip hash and the stored event count now
+// live in ONE cached hint (`tip`, below) so a single rescan refreshes all
+// three together.
 
 // code-review-005 F4: a malformed occurred_at (e.g. from a bundle that
 // somehow reached this layer without going through handoff.ts's import
@@ -37,29 +40,41 @@ function safeTimeMs(iso: string): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-async function clockFloor(): Promise<number> {
-  if (lastOccurredAtMs !== undefined) return lastOccurredAtMs;
-  const db = await openAuditDb();
-  const all = await db.getAll('audit_events');
-  lastOccurredAtMs = all.reduce((m, e) => Math.max(m, safeTimeMs(e.occurred_at)), 0);
-  return lastOccurredAtMs;
+// CR7-05: the tip hint. `count` is the number of stored events the hint was
+// taken at; the locked append compares it with `db.count('audit_events')` (an
+// O(1) call) and rescans (O(n), the existing chainOrder) only when another
+// tab — or any path that did not refresh the hint — has changed the table.
+// Residual, documented: a cross-tab replace that leaves an IDENTICAL event
+// count is not seen by this check (the in-tab replace/import paths below
+// invalidate the hint explicitly, so only another tab's replace is exposed).
+// No schema bump.
+interface TipHint {
+  hash: string | null;
+  ms: number;
+  count: number;
 }
+let tip: TipHint | undefined; // undefined = not yet loaded this session
 
-async function monotonicOccurredAt(requested: string): Promise<string> {
-  const floor = await clockFloor();
-  const requestedMs = safeTimeMs(requested);
-  const ms = Math.max(requestedMs, floor + 1);
-  lastOccurredAtMs = ms;
-  return new Date(ms).toISOString();
+async function freshTip(): Promise<TipHint> {
+  const db = await openAuditDb();
+  const count = await db.count('audit_events');
+  if (tip !== undefined && tip.count === count) return tip;
+  const all = await db.getAll('audit_events');
+  const ordered = chainOrder(all);
+  tip = {
+    hash: ordered.at(-1)?.hash ?? null,
+    ms: all.reduce((m, e) => Math.max(m, safeTimeMs(e.occurred_at)), 0),
+    count: all.length,
+  };
+  return tip;
 }
 
 // Hash chain (explore-007 D-001). One chain across the WHOLE trail, not per
 // use case — a deletion or edit anywhere breaks the chain from that point
 // on, regardless of which use case the tampered event belonged to. Module
 // state caches the last-written hash within a tab session; a fresh page
-// load recovers it from the DB itself (see lastChainHash below), so the
+// load recovers it from the DB itself (see freshTip below), so the
 // chain survives reloads.
-let cachedLastHash: string | null | undefined; // undefined = not yet loaded this session
 
 // Exported for store/handoff.ts's bundle seal (a hash over the register +
 // audit tip). The chain's own hashing stays internal; this is the one
@@ -122,18 +137,6 @@ function chainOrder(events: readonly AuditEvent[]): AuditEvent[] {
   return orderByHashChain(events) ?? [...events].sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
 }
 
-async function lastChainHash(): Promise<string | null> {
-  if (cachedLastHash !== undefined) return cachedLastHash;
-  const db = await openAuditDb();
-  const all = await db.getAll('audit_events');
-  if (all.length === 0) {
-    cachedLastHash = null;
-    return null;
-  }
-  cachedLastHash = chainOrder(all).at(-1)!.hash;
-  return cachedLastHash;
-}
-
 // Callers never compute prev_hash/hash themselves — append() is the sole
 // write path (verdict-audit.md §4.4) and the sole place the chain is
 // extended, exactly like it was already the sole place occurred_at
@@ -141,7 +144,7 @@ async function lastChainHash(): Promise<string | null> {
 export type AuditEventInput = Omit<AuditEvent, 'prev_hash' | 'hash'>;
 
 // A hash chain is fundamentally sequential: two concurrent append() calls
-// could both read the same lastChainHash() before either writes, producing
+// could both read the same tip before either writes, producing
 // two events with an identical prev_hash — not tampering, but a real fork
 // that would make verifyChain() report a false break for the second event.
 // Every write (and, since code-review-005, every read that must not see a
@@ -183,13 +186,30 @@ export function withAuditQueue<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function appendUnqueued(event: AuditEventInput): Promise<void> {
+  try {
+    await appendOnce(event);
+  } catch (err) {
+    // A `blocking` close (db.ts — another tab or a reset wants the database)
+    // can land between taking the handle and writing. Nothing was written, so
+    // retry ONCE: openAuditDb() reopens, and freshTip() recounts and rescans.
+    if (err instanceof DOMException && err.name === 'InvalidStateError') {
+      await appendOnce(event);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function appendOnce(event: AuditEventInput): Promise<void> {
   const db = await openAuditDb();
-  const occurred_at = await monotonicOccurredAt(event.occurred_at);
-  const prev_hash = await lastChainHash();
+  const current = await freshTip();
+  const ms = Math.max(safeTimeMs(event.occurred_at), current.ms + 1);
+  const occurred_at = new Date(ms).toISOString();
+  const prev_hash = current.hash;
   const withoutHash = { ...event, occurred_at };
   const hash = await sha256Hex((prev_hash ?? 'GENESIS') + '|' + eventContent(withoutHash));
   await db.add('audit_events', { ...withoutHash, prev_hash, hash });
-  cachedLastHash = hash;
+  tip = { hash, ms, count: current.count + 1 };
 }
 
 // db.add() not db.put() — duplicate event_id throws ConstraintError rather than
@@ -226,8 +246,7 @@ export async function getAll(useCaseId: string): Promise<AuditEvent[]> {
 // one test process this state must be reset to genesis alongside wiping the
 // DBs (__resetDbsForTests). Not a runtime path.
 export function __resetChainStateForTests(): void {
-  cachedLastHash = undefined;
-  lastOccurredAtMs = undefined;
+  tip = undefined;
   // The queue itself is recreated implicitly: nothing references the old
   // closure's `queue` variable once every caller in a test has finished
   // awaiting it, and freshMachine() (the tests' helper) never overlaps two
@@ -314,9 +333,7 @@ export function importTailIfContinuesWithinQueue(bundleEvents: readonly AuditEve
       await tx.store.add(e);
     }
     await tx.done;
-    cachedLastHash = undefined;
-    const floor = await clockFloor();
-    lastOccurredAtMs = Math.max(floor, ...tail.map((e) => safeTimeMs(e.occurred_at)));
+    tip = undefined; // rescanned (hash, floor, count) on the next append
     return { kind: 'imported', added: tail.length };
   })();
 }
@@ -393,8 +410,7 @@ export function backupAndReplaceAllRawEventsWithinQueue(
     await tx.store.clear();
     for (const e of events) await tx.store.add(e);
     await tx.done;
-    cachedLastHash = undefined;
-    lastOccurredAtMs = events.reduce((m, e) => Math.max(m, safeTimeMs(e.occurred_at)), 0);
+    tip = undefined; // rescanned (hash, floor, count) on the next append
     return { kind: 'replaced', discarded: chainOrder(discarded) };
   })();
 }

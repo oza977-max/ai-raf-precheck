@@ -15,6 +15,7 @@ import { loadPolicy } from '../store/policy';
 import { checkPolicyReferences } from '../store/policy-references';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { clearAllLocalData } from '../store/reset';
+import { clearDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
 import { sampleCount, seedSampleRegister } from '../seeds/sample-register';
 import { ibCaseCount, seedIbPortfolio } from '../seeds/ib-portfolio';
 
@@ -102,12 +103,20 @@ export default function SettingsPanel() {
     setBusy('clearing');
     try {
       const result = await clearAllLocalData();
+      // CR7-15: drafts are cleared whatever the outcome — the role, hand-off
+      // marker and welcome flag already are, and the message below says so.
+      // (The unsaved drafts live in sessionStorage, owned by intake-draft;
+      // the store must not import components.)
+      clearDraft();
+      clearFormDraft();
+      probeLegacyFormDraft(); // removes the pre-R16 form key if present (its return value is not needed)
       if (!result.complete) {
         // Code review 001, I-3: a blocked delete used to resolve as success
         // and the UI reported a clean reset over surviving data. Say so.
         setBusy('none');
         setMessage(
           `Not everything could be deleted: ${result.incomplete.join(', ')}. ` +
+            'Your unsaved intake drafts, role and hand-off sync record were cleared; the data listed was not. ' +
             'This usually means Counterpoise is open in another tab — close the others and try again.'
         );
         return;
@@ -157,9 +166,11 @@ export default function SettingsPanel() {
           {confirmingClear && (
             <div role="alert">
               <p>
-                This permanently deletes every use case, verdict and audit event in this browser.
-                Counterpoise has no server, so there is no copy to restore from. Export anything you want
-                to keep first. Your model settings are not affected.
+                This permanently deletes every use case, verdict and audit event in this browser, any
+                unsaved intake draft, and the record of past hand-off syncs. The welcome panel will show again.
+                Counterpoise has no server,
+                so there is no copy to restore from. Export anything you want to keep first. Your model
+                settings and the appetite framework you saved here are not affected.
               </p>
               <button type="button" onClick={handleClearAll} disabled={busy !== 'none'}>
                 {busy === 'clearing' ? 'Clearing…' : 'Yes, delete everything'}

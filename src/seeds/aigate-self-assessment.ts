@@ -1,6 +1,7 @@
 import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
 import { addNode, addEdge, addUseCaseModelLink, getUseCase } from '../store/register';
+import { withCaseLock } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
 import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
@@ -119,109 +120,112 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[]): Promise<v
   // as the other two seed scripts.
   if (checkPolicyReferences(policy, packs).errors.length > 0) return;
 
-  const existing = await getUseCase(AIGATE_USE_CASE_ID);
-  if (existing) return;
+  // CR7-18: check-then-act under the per-case lock, re-checked inside it, so
+  // two tabs seeding at once write the self-assessment once.
+  await withCaseLock(AIGATE_USE_CASE_ID, async () => {
+    if (await getUseCase(AIGATE_USE_CASE_ID)) return;
 
-  // P8-C04, review pass 2. This evaluated with NO packs while the graph
-  // declares jurisdictions: ['UK'] — so Counterpoise's own self-assessment was
-  // scored without the UK pack it says applies to it. Harmless-looking until
-  // this chunk made the consequence visible: the row would read Provisional
-  // for "no regulatory basis", which is a false statement about a use case
-  // that named its jurisdiction. Pre-existing gap from P7-C01.
-  const evalResult = evaluate(AIGATE_USE_CASE_GRAPH, policy, packs);
-  if (!evalResult.ok) {
-    throw new Error(`Counterpoise self-assessment failed: ${evalResult.error.kind}`);
-  }
-  const result = evalResult.value;
+    // P8-C04, review pass 2. This evaluated with NO packs while the graph
+    // declares jurisdictions: ['UK'] — so Counterpoise's own self-assessment was
+    // scored without the UK pack it says applies to it. Harmless-looking until
+    // this chunk made the consequence visible: the row would read Provisional
+    // for "no regulatory basis", which is a false statement about a use case
+    // that named its jurisdiction. Pre-existing gap from P7-C01.
+    const evalResult = evaluate(AIGATE_USE_CASE_GRAPH, policy, packs);
+    if (!evalResult.ok) {
+      throw new Error(`Counterpoise self-assessment failed: ${evalResult.error.kind}`);
+    }
+    const result = evalResult.value;
 
-  const now = new Date().toISOString();
-  const verdict: Verdict = {
-    ...result,
-    id: crypto.randomUUID(),
-    use_case_id: AIGATE_USE_CASE_ID,
-    living_status: 'approved',
-    living_status_updated_at: now,
-    attested_by: 'system',
-    attested_at: now,
-    graph_version: AIGATE_USE_CASE_GRAPH.version,
-    corrections: [],
-  };
-
-  // Matches IntakeFlow.tsx's real fresh-path pattern (drift fix #4) —
-  // graph_confirmed then verdict_produced, not the unused
-  // `use_case_created` AuditEventType variant.
-  await append({
-    event_id: crypto.randomUUID(),
-    use_case_id: AIGATE_USE_CASE_ID,
-    event_type: 'graph_confirmed',
-    occurred_at: now,
-    actor: 'system',
-    payload: {
-      type: 'graph_confirmed',
-      graph_id: AIGATE_USE_CASE_GRAPH.id,
+    const now = new Date().toISOString();
+    const verdict: Verdict = {
+      ...result,
+      id: crypto.randomUUID(),
+      use_case_id: AIGATE_USE_CASE_ID,
+      living_status: 'approved',
+      living_status_updated_at: now,
+      attested_by: 'system',
+      attested_at: now,
       graph_version: AIGATE_USE_CASE_GRAPH.version,
-      corrections_count: 0,
-    },
-  });
-  await append({
-    event_id: crypto.randomUUID(),
-    use_case_id: AIGATE_USE_CASE_ID,
-    event_type: 'verdict_produced',
-    occurred_at: now,
-    actor: 'system',
-    payload: {
-      type: 'verdict_produced',
-      verdict,
-      knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(AIGATE_USE_CASE_GRAPH, verdict),
-    },
-  });
+      corrections: [],
+    };
 
-  // BC-P7C01-01: routed through the exact same function as any other use
-  // case — §9's explicit "no auto-approve" is satisfied by NOT
-  // special-casing this call, not by a bypass.
-  const routedWorkflow = routeToWorkflow(result.tier, policy);
+    // Matches IntakeFlow.tsx's real fresh-path pattern (drift fix #4) —
+    // graph_confirmed then verdict_produced, not the unused
+    // `use_case_created` AuditEventType variant.
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: AIGATE_USE_CASE_ID,
+      event_type: 'graph_confirmed',
+      occurred_at: now,
+      actor: 'system',
+      payload: {
+        type: 'graph_confirmed',
+        graph_id: AIGATE_USE_CASE_GRAPH.id,
+        graph_version: AIGATE_USE_CASE_GRAPH.version,
+        corrections_count: 0,
+      },
+    });
+    await append({
+      event_id: crypto.randomUUID(),
+      use_case_id: AIGATE_USE_CASE_ID,
+      event_type: 'verdict_produced',
+      occurred_at: now,
+      actor: 'system',
+      payload: {
+        type: 'verdict_produced',
+        verdict,
+        knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(AIGATE_USE_CASE_GRAPH, verdict),
+      },
+    });
 
-  await addNode({
-    node_id: AIGATE_USE_CASE_ID,
-    node_type: 'use_case',
-    label: 'Counterpoise (self-assessment)',
-    created_at: now,
-    metadata: {
+    // BC-P7C01-01: routed through the exact same function as any other use
+    // case — §9's explicit "no auto-approve" is satisfied by NOT
+    // special-casing this call, not by a bypass.
+    const routedWorkflow = routeToWorkflow(result.tier, policy);
+
+    await addNode({
+      node_id: AIGATE_USE_CASE_ID,
       node_type: 'use_case',
-      submitted_by: 'system',
-      lifecycle_stage: routedWorkflow.lifecycle_stage,
-      current_verdict_id: verdict.id,
-      tier: result.tier,
-      track: result.track,
-    },
-  });
+      label: 'Counterpoise (self-assessment)',
+      created_at: now,
+      metadata: {
+        node_type: 'use_case',
+        submitted_by: 'system',
+        lifecycle_stage: routedWorkflow.lifecycle_stage,
+        current_verdict_id: verdict.id,
+        tier: result.tier,
+        track: result.track,
+      },
+    });
 
-  // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
-  // workflow exists in this codebase.
-  await addNode({
-    node_id: AIGATE_VENDOR_NODE_ID,
-    node_type: 'vendor',
-    label: 'Anthropic',
-    created_at: now,
-    metadata: {
+    // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
+    // workflow exists in this codebase.
+    await addNode({
+      node_id: AIGATE_VENDOR_NODE_ID,
       node_type: 'vendor',
-      vendor_name: 'Anthropic',
-      approval_status: 'pending',
-    },
-  });
+      label: 'Anthropic',
+      created_at: now,
+      metadata: {
+        node_type: 'vendor',
+        vendor_name: 'Anthropic',
+        approval_status: 'pending',
+      },
+    });
 
-  await addEdge({
-    edge_id: crypto.randomUUID(),
-    from_node_id: AIGATE_USE_CASE_ID,
-    to_node_id: AIGATE_VENDOR_NODE_ID,
-    edge_type: 'provided_by_vendor',
-    created_at: now,
-  });
+    await addEdge({
+      edge_id: crypto.randomUUID(),
+      from_node_id: AIGATE_USE_CASE_ID,
+      to_node_id: AIGATE_VENDOR_NODE_ID,
+      edge_type: 'provided_by_vendor',
+      created_at: now,
+    });
 
-  // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
-  // case's confirmation uses — no special-cased write.
-  const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
-  if (declaredModelNode) {
-    await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
-  }
+    // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
+    // case's confirmation uses — no special-cased write.
+    const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
+    if (declaredModelNode) {
+      await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
+    }
+  });
 }

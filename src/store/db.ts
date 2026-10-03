@@ -123,6 +123,19 @@ export function openAuditDb(): Promise<IDBPDatabase<AuditDbSchema>> {
         const store = db.createObjectStore('audit_events', { keyPath: 'event_id' });
         store.createIndex('by_use_case', 'use_case_id');
       },
+      // CR7-20: another tab (or this one's own "Clear all data") is trying to
+      // delete or upgrade the database. Close our handle so the request can
+      // proceed, and forget the cached promise so the next call reopens
+      // instead of using a closed connection. Guarded so a late event from an
+      // already-replaced handle cannot discard a newer one.
+      blocking() {
+        const closing = dbPromise;
+        dbPromise = undefined;
+        void closing?.then((d) => d.close()).catch(() => undefined);
+      },
+      terminated() {
+        dbPromise = undefined;
+      },
     });
   }
   return dbPromise;
@@ -154,6 +167,15 @@ export function openRegisterDb(): Promise<IDBPDatabase<RegisterDbSchema>> {
         const edgeStore = db.createObjectStore('register_edges', { keyPath: 'edge_id' });
         edgeStore.createIndex('by_from_node', 'from_node_id');
         edgeStore.createIndex('by_to_node', 'to_node_id');
+      },
+      // CR7-20: same as the audit database above.
+      blocking() {
+        const closing = registerDbPromise;
+        registerDbPromise = undefined;
+        void closing?.then((d) => d.close()).catch(() => undefined);
+      },
+      terminated() {
+        registerDbPromise = undefined;
       },
     });
   }

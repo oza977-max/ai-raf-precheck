@@ -3,6 +3,7 @@ import { routeToWorkflow } from '../engine/workflow-router';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
 import type { StructuredFormValues } from '../engine/build-graph-from-form';
 import { addNode, getUseCase } from '../store/register';
+import { withCaseLock } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
 import { knowledgeLensMatchedEntryIdsFor } from './knowledge-lens-for-seed';
@@ -295,139 +296,142 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
   let seeded = 0;
 
   for (const ibCase of CASES) {
-    if (await getUseCase(ibCase.id)) continue;
+    // CR7-18: check-then-act under the per-case lock, re-checked inside it.
+    await withCaseLock(ibCase.id, async () => {
+      if (await getUseCase(ibCase.id)) return;
 
-    // B-15: the engine no longer mints its own timestamp — minted once here
-    // (t0/at, moved above the graph build) so the graph's extracted_at
-    // agrees with the use_case_created event's own at(0) below.
-    const t0 = Date.now();
-    const at = (offsetSeconds: number) => new Date(t0 + offsetSeconds * 1000).toISOString();
-    const graph = buildGraphFromForm(ibCase.values, at(0), () => crypto.randomUUID());
-    const evalResult = evaluate(graph, policy, packs);
-    if (!evalResult.ok) continue; // never fake what the policy cannot classify
-    const result = evalResult.value;
-    const verdict: Verdict = {
-      ...result,
-      id: crypto.randomUUID(),
-      use_case_id: ibCase.id,
-      living_status: 'approved',
-      living_status_updated_at: at(2),
-      attested_by: '1LoD',
-      attested_at: at(1),
-      graph_version: graph.version,
-      corrections: [],
-    };
+      // B-15: the engine no longer mints its own timestamp — minted once here
+      // (t0/at, moved above the graph build) so the graph's extracted_at
+      // agrees with the use_case_created event's own at(0) below.
+      const t0 = Date.now();
+      const at = (offsetSeconds: number) => new Date(t0 + offsetSeconds * 1000).toISOString();
+      const graph = buildGraphFromForm(ibCase.values, at(0), () => crypto.randomUUID());
+      const evalResult = evaluate(graph, policy, packs);
+      if (!evalResult.ok) return; // never fake what the policy cannot classify
+      const result = evalResult.value;
+      const verdict: Verdict = {
+        ...result,
+        id: crypto.randomUUID(),
+        use_case_id: ibCase.id,
+        living_status: 'approved',
+        living_status_updated_at: at(2),
+        attested_by: '1LoD',
+        attested_at: at(1),
+        graph_version: graph.version,
+        corrections: [],
+      };
 
-    await append({
-      event_id: crypto.randomUUID(),
-      use_case_id: ibCase.id,
-      event_type: 'use_case_created',
-      occurred_at: at(0),
-      actor: '1LoD',
-      payload: { type: 'use_case_created', description: ibCase.values.description, intake_method: 'structured_form' },
-    });
-    await append({
-      event_id: crypto.randomUUID(),
-      use_case_id: ibCase.id,
-      event_type: 'graph_confirmed',
-      occurred_at: at(1),
-      actor: '1LoD',
-      payload: { type: 'graph_confirmed', graph_id: graph.id, graph_version: graph.version, corrections_count: 0 },
-    });
-    await append({
-      event_id: crypto.randomUUID(),
-      use_case_id: ibCase.id,
-      event_type: 'verdict_produced',
-      occurred_at: at(2),
-      actor: 'system',
-      payload: {
-        type: 'verdict_produced',
-        verdict,
-        knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(graph, verdict),
-      },
-    });
-
-    // Scripted 2LoD pass — the SAME event shapes the sign-off page writes.
-    // Only cases the router parks at pre_checked get a review; Low
-    // self-serves and outside-appetite cases wait for a human, exactly as
-    // the product's lifecycle rules dictate.
-    const routed = routeToWorkflow(result.tier, policy);
-    let stage: LifecycleStage = routed.lifecycle_stage;
-    if (stage === 'pre_checked' && ibCase.review === 'approve' && ibCase.reviewer) {
       await append({
         event_id: crypto.randomUUID(),
         use_case_id: ibCase.id,
-        event_type: 'twoloD_reviewed',
-        occurred_at: at(3),
-        actor: '2LoD',
+        event_type: 'use_case_created',
+        occurred_at: at(0),
+        actor: '1LoD',
+        payload: { type: 'use_case_created', description: ibCase.values.description, intake_method: 'structured_form' },
+      });
+      await append({
+        event_id: crypto.randomUUID(),
+        use_case_id: ibCase.id,
+        event_type: 'graph_confirmed',
+        occurred_at: at(1),
+        actor: '1LoD',
+        payload: { type: 'graph_confirmed', graph_id: graph.id, graph_version: graph.version, corrections_count: 0 },
+      });
+      await append({
+        event_id: crypto.randomUUID(),
+        use_case_id: ibCase.id,
+        event_type: 'verdict_produced',
+        occurred_at: at(2),
+        actor: 'system',
         payload: {
-          type: 'twoloD_reviewed',
-          action: 'approved',
-          verdict_id: verdict.id,
-          attested_by_name: `${ibCase.reviewer} (seeded sample)`,
+          type: 'verdict_produced',
+          verdict,
+          knowledge_lens_matched_entry_ids: knowledgeLensMatchedEntryIdsFor(graph, verdict),
         },
       });
-      await append({
-        event_id: crypto.randomUUID(),
-        use_case_id: ibCase.id,
-        event_type: 'lifecycle_stage_changed',
-        occurred_at: at(4),
-        actor: '2LoD',
-        payload: { type: 'lifecycle_stage_changed', from_stage: 'pre_checked', to_stage: 'approved' },
-      });
-      stage = 'approved';
-    } else if (stage === 'pre_checked' && ibCase.review === 'request_correction' && ibCase.reviewer) {
-      await append({
-        event_id: crypto.randomUUID(),
-        use_case_id: ibCase.id,
-        event_type: 'twoloD_reviewed',
-        occurred_at: at(3),
-        actor: '2LoD',
-        payload: {
-          type: 'twoloD_reviewed',
-          action: 'correction_requested',
-          verdict_id: verdict.id,
-          attested_by_name: `${ibCase.reviewer} (seeded sample)`,
-          ...(ibCase.reviewNote ? { notes: ibCase.reviewNote } : {}),
-        },
-      });
-    }
 
-    // One seeded rule challenge, against a rule the verdict actually relied
-    // on — never an invented rule id.
-    if (ibCase.challenge && result.binding_constraint) {
-      await append({
-        event_id: crypto.randomUUID(),
-        use_case_id: ibCase.id,
-        event_type: 'rule_dissent_filed',
-        occurred_at: at(5),
-        actor: '2LoD',
-        payload: {
-          type: 'rule_dissent_filed',
-          verdict_id: verdict.id,
-          rule_id: result.binding_constraint,
-          dissent: ibCase.challenge,
-          filed_by_name: 'Marcus Chen (seeded sample)',
-        },
-      });
-    }
+      // Scripted 2LoD pass — the SAME event shapes the sign-off page writes.
+      // Only cases the router parks at pre_checked get a review; Low
+      // self-serves and outside-appetite cases wait for a human, exactly as
+      // the product's lifecycle rules dictate.
+      const routed = routeToWorkflow(result.tier, policy);
+      let stage: LifecycleStage = routed.lifecycle_stage;
+      if (stage === 'pre_checked' && ibCase.review === 'approve' && ibCase.reviewer) {
+        await append({
+          event_id: crypto.randomUUID(),
+          use_case_id: ibCase.id,
+          event_type: 'twoloD_reviewed',
+          occurred_at: at(3),
+          actor: '2LoD',
+          payload: {
+            type: 'twoloD_reviewed',
+            action: 'approved',
+            verdict_id: verdict.id,
+            attested_by_name: `${ibCase.reviewer} (seeded sample)`,
+          },
+        });
+        await append({
+          event_id: crypto.randomUUID(),
+          use_case_id: ibCase.id,
+          event_type: 'lifecycle_stage_changed',
+          occurred_at: at(4),
+          actor: '2LoD',
+          payload: { type: 'lifecycle_stage_changed', from_stage: 'pre_checked', to_stage: 'approved' },
+        });
+        stage = 'approved';
+      } else if (stage === 'pre_checked' && ibCase.review === 'request_correction' && ibCase.reviewer) {
+        await append({
+          event_id: crypto.randomUUID(),
+          use_case_id: ibCase.id,
+          event_type: 'twoloD_reviewed',
+          occurred_at: at(3),
+          actor: '2LoD',
+          payload: {
+            type: 'twoloD_reviewed',
+            action: 'correction_requested',
+            verdict_id: verdict.id,
+            attested_by_name: `${ibCase.reviewer} (seeded sample)`,
+            ...(ibCase.reviewNote ? { notes: ibCase.reviewNote } : {}),
+          },
+        });
+      }
 
-    await addNode({
-      node_id: ibCase.id,
-      node_type: 'use_case',
-      label: ibCase.values.useCaseName,
-      created_at: at(0),
-      metadata: {
+      // One seeded rule challenge, against a rule the verdict actually relied
+      // on — never an invented rule id.
+      if (ibCase.challenge && result.binding_constraint) {
+        await append({
+          event_id: crypto.randomUUID(),
+          use_case_id: ibCase.id,
+          event_type: 'rule_dissent_filed',
+          occurred_at: at(5),
+          actor: '2LoD',
+          payload: {
+            type: 'rule_dissent_filed',
+            verdict_id: verdict.id,
+            rule_id: result.binding_constraint,
+            dissent: ibCase.challenge,
+            filed_by_name: 'Marcus Chen (seeded sample)',
+          },
+        });
+      }
+
+      await addNode({
+        node_id: ibCase.id,
         node_type: 'use_case',
-        description: ibCase.values.description,
-        submitted_by: '1LoD',
-        lifecycle_stage: stage,
-        current_verdict_id: verdict.id,
-        tier: result.tier,
-        track: result.track,
-      },
+        label: ibCase.values.useCaseName,
+        created_at: at(0),
+        metadata: {
+          node_type: 'use_case',
+          description: ibCase.values.description,
+          submitted_by: '1LoD',
+          lifecycle_stage: stage,
+          current_verdict_id: verdict.id,
+          tier: result.tier,
+          track: result.track,
+        },
+      });
+      seeded += 1;
     });
-    seeded += 1;
   }
 
   return seeded;

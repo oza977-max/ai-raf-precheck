@@ -85,16 +85,24 @@ export async function generateReasoningTrace(traceData: VerdictTraceData, apiKey
 
   try {
     const client = createClient(apiKey);
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      messages: [
-        {
-          role: 'user',
-          content: `${SYSTEM_INSTRUCTION}\n\n${JSON.stringify(traceData, null, 2)}\n\nWrite the reasoning trace.`,
-        },
-      ],
-    });
+    // CR7-19: this call runs while the caller holds the per-case lock
+    // (IntakeFlow's runConfirmAndEvaluate). With no timeout a stalled network
+    // call held that lock — and so every other action on the case — for the
+    // SDK's default 10 minutes, retried twice. 15 s and no retries: the trace
+    // is optional prose, so a slow call is a failed call (network-error).
+    const response = await client.messages.create(
+      {
+        model: 'claude-sonnet-4-6',
+        max_tokens: 512,
+        messages: [
+          {
+            role: 'user',
+            content: `${SYSTEM_INSTRUCTION}\n\n${JSON.stringify(traceData, null, 2)}\n\nWrite the reasoning trace.`,
+          },
+        ],
+      },
+      { timeout: 15000, maxRetries: 0 },
+    );
 
     const textBlock = response.content.find(
       (block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text',

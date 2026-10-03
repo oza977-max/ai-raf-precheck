@@ -643,6 +643,17 @@ function recordSyncedTip(tipHash: string | null): void {
   }
 }
 
+// CR7-15: "Clear all data and start over" forgets that a sync ever happened —
+// the marker only chooses between two pieces of copy, and keeping it after the
+// data it described is gone would make a first-ever import read as a repeat.
+export function clearHandoffSyncMarker(): void {
+  try {
+    localStorage.removeItem(LAST_SYNCED_TIP_KEY);
+  } catch {
+    /* localStorage unavailable — the marker is advisory */
+  }
+}
+
 function hasSyncedBefore(): boolean {
   try {
     return localStorage.getItem(LAST_SYNCED_TIP_KEY) !== null;

@@ -203,7 +203,9 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     // row. Now a plain-English sentence carries the state; the real
     // pack id/version detail survives as a secondary, quieter line —
     // still real data, not hidden, just no longer the primary sentence.
-    const plainLines = screen.getAllByText(/\d+ rules? applying — not yet signed off/);
+    // CR7-38: the wording is now computed per rule (none / N of M / all) —
+    // every bundled pack is still unsigned, so this screen reads "none signed off".
+    const plainLines = screen.getAllByText(/\d+ rules? applying — none signed off/);
     expect(plainLines.length).toBeGreaterThanOrEqual(3);
     // Review fix, pass 1: EU declares TWO packs — both must be visible in
     // the secondary detail line.
