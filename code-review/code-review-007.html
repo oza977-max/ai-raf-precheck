@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counterpoise — Code Review 007</title>
+  <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'IBM Plex Serif',Georgia,serif;line-height:1.6;color:#111;background:#fffef8;padding:3rem 2rem 6rem}
+@media(prefers-color-scheme:dark){body{color:#e8e8e8;background:#1a1a18}}
+main{max-width:900px;margin:0 auto}
+h1{font-size:2rem;font-weight:400;margin-bottom:.3rem}
+h2{font-size:1.3rem;font-weight:400;margin:2.6rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid #ddd}
+@media(prefers-color-scheme:dark){h2{border-bottom-color:#444}}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem;max-width:68ch}
+.date{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.5rem}
+@media(prefers-color-scheme:dark){.date{color:#999}}
+.subtitle{font-size:1.05rem;color:#555;max-width:68ch;margin-bottom:2rem}
+@media(prefers-color-scheme:dark){.subtitle{color:#aaa}}
+code{font-family:'IBM Plex Mono',monospace;font-size:.82em;background:#f4f2ea;padding:.1rem .3rem;border-radius:2px}
+@media(prefers-color-scheme:dark){code{background:#2a2a28;color:#e8e8e8}}
+table{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.85rem;margin:1rem 0 1.6rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#888;border-bottom:2px solid #333;padding:.4rem .5rem}
+@media(prefers-color-scheme:dark){th{border-bottom-color:#666;color:#999}}
+td{padding:.4rem .5rem;border-bottom:1px solid #eee;vertical-align:top}
+@media(prefers-color-scheme:dark){td{border-bottom-color:#333}}
+tbody tr:nth-child(even){background:#faf9f3}
+@media(prefers-color-scheme:dark){tbody tr:nth-child(even){background:#1f1f1d}}
+.verdict{border:2px solid #333;padding:1.2rem 1.5rem;margin:2rem 0;max-width:700px}
+@media(prefers-color-scheme:dark){.verdict{border-color:#666}}
+.verdict-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.verdict-label{color:#999}}
+.verdict-text{font-size:1.3rem;margin-bottom:.4rem}
+.verdict-basis{font-size:.88rem;color:#555}
+@media(prefers-color-scheme:dark){.verdict-basis{color:#aaa}}
+.verdict.caveats{border-color:#e67e22;background:#fef8f0}
+.verdict.caveats .verdict-text{color:#e67e22}
+@media(prefers-color-scheme:dark){.verdict.caveats{background:#3a2a1a;border-color:#d68a2c}}
+.issue{border-left:3px solid;padding:.8rem 1rem;margin:.8rem 0;max-width:72ch}
+.issue.critical{border-left-color:#c0392b;background:#fdf0ef}
+@media(prefers-color-scheme:dark){.issue.critical{background:#3a1d1a;border-left-color:#e55353}}
+.issue.important{border-left-color:#e67e22;background:#fef8f0}
+@media(prefers-color-scheme:dark){.issue.important{background:#3a2a1a;border-left-color:#e8a84d}}
+.issue.minor{border-left-color:#7f8c8d;background:#f7f7f4}
+@media(prefers-color-scheme:dark){.issue.minor{background:#1f1f1d;border-left-color:#8a8a8a}}
+.issue.observation{border-left-color:#95a5a6;background:#f5f5f3}
+@media(prefers-color-scheme:dark){.issue.observation{background:#1d1d1b;border-left-color:#666}}
+.issue-title{font-weight:600;margin-bottom:.3rem}
+.issue-severity{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-severity{color:#888}}
+.issue-detail{font-size:.92rem;color:#444;margin-bottom:.3rem}
+@media(prefers-color-scheme:dark){.issue-detail{color:#ccc}}
+.issue-location{font-size:.78rem;color:#999;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-location{color:#777}}
+.issue-disposition{font-size:.85rem;color:#666;border-top:1px solid rgba(0,0,0,.1);padding-top:.4rem;margin-top:.4rem;font-style:italic}
+@media(prefers-color-scheme:dark){.issue-disposition{border-top-color:rgba(255,255,255,.1);color:#888}}
+.tally{display:flex;gap:1.5rem;flex-wrap:wrap;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.9rem;margin:1rem 0 1.5rem}
+.tally b{font-size:1.4rem;font-weight:600;display:block}
+.tally div{display:flex;flex-direction:column}
+.themes-section{background:#f9f9f4;padding:1rem 1.2rem;margin:1rem 0 1.5rem;border-left:3px solid #999}
+@media(prefers-color-scheme:dark){.themes-section{background:#1f1f1d;border-left-color:#666}}
+.theme-item{margin-bottom:1rem}
+.theme-title{font-weight:600;margin-bottom:.3rem}
+.coverage-table{font-size:.85rem;margin:1rem 0}
+.coverage-table td:first-child{font-weight:500}
+.coverage-table td:last-child{text-align:right}
+.minor-findings-table td{font-size:.88rem}
+.minor-findings-table td:nth-child(2){max-width:40ch}
+.panel-row{margin-bottom:.8rem;font-size:.88rem}
+.panel-name{font-weight:600;color:#333}
+@media(prefers-color-scheme:dark){.panel-name{color:#e8e8e8}}
+.expert-list{font-size:.88rem;line-height:1.5;margin:1rem 0}
+.gvm-attribution{font-size:.75rem;color:#999;font-style:italic;text-align:center;margin-top:3rem;max-width:none}
+@media(prefers-color-scheme:dark){.gvm-attribution{color:#666}}
+  </style>
+</head>
+<body>
+
+<main>
+
+<p class="date">3 October 2026 — Code Review 007</p>
+<h1>Counterpoise</h1>
+<p class="subtitle">Round 7 (strict), R16 plain-language redesign after CR6 fixes and ENG-ID. Commit range <code>b1e146b..9ecdee6</code>, 49 commits, 56 production files, 86 test files. Chair: Opus 5.5. Panels and checkers: Sonnet.</p>
+
+<div class="verdict not-ready" style="border-color:#c0392b">
+  <div class="verdict-label">Verdict</div>
+  <div class="verdict-text" style="color:#c0392b">Do not merge</div>
+  <p class="verdict-basis">0 Critical, 12 Important (above the 6-Important line), 28 Minor. All 12 Important verified by fresh-context checkers, six proved by test. <strong>Owner triage, 2026-10-03:</strong> fix all 12 Important and all 28 Minor; CR7-23 &mdash; keep the listed country when &ldquo;Somewhere else, or not sure&rdquo; is also ticked (still provisional for the unknown country); dismiss the 5 stub flags as intended code (recorded in an allowlist); accept EBT-2 and EBT-3 as labelled deliberate exceptions; dismiss EBT-4 (console is outside the app). Fixes under full GVM build discipline; nothing is deferred. The verdict is re-decided after the fix round&rsquo;s own review.</p>
+</div>
+
+<h2 id="summary">1. Summary</h2>
+<table>
+  <thead>
+    <tr><th>Critical</th><th>Important</th><th>Minor</th><th>Observations</th><th>Disproven</th><th>Stub flags</th><th>Test-design (EBT) flags</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>0</td><td>12</td><td>28</td><td>11</td><td>0</td><td>5 (all intended code)</td><td>3 groups (31 hits)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Disposition (owner, 2026-10-03):</strong> stub flags dismissed as intended code (allowlisted with rationale); EBT-2 and EBT-3 accepted as labelled exceptions; EBT-4 dismissed.</p>
+<p><strong>Scope and method.</strong> Six defect-class lenses &mdash; A references and unconsumed data, B contracts, C logic and completeness, D naming and spec compliance, E concurrency and ordering, G what renders (honesty, plain language, WCAG 2.1 AA, output safety) &mdash; each run twice: a calibrated panel that saw code review 006 and the project&rsquo;s recurring defect classes, and a blind panel that did not (dual review, shared rule 16). Plus Panel F (stub detection, mechanically assembled prompt) and the EBT test-design linter (a script). Priority was the 27 production files changed by the code-review-006 fixes, which no full panel had reviewed. All 13 panels returned; none missing.</p>
+
+<p><strong>Verification (gvm-graph).</strong> The 14 distinct Critical/Important claims went to 3 fresh-context checkers that saw only each claim and its cited code. Outcomes: 12 confirmed at Important, 2 confirmed but downgraded to Minor (CR7-13, CR7-14), 0 disproven. Six claims were proved by running a probe test in a scratch copy of the repo (CR7-01, 02, 03, 04, 05, 13; and CR7-14&rsquo;s reserved-word render). Honesty check: no claim was disproven; two severities were lowered and two mechanisms corrected (CR7-02&rsquo;s field list, CR7-03&rsquo;s reach), so the checkers did discriminate.</p>
+
+<h2 id="headline">2. Headline</h2>
+<p>The round-6 fix for &quot;Back removes the guessed-value safety check&quot; (CR6-03) closed Back&rsquo;s gate fields but not the two other ways back into the review screen, and not the answers themselves. Three panels and a checker&rsquo;s probe agree: on the description path, &quot;Change an answer&quot;, a failed evaluation, and Back from the questions all lose the person&rsquo;s &quot;Not sure&quot; assumptions, so the confirmation summary and the signed attestation present the case as firmer than it is. In one sequence (&quot;Not on this list&quot;, then Back before typing the name) the AI&rsquo;s rejected supplier guess reaches the result unasked. The same pattern &mdash; a safety or honesty field carried on one step and dropped on a return path &mdash; is the calibration&rsquo;s candidate RF-9, now in its fourth consecutive round.</p>
+
+<p>Second headline: the audit trail &mdash; the product&rsquo;s evidence store &mdash; forks when a reviewer uses two tabs. Each tab caches the last hash; the cross-tab lock orders the writes but never refreshes it. A checker proved it with two module instances over one database: verifyChain() then reports &quot;prev_hash does not match&quot; on data nobody tampered with, permanently.</p>
+
+<p>What held: the CR6-01 hand-off fix (a calibrated panel exported and re-imported every seeded case and a maximal real assumption payload &mdash; all imported, chain intact); the CR6-02 Start-over guards; ENG-ID; the reserved-word sweep of copy; output safety (no dangerouslySetInnerHTML anywhere); every &quot;Not sure&quot; mapping in plain-intake.</p>
+
+<h2 id="coverage">3. Coverage</h2>
+<p><em>Capture-recapture (calibrated vs blind per lens, non-observation findings)</em></p>
+<table class="coverage-table">
+  <thead>
+    <tr><th>Lens</th><th>Calibrated</th><th>Blind</th><th>Shared</th><th>Est. total</th><th>Found</th><th>Coverage</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A references</td><td>4</td><td>2</td><td>1</td><td>8</td><td>5</td><td>62%</td></tr>
+    <tr><td>B contracts</td><td>1</td><td>4</td><td>0</td><td>9 (Chapman)</td><td>5</td><td>56%</td></tr>
+    <tr><td>C logic</td><td>5</td><td>7</td><td>3</td><td>12</td><td>9</td><td>77%</td></tr>
+    <tr><td>D naming/spec</td><td>3</td><td>3</td><td>0</td><td>15 (Chapman)</td><td>6</td><td>40%</td></tr>
+    <tr><td>E timing</td><td>4</td><td>7</td><td>2</td><td>14</td><td>9</td><td>64%</td></tr>
+    <tr><td>G what renders</td><td>11</td><td>8</td><td>8</td><td>11</td><td>11</td><td>100%</td></tr>
+  </tbody>
+</table>
+
+<p>Pooled: estimated ~69, found 45 (before cross-lens de-duplication) &rarr; ~65% (round 6: ~54%). Below the 80% line, so another round would still find more &mdash; mostly in contracts and spec/docs, where the two panels barely overlapped. The estimate is noisy (small overlaps; panels are not fully independent).</p>
+
+<h2 id="important">4. Important findings (CR7-01 &ndash; CR7-12), all verified</h2>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-01 &mdash; Important</div>
+  <div class="issue-title">Reload while the description is being read leaves a permanent &quot;Reading your description&hellip;&quot; screen.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/IntakeFlow.tsx:642, :799</code> (the only two extractGraph calls), <code>:2045-2072</code> (screen), <code>:218-224</code> (no Back on this step); restore at <code>:91-112</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> a person who reloads, or goes to the Register and back, while the AI reads their description returns to a screen that never finishes. No Try again, no Back. The only exit, &quot;Start over instead&quot;, throws away what they typed. Ordinary path (the local model takes up to 120 s).</p>
+  <p class="issue-detail"><strong>Found by:</strong> E calibrated, E blind, C calibrated, C blind (4 panels). <strong>Verified:</strong> V1, proved by probe (&quot;LLM calls made: 0&quot;, buttons: Clear all data / Start over instead).</p>
+  <p class="issue-detail"><strong>Fix:</strong> on a restored graph_extraction + llm draft, re-run extraction from a ref-guarded effect under the attempt token (or show Try again / Answer the questions instead). Test it.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-02 &mdash; Important</div>
+  <div class="issue-title">&quot;Change an answer&quot; and a failed evaluation drop the &quot;Not sure&quot; assumptions; Change an answer also hides the countries question.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/intake-state.ts:944-975</code> (CHANGE_ANSWER), <code>:1012-1041</code> (EVALUATION_FAILED); <code>IntakeFlow.tsx:1350</code> (assumptions written only when non-empty), <code>:2215</code> (countries panel gate).</p>
+  <p class="issue-detail"><strong>Impact:</strong> on the description path, after &quot;Change an answer&quot; (even with no change) or an evaluation failure, the result no longer mentions the answers the person wasn&rsquo;t sure about, and the signed graph_confirmed attestation omits them; the review screen shows every value as &quot;no basis&quot;; after Change an answer the countries panel is gone, so countries can&rsquo;t be corrected. Verdict values are unchanged (the strict values stay); the disclosure is what is lost.</p>
+  <p class="issue-detail"><strong>Found by:</strong> A calibrated (proved with the real reducer), C calibrated, C blind. <strong>Verified:</strong> V1, probe. <strong>Checker correction:</strong> provenance/guessedFields/ignoredJurisdictions were never carried on the confirmation step by design; the real losses are assumptions, uncertainNodeIds and (Change an answer) jurisdictionsConfirmed.</p>
+  <p class="issue-detail"><strong>Fix:</strong> carry assumptions and uncertainNodeIds through both re-entries; set jurisdictionsConfirmed in CHANGE_ANSWER as EVALUATION_FAILED already does. Reducer round-trip test from a &quot;Not sure&quot; answer.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03. (Partial fix of CR6-03; RF-9.)</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-03 &mdash; Important (owner may judge Critical)</div>
+  <div class="issue-title">Back from the questions loses the &quot;Not sure&quot; answers, and in one sequence keeps the AI&rsquo;s rejected guess.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/intake-state.ts:514-540</code> (STEP_BACK), <code>:778-788</code> (answers trim the guessed list, including &quot;Not on this list&quot;); <code>IntakeFlow.tsx:1650-1675</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> (1) &quot;Not sure&quot; &rarr; Back &rarr; Continue: the field is not asked again and the assumption is gone from the result (probe: &quot;re-asked? false&quot;, result mentions unsure answers: false). (2) The AI guessed the supplier or model; the person answers &quot;Not on this list&quot;, then presses Back before typing the name: the AI&rsquo;s guess stays on the case, is never asked again, and reaches the result (probe: &quot;asks supplier again? false&quot;; confirmation card shows the AI&rsquo;s guess). If the guess is &quot;internal&quot;, the supplier check is skipped for a tool the person said is external. Needs that specific sequence, hence Important.</p>
+  <p class="issue-detail"><strong>Found by:</strong> C calibrated, C blind. <strong>Verified:</strong> V1, probes for both parts.</p>
+  <p class="issue-detail"><strong>Fix:</strong> don&rsquo;t trim the guessed list for a &quot;Not on this list&quot; answer until the follow-up is answered; on Back from the questions restore the untrimmed guessed list (or carry answers and assumptions back).</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03. (Partial fix of CR6-03; RF-9.)</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-04 &mdash; Important</div>
+  <div class="issue-title">Changing &quot;Where does the AI come from?&quot; keeps a hidden model name, which then triggers a false model-governance finding.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/StructuredForm.tsx:268-278</code> (Q3 change clears five sub-answers, not 3model); <code>src/engine/plain-intake.ts:280</code> (reads 3model unconditionally).</p>
+  <p class="issue-detail"><strong>Impact:</strong> type a model name under &quot;outside assistant&quot;, switch to &quot;Something a team in your firm built&quot;: the model field disappears but its value stays, and the result shows a model-governance review for a model the person can&rsquo;t see (probe: verdict mentions the model: true; model governance review: true).</p>
+  <p class="issue-detail"><strong>Found by:</strong> C blind. <strong>Verified:</strong> V1, probe.</p>
+  <p class="issue-detail"><strong>Fix:</strong> clear 3model when Q3 changes; read 3model only when its question is visible. Test both.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-05 &mdash; Important</div>
+  <div class="issue-title">The audit trail forks when the app is open in two tabs.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/store/audit.ts:62, :126-134</code> (cached tip), <code>:184-192</code> (append); <code>src/store/db.ts:47-60, 92-109</code> (cross-tab lock).</p>
+  <p class="issue-detail"><strong>Impact:</strong> a reviewer with two tabs open writes in the order A, B, A &rarr; two events share one prev_hash &rarr; the chain-integrity check reports a break on untampered data, permanently (append-only), and a hand-off export of that trail would be refused. Probe: verify {&quot;ok&quot;:false,&quot;brokenAtEventId&quot;:&quot;a2&quot;, &quot;reason&quot;:&quot;prev_hash does not match the preceding event&quot;}.</p>
+  <p class="issue-detail"><strong>Found by:</strong> E calibrated, E blind. <strong>Verified:</strong> V2, probe. (audit.ts predates the range; the range&rsquo;s db.ts comments claim cross-tab ordering is enough.)</p>
+  <p class="issue-detail"><strong>Fix:</strong> inside the locked append, always read the tip from the database (keep the cache only as a hint checked against it). Two-instance test like the probe.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-06 &mdash; Important</div>
+  <div class="issue-title">Double-clicking Save in the policy editor writes duplicate permanent audit events.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/PolicyEditor.tsx:93-118, :194</code>; <code>src/store/policy.ts:546-562</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> two clicks queue a second &quot;re-evaluation queued&quot; event for every active case &mdash; permanent duplicates in an append-only trail (the CLAUDE.md double-fire class). A failure after the policy is saved shows no message.</p>
+  <p class="issue-detail"><strong>Found by:</strong> E blind. <strong>Verified:</strong> V2 (code).</p>
+  <p class="issue-detail"><strong>Fix:</strong> synchronous useRef in-flight guard + disabled button; try/catch with an error message.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-07 &mdash; Important</div>
+  <div class="issue-title">Register rows can only be opened with a mouse.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/RegisterView.tsx:750-757</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> a keyboard-only or screen-reader reviewer cannot open any case from the register, so cannot reach sign-off (WCAG 2.1.1, level A).</p>
+  <p class="issue-detail"><strong>Found by:</strong> G calibrated, G blind. <strong>Verified:</strong> V2.</p>
+  <p class="issue-detail"><strong>Fix:</strong> render the case name as a button that opens the case; keep the row click.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-08 &mdash; Important</div>
+  <div class="issue-title">The faint text colour fails contrast across the new screens, including the honesty labels.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/App.css:11-15</code> (<code>--ink-faint #857f70</code>; used 91 times).</p>
+  <p class="issue-detail"><strong>Impact:</strong> 3.85:1 on cards, 3.19:1 on paper, 3.50:1 on cream (WCAG 1.4.3 needs 4.5:1). Hits the help line under every form question, the &quot;Not in your description&quot; and &quot;no basis&quot; badges, &quot;Provisional&quot;, and the audit-trail caveat. CR6-09 fixed three selectors, not the token.</p>
+  <p class="issue-detail"><strong>Found by:</strong> G calibrated (Important), G blind (Minor). <strong>Verified:</strong> V2 (ratios recomputed).</p>
+  <p class="issue-detail"><strong>Fix:</strong> darken the token once (about <code>#686253</code> clears 4.5:1 on all three); add a test that pins the ratio.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-09 &mdash; Important</div>
+  <div class="issue-title">A case the AI risk team signed off still says &quot;no sign-off needed — self-service&quot;.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/verdict-view-model.ts:825, :536-538, :946-948</code>; <code>VerdictDisplay.tsx:133-137</code>; <code>RegisterDetail.tsx:774, :1098</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> sign-off sets the stage to &quot;approved&quot;, the same stage self-service cases get, and the screen derives &quot;needs sign-off&quot; from the stage alone &mdash; so reopening a signed-off Track II/III case reads &quot;Who signs off: nobody — it&rsquo;s low-stakes&hellip;&quot; and &quot;self-service final&quot;. False, on the main 2LoD journey.</p>
+  <p class="issue-detail"><strong>Found by:</strong> G blind (Important), G calibrated (Minor). <strong>Verified:</strong> V3.</p>
+  <p class="issue-detail"><strong>Fix:</strong> derive &quot;needed sign-off&quot; from the track/tier or the sign-off event, and add &quot;Signed off by your AI risk team&quot; wording.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-10 &mdash; Important</div>
+  <div class="issue-title">&quot;Use the earlier result&quot; shows a submitter another person&rsquo;s case name, which the duplicate card deliberately hides.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>src/components/IntakeFlow.tsx:747, :1942</code> (and <code>:448</code> matches across all submitters); <code>RegisterDetail.tsx:100, :103</code> (audit lines).</p>
+  <p class="issue-detail"><strong>Impact:</strong> breaks the documented redaction (BC-V12C-02). Mitigated: the role is a view preference, not a permission (no sign-in in this build).</p>
+  <p class="issue-detail"><strong>Found by:</strong> G calibrated, G blind. <strong>Verified:</strong> V3.</p>
+  <p class="issue-detail"><strong>Fix:</strong> for non-2LoD views say &quot;an earlier result on your firm&rsquo;s register&quot;; same in the audit lines.</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-11 &mdash; Important</div>
+  <div class="issue-title">Requirement UC-11&rsquo;s second check is not built: the reviewer section never says &quot;No model was named&quot;.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>requirements/requirements.md:163-165</code>; <code>build/prompts/R16.md:183, :252</code> (D-27); nothing in src or test-cases.</p>
+  <p class="issue-detail"><strong>Impact:</strong> a reviewer gets no prompt to ask which model is used when the submitter left it blank &mdash; a stated acceptance criterion silently unmet.</p>
+  <p class="issue-detail"><strong>Found by:</strong> D blind. <strong>Verified:</strong> V3.</p>
+  <p class="issue-detail"><strong>Fix:</strong> render the line in the reviewer section when no model is recorded; add a test case and a verdict-audit &sect;5.7 sentence (both twins).</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<div class="issue important">
+  <div class="issue-severity">CR7-12 &mdash; Important</div>
+  <div class="issue-title">The user guide and &quot;try these&quot; page describe the old form.</div>
+  <p class="issue-detail"><strong>File:</strong> <code>docs/try-these.md:13, :37, :54-55, :135</code>; <code>docs/user-guide.md:37</code>; <code>docs/user-guide.html:~342</code>.</p>
+  <p class="issue-detail"><strong>Impact:</strong> they say to click &quot;Read &amp; extract&quot; (now &quot;Next &rarr;&quot;) and to set engine values (&quot;autonomy level 0&quot;, &quot;LLM&quot;, &quot;Zone B&quot;) that the new form never shows, so a tester can&rsquo;t reproduce the worked cases by hand. No test or script reads docs/.</p>
+  <p class="issue-detail"><strong>Found by:</strong> D calibrated. <strong>Verified:</strong> V3.</p>
+  <p class="issue-detail"><strong>Fix:</strong> rewrite the run steps and per-case answers in the form&rsquo;s own words (both user-guide twins).</p>
+  <p class="issue-detail"><strong>Recommend:</strong> fix. <strong>Disposition:</strong> fix &mdash; owner decision, 2026-10-03.</p>
+</div>
+
+<h2 id="minor">5. Minor findings (CR7-13 &ndash; CR7-40)</h2>
+<p><strong>Disposition (owner, 2026-10-03):</strong> fix all 28. CR7-23 decided: keep the listed country when &ldquo;Somewhere else, or not sure&rdquo; is also ticked; the result stays provisional for the unknown country.</p>
+<table class="minor-findings-table">
+  <thead>
+    <tr><th>ID</th><th>Finding</th><th>File</th><th>Recommend</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CR7-13</td><td>The form&rsquo;s saved answers are cleared before the policy check accepts them; with a broken policy, leaving and returning shows a blank form (checker: Minor &mdash; needs an invalid policy file)</td><td>StructuredForm.tsx:421; IntakeFlow.tsx:1003-1006</td><td>fix</td></tr>
+    <tr><td>CR7-14</td><td>The raw supplier id VENDOR-APPROVED-LLM renders on the result screen, so &quot;APPROVED&quot; appears there (checker: Minor &mdash; test fragility, only while the firm keeps the placeholder id)</td><td>VerdictDisplay.tsx:2166; appetite.yaml:1342-1348</td><td>fix (show plain_name)</td></tr>
+    <tr><td>CR7-15</td><td>&quot;Clear all data&quot; leaves the in-progress drafts and the hand-off &quot;last synced&quot; marker: the person is reloaded back into the old case, and a legitimate colleague&rsquo;s file is then flagged as possibly altered</td><td>store/reset.ts:30-36; handoff.ts:632, :961</td><td>fix</td></tr>
+    <tr><td>CR7-16</td><td>A finished confirm from an abandoned screen can wipe a newer case&rsquo;s saved draft</td><td>IntakeFlow.tsx:1584, :736</td><td>fix</td></tr>
+    <tr><td>CR7-17</td><td>If the self-assessment seed fails, the duplicate check waits forever on first load</td><td>IntakeFlow.tsx:446-455</td><td>fix</td></tr>
+    <tr><td>CR7-18</td><td>Seeds check-then-act: two tabs opening at once can write a seed&rsquo;s audit events twice</td><td>seeds/*.ts</td><td>fix (case lock)</td></tr>
+    <tr><td>CR7-19</td><td>The optional reasoning-trace call has no timeout and holds the case lock (Anthropic path)</td><td>llm/reasoning-trace.ts:88; IntakeFlow.tsx:1423</td><td>fix</td></tr>
+    <tr><td>CR7-20</td><td>&quot;Clear all data&quot; is blocked by the tab&rsquo;s own open database, then blames &quot;other tabs&quot;</td><td>store/reset.ts:23-37; db.ts:117-160</td><td>fix</td></tr>
+    <tr><td>CR7-21</td><td>A failed evaluation then retry writes the same correction events twice</td><td>IntakeFlow.tsx:1281-1293, :1463-1471</td><td>fix</td></tr>
+    <tr><td>CR7-22</td><td>The confirm screen says corrections are preserved in the audit trail; a fresh confirm records only a count</td><td>ConfirmationStep.tsx:118-122; IntakeFlow.tsx:1294-1353</td><td>fix wording or write them</td></tr>
+    <tr><td>CR7-23</td><td>Ticking a listed country plus &quot;Somewhere else, or not sure&quot; drops the listed country (pinned by a test on purpose)</td><td>plain-intake.ts:547-549</td><td>owner decision</td></tr>
+    <tr><td>CR7-24</td><td>Start over and Back don&rsquo;t clear the previous screen&rsquo;s error line</td><td>IntakeFlow.tsx:156-270</td><td>fix</td></tr>
+    <tr><td>CR7-25</td><td>&quot;Does it replace something you use?&quot; has no row on the review card, yet counts in &quot;Fix N details&quot;</td><td>GraphView.tsx:107-132</td><td>fix</td></tr>
+    <tr><td>CR7-26</td><td>The policy checker says {audience}/{destination} work in fields that are never filled in</td><td>policy-references.ts:216-256</td><td>fix</td></tr>
+    <tr><td>CR7-27</td><td>The policy checker doesn&rsquo;t verify three id references (resolves, satisfies_controls, pack control_id); shipped data is clean</td><td>policy-references.ts:223-262</td><td>fix</td></tr>
+    <tr><td>CR7-28</td><td>A questions draft saved before the CR6 update restores without the guessed list, re-opening the CR6-03 hole for that one draft</td><td>intake-draft.ts:57-91</td><td>fix</td></tr>
+    <tr><td>CR7-29</td><td>A firm review and a pack rule sharing an id: the pack review is shown under the firm rule&rsquo;s name and owner</td><td>verdict-view-model.ts:485-491</td><td>fix</td></tr>
+    <tr><td>CR7-30</td><td>The audit trail can show &quot;&rarr; undefined&quot; when &quot;I don&rsquo;t know&quot; answers the model question</td><td>IntakeFlow.tsx:1747-1748, :865-866; RegisterDetail.tsx:63</td><td>fix</td></tr>
+    <tr><td>CR7-31</td><td>If the AI fills &quot;other decision&quot; with filler like &quot;N/A&quot;, the result is marked Provisional</td><td>graph-extractor.ts:114-122; provisional.ts:63-69</td><td>fix</td></tr>
+    <tr><td>CR7-32</td><td>verdict-audit &sect;5.5 contradicts itself on pack plain names; test case TC-R16-D1-07f states the old behaviour</td><td>specs/verdict-audit.md:406 (+html); test-cases-020.md:93</td><td>fix</td></tr>
+    <tr><td>CR7-33</td><td>TC-R16-D1-05d and a verdict-audit bullet say &quot;the team that built the model&quot;; the code says &quot;responsible for&quot;</td><td>test-cases-020.md:70; verdict-audit.md:400</td><td>fix</td></tr>
+    <tr><td>CR7-34</td><td>A code comment says the attempt token changes &quot;ONLY&quot; on Start over; Back and a new description change it too</td><td>IntakeFlow.tsx:116-122</td><td>fix</td></tr>
+    <tr><td>CR7-35</td><td>Model plain names: no warning for a model without one, the review card prints the raw id, no neutral fallback &mdash; so &quot;VENDOR-LLM-v1&quot; shows as a button</td><td>QuestionnaireStep.tsx:33; GraphView.tsx:464; policy-references.ts:190-199</td><td>fix + owner action</td></tr>
+    <tr><td>CR7-36</td><td>The About page says the policy has 18 appetite rules; it has 23</td><td>AboutPanel.tsx:60-61</td><td>fix</td></tr>
+    <tr><td>CR7-37</td><td>With a broken policy, the submitter sees raw field paths (&quot;invariants[3].condition&hellip;&quot;)</td><td>IntakeFlow.tsx:891-895, :1262-1272</td><td>fix</td></tr>
+    <tr><td>CR7-38</td><td>The policy screen says every pack is &quot;not yet signed off&quot;, hard-coded</td><td>PolicyEditor.tsx:262-270</td><td>fix</td></tr>
+    <tr><td>CR7-39</td><td>The &quot;review overdue&quot; warning for lapsed regulatory text is inside a collapsed section; the first screen never mentions it (latent until early 2027)</td><td>VerdictDisplay.tsx:1479; verdict-view-model.ts:621-645</td><td>fix</td></tr>
+    <tr><td>CR7-40</td><td>The reviewer checklist calls policy-declared evidence &quot;machine-verified&quot;</td><td>VerdictDisplay.tsx:959 vs :606-607</td><td>fix</td></tr>
+  </tbody>
+</table>
+
+<h2 id="observations">6. Observations (no severity)</h2>
+<ul>
+  <li>O-1 field-copy label tables, destinationDescription, countryName, buildDynamicOptions have no production consumer (A blind).</li>
+  <li>O-2 Closed vocabularies live in two places (CANONICAL_VOCABULARY and EXTRA_QUESTION_OPTIONS); misspelled condition fields pass validation (documented residual) (A blind).</li>
+  <li>O-3 A draft envelope from a future build version is loaded as current (B calibrated).</li>
+  <li>O-4 An old-shaped assumption in a cross-deploy draft could later make a hand-off export unimportable (B blind).</li>
+  <li>O-5 The hand-off canonical JSON would hash an own undefined property differently after a round trip (no writer does this today) (B blind).</li>
+  <li>O-6 Four test-case rows overstate their tests (TC-CR6-08c, -11, -29, -02e/02i) (D calibrated).</li>
+  <li>O-7 The intake-flow.html ADR-IF-R16-1 omits two sentences the .md has (D blind).</li>
+  <li>O-8 The confirm screen says answers &quot;can&rsquo;t be edited&quot;; the audit trail deliberately avoids that claim (G calibrated).</li>
+  <li>O-9 &quot;Nothing is wrong with the use case&quot; is said before any result exists (G blind).</li>
+  <li>O-10 A refused questionnaire answer would leave its buttons locked (no refusal reachable today) (C blind).</li>
+  <li>O-11 After Back, the countries checkboxes are disabled with no way to un-confirm (C calibrated).</li>
+</ul>
+
+<h2 id="stub-ebt">7. Stub flags (Panel F) and test-design flags (EBT linter)</h2>
+
+<p><strong>Stub flags</strong> &mdash; 5 matches of the mechanical rule, which rates any match outside a stubs/ folder &quot;Critical&quot;. All five are intended code, not placeholders: ErrorBoundary.getDerivedStateFromError returns the constant React error state (ErrorBoundary.tsx:28); four &quot;ignore the result&quot; handlers keep the storage write queues running (db.ts:57, 58, 102, 103). Recommend: dismiss as false positives (record them in a .stub-allowlist with this rationale so the next round does not re-flag them).</p>
+
+<p><strong>EBT-2</strong> &mdash; 8 hits &mdash; deliberate failure injection in the hand-off tests (RegisterView.handoff.test.tsx, handoff.test.ts), already labelled &quot;EBT-2&quot; in the code. Recommend: accept as a labelled exception, as the owner did for EBT-1.</p>
+
+<p><strong>EBT-3</strong> &mdash; 19 hits &mdash; IntakeFlow.cr6-fx2.test.tsx holds calls open with spies to test the in-flight guards (extractor, duplicate check, trace, register, audit). A legitimate technique, but unlabelled. Recommend: accept and label (one comment per group).</p>
+
+<p><strong>EBT-4</strong> &mdash; 4 hits &mdash; spies on console (ErrorBoundary, IntakeFlow.cr6-fx2, register tests). The console is outside the app, so this is a linter false positive. Recommend: dismiss.</p>
+
+<h2 id="expert-panel">8. Expert panel</h2>
+
+<p><strong>A:</strong> Hunt &amp; Thomas (The Pragmatic Programmer), McConnell (Code Complete), Vanderkam (Effective TypeScript). <strong>B:</strong> Keeling (Design It!), Clements (Documenting Software Architectures), Metz (POODR), Kleppmann (DDIA), Bratus/Patterson/Sassaman (LANGSEC), Dodds (Testing Library). <strong>C:</strong> Fagan, Beck (TDD by Example), McConnell, Martin (Clean Code), Beizer (Software Testing Techniques), Kaner (Lessons Learned in Software Testing). <strong>D:</strong> Brooks (The Mythical Man-Month), McConnell, Wiegers (Software Requirements), Vanderkam. <strong>E:</strong> Goetz (Java Concurrency in Practice), Lamport (1978), React core team (react.dev), Kleppmann. <strong>G:</strong> Krug (Don&rsquo;t Make Me Think), Cooper (About Face), Redish (Letting Go of the Words), Pickering + W3C WCAG 2.1, Anderson (Security Engineering). <strong>F:</strong> GVM stub-detection heuristic. <strong>Verification:</strong> gvm-graph fresh-context checkers (3).</p>
+
+<h2 id="higher-score">9. What prevents a higher score</h2>
+<ul>
+  <li>Safety and honesty fields dropped on return paths (CR7-02, 03): the fix pattern is per-transition, not a property of the state type &mdash; the class will recur until the review step&rsquo;s type requires them.</li>
+  <li>Cross-tab correctness (CR7-05, 18) has no test harness: jsdom has no navigator.locks and one module instance per test, so nothing can see a second tab. Structural until a two-instance test pattern exists.</li>
+  <li>Docs and spec twins are outside every mechanical check (CR7-12, 32, 33, O-7): spec-parity reads .md only; nothing reads docs/.</li>
+  <li>Contrast is unchecked by any test (CR7-08): a token-level test would close it permanently.</li>
+</ul>
+
+<p class="gvm-attribution">Developed using the Grounded Vibe Methodology</p>
+
+</main>
+
+</body>
+</html>

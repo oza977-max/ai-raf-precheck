@@ -101,3 +101,58 @@ an app-written case exported and imported end to end. A guard test that claims t
 source at test time. A boundary test suite with only hand-shaped fixtures fails this check.
 
 **Last triggered:** code review 006, 2026-10-03.
+
+---
+
+## BC-004 — Every return path keeps the safety and honesty fields
+
+**Class:** permanent (tier 1).
+**Promoted:** 2026-10-03, after code review 007 (systemic — three consecutive code-review rounds plus a build loop).
+**Diagnosing framework:** Fagan, *Design and Code Inspections* — every path needs defined entry and exit criteria;
+Beizer, *Software Testing Techniques* — bugs cluster at boundaries and error paths.
+
+**The defect class.** A state carries a safety gate or an honesty field (guessed values still to confirm, "Not sure"
+assumptions, provenance quotes, the countries gate, a pending follow-up question) on the way forward, and one of the ways
+BACK into an earlier step — Back, Start over, Undo, Change an answer, a failed evaluation, a restored draft, a reload —
+rebuilds the earlier step without it. The case then reaches the result unasked or presented as firmer than it is.
+
+**Evidence of recurrence.**
+
+| Round | Instance |
+|---|---|
+| R16-F build loop (2026-10-03) | Passes 2–5 each found a navigation path that switched off a gate. |
+| code review 006 (2026-10-03) | CR6-02 (Start over left work running), CR6-03 (Back dropped the guessed-value check), CR6-15. |
+| code review 007 (2026-10-03) | CR7-02 (Change an answer / failed evaluation drop assumptions), CR7-03 (Back drops answers; a rejected supplier guess reaches the result), CR7-01 (restored extraction never restarts), CR7-28 (old draft restores without the guessed list). |
+
+**Acceptance criterion.** For each state a chunk adds or changes, list every action that can re-enter an earlier step
+(the reducer's step × action table) and, for each, a test that starts from a state holding every safety/honesty field and
+asserts they survive the round trip — or that the step is rebuilt fail-safe (re-asks). A fix whose text names several
+paths has one test per named path. Prefer making the fields required on the step's type so a dropped field fails to compile.
+
+**Last triggered:** code review 007, 2026-10-03.
+
+---
+
+## BC-005 — Say no more than the code can prove
+
+**Class:** permanent (tier 1).
+**Promoted:** 2026-10-03, after code review 007 (third code-review round; NF-2/NF-7 honesty rule in CLAUDE.md).
+**Diagnosing framework:** Redish, *Letting Go of the Words* — the reader acts on what the words say; Anderson,
+*Security Engineering* — assurance claims must match the mechanism.
+
+**The defect class.** Rendered text states something stronger than the code establishes: a status derived from a field that
+does not mean what the sentence says, an "always/never/preserved/verified" the code does not guarantee, a fixed string that
+describes data the screen never reads.
+
+**Evidence of recurrence.**
+
+| Round | Instance |
+|---|---|
+| code review 005/006 | CR6-15's "probably confirmed in another tab or window" for a same-tab completion; earlier "immutable" trail copy. |
+| code review 007 (2026-10-03) | CR7-09 "no sign-off needed — self-service" on a case 2LoD signed off; CR7-22 "corrections are preserved in the audit trail" when only a count is written; CR7-40 "machine-verified" for evidence typed into the policy file; CR7-38 "not yet signed off" hard-coded for every pack. |
+
+**Acceptance criterion.** Every new or changed user-visible sentence that asserts a fact about the case, the trail or the
+policy names (in a code comment or the spec) the field or event it is derived from, and a test renders it in the state where
+the claim would be FALSE and asserts it is absent. Fixed strings that describe data are computed from that data.
+
+**Last triggered:** code review 007, 2026-10-03.

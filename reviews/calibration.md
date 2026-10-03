@@ -40,6 +40,7 @@ against.
 | 3v | 2026-10-03 | design | fix verification — one independent read-only reviewer (Sonnet) on R16-D2/R16-E v2.1 against DR7-15..34 and the built R16-F code; every claim spot-checked by the main loop | 0 | 7 | 8 | **Build with caveats** (19 of 20 plan findings closed, DR7-34 partial → closed in v2.2; 7 builder-would-go-wrong gaps (3 in E: per-question focus credited to a step-only mechanism, a second extraction-error call site, an opposite narrow-screen CSS rule; 4 in D2: unspecified "fields" method, §2-vs-§4b contradiction, unnamed evidence helpers, DR7-34 doubled note) + 21 stale citations (19 wrong, 2 approximate) + 8 clarity items. Owner: "apply all, then build" — all applied as v2.2. Not a 4th review round: verification of round-3 fixes. Caveats: D2 before E; re-find citations at build; single reviewer, not a panel) |
 | — | 2026-10-03 | build loop | /gvm-build Hard Gate 3 — one fresh Sonnet reviewer per pass, per chunk (R16-F, R16-D2, R16-E); every finding re-checked by the main loop | 0 | 10 | 10 | R16-F `[(1,1),(2,1),(3,1),(4,1),(5,1)]` — stalled, stopped at pass 5, closed by owner decision after fixing pass 5; R16-D2 `[(1,0)]` — converged; R16-E `[(1,2),(2,1),(3,1),(4,1)]` — closed by owner decision after fixing pass 4. Every C/I fixed with a test shown failing without the fix. Two loops have no `(final, 0)` terminator — recorded as such, not padded; the multi-panel `/gvm-code-review` of the whole R16 range follows |
 | 6 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 6 fresh-context verifiers (gvm-graph) | 6 | 17 | 23 | **Do not merge** (whole R16 range b1e146b..9348882, 15 commits / 51 production files. 31 C/I claims verified: 20 confirmed, 10 partly, 1 disproven (dropped). Hand-off "tampered" Critical PROVEN by test and bisected to code-review-005 fix round 1 (3e4f119) — live since 2026-09-28. Capture-recapture ≈54% coverage → second full round. Owner triage: fix all 6 C; fix 16 I + accept EBT-1 as a labelled exception; fix every Minor + the stub flag; fixes under full GVM build discipline; then R2) |
+| 7 | 2026-10-03 | code | A,B,C,D,E,G ×2 (DUAL: calibrated + blind) + F (assembled stub prompt) + EBT linter + 3 fresh-context verifiers (gvm-graph) | 0 | 12 | 28 | **Do not merge** (second full round of the R16 range b1e146b..9ecdee6 after the CR6 fixes and ENG-ID; 49 commits / 56 production files. 14 distinct C/I claims verified: 12 confirmed, 2 downgraded to Minor, 0 disproven; 6 proved by probe tests in a scratch copy. Capture-recapture ≈65% (round 6: ≈54%). Owner triage: fix all 12 I and all 28 M; CR7-23 keep the listed country; stub flags dismissed (allowlist); EBT-2/3 accepted as labelled exceptions, EBT-4 dismissed) |
 
 ## Round 1 measurements
 
@@ -931,6 +932,44 @@ recommended and chosen. 15 of 33 Critical/Important findings rest wholly on one 
 **Lesson.** A fix round re-reviewed only against schema-shaped fixtures shipped a total break of the feature it was fixing,
 and two later review rounds plus a design review did not see it. A mechanism that verifies integrity must be tested with data
 the real producer wrote, end to end — which is what BC-003 now requires.
+
+## Code review round 7 (2026-10-03) — second full round of the R16 range
+
+**Scope and shape.** b1e146b..9ecdee6 (49 commits, 56 production files, 86 test files), priority on the 27 files the CR6
+fixes changed. Strict criterion, dual review across six lenses (12 Sonnet panels), Panel F via the assembled stub prompt,
+the EBT linter as a script, then 3 fresh-context checkers (5/4/5 claims) that could copy the repo and run probe tests.
+Result: 0 Critical, 12 Important, 28 Minor, 11 observations; 0 disproven; 2 downgraded (form-draft loss needs an invalid
+policy → Minor; the reserved word inside a raw supplier id is test fragility → Minor); 2 mechanisms corrected.
+
+**Capture-recapture.** A 62%, B 56% (Chapman), C 77%, D 40% (Chapman), E 64%, G 100%; pooled est. ~69, found 45 → **~65%**.
+Spec/docs (D) and contracts (B) are where twins barely overlap — the next round's blind spots.
+
+**Anchor examples:**
+- Worst, logic (C calibrated + blind, A calibrated, checker probe): the CR6-03 fix carried the gate fields through Back only;
+  "Change an answer", EVALUATION_FAILED and Back's own answers still drop the "Not sure" assumptions, and "Not on this list"
+  then Back lets the AI's rejected supplier guess reach the result unasked. The fix text named all three re-entries; the
+  build fixed one, and its tests used fixtures that could not see the other two.
+- Worst, timing (E calibrated + blind, proved): the audit chain tip is cached per tab; the cross-tab lock orders writes but
+  never refreshes it → a two-tab reviewer forks the append-only trail permanently. Invisible to jsdom (no navigator.locks,
+  one module instance per test).
+- Best, contracts (B calibrated): proved the CR6-01 hand-off fix with every seeded case and a maximal real assumption
+  payload exported and re-imported in a scratch copy — BC-003 applied by the reviewer, not just the builder.
+- Best, verification: checker V1 corrected CR7-02's field list (three of the five "dropped" fields were never carried on the
+  confirmation step by design) and downgraded the form-draft claim on its precondition, rather than rubber-stamping.
+
+**Recurring / promotions (shared rule 21):**
+- **RF-9 → promoted to BC-004** (R16-F build loop, code review 006, code review 007 — plus design review 007): a safety or
+  honesty field carried on one step and dropped on a return path (CR7-01, 02, 03, 28).
+- **RF-5 → promoted to BC-005** (third code-round sighting): a claim stated more strongly than the evidence — CR7-09
+  ("no sign-off needed" on a signed-off case), CR7-22 ("corrections preserved"), CR7-40 ("machine-verified"), O-8.
+- RF-3 (vocabulary not reaching secondary consumers) **returned** after one silent round: CR7-12 (user docs still describe the
+  old form), CR7-35 (model plain_name reached one of three consumers). docs/ is read by no check.
+- RF-10 (computed but never consumed) — no new instance; CR7-11 is an unbuilt requirement, a different class.
+- New candidate RF-11 — cross-tab state assumed per-tab-safe (CR7-05, CR7-18): one round.
+
+**Lesson.** A fix whose own text lists several paths ("Back, and the EVALUATION_FAILED/CHANGE_ANSWER re-entries") was
+closed on the first path only, and its review pass checked the path it was shown. The fix plan's path list must become the
+test list.
 
 ## Parity Check History
 
