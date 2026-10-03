@@ -151,7 +151,7 @@ function packRequiredControlErrors(packs: JurisdictionPack[], validControlIds: S
   for (const pack of [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id))) {
     for (const rule of sortedById(pack.rules)) {
       if (rule.effect.type === 'required_control' && !validControlIds.has(rule.effect.control_id)) {
-        out.push(`${pack.pack_id}:${rule.id} required_control: no control with id '${rule.effect.control_id}'.`);
+        out.push(`${pack.pack_id}:${rule.id} required_control: no control with id '${rule.effect.control_id}' — add a control with this id to your policy, or remove the pack.`);
       }
     }
   }
