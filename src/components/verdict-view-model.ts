@@ -170,6 +170,36 @@ export interface VerdictView {
   inPlaceScopeName?: string;
 }
 
+/** UC-11 on the register path (CR7-11). The register keeps no graph, but the
+ *  first confirmation writes a `uses_model` edge exactly when a model was
+ *  declared (addUseCaseModelLink). So "no model was named" may be said only
+ *  when ALL of these hold; any other case says nothing rather than guess:
+ *   - the edges were read (`edges` defined — a failed read is not "none");
+ *   - no `uses_model` edge exists;
+ *   - the use case was created on or after MODEL_LINKS_SINCE, because an older
+ *     case never had links written, so a missing edge proves nothing;
+ *   - no `graph_corrected` event on its trail names a declared model — a
+ *     correction after the first confirmation writes no link. */
+export const MODEL_LINKS_SINCE = '2026-08-18T00:00:00.000Z';
+export function registerSaysNoModelNamed(args: {
+  useCaseCreatedAt: string | undefined;
+  edges: ReadonlyArray<{ edge_type: string }> | undefined;
+  events: ReadonlyArray<AuditEvent>;
+}): boolean {
+  const { useCaseCreatedAt, edges, events } = args;
+  if (edges === undefined || useCaseCreatedAt === undefined) return false;
+  if (useCaseCreatedAt < MODEL_LINKS_SINCE) return false;
+  if (edges.some((e) => e.edge_type === 'uses_model')) return false;
+  const correctedModel = events.some(
+    (e) =>
+      e.payload.type === 'graph_corrected' &&
+      e.payload.correction.field === 'declared_model_id' &&
+      e.payload.correction.corrected_value !== null &&
+      e.payload.correction.corrected_value !== undefined,
+  );
+  return !correctedModel;
+}
+
 export type ControlOwnership = Record<string, { owner_name: string; target_date: string }>;
 export type ControlAttestations = Record<string, { attested_by_name: string; evidence_note: string }>;
 

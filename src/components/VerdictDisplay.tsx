@@ -32,6 +32,10 @@ interface VerdictDisplayProps {
   // older render paths (and tests) without them stay valid.
   graph?: DataFlowGraph;
   registerStage?: LifecycleStage;
+  // UC-11, register path: the caller (RegisterDetail) has no graph, so it
+  // decides from the register's own links (registerSaysNoModelNamed) whether
+  // "No model was named" is provable. Ignored when `graph` is present.
+  noModelNamed?: boolean;
   // Optional since P8-C06. register-lifecycle.md §15.1b: the sign-off page
   // reuses this component, and correction is a submitter action
   // (verdict-audit.md §6.1), not a reviewer one. Required-with-a-no-op would
@@ -1308,7 +1312,7 @@ function FirstScreen({
   );
 }
 
-export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, assumptions, packs, evidenceScope, reasoningDefaultOpen = false, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
+export default function VerdictDisplay({ verdict, auditEvents, policy, graph, registerStage, noModelNamed, onCorrect, memoLabel, memoDescription, knowledgeLensMatches, showSignOffChecklist, hasRiskKnowledgeSection, assumptions, packs, evidenceScope, reasoningDefaultOpen = false, controlOwnership, onAssignControlOwner, controlOwnerBusyId, controlOwnerErrorId, controlOwnerError, controlAttestations, onAttestControlEvidence, controlEvidenceBusyIds, controlEvidenceErrors }: VerdictDisplayProps) {
   // design-review-003 (Panel C): computed once here instead of separately
   // inside WhatToDo and at the appetite-line below — see WhatToDo's prop
   // comment for why the duplication was a risk worth closing.
@@ -1490,7 +1494,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       {/* CR7-11 (UC-11 fit criterion, D-27). Derived from the graph's
           processing nodes (declared_model_id); with no graph (the register
           path does not keep it) nothing is claimed either way. */}
-      {graph && graph.processing_nodes.length > 0 && !graph.processing_nodes.some((n) => n.declared_model_id) && (
+      {(graph ? graph.processing_nodes.length > 0 && !graph.processing_nodes.some((n) => n.declared_model_id) : noModelNamed === true) && (
         <p className="verdict__no-model-named">No model was named — your AI risk team may ask which one it uses.</p>
       )}
       {/* R12-ST-1: an undismissable statement of fact, in the same honesty

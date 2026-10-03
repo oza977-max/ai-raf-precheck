@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getUseCase, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
+import { getUseCase, updateLifecycleStage, findLatestVerdictEvent, getGraph } from '../store/register';
 import { getAll as getAuditEvents, append as appendAuditEvent, verifyChain } from '../store/audit';
 import type { ChainVerification } from '../store/audit';
 import VerdictDisplay from './VerdictDisplay';
-import type { AssumptionRecord, AuditEvent, UseCaseSummary } from '../store/types';
+import type { AssumptionRecord, AuditEvent, RegisterEdge, UseCaseSummary } from '../store/types';
+import { registerSaysNoModelNamed } from './verdict-view-model';
 import type { PolicyFile } from '../engine/types';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
@@ -208,6 +209,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   // explore-007 D-001 fix (round 8): a live, provable check — not just an
   // assertion in copy — that the hash chain over the WHOLE audit trail
   // (every use case, not just this one) is intact.
+  const [modelLinks, setModelLinks] = useState<{ createdAt: string | undefined; edges: RegisterEdge[] } | null>(null);
   const [chainCheck, setChainCheck] = useState<ChainVerification | null>(null);
   const [notes, setNotes] = useState('');
   const [attestedByName, setAttestedByName] = useState('');
@@ -684,6 +686,14 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       ]);
       setSummary(s ?? null);
       setEvents(evs);
+      // UC-11: the case's own links. A failed read leaves it undefined — which
+      // registerSaysNoModelNamed treats as "cannot tell", never as "none".
+      try {
+        const { nodes, edges } = await getGraph(useCaseId);
+        setModelLinks({ createdAt: nodes.find((n) => n.node_id === useCaseId)?.created_at, edges });
+      } catch {
+        setModelLinks(null);
+      }
       setLoadError(null);
     } catch (err) {
       // N4: getUseCase() (unlike getUseCases()'s per-row Promise.allSettled)
@@ -1108,6 +1118,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             auditEvents={events}
             policy={policy}
             registerStage={summary.lifecycle_stage}
+            noModelNamed={registerSaysNoModelNamed({ useCaseCreatedAt: modelLinks?.createdAt, edges: modelLinks?.edges, events })}
             memoLabel={summary.label}
             memoDescription={summary.description}
             knowledgeLensMatches={knowledgeLensMatches}
