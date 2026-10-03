@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
+import RegisterDetail from '../RegisterDetail';
 import * as registerModule from '../../store/register';
 import { getUseCases } from '../../store/register';
 
-// Review pass 1, M-2. The register says "No model was named" when a case has no
+// Review pass 1 M-2 / pass 2 M-1. The register says "No model was named" when a case has no
 // uses_model edge. That is only sound if a case can never exist WITHOUT its
 // link when a model was declared — i.e. the link write must not fail after the
 // use-case node was written. The link is therefore written FIRST (and a failure
@@ -92,7 +93,7 @@ describe('IntakeFlow — the model link is written before the use-case node (rev
     vi.restoreAllMocks();
   });
 
-  it('TC-CR7-11h: when the link write fails, no use-case node is left behind — so the register can never show a model-less case that had a model', async () => {
+  it('TC-CR7-11h: the link write fails, the case IS saved (no dead end), flagged model_link_unrecorded, and the register never claims "No model was named"', async () => {
     const user = userEvent.setup();
     mockCreate.mockResolvedValue(extraction());
     const confirm = await reachConfirm(user);
@@ -101,10 +102,20 @@ describe('IntakeFlow — the model link is written before the use-case node (rev
     const linkSpy = vi.spyOn(registerModule, 'addUseCaseModelLink').mockRejectedValue(new Error('link write failed'));
     await user.click(confirm);
     await waitFor(() => expect(linkSpy).toHaveBeenCalled(), { timeout: 5000 });
-    // Settle: the failure surfaces on screen and the flow returns to the answers.
-    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument(), { timeout: 5000 }).catch(() => undefined);
-    const after = await getUseCases('all');
-    expect(after.some((r) => r.description === DESC)).toBe(false);
+    // The result is shown: the failure of the side link does not strand the case.
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 8000 });
+    const row = (await getUseCases('all')).find((r) => r.description === DESC);
+    expect(row).toBeDefined();
+    const { nodes, edges } = await registerModule.getGraph(row!.use_case_id);
+    expect(edges.some((e) => e.edge_type === 'uses_model')).toBe(false);
+    const meta = nodes.find((n) => n.node_id === row!.use_case_id)!.metadata as { model_link_unrecorded?: boolean };
+    expect(meta.model_link_unrecorded).toBe(true);
+    // The register path must say nothing about models for this case.
+    linkSpy.mockRestore();
+    const view = render(<RegisterDetail useCaseId={row!.use_case_id} role="2LoD" onBack={() => {}} />);
+    await view.findByText(/← register/i);
+    await new Promise((res) => setTimeout(res, 100));
+    expect(view.container.textContent).not.toContain('No model was named');
   }, 40000);
 
   it('TC-CR7-11h-1: on success the link exists for the saved case (the order change loses nothing)', async () => {

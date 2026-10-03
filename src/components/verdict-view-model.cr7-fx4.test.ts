@@ -149,11 +149,20 @@ describe('CR7-09 — a signed-off case is not described as needing no sign-off',
 
   it('TC-CR7-09k: a later stage that needed a sign-off but has no approving review claims neither "pending" nor "nobody"', () => {
     const verdict = makeVerdict({ tier: 'High', controls: [] });
+    const withSafeguards = (n: number) => makeVerdict({ tier: 'High', controls: Array.from({ length: n }, (_, i) => `C${i}`) });
+    const pol = { ...policy, controls: [1, 2].map((i) => ({ id: `C${i - 1}`, name: `C${i - 1}`, description: 'd', resolves: [], burden: 1, verification: 'v' })) } as PolicyFile;
+    const one = buildVerdictView(withSafeguards(1), pol, undefined, undefined, undefined, 'approved', { auditEvents: [] });
+    expect(one.headline).toBe('Not confirmed. No sign-off from your AI risk team is on record, and 1 safeguard is still to put in place.');
+    const two = buildVerdictView(withSafeguards(2), pol, undefined, undefined, undefined, 'approved', { auditEvents: [] });
+    expect(two.headline).toBe('Not confirmed. No sign-off from your AI risk team is on record, and 2 safeguards are still to put in place.');
+    expect(one.headline + two.headline).not.toMatch(/you can start/i);
     for (const stage of ['approved', 'in_production', 'monitored'] as const) {
       const view = buildVerdictView(verdict, policy, undefined, undefined, undefined, stage, { auditEvents: [] });
       expect(view.needsSignOff).toBe(false);
       expect(view.signedOff).toBe(false);
       expect(view.headline).not.toMatch(/^Not yet|signed it off|no sign-off needed/);
+      expect(view.headline).not.toMatch(/you can start/i);
+      expect(view.headline).toBe('No sign-off from your AI risk team is on record for this version — confirm with them before you start.');
       expect(view.whoSignsOff).toMatch(/no sign-off is recorded/i);
       expect(view.whoSignsOff).not.toMatch(/^nobody|Until they do/);
       expect(view.nextSteps.join(' ')).not.toMatch(/Send this result to your AI risk team|signed off/);
@@ -255,5 +264,14 @@ describe('wave-1 follow-up — one approved-model resolution rule', () => {
     const src = readFileSync(resolve(__dirname, 'verdict-view-model.ts'), 'utf-8');
     expect(src).toMatch(/resolveApprovedModel/);
     expect(src).not.toMatch(/version_pattern/);
+  });
+});
+
+describe('registerSaysNoModelNamed — a link write that failed (pass 2, M-1)', () => {
+  it('TC-CR7-11i: model_link_unrecorded means "cannot tell" — never "no model was named"', async () => {
+    const { registerSaysNoModelNamed } = await import('./verdict-view-model');
+    const base = { useCaseCreatedAt: '2026-10-02T00:00:00.000Z', edges: [], events: [] as AuditEvent[] };
+    expect(registerSaysNoModelNamed(base)).toBe(true);
+    expect(registerSaysNoModelNamed({ ...base, modelLinkUnrecorded: true })).toBe(false);
   });
 });

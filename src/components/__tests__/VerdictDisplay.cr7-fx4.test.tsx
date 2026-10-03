@@ -89,6 +89,8 @@ describe('VerdictDisplay — CR7-09: the sign-off wording follows the case, not 
     // M-1: the headline must not claim the sign-off is still pending either.
     expect(container.querySelector('.verdict__first-headline')!.textContent ?? '').not.toMatch(/Not yet|signed it off/);
     expect(container.textContent).not.toMatch(/Until they do/);
+    expect(container.querySelector('.verdict__first-headline')!.textContent).not.toMatch(/you can start/i);
+    expect(container.querySelector('.verdict__first-headline')!.textContent).toMatch(/No sign-off from your AI risk team is on record/);
   });
 });
 
