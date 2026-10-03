@@ -113,9 +113,11 @@ describe('IntakeFlow — first evaluation gate refuses on a policy reference err
     // IntakeFlow renders reviewGateError at more than one place in the
     // graph_review screen (e.g. inline + a summary slot) — any match
     // confirms the specific message reached the user.
-    expect(
-      screen.getAllByText(/CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'/).length,
-    ).toBeGreaterThan(0);
+    // CR8-13 (code review 008): a submitter (the default 1LoD view) sees the
+    // plain policy sentence, never the raw field path — that detail is for
+    // 2LoD and the Appetite framework screen (TC-R16-A1-62 / TC-CR8-13).
+    expect(screen.getAllByText(/rules file has a problem/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'/)).not.toBeInTheDocument();
     // Still on graph_review — the Proceed button is still there, the
     // questionnaire/confirmation screens never mounted.
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();

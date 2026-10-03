@@ -158,7 +158,11 @@ safety_margin: 0.1
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     expect(await screen.findAllByText(/Policy file invalid/i)).not.toHaveLength(0);
-    expect(screen.getAllByText(/CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'/).length).toBeGreaterThan(0);
+    // CR8-13 (code review 008): a submitter (the default 1LoD view) sees the
+    // plain policy sentence, never the raw field path — that detail is for
+    // 2LoD and the Appetite framework screen (TC-R16-A1-62 / TC-CR8-13).
+    expect(screen.getAllByText(/rules file has a problem/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'/)).not.toBeInTheDocument();
     // Never reached the summary — FORM_SUBMITTED was never dispatched.
     expect(screen.queryByText(/here.s what we understood/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
