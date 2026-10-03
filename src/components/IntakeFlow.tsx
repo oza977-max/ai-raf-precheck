@@ -2351,6 +2351,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
               guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
               policy={policyResult.valid ? policyResult.policy : undefined}
+              reentry={state.reentry}
             />
             {/* R7-JC (ADR-IF-R7-1): jurisdictions gate at review. Sweep-001
                 found a hallucinated valid code ("US") that would silently
