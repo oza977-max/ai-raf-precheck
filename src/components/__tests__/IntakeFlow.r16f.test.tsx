@@ -701,7 +701,7 @@ describe('R16-F review pass 4: nothing can change the answers while a confirm is
 // on through 'evaluation_pending'. "Start over instead" re-enabled there, so a
 // second case could begin while the first was still running.
 describe('R16-F review pass 5: nothing can start a new case while the result is being worked out', () => {
-  it('TC-R16-F-71: while the result is being worked out, "Start over instead" stays disabled; it re-enables once the result is shown', async () => {
+  it('TC-R16-F-71: while the result is being worked out, "Start over instead" stays disabled; once the result is shown a new case can be started', async () => {
     const useCaseId = 'uc-r16f-evaluating-start-over';
     sessionStorage.setItem(
       DRAFT_KEY,
@@ -745,7 +745,13 @@ describe('R16-F review pass 5: nothing can start a new case while the result is 
       // render passes — a slower runner can paint "Verdict" one tick before
       // that effect has run. The behaviour is correct either way; wait for
       // the state instead of asserting one render early.
-      await waitFor(() => expect(screen.getByRole('button', { name: /start over instead/i })).toBeEnabled());
+      // CR6 FX-2 pass 3 (TC-CR6-02k): once the result is shown the case is
+      // finished, so the "unfinished pre-check… Start over instead" banner
+      // is withdrawn (it overclaimed) — starting a new case from here is
+      // "+ New pre-check", which must be usable. What this test pins (no
+      // new case while the result is being worked out) is unchanged above.
+      await waitFor(() => expect(screen.queryByRole('button', { name: /start over instead/i })).not.toBeInTheDocument());
+      expect(screen.getByRole('button', { name: /new pre-check/i })).toBeEnabled();
     } finally {
       spy.mockRestore();
       sessionStorage.clear();
