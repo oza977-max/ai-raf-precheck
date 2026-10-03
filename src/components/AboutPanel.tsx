@@ -178,10 +178,11 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
         </li>
         <li>
           This version runs entirely in your browser: nothing you enter leaves this machine. The audit
-          trail is hash-chained — a single altered or deleted event is detectable, and every sign-off
-          page shows a live check proving the chain is intact, not just claiming it. What it still
-          cannot do is rule out a full, consistent rewrite by someone with access to this machine —
-          that needs an external, write-once store, which this version does not have.
+          trail is hash-chained — an edited event, or a deleted event with later events after it,
+          breaks the chain, and every sign-off page runs a live check for that. Removing the newest
+          events can&apos;t be detected from inside this browser, and a full, consistent rewrite by
+          someone with access to this machine can&apos;t be ruled out either — that needs an external,
+          write-once store, which this version does not have.
         </li>
       </ul>
 

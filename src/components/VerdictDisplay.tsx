@@ -2392,8 +2392,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       </div>
 
       <p className="verdict__caveat">
-        Audit trail is append-only and hash-chained — a single altered or deleted event is detectable
-        (see the chain-integrity check on the audit trail below). It is still client-side with no
+        Audit trail is append-only and hash-chained — an edited event, or a deleted event with later
+        events after it, breaks the chain (see the chain check on the audit trail below); removing the
+        newest events can&apos;t be detected from inside this browser. It is still client-side with no
         external anchor, so it cannot rule out a full, consistent rewrite by someone with local access.
       </p>
         </div>

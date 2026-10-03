@@ -51,7 +51,7 @@ async function seedCase(label: string): Promise<string> {
 }
 
 // Claims the check cannot back (BC-005).
-const OVERCLAIM = /deleted event[^.]*(detectable|detected|breaks)|altered or deleted|unbroken|Chain integrity verified|proving the chain is intact|proves? the chain/i;
+const OVERCLAIM = /deleted event[^.]*\bdetectable\b|altered or deleted|unbroken|Chain integrity verified|proving the chain is intact|proves? the chain/i;
 
 describe('RegisterDetail — CR8-04 (P5): the integrity wording', () => {
   it('TC-CR8-04c: the banner says only that no break was found in the events present, and the caveat names what is not detectable', async () => {
@@ -64,7 +64,7 @@ describe('RegisterDetail — CR8-04 (P5): the integrity wording', () => {
     expect(banner.textContent).toBe('No break found in the 2 events present.');
     const caveat = document.querySelector('.register-detail__caveat')!.textContent!.replace(/\s+/g, ' ');
     expect(caveat).toContain('an edited event, or a deleted event with later events after it, breaks the chain');
-    expect(caveat).toContain("removing the newest events can't be detected from inside this browser");
+    expect(caveat).toMatch(/removing the newest events can't be detected from inside this browser/i);
     // The two phrases other tests pin still hold.
     expect(caveat).toMatch(/hash-chained to the one before it/i);
     expect(caveat).toMatch(/cannot rule out someone with full local access/i);
