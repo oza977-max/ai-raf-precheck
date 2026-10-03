@@ -1,0 +1,56 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import SettingsPanel from '../SettingsPanel';
+import { saveDraft, loadDraft, saveFormDraft, loadFormDraft } from '../intake-draft';
+import type { IntakeState } from '../intake-state';
+
+describe('SettingsPanel — Clear all data (CR7-15)', () => {
+  const reload = vi.fn();
+  const realLocation = window.location;
+
+  beforeEach(() => {
+    reload.mockClear();
+    vi.stubGlobal('location', { ...realLocation, reload });
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('TC-CR7-15: clears the saved intake drafts (all three keys) and the hand-off marker, then reloads', async () => {
+    // the app's own writers produce the drafts (BC-003)
+    saveDraft({ step: 'description_entry', description: 'a half-written description' } as IntakeState);
+    saveFormDraft({ useCaseName: 'half-typed' });
+    sessionStorage.setItem('aigate:intake-form-draft', '{"legacy":true}');
+    localStorage.setItem('aigate-handoff-last-synced-tip', 'abc');
+    expect(loadDraft()).not.toBeNull();
+    expect(loadFormDraft()).not.toBeNull();
+
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+    await user.click(screen.getByText(/demo data/i));
+    await user.click(screen.getByRole('button', { name: /clear all data and start over/i }));
+    await user.click(screen.getByRole('button', { name: /yes, delete everything/i }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(loadDraft()).toBeNull();
+    expect(loadFormDraft()).toBeNull();
+    expect(sessionStorage.getItem('aigate:intake-form-draft')).toBeNull();
+    expect(localStorage.getItem('aigate-handoff-last-synced-tip')).toBeNull();
+  });
+
+  it('TC-CR7-15: the confirmation says exactly what is cleared and what is kept (BC-005)', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+    await user.click(screen.getByText(/demo data/i));
+    await user.click(screen.getByRole('button', { name: /clear all data and start over/i }));
+    const warning = screen.getByRole('alert');
+    expect(warning.textContent).toMatch(/unsaved intake draft/i);
+    expect(warning.textContent).toMatch(/hand-off/i);
+    // what survives is named, not implied
+    expect(warning.textContent).toMatch(/model settings/i);
+    expect(warning.textContent).toMatch(/appetite framework you saved/i);
+  });
+});

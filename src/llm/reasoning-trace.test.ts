@@ -124,4 +124,11 @@ describe('generateReasoningTrace', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.kind).toBe('network-error');
   });
+
+  it('TC-CR7-19: the SDK call carries a 15 s timeout and no retries, so a stalled call cannot hold the case lock', async () => {
+    const trace = buildTraceData(makeVerdict(), CONTROL_LIBRARY, 'desc');
+    await generateReasoningTrace(trace, 'test-key');
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate.mock.calls[0]![1]).toEqual({ timeout: 15000, maxRetries: 0 });
+  });
 });
