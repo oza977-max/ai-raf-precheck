@@ -1349,3 +1349,18 @@ describe('CR8-08 — correcting from the result shows the countries panel', () =
     expect(hit).toBeDefined();
   }, 30000);
 });
+
+// CR8-14: the plain policy sentence is not followed by a line that blames the
+// person's details for a gap in the firm's rules.
+describe('CR8-14 — a failed evaluation on the review screen carries no blaming suffix', () => {
+  it('TC-CR8-14: the alert keeps its prefix and the policy sentence, and no longer tells the person to check the details and try again', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await failNextEvaluation();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/something went wrong working out the result/i);
+    expect(alert).not.toHaveTextContent(/check the details below/i);
+    expect(alert).not.toHaveTextContent(/try again/i);
+  }, 30000);
+});
