@@ -119,7 +119,14 @@ const EXTRACT_GRAPH_SCHEMA = {
           // fire from an LLM-extracted graph. Bounded like the hand-off's
           // free-text fields (src/store/handoff.ts's boundedText) — a
           // decision-type label is a short phrase, never a paragraph.
-          decision_type_other: { type: 'string', maxLength: 200 },
+          // CR7-31: without this a model fills the field with filler ("n/a")
+          // beside a listed decision_type, and the engine treats any typed
+          // value as an unclassified decision (Provisional).
+          decision_type_other: {
+            type: 'string',
+            maxLength: 200,
+            description: 'Use only when no listed decision type fits; otherwise omit.',
+          },
           hitl: { type: 'boolean' },
           basis_quotes: {
           type: 'object',
@@ -382,6 +389,11 @@ function parseExtraction(input: unknown, description: string): GraphExtraction |
   ): Omit<T, 'basis_quotes'>[] =>
     nodes.map((node) => {
       const { basis_quotes: _basis, ...rest } = node;
+      // CR7-31: a listed decision_type wins — a free-text label beside it is
+      // filler and would make the result Provisional (provisional.ts reads it).
+      if (kind === 'output' && (rest as Record<string, unknown>).decision_type !== undefined) {
+        delete (rest as Record<string, unknown>).decision_type_other;
+      }
       const check = verifyQuotes(description, kind, node as Record<string, unknown>);
       if (Object.keys(check.verified).length > 0) provenance[node.id] = check.verified;
       if (check.guessed.length > 0) guessed[node.id] = check.guessed;

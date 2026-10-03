@@ -102,6 +102,14 @@ function supplierVendors(policy: PolicyFile): RegistryEntry[] {
   return (policy.vendors ?? []).filter((v) => (v.kind ?? 'supplier') === 'supplier');
 }
 
+/** CR7-04. True when the form asks the optional "which model" question: Q3 is
+ *  an outside assistant or a supplier option (the same rule as StructuredForm's
+ *  showQ3Model, verified: src/components/StructuredForm.tsx:326). */
+export function q3ShowsModelQuestion(answers: PlainAnswers): boolean {
+  const q3 = answers['3'];
+  return q3 === 'outside-assistant' || q3 === 'supplier-feature' || q3 === 'specialist-product';
+}
+
 export function plainAnswersToFormValues(
   answers: PlainAnswers,
   policy: PolicyFile,
@@ -277,7 +285,9 @@ export function plainAnswersToFormValues(
   // ---- Q3model: optional named model ----
   let declaredModelId: string | undefined;
   let declaredModelIdOther: string | undefined;
-  const modelText = str('3model')?.trim();
+  // CR7-04: the form asks this only when q3ShowsModelQuestion — an answer left
+  // over from an earlier Q3 choice must not name a model.
+  const modelText = q3ShowsModelQuestion(answers) ? str('3model')?.trim() : undefined;
   if (modelText) {
     const match = (policy.approved_models ?? []).find((m) => m.model_id === modelText);
     if (match) declaredModelId = match.model_id;
@@ -544,9 +554,13 @@ export function plainAnswersToFormValues(
   // ---- Q11: jurisdictions (tick-all) ----
   const q11 = toArray(answers['11']);
   const knownCodes = new Set((policy.jurisdictions ?? []).map((j) => j.code));
-  const jurisdictions = q11.includes('elsewhere-not-sure')
-    ? []
-    : q11.filter((code) => knownCodes.has(code));
+  // CR7-23 (owner decisions): a listed country stays when "Somewhere else, or
+  // not sure" is also ticked, and the unknown country is listed back as an
+  // assumption. "Somewhere else" alone still gives [] and no assumption.
+  const jurisdictions = q11.filter((code) => knownCodes.has(code));
+  if (q11.includes('elsewhere-not-sure') && jurisdictions.length > 0) {
+    assume('11', 'elsewhere-not-sure', ['jurisdictions']);
+  }
 
   // ---- Q12: replaces something ----
   let replacesPriorModel: boolean;

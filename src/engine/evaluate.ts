@@ -458,25 +458,13 @@ function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): Downs
   ].sort();
   if (declared.length === 0) return [];
 
-  // Exact-id-first, family-fallback (R11-MG-1a, ADR-PS-R11-1a). Both maps
-  // are built from the same sorted-by-model_id order (NF-1) so resolution
-  // is a pure function of the policy's own stable order, never runtime-
-  // derived.
-  const sortedModels = sortedByModelId(policy.approved_models ?? []);
-  const registry = new Map<string, ApprovedModel>(
-    sortedModels.filter((m) => !m.is_family).map((m) => [m.model_id, m]),
-  );
-  const families = sortedModels.filter((m) => m.is_family === true);
-
-  function resolveApprovedModel(id: string): ApprovedModel | undefined {
-    const exact = registry.get(id);
-    if (exact) return exact;
-    return families.find((f) => f.version_pattern !== undefined && id.startsWith(f.version_pattern));
-  }
+  // Exact-id-first, family-fallback — see resolveApprovedModel below.
+  const models = policy.approved_models ?? [];
+  const resolve = (id: string) => resolveApprovedModel(models, id);
 
   return declared
     .filter((id) => {
-      const entry = resolveApprovedModel(id);
+      const entry = resolve(id);
       return entry === undefined || entry.is_approved === false;
     })
     .map((id) => ({
@@ -486,6 +474,21 @@ function modelGovernanceReviews(graph: DataFlowGraph, policy: PolicyFile): Downs
       // "approved" without the banned word reaching a rendered string.
       review: `Model governance review required — ${id} is not on the firm's model registry within appetite`,
     }));
+}
+
+/** Exact-id-first, family-fallback (R11-MG-1a, ADR-PS-R11-1a). Both lookups
+ *  use the same sorted-by-model_id order (NF-1), so resolution is a pure
+ *  function of the policy's own stable order, never runtime-derived. Exported
+ *  (CR7-41) so the register snapshot resolves a model the way the engine does
+ *  instead of keeping its own exact-id copy. Pure; reads the models as given —
+ *  a family lapsed by reattest_by is only unapproved once applyReattestExpiry
+ *  has been applied to them. */
+export function resolveApprovedModel(models: ApprovedModel[] | undefined, id: string): ApprovedModel | undefined {
+  const sorted = sortedByModelId(models ?? []);
+  const registry = new Map<string, ApprovedModel>(sorted.filter((m) => !m.is_family).map((m) => [m.model_id, m]));
+  const exact = registry.get(id);
+  if (exact) return exact;
+  return sorted.find((f) => f.is_family === true && f.version_pattern !== undefined && id.startsWith(f.version_pattern));
 }
 
 function sortedByModelId(items: ApprovedModel[]): ApprovedModel[] {

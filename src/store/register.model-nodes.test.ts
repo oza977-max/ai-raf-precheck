@@ -136,3 +136,41 @@ describe('addUseCaseModelLink — TC-R11-MG-6 dormancy-repeat guard', () => {
     expect(edge).toBeUndefined();
   });
 });
+
+// CR7-41. The engine accepts a model by exact id OR by a listed family whose
+// version_pattern prefixes it (evaluate.ts). The register's snapshot of "which
+// vendor, accepted or not" must resolve the same way, or a model the engine
+// accepted is filed as vendor "unknown", not accepted.
+function familyPolicy(): PolicyFile {
+  const p = makePolicy('gpt-4o-family-label', true);
+  p.approved_models = [
+    { model_id: 'gpt-4o-*', vendor: 'Family Vendor', provenance_class: 'vendor_hosted', is_approved: true, is_family: true, version_pattern: 'gpt-4o-' },
+    { model_id: 'pinned-model', vendor: 'Pinned Vendor', provenance_class: 'vendor_hosted', is_approved: false },
+  ];
+  return p;
+}
+
+describe('addUseCaseModelLink — CR7-41 family resolution', () => {
+  it('TC-CR7-41a: a model that belongs to a listed family is snapshotted with the family vendor and acceptance', async () => {
+    const modelId = `gpt-4o-2024-${crypto.randomUUID()}`;
+    const useCaseId = crypto.randomUUID();
+    await addNode(makeUseCaseNode(useCaseId, 'Use case'));
+    await addUseCaseModelLink(useCaseId, makeProcessingNode(modelId), familyPolicy());
+    const { nodes } = await exportAll();
+    const modelNode = nodes.find((n) => n.node_type === 'ai_model' && n.label === modelId);
+    expect(modelNode?.metadata).toMatchObject({ node_type: 'ai_model', model_id: modelId, vendor: 'Family Vendor', is_approved: true });
+  });
+
+  it('TC-CR7-41b: an exact entry still resolves to itself, and an id no entry covers stays unknown / not accepted', async () => {
+    const useCaseId = crypto.randomUUID();
+    await addNode(makeUseCaseNode(useCaseId, 'Use case'));
+    const stray = `stray-${crypto.randomUUID()}`;
+    await addUseCaseModelLink(useCaseId, makeProcessingNode('pinned-model'), familyPolicy());
+    await addUseCaseModelLink(useCaseId, makeProcessingNode(stray), familyPolicy());
+    const { nodes } = await exportAll();
+    const pinned = nodes.find((n) => n.node_type === 'ai_model' && n.label === 'pinned-model');
+    expect(pinned?.metadata).toMatchObject({ vendor: 'Pinned Vendor', is_approved: false });
+    const unknown = nodes.find((n) => n.node_type === 'ai_model' && n.label === stray);
+    expect(unknown?.metadata).toMatchObject({ vendor: 'unknown', is_approved: false });
+  });
+});
