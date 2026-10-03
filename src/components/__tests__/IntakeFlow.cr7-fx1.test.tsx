@@ -1068,6 +1068,18 @@ describe('FX7-1 review pass 1 — the correction count matches the events (M-4)'
   }, 30000);
 });
 
+function expectNetValueIsOriginal(corrections: Array<Record<string, unknown>>) {
+  const first = new Map<string, unknown>();
+  const latest = new Map<string, unknown>();
+  for (const c of corrections) {
+    const k = `${c.node_id}|${c.field}`;
+    if (!first.has(k)) first.set(k, c.original_value);
+    latest.set(k, c.corrected_value);
+  }
+  expect(latest.size).toBeGreaterThan(0);
+  for (const [k, v] of latest) expect(v).toEqual(first.get(k));
+}
+
 describe('FX7-1 review pass 2 — the trail ends at the value the verdict was computed on (I-A)', () => {
   it('TC-CR7-21f: a form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail', async () => {
     const user = userEvent.setup();
@@ -1106,13 +1118,54 @@ describe('FX7-1 review pass 2 — the trail ends at the value the verdict was co
     const corrections = events
       .filter((e) => e.event_type === 'graph_corrected')
       .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction);
-    // Net value per (node, field) on the trail is the ORIGINAL name again.
-    const latest = new Map<string, unknown>();
-    for (const c of corrections) latest.set(`${c.node_id}|${c.field}`, c.corrected_value);
-    expect(latest.size).toBeGreaterThan(0);
-    for (const v of latest.values()) expect(String(v)).not.toContain('(changed)');
+    // Net value per (node, field) on the trail EQUALS what it was before the
+    // failed attempt (the first correction's original value) — exactly, so a
+    // null or a stale value cannot pass.
+    expectNetValueIsOriginal(corrections);
     // And the verdict's own count matches the events.
     const corrected = events.find((e) => e.event_type === 'verdict_corrected')!.payload as unknown as { corrections_count: number };
     expect(corrected.corrections_count).toBe(corrections.length);
+  }, 60000);
+});
+
+describe('FX7-1 review pass 3 — a synthesised correction never writes a value it did not find (I-1)', () => {
+  it('TC-CR7-21h: a data class ticked, evaluation fails, it is unticked and resubmitted: the net trail value equals the original set', async () => {
+    const user = userEvent.setup();
+    const label = 'Zephyrquill data class probe';
+    await reachForm(user, label);
+    await fillMinimalForm(user, label, 'Sorts internal documents for the data class test.');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const useCase = (await getUseCases('all')).find((u) => u.label === label)!;
+
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    await screen.findByLabelText(/what do you want to call it/i);
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
+
+    await screen.findByLabelText(/what do you want to call it/i);
+    await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(
+      async () => expect((await getAll(useCase.use_case_id)).filter((e) => e.event_type === 'verdict_corrected')).toHaveLength(1),
+      { timeout: 5000 },
+    );
+
+    const corrections = (await getAll(useCase.use_case_id))
+      .filter((e) => e.event_type === 'graph_corrected')
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction);
+    const inputs = corrections.filter((c) => c.node_id === 'inputs' && c.field === 'data_classes');
+    expect(inputs.length).toBe(2);
+    expect(inputs[1]!.corrected_value).toEqual(inputs[0]!.original_value);
+    expect(corrections.some((c) => c.corrected_value === null && c.original_value !== null)).toBe(false);
+    expectNetValueIsOriginal(corrections);
   }, 60000);
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { intakeReducer, planCorrectionWrites } from './intake-state';
+import { intakeReducer, planCorrectionWrites, graphValueResolver } from './intake-state';
 import type { IntakeState } from './intake-state';
 import type { DataFlowGraph, GraphCorrection } from '../engine/types';
 import type { Assumption } from './plain-copy';
@@ -1912,7 +1912,7 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
 
   const graphWith = (scale: unknown): DataFlowGraph =>
     graph({ output_nodes: [{ id: 'n1', scale } as never], version: 5 });
-  const ctx = (scale: unknown) => ({ graph: graphWith(scale), newId: () => 'synth', now: () => '2026-02-02T00:00:00.000Z', by: '1LoD' });
+  const ctx = (scale: unknown) => ({ resolve: graphValueResolver(graphWith(scale)), version: 5, newId: () => 'synth', now: () => '2026-02-02T00:00:00.000Z', by: '1LoD' });
 
   it('TC-CR7-21e: A->B, A->C, then A->B again: the third is written (the trail would otherwise end at C while the graph says B)', () => {
     const events = [ev(corr('1', 'A', 'B')), ev(corr('2', 'A', 'C'))];
@@ -1934,6 +1934,30 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
 
   it('TC-CR7-21f: when the trail already ends at the graph value nothing is synthesised', () => {
     expect(planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], ctx('B')).toWrite).toEqual([]);
+  });
+
+  it('TC-CR7-21i: a node the resolver cannot find writes NOTHING for that key — never a null on the trail', () => {
+    const unresolved = { resolve: () => ({ found: false as const }), version: 5, newId: () => 'synth', now: () => 'x', by: '1LoD' };
+    const plan = planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], unresolved);
+    expect(plan.toWrite).toEqual([]);
+    expect(plan.sinceLastResult).toBe(1);
+  });
+
+  it('TC-CR7-21i: the form path resolver maps the ORIGINAL ids by role, and the inputs sentinel to the sorted distinct data classes', () => {
+    const original = graph({ intake_method: 'structured_form', processing_nodes: [{ id: 'old-p', label: 'Old' } as never], output_nodes: [{ id: 'old-o', scale: 'x' } as never] });
+    const current = graph({
+      intake_method: 'structured_form',
+      processing_nodes: [{ id: 'new-p', label: 'Name' } as never],
+      output_nodes: [{ id: 'new-o', scale: 'wide' } as never],
+      input_nodes: [{ id: 'i1', data_class: 'PII' } as never, { id: 'i2', data_class: 'Internal' } as never, { id: 'i3', data_class: 'PII' } as never],
+      jurisdictions: ['UK'],
+    });
+    const r = graphValueResolver(current, original);
+    expect(r('old-p', 'label')).toEqual({ found: true, value: 'Name' });
+    expect(r('old-o', 'scale')).toEqual({ found: true, value: 'wide' });
+    expect(r('inputs', 'data_classes')).toEqual({ found: true, value: ['Internal', 'PII'] });
+    expect(r('graph', 'jurisdictions')).toEqual({ found: true, value: ['UK'] });
+    expect(r('some-other-id', 'label')).toEqual({ found: false });
   });
 
   it('TC-CR7-21g (M-B): list values compare as sets — a different order is the same correction', () => {
