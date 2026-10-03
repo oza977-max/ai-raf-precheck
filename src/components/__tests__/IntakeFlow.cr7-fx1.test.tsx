@@ -1323,3 +1323,29 @@ describe('CR8-03 — the Back guard survives the confirmation (P3)', () => {
     expect(await eventsOfType('graph_confirmed')).toHaveLength(2);
   }, 30000);
 });
+
+// CR8-08: correcting from the result hides the countries panel.
+describe('CR8-08 — correcting from the result shows the countries panel', () => {
+  it('TC-CR8-08b: Correct from the result -> the countries panel renders and a country can be ticked, recorded as a jurisdictions correction on the corrected verdict', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    await screen.findByText('Check what we read from your description');
+    expect(screen.getByText('Which countries does it involve?')).toBeInTheDocument();
+    const box = document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!;
+    expect(box.disabled).toBe(false);
+    await user.click(box);
+    expect(document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!.checked).toBe(true);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(async () => expect(await eventsOfType('verdict_corrected')).toHaveLength(1), { timeout: 5000 });
+    const hit = (await eventsOfType('graph_corrected'))
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction)
+      .find((c) => c.field === 'jurisdictions');
+    expect(hit).toBeDefined();
+  }, 30000);
+});

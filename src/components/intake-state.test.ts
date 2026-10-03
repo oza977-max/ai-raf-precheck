@@ -2269,3 +2269,13 @@ describe('planCorrectionWrites — P1: the trail ends at the graph value after a
     );
   });
 });
+
+describe('intakeReducer — correcting from the result keeps the countries panel (CR8-08)', () => {
+  it('TC-CR8-08a (reducer): CORRECT_VERDICT lands on a review whose countries are already checked (so the panel renders), as CHANGE_ANSWER and a failed evaluation already do', () => {
+    const next = intakeReducer(
+      { step: 'verdict', verdictId: 'v1' },
+      { type: 'CORRECT_VERDICT', graph: graph({ intake_method: 'llm' }), useCaseId: 'uc-1', originalVerdictId: 'v1' },
+    );
+    expect(next).toMatchObject({ step: 'graph_review', jurisdictionsConfirmed: true, originalVerdictId: 'v1' });
+  });
+});
