@@ -297,13 +297,15 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
   for (const ibCase of CASES) {
     if (await getUseCase(ibCase.id)) continue;
 
-    const graph = buildGraphFromForm(ibCase.values);
+    // B-15: the engine no longer mints its own timestamp — minted once here
+    // (t0/at, moved above the graph build) so the graph's extracted_at
+    // agrees with the use_case_created event's own at(0) below.
+    const t0 = Date.now();
+    const at = (offsetSeconds: number) => new Date(t0 + offsetSeconds * 1000).toISOString();
+    const graph = buildGraphFromForm(ibCase.values, at(0));
     const evalResult = evaluate(graph, policy, packs);
     if (!evalResult.ok) continue; // never fake what the policy cannot classify
     const result = evalResult.value;
-
-    const t0 = Date.now();
-    const at = (offsetSeconds: number) => new Date(t0 + offsetSeconds * 1000).toISOString();
     const verdict: Verdict = {
       ...result,
       id: crypto.randomUUID(),

@@ -179,12 +179,14 @@ async function runSeed(policy: PolicyFile, packs: JurisdictionPack[] = []): Prom
   for (const sample of SAMPLES) {
     if (await getUseCase(sample.id)) continue;
 
-    const graph = buildGraphFromForm(sample.values);
+    // B-15: the engine no longer mints its own timestamp — minted once here
+    // and reused for the graph and every event below, so a sample's whole
+    // audit trail agrees on when it was seeded.
+    const now = new Date().toISOString();
+    const graph = buildGraphFromForm(sample.values, now);
     const evalResult = evaluate(graph, policy, packs);
     if (!evalResult.ok) continue; // a sample the current policy cannot classify is skipped, not faked
     const result = evalResult.value;
-
-    const now = new Date().toISOString();
     const verdict: Verdict = {
       ...result,
       id: crypto.randomUUID(),

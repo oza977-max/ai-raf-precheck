@@ -69,7 +69,13 @@ export interface StructuredFormValues {
   jurisdictions: string[];
 }
 
-export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph {
+// B-15: `extractedAt` is a required parameter, not an internal default —
+// `new Date().toISOString()` inside this function was a real clock call in
+// src/engine/*, which cross-cutting.md §7 Rule 1 forbids outright (no
+// Date.now() anywhere in the engine's call graph). Every caller mints the
+// timestamp itself and passes it in; see B-15's caller list in
+// build/prompts/CR6-fixes.md for the full sweep this fix required.
+export function buildGraphFromForm(values: StructuredFormValues, extractedAt: string): DataFlowGraph {
   const processingId = crypto.randomUUID();
   const outputId = crypto.randomUUID();
 
@@ -151,6 +157,6 @@ export function buildGraphFromForm(values: StructuredFormValues): DataFlowGraph 
     ],
     jurisdictions: values.jurisdictions,
     intake_method: 'structured_form',
-    extracted_at: new Date().toISOString(),
+    extracted_at: extractedAt,
   };
 }
