@@ -186,6 +186,21 @@ export function withAuditQueue<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function appendUnqueued(event: AuditEventInput): Promise<void> {
+  try {
+    await appendOnce(event);
+  } catch (err) {
+    // A `blocking` close (db.ts — another tab or a reset wants the database)
+    // can land between taking the handle and writing. Nothing was written, so
+    // retry ONCE: openAuditDb() reopens, and freshTip() recounts and rescans.
+    if (err instanceof DOMException && err.name === 'InvalidStateError') {
+      await appendOnce(event);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function appendOnce(event: AuditEventInput): Promise<void> {
   const db = await openAuditDb();
   const current = await freshTip();
   const ms = Math.max(safeTimeMs(event.occurred_at), current.ms + 1);

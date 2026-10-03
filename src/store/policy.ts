@@ -1,7 +1,7 @@
 import { load } from 'js-yaml';
 import { z } from 'zod';
 import { CANONICAL_VOCABULARY } from '../engine/canonical-vocabulary';
-import { getUseCases } from './register';
+import { getUseCases, hasPendingPolicyUpdate } from './register';
 import { append } from './audit';
 import type { LifecycleStage } from './types';
 import type {
@@ -547,7 +547,15 @@ export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount
   const allUseCases = await getUseCases('all');
   const active = allUseCases.filter((uc) => ACTIVE_LIFECYCLE_STAGES.includes(uc.lifecycle_stage));
 
+  let queuedCount = 0;
   for (const uc of active) {
+    // CR7-06c: skip a case already queued and not yet re-evaluated — a
+    // re_evaluation_queued event NEWER than its latest verdict (the same rule
+    // the "Policy updated" banner uses). A retry after a part-way failure
+    // therefore queues each case once; a save after a later verdict queues
+    // again. Deliberately not keyed on the version string: a re-save of the
+    // same version with edited YAML must still queue.
+    if (await hasPendingPolicyUpdate([uc.use_case_id])) continue;
     // BC-P6C02-02: lifecycle_stage is NOT changed here — only queued for
     // re-evaluation. It moves to 'pre_checked' only on a human-triggered
     // re-run or a changed verdict (§8).
@@ -559,7 +567,8 @@ export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount
       actor: 'system',
       payload: { type: 're_evaluation_queued', policy_version: newVersion },
     });
+    queuedCount += 1;
   }
 
-  return { queuedCount: active.length };
+  return { queuedCount };
 }

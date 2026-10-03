@@ -243,7 +243,8 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
             <div role="alert">
               <p>
                 The policy was saved, but queuing the re-evaluations did not finish, so some active use cases may
-                not show the &quot;Policy updated&quot; notice yet.
+                not show the &quot;Policy updated&quot; notice yet. Saving again is safe: it queues only the use cases
+                not queued yet.
               </p>
             </div>
           )}

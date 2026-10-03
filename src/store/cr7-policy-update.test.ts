@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { onPolicyUpdated } from './policy';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { loadPolicy, onPolicyUpdated } from './policy';
+import { seedSampleRegister } from '../seeds/sample-register';
 import { addNode } from './register';
 import * as audit from './audit';
 import type { RegisterNode } from './types';
@@ -55,6 +58,12 @@ describe('onPolicyUpdated dedupe (CR7-06c)', () => {
     for (const id of IDS) expect(await queued(id)).toHaveLength(1);
 
     // a re-evaluation produces a newer verdict; the NEXT save must queue again
+    // a REAL verdict, produced by the seed path, re-homed onto each test case
+    const loaded = loadPolicy(readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8'));
+    if (!loaded.valid) throw new Error('fixture policy invalid');
+    await seedSampleRegister(loaded.policy);
+    const seededVerdict = (await audit.getAllForExport()).find((e) => e.payload.type === 'verdict_produced')!;
+    if (seededVerdict.payload.type !== 'verdict_produced') throw new Error('unreachable');
     for (const id of IDS) {
       await real({
         event_id: `${id}-verdict`,
@@ -62,7 +71,7 @@ describe('onPolicyUpdated dedupe (CR7-06c)', () => {
         event_type: 'verdict_produced',
         occurred_at: new Date().toISOString(),
         actor: 'system',
-        payload: { type: 'verdict_produced', verdict: {} as never, knowledge_lens_matched_entry_ids: [] },
+        payload: { type: 'verdict_produced', verdict: { ...seededVerdict.payload.verdict, use_case_id: id }, knowledge_lens_matched_entry_ids: [] },
       });
     }
     await onPolicyUpdated('cr7-06c-v1'); // same version string, edited YAML
