@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import App from '../../App';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
+import { setRole } from '../../store/role';
+import { POLICY_PROBLEM_MESSAGE } from '../plain-copy';
 
 // R16-A1 (§1.4, CF-5). The app start-up gate: checkPolicyReferences errors
 // show the "Policy file invalid" banner and name the specific bad
@@ -53,12 +55,28 @@ describe('App — R16-A1 start-up gate (CF-5)', () => {
     localStorage.clear();
   });
 
+  // CR8-13 (deliberate re-scope, code review 008): the field paths in the banner list are for whoever
+  // edits the file, so this row now runs as the 2LoD role. TC-CR8-13 covers what everyone else sees.
   it("TC-R16-A1-62: a covers_reviews reference error shows the Policy file invalid banner, naming the bad id, and evaluation is disabled", () => {
+    setRole('2LoD');
     setCurrentPolicyYaml(MINIMAL_VALID_YAML_WITH_BAD_COVERS_REVIEWS);
     render(<App />);
     expect(screen.getByText(/Policy file invalid/i)).toBeInTheDocument();
     expect(screen.getByText(/evaluation is disabled/i)).toBeInTheDocument();
     expect(screen.getByText(/CTRL-TPRM-01 covers_reviews: no review with id 'DR-VENDR-01'/)).toBeInTheDocument();
+  });
+
+  // CR8-13. Derived from: the role (store/role) and the current view. The heading stays for every role
+  // (IntakeFlow tests assert it); only the list changes.
+  it('TC-CR8-13: a 1LoD submitter sees the plain message in the banner list, not the raw field path', () => {
+    setRole('1LoD');
+    setCurrentPolicyYaml(MINIMAL_VALID_YAML_WITH_BAD_COVERS_REVIEWS);
+    render(<App />);
+    expect(screen.getByText(/Policy file invalid/i)).toBeInTheDocument();
+    expect(screen.getByText(/evaluation is disabled/i)).toBeInTheDocument();
+    const list = document.querySelector('.app-policy-invalid ul')!;
+    expect(list.textContent).toContain(POLICY_PROBLEM_MESSAGE);
+    expect(document.querySelector('.app-policy-invalid')!.textContent).not.toMatch(/covers_reviews|DR-VENDR-01|CTRL-TPRM-01/);
   });
 
   it('shows no such banner when the policy has no reference errors (the normal, shipped-policy case)', () => {
