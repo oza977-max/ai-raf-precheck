@@ -461,7 +461,12 @@ function NodeCard({
             <div className="graph-node__meaning-row">
               <dt>{questionnaireCopyForField('declared_model_id').shortLabel}</dt>
               <dd>
-                <span className="graph-node__meaning">{declaredModelId}</span>
+                {/* TC-MN-05: the same plain name the questionnaire's button
+                    and Recorded line use (plain_name ?? model_id). */}
+                <span className="graph-node__meaning">
+                  {policy?.approved_models?.find((m) => !m.is_family && m.model_id === declaredModelId)?.plain_name ??
+                    declaredModelId}
+                </span>
                 {quotes.declared_model_id ? (
                   <span
                     className="graph-node__basis"

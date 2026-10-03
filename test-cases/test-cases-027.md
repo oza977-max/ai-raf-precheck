@@ -19,6 +19,8 @@ Test file: `src/components/__tests__/QuestionnaireStep.mn.test.tsx`.
 | TC-MN-02 | Rendering the real policy, the description-path model question shows "A licensed AI model from an outside company (example)" and no button is labelled with `VENDOR-LLM-v1` |
 | TC-MN-03 | The unapproved local model also renders as a button, under "A small open model running on your own computer", and the "Recorded" line uses that name, never `qwen3:4b` |
 | TC-MN-04 | Neither plain name contains the words "approved" or "rejected" (the verdict-screen single-match query) |
+| TC-MN-05 | The review screen names a declared model by the same plain name the button used (real policy: `qwen3:4b` → "A small open model running on your own computer"), never the raw id — found in the MODEL-NAMES review |
+| TC-MN-05b | A model id the policy does not list is shown on the review screen as written |
 
 ## Amended existing cases
 
