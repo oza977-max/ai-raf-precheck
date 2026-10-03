@@ -893,6 +893,13 @@ export function extractionErrorMessage(kind: 'no-api-key' | 'network-error' | 'p
 
 export const EXTRACTION_ERROR_HELP = 'You can try again, or answer the questions yourself instead.';
 
+// CR7-37. What a person is told when the firm's own rules file cannot be used.
+// Plain, and it says whose problem it is and who can fix it — the field paths
+// and reason strings (`invariants[3].condition: …`) are for whoever edits the
+// file, so they go to the console, never into an alert a submitter reads.
+export const POLICY_PROBLEM_MESSAGE =
+  'Your firm’s rules file has a problem, so this can’t be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen.';
+
 // CR6-12 (Minor). evaluate()'s EngineError.kind used to reach the screen as
 // the raw enum string inside "Evaluation failed: {kind}", itself then
 // wrapped in "...Review your answers and try again." — every one of these

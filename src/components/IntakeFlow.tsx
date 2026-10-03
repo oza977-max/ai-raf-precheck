@@ -43,6 +43,7 @@ import {
   extractionErrorMessage,
   EXTRACTION_ERROR_HELP,
   engineErrorMessage,
+  POLICY_PROBLEM_MESSAGE,
   questionnaireCopyForField,
   vendorNotOnListValue,
   VENDOR_UNSURE_VALUE,
@@ -82,15 +83,6 @@ const CONFIRMATION_REFUSAL_MESSAGE: Record<ConfirmationRefusal, string> = {
   'corrected-elsewhere':
     "This result was corrected in another tab or window while you were working, so your correction wasn't saved. Open the case from the register to see the current result.",
 };
-
-// CR7-37. What a person is told when the firm's own rules file cannot be used.
-// Plain, and it says whose problem it is and who can fix it — the field paths
-// and reason strings (`invariants[3].condition: …`) are for whoever edits the
-// file, so they go to the console (see policyProblemDetail callers), never into
-// an alert a submitter reads. FX7-4 moves this sentence into plain-copy.ts
-// beside `engineErrorMessage`.
-const POLICY_PROBLEM_MESSAGE =
-  'Your firm’s rules file has a problem, so this can’t be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen.';
 
 // CR7-21/22 and the count of corrections on the trail: planCorrectionWrites
 // (intake-state.ts, pure and unit-tested).
