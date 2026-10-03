@@ -166,7 +166,8 @@ describe('QuestionnaireStep — vendor/declared_model_id (R16-E §2, DR7-28)', (
         policy={policy}
       />,
     );
-    expect(screen.getByRole('button', { name: /^gpt-4o$/i })).toBeInTheDocument();
+    // CR7-35: an unnamed listed model shows a neutral label, never its id.
+    expect(screen.getByRole('button', { name: /^Model 1$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^not on the list$/i })).toBeInTheDocument();
   });
 

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round UNSIGNED-MODEL (a model the firm lists but has not accepted) &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-the-unaccepted-model-says-so">&sect;1 &mdash; The unaccepted model says so</a></li>
+                <li><a href="#code-review-007-cr7-35">Code review 007 &mdash; CR7-35</a></li>
+                <li><a href="#amended-existing-cases">Amended existing cases</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round UNSIGNED-MODEL (a model the firm lists but has not accepted)</h1>
+<p class="metadata">3 October 2026 &middot; Generated from test-cases-028.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-03. The shipped <code>qwen3:4b</code> entry is listed in <code>approved_models</code> with <code>is_approved: false</code>. Its button, "Recorded" line and review-screen row now say so in the owner-approved words, and its owed model-registry review reads "your AI risk team accepting this model" instead of "adding the model to your firm's list of known models" (the model is already on the list; what is owed is the firm's acceptance). Presentation only: no engine change, no policy change, no policy version bump. Code review 007 finding CR7-35 is folded in: a listed model with no <code>plain_name</code> never shows its raw id.</em></p>
+<p>Test file: <code>src/components/__tests__/QuestionnaireStep.um.test.tsx</code> (real <code>policy/appetite.yaml</code>, BC-003).</p>
+
+<section id="1-the-unaccepted-model-says-so">
+<h2>&sect;1 &mdash; The unaccepted model says so</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-UM-01</td><td><code>qwen3:4b</code>'s button and "Recorded" line read "{plain name} &mdash; not yet accepted by your firm, so it gets an extra check"; <code>VENDOR-LLM-v1</code>'s do not</td></tr>
+<tr><td>TC-UM-02</td><td>The review-screen row for <code>qwen3:4b</code> carries the same label; <code>VENDOR-LLM-v1</code> and an unlisted id do not</td></tr>
+<tr><td>TC-UM-03</td><td>A real <code>evaluate()</code> of a case declaring <code>qwen3:4b</code> owes "your AI risk team accepting this model", never "adding the model to your firm's list"</td></tr>
+<tr><td>TC-UM-04</td><td>A case declaring a model id not in the policy still owes "adding the model to your firm's list of known models"</td></tr>
+<tr><td>TC-UM-05</td><td>The new strings contain neither "approved" nor "rejected"</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="code-review-007-cr7-35">
+<h2>Code review 007 &mdash; CR7-35</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-CR7-35a</td><td>The reference check emits a warning (never an error) naming each non-family <code>approved_models</code> entry with no <code>plain_name</code>; the real policy gives none</td></tr>
+<tr><td>TC-CR7-35b</td><td>With no <code>plain_name</code>, the button, "Recorded" line and review row show "Model n" (numbered among the unnamed, in list order, as suppliers are), keep the not-yet-accepted suffix when <code>is_approved</code> is false, and never show the raw id</td></tr>
+<tr><td>TC-CR7-35c</td><td>A declared model id not on the list is shown as written (the person typed it)</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="amended-existing-cases">
+<h2>Amended existing cases</h2>
+<table>
+<thead><tr><th>ID</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>TC-MN-03</td><td><code>qwen3:4b</code> is <code>is_approved: false</code>, so its button, "Recorded" line and review row now read its plain name plus the not-yet-accepted suffix</td></tr>
+<tr><td>TC-CR6-19</td><td>A listed model with no <code>plain_name</code> now shows "Model 1" rather than its raw id (CR7-35b)</td></tr>
+<tr><td>TC-MN-05</td><td>Same as TC-MN-03, for the review-screen row</td></tr>
+<tr><td>TC-R16-E-31b</td><td>Same as TC-CR6-19: the unnamed model's button reads "Model 1"</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
+</html>

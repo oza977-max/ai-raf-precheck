@@ -863,6 +863,8 @@ export interface ApprovedModel {
 
 **Amended 2026-10-03 (CR6-19).** `ApprovedModel` gains an optional `plain_name?: string`, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read `plain_name ?? model_id`, so a raw id such as `VENDOR-LLM-v1` no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). MODEL-NAMES (2026-10-03, policy v1.9): the owner supplied the two shipped names — `VENDOR-LLM-v1` is "A licensed AI model from an outside company (example)" (a demo placeholder, hence "(example)") and `qwen3:4b` is "A small open model running on your own computer" (TC-MN-01..04).
 
+**UNSIGNED-MODEL and CR7-35 (2026-10-03).** Labels are built by one shared helper (`approvedModelOptionList`, `plain-copy.ts`) so the button, the "Recorded:" line and the review-screen row agree. A non-family entry with `is_approved: false` reads `{plain_name} — not yet accepted by your firm, so it gets an extra check`; an entry with no `plain_name` reads a neutral `Model n` (numbered among the unnamed, in list order, as suppliers are) instead of its raw id, and `checkPolicyReferences` warns (never errors) naming each such model. A declared id the policy does not list is shown as written (TC-UM-01, 02; TC-CR7-35a..c). This supersedes the `plain_name ?? model_id` wording above.
+
 **ADR-PS-R11-1a — matching is exact-id-first, family-fallback; never
 weakens Track II pinning.** `resolveApprovedModel(declaredModelId, registry)`
 checks for an exact `model_id` match first; only if none exists does it

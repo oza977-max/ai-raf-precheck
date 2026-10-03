@@ -26,6 +26,7 @@ import {
   SUMMARY_REVERSIBILITY,
   SUMMARY_MULTI_INSTANCE,
   supplierDisplayName,
+  approvedModelLabelFor,
 } from './plain-copy';
 import { FIELD_CONSEQUENCES } from './field-copy';
 
@@ -464,8 +465,7 @@ function NodeCard({
                 {/* TC-MN-05: the same plain name the questionnaire's button
                     and Recorded line use (plain_name ?? model_id). */}
                 <span className="graph-node__meaning">
-                  {policy?.approved_models?.find((m) => !m.is_family && m.model_id === declaredModelId)?.plain_name ??
-                    declaredModelId}
+                  {approvedModelLabelFor(policy?.approved_models, declaredModelId) ?? declaredModelId}
                 </span>
                 {quotes.declared_model_id ? (
                   <span

@@ -1241,3 +1241,35 @@ export function neutralPlatformLabel(n: number): string {
 export function neutralSupplierLabel(n: number): string {
   return `Supplier ${n}`;
 }
+
+/** UNSIGNED-MODEL (owner-approved 2026-10-03): the one label for a model the
+ *  policy lists — button, "Recorded:" line and review row all read it. A
+ *  listed model the firm has not accepted (is_approved false) says so. */
+export const UNACCEPTED_MODEL_SUFFIX = ' — not yet accepted by your firm, so it gets an extra check';
+export function neutralModelLabel(n: number): string {
+  return `Model ${n}`;
+}
+
+/** The label of every listed (non-family) model, in the list's own order.
+ *  A model with no plain_name gets a numbered neutral label — never the raw
+ *  id (CR7-35b) — numbered only among the unnamed, as suppliers are. */
+export function approvedModelOptionList(
+  models: ReadonlyArray<{ model_id: string; plain_name?: string; is_approved: boolean; is_family?: boolean }> | undefined,
+): Array<{ value: string; label: string }> {
+  let neutralIndex = 0;
+  return (models ?? [])
+    .filter((m) => !m.is_family)
+    .map((m) => {
+      const base = m.plain_name ?? neutralModelLabel(++neutralIndex);
+      return { value: m.model_id, label: m.is_approved === false ? base + UNACCEPTED_MODEL_SUFFIX : base };
+    });
+}
+
+/** The label for a declared model id, or undefined when the policy does not
+ *  list it (the caller then shows what the person typed, as written). */
+export function approvedModelLabelFor(
+  models: Parameters<typeof approvedModelOptionList>[0],
+  modelId: string,
+): string | undefined {
+  return approvedModelOptionList(models).find((o) => o.value === modelId)?.label;
+}

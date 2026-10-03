@@ -198,6 +198,13 @@ function registryPlainNameWarnings(kind: 'platform' | 'vendor', entries: Registr
     );
 }
 
+// CR7-35a: a listed model with no plain_name is shown as "Model n", never its id.
+function modelPlainNameWarnings(models: PolicyFile['approved_models']): string[] {
+  return (models ?? [])
+    .filter((m) => !m.is_family && !m.plain_name)
+    .map((m) => `approved_models ${m.model_id}: no plain_name set — shown as a neutral label ("Model" + a number) on the form until one is added`);
+}
+
 function invariantWarnings(inv: Invariant): string[] {
   return [
     ...placeholderWarnings(`${inv.id} plain_reason`, inv.plain_reason),
@@ -281,6 +288,7 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
 
   warnings.push(...registryPlainNameWarnings('platform', policy.platforms));
   warnings.push(...registryPlainNameWarnings('vendor', policy.vendors));
+  warnings.push(...modelPlainNameWarnings(policy.approved_models));
 
   for (const pack of [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id))) {
     for (const rule of sortedById(pack.rules)) {

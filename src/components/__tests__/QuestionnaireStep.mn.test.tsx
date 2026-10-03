@@ -12,7 +12,9 @@ import type { DataFlowGraph, IntakeQuestion, PolicyFile } from '../../engine/typ
 // follow-up). These tests read the REAL policy/appetite.yaml (BC-003).
 
 const VENDOR_NAME = 'A licensed AI model from an outside company (example)';
-const LOCAL_NAME = 'A small open model running on your own computer';
+// UNSIGNED-MODEL: qwen3:4b is is_approved false, so its label (button, Recorded
+// line, review row) now carries the owner-approved suffix after the plain name.
+const LOCAL_NAME = 'A small open model running on your own computer — not yet accepted by your firm, so it gets an extra check';
 
 const result = loadPolicy(readFileSync(resolve(__dirname, '../../../policy/appetite.yaml'), 'utf-8'));
 if (!result.valid) throw new Error('shipped policy invalid: ' + JSON.stringify(result));

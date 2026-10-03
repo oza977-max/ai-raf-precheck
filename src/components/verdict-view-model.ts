@@ -459,6 +459,9 @@ interface ReviewInstance {
 // supplier is assessed — one piece of work.)" — grammatically broken.
 const PV_UNREGISTERED_PLAIN = { name: "adding the supplier to your firm's list", owner: 'your vendor-risk team' };
 const MODEL_REGISTRY_PLAIN = { name: "adding the model to your firm's list of known models", owner: 'your AI risk team' };
+// UNSIGNED-MODEL: a model the firm lists but has not accepted owes the firm's
+// acceptance, not a registry entry it already has.
+const MODEL_UNACCEPTED_PLAIN = { name: 'your AI risk team accepting this model', owner: 'your AI risk team' };
 // §4.4: "pack review → 'a regulatory review required for this kind of use —
 // ask your AI risk team which'" (D-15). Every base id that is neither a firm
 // downstream_reviews id nor one of the two sentinels is, by §1.3's
@@ -479,9 +482,16 @@ function resolveReviewPlain(
   policy: PolicyFile | undefined,
   packs: JurisdictionPack[] = [],
   formalReview?: string,
+  ruleId?: string,
 ): { name: string; owner: string } {
   if (baseId === 'PV-UNREGISTERED') return PV_UNREGISTERED_PLAIN;
-  if (baseId === 'MODEL-REGISTRY') return MODEL_REGISTRY_PLAIN;
+  if (baseId === 'MODEL-REGISTRY') {
+    // The model id is everything after the first ":" (ids such as qwen3:4b
+    // carry their own colon).
+    const modelId = ruleId !== undefined ? ruleId.slice(ruleId.indexOf(':') + 1) : undefined;
+    const listed = modelId !== undefined && policy?.approved_models?.some((m) => !m.is_family && m.model_id === modelId && m.is_approved === false);
+    return listed ? MODEL_UNACCEPTED_PLAIN : MODEL_REGISTRY_PLAIN;
+  }
   const firmRule: DownstreamReviewRule | undefined = policy?.downstream_reviews?.find((r) => r.id === baseId);
   if (firmRule) {
     return {
@@ -516,7 +526,7 @@ function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, 
   if (sources !== undefined) {
     return sources.map((s) => {
       const baseId = baseReviewId(s.rule_id);
-      const { name, owner } = resolveReviewPlain(baseId, policy, packs, s.review);
+      const { name, owner } = resolveReviewPlain(baseId, policy, packs, s.review, s.rule_id);
       return { baseId, formalName: s.review, plainName: name, ownerText: owner };
     });
   }

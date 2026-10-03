@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DataFlowGraph, IntakeQuestion, PolicyFile, QuestionAnswer } from '../engine/types';
-import { neutralSupplierLabel, questionnaireCopyForField, type QuestionnaireFieldCopy, supplierDisplayName } from './plain-copy';
+import { approvedModelOptionList, neutralSupplierLabel, questionnaireCopyForField, type QuestionnaireFieldCopy, supplierDisplayName } from './plain-copy';
 import { fillPlaceholders, joinWithAnd } from './verdict-view-model';
 
 // UC-4 (intake-flow.md §6). Rule 4 (cross-cutting.md §7): presentation-only.
@@ -28,9 +28,7 @@ function supplierVendorOptions(policy: PolicyFile | undefined): Array<{ value: s
 }
 
 function approvedModelOptions(policy: PolicyFile | undefined): Array<{ value: string; label: string }> {
-  return (policy?.approved_models ?? [])
-    .filter((m) => !m.is_family)
-    .map((m) => ({ value: m.model_id, label: m.plain_name ?? m.model_id }));
+  return approvedModelOptionList(policy?.approved_models);
 }
 
 /** The "Recorded:" line (BC-4): the chosen option LABEL(s), never the raw

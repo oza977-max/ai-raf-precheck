@@ -43,13 +43,14 @@ const policy = minimalPolicy({
 });
 
 describe('QuestionnaireStep — CR6-19: a model with a plain name is shown by it', () => {
-  it('TC-CR6-19: button label and the Recorded line use plain_name, falling back to model_id', () => {
+  it('TC-CR6-19: button label and the Recorded line use plain_name, falling back to a neutral "Model n" (CR7-35: never the raw id)', () => {
     const { rerender } = render(
       <QuestionnaireStep questions={[question()]} answeredCount={0} onAnswer={vi.fn()} policy={policy} />,
     );
     expect(screen.getByRole('button', { name: /^your firm.s approved writing assistant$/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^VENDOR-LLM-v1$/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^gpt-4o$/ })).toBeInTheDocument(); // no plain_name: the id
+    expect(screen.getByRole('button', { name: /^Model 1$/ })).toBeInTheDocument(); // no plain_name: neutral label, not the id (CR7-35)
+    expect(screen.queryByRole('button', { name: /gpt-4o/ })).not.toBeInTheDocument();
 
     rerender(
       <QuestionnaireStep
