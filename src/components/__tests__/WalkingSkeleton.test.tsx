@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
+import { fillText, SLOW_FLOW_MS, DUP_CHECK_WAIT } from './fillText';
 
 // TDD-2 mock budget = 1: the only mock is the external boundary (Anthropic SDK).
 // Everything else — IndexedDB via fake-indexeddb, React rendering — is real.
@@ -103,14 +104,14 @@ describe('Walking Skeleton', () => {
   });
 
   it('completes full flow end-to-end with real boundaries', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     // Step 1: description entry
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'A tool that drafts client emails for relationship managers, pulling recent meeting notes, pending requests, preferred greeting style, signature blocks, and followup reminders into a polished first draft' + DETAIL);
+    await fillText(user, input, 'A tool that drafts client emails for relationship managers, pulling recent meeting notes, pending requests, preferred greeting style, signature blocks, and followup reminders into a polished first draft' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
 
     // Step 2: graph extraction happened (real Anthropic tool_use call, mocked at the SDK boundary)
     // and the graph review step renders the extracted node.
@@ -149,18 +150,18 @@ describe('Walking Skeleton', () => {
     // raw 'pre_checked' enum.
     await user.selectOptions(screen.getByLabelText(/viewing as/i), '2LoD');
     expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C02: routes to the structured form on the no-api-key path and completes end-to-end without any LLM call [TC-NF-4-01]', async () => {
     localStorage.clear(); // no API key configured
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'A tool that drafts client emails');
+    await fillText(user, input, 'A tool that drafts client emails');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
 
     // Structured intake banner renders instead of the old dead-end message.
     expect(await screen.findByText(/new pre-check — tell us about the ai you want to use/i)).toBeInTheDocument();
@@ -172,13 +173,13 @@ describe('Walking Skeleton', () => {
     // need, same as the retired "Zone B" + unset-vendor combination), a
     // draft a person checks, internal-only, non-binding, reversible,
     // limited, no jurisdiction named.
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafting tool');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'Email drafting tool');
     // R16-W W-1 (D-67): question 2 now starts pre-filled with the first
     // screen's own description — clear it first so this fixture's own
     // wording is what ends up recorded, matching this test's pre-R16-W
     // behaviour exactly.
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
     await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
     // R16-W W-9 (D-79): PLAT-INTERNAL-ML allows both Zone B and Zone C, so
     // the new follow-up is required. "No — the platform passes it to an
@@ -229,7 +230,7 @@ describe('Walking Skeleton', () => {
     // Self-verifying, not just structurally implied: the LLM boundary was
     // never touched on the no-api-key path (review finding, pass 1).
     expect(mockCreate).not.toHaveBeenCalled();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C03: an uncertain node generates a real question, answering it reaches a verdict', async () => {
     mockCreate.mockResolvedValueOnce({
@@ -269,13 +270,13 @@ describe('Walking Skeleton', () => {
       ],
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'A risk scoring tool for internal use');
+    await fillText(user, input, 'A risk scoring tool for internal use');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
 
     expect((await screen.findAllByText(/risk scoring model/i)).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
@@ -300,7 +301,7 @@ describe('Walking Skeleton', () => {
       const submitAnswer = screen.queryByRole('button', { name: /submit answer/i });
       if (submitAnswer) {
         const textbox = screen.getByLabelText(/your answer/i);
-        await user.type(textbox, 'test answer');
+        await fillText(user, textbox, 'test answer');
         await user.click(submitAnswer);
         continue;
       }
@@ -313,7 +314,7 @@ describe('Walking Skeleton', () => {
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P4-C04: writes graph_confirmed then verdict_produced to the audit trail, in order, before showing the verdict (TC-UC-6-01/02/03)', async () => {
     const uniqueLabel = 'audit ordering check model';
@@ -355,13 +356,13 @@ describe('Walking Skeleton', () => {
       ],
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Audit ordering check: verifies that confirmation events precede verdict events, replaying sequence numbers, timestamps, writer identities, and tie breaking behaviour across rapid consecutive submissions' + DETAIL);
+    await fillText(user, input, 'Audit ordering check: verifies that confirmation events precede verdict events, replaying sequence numbers, timestamps, writer identities, and tie breaking behaviour across rapid consecutive submissions' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
@@ -444,12 +445,12 @@ describe('Walking Skeleton', () => {
       ],
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Double click guard: protects the confirm button against impatient repeated presses, suppressing duplicate submissions, stray keyboard activations, and bouncing touchscreen taps during slow renders' + DETAIL);
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Double click guard: protects the confirm button against impatient repeated presses, suppressing duplicate submissions, stray keyboard activations, and bouncing touchscreen taps during slow renders' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
@@ -515,13 +516,13 @@ describe('Walking Skeleton', () => {
       ],
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Correction survival check: carries a reviewer edited field through questionnaire, attestation, persistence, and ledger entry without losing that human override anywhere downstream' + DETAIL);
+    await fillText(user, input, 'Correction survival check: carries a reviewer edited field through questionnaire, attestation, persistence, and ledger entry without losing that human override anywhere downstream' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
 
     // Make a real correction in graph_review before proceeding — V1.1-C01:
@@ -586,14 +587,14 @@ describe('Walking Skeleton', () => {
       content: [{ type: 'tool_use', name: 'extract_graph', input: buildGraphInput() }],
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     // First pass: reach a verdict normally.
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Quartz xylophone probe intake: calibrates resonant percussion sensors, logging amplitude drift, harmonic distortion, bar temperature, mallet hardness, and tuning fork reference offsets nightly' + DETAIL);
+    await fillText(user, input, 'Quartz xylophone probe intake: calibrates resonant percussion sensors, logging amplitude drift, harmonic distortion, bar temperature, mallet hardness, and tuning fork reference offsets nightly' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
@@ -651,7 +652,7 @@ describe('Walking Skeleton', () => {
         originalVerdictEvent.payload.type === 'verdict_produced' ? originalVerdictEvent.payload.verdict.id : undefined,
       );
     }
-  });
+  }, SLOW_FLOW_MS);
 
   it('a genuine engine failure (no-track-match) shows an error and returns to graph_review instead of hanging on "Evaluating..." forever (live-found gap, now fixed)', async () => {
     localStorage.clear(); // no API key — structured form path, reproduces the exact scenario found live
@@ -678,13 +679,13 @@ describe('Walking Skeleton', () => {
     );
     setCurrentPolicyYaml(holed);
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'No track match check');
+    await fillText(user, input, 'No track match check');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(/new pre-check — tell us about the ai you want to use/i)).toBeInTheDocument();
 
     // R16-B: adapted to the new questions, same no-track-match scenario —
@@ -692,10 +693,10 @@ describe('Walking Skeleton', () => {
     // documents") matches no track in the holed policy above; "read"
     // conveniently keeps the same non-binding, no-6a-follow-up shape the
     // retired form field had.
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'No track match tool');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'No track match tool');
     // R16-W W-1 (D-67): see the earlier test's comment on the same clear().
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A tool with no matching track rule.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'A tool with no matching track rule.');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(screen.getByRole('radio', { name: /recognises things in images, sound or documents/i }));
     await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
@@ -725,28 +726,28 @@ describe('Walking Skeleton', () => {
     // this test used to check for "Confirm what we understood"
     // (graph_review's heading), which this path cannot reach.
     expect(await screen.findByLabelText(/what do you want to call it/i)).toHaveValue('No track match tool');
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-LC-2-02 (P6-C02): a High-tier verdict routes the register node to lifecycle_stage "pre_checked" pending 2LoD approval, not auto-approved', async () => {
     localStorage.clear(); // no API key — structured form path, deterministic tier
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'High tier routing check');
+    await fillText(user, input, 'High tier routing check');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(/new pre-check — tell us about the ai you want to use/i)).toBeInTheDocument();
 
     // R16-B: adapted to the new questions — traditional-ml via "gives a
     // score..." + "they can show which factors drove each result",
     // suggests/recommend with material weight, client-facing exposure
     // (still the TIER-HIGH trigger, policy/appetite.yaml).
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'High tier tool');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'High tier tool');
     // R16-W W-1 (D-67): see the earlier test's comment on the same clear().
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Client-facing decision support.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Client-facing decision support.');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(screen.getByRole('radio', { name: /gives a score, ranking, flag, category or forecast/i }));
     await user.click(screen.getByRole('radio', { name: /they can show which factors drove each result/i }));
@@ -778,7 +779,7 @@ describe('Walking Skeleton', () => {
     // STAGE_LABELS plain word ("Awaiting 2LoD sign-off"), not the raw
     // 'pre_checked' enum — same assertion, updated text.
     expect(await screen.findByRole('button', { name: 'Awaiting 2LoD sign-off' })).toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('P5-C02: the real LLM-generated reasoning trace renders in the verdict details section', async () => {
     // Distinguish calls by shape, not by queue order: extractGraph() and
@@ -794,19 +795,23 @@ describe('Walking Skeleton', () => {
       };
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy: projects pipe fitting, valve, gasket, solder, flange, and copper elbow stock levels per warehouse, seasonal demand, supplier lead times, and reorder cadence' + DETAIL);
+    await fillText(user, input, 'Zxqvw plumbing inventory forecaster xyzzy: projects pipe fitting, valve, gasket, solder, flange, and copper elbow stock levels per warehouse, seasonal demand, supplier lead times, and reorder cadence' + DETAIL);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
     expect(await screen.findByText(/check what we read from your description/i)).toBeInTheDocument();
     await confirmAllNodes(user);
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
-    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+    // FX7-6: slow IndexedDB, not an early read — this wait follows the
+    // graph confirmation's case lock and hash-chained writes, which can pass
+    // the 1 s default on a loaded machine. Same precedent as
+    // confirmAndReachVerdict in IntakeFlow.r16d2.test.tsx.
+    await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }, { timeout: 5000 }));
 
-    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
+    expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 })).toBeInTheDocument();
     await user.click(screen.getByText(/reasoning trace/i));
     expect(
       await screen.findByText(/track ii applies because the model produces a quantitative recommendation/i),
@@ -814,7 +819,7 @@ describe('Walking Skeleton', () => {
   });
 
   it('TC-LC-4-02 (P7-C01): Counterpoise evaluates itself on first launch and appears in the register with a real verdict, without any user action', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     // No submission action taken — the seed fires from a mount effect, not
@@ -854,7 +859,7 @@ describe('Walking Skeleton', () => {
   // real-save assertions below (queued count, header policy version bump)
   // are otherwise unchanged.
   it('P7-C03 Part B: saving a valid policy via the Appetite framework editor is a real save — queues re-evaluation for existing active use cases and updates the header\'s policy version', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     await user.click(screen.getByText('§ Appetite framework'));
@@ -928,11 +933,11 @@ describe('Walking Skeleton', () => {
       },
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
     // High keyword overlap with the seeded label -> keyword duplicate hit.
-    await user.type(input, 'quorix zenbat flumtrek checker');
+    await fillText(user, input, 'quorix zenbat flumtrek checker');
     await user.click(screen.getByRole('button', { name: /^next/i }));
 
     // V2-B: the duplicate check is a GATE — the card renders at the
@@ -972,9 +977,9 @@ describe('Walking Skeleton', () => {
       },
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'brindle vexomat quarlune probe');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'brindle vexomat quarlune probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
 
     // V2-B gate: 2LoD sees the full match detail at the duplicate step.
@@ -993,20 +998,20 @@ describe('Walking Skeleton', () => {
 describe('Register row naming (charter 004 D-004)', () => {
   it('titles the use case after the system, not after its input node', async () => {
     localStorage.clear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'A tool that drafts client emails');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A tool that drafts client emails');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
 
     await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
     // R16-B: adapted to the new questions — same Client PII / in-house
     // platform (Zone B, vendor internal) / drafted-for-review scenario.
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Mortgage servicing assistant');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'Mortgage servicing assistant');
     // R16-W W-1 (D-67): see the earlier test's comment on the same clear().
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts servicing letters.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Drafts servicing letters.');
     await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
     // R16-W W-9 (D-79): PLAT-INTERNAL-ML allows both Zone B and Zone C, so
     // the new follow-up is required. "No — the platform passes it to an
@@ -1041,7 +1046,7 @@ describe('Register row naming (charter 004 D-004)', () => {
     // The register lists AI systems. Its row is the system's name.
     expect(await screen.findByText('Mortgage servicing assistant')).toBeInTheDocument();
     expect(screen.queryByText(/Mortgage servicing assistant — input/)).not.toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 });
 
 // Round 4 — charter 004 D-001. The description was captured, used for
@@ -1050,13 +1055,13 @@ describe('Register row naming (charter 004 D-004)', () => {
 describe('The submitted description is shown back (charter 004 D-001)', () => {
   it('renders what the user typed on the graph review screen [TC-UC-1-01]', async () => {
     localStorage.clear();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const typed = 'A tool that drafts client emails from CRM notes';
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), typed);
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), typed);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i}));
+    await user.click(await screen.findByRole('button', { name: /continue →/i}, DUP_CHECK_WAIT));
 
     await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
     // R16-W W-1 (D-67, charter 004 D-001's own guarantee carried onto the
@@ -1071,9 +1076,9 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
 
     // R16-B: adapted to the new questions — same Client PII / in-house
     // platform (Zone B, vendor internal) / drafted-for-review scenario.
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Email drafter');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'Email drafter');
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts emails.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Drafts emails.');
     await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
     // R16-W W-9 (D-79): PLAT-INTERNAL-ML allows both Zone B and Zone C, so
     // the new follow-up is required. "No — the platform passes it to an
@@ -1097,5 +1102,5 @@ describe('The submitted description is shown back (charter 004 D-001)', () => {
 
     // R16-W W-3 (D-69): the form path reaches the summary directly.
     await screen.findByText(/here.s what we understood/i);
-  });
+  }, SLOW_FLOW_MS);
 });

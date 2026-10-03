@@ -5,6 +5,7 @@ import App from '../../App';
 import { getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
 import type { GraphCorrection } from '../../engine/types';
+import { fillText, DUP_CHECK_WAIT, SLOW_FLOW_MS } from './fillText';
 
 // R16-D2 §5 (D-82, DR7-17/DR7-22). Integration-level coverage for
 // correcting a form-built verdict THROUGH THE FORM: the correction stays
@@ -28,9 +29,9 @@ beforeEach(() => {
 
 async function fillMinimalForm(user: ReturnType<typeof userEvent.setup>, name: string, description: string) {
   await user.clear(screen.getByLabelText(/what do you want to call it/i));
-  await user.type(screen.getByLabelText(/what do you want to call it/i), name);
+  await fillText(user, screen.getByLabelText(/what do you want to call it/i), name);
   await user.clear(screen.getByLabelText(/in a sentence or two/i));
-  await user.type(screen.getByLabelText(/in a sentence or two/i), description);
+  await fillText(user, screen.getByLabelText(/in a sentence or two/i), description);
   await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
   await user.click(
     screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
@@ -47,9 +48,9 @@ async function fillMinimalForm(user: ReturnType<typeof userEvent.setup>, name: s
 
 async function reachFormScreen(user: ReturnType<typeof userEvent.setup>, description: string) {
   render(<App />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
 }
 
@@ -70,7 +71,7 @@ async function clickThroughToConfirm(user: ReturnType<typeof userEvent.setup>) {
     const explain = screen.queryByRole('textbox', { name: /explain|resolution/i });
     const resolveButton = screen.queryByRole('button', { name: /resolve|continue/i });
     if (explain && resolveButton) {
-      await user.type(explain, 'Explained for the test.');
+      await fillText(user, explain, 'Explained for the test.');
       await user.click(resolveButton);
       continue;
     }
@@ -94,8 +95,12 @@ async function confirmAndReachVerdict(user: ReturnType<typeof userEvent.setup>) 
 }
 
 describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR7-17/DR7-22)', () => {
+  // FX7-6: each test here is two complete form-to-verdict flows (the original
+  // and its correction) — the point of the file — so each gets SLOW_FLOW_MS (15 s) instead
+  // of the 5 s default; a loaded machine ran them past 5 s even after the
+  // cheaper fill. The same reason applies to the next three tests.
   it('TC-R16-D2-48: "Correct" re-opens the FORM filled in, with the correction note, writes form-sourced graph_corrected events against the original case, then verdict_corrected — never a second use_case_created', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill correction probe one';
     await reachFormScreen(user, label);
     await fillMinimalForm(user, label, 'Sorts internal documents for the correction test.');
@@ -129,7 +134,7 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     // correction (label is diffable; nothing else on the graph moves).
     const correctedLabel = `${label} (corrected)`;
     await user.clear(nameInput);
-    await user.type(nameInput, correctedLabel);
+    await fillText(user, nameInput, correctedLabel);
     await confirmAndReachVerdict(user);
 
     const afterEvents = await getAll(useCase!.use_case_id);
@@ -167,10 +172,10 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
       expect(verdictCorrected!.payload.corrections_count).toBe(2);
       expect(verdictCorrected!.payload.new_verdict.graph_version).toBe(corrections[0]!.graph_version_after);
     }
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-49 (F2C-6): resubmitting the form with NOTHING changed writes verdict_corrected with zero graph_corrected events', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill correction probe two';
     await reachFormScreen(user, label);
     await fillMinimalForm(user, label, 'Zero-change resubmission test.');
@@ -190,10 +195,10 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     if (verdictCorrected!.payload.type === 'verdict_corrected') {
       expect(verdictCorrected!.payload.corrections_count).toBe(0);
     }
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-50: "Change an answer" during a form correction keeps the correction — the eventual re-confirm still writes verdict_corrected, never refused as "already has a result"', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill correction probe three';
     await reachFormScreen(user, label);
     await fillMinimalForm(user, label, 'Change-an-answer-mid-correction test.');
@@ -217,10 +222,10 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     expect(events.filter((e) => e.payload.type === 'verdict_corrected')).toHaveLength(1);
     // Never refused: the F-1 alert never appears.
     expect(screen.queryByText(/already has a result/i)).not.toBeInTheDocument();
-  });
+  }, SLOW_FLOW_MS);
 
   it('TC-R16-D2-51: a double-click on "Confirm and evaluate" during a form correction writes exactly one verdict_corrected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill correction probe four';
     await reachFormScreen(user, label);
     await fillMinimalForm(user, label, 'Double-click guard during correction test.');
@@ -241,5 +246,5 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
 
     const events = await getAll(useCase.use_case_id);
     expect(events.filter((e) => e.payload.type === 'verdict_corrected')).toHaveLength(1);
-  });
+  }, SLOW_FLOW_MS);
 });
