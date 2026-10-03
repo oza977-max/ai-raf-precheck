@@ -146,7 +146,7 @@ describe('PolicyEditor save (CR7-06)', () => {
   it('TC-CR7-06a: Save is disabled while the save is running', async () => {
     let release!: () => void;
     vi.mocked(policyStore.onPolicyUpdated).mockImplementationOnce(
-      () => new Promise((resolve) => { release = () => resolve({ queuedCount: 0 }); }),
+      () => new Promise((resolve) => { release = () => resolve({ queuedCount: 0, alreadyPendingCount: 0 }); }),
     );
     await pasteAndOpen('cr7-06a2');
     fireEvent.click(screen.getByRole('button', { name: /^sav/i }));

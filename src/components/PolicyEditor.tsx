@@ -34,7 +34,8 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
   const [result, setResult] = useState<
     | { status: 'idle' }
     | { status: 'validated'; warnings: string[] }
-    | { status: 'saved'; queuedCount: number }
+    | { status: 'saved'; queuedCount: number; alreadyPendingCount: number }
+    | { status: 'store-failed' }
     | { status: 'error'; errors: PolicyValidationError[] }
     | { status: 'save-failed' }
   >({ status: 'idle' });
@@ -120,11 +121,18 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
     saveInFlight.current = true;
     setSaving(true);
     try {
-      setCurrentPolicyYaml(yaml);
+      try {
+        setCurrentPolicyYaml(yaml);
+      } catch {
+        // Storage quota or blocked storage: nothing was stored and nothing was
+        // queued, so the alert must not say "saved" or invite a retry as safe.
+        setResult({ status: 'store-failed' });
+        return;
+      }
       // BC-P7C03-01: a real call, queuing real re_evaluation_queued audit
       // events for real active use cases — not a simulated message.
-      const { queuedCount } = await onPolicyUpdated(outcome.policy.version);
-      setResult({ status: 'saved', queuedCount });
+      const { queuedCount, alreadyPendingCount } = await onPolicyUpdated(outcome.policy.version);
+      setResult({ status: 'saved', queuedCount, alreadyPendingCount });
       onSaved?.();
     } catch {
       // The YAML itself WAS stored (setCurrentPolicyYaml ran first); only the
@@ -234,8 +242,15 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
             <div role="status">
               <p>
                 Policy saved — {result.queuedCount} active use case{result.queuedCount === 1 ? '' : 's'} queued for
-                re-evaluation.
+                re-evaluation
+                {result.alreadyPendingCount > 0 ? ` (${result.alreadyPendingCount} already waiting)` : ''}.
               </p>
+            </div>
+          )}
+
+          {result.status === 'store-failed' && (
+            <div role="alert">
+              <p>The policy could not be saved to this browser.</p>
             </div>
           )}
 

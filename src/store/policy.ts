@@ -543,11 +543,12 @@ const ACTIVE_LIFECYCLE_STAGES: readonly LifecycleStage[] = ['approved', 'in_prod
 // count — no existing caller used the return value, so this is a
 // non-breaking change. Lets PolicyEditor.tsx's Save flow report an
 // honest "N use cases queued" message instead of a vague confirmation.
-export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount: number }> {
+export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount: number; alreadyPendingCount: number }> {
   const allUseCases = await getUseCases('all');
   const active = allUseCases.filter((uc) => ACTIVE_LIFECYCLE_STAGES.includes(uc.lifecycle_stage));
 
   let queuedCount = 0;
+  let alreadyPendingCount = 0;
   for (const uc of active) {
     // CR7-06c: skip a case already queued and not yet re-evaluated — a
     // re_evaluation_queued event NEWER than its latest verdict (the same rule
@@ -555,7 +556,15 @@ export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount
     // therefore queues each case once; a save after a later verdict queues
     // again. Deliberately not keyed on the version string: a re-save of the
     // same version with edited YAML must still queue.
-    if (await hasPendingPolicyUpdate([uc.use_case_id])) continue;
+    // A skipped case keeps its EARLIER queued event, which names the policy
+    // version of that earlier save — not newVersion. That is accurate: the
+    // event records when the case was queued and under which version, and the
+    // case is still waiting for its re-evaluation, which will run against the
+    // current policy whichever save queued it.
+    if (await hasPendingPolicyUpdate([uc.use_case_id])) {
+      alreadyPendingCount += 1;
+      continue;
+    }
     // BC-P6C02-02: lifecycle_stage is NOT changed here — only queued for
     // re-evaluation. It moves to 'pre_checked' only on a human-triggered
     // re-run or a changed verdict (§8).
@@ -570,5 +579,5 @@ export async function onPolicyUpdated(newVersion: string): Promise<{ queuedCount
     queuedCount += 1;
   }
 
-  return { queuedCount };
+  return { queuedCount, alreadyPendingCount };
 }
