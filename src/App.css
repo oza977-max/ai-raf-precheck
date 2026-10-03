@@ -8,11 +8,12 @@
 :root {
   --ink: #1c1b18;
   --ink-soft: #4a463d;
-  --ink-faint: #857f70;
+  --ink-faint: #686253;
   --cream: #f3f0e8;
   --paper: #e9e6dd;
   --card-bg: #fcfbf7;
   --card-border: #d8d3c7;
+  --control-border: #7d7869;
   --rule: #ddd;
   --header-bg: #1c1b18;
   --header-text: #f3f0e8;
@@ -21,7 +22,7 @@
   --navy-hover: #253c58;
   --warn-bg: #fdf3e6;
   --warn-border: #c8791a;
-  --warn-text: #8f6a2f;
+  --warn-text: #7a5a22;
   --critical: #a8322a;
   --high: #b5651d;
   --medium: #8a7a2a;
@@ -607,7 +608,7 @@ select {
   font-family: inherit;
   font-size: 0.95rem;
   padding: 0.6rem 0.7rem;
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   background: var(--card-bg);
   color: var(--ink);
