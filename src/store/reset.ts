@@ -45,6 +45,10 @@ function deleteDatabase(name: string): Promise<DeleteOutcome> {
 // Callers must reload the page afterwards — src/store/db.ts caches its
 // open-database promises at module scope, so in-memory handles survive
 // the delete until the module is re-evaluated.
+// CR8-16: what this clears (role, hand-off marker, welcome flag, both databases;
+// the panel adds the intake drafts) is named in SettingsPanel's confirmation and
+// incomplete messages, and TC-CR8-16c pins the localStorage keys. Change one,
+// change the other.
 export async function clearAllLocalData(): Promise<{ complete: boolean; incomplete: string[] }> {
   localStorage.removeItem('aigate:role');
   // CR7-15: "start over" also forgets that a hand-off ever synced (that marker
