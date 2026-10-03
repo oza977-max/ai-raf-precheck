@@ -38,7 +38,7 @@ describe('clearAllLocalData (CR7-20, CR7-15)', () => {
     expect((await A.verifyChain()).ok).toBe(true);
   });
 
-  it('TC-CR7-15: clears the hand-off sync marker and the welcome flag, keeps the policy and model settings', async () => {
+  it('TC-CR7-15-4: clears the hand-off sync marker and the welcome flag, keeps the policy and model settings', async () => {
     localStorage.setItem('aigate-handoff-last-synced-tip', 'abc');
     localStorage.setItem('aigate:welcome-dismissed', '1');
     localStorage.setItem('aigate:role', '2LoD');

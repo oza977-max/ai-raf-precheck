@@ -53,7 +53,7 @@ async function eventsByType(type: string) {
 }
 
 describe('seeds across two tabs (CR7-18)', () => {
-  it('TC-CR7-18: two module instances seeding the sample register at once write one set of events', async () => {
+  it('TC-CR7-18-1: two module instances seeding the sample register at once write one set of events', async () => {
     const A = await import('./sample-register');
     vi.resetModules();
     const B = await import('./sample-register');
@@ -66,7 +66,7 @@ describe('seeds across two tabs (CR7-18)', () => {
     expect((await audit.verifyChain()).ok).toBe(true);
   });
 
-  it('TC-CR7-18: two module instances seeding the investment-bank portfolio at once write one set of events', async () => {
+  it('TC-CR7-18-2: two module instances seeding the investment-bank portfolio at once write one set of events', async () => {
     const A = await import('./ib-portfolio');
     vi.resetModules();
     const B = await import('./ib-portfolio');
@@ -77,7 +77,7 @@ describe('seeds across two tabs (CR7-18)', () => {
     expect(new Set(created.map((e) => e.use_case_id)).size).toBe(A.ibCaseCount());
   });
 
-  it('TC-CR7-18: two module instances seeding the self-assessment at once write it once', async () => {
+  it('TC-CR7-18-3: two module instances seeding the self-assessment at once write it once', async () => {
     const A = await import('./aigate-self-assessment');
     vi.resetModules();
     const B = await import('./aigate-self-assessment');

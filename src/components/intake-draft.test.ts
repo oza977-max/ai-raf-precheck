@@ -229,30 +229,30 @@ describe('clearDraftIfCase â€” an abandoned confirm or adopt cannot wipe a newer
       ...(useCaseId ? { useCaseId } : {}),
     }) as unknown as IntakeState;
 
-  it('TC-CR7-16: clears when the stored draft carries this useCaseId', () => {
+  it('TC-CR7-16-1: clears when the stored draft carries this useCaseId', () => {
     saveDraft(reviewDraft('uc-1'));
     clearDraftIfCase('uc-1');
     expect(loadDraft()).toBeNull();
   });
 
-  it('TC-CR7-16: clears when there is no stored draft (nothing to protect)', () => {
+  it('TC-CR7-16-2: clears when there is no stored draft (nothing to protect)', () => {
     clearDraftIfCase('uc-1');
     expect(loadDraft()).toBeNull();
   });
 
-  it('TC-CR7-16: leaves a draft with a different useCaseId', () => {
+  it('TC-CR7-16-3: leaves a draft with a different useCaseId', () => {
     saveDraft(reviewDraft('uc-other'));
     clearDraftIfCase('uc-1');
     expect(loadDraft()?.step).toBe('graph_review');
   });
 
-  it('TC-CR7-16: leaves a draft with no useCaseId at all (a case just started)', () => {
+  it('TC-CR7-16-4: leaves a draft with no useCaseId at all (a case just started)', () => {
     saveDraft({ step: 'description_entry', description: 'something new' } as IntakeState);
     clearDraftIfCase('uc-1');
     expect(loadDraft()?.step).toBe('description_entry');
   });
 
-  it('TC-CR7-16: an adopt (which mints its id inside the handler) also clears the duplicate-check draft it came from, and only that one', () => {
+  it('TC-CR7-16-5: an adopt (which mints its id inside the handler) also clears the duplicate-check draft it came from, and only that one', () => {
     saveDraft({ step: 'duplicate_check', description: 'the adopted description' } as IntakeState);
     clearDraftIfCase('uc-adopted', { duplicateCheckDescription: 'the adopted description' });
     expect(loadDraft()).toBeNull();
@@ -293,7 +293,7 @@ describe('a questions draft saved before CR6 restores without the guessed list â
   });
 
   for (const step of ['questionnaire', 'contradiction_review'] as const) {
-    it(`TC-CR7-28: a bare (version 1) ${step} draft on the description path restores as graph_review with every card to re-check, the countries unchecked, and nothing invented`, () => {
+    it(`TC-CR7-28-4: a bare (version 1) ${step} draft on the description path restores as graph_review with every card to re-check, the countries unchecked, and nothing invented`, () => {
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(oldQuestionnaire(step)));
       const restored = loadDraft() as unknown as Record<string, unknown>;
       expect(restored).toMatchObject({
@@ -312,38 +312,38 @@ describe('a questions draft saved before CR6 restores without the guessed list â
     });
   }
 
-  it('TC-CR7-28: loadDraftInfo says the draft was migrated, so the screen can say so', () => {
+  it('TC-CR7-28-5: loadDraftInfo says the draft was migrated, so the screen can say so', () => {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(oldQuestionnaire('questionnaire')));
     expect(loadDraftInfo()?.migratedFromOldBuild).toBe(true);
   });
 
-  it('TC-CR7-28: a form-path questionnaire (plainAnswers present) is NOT migrated', () => {
+  it('TC-CR7-28-6: a form-path questionnaire (plainAnswers present) is NOT migrated', () => {
     const formDraft = { ...oldQuestionnaire('questionnaire'), plainAnswers: { '1': 'Tool' }, graph: { ...oldGraph, intake_method: 'structured_form' } };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(formDraft));
     expect(loadDraft()?.step).toBe('questionnaire');
     expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
   });
 
-  it('TC-CR7-28: a draft saved by the current build (an envelope at the current version) is never migrated', () => {
+  it('TC-CR7-28-7: a draft saved by the current build (an envelope at the current version) is never migrated', () => {
     saveDraft(oldQuestionnaire('questionnaire') as unknown as IntakeState);
     expect(loadDraft()?.step).toBe('questionnaire');
     expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
   });
 
-  it('TC-CR7-28 (M-1): the migrated review keeps the assumptions and the frozen uncertain list the old draft held', () => {
+  it('TC-CR7-28-8 (M-1): the migrated review keeps the assumptions and the frozen uncertain list the old draft held', () => {
     const a = { questionId: 'field:scale', question: 'q', shortLabel: 's', assumption: 'a', fields: ['scale'] };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...oldQuestionnaire('questionnaire'), assumptions: [a], uncertainNodeIds: ['o1'] }));
     expect(loadDraft()).toMatchObject({ step: 'graph_review', assumptions: [a], uncertainNodeIds: ['o1'] });
   });
 
-  it('TC-CR7-28b (M-2): the current draft version is 3, and a version-2 description-path questions draft with no back snapshot is migrated like a version-1 one', () => {
+  it('TC-CR7-28b-1 (M-2): the current draft version is 3, and a version-2 description-path questions draft with no back snapshot is migrated like a version-1 one', () => {
     saveDraft({ step: 'description_entry', description: 'x' } as IntakeState);
     expect(JSON.parse(sessionStorage.getItem(DRAFT_KEY)!).version).toBe(3);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 2, state: oldQuestionnaire('questionnaire') }));
     expect(loadDraftInfo()).toMatchObject({ migratedFromOldBuild: true, state: { step: 'graph_review' } });
   });
 
-  it('TC-CR7-28b (M-2): a version-2 draft that is on the form path, or that already has its back snapshot, is not migrated', () => {
+  it('TC-CR7-28b-2 (M-2): a version-2 draft that is on the form path, or that already has its back snapshot, is not migrated', () => {
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({ version: 2, state: { ...oldQuestionnaire('questionnaire'), plainAnswers: { '1': 'Tool' }, graph: { ...oldGraph, intake_method: 'structured_form' } } }),

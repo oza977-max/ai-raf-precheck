@@ -1601,7 +1601,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
     ...overrides,
   });
 
-  it('TC-CR7-02a (reducer): CHANGE_ANSWER on the description path carries the assumptions and the frozen uncertain list, marks the countries as already checked, and flags the re-entry', () => {
+  it('TC-CR7-02a-2 (reducer): CHANGE_ANSWER on the description path carries the assumptions and the frozen uncertain list, marks the countries as already checked, and flags the re-entry', () => {
     const next = intakeReducer(confirmation(), { type: 'CHANGE_ANSWER' });
     expect(next).toMatchObject({
       step: 'graph_review',
@@ -1612,7 +1612,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
     });
   });
 
-  it('TC-CR7-02b (reducer): a failed evaluation hands the assumptions and uncertain list back to the review screen too', () => {
+  it('TC-CR7-02b-2 (reducer): a failed evaluation hands the assumptions and uncertain list back to the review screen too', () => {
     const pending = intakeReducer(confirmation(), { type: 'CONFIRMED' });
     const next = intakeReducer(pending, { type: 'EVALUATION_FAILED' });
     expect(next).toMatchObject({
@@ -1625,7 +1625,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
     });
   });
 
-  it('TC-CR7-02d (reducer): CORRECT_VERDICT carries what the last confirmation was based on', () => {
+  it('TC-CR7-02d-2 (reducer): CORRECT_VERDICT carries what the last confirmation was based on', () => {
     const next = intakeReducer(
       { step: 'verdict', verdictId: 'v1' },
       {
@@ -1652,7 +1652,7 @@ describe('intakeReducer — re-entries into graph_review keep the "Not sure" ass
     expect(next).toMatchObject({ step: 'questionnaire', assumptions: [A1], uncertainNodeIds: ['o1'] });
   });
 
-  it('TC-CR7-02 (2): STEP_BACK from the questionnaire carries NO assumptions — they are re-asked (CR7-03)', () => {
+  it('TC-CR7-02-1 (2): STEP_BACK from the questionnaire carries NO assumptions — they are re-asked (CR7-03)', () => {
     const q: IntakeState = {
       step: 'questionnaire',
       description: 'd',
@@ -1694,7 +1694,7 @@ describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; 
     ...(assumptions ? { assumptions } : {}),
   });
 
-  it('TC-CR7-02e: "Not sure" again for a question that already has an assumption leaves exactly one', () => {
+  it('TC-CR7-02e-1: "Not sure" again for a question that already has an assumption leaves exactly one', () => {
     const next = intakeReducer(base([NOT_SURE]), {
       type: 'ANSWER_SUBMITTED',
       answer: { questionId: 'Q-rev', value: 'irreversible' },
@@ -1703,7 +1703,7 @@ describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; 
     expect(next.step === 'questionnaire' && next.assumptions).toEqual([NOT_SURE]);
   });
 
-  it('TC-CR7-02e: a definite answer for a question that had an assumption removes it (and leaves the others)', () => {
+  it('TC-CR7-02e-2: a definite answer for a question that had an assumption removes it (and leaves the others)', () => {
     const next = intakeReducer(base([NOT_SURE, OTHER]), {
       type: 'ANSWER_SUBMITTED',
       answer: { questionId: 'Q-rev', value: 'reversible' },
@@ -1711,7 +1711,7 @@ describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; 
     expect(next.step === 'questionnaire' && next.assumptions).toEqual([OTHER]);
   });
 
-  it('TC-CR7-02f: Undo after a replaced assumption restores the previous array', () => {
+  it('TC-CR7-02f-1: Undo after a replaced assumption restores the previous array', () => {
     const answered = intakeReducer(base([NOT_SURE, OTHER]), {
       type: 'ANSWER_SUBMITTED',
       answer: { questionId: 'Q-rev', value: 'reversible' },
@@ -1720,7 +1720,7 @@ describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; 
     expect(undone.step === 'questionnaire' && undone.assumptions).toEqual([NOT_SURE, OTHER]);
   });
 
-  it('TC-CR7-02f: Undo of a first "Not sure" removes it again', () => {
+  it('TC-CR7-02f-2: Undo of a first "Not sure" removes it again', () => {
     const answered = intakeReducer(base(), {
       type: 'ANSWER_SUBMITTED',
       answer: { questionId: 'Q-rev', value: 'irreversible' },
@@ -1753,7 +1753,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
   };
   const Q = { id: 'Q-vendor', field: 'vendor', node_id: 'p1', triggered_by: [], answer_type: 'select' as const };
 
-  it('TC-CR7-03 (reducer): QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list', () => {
+  it('TC-CR7-03-1 (reducer): QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list', () => {
     const q = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     expect(q).toMatchObject({
       step: 'questionnaire',
@@ -1763,7 +1763,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     });
   });
 
-  it('TC-CR7-03 (reducer): after an answer that trims the field and changes the graph, Back restores all three so the field is asked again', () => {
+  it('TC-CR7-03-2 (reducer): after an answer that trims the field and changes the graph, Back restores all three so the field is asked again', () => {
     let s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     s = intakeReducer(s, {
       type: 'ANSWER_SUBMITTED',
@@ -1777,7 +1777,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     expect(back).toMatchObject({ step: 'graph_review', graph: g1, corrections: [c0], guessedFields: { p1: ['vendor'] } });
   });
 
-  it('TC-CR7-03 (reducer): the snapshot survives Undo, a contradiction round trip, and a second answer', () => {
+  it('TC-CR7-03-3 (reducer): the snapshot survives Undo, a contradiction round trip, and a second answer', () => {
     let s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q, { ...Q, id: 'Q2', field: 'scale' }] });
     s = intakeReducer(s, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q-vendor', value: 'dont-know' }, correction: c1, updatedGraph: g2 });
     s = intakeReducer(s, { type: 'ANSWER_UNDONE' });
@@ -1791,7 +1791,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     expect(back).toMatchObject({ step: 'graph_review', graph: g1, corrections: [c0], guessedFields: { p1: ['vendor'] } });
   });
 
-  it('TC-CR7-03 (reducer): a questionnaire saved before this change (no snapshot) steps back exactly as it did before', () => {
+  it('TC-CR7-03-4 (reducer): a questionnaire saved before this change (no snapshot) steps back exactly as it did before', () => {
     const old: IntakeState = {
       step: 'questionnaire',
       description: 'd',
@@ -1807,7 +1807,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     expect(back).toMatchObject({ step: 'graph_review', graph: g2, corrections: [c0, c1], guessedFields: {} });
   });
 
-  it('TC-CR7-02 (6) (reducer): a revisited review screen stays marked as revisited across a trip into the questions and Back (including a contradiction round trip)', () => {
+  it('TC-CR7-02-2 (6) (reducer): a revisited review screen stays marked as revisited across a trip into the questions and Back (including a contradiction round trip)', () => {
     const revisited: IntakeState = { ...(review as Extract<IntakeState, { step: 'graph_review' }>), reentry: true };
     let s = intakeReducer(revisited, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     expect(s).toMatchObject({ step: 'questionnaire', reentry: true });
@@ -1817,7 +1817,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     expect(intakeReducer(s, { type: 'STEP_BACK' })).toMatchObject({ step: 'graph_review', reentry: true });
   });
 
-  it('TC-CR7-02 (6) (reducer): a first reading of the review screen is NOT marked as revisited, before or after a trip into the questions', () => {
+  it('TC-CR7-02-3 (6) (reducer): a first reading of the review screen is NOT marked as revisited, before or after a trip into the questions', () => {
     const s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     expect('reentry' in s && s.reentry).toBeFalsy();
     const back = intakeReducer(s, { type: 'STEP_BACK' });
@@ -1849,7 +1849,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
     uncertainNodeIds: ['o1'],
   };
 
-  it('TC-CR7-02h (reducer): Change an answer -> Continue (questions) -> a new "Not sure" -> Back: the earlier round\'s assumption is back, the new one is re-asked', () => {
+  it('TC-CR7-02h-3 (reducer): Change an answer -> Continue (questions) -> a new "Not sure" -> Back: the earlier round\'s assumption is back, the new one is re-asked', () => {
     let s = intakeReducer(confirmation, { type: 'CHANGE_ANSWER' });
     s = intakeReducer(s, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     expect(s).toMatchObject({ backAssumptions: [A] });
@@ -1859,7 +1859,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
     expect(back).toMatchObject({ step: 'graph_review', assumptions: [A], uncertainNodeIds: ['o1'], reentry: true });
   });
 
-  it('TC-CR7-02h (reducer, CORRECT_VERDICT): the same round trip from a correction pass', () => {
+  it('TC-CR7-02h-4 (reducer, CORRECT_VERDICT): the same round trip from a correction pass', () => {
     let s = intakeReducer(
       { step: 'verdict', verdictId: 'v1' },
       { type: 'CORRECT_VERDICT', graph: graph(), useCaseId: 'uc-1', originalVerdictId: 'v1', assumptions: [A], uncertainNodeIds: ['o1'] },
@@ -1871,7 +1871,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
     expect(intakeReducer(s, { type: 'STEP_BACK' })).toMatchObject({ step: 'graph_review', assumptions: [A], originalVerdictId: 'v1' });
   });
 
-  it('TC-CR7-03f (reducer): a review re-entered after a failed evaluation is still "after a failed evaluation" after a trip into the questions and Back, and Back from it is refused', () => {
+  it('TC-CR7-03f-2 (reducer): a review re-entered after a failed evaluation is still "after a failed evaluation" after a trip into the questions and Back, and Back from it is refused', () => {
     let s = intakeReducer(confirmation, { type: 'CONFIRMED' });
     s = intakeReducer(s, { type: 'EVALUATION_FAILED' });
     expect(s).toMatchObject({ afterFailedEvaluation: true });
@@ -1883,7 +1883,7 @@ describe('intakeReducer — Back from the questions restores the assumptions and
     expect(intakeReducer(back, { type: 'STEP_BACK' })).toBe(back);
   });
 
-  it('TC-CR7-03f (reducer): a first reading is not marked as after a failed evaluation', () => {
+  it('TC-CR7-03f-3 (reducer): a first reading is not marked as after a failed evaluation', () => {
     const review: IntakeState = { step: 'graph_review', description: 'd', graph: graph(), graphVersion: 1, corrections: [], useCaseId: 'uc-1' };
     const q = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
     const back = intakeReducer(q, { type: 'STEP_BACK' });
@@ -1899,13 +1899,13 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
   const ev = (c: GraphCorrection) => ({ event_type: 'graph_corrected', payload: { type: 'graph_corrected', correction: c } }) as never;
   const verdict = () => ({ event_type: 'verdict_produced', payload: { type: 'verdict_produced' } }) as never;
 
-  it('TC-CR7-21c: A->B (failed), B->A, then A->B again: the third is NOT treated as already there', () => {
+  it('TC-CR7-21c-1: A->B (failed), B->A, then A->B again: the third is NOT treated as already there', () => {
     const events = [ev(corr('1', 'A', 'B')), ev(corr('2', 'B', 'A'))];
     const plan = planCorrectionWrites([corr('3', 'A', 'B')], events);
     expect(plan.toWrite.map((c) => c.correction_id)).toEqual(['3']);
   });
 
-  it('TC-CR7-21c: the same change retried with a fresh id IS skipped when nothing reversed it', () => {
+  it('TC-CR7-21c-2: the same change retried with a fresh id IS skipped when nothing reversed it', () => {
     const plan = planCorrectionWrites([corr('9', 'A', 'B')], [ev(corr('1', 'A', 'B'))]);
     expect(plan.toWrite).toEqual([]);
   });
@@ -1914,36 +1914,36 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     graph({ output_nodes: [{ id: 'n1', scale } as never], version: 5 });
   const ctx = (scale: unknown) => ({ resolve: graphValueResolver(graphWith(scale)), version: 5, newId: () => 'synth', now: () => '2026-02-02T00:00:00.000Z', by: '1LoD' });
 
-  it('TC-CR7-21e: A->B, A->C, then A->B again: the third is written (the trail would otherwise end at C while the graph says B)', () => {
+  it('TC-CR7-21e-1: A->B, A->C, then A->B again: the third is written (the trail would otherwise end at C while the graph says B)', () => {
     const events = [ev(corr('1', 'A', 'B')), ev(corr('2', 'A', 'C'))];
     const plan = planCorrectionWrites([corr('3', 'A', 'B')], events, ctx('B'));
     expect(plan.toWrite.map((c) => c.correction_id)).toEqual(['3']);
   });
 
-  it('TC-CR7-21e: a pending correction equal to the latest written value for its field is skipped', () => {
+  it('TC-CR7-21e-2: a pending correction equal to the latest written value for its field is skipped', () => {
     const events = [ev(corr('1', 'A', 'C')), ev(corr('2', 'A', 'B'))];
     expect(planCorrectionWrites([corr('3', 'A', 'B')], events, ctx('B')).toWrite).toEqual([]);
   });
 
-  it('TC-CR7-21f: A->B was written, the field is back at A and nothing is pending: one B->A correction is written, same source, and the count includes it', () => {
+  it('TC-CR7-21f-2: A->B was written, the field is back at A and nothing is pending: one B->A correction is written, same source, and the count includes it', () => {
     const plan = planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], ctx('A'));
     expect(plan.toWrite).toHaveLength(1);
     expect(plan.toWrite[0]).toMatchObject({ node_id: 'n1', field: 'scale', original_value: 'B', corrected_value: 'A', correction_source: 'form', graph_version_after: 5, corrected_at: '2026-02-02T00:00:00.000Z' });
     expect(plan.sinceLastResult).toBe(2);
   });
 
-  it('TC-CR7-21f: when the trail already ends at the graph value nothing is synthesised', () => {
+  it('TC-CR7-21f-3: when the trail already ends at the graph value nothing is synthesised', () => {
     expect(planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], ctx('B')).toWrite).toEqual([]);
   });
 
-  it('TC-CR7-21i: a node the resolver cannot find writes NOTHING for that key — never a null on the trail', () => {
+  it('TC-CR7-21i-1: a node the resolver cannot find writes NOTHING for that key — never a null on the trail', () => {
     const unresolved = { resolve: () => ({ found: false as const }), version: 5, newId: () => 'synth', now: () => 'x', by: '1LoD' };
     const plan = planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], unresolved);
     expect(plan.toWrite).toEqual([]);
     expect(plan.sinceLastResult).toBe(1);
   });
 
-  it('TC-CR7-21i: the form path resolver maps the ORIGINAL ids by role, and the inputs sentinel to the sorted distinct data classes', () => {
+  it('TC-CR7-21i-2: the form path resolver maps the ORIGINAL ids by role, and the inputs sentinel to the sorted distinct data classes', () => {
     const original = graph({ intake_method: 'structured_form', processing_nodes: [{ id: 'old-p', label: 'Old' } as never], output_nodes: [{ id: 'old-o', scale: 'x' } as never] });
     const current = graph({
       intake_method: 'structured_form',
@@ -1960,7 +1960,7 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(r('some-other-id', 'label')).toEqual({ found: false });
   });
 
-  it('TC-CR7-21i (M-1): the resolver returns list values sorted, so a synthesised correction is stored the way formCorrections stores them', () => {
+  it('TC-CR7-21i-3 (M-1): the resolver returns list values sorted, so a synthesised correction is stored the way formCorrections stores them', () => {
     const r = graphValueResolver(graph({ jurisdictions: ['UK', 'EU'] }));
     expect(r('graph', 'jurisdictions')).toEqual({ found: true, value: ['EU', 'UK'] });
   });
@@ -1970,7 +1970,7 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(planCorrectionWrites([corr('2', [], ['EU', 'UK'])], events).toWrite).toEqual([]);
   });
 
-  it('TC-CR7-21d: sinceLastResult counts the events in the window plus the ones about to be written, and ignores those before the last result', () => {
+  it('TC-CR7-21d-2: sinceLastResult counts the events in the window plus the ones about to be written, and ignores those before the last result', () => {
     const events = [ev(corr('0', 'X', 'Y')), verdict(), ev(corr('1', 'A', 'B'))];
     expect(planCorrectionWrites([], events).sinceLastResult).toBe(1);
     expect(planCorrectionWrites([corr('2', 'C', 'D')], events).sinceLastResult).toBe(2);

@@ -66,6 +66,20 @@ controls:
     resolves: []
     burden: 1
     verification: "manual check"
+  # CR7-27: the shipped EU pack's required_control ids must exist in the
+  # policy, or the (correct) reference check refuses the save.
+  - id: "CTRL-DISCLOSE-01"
+    name: "d"
+    description: "d"
+    resolves: []
+    burden: 1
+    verification: "v"
+  - id: "CTRL-SYNTHMARK-01"
+    name: "s"
+    description: "s"
+    resolves: []
+    burden: 1
+    verification: "v"
 
 kri_thresholds: {}
 
@@ -127,7 +141,7 @@ describe('PolicyEditor save (CR7-06)', () => {
     packHolder.rewrite = undefined;
   });
 
-  it('TC-CR7-06a: two rapid clicks on Save queue each active case once (the real trail)', async () => {
+  it('TC-CR7-06a-1: two rapid clicks on Save queue each active case once (the real trail)', async () => {
     await addNode(useCase('a'));
     await addNode(useCase('b'));
     await pasteAndOpen('cr7-06a');
@@ -143,7 +157,7 @@ describe('PolicyEditor save (CR7-06)', () => {
     expect(policyStore.onPolicyUpdated).toHaveBeenCalledTimes(1);
   });
 
-  it('TC-CR7-06a: Save is disabled while the save is running', async () => {
+  it('TC-CR7-06a-2: Save is disabled while the save is running', async () => {
     let release!: () => void;
     vi.mocked(policyStore.onPolicyUpdated).mockImplementationOnce(
       () => new Promise((resolve) => { release = () => resolve({ queuedCount: 0, alreadyPendingCount: 0 }); }),
@@ -183,14 +197,14 @@ describe('PolicyEditor save — counts and storage failure (CR7-06)', () => {
     packHolder.rewrite = undefined;
   });
 
-  it('TC-CR7-06d: after a retry the saved message says how many were already waiting', async () => {
+  it('TC-CR7-06d-1: after a retry the saved message says how many were already waiting', async () => {
     vi.mocked(policyStore.onPolicyUpdated).mockResolvedValueOnce({ queuedCount: 1, alreadyPendingCount: 2 });
     const user = await pasteAndOpen('cr7-06d');
     await user.click(screen.getByRole('button', { name: /^save$/i }));
     expect(await screen.findByText(/1 active use case queued for re-evaluation \(2 already waiting\)/i)).toBeInTheDocument();
   });
 
-  it('TC-CR7-06d: with nothing already waiting the message has no "already waiting" part', async () => {
+  it('TC-CR7-06d-2: with nothing already waiting the message has no "already waiting" part', async () => {
     vi.mocked(policyStore.onPolicyUpdated).mockResolvedValueOnce({ queuedCount: 2, alreadyPendingCount: 0 });
     const user = await pasteAndOpen('cr7-06d2');
     await user.click(screen.getByRole('button', { name: /^save$/i }));

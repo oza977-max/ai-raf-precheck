@@ -254,7 +254,7 @@ async function eventsOfType(type: string, description = NSDESC) {
 type AssumptionLike = { questionId: string; fields: string[] };
 
 describe('CR7-02 — re-entries into the review screen keep the "Not sure" assumptions (BC-004)', () => {
-  it('TC-CR7-02a / TC-CR7-02c: Change an answer -> Continue -> Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present', async () => {
+  it('TC-CR7-02a-1 / TC-CR7-02c: Change an answer -> Continue -> Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
 
@@ -277,7 +277,7 @@ describe('CR7-02 — re-entries into the review screen keep the "Not sure" assum
     expect(screen.getByText(/answers the submitter wasn.t sure about/i)).toBeInTheDocument();
   }, 30000);
 
-  it('TC-CR7-02b: after a failed evaluation the re-entered review keeps the assumption through to the second graph_confirmed', async () => {
+  it('TC-CR7-02b-1: after a failed evaluation the re-entered review keeps the assumption through to the second graph_confirmed', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({
@@ -299,7 +299,7 @@ describe('CR7-02 — re-entries into the review screen keep the "Not sure" assum
     for (const c of confirmed) expect(c.assumptions?.map((a) => a.questionId)).toEqual(['field:output_reversibility']);
   }, 30000);
 
-  it('TC-CR7-02d: correcting from the result keeps the assumption in verdict_corrected', async () => {
+  it('TC-CR7-02d-1: correcting from the result keeps the assumption in verdict_corrected', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -427,7 +427,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
     );
   }
 
-  it('TC-CR7-01a: the extractor is called exactly once and the review screen appears', async () => {
+  it('TC-CR7-01a-1: the extractor is called exactly once and the review screen appears', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     extractingDraft();
@@ -436,7 +436,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
     expect(spy).toHaveBeenCalledTimes(1);
   }, 30000);
 
-  it('TC-CR7-01a (StrictMode): still exactly one call when mounted twice', async () => {
+  it('TC-CR7-01a-2 (StrictMode): still exactly one call when mounted twice', async () => {
     const { StrictMode } = await import('react');
     mockCreate.mockResolvedValue(notSureExtraction());
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
@@ -487,7 +487,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
   }
 
-  it('TC-CR7-24: Back, then forward again, shows no stale gate error', async () => {
+  it('TC-CR7-24-1: Back, then forward again, shows no stale gate error', async () => {
     const user = userEvent.setup();
     await provokeGateError(user);
     await user.click(screen.getByRole('button', { name: /back/i }));
@@ -496,7 +496,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     expect(document.querySelector('.intake-flow__gate-error')).toBeNull();
   }, 30000);
 
-  it('TC-CR7-24: Start over, then a fresh case to the review screen, shows no stale gate error', async () => {
+  it('TC-CR7-24-2: Start over, then a fresh case to the review screen, shows no stale gate error', async () => {
     const user = userEvent.setup();
     await provokeGateError(user);
     // Start over is on the resumed-draft banner: reload over the saved draft.
@@ -727,7 +727,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     expect((loadDraft() as { useCaseId?: string }).useCaseId).toBe('uc-newer-case');
   }, 30000);
 
-  it("TC-CR7-16b: an adopt that finishes after the person left leaves a different case's draft alone", async () => {
+  it("TC-CR7-16b-1: an adopt that finishes after the person left leaves a different case's draft alone", async () => {
     localStorage.removeItem('aigate:api-key');
     await addNode({
       node_id: crypto.randomUUID(),
@@ -768,7 +768,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     expect((loadDraft() as { useCaseId?: string }).useCaseId).toBe('uc-newer-case');
   }, 30000);
 
-  it("TC-CR7-16b (own draft): a finished adopt still clears its own saved draft", async () => {
+  it("TC-CR7-16b-2 (own draft): a finished adopt still clears its own saved draft", async () => {
     localStorage.removeItem('aigate:api-key');
     await addNode({
       node_id: crypto.randomUUID(),
@@ -900,7 +900,7 @@ describe('CR7-28 — a questions draft from before CR6 restores as the review sc
     return JSON.stringify(version2 ? { version: 3, state } : state);
   };
 
-  it('TC-CR7-28: the review screen shows with every card to re-check, the countries unchecked, and the plain notice', async () => {
+  it('TC-CR7-28-1: the review screen shows with every card to re-check, the countries unchecked, and the plain notice', async () => {
     sessionStorage.setItem(DRAFT_KEY, oldDraft(false));
     render(<App />);
     expect(await screen.findByText('Check what we read from your description')).toBeInTheDocument();
@@ -913,7 +913,7 @@ describe('CR7-28 — a questions draft from before CR6 restores as the review sc
     expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
   }, 30000);
 
-  it('TC-CR7-28 (BC-005): a draft the current build saved shows no such notice', async () => {
+  it('TC-CR7-28-2 (BC-005): a draft the current build saved shows no such notice', async () => {
     sessionStorage.setItem(DRAFT_KEY, oldDraft(true));
     render(<App />);
     expect(await screen.findByText(/question 1 of 1/i)).toBeInTheDocument();
@@ -922,7 +922,7 @@ describe('CR7-28 — a questions draft from before CR6 restores as the review sc
 });
 
 describe('CR7-28 (M-1): the migrated review keeps what the old draft held, and the notice goes when the step does', () => {
-  it('TC-CR7-28: the notice is gone once the person leaves the review screen', async () => {
+  it('TC-CR7-28-3: the notice is gone once the person leaves the review screen', async () => {
     const state = {
       step: 'questionnaire',
       description: 'A description the person typed earlier.',
@@ -971,7 +971,7 @@ function saveQuestionnaireFromReviewDraft() {
 }
 
 describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and editable countries (I-1)', () => {
-  it('TC-CR7-02h: Not sure -> confirmation -> Change an answer -> Continue (questions) -> Back -> Continue -> Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round)', async () => {
+  it('TC-CR7-02h-1: Not sure -> confirmation -> Change an answer -> Continue (questions) -> Back -> Continue -> Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round)', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
@@ -990,7 +990,7 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
     expect(confirmed.assumptions?.map((a) => a.questionId)).toEqual(['field:output_reversibility']);
   }, 30000);
 
-  it('TC-CR7-02h (correction): the same through a correction from the result — verdict_corrected keeps the earlier "Not sure"', async () => {
+  it('TC-CR7-02h-2 (correction): the same through a correction from the result — verdict_corrected keeps the earlier "Not sure"', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -1011,7 +1011,7 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
     expect(corrected.assumptions?.map((a) => a.questionId)).toEqual(['field:output_reversibility']);
   }, 30000);
 
-  it('TC-CR7-03f: failed evaluation -> questions -> Back: Back from the review is still refused, and the case id is unchanged', async () => {
+  it('TC-CR7-03f-1: failed evaluation -> questions -> Back: Back from the review is still refused, and the case id is unchanged', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
@@ -1051,7 +1051,7 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
 });
 
 describe('FX7-1 review pass 1 — the correction count matches the events (M-4)', () => {
-  it('TC-CR7-21d: a description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail', async () => {
+  it('TC-CR7-21d-1: a description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail', async () => {
     const user = userEvent.setup();
     await reachNotSureConfirmation(user);
     vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
@@ -1081,7 +1081,7 @@ function expectNetValueIsOriginal(corrections: Array<Record<string, unknown>>) {
 }
 
 describe('FX7-1 review pass 2 — the trail ends at the value the verdict was computed on (I-A)', () => {
-  it('TC-CR7-21f: a form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail', async () => {
+  it('TC-CR7-21f-1: a form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail', async () => {
     const user = userEvent.setup();
     const label = 'Zephyrquill reversal probe';
     await reachForm(user, label);

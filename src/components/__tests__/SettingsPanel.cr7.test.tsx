@@ -25,7 +25,7 @@ describe('SettingsPanel — Clear all data (CR7-15)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('TC-CR7-15: clears the saved intake drafts (all three keys) and the hand-off marker, then reloads', async () => {
+  it('TC-CR7-15-1: clears the saved intake drafts (all three keys) and the hand-off marker, then reloads', async () => {
     // the app's own writers produce the drafts (BC-003)
     saveDraft({ step: 'description_entry', description: 'a half-written description' } as IntakeState);
     saveFormDraft({ useCaseName: 'half-typed' });
@@ -47,7 +47,7 @@ describe('SettingsPanel — Clear all data (CR7-15)', () => {
     expect(localStorage.getItem('aigate-handoff-last-synced-tip')).toBeNull();
   });
 
-  it('TC-CR7-15: the confirmation says exactly what is cleared and what is kept (BC-005)', async () => {
+  it('TC-CR7-15-2: the confirmation says exactly what is cleared and what is kept (BC-005)', async () => {
     const user = userEvent.setup();
     render(<SettingsPanel />);
     await user.click(screen.getByText(/demo data/i));
@@ -61,7 +61,7 @@ describe('SettingsPanel — Clear all data (CR7-15)', () => {
     expect(warning.textContent).toMatch(/appetite framework you saved/i);
   });
 
-  it('TC-CR7-15: an incomplete reset clears the drafts too, and its message says exactly what was and was not cleared', async () => {
+  it('TC-CR7-15-3: an incomplete reset clears the drafts too, and its message says exactly what was and was not cleared', async () => {
     vi.mocked(resetStore.clearAllLocalData).mockResolvedValueOnce({ complete: false, incomplete: ['aigate-audit (blocked)'] });
     saveDraft({ step: 'description_entry', description: 'a half-written description' } as IntakeState);
     saveFormDraft({ useCaseName: 'half-typed' });
