@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { clearDraft } from './intake-draft';
+import { clearDraft, clearFormDraft } from './intake-draft';
 
 // CR6-04 (Critical, BC-002). No error boundary existed around the intake
 // flow — a render-time crash (an incompatible draft shape reaching a
@@ -38,6 +38,9 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
   private handleStartFresh = (): void => {
     clearDraft();
+    // Same pair handleStartOver clears (IntakeFlow.tsx): the guided form keeps
+    // its answers under a second key.
+    clearFormDraft();
     this.setState({ hasError: false });
   };
 
@@ -47,8 +50,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         <div className="intake-flow__crash" role="alert">
           <p>Something went wrong and this check could not continue.</p>
           <p className="field-help">
-            This did not touch your firm&rsquo;s record of past checks — only this one, unfinished
-            check could not be shown. Starting a fresh check clears it.
+            Something went wrong and this screen could not be shown. Anything already saved is on
+            the register. Starting a fresh check clears this unfinished one.
           </p>
           <button type="button" onClick={this.handleStartFresh}>
             Start a fresh check

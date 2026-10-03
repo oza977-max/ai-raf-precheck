@@ -88,8 +88,27 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // browser Back, or a trip to the Register mid-intake no longer discards
   // the description, the guided-form answers and the extracted graph.
   // Lazy init so the read happens once, before first paint.
-  const restoredDraft = useRef<boolean>(loadDraft() !== null);
-  const [state, dispatch] = useReducer(intakeReducer, INITIAL_STATE, (initial) => loadDraft() ?? initial);
+  const restoredDraft = useRef<boolean>(
+    (() => {
+      const d = loadDraft();
+      return d !== null && d.step !== 'evaluation_pending';
+    })(),
+  );
+  // CR6-15c (M-4). A draft saved at 'evaluation_pending' means the person
+  // left (or the tab closed) while the result was being worked out. The work
+  // does not resume on return, so restoring that step would show "Evaluating…"
+  // forever. Not restored at all: the intake starts empty (the saveDraft
+  // effect below clears the stale draft) and a plain notice says only what is
+  // known — the check was interrupted, and anything that finished is on the
+  // register. No cause is claimed. Chosen over "don't persist that step"
+  // because that would leave the previous 'confirmation' draft behind, which
+  // restores into the false "already has a result" refusal (CR6-15).
+  const interruptedEvaluation = useRef<boolean>(loadDraft()?.step === 'evaluation_pending');
+  const [showInterrupted, setShowInterrupted] = useState(interruptedEvaluation.current);
+  const [state, dispatch] = useReducer(intakeReducer, INITIAL_STATE, (initial) => {
+    const draft = loadDraft();
+    return draft && draft.step !== 'evaluation_pending' ? draft : initial;
+  });
   // Restoring silently would drop the user somewhere they did not navigate
   // to, with no explanation — the same class of surprise NF-2 exists to
   // prevent. Say what happened and offer a way out.
@@ -131,6 +150,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // reappear on the next visit to the form step.
     clearFormDraft();
     setShowResumed(false);
+    setShowInterrupted(false);
     // The confirm guard is deliberately left set after a SUCCESSFUL
     // confirm (that flow never returns to its confirmation step). A fresh
     // intake must release it, or the next case's "Confirm and evaluate"
@@ -160,6 +180,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // set it — it must not still be showing when a fresh case's own
     // (pending) extraction has not even had a chance to succeed or fail.
     setExtractionError(null);
+    // I-4 (FX-2 review): the adopted-result screen and a failed-evaluation
+    // message also belong to the abandoned case.
+    setAdoptedFrom(null);
+    setEvaluationError(null);
     // F-1: a fresh intake must not carry a stale refusal into the new
     // case's own confirmation step.
     setConfirmationRefusal(null);
@@ -198,6 +222,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // so re-entering the step would sit on "Checking the existing inventory…"
     // forever with no way forward: explore-005's D-001, reintroduced by its
     // own fix. Verified against src/components/IntakeFlow.tsx:161-205.
+    //
+    // CR6-02f (FX-2 review I-5): Back also abandons whatever check or
+    // decision was in flight — bump the token so its late result is dropped
+    // (a stale match card must never appear on the changed description, and
+    // "Mine is different" must never write duplicate_dismissed against the
+    // OLD candidate). Because the abandoned calls' `finally` blocks now
+    // release their guard only when the token still matches (CR6-02g), Back
+    // releases the guards itself, exactly as handleStartOver does.
+    attemptToken.current += 1;
+    confirmNewInFlight.current = false;
+    adoptInFlight.current = false;
+    retryExtractionInFlight.current = false;
     setDuplicateCheckDone(false);
     dupCheckInFlight.current = false;
     setDuplicateMatch(null);
@@ -392,6 +428,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
   function handleSubmitDescription() {
     if (state.step !== 'description_entry') return;
+    // CR6-02f: entering a new duplicate check is a new attempt — anything
+    // still running for an earlier description is dropped when it lands.
+    attemptToken.current += 1;
+    setShowInterrupted(false);
     setSubmittedDescription(state.description);
     setDuplicateMatch(null);
     setDuplicateCheckDone(false);
@@ -467,8 +507,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         // hang the step on "Looking through earlier checks…" on every
         // first entry under StrictMode, which relies on the synchronous
         // dupCheckInFlight ref alone to stop the second mount's call.
-        dupCheckInFlight.current = false;
-        if (attemptToken.current === myAttempt) setDuplicateCheckDone(true);
+        //
+        // CR6-02g (FX-2 review M-1): ONLY a call that is still the current
+        // attempt releases the ref and shows its result. An abandoned call
+        // (Start Over / Back already reset the ref themselves) must not free
+        // the guard a NEWER check is holding. Under StrictMode the second
+        // mount returns at the ref check, the one real call keeps the same
+        // token, and so still releases normally (TC-CR6-02d).
+        if (attemptToken.current === myAttempt) {
+          dupCheckInFlight.current = false;
+          setDuplicateCheckDone(true);
+        }
       }
     })();
   }, [state, duplicateCheckDone, registerLoaded, registerRows]);
@@ -559,7 +608,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       });
     }
     } finally {
-      confirmNewInFlight.current = false;
+      // CR6-02g: release only if still this attempt's guard.
+      if (attemptToken.current === myAttempt) confirmNewInFlight.current = false;
     }
   }
 
@@ -631,7 +681,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
       if (attemptToken.current === myAttempt) setAdoptedFrom(source.label);
     } finally {
-      adoptInFlight.current = false;
+      // CR6-02g: an abandoned adoption finishing late must not free the
+      // guard the NEW case's adopt holds (a second click would then write a
+      // second set of audit events).
+      if (attemptToken.current === myAttempt) adoptInFlight.current = false;
     }
   }
 
@@ -682,7 +735,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         guessedFields: extraction.value.guessed,
       });
     } finally {
-      retryExtractionInFlight.current = false;
+      if (attemptToken.current === myAttempt) retryExtractionInFlight.current = false;
     }
   }
 
@@ -1652,18 +1705,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // the last of the ORIGINAL list.
     const totalQuestions = state.questions.length + (insertQuestions?.length ?? 0);
     if (nextAnswers.length >= totalQuestions) {
-      // B-10 (Minor). F-6's routing order is unchanged (questions still
-      // come before contradictions) — but a contradiction already found
-      // at FORM SUBMISSION time must still be reviewed once the questions
-      // end, even if the live detectContradictions call just above found
-      // nothing new (the conflicting field may not be one any of these
-      // questions touches). Carried onto the questionnaire state by
-      // FORM_SUBMITTED (intake-state.ts); consumed exactly once, here.
-      const submissionContradictions = state.submissionContradictions;
-      if (submissionContradictions && submissionContradictions.length > 0) {
-        dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions: submissionContradictions });
-        return;
-      }
+      // B-10 (rewritten, FX-2 review I-3). A contradiction found at form
+      // submission is NOT replayed from a carried copy here: detectContradictions
+      // reads only the description and the graph, so the live check just above
+      // (on the graph AS ANSWERED) already shows it whenever it still holds,
+      // and a carried copy could only fire after an answer had resolved it —
+      // re-flagging what R6 says must not be re-flagged. Re-running that same
+      // check at the end would be the identical call, so there is nothing
+      // further to do: reaching this line means no contradiction holds now.
       dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
     }
   }
@@ -1739,6 +1788,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         Tell us about an AI tool you want to use. We&rsquo;ll check it against your firm&rsquo;s rules and
         tell you whether you can go ahead, and what needs doing first.
       </p>
+
+      {showInterrupted && state.step === 'description_entry' && (
+        <div className="intake-flow__resumed" role="status">
+          Your last pre-check was interrupted while its result was being worked out, so it could not be
+          picked up again. If it finished, it is on the register.
+        </div>
+      )}
 
       {showResumed && state.step !== 'description_entry' && (
         <div className="intake-flow__resumed" role="status">
@@ -1831,12 +1887,22 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                 </p>
               </>
             )}
-            {!duplicateCheckDone ? (
-              // CR6-08 (Important): an in-progress line with no live
-              // region at all — a screen-reader user landing here heard
-              // nothing until (if) a match card's own role="alert" fired.
-              <p role="status">Looking through earlier checks…</p>
-            ) : (
+            {/* CR6-08 / CR6-08c (M-3). ONE status region that persists from the
+                in-progress line into the outcome: a live region announces
+                changes to its content, so swapping the node itself for a
+                plain <p> (as the "Nothing similar found" outcome did) was
+                never announced. A found match keeps its own role="alert". */}
+            <div role="status">
+              {!duplicateCheckDone ? (
+                <p>Looking through earlier checks…</p>
+              ) : !duplicateMatch ? (
+                <p className="dup-gate__clear">
+                  Nothing similar found — we looked through {registerRows.length} earlier check
+                  {registerRows.length === 1 ? '' : 's'}.
+                </p>
+              ) : null}
+            </div>
+            {duplicateCheckDone && (
               <>
                 {duplicateMatch ? (
                   <div className="duplicate-card" role="alert">
@@ -1867,12 +1933,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                       this one.
                     </p>
                   </div>
-                ) : (
-                  <p className="dup-gate__clear">
-                    Nothing similar found — we looked through {registerRows.length} earlier check
-                    {registerRows.length === 1 ? '' : 's'}.
-                  </p>
-                )}
+                ) : null}
                 <div className="dup-gate__actions">
                   {/* UC-2: both decisions, side by side. Only "new use case"
                       existed, so the requirement's other half — adopt — was

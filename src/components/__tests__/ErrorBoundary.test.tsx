@@ -17,10 +17,12 @@ function Boom(): never {
 }
 
 const DRAFT_KEY = 'aigate:intake-draft';
+const FORM_DRAFT_KEY = 'aigate:intake-form-draft:v2';
 
 describe('ErrorBoundary (CR6-04, BC-002)', () => {
   it('TC-CR6-04c: a render error below the boundary shows a plain message and a button that clears the saved draft', async () => {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'questionnaire', description: 'd' }));
+    sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify({ x: 1 }));
     // React logs the caught error to the console by design (componentDidCatch);
     // silenced here so the test's own output stays readable, not to hide a
     // real failure — the assertions below are what prove the boundary works.
@@ -42,6 +44,25 @@ describe('ErrorBoundary (CR6-04, BC-002)', () => {
 
       await userEvent.click(fresh);
       expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+      // CR6-04c strengthened: the guided form's own draft key too (as Start Over).
+      expect(sessionStorage.getItem(FORM_DRAFT_KEY)).toBeNull();
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it('TC-CR6-04d: the crash message makes no claim about the firm record being untouched', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      render(
+        <ErrorBoundary>
+          <Boom />
+        </ErrorBoundary>,
+      );
+      const text = screen.getByRole('alert').textContent ?? '';
+      expect(text).not.toMatch(/did not touch|untouched|not affected/i);
+      expect(text).toMatch(/already saved is on the register/i);
+      expect(text).not.toMatch(/approved|rejected/i);
     } finally {
       consoleSpy.mockRestore();
     }

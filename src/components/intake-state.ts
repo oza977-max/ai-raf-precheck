@@ -80,6 +80,11 @@ export type IntakeState =
       // that the loaded policy does not recognise — removed from the graph
       // before the human sees it, surfaced so the removal is visible.
       ignoredJurisdictions?: string[];
+      // M-2 (FX-2 review). Present only after a Back from the questionnaire:
+      // the FROZEN uncertainNodeIds from the first QUESTIONS_GENERATED, so a
+      // Back + Continue does not re-derive it from the since-trimmed
+      // guessedFields.
+      uncertainNodeIds?: string[];
       // F-2 (DR7-04). Set by EVALUATION_FAILED on a description-path graph
       // ONLY — this is a re-entry after a genuine engine/policy failure,
       // not a fresh submission, so it must not be walked out of the same
@@ -165,15 +170,10 @@ export type IntakeState =
       provenance?: Record<string, Record<string, string>>;
       unconfirmedNodeIds?: string[];
       jurisdictionsConfirmed?: boolean;
-      // B-10 (Minor). The contradictions detectContradictions already
-      // found at FORM SUBMISSION time (action.contradictions,
-      // FORM_SUBMITTED) — F-6 still routes to the questions first when
-      // both are present, but the submission-time contradictions must not
-      // simply be discarded: carried here so handleAnswerSubmitted
-      // (IntakeFlow.tsx) can still raise them once every question is
-      // answered, even if no single answer happens to re-trigger a live
-      // detectContradictions call. Consumed exactly once, at that point.
-      submissionContradictions?: Contradiction[];
+      // M-2 (FX-2 review). Carried from graph_review at QUESTIONS_GENERATED
+      // (and threaded through a contradiction round trip) so Back restores
+      // the "We ignored X" notice instead of silently dropping it.
+      ignoredJurisdictions?: string[];
     }
   | {
       step: 'contradiction_review';
@@ -193,6 +193,7 @@ export type IntakeState =
       assumptions?: Assumption[];
       // F-7: see the questionnaire variant's comment above.
       uncertainNodeIds?: string[];
+      ignoredJurisdictions?: string[];
       // CR6-03: see the questionnaire variant's comment above — threaded
       // through a contradiction-review round trip the same way
       // uncertainNodeIds already is, so a Back from the questionnaire
@@ -518,6 +519,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             provenance: state.provenance,
             unconfirmedNodeIds: state.unconfirmedNodeIds,
             jurisdictionsConfirmed: state.jurisdictionsConfirmed,
+            // M-2: the notice and the frozen record both survive the trip.
+            ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
+            ...(state.uncertainNodeIds ? { uncertainNodeIds: state.uncertainNodeIds } : {}),
           };
         default:
           return state;
@@ -607,14 +611,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             // node-level corrections already use, so runConfirmAndEvaluate
             // writes them with no change of its own.
             corrections: action.corrections,
-            // B-10 (Minor). F-6 still routes to the questions first, but a
-            // contradiction already found at FORM SUBMISSION time
-            // (action.contradictions) must not be silently dropped just
-            // because questions also exist — carried here so
-            // handleAnswerSubmitted (IntakeFlow.tsx) can still raise it
-            // once every question is answered, even if no single answer
-            // happens to re-trigger a live detectContradictions call.
-            ...(action.contradictions.length > 0 ? { submissionContradictions: action.contradictions } : {}),
+            // B-10 (rewritten, FX-2 review I-3): nothing carried. A submission-
+            // time contradiction is re-derived from the CURRENT graph when the
+            // questions end (IntakeFlow), never replayed from a stale copy.
           };
         case 'contradiction_review':
           return {
@@ -719,7 +718,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         originalVerdictId: state.originalVerdictId,
         // F-7 (DR7-07): captured once, here, from graph_review's own
         // guessedFields — the only step this field exists on.
-        uncertainNodeIds: Object.keys(state.guessedFields ?? {}),
+        // M-2: after a Back round trip graph_review carries the FIRST capture;
+        // keep it rather than re-deriving from the trimmed guessedFields.
+        uncertainNodeIds: state.uncertainNodeIds ?? Object.keys(state.guessedFields ?? {}),
         // CR6-03 (Critical). Carried forward so a later STEP_BACK can
         // restore them — see the questionnaire type's own comment. The
         // guard above already proved unconfirmedNodeIds/jurisdictionsConfirmed
@@ -728,6 +729,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         provenance: state.provenance,
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
+        ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
       };
 
     case 'ANSWER_SUBMITTED': {
@@ -846,6 +848,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         provenance: state.provenance,
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
+        ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -875,6 +878,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         provenance: state.provenance,
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
+        ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
       };
 
     case 'PROCEED_TO_CONFIRMATION':

@@ -810,12 +810,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       answers: [],
       resolutionNotes: [],
       corrections: [],
-      // B-10 (Minor), added after this test was first written: the
-      // submission-time contradiction used to be silently dropped here —
-      // F-6's routing (questions win) is unchanged, but the contradiction
-      // itself must survive, carried, so handleAnswerSubmitted can still
-      // raise it once the questions end.
-      submissionContradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
+      // (B-10 rewritten, FX-2 review I-3: no carried submission-time contradiction.)
     });
   });
 
@@ -1347,6 +1342,28 @@ describe('intakeReducer — guessedFields/provenance/gate values survive Back fr
     });
   });
 
+  it('TC-CR6-03e: Back carries ignoredJurisdictions, and a Back + Continue round trip keeps the FIRST uncertainNodeIds even though guessedFields has since been trimmed', () => {
+    const q1 = { id: 'Q1', field: 'vendor', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' as const };
+    const first = intakeReducer(reviewState({ ignoredJurisdictions: ['Internal'] }), { type: 'QUESTIONS_GENERATED', questions: [q1] });
+    expect(first).toMatchObject({ uncertainNodeIds: ['n1'], ignoredJurisdictions: ['Internal'] });
+
+    // Answer the guessed field (trims guessedFields), go Back.
+    const answered = intakeReducer(first, {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'Acme' },
+    } as never);
+    const back = intakeReducer(answered, { type: 'STEP_BACK' });
+    expect(back).toMatchObject({ step: 'graph_review', ignoredJurisdictions: ['Internal'], uncertainNodeIds: ['n1'] });
+
+    // Continue again: guessedFields is now trimmed to {n1:['platform']} or {},
+    // yet the frozen record must stay what the FIRST generation captured.
+    const again = intakeReducer(
+      { ...(back as object), guessedFields: {} } as IntakeState,
+      { type: 'QUESTIONS_GENERATED', questions: [] },
+    );
+    expect(again).toMatchObject({ step: 'questionnaire', uncertainNodeIds: ['n1'], ignoredJurisdictions: ['Internal'] });
+  });
+
   it('TC-CR6-03b: the review screen after Back still shows its quotes and its checked state (provenance and unconfirmedNodeIds both survive the round trip)', () => {
     // A card already corrected (so it dropped out of unconfirmedNodeIds)
     // before Continue was ever pressed — the restored graph_review must
@@ -1503,15 +1520,19 @@ describe('intakeReducer — ANSWER_UNDONE defensive fallbacks for an undo snapsh
 // IntakeFlow.cr6-fx2.test.tsx; the reducer side (a second ANSWER_UNDONE with
 // no snapshot is a no-op) is already pinned above by TC-R71-06.
 
-// B-10 (Minor). FORM_SUBMITTED's questionnaire branch computed
-// action.contradictions (the submission-time check) and then discarded it —
-// a contradiction found at form submission was never shown if no SINGLE
-// questionnaire answer happened to re-trigger detectContradictions once the
-// questions ended. F-6's routing order (questions before contradictions)
-// is unchanged; what's fixed is that the submission-time contradictions are
-// no longer silently dropped.
-describe('intakeReducer — FORM_SUBMITTED carries submission-time contradictions onto the questionnaire (B-10)', () => {
-  it('TC-CR6-B10: with both questions and contradictions present, routes to questionnaire (F-6 unchanged) and keeps the contradictions on the new state', () => {
+// B-10 (Minor), REWRITTEN by the FX-2 review (I-3). The first B-10 fix carried
+// the submission-time contradictions onto the questionnaire state and
+// re-raised them when the questions ended. detectContradictions reads only
+// the description and the graph — never the answers — and the live check
+// after each answer already catches a still-present contradiction, so the
+// carried copy could only ever fire when an answer had ALREADY resolved the
+// conflict, re-flagging a stale contradiction (breaking R6: "an answer that
+// just fixed the contradiction must not re-flag it"). The carried field is
+// gone; IntakeFlow re-runs detectContradictions on the CURRENT graph when the
+// questions end instead (see IntakeFlow.cr6-fx2.test.tsx TC-CR6-B10).
+// What stays pinned here: F-6 routing is unchanged and nothing stale is carried.
+describe('intakeReducer — FORM_SUBMITTED with questions AND contradictions (B-10, rewritten)', () => {
+  it('TC-CR6-B10: routes to the questionnaire (F-6 unchanged) and carries NO stale submission-time contradiction onto it', () => {
     const g = graph({ intake_method: 'structured_form' });
     const contradictions = [{ statement1: 'no client data', statement2: 'Client PII', field: 'data_class' }];
     const questions = [{ id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const }];
@@ -1529,26 +1550,7 @@ describe('intakeReducer — FORM_SUBMITTED carries submission-time contradiction
     });
     // F-6 unchanged: questions present wins, same as TC-R16-W-19.
     expect(next.step).toBe('questionnaire');
-    expect((next as { submissionContradictions?: typeof contradictions }).submissionContradictions).toEqual(
-      contradictions,
-    );
-  });
-
-  it('with no submission-time contradictions, carries nothing (no spurious field)', () => {
-    const g = graph({ intake_method: 'structured_form' });
-    const questions = [{ id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const }];
-    const state: IntakeState = { step: 'graph_extraction', description: 'd', method: 'form' };
-    const next = intakeReducer(state, {
-      type: 'FORM_SUBMITTED',
-      graph: g,
-      useCaseId: 'uc-1',
-      description: 'd',
-      plainAnswers: {},
-      assumptions: [],
-      questions,
-      contradictions: [],
-      corrections: [],
-    });
-    expect((next as { submissionContradictions?: unknown }).submissionContradictions).toBeUndefined();
+    expect(JSON.stringify(next)).not.toContain('no client data');
+    expect('submissionContradictions' in next).toBe(false);
   });
 });

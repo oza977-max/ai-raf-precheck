@@ -8,7 +8,7 @@ import * as duplicateCheckModule from '../../llm/duplicate-check';
 import * as registerModule from '../../store/register';
 import * as traceModule from '../../llm/reasoning-trace';
 import { addNode } from '../../store/register';
-import { append as appendAuditEvent, getAll } from '../../store/audit';
+import { append as appendAuditEvent, getAll, getAllForExport } from '../../store/audit';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import type { DataFlowGraph } from '../../engine/types';
 import type { Verdict } from '../../types/verdict';
@@ -508,7 +508,8 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
     try {
       render(<App />);
       const looking = await screen.findByText('Looking through earlier checks…');
-      expect(looking).toHaveAttribute('role', 'status');
+      // CR6-08c: the line now sits inside the persisting status region.
+      expect(looking.closest('[role="status"]')).not.toBeNull();
 
       // Drive on to evaluation_pending to check "Evaluating…" too.
       const user = userEvent.setup();
@@ -739,5 +740,229 @@ describe('CR6-17: an invalid policy shows a message at the button instead of fai
 
     expect(await screen.findByText(/policy invalid/i, { selector: '.intake-flow__gate-error' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FX-2 review-loop findings (I-1..I-5, M-1..M-5).
+// ---------------------------------------------------------------------------
+
+const REGISTERED_PROBE = 'Review-loop probe summariser for relationship managers';
+
+async function seedProbeUseCase(label = REGISTERED_PROBE) {
+  await addNode({
+    node_id: crypto.randomUUID(),
+    node_type: 'use_case',
+    label,
+    created_at: '2026-01-01T00:00:00.000Z',
+    metadata: {
+      node_type: 'use_case',
+      submitted_by: '1LoD',
+      lifecycle_stage: 'approved',
+      current_verdict_id: null,
+      tier: 'High',
+      track: 'II',
+    },
+  });
+}
+
+describe('I-3 / B-10 rewritten: a contradiction is shown iff it still holds when the questions end', () => {
+  const manualGraph = (autonomy: number) =>
+    makeGraph({
+      intake_method: 'llm',
+      processing_nodes: [{ ...makeGraph().processing_nodes[0]!, autonomy_level: autonomy as never }],
+    });
+  const seed = (graph: DataFlowGraph, questions: unknown[], extra: Record<string, unknown> = {}) =>
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'questionnaire',
+        description: 'The process is fully manual',
+        graph,
+        questions,
+        answers: [],
+        resolutionNotes: [],
+        corrections: [],
+        useCaseId: 'uc-b10',
+        ...extra,
+      }),
+    );
+
+  it('TC-CR6-B10 (a): a contradiction that still holds on the current graph is shown', async () => {
+    seed(manualGraph(3), [
+      { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+    ]);
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /^yes$/i }));
+    expect(await screen.findByText(/says a person approves everything it does/i)).toBeInTheDocument();
+  });
+
+  it('TC-CR6-B10 (b): an answer that resolved the contradiction does not bring it back, even if a stale submission-time copy was saved', async () => {
+    seed(
+      manualGraph(3),
+      [{ id: 'Q1', field: 'autonomy_level', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'select' }],
+      // What the removed carried field looked like in a draft saved by the previous build.
+      {
+        submissionContradictions: [
+          { statement1: 'Your description says a person approves everything it does.', statement2: 'but your answers say it acts by itself.', field: 'autonomy_level' },
+        ],
+      },
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /a person checks or approves each thing/i }));
+    expect(await screen.findByRole('button', { name: /confirm and evaluate/i })).toBeInTheDocument();
+    expect(screen.queryByText(/says a person approves everything it does/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('I-4: Start over after "Use the earlier result" leaves nothing of the adopted case behind', () => {
+  it('TC-CR6-02e: after an earlier result was used, Start over + a new description does not show "Earlier result used from"', async () => {
+    await seedProbeUseCase();
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: REGISTERED_PROBE }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
+
+    await user.click(screen.getByRole('button', { name: /start over instead/i }));
+    await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'A chatbot that helps interns book conference rooms');
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await screen.findByRole('button', { name: /^continue →$/i });
+    expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('I-5: going Back mid duplicate check abandons that check', () => {
+  it('TC-CR6-02f: a held check resolving after Back + a changed description never shows its stale match card and writes no audit event', async () => {
+    localStorage.setItem('aigate:api-key', 'test-key');
+    await seedProbeUseCase();
+    const first = held<boolean>();
+    const spy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockImplementationOnce(() => first.promise);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: REGISTERED_PROBE }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await screen.findByText(/looking through earlier checks/i);
+      await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+      await user.click(screen.getAllByRole('button', { name: /back/i })[0]!);
+      const box = await screen.findByLabelText(/what ai tool do you want to use/i);
+      await user.clear(box);
+      await user.type(box, 'A chatbot that helps interns book conference rooms');
+      await user.click(screen.getByRole('button', { name: /^next/i }));
+      await screen.findByRole('button', { name: /^continue →$/i });
+
+      first.resolve(true);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(screen.queryByRole('button', { name: /mine is different/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^continue →$/i })).toBeInTheDocument();
+      expect((await getAllForExport()).filter((e) => e.event_type === 'duplicate_dismissed')).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('M-1: an abandoned call does not release the new case\'s guard', () => {
+  it('TC-CR6-02g: after the abandoned adoption finishes late, a second click on the new case\'s adopt still cannot start a second write', async () => {
+    await seedProbeUseCase('Adopt guard probe assistant');
+    const a = held<void>();
+    const b = held<void>();
+    const addNodeSpy = vi.spyOn(registerModule, 'addNode');
+    addNodeSpy.mockImplementationOnce(() => a.promise as never).mockImplementationOnce(() => b.promise as never);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt guard probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+      await user.click(screen.getByRole('button', { name: /start over instead/i }));
+      await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Adopt guard probe assistant');
+      await user.click(screen.getByRole('button', { name: /^next/i }));
+      await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+      expect(addNodeSpy).toHaveBeenCalledTimes(2);
+
+      // The abandoned adoption finishes late — its finally must not free the guard B holds.
+      a.resolve();
+      await new Promise((r) => setTimeout(r, 20));
+      await user.click(screen.getByRole('button', { name: /use the earlier result/i }));
+      expect(addNodeSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      b.resolve(undefined);
+      addNodeSpy.mockRestore();
+    }
+  });
+});
+
+describe('M-3: "Nothing similar found" lives inside a status region', () => {
+  it('TC-CR6-08c: the no-match outcome is announced from a role="status" region, not a plain paragraph', async () => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'A chatbot that helps interns book conference rooms' }));
+    render(<App />);
+    const text = await screen.findByText(/nothing similar found/i);
+    expect(text.closest('[role="status"]')).not.toBeNull();
+  });
+});
+
+describe('M-4: a draft saved mid-evaluation is not restored into "Evaluating…"', () => {
+  it('TC-CR6-15c: restoring an evaluation_pending draft shows a plain pointer to the register, no endless "Evaluating…", and clears the draft', async () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ step: 'evaluation_pending', graph: makeGraph(), useCaseId: 'uc-pending', description: 'd' }),
+    );
+    render(<App />);
+    expect(await screen.findByText(/interrupted/i)).toBeInTheDocument();
+    expect(screen.getByText(/on the register/i)).toBeInTheDocument();
+    expect(screen.queryByText(/evaluating…/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
+    await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull());
+  });
+});
+
+describe('M-5: App guards IntakeFlow with the ErrorBoundary; an old-shape draft survives Undo', () => {
+  it('TC-CR6-04e: a draft that crashes the intake render shows the boundary from inside App, and its button gets a working intake back', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // No graph at all: IntakeFlow's own render dereferences it and throws.
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ step: 'confirmation', description: 'd', corrections: [], answers: [], resolutionNotes: [], useCaseId: 'u' }),
+    );
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /start a fresh check/i }));
+      expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
+      expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it('TC-CR6-04a (UI): a draft saved with the old undo shape restores without a crash, offers no Undo for that answer, and Undo works for the next one', async () => {
+    const g = makeGraph({ intake_method: 'llm' });
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'questionnaire',
+        description: 'd',
+        graph: g,
+        questions: [
+          { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+          { id: 'Q2', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+          { id: 'Q3', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+        ],
+        answers: [{ questionId: 'Q1', value: true }],
+        resolutionNotes: [],
+        corrections: [],
+        useCaseId: 'uc-old',
+        undo: { graph: g, correctionsLen: 0 },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(/question 2 of 3/i);
+    expect(screen.queryByRole('button', { name: /^undo$/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^no$/i }));
+    await user.click(await screen.findByRole('button', { name: /^undo$/i }));
+    expect(await screen.findByText(/question 2 of 3/i)).toBeInTheDocument();
   });
 });
