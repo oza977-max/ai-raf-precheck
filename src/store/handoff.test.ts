@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { resolve } from 'node:path';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { append, getAllForExport, verifyChain, __resetChainStateForTests, __recomputeChainForTests } from './audit';
 import { addNode, updateLifecycleStage } from './register';
 import * as registerStore from './register';
 import { __resetDbsForTests } from './db';
+import { loadPolicy } from './policy';
+import { seedAigateSelfAssessment } from '../seeds/aigate-self-assessment';
 import {
   exportBundle,
   importBundle,
@@ -14,6 +17,7 @@ import {
   type HandoffBundle,
 } from './handoff';
 import type { RegisterNode, AuditEvent } from './types';
+import type { PolicyFile } from '../engine/types';
 
 // RG-8 — verified hand-off bundle (relabelled from RG-6 in code-review-005
 // F9/F27 — RG-6 already meant something else in this product's requirement
@@ -202,6 +206,14 @@ describe('RG-8 hand-off bundle — tamper detection', () => {
     expect(result.eventsAdded).toBe(0);
   });
 
+  // CR6-30 (Minor, code review 006). The generic invalid_format message read
+  // "an Counterpoise" — wrong grammar in a user-facing string.
+  it('TC-CR6-30: the generic invalid-format message uses correct grammar ("a Counterpoise", not "an Counterpoise")', async () => {
+    const result = await importBundle({ hello: 'world' });
+    expect(result.outcome).toBe('invalid_format');
+    expect(result.message).toBe('This file is not a Counterpoise hand-off bundle.');
+  });
+
   // code-review-005 F2. The seal and chain are plain SHA-256 — no key, no
   // secret, no external anchor. This is the test that pins the documented
   // limit rather than hiding it: a fully re-hashed forgery (a payload
@@ -338,7 +350,7 @@ describe('RG-8 hand-off bundle — import validation at the boundary (code-revie
     const result = await importBundle(fromTheFuture);
     expect(result.outcome).toBe('invalid_format');
     expect(result.message).toMatch(/different version of Counterpoise/i);
-    expect(result.message).not.toBe('This file is not an Counterpoise hand-off bundle.');
+    expect(result.message).not.toBe('This file is not a Counterpoise hand-off bundle.');
   });
 
   it('replaceWithBundle applies the same validation as importBundle (a malformed bundle cannot be replaced in either)', async () => {
@@ -1119,6 +1131,9 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     await freshMachine();
     await seedSubmitterCase('uc-partial-own');
 
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       const result = await replaceWithBundle(bundle);
@@ -1143,6 +1158,9 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     await freshMachine();
     await seedSubmitterCase('uc-finish-ok-own');
 
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     let partial: Awaited<ReturnType<typeof replaceWithBundle>>;
     try {
@@ -1167,6 +1185,9 @@ describe('RG-8 hand-off bundle — partial replace and finishing it (code-review
     await freshMachine();
     await seedSubmitterCase('uc-finish-stale-own');
 
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');
@@ -1219,6 +1240,9 @@ describe('RG-8 hand-off bundle — recovering a lost partially_replaced via re-i
     // Reach partially_replaced exactly like TC-RG-8-28/29/30 do — the audit
     // trail is replaced with the bundle's events, but the register step
     // fails, so the register still shows 'uc-lost-own'.
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       expect((await replaceWithBundle(bundle)).outcome).toBe('partially_replaced');
@@ -1433,6 +1457,137 @@ describe('RG-8 hand-off bundle — app_version provenance (code-review-005 round
     // the suite; see CLAUDE.md) run with the repo root as cwd.
     const pkgVersion = JSON.parse(readFileSync('./package.json', 'utf-8')).version as string;
     expect(__APP_VERSION__).toBe(pkgVersion);
+  });
+});
+
+// code review 006, CR6-01 (Critical). validateBundle used to check the seal
+// and the hash chain, and hand events off for storage, from zod's PARSED
+// bundle (parsed.data) — but zod's object parsing rebuilds every event, and
+// every nested payload, as a NEW object with keys in the SCHEMA's
+// declaration order (passthrough extras appended after), while eventContent
+// (audit.ts) hashes `JSON.stringify(e.payload)` in whatever key order the
+// object it is given actually has. The real producer always computed an
+// event's stored `.hash` over ITS OWN (insertion) key order — whatever
+// order the real application code happened to write the payload literal in
+// — so re-hashing the schema-reordered copy recomputed a DIFFERENT string
+// and never matched: every real, untampered bundle was rejected as
+// "tampered".
+//
+// BC-003: every test below uses data a REAL producer wrote (the app's own
+// self-assessment seed, or a payload typed in the real writer's own field
+// order) instead of a hand fixture. That is the point of this finding —
+// every OTHER hand-off test in this file types its fixtures (minimalVerdict,
+// validAssumption, etc.) in something close to the schema's OWN declared
+// order, so reparsing them changed nothing observable and the five-day-old
+// break stayed green. A hand fixture typed in schema order could never have
+// caught this.
+describe('RG-8 hand-off bundle — raw-event hashing survives a real schema reparse (code review 006, CR6-01)', () => {
+  let cr6Policy: PolicyFile;
+
+  beforeAll(() => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(yaml);
+    if (!result.valid) throw new Error(`fixture policy invalid: ${JSON.stringify(result.errors)}`);
+    cr6Policy = result.policy;
+  });
+
+  beforeEach(async () => {
+    await freshMachine();
+  });
+
+  // seeds/aigate-self-assessment.ts builds its verdict as
+  // `{ ...evaluate()'s real EvaluationResult, id, use_case_id, living_status,
+  // ... }` — evaluate.ts's own emptyResult() field order (status, tier,
+  // track, binding_constraint, ... explanation, provisional_reasons,
+  // unclassified_decision_types), nothing like verdictSchema's declared
+  // order (id, use_case_id, status, policy_version, tier, track, ...) below
+  // in this file. JSON.parse(JSON.stringify(...)) simulates the file this
+  // bundle would actually travel as.
+  async function realSelfAssessmentBundleRoundTripped(): Promise<unknown> {
+    await seedAigateSelfAssessment(cr6Policy);
+    const bundle = await exportBundle(APP_VERSION);
+    return JSON.parse(JSON.stringify(bundle)) as unknown;
+  }
+
+  it('TC-CR6-01a: the app\'s own self-assessment case, exported and round-tripped through JSON, imports into an empty machine', async () => {
+    const raw = await realSelfAssessmentBundleRoundTripped();
+    await freshMachine();
+
+    const result = await importBundle(raw);
+    expect(result.outcome).toBe('imported_into_empty');
+  });
+
+  it(
+    'TC-CR6-01b: a verdict_corrected payload in the real writer\'s own key order (corrections_count right after ' +
+      'knowledge_lens_matched_entry_ids, then submitter_note, assumptions, evidence_scope) imports',
+    async () => {
+      const useCaseId = 'uc-cr6-01b-real-order';
+      await seedSubmitterCase(useCaseId);
+      // IntakeFlow.tsx:1229-1251's own object-literal order — NOT
+      // verdictSchema's declared order (which puts corrections_count last,
+      // after contradiction_resolutions/answer_contexts/assumptions/
+      // evidence_scope).
+      await append({
+        event_id: `${useCaseId}-corrected`,
+        use_case_id: useCaseId,
+        event_type: 'verdict_corrected',
+        occurred_at: '2026-01-02T00:00:02.000Z',
+        actor: 'system',
+        payload: {
+          type: 'verdict_corrected',
+          original_verdict_id: `${useCaseId}-v1`,
+          new_verdict: minimalVerdict(useCaseId, { id: `${useCaseId}-v2` }),
+          knowledge_lens_matched_entry_ids: ['INV-1'],
+          corrections_count: 1,
+          submitter_note: 'Re-checked after a correction.',
+          assumptions: [
+            {
+              questionId: '9',
+              question: 'Can the mistake be caught and put right?',
+              shortLabel: 'whether a mistake can be put right',
+              assumption: 'Assumed the strictest case because this was not stated.',
+              fields: ['output_reversibility'],
+            },
+          ],
+          evidence_scope: { platform: 'PLAT-CLOUD-LLM' },
+        },
+      });
+      const bundle = await exportBundle(APP_VERSION);
+      const raw = JSON.parse(JSON.stringify(bundle)) as unknown;
+      await freshMachine();
+
+      const result = await importBundle(raw);
+      expect(result.outcome).toBe('imported_into_empty');
+      expect(result.eventsAdded).toBe(3);
+    },
+  );
+
+  it('TC-CR6-01c: after the self-assessment case imports, verifyChain() on the receiving machine reports the chain intact', async () => {
+    const raw = await realSelfAssessmentBundleRoundTripped();
+    await freshMachine();
+
+    const result = await importBundle(raw);
+    // Guards against a vacuous pass: an EMPTY local store also "verifies",
+    // so the import must actually have landed the events first.
+    expect(result.outcome).toBe('imported_into_empty');
+    expect(result.eventsAdded).toBeGreaterThan(0);
+
+    const verification = await verifyChain();
+    expect(verification.ok).toBe(true);
+    expect(verification.checked).toBe(result.eventsAdded);
+  });
+
+  it('TC-CR6-01d: replaceWithBundle accepts the same real self-assessment case, and the local chain verifies afterwards', async () => {
+    const raw = await realSelfAssessmentBundleRoundTripped();
+    await freshMachine();
+    // The receiving machine's own, unrelated local data — replaceWithBundle
+    // must discard it in favour of the incoming bundle, not reject the
+    // bundle as tampered.
+    await seedSubmitterCase('uc-cr6-01d-local');
+
+    const result = await replaceWithBundle(raw);
+    expect(result.outcome).toBe('replaced');
+    expect((await verifyChain()).ok).toBe(true);
   });
 });
 

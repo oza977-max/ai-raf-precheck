@@ -62,6 +62,9 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
 describe('VerdictDisplay memo download — visible error on failure (code-review-005, R3-3)', () => {
   it('TC-RG-8-48: clicking "Download effective-challenge memo" shows a visible error instead of failing silently when memo generation throws', async () => {
     const user = userEvent.setup();
+    // EBT-1 (accepted): deliberate fault injection. buildChallengeMemo has no
+    // real input that throws — this spy is the only way to exercise the
+    // button's own catch path.
     const spy = vi.spyOn(challengeMemoModule, 'buildChallengeMemo').mockImplementationOnce(() => {
       throw new Error('simulated memo generation failure');
     });

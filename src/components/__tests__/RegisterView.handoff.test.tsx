@@ -327,7 +327,7 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     // before any `await`, so there is no async gap to wait out here.
     fireFileChange(await getImportInput(), makeFile({ not: 'a bundle' }));
 
-    expect(screen.queryByText('This file is not an Counterpoise hand-off bundle.')).not.toBeInTheDocument();
+    expect(screen.queryByText('This file is not a Counterpoise hand-off bundle.')).not.toBeInTheDocument();
     expect(screen.getByText(/different histories, so they can't be merged/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^save a backup of mine first$/i })).toBeInTheDocument();
   });
@@ -372,6 +372,9 @@ describe('RegisterView hand-off — partial replace and finishing it (code-revie
     await seedLocalDemoCase(crypto.randomUUID());
 
     const restore = mockSuccessfulDownload();
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
@@ -449,6 +452,9 @@ describe('RegisterView hand-off — recovering a lost partially_replaced via re-
     await seedLocalDemoCase(localId);
 
     let restore = mockSuccessfulDownload();
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       const { unmount } = render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
@@ -546,6 +552,9 @@ describe('RegisterView hand-off — import disabled while a replace/finish is pe
     await seedLocalDemoCase(crypto.randomUUID());
 
     const restore = mockSuccessfulDownload();
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
@@ -655,6 +664,9 @@ describe('RegisterView hand-off — finish_out_of_date through the real button (
     await seedLocalDemoCase(localId);
 
     const restore = mockSuccessfulDownload();
+    // EBT-2: deliberate fault injection. A well-formed, schema-valid bundle
+    // never fails backupAndReplaceRegister's plain IndexedDB put()s — no
+    // real input reaches this branch, only this spy.
     const spy = vi.spyOn(registerStore, 'backupAndReplaceRegister').mockRejectedValueOnce(new Error('simulated register-store failure'));
     try {
       render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);

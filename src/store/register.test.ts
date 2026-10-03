@@ -567,6 +567,10 @@ describe('Register and audit guarantees that were untested (round 4)', () => {
     } as unknown as RegisterNode;
     await addNode(badNode);
 
+    // EBT-3: deliberate fault injection, not a mock of a real failure. The
+    // console spy captures/suppresses the error toSummary() logs for this
+    // hand-built, type-bypassing bad row — no real write path (including the
+    // hand-off import boundary) can produce a node:metadata mismatch like it.
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     let summaries: Awaited<ReturnType<typeof getUseCases>>;
     let wasLogged: boolean;
