@@ -13,7 +13,7 @@ import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
-import { supplierDisplayName } from './plain-copy';
+import { supplierDisplayName, approvedModelLabelFor } from './plain-copy';
 import { Fold } from './Fold';
 // R16 chunk D1 (build/prompts/R16.md v2.1 §4.1): the one view-model behind
 // the verdict's first screen AND the four readers that need a safeguard's
@@ -140,6 +140,20 @@ const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
   approved: 'Saved to register — self-service final.',
   in_production: 'Saved to register — in production.',
 };
+
+// M-3 (review pass 1). The engine's model-governance review sentence names the
+// declared model by its raw id ("... - qwen3:4b is not on the firm's registry...").
+// On screen a listed model reads by its plain name (the same helper the form
+// and review card use); a model the policy does not list stays as written. The
+// rule id is looked up from the verdict's own review sources, so nothing is
+// guessed from the text.
+function reviewWords(review: string, verdict: Verdict, policy: PolicyFile | undefined): string {
+  const src = (verdict.downstream_review_sources ?? []).find((x) => x.review === review && x.rule_id.startsWith('MODEL-REGISTRY:'));
+  if (!src) return review;
+  const id = src.rule_id.slice(src.rule_id.indexOf(':') + 1);
+  const label = approvedModelLabelFor(policy?.approved_models, id);
+  return label ? review.split(id).join(label) : review;
+}
 
 // CR7-09 / BC-005. The 'approved' stage is reached by self-service AND by a
 // 2LoD sign-off, so its note is derived from what the case needed
@@ -597,7 +611,7 @@ function WhatToDo({
               <ul className="verdict__todo-list verdict__todo-list--reviews">
                 {reviews.map((r) => (
                   <li key={r}>
-                    <strong>{r}</strong>
+                    <strong>{reviewWords(r, verdict, policy)}</strong>
                     <span className="verdict__todo-chip verdict__todo-chip--review">separate review</span>
                   </li>
                 ))}
@@ -2041,13 +2055,13 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             <p>
               Nothing here is required of you now — this verdict is out of appetite. Kept for
               whoever takes it forward: a use case of this shape would also need{' '}
-              {verdict.downstream_reviews.join(', ')}. Those are separate from the appetite
+              {verdict.downstream_reviews.map((r) => reviewWords(r, verdict, policy)).join(', ')}. Those are separate from the appetite
               question, so bringing this inside appetite would not remove them.
             </p>
           </div>
         ) : (
           <div className="verdict__downstream">
-            <p>Downstream reviews: {verdict.downstream_reviews.join(', ')}</p>
+            <p>Downstream reviews: {verdict.downstream_reviews.map((r) => reviewWords(r, verdict, policy)).join(', ')}</p>
             {/* CS-3's fit criterion: "with the policy rule that triggered each
                 one named". A required review with no traceable cause is an
                 instruction with no author — a reviewer cannot check it, argue
@@ -2060,7 +2074,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                   // C-5: two packs may share a rule id with different review
                   // text — both are kept by the engine, so the key needs both.
                   <li key={`${s.rule_id}|${s.review}`}>
-                    {s.review} — required by <code>{s.rule_id}</code>
+                    {reviewWords(s.review, verdict, policy)} — required by{' '}
+                    <code className={s.rule_id.startsWith('MODEL-REGISTRY:') ? 'verdict__id-quiet' : undefined}>{s.rule_id}</code>
                     {s.regulatory_basis ? <Citation text={s.regulatory_basis} /> : null}
                   </li>
                 ))}
