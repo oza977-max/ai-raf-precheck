@@ -72,8 +72,10 @@ describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no
     const fold = container.textContent ?? '';
     expect(fold).not.toMatch(/not on the covered registry — nothing inherited/);
     expect(fold).toMatch(/1 declared component not on the covered registry/);
-    // FX-4 pass 2: with two components "the rest" is always exactly one.
-    expect(fold).toMatch(/still inherited from the other one, which is/);
+    // FX-4 pass 2 + final review: with two components "the rest" is always
+    // exactly one — and the sentence must end, not trail off at "which is".
+    expect(fold).toMatch(/\d+ controls? still inherited from the listed one(?!,? which)/);
+    expect(fold).not.toMatch(/which is\s*$/);
   });
 
   it('TC-CR6-11c: listed platform OUTSIDE its envelope + unlisted supplier — says why the listed one inherits nothing', () => {
@@ -87,7 +89,10 @@ describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no
     const entry = container.querySelector('.verdict__chain-entry')!;
     expect(entry.textContent).toMatch(/Partly on the registry/);
     expect(entry.textContent).toMatch(/Not on the covered registry:\s*VENDOR-NOT-LISTED/);
-    expect(entry.textContent).toMatch(/falls outside the covered envelope/);
+    // Final review M-3: the engine can inherit nothing for more than one
+    // reason (outside the envelope, no satisfies_controls, coupled clusters),
+    // so the line claims only what is known — the approval does not cover it.
+    expect(entry.textContent).toMatch(/Nothing inherited from the listed one either:\s*its approval does not cover this use case/);
   });
 });
 

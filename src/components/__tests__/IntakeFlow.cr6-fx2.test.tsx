@@ -1113,6 +1113,27 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
   });
 });
 
+describe('Final review M-1: a failed-save message belongs to its own case', () => {
+  it('TC-CR6-02m: after a failed "Mine is different" save, Start over and a new description show no leftover "could not be saved"', async () => {
+    await seedProbeUseCase('Leftover message probe assistant');
+    const appendSpy = vi.spyOn(auditModule, 'append').mockRejectedValueOnce(new Error('simulated storage fault'));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Leftover message probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /mine is different/i }));
+      await screen.findByText(/could not be saved/i);
+      await user.click(screen.getByRole('button', { name: /start over instead/i }));
+      await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Leftover message probe assistant');
+      await user.click(screen.getByRole('button', { name: /^next/i }));
+      await screen.findByRole('button', { name: /mine is different/i });
+      expect(screen.queryByText(/could not be saved/i)).not.toBeInTheDocument();
+    } finally {
+      appendSpy.mockRestore();
+    }
+  });
+});
+
 describe('M-3: "Nothing similar found" lives inside a status region', () => {
   it('TC-CR6-08c: the no-match outcome is announced from a role="status" region, not a plain paragraph', async () => {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'A chatbot that helps interns book conference rooms' }));

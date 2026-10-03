@@ -154,6 +154,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   }, [newPrecheckNonce]);
 
   function handleStartOver() {
+    // Final review M-1: a failed-save message belongs to the case it was
+    // about — never carried onto the next one.
+    setDecisionError(null);
     // CR6-02 (Critical). Bumped FIRST: any async handler/effect from the
     // abandoned attempt that resumes after this point (its own await
     // having been in flight when Start Over was clicked) will see its own
@@ -230,6 +233,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     !(state.step === 'graph_review' && (state.originalVerdictId || state.afterFailedEvaluation));
 
   function handleStepBack() {
+    // Final review M-1: a failed-save message belongs to the case it was
+    // about — never carried onto the next one.
+    setDecisionError(null);
     // Stepping back to the description means the duplicate check has to run
     // again on the way forward — the description it checked may change.
     //
@@ -449,6 +455,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   }, [refreshRegister]);
 
   function handleSubmitDescription() {
+    // Final review M-1: a failed-save message belongs to the case it was
+    // about — never carried onto the next one.
+    setDecisionError(null);
     if (state.step !== 'description_entry') return;
     // CR6-02f: entering a new duplicate check is a new attempt — anything
     // still running for an earlier description is dropped when it lands.
@@ -584,18 +593,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // looking at when they ask why there are two of these.
     if (duplicateMatch) {
       const candidate = duplicateMatch;
-      await appendAuditEvent({
-        event_id: crypto.randomUUID(),
-        use_case_id: candidate.id,
-        event_type: 'duplicate_dismissed',
-        occurred_at: new Date().toISOString(),
-        actor: getRole(),
-        payload: {
-          type: 'duplicate_dismissed',
-          candidate_use_case_id: candidate.id,
-          candidate_label: candidate.label,
-        },
-      });
+      // Final review M-1: only THIS single append can fail as "your choice
+      // could not be saved" — so only it is caught as that (nothing was
+      // recorded, and the choice can simply be made again).
+      try {
+        await appendAuditEvent({
+          event_id: crypto.randomUUID(),
+          use_case_id: candidate.id,
+          event_type: 'duplicate_dismissed',
+          occurred_at: new Date().toISOString(),
+          actor: getRole(),
+          payload: {
+            type: 'duplicate_dismissed',
+            candidate_use_case_id: candidate.id,
+            candidate_label: candidate.label,
+          },
+        });
+      } catch {
+        if (attemptToken.current === myAttempt) {
+          setDecisionError('Your choice could not be saved. Please try again.');
+        }
+        return;
+      }
     }
     // The dismissal write is done; the extraction below is covered by the
     // ordinary Start over/Retry handling, which must stay usable. An
@@ -637,12 +656,6 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         guessedFields: extraction.value.guessed,
       });
     }
-    } catch {
-      // The only throwing step is the single duplicate_dismissed append, so
-      // nothing was recorded and the choice can simply be made again.
-      if (attemptToken.current === myAttempt) {
-        setDecisionError('Your choice could not be saved. Please try again.');
-      }
     } finally {
       // CR6-02g / TC-CR6-02j: release the guard AND the decision lock only
       // if they are still this attempt's — after Start over they may belong

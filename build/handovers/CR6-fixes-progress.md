@@ -123,3 +123,8 @@ Contract: build/prompts/CR6-fixes.md v2 (base commit fe29bfb). Review: code-revi
   STILL TO DO after the FX-4 fix builder: TC-CR6-23 is used by two tests (UnderstoodSummary.test.tsx and
   plain-copy.cr6-fx4.test.ts) — rename one (careful: the FX-4 builder may add 23b) and split its 025 row, regenerate
   html; add rows/spec sentences for FX-4 pass-1 fixes; parity must then be clean.
+- ALL FOUR CHUNKS CONVERGED. Docs, handover, ritual ×3 (1533) green. Live walkthrough done (hand-off verified on real
+  data; TC-CR6-07f found + fixed, 4b00c47). Owner asked mid-session: "keep GVM on, don't slip" → a final independent
+  review pass over the main-loop-authored fixes (6d7146d, 86f3c36, 94015ca, 4b00c47) is running BEFORE merge.
+- NEXT: if that pass is clean → fast-forward main to cr6-fixes, push, check CI; then remind the owner and release the
+  waiting "random id" session (see OWNER INSTRUCTION above). Then the owner's second full review round, then /gvm-test.

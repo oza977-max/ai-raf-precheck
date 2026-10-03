@@ -80,10 +80,24 @@ Format: `[(pass, Critical+Important found)]`.
 - FX-4: `[(1, 1), (2, 0)]`.
   - Pass 1: the combined inheritance entry said "nothing inherited" when controls were inherited.
   - Pass 2's 3 Minors were fixed by the main loop:
-    - Every real company name used as sample data in this round's tests and docs was replaced with an invented one.
-      One was a Big-4 firm's name, and the repo is public.
-    - The fold summary now says "from the other one, which is".
-    - TC-CR6-11c: when the listed component itself inherits nothing, the entry says it is outside the covered envelope.
+    - Every real company name used as sample data in this round's tests and docs was replaced with an invented one
+      (the repo is public). The commit that first added them was folded into its fix before anything was pushed, so
+      no commit on the branch carries them.
+    - The fold summary now says "N controls still inherited from the listed one".
+    - TC-CR6-11c: when the listed component itself inherits nothing, the entry says its approval does not cover this
+      use case.
+
+## Final review of the main loop's own fixes
+
+The fixes the main loop wrote itself after each chunk converged had one more independent pass. Result: 2 Important,
+3 Minor, all fixed test-first.
+- **Important:** the fold summary sentence trailed off at "which is".
+- **Important:** a not-yet-pushed commit still carried the replaced sample names. That stretch of branch history was
+  rebuilt with identical end content and re-scanned clean.
+- **Minor:** a failed-save message could carry over to the next case (TC-CR6-02m), and the dismiss save's error handler
+  is now narrowed to that single save.
+- **Minor:** TC-R16-F-71's last step was empty. It now clicks "+ New pre-check" and checks that a fresh case starts.
+- **Minor:** the "no envelope" line now claims only that the approval does not cover this use case.
 
 ## Live walkthrough (2026-10-03)
 

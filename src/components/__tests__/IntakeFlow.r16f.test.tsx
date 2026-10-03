@@ -751,7 +751,11 @@ describe('R16-F review pass 5: nothing can start a new case while the result is 
       // "+ New pre-check", which must be usable. What this test pins (no
       // new case while the result is being worked out) is unchanged above.
       await waitFor(() => expect(screen.queryByRole('button', { name: /start over instead/i })).not.toBeInTheDocument());
-      expect(screen.getByRole('button', { name: /new pre-check/i })).toBeEnabled();
+      // Final review M-2: that sidebar button is never disabled, so being
+      // enabled proves nothing — USE it and show a new case really starts.
+      await userEvent.click(screen.getByRole('button', { name: /new pre-check/i }));
+      expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toHaveValue('');
+      expect(screen.queryByText('Verdict', { selector: '.verdict__eyebrow' })).not.toBeInTheDocument();
     } finally {
       spy.mockRestore();
       sessionStorage.clear();

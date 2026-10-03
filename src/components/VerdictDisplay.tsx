@@ -2143,7 +2143,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             verdict.inheritance
               ? verdict.inheritance.resolved
                 ? `On the covered registry — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} inherited`
-                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry${verdict.inheritance.inherited_controls.length > 0 ? ` — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} still inherited from the other one, which is` : ' — nothing inherited'}`
+                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry${verdict.inheritance.inherited_controls.length > 0 ? ` — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} still inherited from the listed one` : ' — nothing inherited'}`
               : ''
           }
         ><div className="verdict__chain">
@@ -2212,8 +2212,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 entry.unresolvedIds.length > 0 &&
                 entry.unresolvedIds.length < entry.declaredId.split(' + ').length && (
                 <p className="verdict__chain-derived">
-                  Nothing inherited from the listed one either:&ensp;this use case falls outside the
-                  covered envelope, so its controls are assessed from scratch.
+                  Nothing inherited from the listed one either:&ensp;its approval does not cover this
+                  use case, so its controls are assessed from scratch.
                 </p>
               )}
               {entry.inheritedControls.length === 0 && entry.unresolvedIds && entry.unresolvedIds.length === 0 && (
