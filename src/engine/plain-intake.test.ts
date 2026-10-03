@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { plainAnswersToFormValues, platformZoneOptionKeys } from './plain-intake';
+import { plainAnswersToFormValues, platformZoneOptionKeys, q3ShowsModelQuestion } from './plain-intake';
 import { buildGraphFromForm } from './build-graph-from-form';
+import { evaluate } from './evaluate';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { loadPolicy } from '../store/policy';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
+import { describeAssumptions } from '../components/plain-copy';
 // R16-F §5 (DR7-06): PlainAnswers is engine-owned (ids/keys only) —
 // imported from its real source rather than round-tripping through the
 // component layer's re-export.
@@ -279,7 +286,10 @@ describe('plainAnswersToFormValues — Q3 (where the AI comes from)', () => {
   });
 
   it('3model: a free-typed name not on the model registry becomes declaredModelIdOther', () => {
-    const { values } = plainAnswersToFormValues({ ...BASE, '3model': 'gpt-4o-custom' }, policy());
+    // CR7-04: the model question is only asked for an outside assistant or a
+    // supplier option, so the answer is read only then (BASE's firm-built
+    // would now ignore it — see TC-CR7-04b).
+    const { values } = plainAnswersToFormValues({ ...BASE, '3': 'outside-assistant', '3a': 'firm-account', '3model': 'gpt-4o-custom' }, policy());
     expect(values.declaredModelIdOther).toBe('gpt-4o-custom');
     expect(values.declaredModelId).toBeUndefined();
   });
@@ -595,9 +605,11 @@ describe('plainAnswersToFormValues — Q11 (jurisdictions, tick-all)', () => {
     expect(values.jurisdictions.sort()).toEqual(['EU', 'UK']);
   });
 
-  it('"Somewhere else, or not sure" forces an empty jurisdictions list, even alongside other ticks', () => {
-    const { values } = plainAnswersToFormValues({ ...BASE, '11': ['UK', 'elsewhere-not-sure'] }, policy());
+  it('"Somewhere else, or not sure" on its own gives an empty jurisdictions list (TC-CR7-23b)', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '11': ['elsewhere-not-sure'] }, policy());
     expect(values.jurisdictions).toEqual([]);
+    // unchanged: no assumption is added for the lone tick
+    expect(assumptions.some((a) => a.questionId === '11')).toBe(false);
   });
 
   it('an unrecognised code is dropped rather than passed through unchecked', () => {
@@ -1132,5 +1144,66 @@ describe('plainAnswersToFormValues — TC-R16-D2-19: the "Not sure" fields guard
       }
       expect([...union].sort(), c.label).toEqual([...reported!.fields].sort());
     }
+  });
+});
+
+// CR7-04 (engine half). The model question (3model) is asked only when Q3 is
+// an outside assistant or a supplier option — StructuredForm's showQ3Model.
+// A value left in the answers from an earlier Q3 choice must not reach the graph.
+describe('CR7-04 — 3model is read only when the model question is shown', () => {
+  it('TC-CR7-04b: q3ShowsModelQuestion is true for outside-assistant, supplier-feature, specialist-product only', () => {
+    expect(q3ShowsModelQuestion({ ...BASE, '3': 'outside-assistant' })).toBe(true);
+    expect(q3ShowsModelQuestion({ ...BASE, '3': 'supplier-feature' })).toBe(true);
+    expect(q3ShowsModelQuestion({ ...BASE, '3': 'specialist-product' })).toBe(true);
+    for (const q3 of ['firm-built', 'not-sure', 'PLAT-CLOUD-LLM']) {
+      expect(q3ShowsModelQuestion({ ...BASE, '3': q3 }), q3).toBe(false);
+    }
+    expect(q3ShowsModelQuestion({ ...BASE, '3': undefined } as unknown as PlainAnswers)).toBe(false);
+  });
+
+  it('TC-CR7-04b: a stale 3model left behind after Q3 changed to firm-built names no model', () => {
+    const { values } = plainAnswersToFormValues({ ...BASE, '3': 'firm-built', '3model': 'gpt-4o-custom' }, policy());
+    expect(values.declaredModelId).toBeUndefined();
+    expect(values.declaredModelIdOther).toBeUndefined();
+  });
+
+  it('TC-CR7-04b: the same 3model is read when Q3 is a supplier option', () => {
+    const { values } = plainAnswersToFormValues(
+      { ...BASE, '3': 'supplier-feature', '3supplier': 'VENDOR-SUPPLIER-A', '3model': 'gpt-4o-custom' },
+      policy(),
+    );
+    expect(values.declaredModelIdOther).toBe('gpt-4o-custom');
+  });
+});
+
+// CR7-23 (owner decisions): a listed country stays checked when "Somewhere
+// else, or not sure" is also ticked, and the unknown country is listed back
+// as an assumption. The result is NOT marked provisional on that account.
+describe('CR7-23 — listed country kept alongside "Somewhere else, or not sure"', () => {
+  it('TC-CR7-23a: UK + elsewhere keeps UK and lists the unchecked country as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '11': ['UK', 'elsewhere-not-sure'] }, policy());
+    expect(values.jurisdictions).toEqual(['UK']);
+    expect(assumptions.find((a) => a.questionId === '11')).toEqual({
+      questionId: '11',
+      optionKey: 'elsewhere-not-sure',
+      fields: ['jurisdictions'],
+    });
+    const worded = describeAssumptions(assumptions).find((a) => a.questionId === '11');
+    expect(worded?.assumption).toMatch(/no other country/i);
+    expect(worded?.shortLabel).not.toBe(worded?.question);
+  });
+
+  it('TC-CR7-23a: with the shipped policy and packs the UK pack applies and the result is not provisional for want of a regulatory basis', () => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const loaded = loadPolicy(yaml);
+    if (!loaded.valid) throw new Error('policy invalid');
+    const pk = loadPacks(getPackSources());
+    const answers: PlainAnswers = { ...BASE, '11': ['UK', 'elsewhere-not-sure'] };
+    const { values } = plainAnswersToFormValues(answers, loaded.policy);
+    const graph = buildGraphFromForm(values, '2026-01-01T00:00:00Z', () => 'id');
+    const r = evaluate(graph, loaded.policy, pk.packs);
+    if (!r.ok) throw new Error('evaluate failed');
+    expect(Object.keys(r.value.pack_versions).length).toBeGreaterThan(0);
+    expect(r.value.provisional_reasons).not.toContain('no_regulatory_basis');
   });
 });
