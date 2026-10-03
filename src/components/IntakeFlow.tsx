@@ -1681,7 +1681,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
         } catch (err) {
           console.error('Counterpoise: the model link for this case could not be written:', err);
-          await updateUseCaseVerdictSummary(useCaseId, { modelLinkUnrecorded: true });
+          // A second failure must not break a confirm whose case is already saved:
+          // log it and carry on. Residual (accepted): with neither the edge nor
+          // the flag written, the register may later say "No model was named".
+          try {
+            await updateUseCaseVerdictSummary(useCaseId, { modelLinkUnrecorded: true });
+          } catch (flagErr) {
+            console.error('Counterpoise: the case could not be flagged model_link_unrecorded:', flagErr);
+          }
         }
       }
     }
