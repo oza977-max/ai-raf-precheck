@@ -46,12 +46,14 @@ function safeTimeMs(iso: string): number {
 // tab — or any path that did not refresh the hint — has changed the table.
 // CR8-07: an equal count alone is not trusted. The hint also remembers the
 // tip event's id and hash; when counts match, the stored event with that id
-// must still exist with the same hash (one O(1) get), otherwise rescan. That
-// catches another tab's replace that happened to leave the same number of
-// events. Still undetected, documented: a change that keeps the count AND the
-// tip event byte-identical while altering earlier events — an append lands on
-// the real tip either way, and verifyChain() is what finds the earlier edit.
-// No schema bump.
+// must still exist with the same hash AND no stored event may name that hash
+// as its prev_hash (the tip is still the newest) — otherwise rescan. That
+// catches another tab's replace, or delete-then-append, that left the same
+// number of events. The "still newest" check reads the table (no prev_hash
+// index; none added — no schema bump). Still undetected, documented: a change
+// that keeps the count, the tip event and its newest-ness while altering
+// earlier events — an append lands on the real tip either way, and
+// verifyChain() is what finds the earlier edit.
 interface TipHint {
   hash: string | null;
   /** event_id of the tip event (null for an empty trail). */
@@ -67,7 +69,14 @@ async function freshTip(): Promise<TipHint> {
   if (tip !== undefined && tip.count === count) {
     if (tip.eventId === null) return tip; // empty trail, still empty
     const stored = await db.get('audit_events', tip.eventId);
-    if (stored !== undefined && stored.hash === tip.hash) return tip;
+    if (stored !== undefined && stored.hash === tip.hash) {
+      // The tip must also still be the NEWEST event: no stored event may name
+      // its hash as prev_hash (another tab could have deleted an earlier event
+      // and appended, leaving the count equal). There is no prev_hash index, so
+      // this is a getAll (O(n) on the count-equal path).
+      const all = await db.getAll('audit_events');
+      if (!all.some((e) => e.prev_hash === tip!.hash)) return tip;
+    }
   }
   const all = await db.getAll('audit_events');
   const ordered = chainOrder(all);

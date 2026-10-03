@@ -1,7 +1,7 @@
 import { evaluate } from '../engine/evaluate';
 import { routeToWorkflow } from '../engine/workflow-router';
 import { addNode, addEdge, addUseCaseModelLink } from '../store/register';
-import { withCaseLock } from '../store/db';
+import { withCaseLock, openRegisterDb } from '../store/db';
 import { append } from '../store/audit';
 import { checkPolicyReferences } from '../store/policy-references';
 import { localLlmEnabled, DEFAULT_LOCAL_LLM_MODEL } from '../llm/local-provider';
@@ -206,6 +206,40 @@ async function writeRegisterRows(
   track: Verdict['track'],
   stage: LifecycleStage,
 ): Promise<void> {
+  // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
+  // workflow exists in this codebase.
+  // CR8-10: each row is written only if absent, so a run interrupted part-way
+  // is completed by the next. The use-case node goes LAST: it is what the seed's
+  // skip check looks at, so it must only exist once everything else does.
+  const db = await openRegisterDb();
+  if (!(await db.get('register_nodes', AIGATE_VENDOR_NODE_ID))) await addNode({
+    node_id: AIGATE_VENDOR_NODE_ID,
+    node_type: 'vendor',
+    label: 'Anthropic',
+    created_at: now,
+    metadata: {
+      node_type: 'vendor',
+      vendor_name: 'Anthropic',
+      approval_status: 'pending',
+    },
+  });
+
+  const existingEdges = await db.getAllFromIndex('register_edges', 'by_from_node', AIGATE_USE_CASE_ID);
+  if (!existingEdges.some((e) => e.edge_type === 'provided_by_vendor')) await addEdge({
+    edge_id: crypto.randomUUID(),
+    from_node_id: AIGATE_USE_CASE_ID,
+    to_node_id: AIGATE_VENDOR_NODE_ID,
+    edge_type: 'provided_by_vendor',
+    created_at: now,
+  });
+
+  // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
+  // case's confirmation uses — no special-cased write.
+  const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
+  if (declaredModelNode && !existingEdges.some((e) => e.edge_type === 'uses_model')) {
+    await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
+  }
+
   await addNode({
     node_id: AIGATE_USE_CASE_ID,
     node_type: 'use_case',
@@ -220,33 +254,4 @@ async function writeRegisterRows(
       track,
     },
   });
-
-  // Drift fix #3: 'pending', not 'approved' — no real vendor-approval
-  // workflow exists in this codebase.
-  await addNode({
-    node_id: AIGATE_VENDOR_NODE_ID,
-    node_type: 'vendor',
-    label: 'Anthropic',
-    created_at: now,
-    metadata: {
-      node_type: 'vendor',
-      vendor_name: 'Anthropic',
-      approval_status: 'pending',
-    },
-  });
-
-  await addEdge({
-    edge_id: crypto.randomUUID(),
-    from_node_id: AIGATE_USE_CASE_ID,
-    to_node_id: AIGATE_VENDOR_NODE_ID,
-    edge_type: 'provided_by_vendor',
-    created_at: now,
-  });
-
-  // R11-MG-3 / ADR-RL-R11-2: same addUseCaseModelLink() path any other use
-  // case's confirmation uses — no special-cased write.
-  const declaredModelNode = AIGATE_USE_CASE_GRAPH.processing_nodes.find((n) => n.declared_model_id);
-  if (declaredModelNode) {
-    await addUseCaseModelLink(AIGATE_USE_CASE_ID, declaredModelNode, policy);
-  }
 }

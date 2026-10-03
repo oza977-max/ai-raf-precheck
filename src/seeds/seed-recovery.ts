@@ -1,5 +1,5 @@
 import { routeToWorkflow } from '../engine/workflow-router';
-import { getUseCase } from '../store/register';
+import { getUseCase, findLatestVerdictEvent } from '../store/register';
 import { getAll } from '../store/audit';
 import type { PolicyFile } from '../engine/types';
 import type { LifecycleStage } from '../store/types';
@@ -19,6 +19,9 @@ import type { Verdict } from '../types/verdict';
 //   - events but no verdict_produced       -> skip and console.error: an
 //                                             orphan that cannot be completed
 //                                             safely
+// Known limit: recovery appends nothing, so a reload that landed before an
+// ib-portfolio case's scripted 2LoD events were written leaves the case at the
+// router's stage with no review on its trail.
 // Writing the node first is NOT an option: its current_verdict_id would point
 // at a verdict that does not exist yet.
 export type SeedPlan =
@@ -30,12 +33,14 @@ export async function planSeed(caseId: string, policy: PolicyFile): Promise<Seed
   if (await getUseCase(caseId)) return { kind: 'skip' };
   const events = await getAll(caseId);
   if (events.length === 0) return { kind: 'fresh' };
-  const produced = events.find((e) => e.payload.type === 'verdict_produced');
-  if (!produced || produced.payload.type !== 'verdict_produced') {
+  const latest = findLatestVerdictEvent(events);
+  if (!latest) {
     console.error(`Seed skipped for "${caseId}": it has audit events but no verdict_produced event, so it cannot be completed safely.`);
     return { kind: 'skip' };
   }
-  const verdict = produced.payload.verdict;
+  // The LAST verdict_produced or verdict_corrected, consistent with taking the
+  // last stage change below.
+  const verdict = latest.type === 'verdict_produced' ? latest.verdict : latest.new_verdict;
   // The stage the case's own trail implies: the last lifecycle_stage_changed
   // event wins (ib-portfolio's scripted 2LoD approval writes one, so an
   // approved case recovers as approved); with none, the router's stage for the
