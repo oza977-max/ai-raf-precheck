@@ -1637,22 +1637,6 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // cycle (established since P4-C01/P5-C01) — the unobservable
       // Idea/Exploring states are skipped; the node is created directly
       // at its routed stage (build/prompts/P6-C02.md deviation #4).
-      // M-2 (review pass 1): written BEFORE the use-case node. The register says
-      // "No model was named" for a case with no uses_model edge, so a case must
-      // never exist without its link when a model was declared: if this throws,
-      // no use-case node has been written and the confirmation fails whole.
-      // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md §16): the dormant
-      // ai_model/uses_model schema, consumed at the same write that already
-      // produces the use_case node. Only on first confirmation, not on a
-      // correction re-evaluation — a correction reuses useCaseId and would
-      // otherwise write a second uses_model edge for the same use case.
-      const declaredModelNode = graph.processing_nodes.find((n) => n.declared_model_id);
-      if (declaredModelNode && policyResult.valid) {
-        // CR7-41: the snapshot judges acceptance on the same expiry-applied
-        // policy evaluate() saw, so a family past its reattest_by is not filed
-        // as accepted while the verdict owes its review.
-        await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
-      }
       await addNode({
         node_id: useCaseId,
         node_type: 'use_case',
@@ -1678,6 +1662,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           track: result.track,
         },
       });
+      // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md section 16): the dormant
+      // ai_model/uses_model schema, consumed at the same write that already
+      // produces the use_case node. Only on first confirmation, not on a
+      // correction re-evaluation: a correction reuses useCaseId and would
+      // otherwise write a second uses_model edge for the same use case.
+      // Pass 2 M-1: written AFTER the node, never before. The verdict is already
+      // on the trail, so a failure here must not strand the case (Confirm would
+      // refuse it as already decided). If the link cannot be written the case is
+      // saved and flagged `model_link_unrecorded`, and the register then says
+      // nothing about whether a model was named.
+      const declaredModelNode = graph.processing_nodes.find((n) => n.declared_model_id);
+      if (declaredModelNode && policyResult.valid) {
+        try {
+          // CR7-41: the snapshot judges acceptance on the same expiry-applied
+          // policy evaluate() saw, so a family past its reattest_by is not filed
+          // as accepted while the verdict owes its review.
+          await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
+        } catch (err) {
+          console.error('Counterpoise: the model link for this case could not be written:', err);
+          await updateUseCaseVerdictSummary(useCaseId, { modelLinkUnrecorded: true });
+        }
+      }
     }
     await refreshRegister();
     setVerdictAuditEvents(await getAuditEvents(useCaseId));

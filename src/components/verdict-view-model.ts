@@ -180,6 +180,7 @@ export interface VerdictView {
  *   - no `uses_model` edge exists;
  *   - the use case was created on or after MODEL_LINKS_SINCE, because an older
  *     case never had links written, so a missing edge proves nothing;
+ *   - the case is not flagged `model_link_unrecorded` (the link write failed);
  *   - no `graph_corrected` event on its trail names a declared model — a
  *     correction after the first confirmation writes no link. */
 export const MODEL_LINKS_SINCE = '2026-08-18T00:00:00.000Z';
@@ -187,8 +188,12 @@ export function registerSaysNoModelNamed(args: {
   useCaseCreatedAt: string | undefined;
   edges: ReadonlyArray<{ edge_type: string }> | undefined;
   events: ReadonlyArray<AuditEvent>;
+  /** Set on the use_case node when the link write failed after the case was
+   *  saved (IntakeFlow): the missing edge then proves nothing. */
+  modelLinkUnrecorded?: boolean;
 }): boolean {
   const { useCaseCreatedAt, edges, events } = args;
+  if (args.modelLinkUnrecorded === true) return false;
   if (edges === undefined || useCaseCreatedAt === undefined) return false;
   if (useCaseCreatedAt < MODEL_LINKS_SINCE) return false;
   if (edges.some((e) => e.edge_type === 'uses_model')) return false;
@@ -612,9 +617,11 @@ function headlineText(status: Verdict['status'], needsSignOff: boolean, n: numbe
     return `Not yet. You can start once your AI risk team has signed it off and all ${n} safeguards are in place.`;
   }
   if (signOffMissing) {
-    if (n === 0) return 'Yes — you can start.';
-    if (n === 1) return 'Nearly. You can start once 1 safeguard is in place.';
-    return `Nearly. You can start once ${n} safeguards are in place.`;
+    // Non-permissive (BC-005): a required sign-off with none on record is not a
+    // green light, and this screen cannot say it is merely pending either.
+    if (n === 0) return 'No sign-off from your AI risk team is on record for this version — confirm with them before you start.';
+    if (n === 1) return 'Not confirmed. No sign-off from your AI risk team is on record, and 1 safeguard is still to put in place.';
+    return `Not confirmed. No sign-off from your AI risk team is on record, and ${n} safeguards are still to put in place.`;
   }
   if (n === 0) return 'Yes — you can start.';
   if (n === 1) return 'Nearly. You can start once 1 safeguard is in place — no sign-off needed.';

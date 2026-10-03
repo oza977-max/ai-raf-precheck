@@ -6,11 +6,11 @@ import RegisterDetail from '../RegisterDetail';
 import * as registerModule from '../../store/register';
 import { getUseCases } from '../../store/register';
 
-// Review pass 1 M-2 / pass 2 M-1. The register says "No model was named" when a case has no
-// uses_model edge. That is only sound if a case can never exist WITHOUT its
-// link when a model was declared — i.e. the link write must not fail after the
-// use-case node was written. The link is therefore written FIRST (and a failure
-// stops the confirmation before any use-case node exists).
+// Review pass 2, M-1. The register says "No model was named" when a case has no
+// uses_model edge. The link is written AFTER the use-case node (writing it first
+// stranded a case whose verdict was already on the trail). If the link write
+// fails the case is saved and flagged model_link_unrecorded, and the register
+// then says nothing about models.
 // Mock budget = 1 (the Anthropic SDK); addUseCaseModelLink is SPIED, not replaced.
 const mockCreate = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
@@ -19,7 +19,9 @@ vi.mock('@anthropic-ai/sdk', () => ({
   },
 }));
 
-const DESC = 'The Alpha tool built in-house drafts text. A person checks each one. It replaces no earlier model.';
+const BASE = 'The Alpha tool built in-house drafts text. A person checks each one. It replaces no earlier model.';
+// The store persists across the tests of this file, so each test describes its own case.
+let DESC = BASE;
 
 function extraction() {
   return {
@@ -84,12 +86,13 @@ async function reachConfirm(user: User) {
   return screen.findByRole('button', { name: /confirm and evaluate/i });
 }
 
-describe('IntakeFlow — the model link is written before the use-case node (review pass 1, M-2)', () => {
+describe('IntakeFlow — a failed model-link write never strands a case (review pass 2, M-1)', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     localStorage.setItem('aigate:api-key', 'test-key');
     mockCreate.mockReset();
+    DESC = `${BASE} Case ${crypto.randomUUID().slice(0, 8)}.`;
     vi.restoreAllMocks();
   });
 

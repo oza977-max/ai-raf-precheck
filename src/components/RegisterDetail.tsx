@@ -209,7 +209,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   // explore-007 D-001 fix (round 8): a live, provable check — not just an
   // assertion in copy — that the hash chain over the WHOLE audit trail
   // (every use case, not just this one) is intact.
-  const [modelLinks, setModelLinks] = useState<{ createdAt: string | undefined; edges: RegisterEdge[] } | null>(null);
+  const [modelLinks, setModelLinks] = useState<{ createdAt: string | undefined; edges: RegisterEdge[]; unrecorded: boolean } | null>(null);
   const [chainCheck, setChainCheck] = useState<ChainVerification | null>(null);
   const [notes, setNotes] = useState('');
   const [attestedByName, setAttestedByName] = useState('');
@@ -690,7 +690,12 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       // registerSaysNoModelNamed treats as "cannot tell", never as "none".
       try {
         const { nodes, edges } = await getGraph(useCaseId);
-        setModelLinks({ createdAt: nodes.find((n) => n.node_id === useCaseId)?.created_at, edges });
+        const own = nodes.find((n) => n.node_id === useCaseId);
+        setModelLinks({
+          createdAt: own?.created_at,
+          edges,
+          unrecorded: own?.metadata.node_type === 'use_case' && own.metadata.model_link_unrecorded === true,
+        });
       } catch {
         setModelLinks(null);
       }
@@ -1118,7 +1123,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             auditEvents={events}
             policy={policy}
             registerStage={summary.lifecycle_stage}
-            noModelNamed={registerSaysNoModelNamed({ useCaseCreatedAt: modelLinks?.createdAt, edges: modelLinks?.edges, events })}
+            noModelNamed={registerSaysNoModelNamed({ useCaseCreatedAt: modelLinks?.createdAt, edges: modelLinks?.edges, events, modelLinkUnrecorded: modelLinks?.unrecorded })}
             memoLabel={summary.label}
             memoDescription={summary.description}
             knowledgeLensMatches={knowledgeLensMatches}
