@@ -3,3 +3,6 @@
 src/components/ErrorBoundary.tsx::getDerivedStateFromError | constant | React error-boundary contract: returns the constant "an error happened" state.
 src/store/db.ts::createWriteQueue | constant | `() => undefined` handlers discard the result and swallow rejection so the serial write queue keeps going.
 src/store/db.ts::withCaseLock | constant | same queue-tail idiom for the per-case lock queue.
+src/store/db.ts::openAuditDb | constant | The blocking() handler's `() => undefined` swallows a close failure on an already-closing handle (another tab or Clear all data wants the database); the next call reopens.
+src/store/db.ts::openRegisterDb | constant | Same blocking() close-swallow as openAuditDb, for the register database.
+src/seeds/aigate-self-assessment.ts::selfAssessmentSeeded | constant | Returns an already-resolved promise when no seeding run is in flight: nothing to wait for, so consumers proceed.
