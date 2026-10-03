@@ -40,4 +40,22 @@ describe('RegisterView — CR7-07 keyboard access', () => {
     expect(onSelectRow).toHaveBeenCalledTimes(1);
     expect(onSelectRow).toHaveBeenCalledWith(node.node_id);
   });
+
+  it('TC-CR7-07-1: two cases with the same name get different accessible names (tier and stage)', async () => {
+    const a = caseNode('Repeated name');
+    const b = caseNode('Repeated name');
+    (b.metadata as { tier: string; lifecycle_stage: string }).tier = 'Low';
+    (b.metadata as { tier: string; lifecycle_stage: string }).lifecycle_stage = 'approved';
+    await addNode(a);
+    await addNode(b);
+    render(<RegisterView role="2LoD" currentPolicyVersion="1.0" selectedId={null} onSelectRow={vi.fn()} onCloseDetail={() => {}} />);
+    await screen.findAllByRole('button', { name: /Repeated name/ });
+    const user = userEvent.setup();
+    const all = screen.queryByRole('button', { name: /show all/i });
+    if (all) await user.click(all);
+    const names = (await screen.findAllByRole('button', { name: /Repeated name/ })).map((el) => el.getAttribute('aria-label'));
+    expect(names).toContain('Repeated name — High tier, Awaiting 2LoD sign-off');
+    expect(names).toContain('Repeated name — Low tier, Cleared');
+    expect(new Set(names).size).toBe(names.length);
+  });
 });
