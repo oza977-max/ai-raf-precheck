@@ -831,8 +831,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // CR8-03 (P3), defence in depth: GRAPH_EXTRACTED is the description path's
       // exit and mints the case id; a form-method step (reached by a failed
       // evaluation, Change an answer or a correction, carrying the attested
-      // case) must never take it.
-      if (state.method === 'form') return state;
+      // case) must never take it. Narrowed to a step that already carries a case
+      // id: a bare form step (no id yet) is the one existing, pinned shape
+      // (TC-R5-GR-2-03) and holds no attested case to protect.
+      if (state.method === 'form' && state.useCaseId !== undefined) return state;
       return {
         step: 'graph_review',
         description: carriedDescription(state),
