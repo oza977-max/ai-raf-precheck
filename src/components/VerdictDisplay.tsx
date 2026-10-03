@@ -2001,7 +2001,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             {(verdict.downstream_review_sources ?? []).length > 0 && (
               <ul className="verdict__downstream-sources">
                 {(verdict.downstream_review_sources ?? []).map((s) => (
-                  <li key={s.rule_id}>
+                  // C-5: two packs may share a rule id with different review
+                  // text — both are kept by the engine, so the key needs both.
+                  <li key={`${s.rule_id}|${s.review}`}>
                     {s.review} — required by <code>{s.rule_id}</code>
                     {s.regulatory_basis ? <Citation text={s.regulatory_basis} /> : null}
                   </li>

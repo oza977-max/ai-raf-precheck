@@ -74,11 +74,10 @@ describe('CR6-05 — "replaces something you already use?" on the description pa
     });
     const user = userEvent.setup();
     render(<App />);
-    await user.type(
-      screen.getByLabelText(/what ai tool do you want to use/i),
+    const description =
       'A model suggests client updates. A person reviews every update. It was built in-house. Only my team sees ' +
-        'them, as one input among several, easily put right. It is a small trial.',
-    );
+      'them, as one input among several, easily put right. It is a small trial.';
+    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('Check what we read from your description');
@@ -104,7 +103,12 @@ describe('CR6-05 — "replaces something you already use?" on the description pa
     // Value true: the answer wrote one correction (false -> true, graph v2)
     // and the assumption is on the audited confirmation. replaces_prior_model
     // true routes a Low case to Track II (TRACK-II-REPLACE).
-    const [useCase] = await getUseCases('all');
+    // App seeds demo cases into the same register, and getUseCases returns
+    // them in index (UUID) order — select THIS test's case by what it typed,
+    // never by position (review pass 2: [0] was a seeded case most runs).
+    const mine = (await getUseCases('all')).filter((u) => u.description === description);
+    expect(mine).toHaveLength(1);
+    const useCase = mine[0];
     const events = await getAll(useCase!.use_case_id);
     const confirmed = events.find((e) => e.payload.type === 'graph_confirmed')!.payload as {
       type: 'graph_confirmed';
