@@ -840,6 +840,32 @@ export function extractionErrorMessage(kind: 'no-api-key' | 'network-error' | 'p
 
 export const EXTRACTION_ERROR_HELP = 'You can try again, or answer the questions yourself instead.';
 
+// CR6-12 (Minor). evaluate()'s EngineError.kind used to reach the screen as
+// the raw enum string inside "Evaluation failed: {kind}", itself then
+// wrapped in "...Review your answers and try again." — every one of these
+// kinds is the firm's own rules, policy file or pack authoring, never
+// something a different answer from the person would have avoided. One
+// plain sentence per kind, same posture as extractionErrorMessage above —
+// and, like it, typed as the literal union rather than importing
+// EngineError from src/engine/types: a components file reads its own
+// words, not the engine layer's error type.
+export function engineErrorMessage(
+  kind: 'policy-invalid' | 'hard-line-tripped' | 'no-control-set' | 'jurisdiction-conflict' | 'no-track-match',
+): string {
+  switch (kind) {
+    case 'policy-invalid':
+      return 'Your firm’s rules file has a problem, so this can’t be worked out right now. Nothing about your answers is at fault.';
+    case 'hard-line-tripped':
+      return 'One of your firm’s own always-block rules has a problem, so this can’t be worked out right now. Nothing about your answers is at fault.';
+    case 'no-control-set':
+      return 'Your firm’s rules don’t yet say what would make this acceptable — that’s a gap in the rules, not something wrong with your answers.';
+    case 'jurisdiction-conflict':
+      return 'Two of your firm’s rule sets disagree about the countries involved here, so this can’t be worked out right now. Nothing about your answers is at fault.';
+    case 'no-track-match':
+      return 'Your firm’s rules don’t yet cover this particular combination of answers — that’s a gap in the rules, not something wrong with your answers.';
+  }
+}
+
 // A worked case's answers (backtest/worked-case-answers.json) were typed
 // independently of this file and use plain ASCII apostrophes throughout
 // ("they're", "can't"); this module's own option text uses the typographic

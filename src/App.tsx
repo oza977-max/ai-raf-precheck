@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import IntakeFlow from './components/IntakeFlow';
+import ErrorBoundary from './components/ErrorBoundary';
 import RegisterView from './components/RegisterView';
 import PolicyEditor from './components/PolicyEditor';
 import SettingsPanel from './components/SettingsPanel';
@@ -375,7 +376,16 @@ export default function App() {
               </button>
             </div>
           )}
-          {view === 'intake' && <IntakeFlow newPrecheckNonce={newPrecheckNonce} />}
+          {/* CR6-04 (Critical, BC-002): a render-time crash anywhere in the
+              intake flow — including one caused by a draft shape this
+              build can no longer read — used to blank the whole screen
+              with no way back except a reload that would just restore the
+              identical bad draft and crash again. */}
+          {view === 'intake' && (
+            <ErrorBoundary>
+              <IntakeFlow newPrecheckNonce={newPrecheckNonce} />
+            </ErrorBoundary>
+          )}
           {view === 'about' && <AboutPanel onNavigate={navigate} />}
           {view === 'register' && (
             <RegisterView

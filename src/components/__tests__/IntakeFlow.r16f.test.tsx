@@ -7,6 +7,7 @@ import * as registerModule from '../../store/register';
 import * as traceModule from '../../llm/reasoning-trace';
 import { append as appendAuditEvent, getAll } from '../../store/audit';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
+import { loadDraft } from '../intake-draft';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { Verdict } from '../../types/verdict';
 import type { DataFlowGraph } from '../../engine/types';
@@ -379,7 +380,11 @@ describe('F-2 (DR7-04): an evaluation error never orphans the case', () => {
     // F-3: exactly one use_case_created and one graph_confirmed survive —
     // the failed attempt attested once, honestly, and nothing orphaned.
     const { getUseCases } = await import('../../store/register');
-    const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY)!);
+    // CR6-04: the draft is now saved as a {version, state} envelope — read
+    // it through the real, stable loadDraft() API rather than parsing the
+    // raw sessionStorage value's shape directly (BC-002: the recogniser
+    // that validates is the one whose output is used).
+    const draft = loadDraft() as { step: string; method: string; useCaseId: string };
     expect(draft.step).toBe('graph_extraction');
     expect(draft.method).toBe('form');
     const events = await getAll(draft.useCaseId);

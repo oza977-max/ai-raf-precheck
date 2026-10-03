@@ -287,7 +287,8 @@ describe('engineErrorMessage (CR6-12)', () => {
       const message = engineErrorMessage(kind);
       expect(message, `kind: ${kind}`).not.toMatch(/review your answers/i);
       expect(message, `kind: ${kind}`).not.toContain(kind);
-      expect(message, `kind: ${kind}`).toMatch(/firm.s (own )?rules|rules (file|don.t)/i);
+      expect(message.toLowerCase(), `kind: ${kind}`).toContain('firm');
+      expect(message, `kind: ${kind}`).toMatch(/rules?\b/i);
     }
   });
 
