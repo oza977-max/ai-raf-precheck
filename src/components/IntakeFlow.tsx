@@ -136,6 +136,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // buttons are disabled, because a write already started cannot be recalled
   // and a second one would be a duplicate record in an append-only trail.
   const [decisionPending, setDecisionPending] = useState(false);
+  // FX-2 pass 3: a failed adopt/dismiss write used to be an unhandled
+  // rejection — the buttons came back and nothing said why.
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   // "+ New pre-check" while a flow is FINISHED starts a fresh one (known
   // issue since v0.3.2). Only the verdict step resets: an in-progress
@@ -564,6 +567,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (confirmNewInFlight.current) return;
     confirmNewInFlight.current = true;
     setDecisionPending(true);
+    setDecisionError(null);
     // CR6-02 (Critical): captured before any await — every dispatch/
     // setState below checks it is still current before firing, so Start
     // Over abandoning THIS call (e.g. while the audit write or the
@@ -594,9 +598,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       });
     }
     // The dismissal write is done; the extraction below is covered by the
-    // ordinary Start over/Retry handling, which must stay usable.
-    setDecisionPending(false);
+    // ordinary Start over/Retry handling, which must stay usable. An
+    // abandoned attempt leaves the lock alone — Start over already cleared
+    // it, and it may now belong to the new case's own write (TC-CR6-02j).
     if (attemptToken.current !== myAttempt) return;
+    setDecisionPending(false);
 
     // The LLM intake path exists if EITHER extractor is configured — the
     // Anthropic key or a local open model. Which one runs is decided inside
@@ -631,10 +637,20 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         guessedFields: extraction.value.guessed,
       });
     }
+    } catch {
+      // The only throwing step is the single duplicate_dismissed append, so
+      // nothing was recorded and the choice can simply be made again.
+      if (attemptToken.current === myAttempt) {
+        setDecisionError('Your choice could not be saved. Please try again.');
+      }
     } finally {
-      // CR6-02g: release only if still this attempt's guard.
-      setDecisionPending(false);
-      if (attemptToken.current === myAttempt) confirmNewInFlight.current = false;
+      // CR6-02g / TC-CR6-02j: release the guard AND the decision lock only
+      // if they are still this attempt's — after Start over they may belong
+      // to the new case's own in-flight write.
+      if (attemptToken.current === myAttempt) {
+        setDecisionPending(false);
+        confirmNewInFlight.current = false;
+      }
     }
   }
 
@@ -654,6 +670,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (adoptInFlight.current) return;
     adoptInFlight.current = true;
     setDecisionPending(true);
+    setDecisionError(null);
     // CR6-02 (Critical): see handleConfirmNewUseCase's identical comment —
     // the writes below complete honestly regardless (the register node, if
     // created, is real), but the one visible result (setAdoptedFrom) must
@@ -713,9 +730,21 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // draft effect cannot re-save it, and no reducer/draft-shape change is
       // needed.
       clearDraft();
-      if (attemptToken.current === myAttempt) setAdoptedFrom(source.label);
+      if (attemptToken.current === myAttempt) {
+        setAdoptedFrom(source.label);
+        setShowResumed(false);
+      }
+    } catch {
+      // Three separate writes: if the first landed and a later one failed, a
+      // record may already be on the register — so say "check first", never
+      // "nothing was saved".
+      if (attemptToken.current === myAttempt) {
+        setDecisionError(
+          'Using the earlier result could not be saved. Check the register before trying again — part of it may already be there.',
+        );
+      }
     } finally {
-      setDecisionPending(false);
+      if (attemptToken.current === myAttempt) setDecisionPending(false);
       // CR6-02g: an abandoned adoption finishing late must not free the
       // guard the NEW case's adopt holds (a second click would then write a
       // second set of audit events).
@@ -1835,7 +1864,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         </div>
       )}
 
-      {showResumed && state.step !== 'description_entry' && (
+      {/* TC-CR6-02k: a finished case (result shown, or an earlier result
+          used) is not "unfinished" — the banner would overclaim. */}
+      {showResumed && state.step !== 'description_entry' && state.step !== 'verdict' && !adoptedFrom && (
         <div className="intake-flow__resumed" role="status">
           <strong>Picked up where you left off.</strong> Your unfinished pre-check was restored — you were
           part-way through, and refreshing or navigating away no longer loses it.
@@ -1988,6 +2019,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                     {duplicateMatch ? 'Mine is different — continue →' : 'Continue →'}
                   </button>
                 </div>
+                {decisionError && (
+                  <p className="intake-flow__gate-error" role="alert">
+                    {decisionError}
+                  </p>
+                )}
               </>
             )}
           </section>

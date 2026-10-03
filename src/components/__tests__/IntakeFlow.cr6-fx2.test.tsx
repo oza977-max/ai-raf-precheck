@@ -866,7 +866,11 @@ describe('B-10c (pass 2): an explained contradiction is not raised again by the 
 });
 
 describe('I-4: Start over after "Use the earlier result" leaves nothing of the adopted case behind', () => {
-  it('TC-CR6-02e: after an earlier result was used, Start over + a new description does not show "Earlier result used from"', async () => {
+  // Pass 3 (TC-CR6-02k): the adopted screen is a finished case, so the
+  // "Picked up…/Start over instead" banner no longer shows there — the way to
+  // a fresh case from it is "+ New pre-check" (02i B). This test now takes
+  // that route; what it pins is unchanged: nothing of the adopted case leaks.
+  it('TC-CR6-02e: after an earlier result was used, a fresh case + a new description does not show "Earlier result used from"', async () => {
     await seedProbeUseCase();
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: REGISTERED_PROBE }));
     const user = userEvent.setup();
@@ -874,7 +878,7 @@ describe('I-4: Start over after "Use the earlier result" leaves nothing of the a
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
     await screen.findByText(/earlier result used from/i);
 
-    await user.click(screen.getByRole('button', { name: /start over instead/i }));
+    await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'A chatbot that helps interns book conference rooms');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await screen.findByRole('button', { name: /^continue →$/i });
@@ -1024,6 +1028,88 @@ describe('I-2 (pass 2): a finished adoption is finished', () => {
     await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
     expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; finished cases say so; failed saves are not silent', () => {
+  it('TC-CR6-02j: an abandoned "Mine is different" finishing late does not unlock the NEW case\'s decision that is still writing', async () => {
+    await seedProbeUseCase('Lock owner probe assistant');
+    localStorage.setItem('aigate:api-key', 'test-key');
+    const oldExtraction = held<ExtractResult>();
+    const extractSpy = vi.spyOn(graphExtractorModule, 'extractGraph').mockImplementationOnce(() => oldExtraction.promise);
+    const semanticSpy = vi.spyOn(duplicateCheckModule, 'confirmSemanticDuplicate').mockResolvedValue(true);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Lock owner probe assistant' }));
+    const newDismissal = held<void>();
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      // Old attempt: dismissal written for real, then its extraction is held.
+      await user.click(await screen.findByRole('button', { name: /mine is different/i }));
+      await screen.findByText(/reading your description/i);
+      await user.click(screen.getByRole('button', { name: /start over instead/i }));
+
+      // New attempt reaches the same match; its own dismissal write is held.
+      await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Lock owner probe assistant');
+      await user.click(screen.getByRole('button', { name: /^next/i }));
+      const appendSpy = vi.spyOn(auditModule, 'append').mockImplementationOnce(() => newDismissal.promise as never);
+      await user.click(await screen.findByRole('button', { name: /mine is different/i }));
+      expect(screen.getByRole('button', { name: /use the earlier result/i })).toBeDisabled();
+
+      // The abandoned extraction now finishes — its finally must not release
+      // the lock the new attempt holds.
+      oldExtraction.resolve({ ok: false, error: { kind: 'network-error', message: 'simulated' } });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(screen.getByRole('button', { name: /use the earlier result/i })).toBeDisabled();
+      appendSpy.mockRestore();
+    } finally {
+      newDismissal.resolve();
+      extractSpy.mockRestore();
+      semanticSpy.mockRestore();
+    }
+  });
+
+  it('TC-CR6-02k: once an earlier result has been used, the "Picked up where you left off" banner is gone — the case is finished, not unfinished', async () => {
+    await seedProbeUseCase('Banner probe assistant');
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Banner probe assistant' }));
+    const user = userEvent.setup();
+    render(<App />);
+    expect(await screen.findByText(/picked up where you left off/i)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
+    expect(screen.queryByText(/picked up where you left off/i)).not.toBeInTheDocument();
+  });
+
+  it('TC-CR6-02l: a failed "Use the earlier result" save shows a plain message that sends the person to the register first', async () => {
+    await seedProbeUseCase('Failed adopt probe assistant');
+    const addNodeSpy = vi.spyOn(registerModule, 'addNode').mockRejectedValueOnce(new Error('simulated storage fault'));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Failed adopt probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+      const msg = await screen.findByText(/could not be saved/i);
+      expect(msg.closest('[role="alert"]')).not.toBeNull();
+      expect(msg.textContent).toMatch(/check the register/i);
+      expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+    } finally {
+      addNodeSpy.mockRestore();
+    }
+  });
+
+  it('TC-CR6-02l (dismiss): a failed "Mine is different" save shows a plain message and the choice can be made again', async () => {
+    await seedProbeUseCase('Failed dismiss probe assistant');
+    const appendSpy = vi.spyOn(auditModule, 'append').mockRejectedValueOnce(new Error('simulated storage fault'));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Failed dismiss probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /mine is different/i }));
+      const msg = await screen.findByText(/could not be saved/i);
+      expect(msg.closest('[role="alert"]')).not.toBeNull();
+      expect(screen.getByRole('button', { name: /mine is different/i })).toBeEnabled();
+    } finally {
+      appendSpy.mockRestore();
+    }
   });
 });
 
