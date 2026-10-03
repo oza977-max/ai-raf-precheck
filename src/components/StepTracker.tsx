@@ -61,9 +61,12 @@ const ORDER = [
 export default function StepTracker({
   current,
   onBack,
+  backDisabled = false,
 }: {
   current: IntakeState['step'];
   onBack?: () => void;
+  /** True while a write that cannot be recalled is in flight. */
+  backDisabled?: boolean;
 }) {
   const currentIndex = ORDER.indexOf(current);
   const activeStepIndex = STEPS.findIndex((s) => s.matches(current));
@@ -83,7 +86,7 @@ export default function StepTracker({
         return (
           <li key={step.key} className={className}>
             {isBackTarget ? (
-              <button type="button" className="step-tracker__back" onClick={onBack}>
+              <button type="button" className="step-tracker__back" onClick={onBack} disabled={backDisabled}>
                 <span className="step-tracker__marker">←</span>
                 <span>{step.label}</span>
               </button>

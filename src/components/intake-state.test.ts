@@ -159,7 +159,7 @@ describe('intakeReducer', () => {
     expect(next).toEqual({ ...state, step: 'contradiction_review', contradictions });
   });
 
-  it('contradiction_review → questionnaire on CONTRADICTION_RESOLVED, recording the explanation', () => {
+  it('contradiction_review → questionnaire on CONTRADICTION_RESOLVED, recording the explanation and (TC-CR6-B10c) which contradiction it explained', () => {
     const g = graph();
     const answers = [{ questionId: 'Q1', value: 'yes' }];
     const state: IntakeState = {
@@ -181,6 +181,7 @@ describe('intakeReducer', () => {
       questions: [],
       answers,
       resolutionNotes: ['Confirmed both are correct.'],
+      explainedContradictions: ['data_class|a'],
       corrections: [],
       useCaseId: 'uc-1',
     });

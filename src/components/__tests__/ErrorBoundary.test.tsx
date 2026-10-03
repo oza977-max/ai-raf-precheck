@@ -63,6 +63,8 @@ describe('ErrorBoundary (CR6-04, BC-002)', () => {
       expect(text).not.toMatch(/did not touch|untouched|not affected/i);
       expect(text).toMatch(/already saved is on the register/i);
       expect(text).not.toMatch(/approved|rejected/i);
+      // Pass 2 (Minor): said once, plainly - not two sentences opening the same way.
+      expect((text.match(/something went wrong/gi) ?? []).length).toBe(1);
     } finally {
       consoleSpy.mockRestore();
     }

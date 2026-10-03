@@ -50,8 +50,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
         <div className="intake-flow__crash" role="alert">
           <p>Something went wrong and this check could not continue.</p>
           <p className="field-help">
-            Something went wrong and this screen could not be shown. Anything already saved is on
-            the register. Starting a fresh check clears this unfinished one.
+            Anything already saved is on the register. Starting a fresh check clears this
+            unfinished one.
           </p>
           <button type="button" onClick={this.handleStartFresh}>
             Start a fresh check

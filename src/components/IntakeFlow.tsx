@@ -34,7 +34,7 @@ import KnowledgeLensPanel from './KnowledgeLensPanel';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
-import { intakeReducer, nextReviewStep } from './intake-state';
+import { intakeReducer, nextReviewStep, contradictionKey } from './intake-state';
 import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
@@ -126,6 +126,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // of waiting for abandoned work to finish on its own first.
   const attemptToken = useRef(0);
 
+  // Set once the classification has been adopted (declared up here because
+  // canStepBack, below, reads it).
+  const [adoptedFrom, setAdoptedFrom] = useState<string | null>(null);
+  // FX-2 pass 2 (I-1): true while the duplicate screen's own decision is
+  // writing ("Use the earlier result": register node + two audit events;
+  // "Mine is different": duplicate_dismissed). Same ruling as confirmPending
+  // above: while set, Back (both controls), "Start over instead" and both gate
+  // buttons are disabled, because a write already started cannot be recalled
+  // and a second one would be a duplicate record in an append-only trail.
+  const [decisionPending, setDecisionPending] = useState(false);
+
   // "+ New pre-check" while a flow is FINISHED starts a fresh one (known
   // issue since v0.3.2). Only the verdict step resets: an in-progress
   // draft is the user's work, and the resumed-draft banner already offers
@@ -134,7 +145,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   useEffect(() => {
     if (newPrecheckNonce === lastNonce.current) return;
     lastNonce.current = newPrecheckNonce;
-    if (state.step === 'verdict') handleStartOver();
+    // A finished adoption is finished too (FX-2 pass 2, I-2).
+    if (state.step === 'verdict' || adoptedFrom) handleStartOver();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newPrecheckNonce]);
 
@@ -168,6 +180,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     confirmNewInFlight.current = false;
     retryExtractionInFlight.current = false;
     adoptInFlight.current = false;
+    setDecisionPending(false);
     formSubmitInFlight.current = false;
     // Exactly as handleStepBack already does, and for the identical reason
     // its own comment gives: clearing only duplicateCheckDone re-arms the
@@ -197,6 +210,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // `questionnaire` is past the confirmation attestation, which is one-way by
   // design — see the STEP_BACK case in intake-state.ts.
   const canStepBack =
+    // FX-2 pass 2 (I-2): an adopted result is a finished case, not an open step.
+    !adoptedFrom &&
     (state.step === 'duplicate_check' ||
       state.step === 'graph_review' ||
       state.step === 'questionnaire') &&
@@ -230,10 +245,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // OLD candidate). Because the abandoned calls' `finally` blocks now
     // release their guard only when the token still matches (CR6-02g), Back
     // releases the guards itself, exactly as handleStartOver does.
+    //
+    // FX-2 pass 2 (I-1): Back does NOT release confirmNewInFlight/adoptInFlight.
+    // Back is disabled while either decision write is pending (decisionPending),
+    // so those guards are never legitimately held here; releasing them is what
+    // let Back -> Next -> "Use the earlier result" start a second adoption
+    // while the first landed invisibly.
     attemptToken.current += 1;
-    confirmNewInFlight.current = false;
-    adoptInFlight.current = false;
     retryExtractionInFlight.current = false;
+    setAdoptedFrom(null);
     setDuplicateCheckDone(false);
     dupCheckInFlight.current = false;
     setDuplicateMatch(null);
@@ -271,7 +291,6 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   const [extractionError, setExtractionError] = useState<string | null>(null);
   // Set once the classification has been adopted — the flow ends here rather
   // than continuing to intake questions (TC-UC-2-02).
-  const [adoptedFrom, setAdoptedFrom] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [registerRows, setRegisterRows] = useState<UseCaseSummary[]>([]);
   const [savedStage, setSavedStage] = useState<LifecycleStage | null>(null);
@@ -431,6 +450,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // CR6-02f: entering a new duplicate check is a new attempt — anything
     // still running for an earlier description is dropped when it lands.
     attemptToken.current += 1;
+    setAdoptedFrom(null);
     setShowInterrupted(false);
     setSubmittedDescription(state.description);
     setDuplicateMatch(null);
@@ -543,6 +563,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (state.step !== 'duplicate_check') return;
     if (confirmNewInFlight.current) return;
     confirmNewInFlight.current = true;
+    setDecisionPending(true);
     // CR6-02 (Critical): captured before any await — every dispatch/
     // setState below checks it is still current before firing, so Start
     // Over abandoning THIS call (e.g. while the audit write or the
@@ -572,6 +593,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         },
       });
     }
+    // The dismissal write is done; the extraction below is covered by the
+    // ordinary Start over/Retry handling, which must stay usable.
+    setDecisionPending(false);
     if (attemptToken.current !== myAttempt) return;
 
     // The LLM intake path exists if EITHER extractor is configured — the
@@ -609,6 +633,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     }
     } finally {
       // CR6-02g: release only if still this attempt's guard.
+      setDecisionPending(false);
       if (attemptToken.current === myAttempt) confirmNewInFlight.current = false;
     }
   }
@@ -628,6 +653,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // afterwards (same guard as the 2LoD actions, RegisterDetail.tsx:76).
     if (adoptInFlight.current) return;
     adoptInFlight.current = true;
+    setDecisionPending(true);
     // CR6-02 (Critical): see handleConfirmNewUseCase's identical comment —
     // the writes below complete honestly regardless (the register node, if
     // created, is real), but the one visible result (setAdoptedFrom) must
@@ -679,8 +705,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         },
       });
 
+      // FX-2 pass 2 (I-2): the case is on the register now. The saved draft
+      // still says duplicate_check, which would offer "Use the earlier result"
+      // again on a return/refresh and write a SECOND record. Cleared directly
+      // (mirrors CR6-15's clear after a verdict) rather than via a new reducer
+      // step: nothing on the adopted screen changes reducer state, so the
+      // draft effect cannot re-save it, and no reducer/draft-shape change is
+      // needed.
+      clearDraft();
       if (attemptToken.current === myAttempt) setAdoptedFrom(source.label);
     } finally {
+      setDecisionPending(false);
       // CR6-02g: an abandoned adoption finishing late must not free the
       // guard the NEW case's adopt holds (a second click would then write a
       // second set of audit events).
@@ -1695,8 +1730,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // answer that just fixed the contradiction must not re-flag it.
       updatedGraph ?? state.graph,
     );
-    if (contradictions.length > 0) {
-      dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions });
+    // B-10c: one the person has already explained is not raised again while
+    // the graph still holds it; a different contradiction still is.
+    const explained = new Set(state.step === 'questionnaire' ? (state.explainedContradictions ?? []) : []);
+    const fresh = contradictions.filter((c) => !explained.has(contradictionKey(c)));
+    if (fresh.length > 0) {
+      dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions: fresh });
       return;
     }
 
@@ -1791,8 +1830,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
 
       {showInterrupted && state.step === 'description_entry' && (
         <div className="intake-flow__resumed" role="status">
-          Your last pre-check was interrupted while its result was being worked out, so it could not be
-          picked up again. If it finished, it is on the register.
+          Your last pre-check was still being worked out when you left, so it can&rsquo;t be picked up
+          here. If it completed, it is on the register &mdash; it can take a moment to appear.
         </div>
       )}
 
@@ -1800,13 +1839,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         <div className="intake-flow__resumed" role="status">
           <strong>Picked up where you left off.</strong> Your unfinished pre-check was restored — you were
           part-way through, and refreshing or navigating away no longer loses it.
-          <button type="button" onClick={handleStartOver} disabled={confirmPending}>
+          <button type="button" onClick={handleStartOver} disabled={confirmPending || decisionPending}>
             Start over instead
           </button>
         </div>
       )}
 
-      <StepTracker current={state.step} onBack={canStepBack ? handleStepBack : undefined} />
+      <StepTracker current={state.step} onBack={canStepBack ? handleStepBack : undefined} backDisabled={decisionPending} />
 
       <div className="card" ref={stepContainerRef} tabIndex={-1}>
         {/* FN-006. Rendered once, above the step content, rather than per
@@ -1814,7 +1853,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             stop looking for. Absent past `questionnaire` because confirmation
             is an attestation and one-way by design. */}
         {canStepBack && (
-          <button type="button" className="step-back" onClick={handleStepBack}>
+          <button type="button" className="step-back" onClick={handleStepBack} disabled={decisionPending}>
             ← Back
           </button>
         )}
@@ -1941,11 +1980,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                       only when there IS a match to adopt from. R16-W §4
                       (D-74): both buttons renamed. */}
                   {duplicateMatch && (
-                    <button type="button" onClick={() => void handleAdoptClassification()}>
+                    <button type="button" onClick={() => void handleAdoptClassification()} disabled={decisionPending}>
                       Use the earlier result
                     </button>
                   )}
-                  <button type="button" onClick={() => void handleConfirmNewUseCase()}>
+                  <button type="button" onClick={() => void handleConfirmNewUseCase()} disabled={decisionPending}>
                     {duplicateMatch ? 'Mine is different — continue →' : 'Continue →'}
                   </button>
                 </div>

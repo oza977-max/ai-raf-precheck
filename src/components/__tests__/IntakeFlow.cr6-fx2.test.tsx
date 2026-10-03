@@ -7,6 +7,7 @@ import * as graphExtractorModule from '../../llm/graph-extractor';
 import * as duplicateCheckModule from '../../llm/duplicate-check';
 import * as registerModule from '../../store/register';
 import * as traceModule from '../../llm/reasoning-trace';
+import * as auditModule from '../../store/audit';
 import { addNode } from '../../store/register';
 import { append as appendAuditEvent, getAll, getAllForExport } from '../../store/audit';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
@@ -257,7 +258,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
     }
   });
 
-  it('TC-CR6-02c (adopt): "Use the earlier result" works on the new case after Start over, even though the abandoned case\'s own adoption write was still pending', async () => {
+  it('TC-CR6-02c (adopt): after an adoption has finished, Start over and a new case\'s "Use the earlier result" works (the guard was released)', async () => {
     await addNode({
       node_id: crypto.randomUUID(),
       node_type: 'use_case',
@@ -272,35 +273,20 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
         track: 'II',
       },
     });
-    const abandonedAdopt = held<void>();
-    const addNodeSpy = vi.spyOn(registerModule, 'addNode');
-    addNodeSpy.mockImplementationOnce(() => abandonedAdopt.promise as never);
+    // While the write is pending "Start over instead" is disabled
+    // (TC-CR6-02g), so the abandoned-mid-write case cannot arise; this checks
+    // the guard is free again once an adoption has finished.
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-abandon probe assistant' }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
 
-    try {
-      const user = userEvent.setup();
-      render(<App />);
-
-      const adopt = await screen.findByRole('button', { name: /use the earlier result/i });
-      // The abandoned case's own adoption write is now pending (held).
-      await user.click(adopt);
-
-      await user.click(screen.getByRole('button', { name: /start over instead/i }));
-      await screen.findByLabelText(/what ai tool do you want to use/i);
-
-      await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Adopt-abandon probe assistant');
-      await user.click(screen.getByRole('button', { name: /^next/i }));
-      const adoptAgain = await screen.findByRole('button', { name: /use the earlier result/i });
-      addNodeSpy.mockResolvedValueOnce(undefined as never);
-      // Before the fix, this click silently did nothing — adoptInFlight was
-      // still true from the abandoned case's still-pending write.
-      await user.click(adoptAgain);
-
-      await screen.findByText(/earlier result used from/i);
-    } finally {
-      addNodeSpy.mockRestore();
-      abandonedAdopt.resolve();
-    }
+    await user.click(screen.getByRole('button', { name: /new pre-check/i }));
+    await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Adopt-abandon probe assistant');
+    await user.click(screen.getByRole('button', { name: /^next/i }));
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
   });
 
   it('TC-CR6-02d: rendered inside StrictMode, the duplicate check still completes and shows its result exactly once', async () => {
@@ -817,6 +803,68 @@ describe('I-3 / B-10 rewritten: a contradiction is shown iff it still holds when
   });
 });
 
+describe('B-10c (pass 2): an explained contradiction is not raised again by the next answer', () => {
+  const contradictoryGraph = () =>
+    makeGraph({
+      intake_method: 'llm',
+      processing_nodes: [{ ...makeGraph().processing_nodes[0]!, autonomy_level: 3 as never }],
+    });
+  const questions = [
+    { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+    { id: 'Q2', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+    { id: 'Q3', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+  ];
+
+  it('TC-CR6-B10c: explain one, answer the next question -> not re-raised; the explanation is saved with the draft', async () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'questionnaire',
+        description: 'The process is fully manual',
+        graph: contradictoryGraph(),
+        questions,
+        answers: [],
+        resolutionNotes: [],
+        corrections: [],
+        useCaseId: 'uc-b10c',
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /^yes$/i }));
+    await screen.findByText(/says a person approves everything it does/i);
+    await user.type(screen.getByLabelText(/which is right, and why/i), 'The reviewer signs off by hand');
+    await user.click(screen.getByRole('button', { name: /^(explain|resolve|continue)/i }));
+    await screen.findByText(/question 2 of 3/i);
+
+    await user.click(screen.getByRole('button', { name: /^no$/i }));
+    expect(await screen.findByText(/question 3 of 3/i)).toBeInTheDocument();
+    expect(screen.queryByText(/says a person approves everything it does/i)).not.toBeInTheDocument();
+    expect(sessionStorage.getItem(DRAFT_KEY) ?? '').toMatch(/explainedContradictions/);
+  });
+
+  it('TC-CR6-B10c (new one still shows): an explained entry for a different contradiction does not suppress the live one', async () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'questionnaire',
+        description: 'The process is fully manual',
+        graph: contradictoryGraph(),
+        questions,
+        answers: [],
+        resolutionNotes: ['already explained'],
+        explainedContradictions: ['some_other_field|A different statement.'],
+        corrections: [],
+        useCaseId: 'uc-b10c2',
+      }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /^yes$/i }));
+    expect(await screen.findByText(/says a person approves everything it does/i)).toBeInTheDocument();
+  });
+});
+
 describe('I-4: Start over after "Use the earlier result" leaves nothing of the adopted case behind', () => {
   it('TC-CR6-02e: after an earlier result was used, Start over + a new description does not show "Earlier result used from"', async () => {
     await seedProbeUseCase();
@@ -864,33 +912,118 @@ describe('I-5: going Back mid duplicate check abandons that check', () => {
   });
 });
 
-describe('M-1: an abandoned call does not release the new case\'s guard', () => {
-  it('TC-CR6-02g: after the abandoned adoption finishes late, a second click on the new case\'s adopt still cannot start a second write', async () => {
+describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can leave or repeat it', () => {
+  it('TC-CR6-02g: while "Use the earlier result" is held, Back, the step-tracker back, Start over and both gate buttons are disabled, and exactly one addNode happens', async () => {
     await seedProbeUseCase('Adopt guard probe assistant');
     const a = held<void>();
-    const b = held<void>();
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
-    addNodeSpy.mockImplementationOnce(() => a.promise as never).mockImplementationOnce(() => b.promise as never);
+    addNodeSpy.mockImplementationOnce(() => a.promise as never);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt guard probe assistant' }));
     try {
       const user = userEvent.setup();
       render(<App />);
       await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-      await user.click(screen.getByRole('button', { name: /start over instead/i }));
-      await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Adopt guard probe assistant');
-      await user.click(screen.getByRole('button', { name: /^next/i }));
-      await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-      expect(addNodeSpy).toHaveBeenCalledTimes(2);
+      expect(addNodeSpy).toHaveBeenCalledTimes(1);
 
-      // The abandoned adoption finishes late — its finally must not free the guard B holds.
-      a.resolve();
-      await new Promise((r) => setTimeout(r, 20));
+      expect(screen.getByRole('button', { name: /start over instead/i })).toBeDisabled();
+      const backs = screen.getAllByRole('button', { name: /back/i });
+      expect(backs.length).toBeGreaterThanOrEqual(1); // .step-back (and the tracker's, when drawn)
+      for (const b of backs) expect(b).toBeDisabled();
+      expect(screen.getByRole('button', { name: /use the earlier result/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /mine is different/i })).toBeDisabled();
+
+      await user.click(backs[0]!);
       await user.click(screen.getByRole('button', { name: /use the earlier result/i }));
-      expect(addNodeSpy).toHaveBeenCalledTimes(2);
+      expect(addNodeSpy).toHaveBeenCalledTimes(1);
+      expect(screen.queryByLabelText(/what ai tool do you want to use/i)).not.toBeInTheDocument();
+
+      a.resolve();
+      await screen.findByText(/earlier result used from/i);
+      expect(addNodeSpy).toHaveBeenCalledTimes(1);
+      const created = (await getAllForExport()).filter(
+        (e) => e.event_type === 'use_case_created' && (e.payload as { description?: string }).description === 'Adopt guard probe assistant',
+      );
+      expect(created).toHaveLength(1);
     } finally {
-      b.resolve(undefined);
+      a.resolve();
       addNodeSpy.mockRestore();
     }
+  });
+
+  it('TC-CR6-02h: Back is unusable during a held adoption, so no second adoption can follow; exactly one classification_adopted event', async () => {
+    await seedProbeUseCase('Adopt back probe assistant');
+    const a = held<void>();
+    const addNodeSpy = vi.spyOn(registerModule, 'addNode');
+    addNodeSpy.mockImplementationOnce(() => a.promise as never);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt back probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+      for (const b of screen.getAllByRole('button', { name: /back/i })) await user.click(b);
+      expect(screen.queryByLabelText(/what ai tool do you want to use/i)).not.toBeInTheDocument();
+      expect(addNodeSpy).toHaveBeenCalledTimes(1);
+      a.resolve();
+      await screen.findByText(/earlier result used from/i);
+      const adopted = (await getAllForExport()).filter(
+        (e) => e.event_type === 'classification_adopted' && (e.payload as { adopted_from_label?: string }).adopted_from_label === 'Adopt back probe assistant',
+      );
+      expect(adopted).toHaveLength(1);
+    } finally {
+      a.resolve();
+      addNodeSpy.mockRestore();
+    }
+  });
+
+  it('TC-CR6-02h (dismiss): while "Mine is different" is writing its dismissal, Back / Start over / both buttons are disabled', async () => {
+    await seedProbeUseCase('Dismiss probe assistant');
+    const d = held<void>();
+    const auditSpy = vi.spyOn(auditModule, 'append');
+    auditSpy.mockImplementationOnce(() => d.promise as never);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Dismiss probe assistant' }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /mine is different/i }));
+      expect(screen.getByRole('button', { name: /start over instead/i })).toBeDisabled();
+      for (const b of screen.getAllByRole('button', { name: /back/i })) expect(b).toBeDisabled();
+      expect(screen.getByRole('button', { name: /use the earlier result/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /mine is different/i })).toBeDisabled();
+    } finally {
+      d.resolve();
+      auditSpy.mockRestore();
+    }
+  });
+});
+
+describe('I-2 (pass 2): a finished adoption is finished', () => {
+  it('TC-CR6-02i (A): after adopting, leaving and coming back (remount) starts a fresh intake - no adopt offer, no restored draft', async () => {
+    await seedProbeUseCase('Adopt twice probe assistant');
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt twice probe assistant' }));
+    const user = userEvent.setup();
+    const first = render(<App />);
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
+    expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    first.unmount();
+
+    render(<App />);
+    expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /use the earlier result/i })).not.toBeInTheDocument();
+  });
+
+  it('TC-CR6-02i (B): on the adopted screen there is no Back, and "+ New pre-check" starts a fresh intake', async () => {
+    await seedProbeUseCase('Adopt screen probe assistant');
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt screen probe assistant' }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await screen.findByText(/earlier result used from/i);
+    expect(screen.queryAllByRole('button', { name: /back/i })).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: /new pre-check/i }));
+    expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
+    expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
   });
 });
 
@@ -910,8 +1043,10 @@ describe('M-4: a draft saved mid-evaluation is not restored into "Evaluating…"
       JSON.stringify({ step: 'evaluation_pending', graph: makeGraph(), useCaseId: 'uc-pending', description: 'd' }),
     );
     render(<App />);
-    expect(await screen.findByText(/interrupted/i)).toBeInTheDocument();
-    expect(screen.getByText(/on the register/i)).toBeInTheDocument();
+    const notice = await screen.findByText(/still being worked out when you left/i);
+    expect(notice.textContent).toMatch(/can.t be picked up here/i);
+    expect(notice.textContent).toMatch(/on the register/i);
+    expect(notice.textContent).not.toMatch(/interrupted|could not be picked up/i);
     expect(screen.queryByText(/evaluating…/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
     await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull());

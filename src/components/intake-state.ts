@@ -101,6 +101,12 @@ export type IntakeState =
       questions: IntakeQuestion[];
       answers: QuestionAnswer[];
       resolutionNotes: string[];
+      // B-10c (FX-2 review pass 2). Keys (see contradictionKey) of the
+      // contradictions the person has already explained, so the next answer's
+      // re-run of detectContradictions does not raise the same one again.
+      // Threaded questionnaire <-> contradiction_review and persisted with the
+      // draft; starts empty wherever resolutionNotes does.
+      explainedContradictions?: string[];
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
@@ -183,6 +189,8 @@ export type IntakeState =
       answers: QuestionAnswer[];
       contradictions: Contradiction[];
       resolutionNotes: string[];
+      // B-10c: see the questionnaire variant's comment.
+      explainedContradictions?: string[];
       corrections: GraphCorrection[];
       useCaseId: string;
       originalVerdictId?: string;
@@ -420,6 +428,13 @@ function returnsToForm(state: {
  *  D-001/O-001 fix, and recorded here rather than hidden behind a cast. */
 function carriedDescription(state: IntakeState): string {
   return 'description' in state && typeof state.description === 'string' ? state.description : '';
+}
+
+/** B-10c. Identity of a contradiction for "already explained": the field it
+ *  is about plus its first statement. Stable across re-detection because
+ *  detectContradictions is deterministic over the same description + graph. */
+export function contradictionKey(c: Contradiction): string {
+  return `${c.field ?? ''}|${c.statement1}`;
 }
 
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
@@ -830,6 +845,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         answers: state.answers,
         contradictions: action.contradictions,
         resolutionNotes: state.resolutionNotes,
+        ...(state.explainedContradictions ? { explainedContradictions: state.explainedContradictions } : {}),
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
@@ -863,6 +879,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         questions: state.questions,
         answers: state.answers,
         resolutionNotes: [...state.resolutionNotes, action.explanation.trim()],
+        // B-10c: what was just explained is remembered by identity.
+        explainedContradictions: [
+          ...(state.explainedContradictions ?? []),
+          ...state.contradictions.map(contradictionKey),
+        ],
         corrections: state.corrections,
         useCaseId: state.useCaseId,
         originalVerdictId: state.originalVerdictId,
