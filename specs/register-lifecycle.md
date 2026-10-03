@@ -636,6 +636,8 @@ someone signs their name.
 than writing a third copy of the same scan — the duplication ADR-EE-R3-1 was
 written to close.
 
+**CR6 amendments to the reviewer's page (2026-10-03).** `RegisterDetail` passes no graph to `VerdictDisplay`, so when a verdict declares both a platform and a supplier the inheritance panel shows one combined entry built from the verdict's own `inheritance`, with a note that this record does not keep the two apart, instead of "N controls inherited" over an empty list (CR6-11, TC-CR6-11; `verdict-audit.md` §5.7). The page also names the source of each correction in plain words, and nothing for an older record without one (CR6-10, TC-CR6-10). The lifecycle banner after a sign-off reads "cleared by 2LoD", never the reserved verdict words (CR6-29, TC-CR6-29).
+
 ### 15.2 No verdict recorded, and verdicts without explanation (R3-RD-2)
 
 Where no verdict-bearing event exists — the seeded Counterpoise self-assessment is the
@@ -742,6 +744,7 @@ gatekeeper" framing.
 
 | Date | Change |
 |---|---|
+| 2026-10-03 | CR6 — §15.1b amended: the reviewer's page shows a combined inheritance entry when no graph is available, names each correction's source, and words the lifecycle banner without the reserved verdict words (CR6-11, 10, 29). |
 | 2026-09-28 | §5 amended — code review 005 (F10). `RegisterStore` gains `importRegister` and `backupAndReplaceRegister` (RG-8 hand-off); `getUseCases`/`getUseCase` gain their real optional parameters; `updateUseCaseVerdictSummary`'s signature corrected to `Partial<UseCaseSummary>`; noted that `getUseCases` skips an unreadable row rather than failing the whole list. §13 gains an RG-8 traceability row. Full hand-off bundle spec added at `verdict-audit.md` §16. |
 | 2026-07-29 | §15 added — round 3. ADR-RL-R3-1 reads the verdict from the audit trail rather than recomputing it, so the reviewer sees the verdict that was attested rather than one computed against today's policy. |
 | 2026-08-17 | §17 added — round 11. ADR-RL-R11-1 consumes the dormant `ai_model`/`uses_model` schema (deduped by `model_id`); ADR-RL-R11-2 has the self-assessment declare its own runtime model through the same path. |

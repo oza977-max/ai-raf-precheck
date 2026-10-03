@@ -88,6 +88,14 @@ type IntakeState =
   | { step: 'verdict'; verdictId: string };
 ```
 
+**Navigation, concurrency and crash safety (CR6, 2026-10-03).** Start over and every new-case entry bump an attempt token (a `useRef` counter in `IntakeFlow.tsx`), and so do Back and a description submission. Every async handler that can dispatch or set state after an `await` (confirm-new, adopt, retry-extraction, and the duplicate-check effect) captures the token when it starts and drops its result silently if the token has changed, so an abandoned case's late extraction, duplicate-check match or retry can never land on the new case, show a stale match card, or write `duplicate_dismissed` against the wrong candidate (TC-CR6-02a, 02b, 02c, 02f). Each in-flight guard (`confirmNewInFlight`, `retryExtractionInFlight`, `adoptInFlight`, `formSubmitInFlight`) is released only by the attempt that set it; Start over releases them and resets the duplicate-check trio (`duplicateCheckDone`, `duplicateMatch`, `dupCheckInFlight`) together, never one without the others; Back never releases a guard that protects a write in flight (TC-CR6-02g, 02j). The duplicate-check effect deliberately has no cleanup flag: it relies on the synchronous `dupCheckInFlight` ref to stop StrictMode's second mount firing a second model call, and a cleanup flag gating its `finally` would hang the step on "Looking through earlier checks…" (TC-CR6-02d). A stale extraction error is cleared by Start over and when a new extraction starts (TC-CR6-14).
+
+**The decision lock, and adoption is final (CR6, 2026-10-03).** "Use the earlier result" and "Mine is different" are decisions with a write behind them. While either runs, a `decisionPending` lock (the same ruling Confirm already follows, R16-F pass 4) disables both Back controls (the button and the step tracker's), "Start over instead" and both gate buttons, so a second adoption can never follow: exactly one `addNode` and one `classification_adopted` (TC-CR6-02g, 02h). The lock is released only by its own attempt, so an abandoned dismissal finishing late cannot unlock the new case's decision (TC-CR6-02j). Adoption is final: the saved draft is cleared right after `classification_adopted` is written, the adopted screen has no Back, `adoptedFrom` is cleared on Back and on a new description, and "+ New pre-check" resets it; Start over also clears the adopted screen and any evaluation error (TC-CR6-02e, 02i). A failed adopt save says that part of it may already be there (it is three writes, so never a false "nothing was saved") and sends the person to the register; a failed dismiss save says the choice could not be saved and can be made again (TC-CR6-02l). Known narrow gap: a tab refresh inside the adoption write itself can still restore the pre-adoption draft. The "Picked up where you left off … unfinished pre-check" banner is shown only on unfinished screens: it is hidden on the adopted screen and on the result, where the case is finished (TC-CR6-02k; TC-R16-F-71 amended).
+
+**The saved draft: versioned, cleared on a result, never restored mid-evaluation (CR6, 2026-10-03).** The draft is saved as a `{ version, state }` envelope (`intake-draft.ts`, BC-002). `loadDraft()` still returns a bare `IntakeState`; a draft with no envelope is read as version 1, which is what every earlier build wrote, and an incompatible version has only its one unsafe piece, the questionnaire step's `undo` snapshot, dropped on restore, never the whole draft (TC-CR6-04b). `ANSWER_UNDONE` also falls back to the current questions and assumptions length when a snapshot predates them, so a session saved by an older build cannot index into nothing (TC-CR6-04a). The draft is cleared directly the moment a result is recorded (`runConfirmAndEvaluate`), not only by the effect on `step === 'verdict'`, which does nothing once the component has unmounted: navigating away mid-confirm leaves no stale confirmation draft for a case that already has a result (TC-CR6-15a). A draft saved while `evaluation_pending` is never restored, since it would wait for an evaluation no longer running; a notice says the check was still being worked out when the person left, that its result may take a moment to appear, and that any finished result is on the register, and the draft is cleared (TC-CR6-15c). The questionnaire's Undo is offered only while an undo snapshot exists, one use per answer (TC-CR6-C3).
+
+**Crash screen (CR6-04, 2026-10-03).** `App.tsx` wraps the intake flow in an `ErrorBoundary` (`ErrorBoundary.tsx`; TC-CR6-04e). A render-time crash shows a plain message and a "Start a fresh check" button that clears BOTH saved drafts (the intake draft and the guided-form draft, as Start over does) before remounting. It claims only what is known: that anything already saved is on the register. A crash after a confirm has written the result must not be described as touching nothing. It says "Something went wrong" once (TC-CR6-04c, 04d).
+
 ---
 
 ## 4. LLM Graph Extraction (UC-3)
@@ -246,7 +254,7 @@ describing a use case, not constructing a data structure.
 
 ### 5.3 Form output
 
-On submit, `StructuredForm.tsx` calls `buildGraphFromForm(formValues)` which constructs a `DataFlowGraph` object with `intake_method: 'structured_form'`. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.
+On submit, `StructuredForm.tsx` calls `buildGraphFromForm(formValues, extractedAt)` (CR6, B-15, 2026-10-03: the timestamp is a parameter, passed by every caller, so the engine reads no clock; identical values and timestamp build an identical graph, TC-CR6-B15) which constructs a `DataFlowGraph` object with `intake_method: 'structured_form'`. This graph is identical in type to an LLM-extracted graph and flows through the same subsequent steps.
 
 ---
 
@@ -315,6 +323,8 @@ if (contradictions.length > 0) {
 - Confirm that both are correct and explain (rare — recorded as a note in the audit trail)
 
 The flow cannot advance to confirmation while any unresolved contradiction exists.
+
+**Nothing is carried from submission; explained ones are remembered (CR6, B-10, 2026-10-03).** A contradiction is shown only if it still holds on the current graph. `detectContradictions` reads only the description and the graph, so the live check after each answer, and again when the questions end, already finds a submission-time contradiction that still holds; a copy carried from submission could only re-raise one an answer had fixed, so `FORM_SUBMITTED` carries none (TC-R16-W-19 amended; TC-CR6-B10). An explained contradiction is remembered (`explainedContradictions`, keyed `field|statement1`; `CONTRADICTION_RESOLVED` records which one it explained; persisted with the draft) and is not raised again on every later answer, while a different contradiction still shows (TC-CR6-B10c).
 
 ---
 
@@ -509,6 +519,8 @@ progress, and fields that are marked — must be identical in both directions
 selects, fails the requirement as surely as marking none: it tells the user
 nothing.
 
+**Announced as required, not only marked (CR6-07, 2026-10-03).** Single-select questions render as `role="radiogroup"` with `aria-required`, the free-text controls carry `required` and `aria-required`, tick-all groups say "(tick at least one)" in their legend, and the visible asterisk carries visually hidden text "(required)". A visible line beside Continue says what is still missing and is tied to the button with `aria-describedby`; it goes when the form is complete (TC-CR6-07a, 07b, 07c). TC-R3-JU-5-01 is amended to check the radio groups and the free-text controls, not the fieldsets alone.
+
 **Design review round 1, I-8.** `isComplete` is a hand-written boolean
 conjunction, so "the set of fields that block progress" is not enumerable and
 the test cannot check set equality without hardcoding the same list a second
@@ -636,6 +648,8 @@ not state it. Both providers get this automatically — the local provider
 sends the same schema as the decoder constraint, the Claude path as the
 forced tool schema. The prompt instructs exact copying, never paraphrase.
 
+**CR6 extraction details (2026-10-03).** `replaces_prior_model` is a quote field (CR6-05): it is in `QUOTE_FIELDS.processing` and in the tool schema's processing-node `basis_quotes` list, so an unquoted value is guessed and becomes the question "replaces something you already use?", which TRACK-II-REPLACE routes on. "Not sure" on that question means true, is recorded as an assumption and listed back, and the case takes Track II; a quote taken verbatim from the description is verified and not asked (TC-CR6-05a, 05b, 05c). `QUOTE_FIELDS` and `AGENT_REACH_FIELDS` are exported, so TC-R16-E-11 derives its list of generator fields from them and from the real policy's condition keys instead of a hand-typed list (CR6-25). `decision_type_other`, a free-typed unclassified decision label, is in the output-node tool schema and the validation gate, bounded to 200 characters in both, so the engine's unclassified-decision safety net can fire on this path (B-9; TC-CR6-B9, B9b). Every field the question generator can emit is in the hand-off's `ASSUMPTION_GRAPH_FIELDS` (TC-CR6-27).
+
 **ADR-IF-R6-1 — provenance travels BESIDE the graph, not inside it.**
 `extractGraph` now returns `{ graph, provenance, guessed }`
 (`GraphExtraction`): `provenance[nodeId][field] = quote` (verified quotes
@@ -660,9 +674,9 @@ these words".
 
 Review screen, per field row: verified quote → `based on: "<quote>"`;
 guessed → a visually distinct "the description does not say — the model
-guessed". A node carrying NO basis_quotes object at all (schema-impossible
-from a live provider; occurs only in legacy drafts and fixtures) makes no
-provenance claims and follows the standard R5 confirm flow. The R5-GR-3 card warning names the guessed fields (R6-QN-2).
+guessed". A node carrying NO basis_quotes object at all is treated as an empty
+one: every quote field is guessed (CR6, B-8, 2026-10-03; TC-CR6-B8), so a
+missing object can never silently skip the guessed-field mechanism. The R5-GR-3 card warning names the guessed fields (R6-QN-2).
 
 **ADR-IF-R6-2 — a guessed card's resolution path is questions, not a
 click.** Nodes with any guessed field are EXCLUDED from
@@ -818,7 +832,9 @@ policy)` (`src/engine/plain-intake.ts`) takes `PlainAnswers` — option
 *keys* against question ids, e.g. `{'6': 'drafts', '6a': 'little'}` — and
 returns `{ values: StructuredFormValues, assumptions: AssumptionRef[] }`.
 Pure (cross-cutting.md §7 Rule 1): no ids, no clock — `buildGraphFromForm`
-stays the only place those are minted. **Amended R16-F §5 (DR7-06):**
+stays the only place ids are minted, and since CR6 (B-15) it takes its
+timestamp as a parameter rather than reading a clock (the graph id it still
+mints inside the engine is a separate, pending task). **Amended R16-F §5 (DR7-06):**
 `assumptions` was originally specified (and first built) as worded
 `Assumption[]` — the engine resolving its own WORDED text, which required
 importing the words from the component layer and broke Rule 1
@@ -840,6 +856,8 @@ existing component import keeps working unchanged. A guard test
 (`src/engine/engine-boundary.test.ts`) scans every non-test file under
 `src/engine/` for an import resolving into `src/components/` and fails
 the build if one exists.
+
+**Stale or unrecognised answers take the Not sure path (CR6-06, 2026-10-03).** A stored answer outside the question's current options, such as a supplier, company-assistant or platform id the policy no longer lists, or an unrecognised value of a single-select question (tested for Q6, Q6a, Q9 and Q14), takes that question's own "Not sure" path: the strictest value plus an assumption, listed back, never a less strict default (TC-CR6-06a, 06b, 06c, 06f). Q5, the tick-all question, counts as answered only when it is non-empty and every tick is a current option; a stale tick, alone or mixed with real ticks, takes Q5's "Not sure" reading (Confidential) with its assumption, and the first real tick after a stale load drops the stale keys, since a stale key has no checkbox and could never be unticked (TC-CR6-06e). `StructuredForm`'s `isAnswered` counts a single-select as answered only when it is one of the question's current options, including the policy-driven ones, so a stale stored answer shows as unanswered and Continue stays disabled until it is picked again (TC-CR6-06d, 06e).
 
 No question or option names an engine term: no data class, zone letter,
 autonomy level, bindingness, model-type code, tier or track (principle 1,
@@ -952,6 +970,8 @@ A new follow-up, `3platformZone`, shown only when the chosen platform's `approve
 
 §21's `UnderstoodSummary` read the graph through the reviewer cards' own labels (`field-copy.ts`) — a 2LoD-facing vocabulary, not the newcomer-tested question wording the form itself uses. `plain-copy.ts` gains a parallel set of graph-value → sentence lookups (`SUMMARY_DESTINATION`, `SUMMARY_DATA_CLASS`, `SUMMARY_MODEL_TYPE`, `summaryBehaviourLine()`, `SUMMARY_BINDINGNESS` + `summaryShowsWeight()`, `SUMMARY_EXPOSURE`, `SUMMARY_REVERSIBILITY`, `SUMMARY_DECISION_TYPE` + `summaryDecisionLine()`, `SUMMARY_SCALE` + `SUMMARY_NO_COUNTRIES`, `SUMMARY_ACCESS_SCOPE`, `SUMMARY_MULTI_INSTANCE`) and `UnderstoodSummary.tsx` is rewritten to read from them instead — still graph-based (one truth: what gets evaluated), only the WORDING changes. The collapsed "Show the details the rules use" grid keeps `field-copy.ts`'s labels unchanged (§3's "reviewer vocabulary stays there" rule).
 
+**CR6 summary wording (2026-10-03).** (CR6-16) The behaviour line has a clause for every action type at every autonomy level (read, inform, draft and recommend as well as act), and from autonomy level 2 up it names the action (TC-CR6-16). (CR6-23) A country shows as the policy's own country name; one the policy does not list reads "another country", never a bare code, through one shared helper (`countryName`; TC-CR6-23). (G-7) A supplier value that looks like an id (capitals, digits and hyphens or underscores, no spaces) with no registry match reads "a supplier not on your firm's list"; ordinary words are shown as written (TC-CR6-G7).
+
 New content the old summary never rendered at all: the kind of AI (`model_type`), a new "If it gets something wrong" section (`output_reversibility`), and — for a registered vendor/platform — a "Through: {supplier}." / "Runs on: {platform}." line resolved against the registry's own `plain_name` (neutral fallback when a matched entry has none; the vendor string as recorded, flagged "Your firm hasn't assessed this supplier yet.", for an unregistered one).
 
 **Supplier strings at the source (D-72).** `plain-intake.ts` recorded unregistered vendors as `unregistered (…)` — "unregistered" is engine vocabulary that reached the summary, the reviewer section and the audit trail verbatim. The four distinct strings are reworded to plain sentence fragments (e.g. "a personal account (no contract with your firm)"); the three D-64 strings (`"{text} (not on your firm's list)"` etc.) are unchanged. No code anywhere detected an unregistered vendor by the literal `"unregistered"` prefix — the engine already resolves this by registry lookup — so this is a pure text change with no logic to migrate.
@@ -982,6 +1002,8 @@ set, exactly like a correction pass's `originalVerdictId` guard, and
 evaluation retry (no verdict yet) reuses the case id and passes F-1's
 precondition, so the next Confirm writes a genuine second `graph_confirmed`
 — a deliberate second attestation, not a duplicate.
+
+**Plain engine-error messages (CR6-12, 2026-10-03).** The reason shown when an evaluation fails comes from `engineErrorMessage(kind)` (`plain-copy.ts`): one plain sentence per engine error kind (policy invalid, hard line tripped, no control set, jurisdiction conflict, no track match), always attributed to the firm's own rules, policy or packs and never to the person's answers, and never the raw kind string. The "Review your answers and try again" suffix is dropped from the form-path render, because every such error is about the firm's rules or policy (TC-CR6-12).
 
 **F-3/DR7-05 — the creation record is written at Confirm, once.** The
 form's early `use_case_created` write (on the first Continue,
@@ -1016,6 +1038,8 @@ reopening a saved draft at Confirm after the policy was edited). Now an invalid
 or broken policy throws first; the existing catch shows the reason and returns
 to the answers (`EVALUATION_FAILED`), and nothing is written (TC-R16-F-67).
 
+**An invalid policy is shown at the button (CR6-17, 2026-10-03).** `checkPolicyGate()` now RETURNS the invalid-policy message instead of throwing it. A throw inside a React event handler is not caught by an error boundary (boundaries see only render-time errors), so both Continue buttons used to do nothing visible. Both call sites route the message through the same `setReviewGateError` path the reference-error case already used, so it shows at the button (TC-CR6-17a for the guided form, TC-CR6-17b for the review screen).
+
 **F-7/DR7-07 — the "couldn't tell" list survives a refresh.** `uncertainNodeIds?:
 string[]` now lives on `questionnaire`, `contradiction_review` and
 `confirmation` (`intake-state.ts`), set once at `QUESTIONS_GENERATED` from
@@ -1025,6 +1049,8 @@ were (W-3/W-4). `IntakeFlow.tsx` reads it directly off `state`; the
 `uncertainNodeIds` `useState` and its `graph_review`-only effect are
 deleted. A refresh on confirmation now keeps the list, the same fix W-4
 already made for the form path's assumptions.
+
+**Back keeps what the review screen needs (CR6-03, 2026-10-03).** `questionnaire` and `contradiction_review` also carry `guessedFields`, `provenance`, `unconfirmedNodeIds` and `jurisdictionsConfirmed`, set once at `QUESTIONS_GENERATED` from `graph_review`'s own copies (never re-derived) and restored on `STEP_BACK`, so Back no longer turns off the R5-GR-2/R7-JC confirm gate or loses track of which guessed fields still need asking. The carried gate values are concrete (`unconfirmedNodeIds: []` and `jurisdictionsConfirmed: true`, since every card was checked before Continue was allowed), or `undefined` where there is no gate (the form path, corrections, evaluation-failure re-entries); what `undefined` means in `GraphView` is unchanged (TC-R5-GR-2-03; TC-CR6-03d). `guessedFields` means "still to ask": an answered guessed field drops out (`ANSWER_SUBMITTED`, mirroring `CORRECTION_APPLIED`; `ANSWER_UNDONE` restores it from the undo snapshot), so Back and Continue never asks it again (TC-CR6-03a, 03b, 03c). `ignoredJurisdictions` (the "We ignored X" notice) is kept on Back, and `uncertainNodeIds` stays frozen at its first value (TC-CR6-03e). "Change an answer" on a `structured_form` case returns to the guided form (TC-CR6-D1).
 
 **F-9/DR7-09 — the zone answer is cross-checked and attributed.**
 `src/engine/plausibility.ts`'s messages are rewritten in plain words — no
@@ -1053,6 +1079,8 @@ polite live region announces `StepTracker`'s own `describeStep()` (e.g.
 with the visible tracker. `VerdictDisplay.tsx`'s "Go to this safeguard"
 now moves focus to the target (`tabIndex={-1}` on its container) after
 scrolling, not only scrolling.
+
+**Announcements and status regions (CR6-08, 2026-10-03).** The announcement text separates the two sides of the evaluation: "Working out your result…" for `evaluation_pending` and "Your result is ready." for `verdict`, while the visible `StepTracker` keeps its one "Result" step (TC-CR6-08a). The in-progress lines ("Evaluating…", "Looking through earlier checks…" and its "nothing similar found" outcome) are `role="status"` regions; the duplicate-check progress and its outcome share one persistent region so the outcome is announced (TC-CR6-08b, 08c).
 
 **§4/DR7-11 — the correction screen's agent-access editor.** `GraphView.tsx`
 gains a tick-all checkbox editor for `system_access_scope` only (every
@@ -1110,6 +1138,8 @@ Spec for `build/prompts/R16-E.md` v2.2, built on top of §21–§24 above (after
 
 **D-102/DR7-24/27/28/29 — answering: multi-select, "Not sure", and three follow-ups.** `IntakeQuestion.answer_type` gains `'multi_select'` for `system_access_scope`; `coerceAnswerValue` routes it through `normaliseAccessScope` (array or scalar) rather than the generic closed-set compare, which would reject every array. `QuestionnaireStep`'s tick-all control is a `<fieldset>` with a `<legend>` and one `<label>` per option (never one label wrapping all four — the exact bug R16-F's `AccessScopeEditor` fixed, reproduced here independently since this is a separate control), a "Done" button disabled until something is ticked, and the form's own "Nothing beyond…" exclusivity. Every closed-vocabulary field that offers "Not sure" renders a generic "Not sure" control (boolean, select or multi-select alike) that submits `QUESTIONNAIRE_COPY[field].notSure.value` directly and flags the answer `notSure: true`; `IntakeFlow.tsx`'s `handleAnswerSubmitted` resolves the matching D2-shaped `Assumption` (`questionId: 'field:<field>'`, `fields: [field]`) from the same table entry — reusing D2's `Assumption` shape unchanged, never redefining it. Three fields route through a named choice or a follow-up instead of the generic path: `decision_type` "Something else" leaves `decision_type` unset and inserts a `decision_type_other` follow-up (DR7-29 — dropping it would give this path a lighter route than the form's own `8other`); `vendor`/`declared_model_id` "Not on this list" insert a `vendor_name`/`declared_model_id_name` follow-up, resolved once typed (`vendorNotOnListValue()`, mirroring the form's own D-64 wording) or left blank; `vendor` "I don't know" resolves immediately to its own value with an assumption (`VENDOR_UNSURE_VALUE`/`VENDOR_UNSURE_ASSUMPTION`, mirroring the form's own D-72 wording); `declared_model_id` "I don't know" clears the field — "none declared", an honest absence, never an assumption (D-27, matching Q3model). The follow-up mechanism itself is new reducer plumbing: `ANSWER_SUBMITTED` gains optional `insertQuestions`/`assumption`; the reducer splices the follow-up into `state.questions` right after the question just answered (found by id) and appends the assumption to `state.assumptions` (created on first use). `ANSWER_UNDONE`'s snapshot grows to cover both, so undoing an answer removes its follow-up and its assumption together. The "Recorded:" line resolves the chosen option's LABEL(s) — joined `"a, b and c"` for a multi-select answer — never the raw value. A guessed-field question introduces itself ("We couldn't tell this from your description:"); the triggering rule's own `plain_reason` (resolved through `verdict-view-model.ts`'s `fillPlaceholders`, exported for this reuse — one computation, not a second one living beside it) renders as "Why we ask: …", and renders nothing at all when there is none to show. The per-answer context label now names "your AI risk team" (F1B-6). A new focus effect — the step-focus effect in `IntakeFlow.tsx` only fires on `state.step` changes, and answering a question never leaves `questionnaire` — moves focus to the next question's own text when its id changes.
 
+**CR6 amendments to the questionnaire (2026-10-03).** The model buttons and the "Recorded:" line read `plain_name ?? model_id` (`ApprovedModel.plain_name` is optional; see `policy-schema.md` §10a), so a raw model id no longer reaches a button the person clicks (TC-CR6-19, 19b). The tick-all list resets the fieldset and styles each option like the guided form's own (TC-CR6-21). The shipped `VENDOR-LLM-v1` and `qwen3:4b` entries still need an owner-supplied `plain_name`; until then they show their ids (owner action, CR6-19).
+
 **BC-3 — confirming the extractor's own access set writes no correction.** `handleAnswerSubmitted` compares a `system_access_scope` answer against the graph's current value by CONTENT (`sameAccessScopeSet`, R16-F's own helper — the same one `handleCorrectNode` already uses), not the generic `!==` every other field uses, which a fresh array is never reference-equal to even when it names the identical kinds.
 
 **D-103/DR7-26/30/33 — the review screen's own words, in every entry.** `GraphView`'s three columns are titled "What it uses" / "The AI" / "What comes out" (`GRAPH_REVIEW_CARD_TITLES`, shared with the plausibility wording below so the two can't drift from each other); every field row's label is `QUESTIONNAIRE_COPY`'s own `shortLabel`, with no field code or value code beside it anywhere on the card (the one exception — `GraphView`-only, never offered as a choosable button — is a legacy label for the retired `lending-decision` value, so an older record never shows the bare code). Provenance reads "From your description: "{quote}""; the no-basis badge reads "Not in your description — please check this"; the guessed badge reads "Not in your description — check this, or it becomes a question". The confirm button keeps its two forms in plain words: "This is right" / "I've checked this — it's right"; the confirmed note reads "Checked by you." The gate note, the checklist (title, items, done state), the jurisdictions panel (heading, both messages, buttons, country names with no code) and `IntakeFlow.tsx`'s own gate messages and evaluation-failure re-entry message are reworded to the contract's exact text, in EVERY entry to `graph_review` (fresh, a correction re-entry, and an evaluation-failure re-entry) — the heading and its one-line explanation are unconditional, not keyed to how the screen was reached. A `"Fix guessed values"` button is reworded to `"Fix the details we couldn't tell"` — found while verifying this chunk's own §8 guard test, since "guessed" is explicitly on its banned-word list.
@@ -1140,6 +1170,7 @@ Spec for `build/prompts/R16-E.md` v2.2, built on top of §21–§24 above (after
 
 | Date | Change |
 |---|---|
+| 2026-10-03 | CR6 — code review 006 fixes. §3 gains the attempt token, in-flight guards, decision lock (adoption is final), draft versioning, the crash-screen boundary and the saved-draft rules (CR6-02, 04, 14, 15, C-3); §7 (nothing carried from submission, explained contradictions remembered, B-10); §13.3 (required questions announced, CR6-07); §16.1/§16.3 (`replaces_prior_model` is a quote field, a missing quote object means every field guessed, `decision_type_other` bounded, CR6-05, B-8, B-9); §5.3/ADR-IF-R16-1 (the timestamp is a parameter, stale answers take the Not sure path, B-15, CR6-06); §22.1 (summary clauses, country and supplier fallbacks, CR6-16/23/G-7); §23 (plain engine errors, an invalid policy shown at the button, Back keeps the review gate, announcements, CR6-12/17/03/08); §25 (plain model names, CR6-19/21). |
 | 2026-10-03 | §25 added — round R16-E (the description-first path speaks the form's words). `QUESTIONNAIRE_COPY` (`plain-copy.ts`) drives both the targeted questionnaire and the review screen; `IntakeQuestion.text` retired from the engine type; `system_access_scope`/`multi_instance_coordination` join the extraction schema; `'multi_select'` answer type; the follow-up mechanism (`insertQuestions`/`assumption` on `ANSWER_SUBMITTED`) for decision-type/vendor/model; BC-3's content-based access-scope comparison; the review screen, the extraction-error screens (unified via `extractionErrorMessage()`, plus `SWITCH_TO_FORM`), and the contradiction screen all reworded; the narrow-window reflow rule; the summary's merged "couldn't tell" list. |
 | 2026-10-03 | §24 added — round R16-D2 (the "No" screen's intake-side plumbing; saved assumptions, D-95/D-96/D-81; the register's "already in place" parity, D-97; correcting a form-built verdict through the form, D-82). New reducer action `CORRECT_VERDICT_WITH_FORM`; `originalGraph` threads through the form-path correction states beside `originalVerdictId`; new pure module `src/components/form-corrections.ts`. The "No" screen's own composition (VD-10) is documented in `verdict-audit.md` §5.9, cross-referenced here rather than duplicated. |
 | 2026-10-02 | §23 added — round R16-F, closing design-review-007.html's Group 1 findings (DR7-01 to DR7-14). ADR-IF-R16-1 amended: `plainAnswersToFormValues` returns assumption REFERENCES, not worded text (DR7-06) — the engine/screen boundary fix that also moved `QuestionId`/`PlainAnswers` to a new `src/engine/plain-questions.ts`. |

@@ -330,7 +330,7 @@ Every entry point, its consumed modules, the chunk that owns the call site, and 
 
 **Deliverables:**
 - `src/components/StructuredForm.tsx` — all 12 fields from `intake-flow.md §5.2`; all select options from loaded policy (no hardcoded enums)
-- `buildGraphFromForm(formValues): DataFlowGraph` — `intake_method: 'structured_form'`
+- `buildGraphFromForm(formValues, extractedAt): DataFlowGraph` — `intake_method: 'structured_form'`; the caller mints `extractedAt` (CR6 B-15, 2026-10-03: no clock inside the engine)
 - `usePolicy()` hook — `hasApiKey: boolean` drives path selection in `IntakeFlow.tsx`
 - "Guided intake" banner shown when no API key
 

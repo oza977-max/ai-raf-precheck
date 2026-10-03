@@ -861,6 +861,8 @@ export interface ApprovedModel {
 }
 ```
 
+**Amended 2026-10-03 (CR6-19).** `ApprovedModel` gains an optional `plain_name?: string`, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read `plain_name ?? model_id`, so a raw id such as `VENDOR-LLM-v1` no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). The shipped entries `VENDOR-LLM-v1` and `qwen3:4b` still need an owner-supplied `plain_name` (policy text is owner-authored; owner action).
+
 **ADR-PS-R11-1a — matching is exact-id-first, family-fallback; never
 weakens Track II pinning.** `resolveApprovedModel(declaredModelId, registry)`
 checks for an exact `model_id` match first; only if none exists does it
@@ -1093,6 +1095,8 @@ the EXACT same check a firm `HardLine`'s own pair already gets
 (`hardLineWarnings`), since both use the identical `{audience}`/
 `{destination}` vocabulary. Warning, not error, like every other
 plain-language placeholder check on this page.
+
+**Amended 2026-10-03 (CR6, A-5, C-5).** Errors also include a `platforms[].vendor_id` that is not a registered vendor id on the SAME policy: `vendor_id` names the supplier behind a platform, and an unregistered one is a referential error, always checkable like the `applies_to` check above, since platforms and vendors are both part of the policy file (TC-CR6-A5). Warnings also include two loaded packs that declare a rule with the same id, naming every pack that uses it (TC-CR6-C5b), and a firm `downstream_reviews` id equal to a loaded pack rule id, naming the pack (TC-CR6-C5d). These are the load-time signal for the condition `evaluation-engine.md` §15a now handles downstream (sources collapse only when identical in both `rule_id` and `review`).
 
 The check is referential only — a `covers_reviews` id that resolves to a
 real review is not itself proof the control's action satisfies that

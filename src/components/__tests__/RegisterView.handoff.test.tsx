@@ -287,7 +287,7 @@ describe('RegisterView hand-off — two-step replace (code-review-005 F1)', () =
     }
   });
 
-  it('TC-CR6-30: a file that is not JSON at all gets the same corrected grammar ("a Counterpoise")', async () => {
+  it('TC-CR6-30b: a file that is not JSON at all gets the same corrected grammar ("a Counterpoise")', async () => {
     await seedLocalDemoCase(crypto.randomUUID());
     render(<RegisterViewHarness role="1LoD" currentPolicyVersion="1.0" />);
     await screen.findByText('Local demo case');

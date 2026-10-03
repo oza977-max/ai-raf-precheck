@@ -184,6 +184,8 @@ Policy validation errors are surfaced at startup via the `usePolicy` hook. If th
 ### UI errors
 React error boundaries at the route level. Each major view (intake, verdict, register) has its own error boundary. Errors are shown as user-readable messages, never as stack traces.
 
+**As built (CR6-04, 2026-10-03).** One boundary exists so far: `ErrorBoundary.tsx` wraps the intake flow in `App.tsx`, the view holding unfinished work that a stale saved draft could crash on every reload. A render-time crash there shows a plain message that claims only that anything already saved is on the register, and a "Start a fresh check" button that clears both saved drafts before remounting (TC-CR6-04c, 04d, 04e; `intake-flow.md` §3). The verdict and register views are not separately wrapped yet, so the sentence above is the target, not the current state. Engine failures shown on the intake screens use `engineErrorMessage(kind)` (`plain-copy.ts`): a plain sentence per engine error kind that blames the firm's rules or policy, never the person's answers (CR6-12).
+
 ---
 
 ## 6. Testing Conventions (Beck, Dodds)
@@ -216,6 +218,8 @@ src/engine/evaluate.test.ts   ← same directory
 ## 7. Module Boundary Rules
 
 **Rule 1 — Engine is a pure island:** `src/engine/*` imports only from `src/engine/types.ts` and standard TypeScript types. No React, no idb, no Anthropic SDK, no browser APIs.
+
+**Amended 2026-10-03 (CR6, B-15).** `buildGraphFromForm` no longer reads a clock inside the engine: it takes the timestamp as a parameter and every caller (the form, the seed cases) passes it, so identical inputs and timestamp build an identical graph (TC-CR6-B15). It still mints the graph id inside the engine; moving that out is a separate, pending task.
 
 **Rule 2 — LLM boundary is isolated:** `src/llm/*` is the only place the Anthropic SDK is imported. Nothing in `src/engine/*` or `src/store/*` calls the LLM.
 

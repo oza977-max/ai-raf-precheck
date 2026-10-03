@@ -752,10 +752,14 @@ know in advance.
 `downstream_reviews` is **derived** from `downstream_review_sources` — the
 sources' `review` strings, de-duplicated and sorted — so there is one
 source of truth instead of two independent derivations that could drift.
-Sources themselves are never deduplicated against each other (two
-producers naming the literal same review text both still appear as
-separate, independently-traceable sources); they are sorted by `rule_id`
-for determinism (NF-1), the same discipline every other policy collection
+Sources collapse only when two entries are identical in BOTH `rule_id`
+and `review` text (CR6, C-5, 2026-10-03; TC-CR6-C5c): a pack rule id is
+unique within one pack, never guaranteed across the packs a firm loads
+together, and a second pack's DIFFERENT review under a shared id is a real
+obligation that a keep-first rule on the id alone would have under-reported
+(TC-CR6-C5a). Two producers naming the same review text under different
+ids still appear as separate, independently-traceable sources. Sources are
+sorted by `rule_id`, then `review`, for determinism (NF-1), the same discipline every other policy collection
 in this pipeline already follows.
 
 **The pack hard-line fix (D-58).** Before this round, a pack-level hard
@@ -779,6 +783,7 @@ silently disagree.
 
 | Date | Change |
 |---|---|
+| 2026-10-03 | CR6 — §15a amended (C-5): `downstream_review_sources` collapse only entries identical in both `rule_id` and `review`, sorted by `rule_id` then `review`; a shared id with different text keeps both (TC-CR6-C5a, C5c). The unused `emptyExplanation()` helper was inlined at its one call site (no behaviour change; TC-PE-1-01 unchanged). |
 | 2026-10-02 | §15a added — round 16 chunk A1. PE-9: `collectFieldValues` expands an array value into per-element candidates; `describeGraphPath` names every input. Per-instance `downstream_review_sources` populated from all applicable producers at every `evaluate()` return site, with `downstream_reviews` derived from it; the pack hard-line branch (previously set neither field) now mirrors the base hard-line branch. `envelope.ts` exports `DATA_CLASS_RANK`/`maxBy`. |
 | 2026-09-28 | §3.4 amended and §7 point 2 clarified — track assignment uses the policy file's own declared order, not sorted by id (the one deliberate exception among policy collections). Fixes a defect where `evaluate()` sorted `policy.tracks` by id before calling `assignTrack()`, silently defeating the ordering `policy/appetite.yaml` already declares deliberately (oracle rounds 001/002). See `src/engine/track.test.ts` TC-R17-TO-01..05. |
 | 2026-08-18 | §15 added — round 12. ADR-EE-R12-1: staleness and family re-attestation as pure date-parameterised transforms outside evaluate(); NF-1 untouched by construction. |

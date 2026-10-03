@@ -602,6 +602,7 @@ type EngineError =
 
     <h3 id="ui-errors">UI Errors</h3>
     <p>React error boundaries at the route level. Each major view (intake, verdict, register) has its own error boundary. Errors are shown as user-readable messages, never as stack traces.</p>
+    <p><strong>As built (CR6-04, 2026-10-03).</strong> One boundary exists so far: <code>ErrorBoundary.tsx</code> wraps the intake flow in <code>App.tsx</code>, the view holding unfinished work that a stale saved draft could crash on every reload. A render-time crash there shows a plain message that claims only that anything already saved is on the register, and a "Start a fresh check" button that clears both saved drafts before remounting (TC-CR6-04c, 04d, 04e; <code>intake-flow.md</code> &sect;3). The verdict and register views are not separately wrapped yet, so the sentence above is the target, not the current state. Engine failures shown on the intake screens use <code>engineErrorMessage(kind)</code> (<code>plain-copy.ts</code>): a plain sentence per engine error kind that blames the firm's rules or policy, never the person's answers (CR6-12).</p>
 
     <h2 id="testing-conventions">Testing Conventions</h2>
 
@@ -656,6 +657,7 @@ src/engine/evaluate.test.ts   ← same directory</code></pre>
     <h2 id="module-boundaries">Module Boundary Rules</h2>
 
     <p><strong>Rule 1 — Engine is a pure island:</strong> <code>src/engine/*</code> imports only from <code>src/engine/types.ts</code> and standard TypeScript types. No React, no idb, no Anthropic SDK, no browser APIs.</p>
+    <p><strong>Amended 2026-10-03 (CR6, B-15).</strong> <code>buildGraphFromForm</code> no longer reads a clock inside the engine: it takes the timestamp as a parameter and every caller (the form, the seed cases) passes it, so identical inputs and timestamp build an identical graph (TC-CR6-B15). It still mints the graph id inside the engine; moving that out is a separate, pending task.</p>
 
     <p><strong>Rule 2 — LLM boundary is isolated:</strong> <code>src/llm/*</code> is the only place the Anthropic SDK is imported. Nothing in <code>src/engine/*</code> or <code>src/store/*</code> calls the LLM.</p>
 
