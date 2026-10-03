@@ -33,7 +33,7 @@ function makePolicy(workflow: 'self-service' | '2LoD-approve', overrides: Partia
   } as PolicyFile;
 }
 
-const CTRL = { id: 'C1', name: 'C1', description: 'd', resolves: [], burden: 1, verification: 'v' };
+const CTRL = { id: 'C1', name: 'C1', description: 'd', resolves: [], burden: 1 as const, verification: 'v' };
 const PERMISSIVE = /you can start|nobody|no sign-off needed|go ahead/i;
 
 function allText(view: ReturnType<typeof buildVerdictView>): string[] {
