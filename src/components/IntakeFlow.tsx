@@ -42,6 +42,7 @@ import type { Assumption, PlainAnswers } from './plain-copy';
 import {
   extractionErrorMessage,
   EXTRACTION_ERROR_HELP,
+  engineErrorMessage,
   questionnaireCopyForField,
   vendorNotOnListValue,
   VENDOR_UNSURE_VALUE,
@@ -71,8 +72,13 @@ const CONFIRMATION_REFUSAL_MESSAGE: Record<ConfirmationRefusal, string> = {
   // is likely to pass on a retry, so Confirm stays usable for this one.
   'check-failed':
     "We couldn't check this case's record just now, so nothing was saved. Try again in a moment.",
-  'already-decided':
-    'This case already has a result — it was probably confirmed in another tab or window. Open it from the register to see it.',
+  // CR6-15 (Important). Previously claimed a cause ("probably confirmed in
+  // another tab or window") this app has no way to actually verify — a
+  // confirm that keeps running after the component unmounts (CR6-15, the
+  // draft-clearing fix below) can reach this SAME refusal in the SAME tab,
+  // on a later visit, with no other tab or window involved at all. Says
+  // only what is known to be true.
+  'already-decided': 'This case already has a result. Open it from the register to see it.',
   'corrected-elsewhere':
     "This result was corrected in another tab or window while you were working, so your correction wasn't saved. Open the case from the register to see the current result.",
 };
@@ -89,6 +95,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // prevent. Say what happened and offer a way out.
   const [showResumed, setShowResumed] = useState(restoredDraft.current);
 
+  // CR6-02 (Critical). One "attempt" is one run through intake, from a
+  // fresh description to Start Over. Bumped ONLY by handleStartOver — the
+  // one place earlier work is explicitly abandoned. Every async handler
+  // below that can dispatch/setState after an await — and the duplicate-
+  // check effect — captures this value when it STARTS, and before any
+  // such call, checks the token is still the one it captured; if Start
+  // Over bumped it meanwhile, the result is simply dropped (no dispatch,
+  // no setState), same as if the call had never returned. This is what
+  // lets handleStartOver below safely release the in-flight refs instead
+  // of waiting for abandoned work to finish on its own first.
+  const attemptToken = useRef(0);
+
   // "+ New pre-check" while a flow is FINISHED starts a fresh one (known
   // issue since v0.3.2). Only the verdict step resets: an in-progress
   // draft is the user's work, and the resumed-draft banner already offers
@@ -102,6 +120,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   }, [newPrecheckNonce]);
 
   function handleStartOver() {
+    // CR6-02 (Critical). Bumped FIRST: any async handler/effect from the
+    // abandoned attempt that resumes after this point (its own await
+    // having been in flight when Start Over was clicked) will see its own
+    // captured token no longer match and drop its result.
+    attemptToken.current += 1;
     clearDraft();
     // explore-005 D-002: the guided form keeps its answers under a SECOND
     // key, so clearing the reducer draft alone left the abandoned answers to
@@ -115,6 +138,28 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // here without remounting this component. Found by the R16-W
     // walkthrough's second submission in one tab.
     confirmInFlight.current = false;
+    // CR6-02 (Critical). handleStartOver used to release ONLY the guard
+    // above — dupCheckInFlight/confirmNewInFlight/retryExtractionInFlight/
+    // adoptInFlight stayed set until their OWN pending call's `finally`
+    // ran, so Start Over while any of them was still in flight left the
+    // IDENTICAL handler on the NEW case reading a guard that was never
+    // reset and silently doing nothing. Released together here.
+    dupCheckInFlight.current = false;
+    confirmNewInFlight.current = false;
+    retryExtractionInFlight.current = false;
+    adoptInFlight.current = false;
+    formSubmitInFlight.current = false;
+    // Exactly as handleStepBack already does, and for the identical reason
+    // its own comment gives: clearing only duplicateCheckDone re-arms the
+    // duplicate-check effect's early return with dupCheckInFlight still
+    // true, which would sit the NEXT case on "Looking through earlier
+    // checks…" forever.
+    setDuplicateCheckDone(false);
+    setDuplicateMatch(null);
+    // CR6-14 (Important): an extraction error belongs to the attempt that
+    // set it — it must not still be showing when a fresh case's own
+    // (pending) extraction has not even had a chance to succeed or fail.
+    setExtractionError(null);
     // F-1: a fresh intake must not carry a stale refusal into the new
     // case's own confirmation step.
     setConfirmationRefusal(null);
@@ -375,6 +420,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // two confirmSemanticDuplicate() calls per restore.
     if (dupCheckInFlight.current) return;
     dupCheckInFlight.current = true;
+    // CR6-02 (Critical). Captured before the first await — if Start Over
+    // bumps the token while this check is still running (abandoning it),
+    // its eventual result must not surface against whatever case is on
+    // screen by then (TC-CR6-02b: an abandoned check's match reappearing
+    // on an unrelated new case).
+    const myAttempt = attemptToken.current;
 
     const description = state.description;
     void (async () => {
@@ -389,7 +440,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         const topCandidate = registerRows.find((r) => r.use_case_id === candidates[0]?.id);
         if (topCandidate) {
           const confirmed = getApiKey() ? await confirmSemanticDuplicate(description, topCandidate.label) : true;
-          if (confirmed) {
+          if (confirmed && attemptToken.current === myAttempt) {
             setDuplicateMatch({
               id: topCandidate.use_case_id,
               tier: topCandidate.tier,
@@ -407,9 +458,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         // invisible (the V1.2-C documented deviation, now user-rejected).
         //
         // In `finally` so an LLM failure still renders the gate rather than
-        // reinstating the hang this defect is about.
+        // reinstating the hang this defect is about. The ref reset is
+        // UNCONDITIONAL (StrictMode double-invoke protection for THIS
+        // mount, unrelated to staleness); only the visible result
+        // (setDuplicateCheckDone) is gated on the attempt token — do NOT
+        // add a `cancelled` cleanup flag here instead (CR6-02): this
+        // effect has none, and a cleanup that gated the `finally` would
+        // hang the step on "Looking through earlier checks…" on every
+        // first entry under StrictMode, which relies on the synchronous
+        // dupCheckInFlight ref alone to stop the second mount's call.
         dupCheckInFlight.current = false;
-        setDuplicateCheckDone(true);
+        if (attemptToken.current === myAttempt) setDuplicateCheckDone(true);
       }
     })();
   }, [state, duplicateCheckDone, registerLoaded, registerRows]);
@@ -435,6 +494,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (state.step !== 'duplicate_check') return;
     if (confirmNewInFlight.current) return;
     confirmNewInFlight.current = true;
+    // CR6-02 (Critical): captured before any await — every dispatch/
+    // setState below checks it is still current before firing, so Start
+    // Over abandoning THIS call (e.g. while the audit write or the
+    // extraction below is still pending) never lets its late result land
+    // on whatever case is on screen by the time it resolves.
+    const myAttempt = attemptToken.current;
     try {
 
     // UC-2 / TC-UC-2-03. Dismissing a surfaced match is a decision about the
@@ -458,6 +523,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         },
       });
     }
+    if (attemptToken.current !== myAttempt) return;
 
     // The LLM intake path exists if EITHER extractor is configured — the
     // Anthropic key or a local open model. Which one runs is decided inside
@@ -470,7 +536,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       return;
     }
 
+    // CR6-14 (Important): clears any error left by an earlier, abandoned
+    // case's own extraction before this one even starts — otherwise this
+    // fresh (pending) extraction briefly reads as the PREVIOUS case's
+    // failure, which it has not had a chance to be.
+    setExtractionError(null);
     const extraction = await extractGraph(state.description);
+    if (attemptToken.current !== myAttempt) return;
     if (!extraction.ok) {
       setExtractionError(extractionErrorMessage(extraction.error.kind));
       return;
@@ -506,6 +578,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // afterwards (same guard as the 2LoD actions, RegisterDetail.tsx:76).
     if (adoptInFlight.current) return;
     adoptInFlight.current = true;
+    // CR6-02 (Critical): see handleConfirmNewUseCase's identical comment —
+    // the writes below complete honestly regardless (the register node, if
+    // created, is real), but the one visible result (setAdoptedFrom) must
+    // not surface for an attempt Start Over has since abandoned.
+    const myAttempt = attemptToken.current;
 
     try {
       const source = duplicateMatch;
@@ -552,7 +629,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         },
       });
 
-      setAdoptedFrom(source.label);
+      if (attemptToken.current === myAttempt) setAdoptedFrom(source.label);
     } finally {
       adoptInFlight.current = false;
     }
@@ -585,9 +662,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     if (state.step !== 'graph_extraction') return;
     if (retryExtractionInFlight.current) return;
     retryExtractionInFlight.current = true;
+    // CR6-02 (Critical): see handleConfirmNewUseCase's identical comment.
+    const myAttempt = attemptToken.current;
     try {
       setExtractionError(null);
       const extraction = await extractGraph(state.description);
+      if (attemptToken.current !== myAttempt) return;
       if (!extraction.ok) {
         setExtractionError(extractionErrorMessage(extraction.error.kind));
         return;
@@ -663,18 +743,22 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     dispatch({ type: 'CORRECTION_APPLIED', correction, updatedGraph });
   }
 
-  // F-6 (DR7-13). The policy-gate check — malformed policy throws (not
-  // expected to happen outside dev); a reference error (e.g. a
+  // F-6 (DR7-13). The policy-gate check — a reference error (e.g. a
   // covers_reviews id that doesn't resolve) is an expected-to-happen-
   // during-editing condition (R16-A1 §1.4, CF-5) and comes back as a
-  // reader-facing message instead. Was written out, nearly identically, in
-  // both handleProceedFromGraphReview and handleFormSubmitted; now one
+  // reader-facing message. Was written out, nearly identically, in both
+  // handleProceedFromGraphReview and handleFormSubmitted; now one
   // function, used by both.
+  // CR6-17 (Important). A malformed policy used to THROW here instead of
+  // returning a message — an uncaught exception inside a React event
+  // handler is not caught by anything (error boundaries only catch
+  // render-time errors), so both callers' click just produced no visible
+  // result at all. Returns the same shape as the reference-error case
+  // below instead, so both failure kinds reach the identical
+  // setReviewGateError/render path.
   function checkPolicyGate(): string | undefined {
     if (!policyResult.valid) {
-      throw new Error(
-        `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
-      );
+      return `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`;
     }
     const referenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
     if (referenceCheck.errors.length > 0) {
@@ -709,9 +793,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       setReviewGateError(gateError);
       return;
     }
-    // checkPolicyGate() already throws when !policyResult.valid, so this is
-    // always true here — restated so TS narrows policyResult.policy below
-    // (it cannot see that invariant across the function-call boundary).
+    // checkPolicyGate() above already returns a message when
+    // !policyResult.valid, so the early return just took it — reaching
+    // here always means policyResult.valid is true. Restated so TS
+    // narrows policyResult.policy below (it cannot see that invariant
+    // across the function-call boundary).
     if (!policyResult.valid) return;
     setReviewGateError(null);
     // R6-QN-1: guessed-field questions ride with the budget-driven ones,
@@ -765,10 +851,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // answer, fill in again, Continue) must be able to re-enter this handler
   // a second time for the SAME mounted IntakeFlow, where confirmInFlight's
   // sibling pattern never needs to (that flow leaves confirmation for good
-  // on success; CORRECT_VERDICT is its own, explicit re-arm). The
-  // double-click race this guard exists for is still closed: a second,
-  // near-simultaneous click reads the ref before the first call's
-  // `await appendAuditEvent` has resolved, every time.
+  // on success; CORRECT_VERDICT is its own, explicit re-arm).
+  // E-2 (Minor): this comment used to describe a double-click race closed
+  // by reading the ref "before the first call's `await appendAuditEvent`
+  // has resolved" — stale since F-3 moved that write to Confirm; this
+  // handler makes no audit write and, today, no await at all, so there is
+  // no actual async gap for two clicks to race across. The ref is kept
+  // belt-and-braces, so the handler still cannot re-enter if an await is
+  // ever added back here.
   async function handleFormSubmitted(builtGraph: DataFlowGraph, assumptions: Assumption[], plainAnswers: PlainAnswers) {
     if (state.step !== 'graph_extraction' || state.method !== 'form') return;
     if (formSubmitInFlight.current) return;
@@ -792,9 +882,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         setReviewGateError(gateError);
         return;
       }
-      // checkPolicyGate() already throws when !policyResult.valid — restated
-      // so TS narrows policyResult.policy below (see the identical comment
-      // in handleProceedFromGraphReview).
+      // checkPolicyGate() above already returns a message when
+      // !policyResult.valid — restated so TS narrows policyResult.policy
+      // below (see the identical comment in handleProceedFromGraphReview).
       if (!policyResult.valid) return;
       setReviewGateError(null);
 
@@ -1334,6 +1424,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     }
     await refreshRegister();
     setVerdictAuditEvents(await getAuditEvents(useCaseId));
+    // CR6-15 (Important). The result IS recorded as of this line — clear
+    // the saved draft directly, right here, rather than relying only on
+    // the effect keyed on `state.step === 'verdict'` below. That effect
+    // never fires for a component that has unmounted (the user navigated
+    // away mid-confirm, a deliberate CR6-15 scenario: this function keeps
+    // running in the background regardless), so the draft used to stay
+    // frozen wherever it last was — typically still `confirmation` — and a
+    // later visit restored that stale screen for a case that, in truth,
+    // already has a result. This call is a plain sessionStorage write, not
+    // React state, so it has an effect whether or not anything is still
+    // mounted to react to it.
+    clearDraft();
     dispatch({ type: 'VERDICT_READY' });
   }
 
@@ -1545,6 +1647,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // the last of the ORIGINAL list.
     const totalQuestions = state.questions.length + (insertQuestions?.length ?? 0);
     if (nextAnswers.length >= totalQuestions) {
+      // B-10 (Minor). F-6's routing order is unchanged (questions still
+      // come before contradictions) — but a contradiction already found
+      // at FORM SUBMISSION time must still be reviewed once the questions
+      // end, even if the live detectContradictions call just above found
+      // nothing new (the conflicting field may not be one any of these
+      // questions touches). Carried onto the questionnaire state by
+      // FORM_SUBMITTED (intake-state.ts); consumed exactly once, here.
+      const submissionContradictions = state.submissionContradictions;
+      if (submissionContradictions && submissionContradictions.length > 0) {
+        dispatch({ type: 'CONTRADICTIONS_DETECTED', contradictions: submissionContradictions });
+        return;
+      }
       dispatch({ type: 'PROCEED_TO_CONFIRMATION' });
     }
   }
@@ -1583,7 +1697,24 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // this same screen, re-rendered) — focus should not also jump the
     // page around.
     stepContainerRef.current?.focus({ preventScroll: true });
-    setStepAnnouncement(describeStep(state.step));
+    // CR6-08 (Important). describeStep() maps BOTH evaluation_pending and
+    // verdict onto the same visible tracker label ("Result", StepTracker.tsx)
+    // — correct for the tracker, which the fix below deliberately leaves
+    // alone, but it meant this announcement re-rendered the IDENTICAL text
+    // on the transition INTO evaluation_pending and then again on the
+    // transition FROM it to verdict. A live region that repeats the same
+    // text is, to a screen reader, a region that said nothing changed —
+    // the result arrived silently. Two distinct sentences here, one for
+    // "still working on it" and one for "it's ready", are enough: neither
+    // needs its own step number, since the step number is what describeStep
+    // already gives every OTHER transition unchanged.
+    setStepAnnouncement(
+      state.step === 'evaluation_pending'
+        ? 'Working out your result…'
+        : state.step === 'verdict'
+          ? 'Your result is ready.'
+          : describeStep(state.step),
+    );
   }, [state.step]);
 
   return (
@@ -1696,7 +1827,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
               </>
             )}
             {!duplicateCheckDone ? (
-              <p>Looking through earlier checks…</p>
+              // CR6-08 (Important): an in-progress line with no live
+              // region at all — a screen-reader user landing here heard
+              // nothing until (if) a match card's own role="alert" fired.
+              <p role="status">Looking through earlier checks…</p>
             ) : (
               <>
                 {duplicateMatch ? (
@@ -2014,7 +2148,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             questions={state.questions}
             answeredCount={state.answers.length}
             lastAnswer={state.answers[state.answers.length - 1]}
-            onUndo={() => dispatch({ type: 'ANSWER_UNDONE' })}
+            // C-3 (Minor): Undo is a single-level, one-use snapshot
+            // (v0.7.1) — offered only while state.undo actually exists, so
+            // the control disappears the moment it is consumed instead of
+            // sitting there as a second press that does nothing (the
+            // "Recorded" line can still be showing the PREVIOUS answer at
+            // that point, which is why this checks state.undo directly
+            // rather than deriving it from whether a Recorded line exists).
+            onUndo={state.undo ? () => dispatch({ type: 'ANSWER_UNDONE' }) : undefined}
             onAnswer={handleAnswerSubmitted}
             policy={policyResult.valid ? policyResult.policy : undefined}
             graph={state.graph}
@@ -2059,7 +2200,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             />
           </>
         )}
-        {state.step === 'evaluation_pending' && <p>Evaluating…</p>}
+        {/* CR6-08 (Important): no live region at all previously. */}
+        {state.step === 'evaluation_pending' && <p role="status">Evaluating…</p>}
 
         {state.step === 'verdict' && verdict && (
           <VerdictDisplay

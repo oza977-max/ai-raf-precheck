@@ -392,7 +392,11 @@ describe('CR6-14: a stale extraction error does not leak onto the next case', ()
 // consumed, the control must stop offering itself rather than sitting there
 // as a button that does nothing on a second press.
 describe('C-3: Undo disappears once its one snapshot is used', () => {
-  it('TC-CR6-C3: Undo is offered after one answer and gone after it is pressed', async () => {
+  it('TC-CR6-C3: Undo is offered after an answer and gone after it is pressed — even though the PREVIOUS answer is still shown as "Recorded"', async () => {
+    // Three questions: after answering Q1 then Q2 and undoing Q2, the
+    // "Recorded" line falls back to Q1's answer — which is still truthy —
+    // so this actually exercises whether onUndo itself is withheld once
+    // the one snapshot is gone, not just "lastAnswer happened to vanish".
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
@@ -402,6 +406,7 @@ describe('C-3: Undo disappears once its one snapshot is used', () => {
         questions: [
           { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
           { id: 'Q2', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+          { id: 'Q3', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
         ],
         answers: [],
         resolutionNotes: [],
@@ -412,13 +417,23 @@ describe('C-3: Undo disappears once its one snapshot is used', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await screen.findByText(/question 1 of 2/i);
+    await screen.findByText(/question 1 of 3/i);
     expect(screen.queryByRole('button', { name: /^undo$/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^yes$/i }));
-
+    await screen.findByText(/question 2 of 3/i);
     expect(await screen.findByRole('button', { name: /^undo$/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^undo$/i }));
+
+    await user.click(screen.getByRole('button', { name: /^no$/i }));
+    await screen.findByText(/question 3 of 3/i);
+    const undo = await screen.findByRole('button', { name: /^undo$/i });
+
+    await user.click(undo);
+    // Back to question 2, Recorded line falls back to Q1's answer — the
+    // single snapshot is gone, so Undo must not still be offered even
+    // though there is still a "Recorded" line to attach it to.
+    await screen.findByText(/question 2 of 3/i);
+    expect(screen.getByText(/^recorded:/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^undo$/i })).not.toBeInTheDocument();
   });
 });
