@@ -1960,6 +1960,11 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(r('some-other-id', 'label')).toEqual({ found: false });
   });
 
+  it('TC-CR7-21i (M-1): the resolver returns list values sorted, so a synthesised correction is stored the way formCorrections stores them', () => {
+    const r = graphValueResolver(graph({ jurisdictions: ['UK', 'EU'] }));
+    expect(r('graph', 'jurisdictions')).toEqual({ found: true, value: ['EU', 'UK'] });
+  });
+
   it('TC-CR7-21g (M-B): list values compare as sets — a different order is the same correction', () => {
     const events = [ev(corr('1', [], ['UK', 'EU']))];
     expect(planCorrectionWrites([corr('2', [], ['EU', 'UK'])], events).toWrite).toEqual([]);

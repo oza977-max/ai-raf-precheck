@@ -1169,3 +1169,70 @@ describe('FX7-1 review pass 3 — a synthesised correction never writes a value 
     expectNetValueIsOriginal(corrections);
   }, 60000);
 });
+
+describe('FX7-1 review pass 4 — reverse corrections on the real trail for a graph field and an output-node field (M-2)', () => {
+  async function changeFailRevert(label: string, change: (u: User) => Promise<void>, revert: (u: User) => Promise<void>) {
+    const user = userEvent.setup();
+    await reachForm(user, label);
+    await fillMinimalForm(user, label, 'Sorts internal documents for the reverse test.');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const useCase = (await getUseCases('all')).find((u) => u.label === label)!;
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    await screen.findByLabelText(/what do you want to call it/i);
+    await change(user);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
+    await screen.findByLabelText(/what do you want to call it/i);
+    await revert(user);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(
+      async () => expect((await getAll(useCase.use_case_id)).filter((e) => e.event_type === 'verdict_corrected')).toHaveLength(1),
+      { timeout: 5000 },
+    );
+    return (await getAll(useCase.use_case_id))
+      .filter((e) => e.event_type === 'graph_corrected')
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction);
+  }
+
+  it('TC-CR7-21j: a country ticked (and "somewhere else" unticked), evaluation fails, then put back: a reverse graph|jurisdictions correction is on the trail', async () => {
+    const corrections = await changeFailRevert(
+      'Zephyrquill jurisdiction reverse probe',
+      async (u) => {
+        await u.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+        await u.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+      },
+      async (u) => {
+        await u.click(screen.getByRole('checkbox', { name: /united kingdom/i }));
+        await u.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+      },
+    );
+    const j = corrections.filter((c) => c.node_id === 'graph' && c.field === 'jurisdictions');
+    expect(j).toHaveLength(2);
+    expect(j[1]!.corrected_value).toEqual(j[0]!.original_value);
+    expectNetValueIsOriginal(corrections);
+  }, 60000);
+
+  it('TC-CR7-21k: an output-node answer (how widely it is used) changed, evaluation fails, then put back: the reverse correction is on the trail', async () => {
+    const corrections = await changeFailRevert(
+      'Zephyrquill output reverse probe',
+      async (u) => {
+        await u.click(screen.getByRole('radio', { name: /my team, as part of normal work/i }));
+      },
+      async (u) => {
+        await u.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+      },
+    );
+    const scale = corrections.filter((c) => c.field === 'scale');
+    expect(scale).toHaveLength(2);
+    expect(scale[1]!.corrected_value).toEqual(scale[0]!.original_value);
+    expectNetValueIsOriginal(corrections);
+  }, 60000);
+});
