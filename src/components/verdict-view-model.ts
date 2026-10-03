@@ -132,6 +132,8 @@ export interface VerdictView {
    *  this verdict's id. A correction request or a later (corrected) verdict
    *  does not count. */
   signedOff: boolean;
+  /** Review pass 1 (M-1). A sign-off was required, the case is past the waiting stage, and no approving review of THIS verdict is on the trail. */
+  signOffMissing: boolean;
   headline: string;
   /** At most two distinct plain reasons, binding constraint first. */
   whyReasons: string[];
@@ -597,7 +599,7 @@ function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, 
 // ---------------------------------------------------------------------------
 // §4.2 copy templates.
 
-function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number, signedOff = false): string {
+function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number, signedOff = false, signOffMissing = false): string {
   if (status === 'rejected') return 'No — not as described.';
   if (signedOff) {
     if (n === 0) return 'Yes — you can start. Your AI risk team has signed it off.';
@@ -608,6 +610,11 @@ function headlineText(status: Verdict['status'], needsSignOff: boolean, n: numbe
     if (n === 0) return 'Not yet. You can start once your AI risk team has signed it off.';
     if (n === 1) return 'Not yet. You can start once your AI risk team has signed it off and 1 safeguard is in place.';
     return `Not yet. You can start once your AI risk team has signed it off and all ${n} safeguards are in place.`;
+  }
+  if (signOffMissing) {
+    if (n === 0) return 'Yes — you can start.';
+    if (n === 1) return 'Nearly. You can start once 1 safeguard is in place.';
+    return `Nearly. You can start once ${n} safeguards are in place.`;
   }
   if (n === 0) return 'Yes — you can start.';
   if (n === 1) return 'Nearly. You can start once 1 safeguard is in place — no sign-off needed.';
@@ -911,13 +918,18 @@ export function buildVerdictView(
   // intake screen before saving) nothing is claimed, as before.
   const signOffRequired =
     stage === 'pre_checked' || (stage !== undefined && policy?.tier_workflow !== undefined && routeToWorkflow(verdict.tier, policy).lifecycle_stage === 'pre_checked');
-  const signedOff =
-    signOffRequired &&
-    (options.auditEvents ?? []).some(
-      (e) =>
-        e.payload.type === 'twoloD_reviewed' && e.payload.action === 'approved' && e.payload.verdict_id === verdict.id,
-    );
-  const needsSignOff = signOffRequired && !signedOff;
+  // From the trail ALONE (review pass 1, I-1): an approving 2LoD review of THIS
+  // verdict is a fact whatever the policy says today — a later tier_workflow
+  // edit, or no policy at all, must not turn it back into "nobody".
+  const signedOff = (options.auditEvents ?? []).some(
+    (e) => e.payload.type === 'twoloD_reviewed' && e.payload.action === 'approved' && e.payload.verdict_id === verdict.id,
+  );
+  // Pending only while the case is actually waiting (stage pre_checked). At a
+  // later stage with no approving review on this verdict the screen claims
+  // neither "pending" nor "no sign-off needed" — only that none is recorded
+  // (M-1).
+  const needsSignOff = signOffRequired && !signedOff && stage === 'pre_checked';
+  const signOffMissing = signOffRequired && !signedOff && stage !== undefined && stage !== 'pre_checked';
 
   // Rejected verdicts carry no safeguards, next steps or could-still-change
   // lines from THIS view-model — the headline still covers the rejected
@@ -929,6 +941,7 @@ export function buildVerdictView(
       needsSignOff,
       signOffRequired,
       signedOff,
+      signOffMissing,
       headline: headlineText('rejected', needsSignOff, 0),
       whyReasons: [],
       whyHasMore: false,
@@ -1033,7 +1046,7 @@ export function buildVerdictView(
   });
   const whyAll = dedupeStrings(byBindingFirst.map((t) => invariantPlainReason(t, policy, graph)));
 
-  const headline = headlineText(verdict.status, needsSignOff, outstandingCount, signedOff);
+  const headline = headlineText(verdict.status, needsSignOff, outstandingCount, signedOff, signOffMissing);
   const nextSteps = buildNextSteps({
     needsSignOff,
     outstandingSafeguards,
@@ -1044,6 +1057,8 @@ export function buildVerdictView(
     ? 'your AI risk team — signed off by your AI risk team on this version of the result.'
     : needsSignOff
     ? "your AI risk team. Until they do, this result isn't final."
+    : signOffMissing
+    ? 'your AI risk team — no sign-off is recorded on this version of the result.'
     : "nobody — it's low-stakes enough for you to go ahead once the safeguard is in place.";
 
   return {
@@ -1051,6 +1066,7 @@ export function buildVerdictView(
     needsSignOff,
     signOffRequired,
     signedOff,
+    signOffMissing,
     headline,
     whyReasons: whyAll.slice(0, 2),
     whyHasMore: whyAll.length > 2,
