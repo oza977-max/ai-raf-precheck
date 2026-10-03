@@ -668,13 +668,22 @@ export function planCorrectionWrites(
  *    only over-removal when the field exists on more than one node; the
  *    honest direction (we list less, never a stale claim). A node id is NOT
  *    added to Assumption — the hand-off schema would strip it (BC-002).
+ *  - `keepQuestionIds`: assumptions the edit cannot make untrue. The countries
+ *    panel cannot express "somewhere else", so a countries edit keeps the
+ *    CR7-23 question-11 assumption ("it reaches countries beyond the ones
+ *    listed"): its disclosure stays true.
  *  - ANSWER_SUBMITTED removes only the exact `field:X` id of the question just
  *    answered; that is a different action and is deliberately left as it is.
  *  - The Undo snapshot is questionnaire-only, so Undo cannot resurrect an
  *    assumption this removes on the review screen. */
-function narrowAssumptions(assumptions: Assumption[] | undefined, field: string): Assumption[] | undefined {
+function narrowAssumptions(
+  assumptions: Assumption[] | undefined,
+  field: string,
+  keepQuestionIds: readonly string[] = [],
+): Assumption[] | undefined {
   if (!assumptions) return assumptions;
   return assumptions.flatMap((a) => {
+    if (keepQuestionIds.includes(a.questionId)) return [a];
     if (!a.fields || a.fields.length === 0) return [];
     if (!a.fields.includes(field)) return [a];
     const rest = a.fields.filter((f) => f !== field);
@@ -819,6 +828,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
 
     case 'GRAPH_EXTRACTED':
       if (state.step !== 'graph_extraction') return state;
+      // CR8-03 (P3), defence in depth: GRAPH_EXTRACTED is the description path's
+      // exit and mints the case id; a form-method step (reached by a failed
+      // evaluation, Change an answer or a correction, carrying the attested
+      // case) must never take it.
+      if (state.method === 'form') return state;
       return {
         step: 'graph_review',
         description: carriedDescription(state),
@@ -867,7 +881,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       const carried = {
         description: action.description,
         graph: action.graph,
-        useCaseId: action.useCaseId,
+        // CR8-03 (P3), defence in depth: a form step that already carries a case
+        // id (a retry, a correction) keeps it; the action's id is only for a
+        // fresh submission.
+        useCaseId: state.useCaseId ?? action.useCaseId,
         plainAnswers: action.plainAnswers,
         assumptions: action.assumptions,
         // R16-D2 §5: carried from THIS state (the correction's start), not
@@ -979,7 +996,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: [...state.corrections, action.correction],
         // CR8-01 (P2): the countries were just set by the person — the
         // CR7-23 "elsewhere, not sure" assumption about them no longer holds.
-        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, 'jurisdictions') } : {}),
+        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, 'jurisdictions', ['11']) } : {}),
         ...(state.jurisdictionsConfirmed !== undefined ? { jurisdictionsConfirmed: true } : {}),
       };
 

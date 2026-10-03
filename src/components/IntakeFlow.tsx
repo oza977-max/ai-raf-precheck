@@ -2298,7 +2298,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                     same); the old "Check the details below and try again." suffix
                     is gone — the sentence is usually a gap in the firm's own
                     rules, not something in the person's details. */}
-                Something went wrong working out the result: {evaluationError}.
+                Something went wrong working out the result:{' '}
+                {/* No added full stop when the sentence already ends with one. */}
+                {evaluationError.endsWith('.') ? evaluationError : `${evaluationError}.`}
               </p>
             )}
             {/* V1.1-C01: a real visual data-flow with a real per-field
