@@ -213,8 +213,10 @@ testing impossible.
 
 Sidebar → **Demo data** → **Clear all data and start over**. It permanently
 deletes every case, verdict and audit entry in this browser, any unsaved
-intake draft and the hand-off sync record — there's no server copy. Your
-saved appetite framework and model settings are kept. Export first if you
+intake draft and the hand-off sync record, and resets your selected role to
+1LoD — there's no server copy. Your saved appetite framework and model
+settings are kept. If Counterpoise is open in another tab, the delete can be
+held up until you close it. Export first if you
 want to keep anything.
 
 
