@@ -64,6 +64,14 @@ const EXTRACT_GRAPH_SCHEMA = {
           // node's `required` list — unresolvable is guessed, same as any
           // other field (R6 machinery), never a hard extraction failure.
           declared_model_id: { type: 'string' },
+          // CR6-05: required value field (never optional, see `required`
+          // below) — but its QUOTE is deliberately NOT added to this
+          // sub-object's own `required` list, for the same reason
+          // declared_model_id/system_access_scope/multi_instance_coordination
+          // aren't: a model with no textual basis must be free to leave the
+          // quote blank (or omit the key) so verifyQuotes() demotes the
+          // field to guessed, rather than being pressured to fabricate a
+          // quote just to satisfy the schema.
           replaces_prior_model: { type: 'boolean' },
           uncertain: { type: 'boolean' },
           // R16-E §1 (D-08, D-65). Both optional and both subject to the
@@ -77,7 +85,13 @@ const EXTRACT_GRAPH_SCHEMA = {
           multi_instance_coordination: { type: 'string', enum: ['no', 'yes', 'unknown'] },
           basis_quotes: {
           type: 'object',
-          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' },declared_model_id: { type: 'string' },system_access_scope: { type: 'string' },multi_instance_coordination: { type: 'string' } },
+          // CR6-05: replaces_prior_model joins the per-field list that
+          // tells the model what it may quote — it was required on the
+          // node (line above) but missing here, so an unquoted value was
+          // never guessed and never became a question (the whole CR6-05
+          // bug). Not added to the `required` array below, same reason as
+          // declared_model_id/system_access_scope/multi_instance_coordination.
+          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' },declared_model_id: { type: 'string' },replaces_prior_model: { type: 'string' },system_access_scope: { type: 'string' },multi_instance_coordination: { type: 'string' } },
           required: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
         },
         },
@@ -97,6 +111,15 @@ const EXTRACT_GRAPH_SCHEMA = {
           output_reversibility: { type: 'string', enum: ['reversible', 'irreversible', 'unknown'] },
           scale: { type: 'string', enum: ['limited', 'at_scale'] },
           decision_type: { type: 'string', enum: DECISION_TYPES },
+          // B-9: the free-text escape hatch for an unclassified decision
+          // (engine/types.ts's OutputNode.decision_type_other) — absent from
+          // both schemas below until now, so the description path could
+          // never populate it and the engine's unclassified-decision safety
+          // net (unclassifiedDecisionTypes in provisional.ts) could never
+          // fire from an LLM-extracted graph. Bounded like the hand-off's
+          // free-text fields (src/store/handoff.ts's boundedText) — a
+          // decision-type label is a short phrase, never a paragraph.
+          decision_type_other: { type: 'string' },
           hitl: { type: 'boolean' },
           basis_quotes: {
           type: 'object',
@@ -225,6 +248,9 @@ const OutputNodeSchema = z.object({
   output_reversibility: z.enum(['reversible', 'irreversible', 'unknown']),
   scale: z.enum(['limited', 'at_scale']),
   decision_type: z.enum(DECISION_TYPES as [string, ...string[]]).optional(),
+  // B-9: bounded free text, same discipline as the hand-off's bounded
+  // strings — short enough for a decision-type label, never a runaway value.
+  decision_type_other: z.string().max(200).optional(),
   hitl: z.boolean().optional(),
   basis_quotes: z.record(z.string()).optional(),
 });
@@ -252,13 +278,23 @@ export interface GraphExtraction {
   guessed: Record<string, string[]>;
 }
 
-const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
+// CR6-25: exported so a test can derive "every field the generator can
+// emit" from the real source instead of hand-typing it (BC-003) — the
+// pattern src/store/plain-language-coverage.test.ts already uses for the
+// policy side of the same question. Exporting changes no behaviour; it is
+// the one place this list is defined, same as before.
+export const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
   input: ['data_class', 'data_zone'],
   processing: [
     'model_type',
     'autonomy_level',
     'data_zone',
     'vendor',
+    // CR6-05: required on the node (never optional) but previously absent
+    // from this list, so verifyQuotes() never evaluated it — an unquoted
+    // value was silently treated as having a basis instead of being guessed,
+    // and the question machinery (questionsForGuessedFields) never saw it.
+    'replaces_prior_model',
     'declared_model_id',
     // R16-E §1 (D-08, D-65): a value with no verified quote is guessed,
     // same as every other field in this list — the question machinery
@@ -276,7 +312,8 @@ const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
 // extracted `model_type: 'agentic'` and said nothing about either field,
 // that silence is itself the gap R6's question machinery exists to close,
 // so both are pushed into `guessed` even though neither has a value yet.
-const AGENT_REACH_FIELDS = ['system_access_scope', 'multi_instance_coordination'] as const;
+// Exported for the same CR6-25 reason as QUOTE_FIELDS above.
+export const AGENT_REACH_FIELDS = ['system_access_scope', 'multi_instance_coordination'] as const;
 
 /** R6-PV-2. Case- and whitespace-insensitive; no fuzzy matching, no
  *  semantics. The machine only answers "did the user actually write these
@@ -290,14 +327,17 @@ function verifyQuotes(
   kind: 'input' | 'processing' | 'output',
   node: Record<string, unknown>,
 ): { verified: Record<string, string>; guessed: string[] } {
-  // A node with NO basis_quotes object at all is schema-impossible from a
-  // live provider (both enforce the schema) — it is a legacy shape (pre-R6
-  // draft, old fixture). Treated as pre-R6: no provenance claims either
-  // way, standard confirm flow. Only a PRESENT object makes claims that
-  // can be verified or demoted.
-  if (node.basis_quotes === undefined) return { verified: {}, guessed: [] };
+  // B-8: `basis_quotes` is required in the JSON tool schema but OPTIONAL in
+  // the zod gate (defence in depth for a provider that doesn't enforce the
+  // schema as strictly, e.g. the local open-model path) — so a node with NO
+  // basis_quotes object at all is a real, reachable shape, not merely a
+  // legacy/pre-R6 fixture. Treating it as "nothing to verify, nothing
+  // guessed" (the old behaviour) silently granted every one of its
+  // decision-bearing fields the SAME standing as a verified quote. A node
+  // with zero quoted evidence must read exactly like `basis_quotes: {}` —
+  // every field below falls through to the `else` branch and is guessed.
   const desc = normalise(description);
-  const quotes = node.basis_quotes as Record<string, string>;
+  const quotes = (node.basis_quotes as Record<string, string> | undefined) ?? {};
   const verified: Record<string, string> = {};
   const guessed: string[] = [];
   for (const field of QUOTE_FIELDS[kind]) {
