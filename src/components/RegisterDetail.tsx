@@ -1399,13 +1399,17 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             a long trail. "Immutable" also overstates what a browser-held
             store can support. The caveat now sits directly under the heading,
             before any event. */}
+        {/* CR8-04 (P5): derived from verifyChain, which proves linkage and hashes of the events PRESENT only.
+            Deleting the newest events leaves a chain that still verifies (TC-CR8-04b), so nothing here may
+            say the whole trail is intact or that every deletion is detectable. */}
         <p className="register-detail__caveat">
           Append-only by construction: nothing here can be edited or deleted through the application.
-          Every event is hash-chained to the one before it, across the whole trail — a single altered
-          or deleted event breaks the chain and is detectable, which the check below actually proves
-          rather than just asserts. This is still a client-side, browser-held store with no external
-          anchor, so it cannot rule out someone with full local access rewriting the entire chain
-          consistently — that would need an external, write-once store, which V1 does not have.
+          Every event is hash-chained to the one before it, across the whole trail — an edited event,
+          or a deleted event with later events after it, breaks the chain, and the check below runs
+          that test live. Removing the newest events can&apos;t be detected from inside this browser.
+          This is still a client-side, browser-held store with no external anchor, so it cannot rule
+          out someone with full local access rewriting the entire chain consistently — that would need
+          an external, write-once store, which V1 does not have.
         </p>
         {chainCheck && (
           <p
@@ -1413,7 +1417,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             role={chainCheck.ok ? 'status' : 'alert'}
           >
             {chainCheck.ok
-              ? `Chain integrity verified — ${chainCheck.checked} event${chainCheck.checked === 1 ? '' : 's'} across the whole trail, unbroken.`
+              ? `No break found in the ${chainCheck.checked} event${chainCheck.checked === 1 ? '' : 's'} present.`
               : `Chain integrity check FAILED — the trail no longer matches its own hash chain, starting at event ${chainCheck.brokenAtEventId} (${chainCheck.reason}). Treat this record as compromised until investigated.`}
           </p>
         )}

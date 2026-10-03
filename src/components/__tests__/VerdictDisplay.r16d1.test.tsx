@@ -61,7 +61,10 @@ function makePolicy(controls: Array<Record<string, unknown>>): PolicyFile {
 
 describe('VerdictDisplay — R16-D1 first screen: headline and word guards', () => {
   it('TC-R16-D1-13: the headline, not the formal status chip, leads the screen — no bare code or reserved word on the first screen', () => {
-    render(<VerdictDisplay verdict={makeVerdict({ controls: [] })} auditEvents={[]} registerStage="approved" onCorrect={vi.fn()} />);
+    // CR8-02 (deliberate change): "you can start" needs a DETERMINED self-service case — a policy whose
+    // tier_workflow is self-service plus an explicit stage.
+    const selfService = { ...makePolicy([]), tier_workflow: { Critical: 'self-service', High: 'self-service', Medium: 'self-service', Low: 'self-service' } } as unknown as PolicyFile;
+    render(<VerdictDisplay verdict={makeVerdict({ controls: [] })} auditEvents={[]} policy={selfService} registerStage="approved" onCorrect={vi.fn()} />);
     const firstScreen = document.querySelector<HTMLElement>('.verdict__first-screen')!;
     expect(within(firstScreen).getByText('Yes — you can start.')).toBeInTheDocument();
     // The formal status/tier/track chip is NOT inside the first screen.

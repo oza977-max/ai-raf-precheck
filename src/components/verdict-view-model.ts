@@ -134,6 +134,10 @@ export interface VerdictView {
   signedOff: boolean;
   /** Review pass 1 (M-1). A sign-off was required, the case is past the waiting stage, and no approving review of THIS verdict is on the trail. */
   signOffMissing: boolean;
+  /** CR8-02 (P4). Whether a sign-off is required CANNOT be determined: no stage (the intake screen before
+   *  the save lands) or no policy tier_workflow to route by, and no approving review on the trail. Every
+   *  surface then says nothing permissive — no "you can start", no "nobody signs off". */
+  signOffUnknown: boolean;
   headline: string;
   /** At most two distinct plain reasons, binding constraint first. */
   whyReasons: string[];
@@ -604,7 +608,7 @@ function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, 
 // ---------------------------------------------------------------------------
 // §4.2 copy templates.
 
-function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number, signedOff = false, signOffMissing = false): string {
+function headlineText(status: Verdict['status'], needsSignOff: boolean, n: number, signedOff = false, signOffMissing = false, signOffUnknown = false): string {
   if (status === 'rejected') return 'No — not as described.';
   if (signedOff) {
     if (n === 0) return 'Yes — you can start. Your AI risk team has signed it off.';
@@ -622,6 +626,12 @@ function headlineText(status: Verdict['status'], needsSignOff: boolean, n: numbe
     if (n === 0) return 'No sign-off from your AI risk team is on record for this version — confirm with them before you start.';
     if (n === 1) return 'Not confirmed. No sign-off from your AI risk team is on record, and 1 safeguard is still to put in place.';
     return `Not confirmed. No sign-off from your AI risk team is on record, and ${n} safeguards are still to put in place.`;
+  }
+  if (signOffUnknown) {
+    // CR8-02 (P4): whether a sign-off is required is not known on this screen — say nothing permissive.
+    if (n === 0) return "We can't tell from this screen whether your AI risk team must sign this off — confirm with them before you start.";
+    if (n === 1) return "Not yet confirmed. We can't tell whether your AI risk team must sign this off, and 1 safeguard is still to put in place.";
+    return `Not yet confirmed. We can't tell whether your AI risk team must sign this off, and ${n} safeguards are still to put in place.`;
   }
   if (n === 0) return 'Yes — you can start.';
   if (n === 1) return 'Nearly. You can start once 1 safeguard is in place — no sign-off needed.';
@@ -645,12 +655,17 @@ function mentionsAiRiskTeam(text: string): boolean {
 
 function buildNextSteps(args: {
   needsSignOff: boolean;
+  signOffMissing: boolean;
+  signOffUnknown: boolean;
   outstandingSafeguards: SafeguardView[];
   owedReviews: OwedReviewView[];
   provisionalReasons: readonly ProvisionalReason[];
 }): string[] {
-  const { needsSignOff, outstandingSafeguards, owedReviews, provisionalReasons } = args;
+  const { needsSignOff, signOffMissing, signOffUnknown, outstandingSafeguards, owedReviews, provisionalReasons } = args;
   const steps: string[] = [];
+  // P4 (CR8-02): when a required sign-off is not on record, or whether one is required can't be
+  // determined, no step — least of all the finish line — says the person can start.
+  const signOffUnclear = signOffMissing || signOffUnknown;
 
   if (needsSignOff) {
     steps.push(
@@ -659,6 +674,10 @@ function buildNextSteps(args: {
     if (outstandingSafeguards.some((s) => mentionsAiRiskTeam(s.ownerText))) {
       steps.push('(Your AI risk team can help you set this up; signing off the use overall is a separate step.)');
     }
+  }
+
+  if (signOffMissing) {
+    steps.push('Ask your AI risk team to confirm the sign-off before you start — none is on record for this version of the result.');
   }
 
   if (outstandingSafeguards.length > 0) {
@@ -693,7 +712,11 @@ function buildNextSteps(args: {
   // "finish" — D-38: "Then" appears only after a preceding step.
   const hasOutstanding = outstandingSafeguards.length > 0;
   let finish: string;
-  if (needsSignOff && hasOutstanding) {
+  if (signOffUnclear) {
+    finish = hasOutstanding
+      ? 'Start only once your AI risk team has confirmed where the sign-off stands, and every safeguard below is in place.'
+      : 'Start only once your AI risk team has confirmed where the sign-off stands.';
+  } else if (needsSignOff && hasOutstanding) {
     finish = "Start only when both are done: it's signed off, and every safeguard below is in place.";
   } else if (needsSignOff) {
     finish = "Start once it's signed off.";
@@ -704,11 +727,20 @@ function buildNextSteps(args: {
   }
   steps.push(finish);
 
-  if (needsSignOff && hasOutstanding) {
+  if ((needsSignOff || signOffUnclear) && hasOutstanding) {
     steps.push('Not sure who these teams are? Ask your AI risk team when you send them this result.');
   }
 
   return steps;
+}
+
+/** CR8-17. The stale sources that count for THIS verdict: only packs the verdict actually used, read from
+ *  verdict.pack_versions (the engine's record of the active packs). A legacy verdict with no pack_versions
+ *  has nothing saying a pack was used, so none count. `stale_sources` itself stays as recorded; this is a
+ *  display filter, shared by the first screen's line and the reviewer banner. */
+export function usedStaleSources(verdict: Verdict): NonNullable<Verdict['stale_sources']> {
+  const used = verdict.pack_versions ?? {};
+  return (verdict.stale_sources ?? []).filter((s) => Object.prototype.hasOwnProperty.call(used, s.pack_id));
 }
 
 function buildCouldStillChange(verdict: Verdict): string[] {
@@ -733,7 +765,7 @@ function buildCouldStillChange(verdict: Verdict): string[] {
   }
   // CR7-39: the review-overdue banner lives in the collapsed reasoning section;
   // derived from verdict.stale_sources, so it is absent when there are none.
-  if ((verdict.stale_sources ?? []).length > 0) {
+  if (usedStaleSources(verdict).length > 0) {
     lines.push(
       "Some of the regulatory text behind this result is overdue for a fresh look — it was last checked longer ago than your firm's window allows. Your AI risk team can tell you which.",
     );
@@ -909,6 +941,10 @@ function buildNoScreen(
  *  readers that need a safeguard's status (WhatToDo, SignOffChecklist, the
  *  evidence panel, and the first screen itself). Pure: same inputs, same
  *  output, every time (NF-1's discipline extended to presentation). */
+// Review pass 1, M-2: the permissive self-service reading is only made at the stages a self-service case
+// actually occupies. At idea / exploring / retired nothing is claimed.
+const SELF_SERVICE_READABLE_STAGES: ReadonlySet<LifecycleStage> = new Set<LifecycleStage>(['approved', 'in_production', 'monitored']);
+
 export function buildVerdictView(
   verdict: Verdict,
   policy: PolicyFile | undefined,
@@ -937,6 +973,11 @@ export function buildVerdictView(
   // (M-1).
   const needsSignOff = signOffRequired && !signedOff && stage === 'pre_checked';
   const signOffMissing = signOffRequired && !signedOff && stage !== undefined && stage !== 'pre_checked';
+  // CR8-02 (P4): "no sign-off needed" is only said where self-service is DETERMINED — an explicit stage and a
+  // policy whose tier_workflow routes this tier to self-service. No stage, or no valid policy, and no approving
+  // review: unknown, and every surface stays non-permissive. (The intake result has no stage until the save
+  // lands, so a genuine self-service case reads cautiously for that moment — accepted.)
+  const signOffUnknown = !signOffRequired && !signedOff && (stage === undefined || policy?.tier_workflow === undefined || !SELF_SERVICE_READABLE_STAGES.has(stage));
 
   // Rejected verdicts carry no safeguards, next steps or could-still-change
   // lines from THIS view-model — the headline still covers the rejected
@@ -949,6 +990,7 @@ export function buildVerdictView(
       signOffRequired,
       signedOff,
       signOffMissing,
+      signOffUnknown,
       headline: headlineText('rejected', needsSignOff, 0),
       whyReasons: [],
       whyHasMore: false,
@@ -1053,9 +1095,11 @@ export function buildVerdictView(
   });
   const whyAll = dedupeStrings(byBindingFirst.map((t) => invariantPlainReason(t, policy, graph)));
 
-  const headline = headlineText(verdict.status, needsSignOff, outstandingCount, signedOff, signOffMissing);
+  const headline = headlineText(verdict.status, needsSignOff, outstandingCount, signedOff, signOffMissing, signOffUnknown);
   const nextSteps = buildNextSteps({
     needsSignOff,
+    signOffMissing,
+    signOffUnknown,
     outstandingSafeguards,
     owedReviews,
     provisionalReasons: verdict.provisional_reasons ?? [],
@@ -1066,6 +1110,8 @@ export function buildVerdictView(
     ? "your AI risk team. Until they do, this result isn't final."
     : signOffMissing
     ? 'your AI risk team — no sign-off is recorded on this version of the result.'
+    : signOffUnknown
+    ? "not known from this screen — ask your AI risk team whether this needs their sign-off."
     : "nobody — it's low-stakes enough for you to go ahead once the safeguard is in place.";
 
   return {
@@ -1074,6 +1120,7 @@ export function buildVerdictView(
     signOffRequired,
     signedOff,
     signOffMissing,
+    signOffUnknown,
     headline,
     whyReasons: whyAll.slice(0, 2),
     whyHasMore: whyAll.length > 2,

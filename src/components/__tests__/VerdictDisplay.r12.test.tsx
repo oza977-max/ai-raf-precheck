@@ -54,6 +54,8 @@ describe('R12-ST-1 — staleness marker', () => {
     render(
       <VerdictDisplay
         verdict={makeVerdict({
+          // CR8-17 (fixture change): the stale pack must be one the verdict used.
+          pack_versions: { 'UK-SS1-23': '1' },
           stale_sources: [{ pack_id: 'UK-SS1-23', retrieved_date: '2026-01-01', max_staleness_days: 90, days_overdue: 15 }],
         })}
         auditEvents={[]}

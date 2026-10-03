@@ -13,13 +13,14 @@ import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
-import { supplierDisplayName, approvedModelLabelFor } from './plain-copy';
+import { supplierDisplayName, approvedModelBaseLabelFor } from './plain-copy';
+import { resolveApprovedModel } from '../engine/evaluate';
 import { Fold } from './Fold';
 // R16 chunk D1 (build/prompts/R16.md v2.1 §4.1): the one view-model behind
 // the verdict's first screen AND the four readers that need a safeguard's
 // status (this first screen, WhatToDo, SignOffChecklist, the evidence
 // panel below) — "one computation per fact" (principle 0.5).
-import { buildVerdictView, joinWithAnd, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
+import { buildVerdictView, joinWithAnd, usedStaleSources, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -141,18 +142,29 @@ const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
   in_production: 'Saved to register — in production.',
 };
 
-// M-3 (review pass 1). The engine's model-governance review sentence names the
-// declared model by its raw id ("... - qwen3:4b is not on the firm's registry...").
-// On screen a listed model reads by its plain name (the same helper the form
-// and review card use); a model the policy does not list stays as written. The
-// rule id is looked up from the verdict's own review sources, so nothing is
-// guessed from the text.
+// M-3 (review pass 1) / CR8-11. The engine's model-governance review sentence names the declared
+// model by its raw id and says "is not on the firm's registry" even for a model the policy LISTS but
+// the firm has not yet accepted; swapping the id for the button label (which carries its own
+// "— not yet accepted ..." suffix) produced a garbled sentence. So the whole sentence is rebuilt here
+// as a pure function of (review, verdict, policy): the model id comes from the verdict's own review
+// sources (rule MODEL-REGISTRY:<id>), the status from the engine's resolveApprovedModel (exact id,
+// then family fallback — the way the engine itself classifies), the name from the bare plain name.
+// Without a policy the engine's own text is kept — nothing is guessed. All four sites that print a
+// review go through this one function.
 function reviewWords(review: string, verdict: Verdict, policy: PolicyFile | undefined): string {
   const src = (verdict.downstream_review_sources ?? []).find((x) => x.review === review && x.rule_id.startsWith('MODEL-REGISTRY:'));
-  if (!src) return review;
+  if (!src || !policy) return review;
   const id = src.rule_id.slice(src.rule_id.indexOf(':') + 1);
-  const label = approvedModelLabelFor(policy?.approved_models, id);
-  return label ? review.split(id).join(label) : review;
+  const entry = resolveApprovedModel(policy.approved_models, id);
+  const lead = 'Model governance review required — ';
+  if (entry === undefined) return `${lead}${id} is not on your firm's model list`;
+  const name = (entry.is_family ? entry.plain_name?.trim() || id : approvedModelBaseLabelFor(policy.approved_models, id)) ?? id;
+  // Review pass 1, I-1: this screen gets TODAY's policy, not the one the verdict was evaluated with.
+  // Only an exact entry that still reads not-accepted can honestly say "not yet accepted"; a family
+  // (it may have lapsed at evaluation) or an entry that reads accepted now gets wording that is always true.
+  return !entry.is_family && entry.is_approved === false
+    ? `${lead}${name} is listed but not yet accepted by your firm`
+    : `${lead}${name} is on your firm's model list, but a model review was required when this was checked`;
 }
 
 // CR7-09 / BC-005. The 'approved' stage is reached by self-service AND by a
@@ -164,6 +176,8 @@ function stageNote(stage: LifecycleStage, view: VerdictView): string | undefined
   if (stage === 'approved') {
     if (view.signedOff) return 'Saved to register — signed off by your AI risk team.';
     if (view.signOffRequired) return 'Saved to register — final; no sign-off from your AI risk team is recorded on this version.';
+    // P4 (CR8-02): "self-service final" only where self-service is DETERMINED (explicit stage + policy routing).
+    if (view.signOffUnknown) return 'Saved to register — whether your AI risk team had to sign this off is not known from this screen.';
     return STAGE_NOTE.approved;
   }
   return STAGE_NOTE[stage];
@@ -1456,7 +1470,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // the type says required, but old audit-trail data may resurface.
   const explanation: VerdictExplanation | undefined = verdict.explanation ?? undefined;
 
-  const staleSources = verdict.stale_sources ?? [];
+  // CR8-17: only packs this verdict used (see usedStaleSources).
+  const staleSources = usedStaleSources(verdict);
 
   // code-review-005 F8: computed once, here, so the CS-1 evidence panel's
   // Fold summary, its collapse condition, and its per-control chip all agree
@@ -2390,8 +2405,9 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
       </div>
 
       <p className="verdict__caveat">
-        Audit trail is append-only and hash-chained — a single altered or deleted event is detectable
-        (see the chain-integrity check on the audit trail below). It is still client-side with no
+        Audit trail is append-only and hash-chained — an edited event, or a deleted event with later
+        events after it, breaks the chain (see the chain check on the audit trail below); removing the
+        newest events can&apos;t be detected from inside this browser. It is still client-side with no
         external anchor, so it cannot rule out a full, consistent rewrite by someone with local access.
       </p>
         </div>

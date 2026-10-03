@@ -341,10 +341,15 @@ export default function App() {
           {startupPolicyErrors.length > 0 && (
             <div className="app-policy-invalid" role="alert">
               <strong>Policy file invalid</strong> — evaluation is disabled until this is resolved.
+              {/* CR8-13: the raw field paths are for whoever edits the file — the 2LoD role and the
+                  Appetite framework screen. Everyone else gets the one plain sentence (its own wording, so it
+                  never repeats the intake alert's sentence). The heading stays for every role. */}
               <ul>
-                {startupPolicyErrors.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
+                {role === '2LoD' || view === 'policyEditor' ? (
+                  startupPolicyErrors.map((e, i) => <li key={i}>{e}</li>)
+                ) : (
+                  <li>Your AI risk team needs to fix the firm&apos;s rules file before checks can run.</li>
+                )}
               </ul>
             </div>
           )}

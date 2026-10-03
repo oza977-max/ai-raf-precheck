@@ -160,7 +160,7 @@ describe('VerdictDisplay — CR7-39: a review-overdue source shows on the first 
   it('TC-CR7-39-2: "Could still change" carries the overdue line when stale_sources is set, and not when it is empty', () => {
     const policy = realPolicy();
     const g = graphFor(undefined, undefined);
-    const stale = verdictFrom(g, policy, { stale_sources: [{ pack_id: 'EU-PACK', days_overdue: 3, max_staleness_days: 90 }] } as Partial<Verdict>);
+    const stale = verdictFrom(g, policy, { pack_versions: { 'EU-PACK': '1' }, stale_sources: [{ pack_id: 'EU-PACK', retrieved_date: '2026-01-01', days_overdue: 3, max_staleness_days: 90 }] } as Partial<Verdict>);
     const a = render(<VerdictDisplay verdict={stale} auditEvents={[]} policy={policy} graph={g} />);
     expect(a.container.querySelector('.verdict__first-could-change')!.textContent).toMatch(/overdue/i);
     a.unmount();

@@ -1266,14 +1266,29 @@ export function neutralModelLabel(n: number): string {
 export function approvedModelOptionList(
   models: ReadonlyArray<{ model_id: string; plain_name?: string; is_approved: boolean; is_family?: boolean }> | undefined,
 ): Array<{ value: string; label: string }> {
+  return modelOptionsWithBase(models).map(({ value, label }) => ({ value, label }));
+}
+
+function modelOptionsWithBase(
+  models: ReadonlyArray<{ model_id: string; plain_name?: string; is_approved: boolean; is_family?: boolean }> | undefined,
+): Array<{ value: string; label: string; base: string }> {
   let neutralIndex = 0;
   return (models ?? [])
     .filter((m) => !m.is_family)
     .map((m) => {
       // A blank plain_name counts as none (TC-CR7-35d) — never a blank button.
       const base = m.plain_name?.trim() ? m.plain_name : neutralModelLabel(++neutralIndex);
-      return { value: m.model_id, label: m.is_approved === false ? base + UNACCEPTED_MODEL_SUFFIX : base };
+      return { value: m.model_id, label: m.is_approved === false ? base + UNACCEPTED_MODEL_SUFFIX : base, base };
     });
+}
+
+/** CR8-11. The BARE plain name of a listed (non-family) model — the label without the
+ *  UNACCEPTED_MODEL_SUFFIX the button adds on top, for use inside a sentence that says the status itself. */
+export function approvedModelBaseLabelFor(
+  models: Parameters<typeof approvedModelOptionList>[0],
+  modelId: string,
+): string | undefined {
+  return modelOptionsWithBase(models).find((o) => o.value === modelId)?.base;
 }
 
 /** The label for a declared model id, or undefined when the policy does not

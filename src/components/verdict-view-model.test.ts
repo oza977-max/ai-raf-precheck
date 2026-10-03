@@ -118,8 +118,11 @@ describe('buildVerdictView — TC-R16-D1-01: headline', () => {
     expect(view.headline).toBe('Not yet. You can start once your AI risk team has signed it off and all 2 safeguards are in place.');
   });
 
+  // CR8-02 (deliberate change, code review 008): the self-service fixtures below now carry a policy
+  // whose tier_workflow is self-service AND an explicit stage, because "you can start" is only said
+  // for a case where self-service is DETERMINED (P4). The undetermined cases are TC-CR8-02b/-02c.
   it('TC-R16-D1-01e: self-service, N=0 — "Yes — you can start."', () => {
-    const view = buildVerdictView(makeVerdict({ controls: [] }), undefined, undefined, undefined, undefined, 'approved');
+    const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy(), undefined, undefined, undefined, 'approved');
     expect(view.headline).toBe('Yes — you can start.');
   });
 
@@ -136,7 +139,7 @@ describe('buildVerdictView — TC-R16-D1-01: headline', () => {
         { id: 'C2', name: 'C2', description: 'd', resolves: [], burden: 1, verification: 'v' },
       ],
     });
-    const view = buildVerdictView(makeVerdict({ controls: ['C1', 'C2'] }), policy, undefined, undefined, undefined, undefined);
+    const view = buildVerdictView(makeVerdict({ controls: ['C1', 'C2'] }), policy, undefined, undefined, undefined, 'approved');
     expect(view.headline).toBe('Nearly. You can start once 2 safeguards are in place — no sign-off needed.');
   });
 
@@ -159,9 +162,9 @@ describe('buildVerdictView — TC-R16-D1-01: headline', () => {
     expect(view.outstandingCount).toBe(0);
   });
 
-  it('TC-R16-D1-01i: no stage passed at all behaves as self-service (needsSignOff false)', () => {
+  it('TC-R16-D1-01i: no stage passed at all makes no sign-off claim (needsSignOff false, cautious headline — CR8-02)', () => {
     const view = buildVerdictView(makeVerdict({ controls: [] }), undefined, undefined, undefined, undefined, undefined);
-    expect(view.headline).toBe('Yes — you can start.');
+    expect(view.headline).toBe("We can't tell from this screen whether your AI risk team must sign this off — confirm with them before you start.");
     expect(view.needsSignOff).toBe(false);
   });
 });
@@ -774,7 +777,8 @@ describe('buildVerdictView — R16-W W-7: evidence scoped to the platforms/vendo
 
 describe('buildVerdictView — TC-R16-D1-08: next steps (combinations and omission)', () => {
   it('TC-R16-D1-08a: self-service, nothing outstanding, nothing owed — only the "Then"-less finish line', () => {
-    const view = buildVerdictView(makeVerdict({ controls: [] }), undefined, undefined, undefined, undefined, 'approved');
+    // CR8-02 (deliberate change): re-fixtured with a self-service policy (undetermined otherwise).
+    const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy(), undefined, undefined, undefined, 'approved');
     expect(view.nextSteps).toEqual(["You can start. It's saved on your firm's register of AI uses, which your AI risk team can see."]);
   });
 
@@ -862,7 +866,8 @@ describe('buildVerdictView — TC-R16-D1-09: who signs off', () => {
   });
 
   it('TC-R16-D1-09b: names nobody for self-service', () => {
-    const view = buildVerdictView(makeVerdict({ controls: [] }), undefined, undefined, undefined, undefined, 'approved');
+    // CR8-02 (deliberate change): re-fixtured with a self-service policy — with no policy it is undetermined.
+    const view = buildVerdictView(makeVerdict({ controls: [] }), makePolicy(), undefined, undefined, undefined, 'approved');
     expect(view.whoSignsOff).toBe("nobody — it's low-stakes enough for you to go ahead once the safeguard is in place.");
   });
 });

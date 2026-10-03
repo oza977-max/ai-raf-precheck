@@ -18,6 +18,7 @@
   --header-bg: #1c1b18;
   --header-text: #f3f0e8;
   --header-border: #3a382f;
+  --header-muted: #b7b2a3;
   --navy: #2f4a6b;
   --navy-hover: #253c58;
   --warn-bg: #fdf3e6;
@@ -98,7 +99,9 @@ body {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
-  color: var(--ink-faint);
+  /* CR8-12: --ink-faint is a dark grey for light cards (about 2.9:1 on the dark header);
+     the header's own light tone is checked against --header-bg in app-css.cr8-fx3.test.ts. */
+  color: var(--header-muted);
   border: 1px solid var(--header-border);
   border-radius: 3px;
   padding: 0.15rem 0.4rem;
