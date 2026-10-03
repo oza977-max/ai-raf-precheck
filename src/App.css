@@ -2974,7 +2974,8 @@ details input {
   border: 1px dashed var(--warn-border);
 }
 
-.graph-node__badge--no-basis {
+.graph-node__badge--no-basis,
+.graph-node__badge--unrecorded {
   color: var(--ink-faint);
   border: 1px dashed var(--warn-border);
 }

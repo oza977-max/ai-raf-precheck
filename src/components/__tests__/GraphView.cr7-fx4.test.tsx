@@ -53,14 +53,12 @@ describe('GraphView — CR7-25: "replaces something you use?" has a row on the r
   it('TC-CR7-25-1: the row can be corrected — editing sends a boolean to onCorrect', async () => {
     const user = userEvent.setup();
     const onCorrect = vi.fn();
-    const { container } = render(
+    render(
       <GraphView graph={makeGraph(false)} editable onCorrect={onCorrect} provenance={{}} guessedFields={{}} unconfirmedNodeIds={[]} onConfirmNode={vi.fn()} />,
     );
-    const editButtons = container.querySelectorAll('.graph-node__edit');
-    await user.click(editButtons[1]!); // the processing card
-    const select = Array.from(container.querySelectorAll('select')).find((s) => Array.from(s.options).some((o) => o.value === 'true') && s.closest('.graph-node__field')?.textContent?.includes('replaces_prior_model'));
-    expect(select).toBeDefined();
-    await user.selectOptions(select!, 'true');
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[1]!); // the processing card
+    const select = screen.getByLabelText(`drafting model — ${REPLACES_LABEL}`);
+    await user.selectOptions(select, 'true');
     expect(onCorrect).toHaveBeenCalledWith('p1', 'replaces_prior_model', true);
   });
 });
