@@ -101,6 +101,41 @@ function coversReviewsErrors(controlId: string, coversReviews: string[] | undefi
 // is always checkable here (unlike covers_reviews, which may name a pack
 // rule id that only exists once packs are loaded), so this is always an
 // error, never a warning.
+// A-5: platforms[].vendor_id is never checked. Referential, like
+// appliesToErrors below — always checkable (platforms/vendors are part of
+// THIS policy file, never a pack) — so this is always an error, never
+// gated on packs being loaded.
+function platformVendorIdErrors(policy: PolicyFile): string[] {
+  const validVendorIds = new Set((policy.vendors ?? []).map((v) => v.id));
+  return sortedById(policy.platforms ?? [])
+    .filter((p) => p.vendor_id !== undefined && !validVendorIds.has(p.vendor_id))
+    .map((p) => `platform ${p.id}: vendor_id '${p.vendor_id}' is not a registered vendor id.`);
+}
+
+// C-5: a rule id is unique WITHIN one pack's own rules, never guaranteed
+// unique ACROSS every pack a firm loads together — two different packs can
+// reuse the same id by coincidence (no cross-pack authoring coordination).
+// That let two downstream_review_sources entries sharing a rule_id reach a
+// verdict (fixed in evaluate.ts's combineReviewSources); this warns the
+// reviewer at load time instead of leaving it to be noticed there.
+function duplicatePackRuleIdWarnings(packs: JurisdictionPack[]): string[] {
+  const packIdsByRuleId = new Map<string, string[]>();
+  for (const pack of [...packs].sort((a, b) => a.pack_id.localeCompare(b.pack_id))) {
+    for (const rule of sortedById(pack.rules)) {
+      const packIds = packIdsByRuleId.get(rule.id) ?? [];
+      packIds.push(pack.pack_id);
+      packIdsByRuleId.set(rule.id, packIds);
+    }
+  }
+  return [...packIdsByRuleId.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .filter(([, packIds]) => packIds.length > 1)
+    .map(
+      ([ruleId, packIds]) =>
+        `rule id '${ruleId}' is used by more than one loaded pack (${packIds.join(', ')}) — each pack rule's id should be unique across every pack a firm loads together.`,
+    );
+}
+
 function appliesToErrors(
   controlId: string,
   appliesTo: { platforms?: string[]; vendors?: string[] } | undefined,
@@ -177,6 +212,9 @@ export function checkPolicyReferences(policy: PolicyFile, packs: JurisdictionPac
     p.rules.filter((r) => r.effect.type === 'required_review').map((r) => r.id),
   );
   const validCoversReviewsTargets = new Set([...firmReviewIds, ...packReviewRuleIds, ...REVIEW_SENTINELS]);
+
+  errors.push(...platformVendorIdErrors(policy));
+  warnings.push(...duplicatePackRuleIdWarnings(packs));
 
   for (const control of sortedById(policy.controls)) {
     errors.push(...appliesToErrors(control.id, control.verification_evidence?.applies_to, policy));
