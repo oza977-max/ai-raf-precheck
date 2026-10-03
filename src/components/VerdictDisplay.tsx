@@ -13,7 +13,8 @@ import { buildChallengeMemo } from './challenge-memo';
 import type { KnowledgeMatch } from '../engine/knowledge-lens';
 import { getCurrentPolicyYaml } from '../store/policy-source';
 import { STATUS_LABEL, GRAPH_FIELD_LABELS } from './field-copy';
-import { supplierDisplayName, approvedModelLabelFor } from './plain-copy';
+import { supplierDisplayName, approvedModelBaseLabelFor } from './plain-copy';
+import { resolveApprovedModel } from '../engine/evaluate';
 import { Fold } from './Fold';
 // R16 chunk D1 (build/prompts/R16.md v2.1 §4.1): the one view-model behind
 // the verdict's first screen AND the four readers that need a safeguard's
@@ -141,18 +142,26 @@ const STAGE_NOTE: Partial<Record<LifecycleStage, string>> = {
   in_production: 'Saved to register — in production.',
 };
 
-// M-3 (review pass 1). The engine's model-governance review sentence names the
-// declared model by its raw id ("... - qwen3:4b is not on the firm's registry...").
-// On screen a listed model reads by its plain name (the same helper the form
-// and review card use); a model the policy does not list stays as written. The
-// rule id is looked up from the verdict's own review sources, so nothing is
-// guessed from the text.
+// M-3 (review pass 1) / CR8-11. The engine's model-governance review sentence names the declared
+// model by its raw id and says "is not on the firm's registry" even for a model the policy LISTS but
+// the firm has not yet accepted; swapping the id for the button label (which carries its own
+// "— not yet accepted ..." suffix) produced a garbled sentence. So the whole sentence is rebuilt here
+// as a pure function of (review, verdict, policy): the model id comes from the verdict's own review
+// sources (rule MODEL-REGISTRY:<id>), the status from the engine's resolveApprovedModel (exact id,
+// then family fallback — the way the engine itself classifies), the name from the bare plain name.
+// Without a policy the engine's own text is kept — nothing is guessed. All four sites that print a
+// review go through this one function.
 function reviewWords(review: string, verdict: Verdict, policy: PolicyFile | undefined): string {
   const src = (verdict.downstream_review_sources ?? []).find((x) => x.review === review && x.rule_id.startsWith('MODEL-REGISTRY:'));
-  if (!src) return review;
+  if (!src || !policy) return review;
   const id = src.rule_id.slice(src.rule_id.indexOf(':') + 1);
-  const label = approvedModelLabelFor(policy?.approved_models, id);
-  return label ? review.split(id).join(label) : review;
+  const entry = resolveApprovedModel(policy.approved_models, id);
+  const lead = 'Model governance review required — ';
+  if (entry === undefined) return `${lead}${id} is not on your firm's model list`;
+  const name = (entry.is_family ? entry.plain_name?.trim() || id : approvedModelBaseLabelFor(policy.approved_models, id)) ?? id;
+  // A listed model with is_approved true here is a family whose re-attestation date has lapsed
+  // (the engine applies that expiry when it evaluates) — say so rather than "not yet accepted".
+  return entry.is_approved === false ? `${lead}${name} is listed but not yet accepted by your firm` : `${lead}${name} is listed but your firm's acceptance of it is not current`;
 }
 
 // CR7-09 / BC-005. The 'approved' stage is reached by self-service AND by a
