@@ -405,7 +405,11 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   // then a count — shown beside Continue and tied to it with aria-describedby.
   // CR6-07d: strip each item's own trailing stop so the line has no doubled
   // punctuation, and give the count its noun.
-  const missingTexts = missingIds.map((id) => (findQuestion(id)?.text ?? id).replace(/[\s.?!;:]+$/, ''));
+  // TC-CR6-07f (live walkthrough): name each question by its FIRST sentence
+  // only — some carry help text after it ("…? If more than one fits — …").
+  const missingTexts = missingIds.map((id) =>
+    (findQuestion(id)?.text ?? id).split(/(?<=[.?!])\s/)[0]!.replace(/[\s.?!;:]+$/, ''),
+  );
   const missingLine =
     missingTexts.length <= 3
       ? missingTexts.join('; ')

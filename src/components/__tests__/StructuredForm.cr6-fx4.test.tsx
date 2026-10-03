@@ -110,6 +110,24 @@ describe('StructuredForm — CR6-07 required questions are announced', () => {
     expect(text).toMatch(/and \d+ more questions?\.$/);
   });
 
+  // Found in the live walkthrough: each item quoted the question's WHOLE
+  // text, help sentences included ("What kind of AI is it? If more than one
+  // fits — for example, …"). The line names each question by its first
+  // sentence only.
+  it('TC-CR6-07f: the still-to-answer line names each question by its first sentence, never its help text', () => {
+    render(
+      <StructuredForm
+        policy={policy()}
+        initialDescription="A chatbot that helps interns book meeting rooms."
+        initialAnswers={{ '1': 'Room finder', '2': 'A chatbot that helps interns book meeting rooms.', '3': 'firm-built' }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const text = document.getElementById('pf-missing')!.textContent!;
+    expect(text).toMatch(/What kind of AI is it;/);
+    expect(text).not.toMatch(/If more than one fits/);
+  });
+
   it('TC-CR6-07e: a required single-select is announced as required once — the fieldset is the radiogroup, its name does not repeat "required"', () => {
     const { container } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
     const groups = screen.getAllByRole('radiogroup');

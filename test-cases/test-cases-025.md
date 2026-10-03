@@ -145,6 +145,7 @@ Test files: `src/store/handoff.test.ts`,
 | TC-CR6-07b | A visible line by Continue says what is still missing and is tied to the button with `aria-describedby`; once the form is truly complete both the line and the `aria-describedby` are gone — `StructuredForm.cr6-fx4.test.tsx` |
 | TC-CR6-07d | The "Still to answer" line has no doubled stops, a noun on the count ("and N more questions") and one final stop — `StructuredForm.cr6-fx4.test.tsx` |
 | TC-CR6-07e | A required single-select is a fieldset with `role="radiogroup"` and `aria-required`, named by its legend, and "required" is announced once — `StructuredForm.cr6-fx4.test.tsx` |
+| TC-CR6-07f | The "Still to answer" line names each question by its first sentence only, never its help text ("What kind of AI is it", not "…? If more than one fits — …") — found in the live walkthrough — `StructuredForm.cr6-fx4.test.tsx` |
 | TC-CR6-07c | A visually-hidden helper class exists for the required-field text — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-09 | Each named faint-text rule (first-screen "also covers", the access-scope legend, the chain source) is at least 4.5:1 on its background, computed from the CSS tokens — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-10 | The register detail names the correction's source in plain words (form, review screen, or an answer to a question) and says nothing for an older record without one — `RegisterDetail.cr6-fx4.test.tsx` |

@@ -85,6 +85,26 @@ Format: `[(pass, Critical+Important found)]`.
     - The fold summary now says "from the other one, which is".
     - TC-CR6-11c: when the listed component itself inherits nothing, the entry says it is outside the covered envelope.
 
+## Live walkthrough (2026-10-03)
+
+- **Real hand-off (CR6-01).**
+  - Exported the register from `http://localhost:5173`: 16 cases and 60 events, written exactly as the Export button
+    writes it (`exportBundle(__APP_VERSION__)`).
+  - Carried it to a fresh origin `http://[::1]:5173` and fed it into the real Import control there.
+  - Result: "different histories … you can save a backup of yours and replace it", never "tampered".
+  - The replace step ran the same `replaceWithBundle` call the confirm button makes, and gave "replaced (60 events)".
+    `verifyChain()` reported `{ok: true, checked: 60}`, and the stored events kept the exporter's exact field order.
+  - Re-importing after a reload gave "already up to date. Nothing to import."
+  - Not clicked: the "Save a backup of mine first" button itself, because it downloads a file. Its own tests cover it.
+- **Duplicate check:** "Nothing similar found — we looked through 17 earlier checks." is announced from a status region.
+- **Guided form:**
+  - Continue is disabled and described by the "Still to answer" line.
+  - The 8 single-selects are fieldsets with `role="radiogroup"` and `aria-required`.
+  - Both tick-all legends say "(tick at least one)".
+  - The walkthrough found that the line quoted each question's whole text, help sentences included. Fixed test-first
+    as TC-CR6-07f: the line now reads "What do you want to call it; Where does the AI come from; What kind of AI is it;
+    and 8 more questions."
+
 ## Tests
 
 - Test cases: `test-cases/test-cases-025.md` (+ html). Every TC-CR6 id in a test has a row. The "Amended existing
