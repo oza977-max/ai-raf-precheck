@@ -5,6 +5,7 @@ import App from '../../App';
 import IntakeFlow from '../IntakeFlow';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
+import { fillText } from './fillText';
 
 // R16-E — the description-first path speaks the form's words. End-to-end
 // coverage for what only the real App/IntakeFlow wiring can prove: both
@@ -35,9 +36,9 @@ beforeEach(() => {
 describe('R16-E §5 (D-104): both extraction-error call sites share one message', () => {
   it('TC-R16-E-64: a fresh extraction failure and a retry failure show the identical plain message for the same error kind, plus "Answer the questions instead"', async () => {
     mockCreate.mockRejectedValue(new Error('network down'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the extraction error screen.');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the extraction error screen.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
 
@@ -56,10 +57,10 @@ describe('R16-E §5 (D-104): both extraction-error call sites share one message'
 describe('R16-E §5: "Answer the questions instead" (SWITCH_TO_FORM)', () => {
   it('TC-R16-E-65: switches to the guided form with the typed description carried into question 2', async () => {
     mockCreate.mockRejectedValue(new Error('network down'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const marker = 'A probe for switching to the form after an extraction failure.';
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), marker);
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), marker);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('We couldn’t reach the description reader just now.');
@@ -198,9 +199,9 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), // BC-003: long enough that every quote in the mock reply is a verbatim
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), // BC-003: long enough that every quote in the mock reply is a verbatim
       // substring of what is typed here.
       'No-track-match description probe: a deep learning image reader built in-house, in our own systems, with no autonomy, replacing no prior model. It reads documents, internal only, non-binding, reversible, at limited scale.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
@@ -223,7 +224,7 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
 
 async function reachTargetedQuestion(user: ReturnType<typeof userEvent.setup>, description: string) {
   render(<App />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByText('Check what we read from your description');
@@ -297,7 +298,7 @@ describe('R16-E BC-3: confirming the extractor\'s own access set writes no corre
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachTargetedQuestion(
       user,
       'This in-house agent updates support tickets. It acts on its own. It works alone, with no coordination. ' +
@@ -371,7 +372,7 @@ describe('R16-E DR7-29: decision_type "Something else" follow-up, end to end', (
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachTargetedQuestion(
       user,
       'A model flags items for review. A person checks each one. It was built in-house. It runs on our own systems. It replaces no earlier model.',
@@ -380,7 +381,7 @@ describe('R16-E DR7-29: decision_type "Something else" follow-up, end to end', (
     await screen.findByText(/which of these does it help decide/i);
     await user.click(screen.getByRole('button', { name: /something else — describe it/i }));
     await screen.findByText(/what does it help decide/i);
-    await user.type(screen.getByLabelText(/your answer/i), 'Collections prioritisation');
+    await fillText(user, screen.getByLabelText(/your answer/i), 'Collections prioritisation');
     await user.click(screen.getByRole('button', { name: /submit answer/i }));
 
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -441,13 +442,13 @@ describe('R16-E DR7-28: vendor "Not on this list", end to end', () => {
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachTargetedQuestion(user, 'A specialist supplier tool drafts text. A person checks each one. It replaces no earlier model.');
 
     await screen.findByText(/which supplier is it/i);
     await user.click(screen.getByRole('button', { name: /^not on this list$/i }));
     await screen.findByText(/what is it called/i);
-    await user.type(screen.getByLabelText(/your answer/i), 'Acme Drafting Co');
+    await fillText(user, screen.getByLabelText(/your answer/i), 'Acme Drafting Co');
     await user.click(screen.getByRole('button', { name: /submit answer/i }));
 
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
@@ -501,7 +502,7 @@ describe('R16-E: a "Not sure" answer on this path reaches the "No" screen\'s own
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachTargetedQuestion(
       user,
       'A model sends client updates. It acts entirely on its own. It was built in-house. Clients see these ' +
@@ -572,7 +573,7 @@ describe('R16-E §3: the multi-select answer reaches the graph in canonical orde
         },
       ],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachTargetedQuestion(
       user,
       'An agent updates records. It acts on its own. It works alone. It was built in-house, and runs on our own systems, for our own team. Any mistake can be corrected. It replaces no earlier model.',
@@ -656,7 +657,7 @@ describe('R16-E §8: the guard test, for the whole graph_review block and the ex
         jurisdictionsConfirmed: false,
       }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { container } = render(<IntakeFlow />);
     // R16-E review pass 4: the "why" lines are hidden until clicked, so
     // a scan of the closed screen never read them — and one said
@@ -668,9 +669,9 @@ describe('R16-E §8: the guard test, for the whole graph_review block and the ex
 
   it('TC-R16-E-74: the extraction-error screen renders with none of the banned words', async () => {
     mockCreate.mockRejectedValue(new Error('network down'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { container } = render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the guard test.');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the guard test.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByRole('button', { name: /answer the questions instead/i });

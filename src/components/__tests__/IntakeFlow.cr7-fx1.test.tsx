@@ -18,6 +18,9 @@ import { intakeReducer } from '../intake-state';
 import type { IntakeState } from '../intake-state';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { DataFlowGraph } from '../../engine/types';
+import { fillText } from './fillText';
+import { IB_PREFIX, ibCaseCount } from '../../seeds/ib-portfolio';
+import { AIGATE_USE_CASE_ID } from '../../seeds/aigate-self-assessment';
 
 // FX7-1 (CR7-fixes.md) — intake state and flow. End-to-end coverage that
 // needs the real App/IntakeFlow wiring. Mock budget = 1: the Anthropic SDK
@@ -187,9 +190,32 @@ function supplierExtraction(opts: { declaredModel?: string; decisionType?: strin
 
 type User = ReturnType<typeof userEvent.setup>;
 
+// FX7-6: make the NEXT evaluation fail the way a gap in the firm's rules would.
+// The app seeds the demo register in the background on first load, and that
+// seeding itself calls evaluate() — so a spy armed while it is still running
+// gets used up by a seeded case instead of the user's. Typing the description
+// character by character used to give the seeding time to finish by luck;
+// with the fast fill it does not. So: wait for the seeding to settle, then arm
+// the one-shot failure. (A test-side ordering fix, not a product race — the
+// seeds and the user's case never share state.)
+async function failNextEvaluation() {
+  await waitFor(
+    async () => {
+      const ids = (await getUseCases('all')).map((u) => u.use_case_id);
+      expect(ids.filter((id) => id.startsWith(IB_PREFIX)).length).toBe(ibCaseCount());
+      expect(ids).toContain(AIGATE_USE_CASE_ID);
+    },
+    { timeout: 10000 },
+  );
+  vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({
+    ok: false,
+    error: { kind: 'no-track-match' },
+  } as never);
+}
+
 async function reachReview(user: User, description: string) {
   render(<App />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByText('Check what we read from your description');
@@ -255,7 +281,7 @@ type AssumptionLike = { questionId: string; fields: string[] };
 
 describe('CR7-02 — re-entries into the review screen keep the "Not sure" assumptions (BC-004)', () => {
   it('TC-CR7-02a-1 / TC-CR7-02c: Change an answer -> Continue -> Confirm keeps the "Not sure" assumption in graph_confirmed and on the result, and the countries panel is present', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
 
     await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
@@ -278,12 +304,9 @@ describe('CR7-02 — re-entries into the review screen keep the "Not sure" assum
   }, 30000);
 
   it('TC-CR7-02b-1: after a failed evaluation the re-entered review keeps the assumption through to the second graph_confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({
-      ok: false,
-      error: { kind: 'no-track-match' },
-    } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText(/something went wrong working out the result/i);
 
@@ -300,7 +323,7 @@ describe('CR7-02 — re-entries into the review screen keep the "Not sure" assum
   }, 30000);
 
   it('TC-CR7-02d-1: correcting from the result keeps the assumption in verdict_corrected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
@@ -321,7 +344,7 @@ describe('CR7-02 — re-entries into the review screen keep the "Not sure" assum
 
 describe('CR7-03 — Back from the questions loses nothing; a rejected guess does not survive (BC-004)', () => {
   it('TC-CR7-03a / TC-CR7-03e: "Not sure" -> Back -> Continue asks the field again, the result lists the assumption once, and no duplicate graph_corrected events are written', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockCreate.mockResolvedValue(notSureExtraction());
     await reachReview(user, NSDESC);
     await proceedFromReview(user);
@@ -354,7 +377,7 @@ describe('CR7-03 — Back from the questions loses nothing; a rejected guess doe
   }, 30000);
 
   it('TC-CR7-03b: a vendor guess -> "Not on this list" -> Back -> Continue asks the supplier again, and the AI guess never reaches the result', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockCreate.mockResolvedValue(supplierExtraction());
     await reachReview(user, VDESC);
     await proceedFromReview(user);
@@ -379,7 +402,7 @@ describe('CR7-03 — Back from the questions loses nothing; a rejected guess doe
   }, 30000);
 
   it('TC-CR7-03c: a declared-model guess -> "Not on the list" -> Back -> Continue asks the model again', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockCreate.mockResolvedValue(supplierExtraction({ declaredModel: 'guessed-model-7' }));
     await reachReview(user, VDESC);
     await proceedFromReview(user);
@@ -399,7 +422,7 @@ describe('CR7-03 — Back from the questions loses nothing; a rejected guess doe
   }, 30000);
 
   it('TC-CR7-03d: decision type "Something else" -> Back -> Continue asks it again', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockCreate.mockResolvedValue(supplierExtraction({ decisionType: 'pricing' }));
     await reachReview(user, VDESC);
     await proceedFromReview(user);
@@ -461,7 +484,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
   it('TC-CR7-01c: a fresh, non-restored description path calls the extractor exactly once', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachReview(user, NSDESC);
     expect(spy).toHaveBeenCalledTimes(1);
   }, 30000);
@@ -488,7 +511,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
   }
 
   it('TC-CR7-24-1: Back, then forward again, shows no stale gate error', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await provokeGateError(user);
     await user.click(screen.getByRole('button', { name: /back/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
@@ -497,7 +520,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
   }, 30000);
 
   it('TC-CR7-24-2: Start over, then a fresh case to the review screen, shows no stale gate error', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await provokeGateError(user);
     // Start over is on the resumed-draft banner: reload over the saved draft.
     cleanup();
@@ -506,7 +529,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /start over instead/i }));
-    await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), NSDESC);
+    await fillText(user, await screen.findByLabelText(/what ai tool do you want to use/i), NSDESC);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('Check what we read from your description');
@@ -519,9 +542,9 @@ describe('CR7-37 — a policy problem reads as a plain sentence, not a field pat
     localStorage.clear(); // no key -> the guided form
     setCurrentPolicyYaml('this_is_not_a_valid_policy_shape: true');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'A policy-problem probe');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A policy-problem probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await fillMinimalForm(user, 'Policy problem tool', 'x');
@@ -537,9 +560,9 @@ describe('CR7-37 — a policy problem reads as a plain sentence, not a field pat
 
 async function fillMinimalForm(user: User, name: string, description: string) {
   await user.clear(screen.getByLabelText(/what do you want to call it/i));
-  await user.type(screen.getByLabelText(/what do you want to call it/i), name);
+  await fillText(user, screen.getByLabelText(/what do you want to call it/i), name);
   await user.clear(screen.getByLabelText(/in a sentence or two/i));
-  await user.type(screen.getByLabelText(/in a sentence or two/i), description);
+  await fillText(user, screen.getByLabelText(/in a sentence or two/i), description);
   await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
   await user.click(
     screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
@@ -585,7 +608,7 @@ function held<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
 async function reachForm(user: User, description: string) {
   localStorage.removeItem('aigate:api-key');
   render(<App />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByLabelText(/what do you want to call it/i);
@@ -593,11 +616,11 @@ async function reachForm(user: User, description: string) {
 
 describe('CR7-04 (form half) — changing Q3 does not keep a hidden model name', () => {
   it('TC-CR7-04a: a model typed under "outside assistant", then Q3 switched to "built in your firm", never reaches the result or the register', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachForm(user, 'A small internal drafting helper.');
-    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Probe');
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), 'Probe');
     await user.click(screen.getByRole('radio', { name: /an ai assistant or website run by an outside company/i }));
-    await user.type(await screen.findByLabelText(/model name, if you know it/i), 'secret-model-9');
+    await fillText(user, await screen.findByLabelText(/model name, if you know it/i), 'secret-model-9');
     // The form side: switching away clears the hidden answer.
     await fillMinimalForm(user, 'Probe', 'A small internal drafting helper.');
     expect(screen.queryByLabelText(/model name, if you know it/i)).not.toBeInTheDocument();
@@ -639,7 +662,7 @@ describe("CR7-10 (intake half) — \"Use the earlier result\" does not show anot
     localStorage.removeItem('aigate:api-key');
     setRole('1LoD');
     await seedMatch();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
     await screen.findByRole('region', { name: /classification adopted/i });
@@ -651,7 +674,7 @@ describe("CR7-10 (intake half) — \"Use the earlier result\" does not show anot
     localStorage.removeItem('aigate:api-key');
     setRole('2LoD');
     await seedMatch();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
     await screen.findByRole('region', { name: /classification adopted/i });
@@ -662,7 +685,7 @@ describe("CR7-10 (intake half) — \"Use the earlier result\" does not show anot
 describe('CR7-13 — form answers are cleared only once the policy check has accepted them', () => {
   it('TC-CR7-13: an invalid policy -> Continue -> remount: the answers are still there', async () => {
     setCurrentPolicyYaml(appetiteYaml.replace('  - id: "PLAT-INTERNAL-ML"\n', '  - id: "PLAT-INTERNAL-ML"\n    vendor_id: "NO-SUCH-VENDOR"\n'));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachForm(user, 'A form that must not lose its answers');
     await fillMinimalForm(user, 'Keep my answers', 'Sentence that must survive a refused submit.');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
@@ -711,7 +734,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
       await gate.promise;
       return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     await vi.waitFor(() => expect(traceSpy).toHaveBeenCalled());
@@ -738,7 +761,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     });
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-late reconciliation workflow assistant' }));
     const gate = held<void>();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const adopt = await screen.findByRole('button', { name: /use the earlier result/i });
     // Spied only now: App's own demo seeding also calls addNode, and a spy
@@ -778,7 +801,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
       metadata: { node_type: 'use_case', submitted_by: '1LoD', lifecycle_stage: 'approved', current_verdict_id: null, tier: 'High', track: 'II' },
     });
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-own reconciliation workflow assistant' }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
     await screen.findByRole('region', { name: /classification adopted/i });
@@ -788,7 +811,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
 
 describe('CR7-21 / CR7-22 — correction events are written once, and a fresh confirm writes the ones it announces', () => {
   it('TC-CR7-21a: a form-path correction -> failed evaluation -> retry writes one set of graph_corrected events', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill retry probe';
     await reachForm(user, label);
     await fillMinimalForm(user, label, 'Sorts internal documents for the retry test.');
@@ -801,10 +824,10 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
     await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
     const nameInput = (await screen.findByLabelText(/what do you want to call it/i)) as HTMLInputElement;
     await user.clear(nameInput);
-    await user.type(nameInput, `${label} (corrected)`);
+    await fillText(user, nameInput, `${label} (corrected)`);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
     // The first attempt wrote its corrections (the name sits on two nodes, so
@@ -828,9 +851,9 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
   }, 60000);
 
   it('TC-CR7-21b: a description-path correction -> failed evaluation -> retry puts the correction on the trail exactly once', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user); // the "Not sure" answer IS a correction
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText(/something went wrong working out the result/i);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
@@ -847,7 +870,7 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
   }, 30000);
 
   it('TC-CR7-22: the confirmation says "N corrections made … preserved in the audit trail" — and the trail holds exactly N graph_corrected events', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
     const sentence = screen.getByText(/corrections? made\. original extraction and corrections are both preserved in the audit trail/i);
     const claimed = Number(/(\d+) correction/.exec(sentence.textContent ?? '')![1]);
@@ -860,7 +883,7 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
 
 describe('CR7-30 (writer half) — no "undefined" value in a recorded correction', () => {
   it('TC-CR7-30a: a questionnaire answer for a field that had no value is recorded with original_value null, not undefined', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const ext = notSureExtraction();
     // An agent: its reach fields are absent and so are asked about.
     (ext.content[0]!.input.processing_nodes[0] as Record<string, unknown>).model_type = 'agentic';
@@ -934,7 +957,7 @@ describe('CR7-28 (M-1): the migrated review keeps what the old draft held, and t
       useCaseId: 'uc-old-draft2',
     };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     await screen.findByText(/this was saved by an earlier version of this tool/i);
     await proceedFromReview(user);
@@ -972,7 +995,7 @@ function saveQuestionnaireFromReviewDraft() {
 
 describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and editable countries (I-1)', () => {
   it('TC-CR7-02h-1: Not sure -> confirmation -> Change an answer -> Continue (questions) -> Back -> Continue -> Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
     await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
     await screen.findByText('Check what we read from your description');
@@ -991,7 +1014,7 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
   }, 30000);
 
   it('TC-CR7-02h-2 (correction): the same through a correction from the result — verdict_corrected keeps the earlier "Not sure"', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
@@ -1012,9 +1035,9 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
   }, 30000);
 
   it('TC-CR7-03f-1: failed evaluation -> questions -> Back: Back from the review is still refused, and the case id is unchanged', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText(/something went wrong working out the result/i);
     const before = (loadDraft() as unknown as { useCaseId: string }).useCaseId;
@@ -1029,7 +1052,7 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
   }, 30000);
 
   it('TC-CR7-02c-edit: after Change an answer a country can be ticked; the graph changes, a jurisdictions correction is recorded and reaches the trail on Confirm', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
     await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
     await screen.findByText('Which countries does it involve?');
@@ -1052,9 +1075,9 @@ describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and e
 
 describe('FX7-1 review pass 1 — the correction count matches the events (M-4)', () => {
   it('TC-CR7-21d-1: a description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachNotSureConfirmation(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText(/something went wrong working out the result/i);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
@@ -1082,7 +1105,7 @@ function expectNetValueIsOriginal(corrections: Array<Record<string, unknown>>) {
 
 describe('FX7-1 review pass 2 — the trail ends at the value the verdict was computed on (I-A)', () => {
   it('TC-CR7-21f-1: a form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill reversal probe';
     await reachForm(user, label);
     await fillMinimalForm(user, label, 'Sorts internal documents for the reversal test.');
@@ -1095,17 +1118,17 @@ describe('FX7-1 review pass 2 — the trail ends at the value the verdict was co
     await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
     const nameInput = (await screen.findByLabelText(/what do you want to call it/i)) as HTMLInputElement;
     await user.clear(nameInput);
-    await user.type(nameInput, `${label} (changed)`);
+    await fillText(user, nameInput, `${label} (changed)`);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
 
     // Back to the original name: formCorrections now finds nothing to correct.
     const again = (await screen.findByLabelText(/what do you want to call it/i)) as HTMLInputElement;
     await user.clear(again);
-    await user.type(again, label);
+    await fillText(user, again, label);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -1130,7 +1153,7 @@ describe('FX7-1 review pass 2 — the trail ends at the value the verdict was co
 
 describe('FX7-1 review pass 3 — a synthesised correction never writes a value it did not find (I-1)', () => {
   it('TC-CR7-21h: a data class ticked, evaluation fails, it is unticked and resubmitted: the net trail value equals the original set', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const label = 'Zephyrquill data class probe';
     await reachForm(user, label);
     await fillMinimalForm(user, label, 'Sorts internal documents for the data class test.');
@@ -1145,7 +1168,7 @@ describe('FX7-1 review pass 3 — a synthesised correction never writes a value 
     await user.click(screen.getByRole('checkbox', { name: /information about people/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
 
@@ -1172,7 +1195,7 @@ describe('FX7-1 review pass 3 — a synthesised correction never writes a value 
 
 describe('FX7-1 review pass 4 — reverse corrections on the real trail for a graph field and an output-node field (M-2)', () => {
   async function changeFailRevert(label: string, change: (u: User) => Promise<void>, revert: (u: User) => Promise<void>) {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachForm(user, label);
     await fillMinimalForm(user, label, 'Sorts internal documents for the reverse test.');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
@@ -1185,7 +1208,7 @@ describe('FX7-1 review pass 4 — reverse corrections on the real trail for a gr
     await change(user);
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
-    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await failNextEvaluation();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
     await screen.findByLabelText(/what do you want to call it/i);
@@ -1247,12 +1270,12 @@ describe('CR7-41 (register snapshot) — a lapsed family is not filed as accepte
     const lapsed = appetiteYaml.replace(/reattest_by: "2027-02-23"/, 'reattest_by: "2020-01-01"');
     expect(lapsed).not.toBe(appetiteYaml);
     setCurrentPolicyYaml(lapsed);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachForm(user, 'A drafting helper inside software we already use.');
     await fillMinimalForm(user, 'Lapsed family probe', 'A drafting helper inside software we already use.');
     await user.click(screen.getByRole('radio', { name: /an ai feature inside software your firm already uses/i }));
     await user.click(screen.getByRole('radio', { name: /i don.t know/i }));
-    await user.type(await screen.findByLabelText(/model name, if you know it/i), 'gpt-4o-2024-08-06');
+    await fillText(user, await screen.findByLabelText(/model name, if you know it/i), 'gpt-4o-2024-08-06');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));

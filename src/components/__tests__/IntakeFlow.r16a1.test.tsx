@@ -102,7 +102,7 @@ describe('IntakeFlow — first evaluation gate refuses on a policy reference err
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(GRAPH_REVIEW_DRAFT));
     render(<App />);
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const proceed = await screen.findByRole('button', { name: /^continue$/i });
     await user.click(proceed);
 

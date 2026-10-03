@@ -5,6 +5,7 @@ import App from '../../App';
 import { addNode, getUseCases } from '../../store/register';
 import { append, getAll } from '../../store/audit';
 import type { Verdict } from '../../types/verdict';
+import { fillText } from './fillText';
 
 // R16-W (build/prompts/R16-W.md) — the owner-side walkthrough fixes,
 // integration-level coverage. Unit-level coverage for the individual pieces
@@ -72,9 +73,9 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
 }
 
 async function fillMinimalForm(user: ReturnType<typeof userEvent.setup>, name: string, description: string) {
-  await user.type(screen.getByLabelText(/what do you want to call it/i), name);
+  await fillText(user, screen.getByLabelText(/what do you want to call it/i), name);
   await user.clear(screen.getByLabelText(/in a sentence or two/i));
-  await user.type(screen.getByLabelText(/in a sentence or two/i), description);
+  await fillText(user, screen.getByLabelText(/in a sentence or two/i), description);
   await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
   await user.click(
     screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
@@ -91,7 +92,7 @@ async function fillMinimalForm(user: ReturnType<typeof userEvent.setup>, name: s
 
 async function reachFormScreen(user: ReturnType<typeof userEvent.setup>, description: string) {
   render(<App />);
-  await user.type(screen.getByLabelText(/what ai tool do you want to use/i), description);
+  await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
   await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
@@ -99,7 +100,7 @@ async function reachFormScreen(user: ReturnType<typeof userEvent.setup>, descrip
 
 describe('R16-W W-3 (D-69): the form path never shows graph_review on the way to confirmation', () => {
   it('TC-R16-W-58: reaches "Here’s what we understood" directly — no "Confirm what we understood", no "worth a second look", no graph-review node cards', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await reachFormScreen(user, 'Zephyrquill morandane intake probe');
     await fillMinimalForm(user, 'Zephyrquill morandane sorter', 'Sorts internal documents.');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
@@ -224,7 +225,7 @@ describe('R16-W W-4 (D-70): changing an answer / stepping back reopens the form 
 // trail — needed no change to its own assertions.
 describe('R16-W W-4 (D-70): one use case, one creation event', () => {
   it('TC-R16-W-62: submit, Change an answer, submit again — exactly one use_case_created for the intake, and the confirmed use case has that id', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const marker = 'Brindlewick tansy fathomgate assistant';
     await reachFormScreen(user, marker);
     await fillMinimalForm(user, marker, 'Checks the resubmission does not duplicate the creation event.');
@@ -260,7 +261,7 @@ describe('R16-W W-4 (D-70): one use case, one creation event', () => {
 // either way.
 describe('R16-W W-1 (D-67): the text left in question 2 is the description from then on', () => {
   it('TC-R16-W-66: the trail and the register record question 2’s edited text, not the first screen’s words', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const marker = 'Tollgrave inkwhistle carrier';
     await reachFormScreen(user, 'First-screen words that the person then replaces.');
     await fillMinimalForm(user, marker, 'Edited words in question two.');
@@ -282,7 +283,7 @@ describe('R16-W W-1 (D-67): the text left in question 2 is the description from 
 
 describe('Confirm guard across intakes (found by the R16-W walkthrough)', () => {
   it('TC-R16-W-67: after one successful confirmation, "+ New pre-check" starts a case whose "Confirm and evaluate" still works — no reload needed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const first = 'Quillmarsh ferngate first tool';
     await reachFormScreen(user, 'The first case in this tab.');
     await fillMinimalForm(user, first, 'The first case in this tab.');
@@ -295,7 +296,7 @@ describe('Confirm guard across intakes (found by the R16-W walkthrough)', () => 
     // finds it via the click event bubbling from its text.
     await user.click(screen.getByText('+ New pre-check'));
     const second = 'Marrowdeep lanternfall second tool';
-    await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'The second case in this tab.');
+    await fillText(user, await screen.findByLabelText(/what ai tool do you want to use/i), 'The second case in this tab.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     // "Continue →" when nothing similar is found; "Mine is different —
     // continue →" if the first case is offered as similar — either way on.
@@ -340,7 +341,7 @@ describe('R16-W W-3 (D-69): similar decided cases on the form-path confirmation 
       payload: { type: 'verdict_produced', verdict: makeVerdict({ use_case_id: 'precedent-row-1' }) },
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // The FIRST-screen description drives the hard DUPLICATE gate (0.4
     // Jaccard threshold, duplicate.ts) — kept at zero overlap with the
     // seeded row's label so this reaches the form normally. The precedent
@@ -367,15 +368,15 @@ describe('R16-W W-3 (D-69): similar decided cases on the form-path confirmation 
 
 describe('R16-W W-5 (D-75): the knowledge-lens panel is collapsed on the intake verdict screen', () => {
   it('TC-R16-W-65: a real verdict with a knowledge-lens match renders the panel inside a collapsed-by-default <details>, after the reviewer section', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const marker = 'Oxmantle driftquill cindergale advisor';
     await reachFormScreen(user, marker);
     // Client PII through the in-house platform's Zone B option (the same
     // scenario WalkingSkeleton's P4-C02 test uses) trips INV-DATA-01, which
     // grounding/risk-knowledge.yaml's real "Privacy & Security" entry covers.
-    await user.type(screen.getByLabelText(/what do you want to call it/i), marker);
+    await fillText(user, screen.getByLabelText(/what do you want to call it/i), marker);
     await user.clear(screen.getByLabelText(/in a sentence or two/i));
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'Drafts client emails from notes.');
     await user.click(screen.getByRole('radio', { name: /your firm.s in-house model platform/i }));
     await user.click(screen.getByRole('radio', { name: /the platform passes it to an outside supplier/i }));
     await user.click(

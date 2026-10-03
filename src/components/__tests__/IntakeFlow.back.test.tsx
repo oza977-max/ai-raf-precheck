@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
+import { fillText } from './fillText';
 
 // FN-006 — user-reported after the v0.1.0 tag: "after describing, if I go to
 // the next step it doesn't go back, there is no back option."
@@ -141,10 +142,10 @@ describe('IntakeFlow — description boundaries (UC-1)', () => {
   });
 
   it('a five-sentence description is accepted and advances [TC-UC-1-02]', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
-    await user.type(
+    await fillText(user, 
       box,
       'We want an assistant that reads CRM notes. It summarises client activity. It recommends an action. It runs internally. The RM approves everything.',
     );
@@ -157,7 +158,7 @@ describe('IntakeFlow — description boundaries (UC-1)', () => {
   });
 
   it('HTML in a description is literal text, never markup [TC-UC-1-04]', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const hostile = 'Ein Tool für Kundendaten — parses <img src=x onerror="alert(1)"> fields.';
     render(<App />);
     const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
@@ -186,7 +187,7 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
   });
 
   it('a description denying what the form declares blocks the skip to confirmation [TC-R16-W-57: a contradiction on the form path stops at contradiction_review, never passing through graph_review]', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.click(box);
@@ -199,8 +200,8 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     // level 3 via "acts by itself within limits someone set" (contradicts
     // "no autonomy"); same two contradiction triggers contradiction.ts
     // checks (autonomy_level >= 3, data_class Client PII), same assertions.
-    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Contradictor');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Contradictor');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(
       screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
@@ -244,7 +245,7 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
   });
 
   it('after resolution with no questions left, the flow reaches confirmation', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     const box = await screen.findByRole('textbox', { name: /what ai tool do you want to use/i });
     await user.click(box);
@@ -256,8 +257,8 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     // situational question set (build/prompts/R16.md §2.2) — adapted to the
     // new questions, same underlying scenario (Client PII, firm-built,
     // drafts for a person to check, UK), same assertion below.
-    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Resolver');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Resolver');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(
       screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }),
@@ -279,7 +280,7 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
 
     // Contradiction review appears; resolve it.
     const explain = await screen.findByRole('textbox', { name: /explain|resolution|why/i });
-    await user.type(explain, 'The description was wrong; the form is right.');
+    await fillText(user, explain, 'The description was wrong; the form is right.');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     // The old behaviour stranded the user at "All questions answered." with

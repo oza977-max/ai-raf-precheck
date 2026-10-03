@@ -11,6 +11,7 @@ import { loadDraft } from '../intake-draft';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { Verdict } from '../../types/verdict';
 import type { DataFlowGraph } from '../../engine/types';
+import { fillText } from './fillText';
 
 // R16-F — design-review-007.html Group 1. Integration-level coverage for
 // the items that need the real App wiring to prove: F-1 (cross-tab
@@ -136,14 +137,14 @@ tier_workflow:
 safety_margin: 0.1
 `);
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Form-path gate probe');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Form-path gate probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
 
-    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'Gate probe tool');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Gate probe tool');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     await user.click(screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }));
     await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
@@ -166,13 +167,13 @@ safety_margin: 0.1
 
 describe('§3 (DR7-10): focus moves and the step change is announced', () => {
   it('TC-R16-F-46: a step change (not the first load) moves focus to the step container and announces the new step', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     // First load: nothing has "changed" into yet — no announcement.
     expect(document.querySelector('.intake-flow__step-announcement')?.textContent).toBe('');
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Focus announcement probe');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Focus announcement probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
 
     // Now on duplicate_check — StepTracker's own numbering: Describe (1),
@@ -344,16 +345,16 @@ describe('F-2 (DR7-04): an evaluation error never orphans the case', () => {
     );
     setCurrentPolicyYaml(holed);
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
-    await user.type(input, 'Evaluation failure probe');
+    await fillText(user, input, 'Evaluation failure probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
 
-    await user.type(await screen.findByLabelText(/what do you want to call it/i), 'No-track-match tool');
-    await user.type(screen.getByLabelText(/in a sentence or two/i), 'x');
+    await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'No-track-match tool');
+    await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
     await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
     // deep-learning, not llm — the holed policy above keeps TRACK-III
     // matching only model_type llm, so this is the one that fails to
@@ -413,7 +414,7 @@ describe('F-3 (DR7-05): "Start over" before Confirm strands nothing', () => {
       }),
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
     // Per F-3, nothing was ever written for this case — reaching Confirm
     // is the only point that writes anything.
@@ -466,7 +467,7 @@ describe('§4 (DR7-11): the tick-all editor through the real correction handler'
         unconfirmedNodeIds: [],
       }),
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
     const card = (await screen.findByText('Ticket agent')).closest('.graph-node') as HTMLElement;
@@ -633,7 +634,7 @@ describe('R16-F review pass 3: a failed-check message does not outlive the attem
       .spyOn(registerModule, 'confirmationPrecondition')
       .mockRejectedValueOnce(new Error('simulated storage read failure'));
     try {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<App />);
       await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
       expect(await screen.findByText(/couldn.t check this case.s record just now/i)).toBeInTheDocument();
@@ -676,7 +677,7 @@ describe('R16-F review pass 4: nothing can change the answers while a confirm is
       .spyOn(registerModule, 'confirmationPrecondition')
       .mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
     try {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<App />);
       await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
@@ -730,7 +731,7 @@ describe('R16-F review pass 5: nothing can start a new case while the result is 
         return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
       });
     try {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<App />);
       await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
       // Held inside the evaluation itself: the trace step has started.

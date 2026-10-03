@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { addNode, getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
+import { fillText } from './fillText';
 
 /** A register entry the duplicate check will match on, seeded before render so
  *  the row is present regardless of App's fire-and-forget seeding. */
@@ -110,7 +111,7 @@ describe('IntakeFlow — resuming a restored draft', () => {
   });
 
   it('returns to a blank description entry when Start over instead is clicked (D-002)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({ step: 'duplicate_check', description: 'A tool that drafts client emails' }),
@@ -141,10 +142,10 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
     // file, so a shared name lets the duplicate check match the OTHER test's
     // row and the assertions then read the wrong record.
     const existing = await seedExistingUseCase('Dismissal probe assistant');
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Dismissal probe assistant');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Dismissal probe assistant');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     // R16-W §4 (D-74): this description keyword-matches the seeded row
     // above, so the match-found screen's own button ("Mine is different —
@@ -160,10 +161,10 @@ describe('Duplicate gate — both decisions exist and both are recorded (UC-2)',
 
   it('TC-UC-2-02: adopting the classification creates a linked record and asks no intake questions', async () => {
     const existing = await seedExistingUseCase('Adoption probe assistant');
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<App />);
 
-    await user.type(screen.getByLabelText(/what ai tool do you want to use/i), 'Adoption probe assistant');
+    await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Adoption probe assistant');
     await user.click(screen.getByRole('button', { name: /^next/i }));
 
     // R16-W §4 (D-74): "Adopt this classification" is now "Use the earlier
