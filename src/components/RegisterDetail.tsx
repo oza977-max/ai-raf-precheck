@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getUseCase, updateLifecycleStage, findLatestVerdictEvent } from '../store/register';
+import { getUseCase, updateLifecycleStage, findLatestVerdictEvent, getGraph } from '../store/register';
 import { getAll as getAuditEvents, append as appendAuditEvent, verifyChain } from '../store/audit';
 import type { ChainVerification } from '../store/audit';
 import VerdictDisplay from './VerdictDisplay';
-import type { AssumptionRecord, AuditEvent, UseCaseSummary } from '../store/types';
+import type { AssumptionRecord, AuditEvent, RegisterEdge, UseCaseSummary } from '../store/types';
+import { registerSaysNoModelNamed } from './verdict-view-model';
 import type { PolicyFile } from '../engine/types';
 import { loadPacks } from '../store/packs';
 import { getPackSources } from '../store/pack-source';
@@ -43,7 +44,17 @@ const CORRECTION_SOURCE_WORDS: Record<string, string> = {
   question: 'an answer to a question',
 };
 
-export function eventDetail(event: AuditEvent): string {
+// CR7-30b: a value that was never stated (null — what the writers record now —
+// or absent, which is how a JSON round-trip stores an old `undefined`) reads
+// "not stated"; every real value, including 0 and false, shows as itself.
+function valueWords(v: unknown): string {
+  return v === null || v === undefined ? 'not stated' : String(v);
+}
+
+// `viewerRole`: another case's name (the matched label in the duplicate /
+// adoption lines) is shown to 2LoD only (CR7-10c) — a 1LoD user is limited to
+// their own cases elsewhere, so the trail must not reveal another one's name.
+export function eventDetail(event: AuditEvent, viewerRole?: string): string {
   const p = event.payload as AuditEvent['payload'] | undefined | null;
   // code-review-005 F13: a damaged record can lack its payload entirely —
   // reading `.type` off it would crash the whole case page, not just one line.
@@ -60,7 +71,7 @@ export function eventDetail(event: AuditEvent): string {
     case 'graph_corrected':
       // CR6-10: where the correction was made, in plain words; nothing when
       // the record predates the field.
-      return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}${
+      return `${p.correction.field} corrected: ${valueWords(p.correction.original_value)} → ${valueWords(p.correction.corrected_value)}${
         p.correction.correction_source ? ` (from ${CORRECTION_SOURCE_WORDS[p.correction.correction_source] ?? 'an unrecorded place'})` : ''
       }`;
     case 'verdict_produced':
@@ -98,9 +109,11 @@ export function eventDetail(event: AuditEvent): string {
     case 'reasoning_trace_generated':
       return 'Plain-English reasoning trace generated and stored with the verdict.';
     case 'duplicate_dismissed':
-      return `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`;
+      return viewerRole === '2LoD'
+        ? `Similar use case reviewed and dismissed: ${p.candidate_label} (${p.candidate_use_case_id.slice(0, 8)}…).`
+        : `Similar use case reviewed and dismissed (${p.candidate_use_case_id.slice(0, 8)}…).`;
     case 'classification_adopted':
-      return `Classification adopted from ${p.adopted_from_label} (${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
+      return `Classification adopted from ${viewerRole === '2LoD' ? `${p.adopted_from_label} ` : 'a similar use case '}(${p.adopted_from_use_case_id.slice(0, 8)}…) — tier ${
         p.tier ?? '—'
       }, track ${p.track ?? '—'}. No evaluation was run for this record.`;
     case 'rule_dissent_filed':
@@ -196,6 +209,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
   // explore-007 D-001 fix (round 8): a live, provable check — not just an
   // assertion in copy — that the hash chain over the WHOLE audit trail
   // (every use case, not just this one) is intact.
+  const [modelLinks, setModelLinks] = useState<{ createdAt: string | undefined; edges: RegisterEdge[]; unrecorded: boolean } | null>(null);
   const [chainCheck, setChainCheck] = useState<ChainVerification | null>(null);
   const [notes, setNotes] = useState('');
   const [attestedByName, setAttestedByName] = useState('');
@@ -672,6 +686,19 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
       ]);
       setSummary(s ?? null);
       setEvents(evs);
+      // UC-11: the case's own links. A failed read leaves it undefined — which
+      // registerSaysNoModelNamed treats as "cannot tell", never as "none".
+      try {
+        const { nodes, edges } = await getGraph(useCaseId);
+        const own = nodes.find((n) => n.node_id === useCaseId);
+        setModelLinks({
+          createdAt: own?.created_at,
+          edges,
+          unrecorded: own?.metadata.node_type === 'use_case' && own.metadata.model_link_unrecorded === true,
+        });
+      } catch {
+        setModelLinks(null);
+      }
       setLoadError(null);
     } catch (err) {
       // N4: getUseCase() (unlike getUseCases()'s per-row Promise.allSettled)
@@ -1096,6 +1123,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
             auditEvents={events}
             policy={policy}
             registerStage={summary.lifecycle_stage}
+            noModelNamed={registerSaysNoModelNamed({ useCaseCreatedAt: modelLinks?.createdAt, edges: modelLinks?.edges, events, modelLinkUnrecorded: modelLinks?.unrecorded })}
             memoLabel={summary.label}
             memoDescription={summary.description}
             knowledgeLensMatches={knowledgeLensMatches}
@@ -1399,7 +1427,7 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
                   <span className="timeline__actor">{event.actor}</span>
                   <span className="timeline__time">{new Date(event.occurred_at).toLocaleString()}</span>
                 </div>
-                <p className="timeline__detail">{eventDetail(event)}</p>
+                <p className="timeline__detail">{eventDetail(event, role)}</p>
               </div>
             </li>
           ))}

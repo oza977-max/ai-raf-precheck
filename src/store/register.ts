@@ -192,7 +192,7 @@ function toSummary(
 // with a whole-register replace/import.
 export function updateUseCaseVerdictSummary(
   useCaseId: string,
-  summary: Partial<UseCaseSummary> & { currentVerdictId?: string }
+  summary: Partial<UseCaseSummary> & { currentVerdictId?: string; modelLinkUnrecorded?: boolean }
 ): Promise<void> {
   return enqueueRegister(async () => {
     const db = await openRegisterDb();
@@ -211,6 +211,7 @@ export function updateUseCaseVerdictSummary(
         // currentVerdictId (P5-C01, verdict-audit.md §6.2) — a correction
         // must point the register at the NEW verdict, not the original.
         current_verdict_id: summary.currentVerdictId ?? node.metadata.current_verdict_id,
+        ...(summary.modelLinkUnrecorded ? { model_link_unrecorded: true } : {}),
       },
     };
 

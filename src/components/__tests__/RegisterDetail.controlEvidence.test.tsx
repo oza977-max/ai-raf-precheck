@@ -236,7 +236,7 @@ describe('RegisterDetail — attesting a control is in place (RG-9)', () => {
     // "attested").
     expect(await screen.findByText(/0 outstanding · 1 addressed/i)).toBeInTheDocument();
     expect(screen.getByText(/1 attested by a reviewer \(not verified\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/0 machine-verified/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 marked verified in your firm.s policy file/i)).toBeInTheDocument();
   });
 
   it('a double-click attests once, not twice (append-only discipline)', async () => {

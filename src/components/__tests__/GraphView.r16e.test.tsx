@@ -102,7 +102,8 @@ describe('GraphView — provenance and badge wording (R16-E §4, F1B-1)', () => 
   });
 
   it('TC-R16-E-44: a confident-but-unquoted field reads "Not in your description — please check this"', () => {
-    render(<GraphView graph={makeGraph()} editable unconfirmedNodeIds={[]} onConfirmNode={vi.fn()} />);
+    // CR7-02 (6): provenance={{}} = a real extraction with nothing quoted.
+    render(<GraphView graph={makeGraph()} editable unconfirmedNodeIds={[]} onConfirmNode={vi.fn()} provenance={{}} />);
     expect(screen.getAllByText('Not in your description — please check this').length).toBeGreaterThan(0);
   });
 });

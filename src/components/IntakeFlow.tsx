@@ -43,6 +43,7 @@ import {
   extractionErrorMessage,
   EXTRACTION_ERROR_HELP,
   engineErrorMessage,
+  POLICY_PROBLEM_MESSAGE,
   questionnaireCopyForField,
   vendorNotOnListValue,
   VENDOR_UNSURE_VALUE,
@@ -82,15 +83,6 @@ const CONFIRMATION_REFUSAL_MESSAGE: Record<ConfirmationRefusal, string> = {
   'corrected-elsewhere':
     "This result was corrected in another tab or window while you were working, so your correction wasn't saved. Open the case from the register to see the current result.",
 };
-
-// CR7-37. What a person is told when the firm's own rules file cannot be used.
-// Plain, and it says whose problem it is and who can fix it — the field paths
-// and reason strings (`invariants[3].condition: …`) are for whoever edits the
-// file, so they go to the console (see policyProblemDetail callers), never into
-// an alert a submitter reads. FX7-4 moves this sentence into plain-copy.ts
-// beside `engineErrorMessage`.
-const POLICY_PROBLEM_MESSAGE =
-  'Your firm’s rules file has a problem, so this can’t be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen.';
 
 // CR7-21/22 and the count of corrections on the trail: planCorrectionWrites
 // (intake-state.ts, pure and unit-tested).
@@ -1670,17 +1662,34 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           track: result.track,
         },
       });
-      // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md §16): the dormant
+      // R11-MG-3 / ADR-RL-R11-1 (register-lifecycle.md section 16): the dormant
       // ai_model/uses_model schema, consumed at the same write that already
       // produces the use_case node. Only on first confirmation, not on a
-      // correction re-evaluation — a correction reuses useCaseId and would
+      // correction re-evaluation: a correction reuses useCaseId and would
       // otherwise write a second uses_model edge for the same use case.
+      // Pass 2 M-1: written AFTER the node, never before. The verdict is already
+      // on the trail, so a failure here must not strand the case (Confirm would
+      // refuse it as already decided). If the link cannot be written the case is
+      // saved and flagged `model_link_unrecorded`, and the register then says
+      // nothing about whether a model was named.
       const declaredModelNode = graph.processing_nodes.find((n) => n.declared_model_id);
       if (declaredModelNode && policyResult.valid) {
-        // CR7-41: the snapshot judges acceptance on the same expiry-applied
-        // policy evaluate() saw, so a family past its reattest_by is not filed
-        // as accepted while the verdict owes its review.
-        await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
+        try {
+          // CR7-41: the snapshot judges acceptance on the same expiry-applied
+          // policy evaluate() saw, so a family past its reattest_by is not filed
+          // as accepted while the verdict owes its review.
+          await addUseCaseModelLink(useCaseId, declaredModelNode, attestablePolicy);
+        } catch (err) {
+          console.error('Counterpoise: the model link for this case could not be written:', err);
+          // A second failure must not break a confirm whose case is already saved:
+          // log it and carry on. Residual (accepted): with neither the edge nor
+          // the flag written, the register may later say "No model was named".
+          try {
+            await updateUseCaseVerdictSummary(useCaseId, { modelLinkUnrecorded: true });
+          } catch (flagErr) {
+            console.error('Counterpoise: the case could not be flagged model_link_unrecorded:', flagErr);
+          }
+        }
       }
     }
     await refreshRegister();
@@ -2359,6 +2368,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
               guessedFields={state.guessedFields}
               ignoredJurisdictions={state.ignoredJurisdictions}
               policy={policyResult.valid ? policyResult.policy : undefined}
+              reentry={state.reentry}
             />
             {/* R7-JC (ADR-IF-R7-1): jurisdictions gate at review. Sweep-001
                 found a hallucinated valid code ("US") that would silently

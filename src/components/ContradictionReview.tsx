@@ -25,8 +25,8 @@ export default function ContradictionReview({ contradictions, onResolve }: Contr
           catch (Cooper) rather than an accusation. */}
       <h2>Your description and your answers don&rsquo;t match</h2>
       <p className="field-help">
-        Nothing is wrong with the use case — we just can&rsquo;t tell which is right, so we&rsquo;re
-        asking before working out a result.
+        This isn&rsquo;t a result yet — we can&rsquo;t tell which is right, so we&rsquo;re asking
+        before working one out.
       </p>
       {contradictions.map((c, i) => (
         <div key={i} className="contradiction" role="alert">

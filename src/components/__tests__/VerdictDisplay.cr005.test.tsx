@@ -139,7 +139,7 @@ describe('VerdictDisplay — code review 005, F11/F25: "addressed" vs "in place"
     );
     const checklist = document.querySelector('.verdict__signoff-checklist')!;
     expect(checklist.textContent).toMatch(
-      /4 controls named · 3 outstanding · 1 addressed · evidence: 0 machine-verified, 1 attested by a reviewer \(not verified\), 3 outstanding/,
+      /4 controls named · 3 outstanding · 1 addressed · evidence: 0 marked verified in your firm.s policy file, 1 attested by a reviewer \(not verified\), 3 outstanding/,
     );
     expect(checklist.textContent).not.toMatch(/\bin place\b/);
     expect(checklist.textContent).not.toMatch(NO_RESERVED_WORDS);

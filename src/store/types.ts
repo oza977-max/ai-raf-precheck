@@ -282,6 +282,9 @@ export type RegisterNodeMetadata =
       current_verdict_id: string | null;
       tier: string | null;
       track: string | null;
+      // Set when the case was saved but writing its uses_model link failed, so
+      // the register cannot tell "no model named" from "link lost".
+      model_link_unrecorded?: boolean;
     }
   | { node_type: 'ai_model'; model_id: string; vendor: string; is_approved: boolean }
   | { node_type: 'platform'; platform_id: string; approved_envelope_summary: string }

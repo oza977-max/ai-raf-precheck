@@ -56,6 +56,11 @@ interface GraphViewProps {
   // R16-E review pass 2: the firm's registry, so a recorded supplier shows
   // its plain name — never its internal id.
   policy?: PolicyFile;
+  // CR7-02 (6). True when this screen is being revisited (Change an answer, a
+  // failed check, a correction pass): every value on it was stated or checked
+  // already, so none is labelled "Not in your description". IntakeFlow passes
+  // the graph_review step's `reentry`.
+  reentry?: boolean;
 }
 
 const REVERSIBILITY = ['reversible', 'irreversible', 'unknown'] as const;
@@ -109,6 +114,9 @@ const PROCESSING_FIELDS: FieldSpec[] = [
   { field: 'model_type', options: MODEL_TYPES },
   { field: 'autonomy_level', options: [0, 1, 2, 3, 4], numeric: true },
   { field: 'data_zone', options: DATA_ZONES },
+  // CR7-25: decision-bearing (it can set the track) and previously missing
+  // from the card, so a wrong reading could never be seen or corrected here.
+  { field: 'replaces_prior_model', options: ['true', 'false'], boolean: true },
   // v1.4 agentic infrastructure-access fields — optional on the engine
   // type; absent renders "not stated", same honest-weaker-claim rule as
   // decision_type/hitl below.
@@ -182,7 +190,7 @@ function ProvenanceQuote({ text }: { text: string }) {
 // and the no-plain-confirm gate for guessed cards are unchanged; this
 // component only renders what that existing logic decided. §4 (F1B-1):
 // reworded off "guessed"/"not found in your text" — engine vocabulary.
-function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated' }) {
+function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated' | 'unrecorded' }) {
   if (kind === 'guessed') {
     return (
       <span className="graph-node__badge graph-node__badge--guessed graph-node__guessed-badge">
@@ -194,6 +202,17 @@ function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated'
     return (
       <span className="graph-node__badge graph-node__badge--no-basis">
         Not in your description — please check this
+      </span>
+    );
+  }
+  if (kind === 'unrecorded') {
+    // CR7-02 (6) / BC-005: a draft saved by an older build kept no record of
+    // which values were found in the description. Saying "Not in your
+    // description" would claim a fact nobody checked; this says only what is
+    // known — the record of where it came from is gone.
+    return (
+      <span className="graph-node__badge graph-node__badge--unrecorded">
+        Where this came from wasn’t saved — please check this
       </span>
     );
   }
@@ -309,6 +328,8 @@ function NodeCard({
   onCorrect,
   onConfirm,
   policy,
+  reentry,
+  provenanceRecorded,
 }: {
   node: AnyNode;
   fields: FieldSpec[];
@@ -323,12 +344,18 @@ function NodeCard({
   onCorrect?: (nodeId: string, field: string, value: unknown) => void;
   onConfirm?: (nodeId: string) => void;
   policy?: PolicyFile;
+  reentry: boolean;
+  /** False when the caller kept neither provenance nor a guessed list (a draft migrated from an old build). */
+  provenanceRecorded: boolean;
 }) {
   const [labelDraft, setLabelDraft] = useState(node.label);
   // R9-SC-2 (ADR-IF-R9-1): consequences one click away, per card.
   const [showWhy, setShowWhy] = useState(false);
   const uncertain = 'uncertain' in node && node.uncertain;
   const record = node as unknown as Record<string, unknown>;
+
+  // The one decision for the "confident, but no verified quote" state.
+  const noBasisBadge = reentry ? null : <ProvenanceBadge kind={provenanceRecorded ? 'no-basis' : 'unrecorded'} />;
 
   const vendor = 'vendor' in node ? (node as ProcessingNode).vendor : null;
   const declaredModelId =
@@ -406,7 +433,7 @@ function NodeCard({
                         // this field, but there is no verified quote behind
                         // it — reworded toward action, same badge family as
                         // "guessed", own distinct label and meaning.
-                        <ProvenanceBadge kind="no-basis" />
+                        noBasisBadge
                       ) : null}
                     </>
                   ) : (
@@ -452,7 +479,7 @@ function NodeCard({
                 ) : guessed.includes('vendor') ? (
                   <ProvenanceBadge kind="guessed" />
                 ) : !uncertain ? (
-                  <ProvenanceBadge kind="no-basis" />
+                  noBasisBadge
                 ) : null}
                 {showWhy && <span className="graph-node__consequence">{FIELD_CONSEQUENCES.vendor}</span>}
               </dd>
@@ -478,7 +505,7 @@ function NodeCard({
                 ) : guessed.includes('declared_model_id') ? (
                   <ProvenanceBadge kind="guessed" />
                 ) : !uncertain ? (
-                  <ProvenanceBadge kind="no-basis" />
+                  noBasisBadge
                 ) : null}
                 {showWhy && (
                   <span className="graph-node__consequence">{FIELD_CONSEQUENCES.declared_model_id}</span>
@@ -602,13 +629,17 @@ export default function GraphView({
   unconfirmedNodeIds,
   onConfirmNode,
   warnings = [],
-  provenance = {},
-  guessedFields = {},
+  provenance: provenanceProp,
+  guessedFields: guessedFieldsProp,
   ignoredJurisdictions = [],
   policy,
+  reentry = false,
 }: GraphViewProps) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const gated = unconfirmedNodeIds !== undefined;
+  const provenance = provenanceProp ?? {};
+  const guessedFields = guessedFieldsProp ?? {};
+  const provenanceRecorded = provenanceProp !== undefined || guessedFieldsProp !== undefined;
 
   const column = (title: string, nodes: AnyNode[], fields: FieldSpec[]) => (
     <div className="graph-view__col">
@@ -630,6 +661,8 @@ export default function GraphView({
           onCorrect={onCorrect}
           onConfirm={gated ? onConfirmNode : undefined}
           policy={policy}
+          reentry={reentry}
+          provenanceRecorded={provenanceRecorded}
         />
       ))}
     </div>

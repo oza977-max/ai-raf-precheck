@@ -42,8 +42,12 @@ describe('R12-BD-1 — badge recalibration', () => {
         editable
         unconfirmedNodeIds={[]}
         onConfirmNode={vi.fn()}
+        provenance={{}}
       />,
     );
+    // CR7-02 (6): `provenance={{}}` is a real extraction with nothing quoted.
+    // With no provenance prop at all (a draft from an older build) the screen
+    // no longer claims "not in your description" — see GraphView.cr7-fx4.
     // R15-C5 (proposal §3.6): reworded toward action; same badge, new
     // text (R16-E §4, F1B-1: "guessed"/"not found in your text" retired).
     expect(screen.getAllByText(/not in your description — please check this/i).length).toBeGreaterThan(0);

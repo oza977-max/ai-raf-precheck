@@ -68,7 +68,7 @@ function makePolicy(overrides: Partial<PolicyFile> = {}): PolicyFile {
     kri_thresholds: {},
     jurisdictions: [],
     roles: {},
-    tier_workflow: { Critical: 'x', High: 'x', Medium: 'x', Low: 'x' },
+    tier_workflow: { Critical: 'self-service', High: 'self-service', Medium: 'self-service', Low: 'self-service' },
     safety_margin: 0.1,
     ...overrides,
   } as PolicyFile;

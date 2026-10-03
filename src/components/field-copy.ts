@@ -166,6 +166,7 @@ export const FIELD_CONSEQUENCES: Record<string, string> = {
   scale: 'How widely it’s used. A mistake in a small trial and a mistake everywhere at once are different risks.',
   decision_type: 'What it helps decide. Some decisions — lending is one — always put a case in the most serious category.',
   hitl: 'Whether a person checks what it produces before anything happens as a result of it.',
+  replaces_prior_model: 'Whether it takes over from something you use now. A replacement for an existing model, scorecard or spreadsheet calculation gets a closer look.',
   // 2026-08-31 — grounded in the August 2026 OpenAI/Hugging Face incident
   // (grounding/proposed-rules/agentic-infrastructure-access.md): the harm
   // path ran through shared infrastructure and credentials, not through any
