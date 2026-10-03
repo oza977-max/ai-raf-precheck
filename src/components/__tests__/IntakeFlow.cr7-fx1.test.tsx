@@ -14,6 +14,8 @@ import { getAll } from '../../store/audit';
 import { setRole } from '../../store/role';
 import { loadDraft } from '../intake-draft';
 import type { Assumption } from '../plain-copy';
+import { intakeReducer } from '../intake-state';
+import type { IntakeState } from '../intake-state';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { DataFlowGraph } from '../../engine/types';
 
@@ -954,20 +956,17 @@ const NOT_SURE_SCALE: Assumption = {
  *  snapshots is exactly what the review held), plus one new "Not sure". Written
  *  from the app's own saved draft, never typed by hand (BC-003). */
 function saveQuestionnaireFromReviewDraft() {
-  const review = loadDraft() as unknown as Record<string, unknown> & { assumptions?: Assumption[] };
-  const state: Record<string, unknown> = {
-    ...review,
-    step: 'questionnaire',
+  // The questionnaire is produced by the REAL reducer from the review screen
+  // the app saved, so the back* snapshot exists only if QUESTIONS_GENERATED
+  // still writes it (BC-003): nothing is copied by hand. Only the one extra
+  // "Not sure" given in the round being abandoned is added afterwards.
+  const review = loadDraft() as IntakeState;
+  const questionnaire = intakeReducer(review, {
+    type: 'QUESTIONS_GENERATED',
     questions: [{ id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' }],
-    answers: [],
-    resolutionNotes: [],
-    assumptions: [...(review.assumptions ?? []), NOT_SURE_SCALE],
-    backGraph: review.graph,
-    backCorrections: review.corrections,
-    backAssumptions: review.assumptions,
-    backAfterFailedEvaluation: review.afterFailedEvaluation === true ? true : undefined,
-  };
-  delete state.afterFailedEvaluation;
+  });
+  if (questionnaire.step !== 'questionnaire') throw new Error('the saved review did not leave for the questions');
+  const state = { ...questionnaire, assumptions: [...(questionnaire.assumptions ?? []), NOT_SURE_SCALE] };
   sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 3, state }));
 }
 
@@ -1067,4 +1066,53 @@ describe('FX7-1 review pass 1 — the correction count matches the events (M-4)'
     const counts = (await eventsOfType('graph_confirmed')).map((e) => (e.payload as unknown as { corrections_count: number }).corrections_count);
     expect(counts).toEqual([written, written]);
   }, 30000);
+});
+
+describe('FX7-1 review pass 2 — the trail ends at the value the verdict was computed on (I-A)', () => {
+  it('TC-CR7-21f: a form correction that fails, then a resubmit with the name back as it was, writes the reverse corrections, and the count matches the trail', async () => {
+    const user = userEvent.setup();
+    const label = 'Zephyrquill reversal probe';
+    await reachForm(user, label);
+    await fillMinimalForm(user, label, 'Sorts internal documents for the reversal test.');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const useCase = (await getUseCases('all')).find((u) => u.label === label)!;
+
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    const nameInput = (await screen.findByLabelText(/what do you want to call it/i)) as HTMLInputElement;
+    await user.clear(nameInput);
+    await user.type(nameInput, `${label} (changed)`);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
+
+    // Back to the original name: formCorrections now finds nothing to correct.
+    const again = (await screen.findByLabelText(/what do you want to call it/i)) as HTMLInputElement;
+    await user.clear(again);
+    await user.type(again, label);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(
+      async () => expect((await getAll(useCase.use_case_id)).filter((e) => e.event_type === 'verdict_corrected')).toHaveLength(1),
+      { timeout: 5000 },
+    );
+
+    const events = await getAll(useCase.use_case_id);
+    const corrections = events
+      .filter((e) => e.event_type === 'graph_corrected')
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction);
+    // Net value per (node, field) on the trail is the ORIGINAL name again.
+    const latest = new Map<string, unknown>();
+    for (const c of corrections) latest.set(`${c.node_id}|${c.field}`, c.corrected_value);
+    expect(latest.size).toBeGreaterThan(0);
+    for (const v of latest.values()) expect(String(v)).not.toContain('(changed)');
+    // And the verdict's own count matches the events.
+    const corrected = events.find((e) => e.event_type === 'verdict_corrected')!.payload as unknown as { corrections_count: number };
+    expect(corrected.corrections_count).toBe(corrections.length);
+  }, 60000);
 });

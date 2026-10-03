@@ -1910,6 +1910,37 @@ describe('planCorrectionWrites — which corrections are already on the trail, a
     expect(plan.toWrite).toEqual([]);
   });
 
+  const graphWith = (scale: unknown): DataFlowGraph =>
+    graph({ output_nodes: [{ id: 'n1', scale } as never], version: 5 });
+  const ctx = (scale: unknown) => ({ graph: graphWith(scale), newId: () => 'synth', now: () => '2026-02-02T00:00:00.000Z', by: '1LoD' });
+
+  it('TC-CR7-21e: A->B, A->C, then A->B again: the third is written (the trail would otherwise end at C while the graph says B)', () => {
+    const events = [ev(corr('1', 'A', 'B')), ev(corr('2', 'A', 'C'))];
+    const plan = planCorrectionWrites([corr('3', 'A', 'B')], events, ctx('B'));
+    expect(plan.toWrite.map((c) => c.correction_id)).toEqual(['3']);
+  });
+
+  it('TC-CR7-21e: a pending correction equal to the latest written value for its field is skipped', () => {
+    const events = [ev(corr('1', 'A', 'C')), ev(corr('2', 'A', 'B'))];
+    expect(planCorrectionWrites([corr('3', 'A', 'B')], events, ctx('B')).toWrite).toEqual([]);
+  });
+
+  it('TC-CR7-21f: A->B was written, the field is back at A and nothing is pending: one B->A correction is written, same source, and the count includes it', () => {
+    const plan = planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], ctx('A'));
+    expect(plan.toWrite).toHaveLength(1);
+    expect(plan.toWrite[0]).toMatchObject({ node_id: 'n1', field: 'scale', original_value: 'B', corrected_value: 'A', correction_source: 'form', graph_version_after: 5, corrected_at: '2026-02-02T00:00:00.000Z' });
+    expect(plan.sinceLastResult).toBe(2);
+  });
+
+  it('TC-CR7-21f: when the trail already ends at the graph value nothing is synthesised', () => {
+    expect(planCorrectionWrites([], [ev(corr('1', 'A', 'B'))], ctx('B')).toWrite).toEqual([]);
+  });
+
+  it('TC-CR7-21g (M-B): list values compare as sets — a different order is the same correction', () => {
+    const events = [ev(corr('1', [], ['UK', 'EU']))];
+    expect(planCorrectionWrites([corr('2', [], ['EU', 'UK'])], events).toWrite).toEqual([]);
+  });
+
   it('TC-CR7-21d: sinceLastResult counts the events in the window plus the ones about to be written, and ignores those before the last result', () => {
     const events = [ev(corr('0', 'X', 'Y')), verdict(), ev(corr('1', 'A', 'B'))];
     expect(planCorrectionWrites([], events).sinceLastResult).toBe(1);
