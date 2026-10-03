@@ -115,6 +115,9 @@ describe('intakeReducer', () => {
       // F-7 (DR7-07): captured from graph_review's own guessedFields —
       // empty here since the fixture above never sets any.
       uncertainNodeIds: [],
+      // CR7-03: the pre-questionnaire values Back returns to.
+      backGraph: g,
+      backCorrections: [correction],
     });
   });
 
@@ -134,11 +137,13 @@ describe('intakeReducer', () => {
     const next = intakeReducer(state, { type: 'ANSWER_SUBMITTED', answer });
     // v0.7.1: the answer also snapshots the pre-answer graph for one-level
     // undo. R16-E §3: the snapshot also carries `questions` (an answer can
-    // insert a follow-up right after itself) and `assumptionsLen`.
+    // insert a follow-up right after itself) and — CR7-02 (4) — the
+    // assumptions array itself (it was `assumptionsLen`, which a replaced
+    // assumption can no longer be undone by).
     expect(next).toEqual({
       ...state,
       answers: [answer],
-      undo: { graph: g, correctionsLen: 0, questions: [], assumptionsLen: 0 },
+      undo: { graph: g, correctionsLen: 0, questions: [], assumptions: [] },
     });
   });
 
@@ -323,6 +328,8 @@ describe('intakeReducer', () => {
       corrections: [],
       useCaseId: 'uc-1',
       originalVerdictId: 'verdict-abc',
+      // CR7-02 (6): a revisited screen, not a first reading.
+      reentry: true,
     });
   });
 
@@ -352,6 +359,8 @@ describe('intakeReducer', () => {
       corrections: [],
       useCaseId: 'uc-1',
       originalVerdictId: 'verdict-abc',
+      // CR7-02 (6): a revisited screen, not a first reading.
+      reentry: true,
       // Review 004 finding 2: the jurisdictions panel must render (and stay
       // editable) after a failed evaluation — the failure most likely to
       // land here is jurisdiction/track-driven.
@@ -663,6 +672,7 @@ describe('intakeReducer — EVALUATION_FAILED routes by intake_method (F-2, DR7-
       originalVerdictId: 'v-abc',
       jurisdictionsConfirmed: true,
       afterFailedEvaluation: true,
+      reentry: true, // CR7-02 (6)
     });
   });
 
@@ -1284,7 +1294,7 @@ describe('intakeReducer — ANSWER_SUBMITTED insertQuestions/assumption (R16-E �
     expect(next).toEqual({
       ...base(),
       answers: [{ questionId: 'Q1', value: 'operational' }],
-      undo: { graph: graph(), correctionsLen: 0, questions: base().questions, assumptionsLen: 0 },
+      undo: { graph: graph(), correctionsLen: 0, questions: base().questions, assumptions: [] },
     });
   });
 });
@@ -1382,7 +1392,14 @@ describe('intakeReducer — guessedFields/provenance/gate values survive Back fr
     });
   });
 
-  it('TC-CR6-03c: a guessed field that has been answered drops out of the carried guessedFields, so Back + Continue will not ask it again', () => {
+  // CR7-03 supersedes the second half of this test. It used to pin "Back
+  // restores the TRIMMED list, so Back + Continue will not ask the answered
+  // field again" — exactly the defect CR7-03 closes (a rejected supplier
+  // guess, or a "Not sure", then silently survived a Back). The
+  // questionnaire's own list is still trimmed as the field is answered; Back
+  // now restores the list as it stood when the questions were generated, so
+  // the answered field IS asked again.
+  it('TC-CR6-03c: a guessed field that has been answered drops out of the questionnaire\'s own guessedFields; Back restores the full asked list (CR7-03)', () => {
     const questionnaire = intakeReducer(reviewState(), {
       type: 'QUESTIONS_GENERATED',
       questions: [
@@ -1408,7 +1425,7 @@ describe('intakeReducer — guessedFields/provenance/gate values survive Back fr
     expect(answered).toMatchObject({ step: 'questionnaire', guessedFields: { n1: ['platform'] } });
 
     const back = intakeReducer(answered, { type: 'STEP_BACK' });
-    expect(back).toMatchObject({ step: 'graph_review', guessedFields: { n1: ['platform'] } });
+    expect(back).toMatchObject({ step: 'graph_review', guessedFields: { n1: ['vendor', 'platform'] } });
   });
 
   it('TC-CR6-03d: a form-path (or gate-free correction) graph_review has no unconfirmedNodeIds/jurisdictionsConfirmed, and Back from its questionnaire keeps both undefined — "no gate" is unaffected (TC-R5-GR-2-03 stays green)', () => {
@@ -1667,8 +1684,8 @@ describe('intakeReducer — ANSWER_SUBMITTED keeps one assumption per question; 
     description: 'd',
     graph: graph(),
     questions: [
-      { id: 'Q-rev', field: 'output_reversibility', node_id: 'o1', triggered_by: [], answer_type: 'single' },
-      { id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'single' },
+      { id: 'Q-rev', field: 'output_reversibility', node_id: 'o1', triggered_by: [], answer_type: 'select' },
+      { id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' },
     ],
     answers: [],
     resolutionNotes: [],
@@ -1734,7 +1751,7 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     jurisdictionsConfirmed: true,
     guessedFields: { p1: ['vendor'] },
   };
-  const Q = { id: 'Q-vendor', field: 'vendor', node_id: 'p1', triggered_by: [], answer_type: 'single' as const };
+  const Q = { id: 'Q-vendor', field: 'vendor', node_id: 'p1', triggered_by: [], answer_type: 'select' as const };
 
   it('TC-CR7-03 (reducer): QUESTIONS_GENERATED snapshots the graph, corrections and the untrimmed guessed list', () => {
     const q = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
@@ -1788,5 +1805,22 @@ describe('intakeReducer — Back from the questions restores the pre-questionnai
     };
     const back = intakeReducer(old, { type: 'STEP_BACK' });
     expect(back).toMatchObject({ step: 'graph_review', graph: g2, corrections: [c0, c1], guessedFields: {} });
+  });
+
+  it('TC-CR7-02 (6) (reducer): a revisited review screen stays marked as revisited across a trip into the questions and Back (including a contradiction round trip)', () => {
+    const revisited: IntakeState = { ...(review as Extract<IntakeState, { step: 'graph_review' }>), reentry: true };
+    let s = intakeReducer(revisited, { type: 'QUESTIONS_GENERATED', questions: [Q] });
+    expect(s).toMatchObject({ step: 'questionnaire', reentry: true });
+    expect(intakeReducer(s, { type: 'STEP_BACK' })).toMatchObject({ step: 'graph_review', reentry: true });
+    s = intakeReducer(s, { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] });
+    s = intakeReducer(s, { type: 'CONTRADICTION_RESOLVED', explanation: 'explained' });
+    expect(intakeReducer(s, { type: 'STEP_BACK' })).toMatchObject({ step: 'graph_review', reentry: true });
+  });
+
+  it('TC-CR7-02 (6) (reducer): a first reading of the review screen is NOT marked as revisited, before or after a trip into the questions', () => {
+    const s = intakeReducer(review, { type: 'QUESTIONS_GENERATED', questions: [Q] });
+    expect('reentry' in s && s.reentry).toBeFalsy();
+    const back = intakeReducer(s, { type: 'STEP_BACK' });
+    expect('reentry' in back && back.reentry).toBeFalsy();
   });
 });

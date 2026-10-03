@@ -239,9 +239,11 @@ async function reachNotSureConfirmation(user: User) {
  *  description its use_case_created event carries. */
 async function eventsOfType(type: string, description = NSDESC) {
   const all = await getAllForExport();
-  const created = all.find(
-    (e) => e.payload.type === 'use_case_created' && (e.payload as { description?: string }).description === description,
-  );
+  // The store persists across the tests of this file: the LAST case created
+  // with this description is this test's own.
+  const created = all
+    .filter((e) => e.payload.type === 'use_case_created' && (e.payload as { description?: string }).description === description)
+    .pop();
   if (!created) return [];
   return all.filter((e) => e.use_case_id === created.use_case_id && e.payload.type === type);
 }
@@ -479,7 +481,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     await reachReview(user, NSDESC);
     // Continue with the cards unchecked -> the gate error.
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
-    expect((await screen.findAllByText(/still need checking|check the countries/i)).length).toBeGreaterThan(0);
+    expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
   }
 
   it('TC-CR7-24: Back, then forward again, shows no stale gate error', async () => {
@@ -488,7 +490,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     await user.click(screen.getByRole('button', { name: /back/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('Check what we read from your description');
-    expect(screen.queryAllByText(/still need checking|check the countries/i)).toHaveLength(0);
+    expect(document.querySelector('.intake-flow__gate-error')).toBeNull();
   }, 30000);
 
   it('TC-CR7-24: Start over, then a fresh case to the review screen, shows no stale gate error', async () => {
@@ -499,13 +501,13 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     mockCreate.mockResolvedValue(notSureExtraction());
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /^continue$/i }));
-    expect((await screen.findAllByText(/still need checking|check the countries/i)).length).toBeGreaterThan(0);
+    expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /start over instead/i }));
     await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), NSDESC);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
     await screen.findByText('Check what we read from your description');
-    expect(screen.queryAllByText(/still need checking|check the countries/i)).toHaveLength(0);
+    expect(document.querySelector('.intake-flow__gate-error')).toBeNull();
   }, 30000);
 });
 
@@ -605,6 +607,8 @@ describe('CR7-04 (form half) — changing Q3 does not keep a hidden model name',
     const mine = (await getUseCases('all')).find((u) => u.label === 'Probe')!;
     const graph = await getGraph(mine.use_case_id);
     expect(graph.nodes.filter((n) => n.node_type === 'ai_model')).toHaveLength(0);
+    // BC-005 (CR7-37): with a working rules file, the policy-problem sentence is not on screen.
+    expect(document.body.textContent).not.toMatch(/rules file has a problem/i);
   }, 30000);
 });
 
@@ -725,28 +729,38 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     await addNode({
       node_id: crypto.randomUUID(),
       node_type: 'use_case',
-      label: 'Adopt-late probe assistant',
+      label: 'Adopt-late reconciliation workflow assistant',
       created_at: '2026-01-01T00:00:00.000Z',
       metadata: { node_type: 'use_case', submitted_by: '1LoD', lifecycle_stage: 'approved', current_verdict_id: null, tier: 'High', track: 'II' },
     });
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-late probe assistant' }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-late reconciliation workflow assistant' }));
     const gate = held<void>();
+    const user = userEvent.setup();
+    render(<App />);
+    const adopt = await screen.findByRole('button', { name: /use the earlier result/i });
+    // Spied only now: App's own demo seeding also calls addNode, and a spy
+    // installed earlier would be consumed by (and hold up) that instead.
     const realAddNode = registerModule.addNode;
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
     addNodeSpy.mockImplementationOnce(async (...args) => {
       await gate.promise;
       return realAddNode(...args);
     });
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
+    await user.click(adopt);
     await vi.waitFor(() => expect(addNodeSpy).toHaveBeenCalled());
     await user.click(screen.getByRole('button', { name: /▤ register/i }));
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(NEWER_DRAFT));
 
     gate.resolve();
     await waitFor(async () => {
-      expect((await getAllForExport()).some((e) => e.event_type === 'classification_adopted')).toBe(true);
+      // This adoption's own event (other tests in this file adopted too).
+      expect(
+        (await getAllForExport()).some(
+          (e) =>
+            e.payload.type === 'classification_adopted' &&
+            (e.payload as { adopted_from_label?: string }).adopted_from_label === 'Adopt-late reconciliation workflow assistant',
+        ),
+      ).toBe(true);
     });
     expect((loadDraft() as { useCaseId?: string }).useCaseId).toBe('uc-newer-case');
   }, 30000);
@@ -756,11 +770,11 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     await addNode({
       node_id: crypto.randomUUID(),
       node_type: 'use_case',
-      label: 'Adopt-own probe assistant',
+      label: 'Adopt-own reconciliation workflow assistant',
       created_at: '2026-01-01T00:00:00.000Z',
       metadata: { node_type: 'use_case', submitted_by: '1LoD', lifecycle_stage: 'approved', current_verdict_id: null, tier: 'High', track: 'II' },
     });
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-own probe assistant' }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step: 'duplicate_check', description: 'Adopt-own reconciliation workflow assistant' }));
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
@@ -790,6 +804,10 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
     vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText(/evaluation could not complete/i)).toBeInTheDocument();
+    // The first attempt wrote its corrections (the name sits on two nodes, so
+    // there is more than one) BEFORE evaluating.
+    const afterFirstAttempt = (await getAll(useCase.use_case_id)).filter((e) => e.event_type === 'graph_corrected');
+    expect(afterFirstAttempt.length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     await clickThroughToConfirm(user);
@@ -800,8 +818,10 @@ describe('CR7-21 / CR7-22 — correction events are written once, and a fresh co
       { timeout: 5000 },
     );
 
+    // The retry minted fresh correction ids for the same changes: none of
+    // them is written again.
     const corrections = (await getAll(useCase.use_case_id)).filter((e) => e.event_type === 'graph_corrected');
-    expect(corrections).toHaveLength(1);
+    expect(corrections).toHaveLength(afterFirstAttempt.length);
   }, 60000);
 
   it('TC-CR7-21b: a description-path correction -> failed evaluation -> retry puts the correction on the trail exactly once', async () => {
@@ -847,15 +867,53 @@ describe('CR7-30 (writer half) — no "undefined" value in a recorded correction
     await screen.findByText(/what can it get into by itself/i);
     await user.click(screen.getByRole('checkbox', { name: /nothing beyond what it.s given for the task/i }));
     await user.click(screen.getByRole('button', { name: /^done$/i }));
+    await screen.findByText(/can copies of it, or other ai agents, pass work or messages to each other/i);
+    await user.click(screen.getByRole('button', { name: /^no — it works alone$/i }));
     await clickThroughToConfirm(user);
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
     await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
 
     const hit = (await eventsOfType('graph_corrected'))
       .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction)
-      .find((c) => c.field === 'system_access_scope')!;
+      .find((c) => c.field === 'multi_instance_coordination')!;
     expect(hit).toBeDefined();
     expect(hit.original_value).toBeNull();
-    expect(hit.corrected_value).not.toBeUndefined();
+    expect(hit.corrected_value).toBe('no');
+  }, 30000);
+});
+
+describe('CR7-28 — a questions draft from before CR6 restores as the review screen, and says so', () => {
+  const oldDraft = (version2: boolean) => {
+    const state = {
+      step: 'questionnaire',
+      description: 'A description the person typed earlier.',
+      graph: makeGraph({ intake_method: 'llm' }),
+      questions: [{ id: 'Q1', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' }],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-old-draft',
+    };
+    return JSON.stringify(version2 ? { version: 2, state } : state);
+  };
+
+  it('TC-CR7-28: the review screen shows with every card to re-check, the countries unchecked, and the plain notice', async () => {
+    sessionStorage.setItem(DRAFT_KEY, oldDraft(false));
+    render(<App />);
+    expect(await screen.findByText('Check what we read from your description')).toBeInTheDocument();
+    expect(screen.getByText(/saved by an earlier version of this tool/i)).toBeInTheDocument();
+    // Every card still needs checking; the countries are not yet checked.
+    expect(screen.getAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /^(these are right|none of these — continue)$/i })).toBeInTheDocument();
+    // Continue is refused until they are (the gate is ON, not silently off).
+    await userEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(await screen.findByText(/still need checking/i)).toBeInTheDocument();
+  }, 30000);
+
+  it('TC-CR7-28 (BC-005): a draft the current build saved shows no such notice', async () => {
+    sessionStorage.setItem(DRAFT_KEY, oldDraft(true));
+    render(<App />);
+    expect(await screen.findByText(/question 1 of 1/i)).toBeInTheDocument();
+    expect(screen.queryByText(/saved by an earlier version of this tool/i)).not.toBeInTheDocument();
   }, 30000);
 });

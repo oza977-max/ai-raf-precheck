@@ -549,7 +549,7 @@ safety_margin: 0.1
     await userEvent.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     // Not stuck: the reason is shown and the person is back at their answers.
-    expect(await screen.findByText(/evaluation could not complete: policy file invalid/i)).toBeInTheDocument();
+    expect(await screen.findByText(/evaluation could not complete: .*rules file has a problem/i)).toBeInTheDocument();
     expect(screen.queryByText(/^Evaluating…$/)).not.toBeInTheDocument();
     // Nothing reached the append-only trail.
     expect(await getAll(useCaseId)).toEqual([]);
