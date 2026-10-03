@@ -44,15 +44,18 @@ export interface AuditEvent {
   // Hash chain (explore-007 D-001 fix, round 8): every event is written with
   // a SHA-256 hash of its own content plus the hash of the event written
   // immediately before it, across the WHOLE trail — not per use case. Any
-  // edit, deletion, or reorder of a past event breaks the chain from that
-  // point forward, and verifyChain() (store/audit.ts) detects that on
-  // read. `prev_hash` is null only for the very first event ever written.
+  // edit, reorder, or deletion of a past event that has later events after
+  // it breaks the chain from that point forward, and verifyChain()
+  // (store/audit.ts) detects that on read. Removing the NEWEST events leaves
+  // a shorter chain that still verifies (CR8-04b) — not detectable without an
+  // outside anchor.
+  // `prev_hash` is null only for the very first event ever written.
   // This is tamper-EVIDENT, not tamper-PROOF: it is still a client-side
   // store, so a sophisticated attacker with full local access could in
   // principle recompute the entire chain consistently after an edit. What
   // it closes is the honest gap the product used to state outright — a
-  // single altered or deleted event, the common case, is now detectable
-  // rather than invisible.
+  // single altered event, or a deleted event with later ones after it, is
+  // now detectable rather than invisible.
   prev_hash: string | null;
   hash: string;
 }
@@ -149,9 +152,10 @@ export type AuditEventPayload =
       assumptions?: AssumptionRecord[];
       // R16-D2 §4b: same field as verdict_produced's above.
       evidence_scope?: { platform?: string; vendor?: string };
-      // R16-D2 §5/§8 (F2C-6). How many graph_corrected events this
-      // correction pass wrote — a zero-correction resubmission writes
-      // none, and eventDetail (RegisterDetail.tsx) reads this to render
+      // R16-D2 §5/§8 (F2C-6), reworded CR8-19. The number of graph_corrected
+      // events on the trail since the last result for this attempt — NOT the
+      // number this one pass wrote. A zero means no answer changed since that
+      // result, and eventDetail (RegisterDetail.tsx) reads it to render
       // "Re-checked — no answers changed." rather than implying something
       // changed. Optional: a pre-D2 verdict_corrected predates the field,
       // and an absent count is never read as zero (`=== 0`, not `!count`).

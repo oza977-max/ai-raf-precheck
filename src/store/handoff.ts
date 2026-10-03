@@ -316,8 +316,9 @@ const auditPayloadSchema = z.discriminatedUnion('type', [
     contradiction_resolutions: z.array(z.string()).optional(),
     answer_contexts: z.array(z.string()).optional(),
     // R16-D2 §1/§4/§4b/§8: same fields as graph_confirmed/verdict_produced
-    // above, plus how many graph_corrected events this pass wrote
-    // (F2C-6's zero-correction "Re-checked" rendering).
+    // above, plus corrections_count: the graph_corrected events on the trail
+    // since the last result for this attempt (CR8-19; F2C-6's
+    // zero-correction "Re-checked" rendering).
     assumptions: z.array(assumptionSchema).optional(),
     evidence_scope: evidenceScopeSchema.optional(),
     corrections_count: z.number().optional(),

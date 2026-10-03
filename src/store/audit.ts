@@ -44,12 +44,18 @@ function safeTimeMs(iso: string): number {
 // taken at; the locked append compares it with `db.count('audit_events')` (an
 // O(1) call) and rescans (O(n), the existing chainOrder) only when another
 // tab — or any path that did not refresh the hint — has changed the table.
-// Residual, documented: a cross-tab replace that leaves an IDENTICAL event
-// count is not seen by this check (the in-tab replace/import paths below
-// invalidate the hint explicitly, so only another tab's replace is exposed).
+// CR8-07: an equal count alone is not trusted. The hint also remembers the
+// tip event's id and hash; when counts match, the stored event with that id
+// must still exist with the same hash (one O(1) get), otherwise rescan. That
+// catches another tab's replace that happened to leave the same number of
+// events. Still undetected, documented: a change that keeps the count AND the
+// tip event byte-identical while altering earlier events — an append lands on
+// the real tip either way, and verifyChain() is what finds the earlier edit.
 // No schema bump.
 interface TipHint {
   hash: string | null;
+  /** event_id of the tip event (null for an empty trail). */
+  eventId: string | null;
   ms: number;
   count: number;
 }
@@ -58,11 +64,17 @@ let tip: TipHint | undefined; // undefined = not yet loaded this session
 async function freshTip(): Promise<TipHint> {
   const db = await openAuditDb();
   const count = await db.count('audit_events');
-  if (tip !== undefined && tip.count === count) return tip;
+  if (tip !== undefined && tip.count === count) {
+    if (tip.eventId === null) return tip; // empty trail, still empty
+    const stored = await db.get('audit_events', tip.eventId);
+    if (stored !== undefined && stored.hash === tip.hash) return tip;
+  }
   const all = await db.getAll('audit_events');
   const ordered = chainOrder(all);
+  const last = ordered.at(-1);
   tip = {
-    hash: ordered.at(-1)?.hash ?? null,
+    hash: last?.hash ?? null,
+    eventId: last?.event_id ?? null,
     ms: all.reduce((m, e) => Math.max(m, safeTimeMs(e.occurred_at)), 0),
     count: all.length,
   };
@@ -209,7 +221,7 @@ async function appendOnce(event: AuditEventInput): Promise<void> {
   const withoutHash = { ...event, occurred_at };
   const hash = await sha256Hex((prev_hash ?? 'GENESIS') + '|' + eventContent(withoutHash));
   await db.add('audit_events', { ...withoutHash, prev_hash, hash });
-  tip = { hash, ms, count: current.count + 1 };
+  tip = { hash, eventId: event.event_id, ms, count: current.count + 1 };
 }
 
 // db.add() not db.put() — duplicate event_id throws ConstraintError rather than
@@ -424,12 +436,13 @@ export interface ChainVerification {
 
 // Walks the WHOLE trail in append order and recomputes every hash from its
 // stored content and the previous event's stored hash, comparing against
-// what was actually persisted. Detects: an edited field, a deleted event
-// (the chain after the gap no longer matches its recorded prev_hash), or a
-// reordered event. Does NOT detect a full, internally-consistent rewrite by
-// an attacker with the ability to recompute every downstream hash — that
-// requires an external anchor this client-side store does not have (see
-// the type comment on AuditEvent.hash). getAllForExport() now supplies
+// what was actually persisted. Detects: an edited field, a deleted event THAT
+// HAS LATER EVENTS AFTER IT (the chain after the gap no longer matches its
+// recorded prev_hash), or a reordered event. Does NOT detect removing the
+// NEWEST events (nothing follows them to disagree — TC-CR8-04b pins this), nor
+// a full, internally-consistent rewrite by an attacker with the ability to
+// recompute every downstream hash — both need an external anchor this
+// client-side store does not have (see the type comment on AuditEvent.hash). getAllForExport() now supplies
 // chain-linked order rather than time order (F15), so this is immune to
 // clock skew between machines raising a false alarm.
 export async function verifyChain(): Promise<ChainVerification> {
