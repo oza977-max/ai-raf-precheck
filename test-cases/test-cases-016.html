@@ -354,6 +354,7 @@
 <tr><td>TC-RG-8-47</td><td>R3-3: <code>buildChallengeMemo</code> on a verdict with no <code>explanation</code> at all (BC-V11C01-04 legacy verdicts) renders the same legacy note <code>RegisterDetail</code> shows, with every explanation-derived field falling back to "none recorded", instead of throwing &mdash; <code>challenge-memo.test.ts</code></td></tr>
 <tr><td>TC-RG-8-48</td><td>R3-3: clicking "Download effective-challenge memo" shows a visible error instead of failing silently when memo generation throws &mdash; <code>VerdictDisplay.memo-download.test.tsx</code></td></tr>
 <tr><td>TC-RG-8-48b</td><td>R3-3: a later, successful download clears the earlier error &mdash; <code>VerdictDisplay.memo-download.test.tsx</code></td></tr>
+<tr><td>TC-RG-8-49</td><td>The Import control is disabled &mdash; not just the chosen file ignored &mdash; for as long as a replace is waiting for its second step, and re-enables once that replace is abandoned (row added 2026-10-03, code review 006 A-6) &mdash; <code>RegisterView.handoff.test.tsx</code></td></tr>
 </tbody>
 </table>
 <p>R3-5 (a stale code comment in <code>src/engine/try-these.test.ts</code> claiming <code>docs/try-these.md</code> was left unedited, when the same commit had already updated it) is a comment-only correction &mdash; no behaviour changed, so no new test applies.</p>
@@ -402,6 +403,7 @@
 <tr><td>2026-09-28</td><td>Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41.</td></tr>
 <tr><td>2026-10-02</td><td>Round 3 fix pass (code-review-005 round 3, R3-1 through R3-5): 8 new tests added, TC-RG-8-42 through TC-RG-8-48b.</td></tr>
 <tr><td>2026-10-02</td><td>R16 chunk D1: TC-RG-8-37 and TC-RG-9-10 superseded (describesSameObligation deleted, replaced by <code>covers_reviews</code>); TC-RG-9-09's description updated to describe the replacement mechanism &mdash; see test-cases-020.md for the chunk's own new cases.</td></tr>
+<tr><td>2026-10-03</td><td>Code review 006 (A-6): row TC-RG-8-49 added for a test that existed without a row.</td></tr>
 </tbody>
 </table>
 </section>

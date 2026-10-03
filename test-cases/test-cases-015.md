@@ -2,8 +2,24 @@
 
 *Written 2026-08-25 alongside the R15 build (targeted UI redesign,
 `requirements/requirements-015.md`, `reviews/design-deliberation-001/proposal.md`).
-R15-C1 and R15-C2 shipped without new automated test cases; this file starts
-with R15-C3.*
+R15-C1's tests were written with the build but their rows were only added on
+2026-10-03 (code review 006, A-6) — see "R15-C1" below; R15-C2 shipped without
+new automated test cases.*
+
+## R15-C1 — register wording, legend and the role switcher (rows added 2026-10-03)
+
+| ID | Asserts |
+|---|---|
+| TC-R15-C1-01 | The register's Stage column shows the plain STAGE_LABELS word and keeps the raw stage value only as a data attribute — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-02 | The stage filter chips use the STAGE_LABELS words, not the raw stage values — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-03 | The 2LoD default view shows only rows awaiting sign-off, with a "Show all" toggle that reveals everything — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-04 | An always-visible legend explains Tier, Track, Stage and Verdict — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-05 | The provisional roll-up renders as a distinct banner with role="note" — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-06 | The Flags column shows badges when a row is flagged and a stable accessible name when it is not — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-07 | The Counterpoise self-assessment row gets a distinct class and a visible tag — `RegisterView.r15c1.test.tsx` |
+| TC-R15-C1-08 | The role switcher is labelled "Viewing as" and shows a visible honesty note — `App.r15c1.test.tsx` |
+| TC-R15-C1-09 | The role options carry a first-mention gloss — `App.r15c1.test.tsx` |
+| TC-R15-C1-10 | The 1LoD register scope note uses the honest view-preference wording — `App.r15c1.test.tsx` |
 
 ## R15-C3 — Guided form + Confirm & attest + questionnaire tag
 
@@ -187,3 +203,9 @@ to Superseded below.
 ---
 
 *Developed using the Grounded Vibe Methodology*
+
+## Changelog
+
+| Date | Change |
+|---|---|
+| 2026-10-03 | Code review 006 (A-6): rows TC-R15-C1-01 to -10 added for tests that existed without rows; the header no longer says R15-C1 shipped without automated tests. |

@@ -149,6 +149,7 @@ pass, not a separate feature.*
 | TC-RG-8-47 | R3-3: `buildChallengeMemo` on a verdict with no `explanation` at all (BC-V11C01-04 legacy verdicts) renders the same legacy note `RegisterDetail` shows, with every explanation-derived field falling back to "none recorded", instead of throwing — `challenge-memo.test.ts` |
 | TC-RG-8-48 | R3-3: clicking "Download effective-challenge memo" shows a visible error instead of failing silently when memo generation throws — `VerdictDisplay.memo-download.test.tsx` |
 | TC-RG-8-48b | R3-3: a later, successful download clears the earlier error — `VerdictDisplay.memo-download.test.tsx` |
+| TC-RG-8-49 | The Import control is disabled — not just the chosen file ignored — for as long as a replace is waiting for its second step, and re-enables once that replace is abandoned (row added 2026-10-03, code review 006 A-6) — `RegisterView.handoff.test.tsx` |
 
 R3-5 (a stale code comment in `src/engine/try-these.test.ts` claiming
 `docs/try-these.md` was left unedited, when the same commit had already
@@ -215,6 +216,7 @@ and `python3 scripts/trace-check.py`, all clean. The round-3 fix pass
 | 2026-09-28 | Round 2 fix pass (code-review-005 round 2, N1-N9 + the noted test gap): 14 new tests added, TC-RG-8-28 through TC-RG-8-41. |
 | 2026-10-02 | Round 3 fix pass (code-review-005 round 3, R3-1 through R3-5): 8 new tests added, TC-RG-8-42 through TC-RG-8-48b. |
 | 2026-10-02 | R16 chunk D1: TC-RG-8-37 and TC-RG-9-10 superseded (describesSameObligation deleted, replaced by `covers_reviews`); TC-RG-9-09's description updated to describe the replacement mechanism — see test-cases-020.md for the chunk's own new cases. |
+| 2026-10-03 | Code review 006 (A-6): row TC-RG-8-49 added for a test that existed without a row. |
 
 ---
 

@@ -234,17 +234,38 @@
 <body>
 <div class="container">
 <nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#r15-c1-register-wording-legend-and-the-role-swit">R15-C1 &mdash; register wording, legend and the role switcher (rows added 2026-10-03)</a></li>
                 <li><a href="#r15-c3-guided-form-confirm-attest-questionnaire-">R15-C3 &mdash; Guided form + Confirm &amp; attest + questionnaire tag</a></li>
                 <li><a href="#r15-c4-appetite-framework-split-header-chip">R15-C4 &mdash; Appetite framework split + header chip</a></li>
                 <li><a href="#r15-c5-graph-review-refinements-rule-improvement">R15-C5 &mdash; Graph review refinements + rule-improvement queue</a></li>
                 <li><a href="#superseded">Superseded</a></li>
+                <li><a href="#changelog">Changelog</a></li>
 </ul></nav>
 <main class="main-content">
 <header>
 <h1>Counterpoise &mdash; Test Cases, Round 15</h1>
 <p class="metadata">25 August 2026 &middot; Generated from test-cases-015.md &mdash; do not hand-edit</p>
 </header>
-<p><em>Written 2026-08-25 alongside the R15 build (targeted UI redesign, <code>requirements/requirements-015.md</code>, <code>reviews/design-deliberation-001/proposal.md</code>). R15-C1 and R15-C2 shipped without new automated test cases; this file starts with R15-C3.</em></p>
+<p><em>Written 2026-08-25 alongside the R15 build (targeted UI redesign, <code>requirements/requirements-015.md</code>, <code>reviews/design-deliberation-001/proposal.md</code>). R15-C1's tests were written with the build but their rows were only added on 2026-10-03 (code review 006, A-6) &mdash; see "R15-C1" below; R15-C2 shipped without new automated test cases.</em></p>
+
+<section id="r15-c1-register-wording-legend-and-the-role-swit">
+<h2>R15-C1 &mdash; register wording, legend and the role switcher (rows added 2026-10-03)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R15-C1-01</td><td>The register's Stage column shows the plain STAGE_LABELS word and keeps the raw stage value only as a data attribute &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-02</td><td>The stage filter chips use the STAGE_LABELS words, not the raw stage values &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-03</td><td>The 2LoD default view shows only rows awaiting sign-off, with a "Show all" toggle that reveals everything &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-04</td><td>An always-visible legend explains Tier, Track, Stage and Verdict &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-05</td><td>The provisional roll-up renders as a distinct banner with role="note" &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-06</td><td>The Flags column shows badges when a row is flagged and a stable accessible name when it is not &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-07</td><td>The Counterpoise self-assessment row gets a distinct class and a visible tag &mdash; <code>RegisterView.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-08</td><td>The role switcher is labelled "Viewing as" and shows a visible honesty note &mdash; <code>App.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-09</td><td>The role options carry a first-mention gloss &mdash; <code>App.r15c1.test.tsx</code></td></tr>
+<tr><td>TC-R15-C1-10</td><td>The 1LoD register scope note uses the honest view-preference wording &mdash; <code>App.r15c1.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
 
 <section id="r15-c3-guided-form-confirm-attest-questionnaire-">
 <h2>R15-C3 &mdash; Guided form + Confirm &amp; attest + questionnaire tag</h2>
@@ -340,8 +361,19 @@
 <tr><td>TC-R15-C5-01</td><td>"<code>GraphView.tsx</code>'s <code>data_class</code>, <code>decision_bindingness</code>, <code>output_reversibility</code> and <code>autonomy_level</code> field rows render the plain question-derived label from <code>field-copy.ts</code>'s <code>GRAPH_FIELD_LABELS</code>, with the engine field name still present as a <code>&lt;code&gt;</code> element beside it." R16-E &sect;4 (D-103, "No code beside any label") reverses this case's own premise: the review screen's field rows now read from <code>QUESTIONNAIRE_COPY</code> instead of <code>GRAPH_FIELD_LABELS</code>, and the engine field name is removed from the row entirely, not merely relabelled &mdash; a quiet <code>&lt;code&gt;</code> beside the label is exactly what principle 1 now forbids on this screen. The replacement fact (the row label, with no code anywhere) is covered by <code>test-cases-024.md</code>'s TC-R16-E-41/41b.</td></tr>
 </tbody>
 </table>
+<hr>
+<p><em>Developed using the Grounded Vibe Methodology</em></p>
 </section>
-<footer class="gvm-attribution"><p><em>Developed using the Grounded Vibe Methodology</em></p></footer>
+
+<section id="changelog">
+<h2>Changelog</h2>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-03</td><td>Code review 006 (A-6): rows TC-R15-C1-01 to -10 added for tests that existed without rows; the header no longer says R15-C1 shipped without automated tests.</td></tr>
+</tbody>
+</table>
+</section>
 </main>
 </div>
 </body>
