@@ -14,6 +14,7 @@ import { getAll } from '../../store/audit';
 import { setRole } from '../../store/role';
 import { loadDraft } from '../intake-draft';
 import type { Assumption } from '../plain-copy';
+import { engineErrorMessage } from '../plain-copy';
 import { intakeReducer } from '../intake-state';
 import type { IntakeState } from '../intake-state';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
@@ -1369,5 +1370,39 @@ describe('CR8-14 — a failed evaluation on the review screen carries no blaming
     expect(alert).toHaveTextContent(/something went wrong working out the result/i);
     expect(alert).not.toHaveTextContent(/check the details below/i);
     expect(alert).not.toHaveTextContent(/try again/i);
+    // Exact text: the policy sentence already ends with a full stop, so none is added (no "..").
+    expect((alert.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      `Something went wrong working out the result: ${engineErrorMessage('no-track-match')}`,
+    );
+  }, 30000);
+});
+
+// CR8-01 (P2), whole-app: the assumption is listed back only while the graph
+// still holds the value it assumed.
+describe('CR8-01 — a card edit removes the assumption it makes untrue (end to end)', () => {
+  it('TC-CR8-01i: Not sure -> Change an answer -> edit the assumed field\'s card -> Confirm: graph_confirmed on the real trail carries no assumption for that field', async () => {
+    const user = userEvent.setup({ delay: null });
+    await reachNotSureConfirmation(user);
+    expect(screen.getAllByText(/the strictest case/i).length).toBeGreaterThan(0);
+
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Check what we read from your description');
+    await user.click(document.querySelector<HTMLButtonElement>('#card-o1 .graph-node__edit')!);
+    const select = screen.getByRole('combobox', { name: /client notifications — whether a mistake can be put right/i });
+    await user.selectOptions(select, 'reversible');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    // The summary no longer lists the assumption either.
+    expect(screen.queryByText(/the strictest case/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+
+    const confirmed = (await eventsOfType('graph_confirmed')).pop()!.payload as unknown as {
+      assumptions?: AssumptionLike[];
+    };
+    const mentioning = (confirmed.assumptions ?? []).filter(
+      (a) => a.questionId === 'field:output_reversibility' || a.fields.includes('output_reversibility'),
+    );
+    expect(mentioning).toEqual([]);
   }, 30000);
 });

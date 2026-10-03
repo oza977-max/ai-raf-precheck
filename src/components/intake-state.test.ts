@@ -2083,14 +2083,28 @@ describe('intakeReducer — a card edit narrows or removes the assumption it mak
     expect(listed(out).map((a) => a.questionId)).toEqual(['6', '3']);
   });
 
-  it('TC-CR8-01d: a countries edit removes the jurisdictions assumption (CR7-23) and leaves the others', () => {
+  it('TC-CR8-01d: a countries edit KEEPS the CR7-23 "somewhere else" assumption (the panel cannot say "somewhere else", so the disclosure stays true) and leaves the others', () => {
     const review = intakeReducer(confirmation([A_JUR, A_REV]), { type: 'CHANGE_ANSWER' });
     const after = intakeReducer(review, {
       type: 'JURISDICTIONS_SET',
       correction: corrected('graph', 'jurisdictions'),
       updatedGraph: graph({ version: 2, jurisdictions: ['UK'] }),
     });
-    expect(listed(after).map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+    expect(listed(after)).toEqual([A_JUR, A_REV]);
+  });
+
+  it('TC-CR8-01j: a different assumption that lists the jurisdictions field is still narrowed by a countries edit (only question 11 is exempt)', () => {
+    const other: Assumption = { ...A_JUR, questionId: 'x-other', fields: ['jurisdictions', 'scale'] };
+    const review = intakeReducer(confirmation([other, A_JUR]), { type: 'CHANGE_ANSWER' });
+    const after = intakeReducer(review, {
+      type: 'JURISDICTIONS_SET',
+      correction: corrected('graph', 'jurisdictions'),
+      updatedGraph: graph({ version: 2, jurisdictions: ['UK'] }),
+    });
+    expect(listed(after).map((a) => [a.questionId, a.fields])).toEqual([
+      ['x-other', ['scale']],
+      ['11', ['jurisdictions']],
+    ]);
   });
 
   it('TC-CR8-01e: an edit to a DIFFERENT field keeps the assumption, with its fields untouched', () => {
@@ -2158,51 +2172,111 @@ describe('intakeReducer — the Back guard survives the confirmation (CR8-03, P3
     expect(s.step).toBe('duplicate_check');
   });
 
-  it('TC-CR8-03d (reducer, P3 over the whole step x action table): from a state after a confirmed attestation, no sequence of actions (RESTART excluded — Start over is a deliberate exit) reaches duplicate_check', () => {
-    const g = graph({ intake_method: 'llm', jurisdictions: [] });
+  it('TC-CR8-03d (reducer, P3 over the whole step x action table): from a state after a confirmed attestation — on a description graph AND a form graph — no sequence of actions (RESTART excluded: Start over is a deliberate exit) reaches duplicate_check or carries a different useCaseId', () => {
     const corr = (id: string): GraphCorrection => ({
       correction_id: id, graph_version_before: 1, graph_version_after: 2, node_id: 'n1', field: 'scale',
       original_value: 'a', corrected_value: 'b', corrected_by: '1LoD', corrected_at: '2026-01-01T00:00:00.000Z',
     });
     const Qs = [{ id: 'Q1', field: 'scale', node_id: 'n1', triggered_by: [], answer_type: 'text' as const }];
-    const actions: Array<Parameters<typeof intakeReducer>[1]> = [
-      { type: 'STEP_BACK' },
-      { type: 'QUESTIONS_GENERATED', questions: [] },
-      { type: 'QUESTIONS_GENERATED', questions: Qs },
-      { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'x' } },
-      { type: 'ANSWER_UNDONE' },
-      { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] },
-      { type: 'CONTRADICTION_RESOLVED', explanation: 'because' },
-      { type: 'PROCEED_TO_CONFIRMATION' },
-      { type: 'CHANGE_ANSWER' },
-      { type: 'CONFIRMED' },
-      { type: 'EVALUATION_FAILED' },
-      { type: 'VERDICT_READY' },
-      { type: 'CORRECTION_APPLIED', correction: corr('c1'), updatedGraph: g },
-      { type: 'JURISDICTIONS_SET', correction: corr('c2'), updatedGraph: g },
-      { type: 'NODE_CONFIRMED', nodeId: 'n1' },
-      { type: 'JURISDICTIONS_CONFIRMED' },
-      { type: 'CORRECT_VERDICT', graph: g, useCaseId: 'uc-1', originalVerdictId: 'v1' },
-    ];
-    const start = intakeReducer(confirmationFirstTime(), { type: 'CONFIRMED' }); // evaluation_pending: attested
-    const seen = new Set<string>([JSON.stringify(start)]);
-    let frontier: IntakeState[] = [start];
-    for (let depth = 0; depth < 9; depth++) {
-      const next: IntakeState[] = [];
-      for (const s of frontier) {
-        for (const a of actions) {
-          const n = intakeReducer(s, a);
-          expect(n.step, `${s.step} + ${a.type} reached duplicate_check`).not.toBe('duplicate_check');
-          const k = JSON.stringify(n);
-          if (!seen.has(k)) {
-            seen.add(k);
-            next.push(n);
+    const formStart = (): IntakeState => ({
+      step: 'confirmation',
+      description: 'd',
+      graph: graph({ intake_method: 'structured_form' }),
+      graphVersion: 1,
+      corrections: [],
+      answers: [],
+      resolutionNotes: [],
+      useCaseId: 'uc-1',
+      plainAnswers: { '1': 'Test tool' },
+      assumptions: [],
+      afterFailedEvaluation: false,
+    });
+    // `NEW` stands for a brand-new case id a caller could hand to an action that
+    // mints a case. The reducer must never let it replace the attested one.
+    const NEW = 'uc-NEW';
+    const explore = (g: DataFlowGraph, start: IntakeState) => {
+      const actions: Array<Parameters<typeof intakeReducer>[1]> = [
+        { type: 'STEP_BACK' },
+        { type: 'SUBMIT_DESCRIPTION' },
+        { type: 'DESCRIPTION_CHANGED', description: 'other' },
+        { type: 'NO_DUPLICATE_FOUND', method: 'llm' },
+        { type: 'NO_DUPLICATE_FOUND', method: 'form' },
+        { type: 'SWITCH_TO_FORM' },
+        { type: 'GRAPH_EXTRACTED', graph: graph({ intake_method: 'llm' }), useCaseId: NEW },
+        {
+          type: 'FORM_SUBMITTED',
+          graph: graph({ intake_method: 'structured_form' }),
+          useCaseId: NEW,
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+          questions: [],
+          contradictions: [],
+          corrections: [],
+        },
+        {
+          type: 'FORM_SUBMITTED',
+          graph: graph({ intake_method: 'structured_form' }),
+          useCaseId: NEW,
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+          questions: Qs,
+          contradictions: [],
+          corrections: [],
+        },
+        { type: 'QUESTIONS_GENERATED', questions: [] },
+        { type: 'QUESTIONS_GENERATED', questions: Qs },
+        { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'x' } },
+        { type: 'ANSWER_UNDONE' },
+        { type: 'CONTRADICTIONS_DETECTED', contradictions: [{ statement1: 'a', statement2: 'b', field: 'scale' } as never] },
+        { type: 'CONTRADICTION_RESOLVED', explanation: 'because' },
+        { type: 'PROCEED_TO_CONFIRMATION' },
+        { type: 'CHANGE_ANSWER' },
+        { type: 'CONFIRMED' },
+        { type: 'EVALUATION_FAILED' },
+        { type: 'VERDICT_READY' },
+        { type: 'CORRECTION_APPLIED', correction: corr('c1'), updatedGraph: g },
+        { type: 'JURISDICTIONS_SET', correction: corr('c2'), updatedGraph: g },
+        { type: 'NODE_CONFIRMED', nodeId: 'n1' },
+        { type: 'JURISDICTIONS_CONFIRMED' },
+        // The caller of a correction passes the case being corrected (the
+        // original id); those two cannot mint a new one by themselves.
+        { type: 'CORRECT_VERDICT', graph: g, useCaseId: 'uc-1', originalVerdictId: 'v1' },
+        {
+          type: 'CORRECT_VERDICT_WITH_FORM',
+          originalGraph: g,
+          useCaseId: 'uc-1',
+          originalVerdictId: 'v1',
+          description: 'd',
+          plainAnswers: { '1': 'Test tool' },
+          assumptions: [],
+        },
+      ];
+      const attested = intakeReducer(start, { type: 'CONFIRMED' }); // evaluation_pending: attested
+      const seen = new Set<string>([JSON.stringify(attested)]);
+      let frontier: IntakeState[] = [attested];
+      for (let depth = 0; depth < 7; depth++) {
+        const next: IntakeState[] = [];
+        for (const s of frontier) {
+          for (const a of actions) {
+            const n = intakeReducer(s, a);
+            expect(n.step, `${s.step} + ${a.type} reached duplicate_check`).not.toBe('duplicate_check');
+            const id = n.step === 'verdict' ? n.verdictId : 'useCaseId' in n ? n.useCaseId : undefined;
+            if (id !== undefined) expect(id, `${s.step} + ${a.type} changed the case id`).toBe('uc-1');
+            const k = JSON.stringify(n);
+            if (!seen.has(k)) {
+              seen.add(k);
+              next.push(n);
+            }
           }
         }
+        frontier = next;
       }
-      frontier = next;
-    }
-    expect(seen.size).toBeGreaterThan(20);
+      return seen.size;
+    };
+    expect(explore(graph({ intake_method: 'llm' }), confirmationFirstTime())).toBeGreaterThan(20);
+    expect(explore(graph({ intake_method: 'structured_form' }), formStart())).toBeGreaterThan(20);
   });
 });
 
