@@ -9,6 +9,15 @@
 # EU AI Act, OSFI E-23 (Canada), MAS (Singapore), DORA, and FSA Japan.
 #
 # CHANGE LOG
+#   1.9 (2026-10-03) — MODEL-NAMES (CR6-19 follow-up): presentation text
+#       only — no condition, tier, track or invariant change; the backtest
+#       predictions and every engine test pass unchanged apart from version
+#       strings. The two approved_models entries gain the owner-approved
+#       plain_name, so the description-path model buttons and the
+#       questionnaire's "Recorded" line no longer show a raw model id:
+#       VENDOR-LLM-v1 -> "A licensed AI model from an outside company
+#       (example)" (a demo placeholder, hence "(example)"); qwen3:4b ->
+#       "A small open model running on your own computer".
 #   1.8 (2026-10-02) — R16-W (walkthrough fixes): presentation text and
 #       evidence scope only — no condition, tier, track or invariant
 #       change; the backtest predictions and every engine test pass
@@ -159,7 +168,7 @@
 # The version is recorded in every verdict's audit trail.
 # ==============================================================================
 
-version: "1.8"
+version: "1.9"
 policy_id: "RAF-001"
 firm_name: "[FIRM]"
 
@@ -1371,12 +1380,14 @@ approved_models:
     vendor: "local (Ollama)"
     provenance_class: "open_weights_self_hosted"
     is_approved: false
+    plain_name: "A small open model running on your own computer"
     license_note: "Apache 2.0 (Qwen3 weights) — no firm benchmark evidence on file yet"
 
   - model_id: "VENDOR-LLM-v1"
     vendor: "[FIRM]-approved third-party LLM"
     provenance_class: "vendor_hosted"
     is_approved: true
+    plain_name: "A licensed AI model from an outside company (example)"
     license_note: "Commercial API license, standard terms"
     benchmark_evidence:
       suite: "[FIRM] Model Risk finance-domain eval suite"

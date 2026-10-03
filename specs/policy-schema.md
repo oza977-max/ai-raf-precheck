@@ -861,7 +861,7 @@ export interface ApprovedModel {
 }
 ```
 
-**Amended 2026-10-03 (CR6-19).** `ApprovedModel` gains an optional `plain_name?: string`, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read `plain_name ?? model_id`, so a raw id such as `VENDOR-LLM-v1` no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). The shipped entries `VENDOR-LLM-v1` and `qwen3:4b` still need an owner-supplied `plain_name` (policy text is owner-authored; owner action).
+**Amended 2026-10-03 (CR6-19).** `ApprovedModel` gains an optional `plain_name?: string`, the model's name in plain words. Labels and the questionnaire's "Recorded:" line read `plain_name ?? model_id`, so a raw id such as `VENDOR-LLM-v1` no longer reaches a button the submitter clicks. It is accepted and kept by the policy schema (TC-CR6-19b). MODEL-NAMES (2026-10-03, policy v1.9): the owner supplied the two shipped names — `VENDOR-LLM-v1` is "A licensed AI model from an outside company (example)" (a demo placeholder, hence "(example)") and `qwen3:4b` is "A small open model running on your own computer" (TC-MN-01..04).
 
 **ADR-PS-R11-1a — matching is exact-id-first, family-fallback; never
 weakens Track II pinning.** `resolveApprovedModel(declaredModelId, registry)`

@@ -70,7 +70,7 @@ function makeVerdict(overrides: Partial<Verdict> = {}): Verdict {
     controls: [],
     downstream_reviews: [],
     conditions: { hypotheses: [] },
-    policy_version: '1.8',
+    policy_version: '1.9',
     pack_versions: {},
     applied_overrides: [],
     confidence_caveats: [],
