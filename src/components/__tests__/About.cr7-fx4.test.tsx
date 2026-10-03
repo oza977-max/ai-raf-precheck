@@ -31,7 +31,7 @@ describe('AboutPanel — CR7-36: the shipped rule counts are computed, not typed
     const { container } = render(<AboutPanel onNavigate={() => {}} />);
     const text = container.textContent ?? '';
     expect(text).toContain(`${loaded.policy.hard_lines.length} hard lines, ${loaded.policy.invariants.length} appetite rules`);
-    expect(text).not.toContain('1 hard lines');
-    expect(text).not.toContain('3 appetite rules');
+    expect(text).not.toMatch(/\b1 hard lines/);
+    expect(text).not.toMatch(/\b3 appetite rules/);
   });
 });

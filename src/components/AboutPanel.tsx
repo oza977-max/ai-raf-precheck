@@ -8,6 +8,17 @@
 // session walked into it three times). Say "inside appetite" / "outside
 // appetite" instead, which is also the more precise language.
 // Rule 4 (cross-cutting.md §7): presentation-only.
+// CR7-36 / BC-005. "Out of the box" is a statement about the policy file that
+// ships with the app, so the counts are read from that file — not typed here
+// (the typed 18 had gone stale: the file has more), and not from the firm's
+// own edited copy.
+import shippedPolicyYaml from '../../policy/appetite.yaml?raw';
+import { loadPolicy } from '../store/policy';
+
+const shipped = loadPolicy(shippedPolicyYaml);
+const SHIPPED_HARD_LINES = shipped.valid ? String(shipped.policy.hard_lines.length) : 'several';
+const SHIPPED_APPETITE_RULES = shipped.valid ? String(shipped.policy.invariants.length) : 'a full set of';
+
 interface AboutPanelProps {
   onNavigate: (view: 'intake' | 'register' | 'policyEditor') => void;
 }
@@ -57,8 +68,8 @@ export default function AboutPanel({ onNavigate }: AboutPanelProps) {
       <h2>It comes with rules — you bring the authority</h2>
       <p>
         A common first question: &ldquo;if my firm has no appetite document, does this app have no
-        rules?&rdquo; The opposite. Out of the box it carries a complete working ruleset — 5 hard lines,
-        18 appetite rules, the full tiering and control machinery — derived from a regulator-grounded
+        rules?&rdquo; The opposite. Out of the box it carries a complete working ruleset —{' '}
+        {`${SHIPPED_HARD_LINES} hard lines, ${SHIPPED_APPETITE_RULES} appetite rules`}, the full tiering and control machinery — derived from a regulator-grounded
         template, and it produces real verdicts with zero configuration.
       </p>
       <p>
