@@ -14,7 +14,7 @@ import type { Verdict } from '../types/verdict';
 // register-lifecycle.md §9 (LC-6). Counterpoise must appear in its own register
 // with a real, self-produced verdict — not a fixture.
 export const AIGATE_USE_CASE_ID = 'aigate-self-assessment';
-const AIGATE_VENDOR_NODE_ID = 'aigate-vendor-anthropic';
+export const AIGATE_VENDOR_NODE_ID = 'aigate-vendor-anthropic';
 
 // BC-P7C01-03: uses output_reversibility (the real OutputNode field —
 // src/engine/types.ts line 86), not §9's incorrect `reversibility` example.

@@ -40,6 +40,28 @@ describe('audit tip hint (CR8-07)', () => {
   });
 });
 
+describe('audit tip hint — tip no longer newest (CR8-07b)', () => {
+  // Same count, tip event still stored with the same hash, but another tab has
+  // since deleted an earlier event and appended a newer one: the hint's tip is
+  // no longer the newest. Trusting it forks the chain (two events, one prev_hash).
+  it('TC-CR8-07b: a hint whose tip already has a successor is not trusted', async () => {
+    const A = await import('./audit');
+    for (const n of ['a1', 'a2', 'a3']) await A.append(mk(`cr8-07b-${n}`));
+    vi.resetModules();
+    const B = await import('./audit');
+    const { openAuditDb } = await import('./db');
+    const db = await openAuditDb();
+    await db.delete('audit_events', 'cr8-07b-a1');
+    await B.append(mk('cr8-07b-b4')); // count back to 3
+
+    await A.append(mk('cr8-07b-a5')); // A's hint: count 3, tip a3 present and unchanged
+
+    const all = await db.getAll('audit_events');
+    const prevs = all.map((e) => e.prev_hash);
+    expect(new Set(prevs).size).toBe(prevs.length); // no fork
+  });
+});
+
 describe('audit chain limit (CR8-04b)', () => {
   // Pins the honest wording: the check finds edits and non-tail deletions, and
   // CANNOT see the newest events removed. If this ever starts failing, the

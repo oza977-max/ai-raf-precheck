@@ -101,10 +101,10 @@ describe('seed recovery after a reload mid-seed (CR8-10)', () => {
     err.mockRestore();
   });
 
-  it('TC-CR8-10d: the self-assessment recovers its node, vendor and model link without a second set of events', async () => {
-    const { seedAigateSelfAssessment, AIGATE_USE_CASE_ID } = await import('./aigate-self-assessment');
+  it('TC-CR8-10d: the self-assessment recovers its node, vendor, edge and model link without a second set of events', async () => {
+    const { seedAigateSelfAssessment, AIGATE_USE_CASE_ID, AIGATE_VENDOR_NODE_ID } = await import('./aigate-self-assessment');
     const { getAllForExport } = await import('../store/audit');
-    const { getUseCase } = await import('../store/register');
+    const { getUseCase, getGraph } = await import('../store/register');
     await seedAigateSelfAssessment(policy);
     const before = await getAllForExport();
     const { openRegisterDb } = await import('../store/db');
@@ -116,5 +116,49 @@ describe('seed recovery after a reload mid-seed (CR8-10)', () => {
 
     expect((await getAllForExport()).map((e) => e.event_id)).toEqual(before.map((e) => e.event_id));
     expect(await getUseCase(AIGATE_USE_CASE_ID)).toBeDefined();
+    const g = await getGraph(AIGATE_USE_CASE_ID);
+    expect(g.nodes.map((n) => n.node_id)).toContain(AIGATE_VENDOR_NODE_ID);
+    expect(g.edges.map((e) => e.edge_type).sort()).toEqual(['provided_by_vendor', 'uses_model']);
+  });
+
+  it('TC-CR8-10e: the use-case node is written last, so a run interrupted before it is completed by the next, with no duplicate rows', async () => {
+    const { seedAigateSelfAssessment, AIGATE_USE_CASE_ID } = await import('./aigate-self-assessment');
+    const { getUseCase, getGraph } = await import('../store/register');
+    await seedAigateSelfAssessment(policy);
+    const { openRegisterDb } = await import('../store/db');
+    const db = await openRegisterDb();
+    await db.delete('register_nodes', AIGATE_USE_CASE_ID); // an interruption after vendor, edge and link
+
+    await seedAigateSelfAssessment(policy);
+
+    expect(await getUseCase(AIGATE_USE_CASE_ID)).toBeDefined();
+    const g = await getGraph(AIGATE_USE_CASE_ID);
+    expect(g.edges.map((e) => e.edge_type).sort()).toEqual(['provided_by_vendor', 'uses_model']);
+  });
+
+  it('TC-CR8-10f: recovery points the node at the LATEST verdict (a later verdict_corrected wins)', async () => {
+    const { seedSampleRegister, SAMPLE_PREFIX } = await import('./sample-register');
+    const { append, getAllForExport } = await import('../store/audit');
+    await seedSampleRegister(policy);
+    const id = `${SAMPLE_PREFIX}var-commentary`;
+    const produced = (await getAllForExport()).find((e) => e.use_case_id === id && e.payload.type === 'verdict_produced')!;
+    if (produced.payload.type !== 'verdict_produced') throw new Error('unreachable');
+    const newer = { ...produced.payload.verdict, id: 'cr8-10f-newer-verdict' };
+    await append({
+      event_id: 'cr8-10f-corrected',
+      use_case_id: id,
+      event_type: 'verdict_corrected',
+      occurred_at: new Date().toISOString(),
+      actor: '1LoD',
+      payload: { type: 'verdict_corrected', original_verdict_id: produced.payload.verdict.id, new_verdict: newer },
+    });
+    await dropNodes(SAMPLE_PREFIX);
+
+    await seedSampleRegister(policy);
+
+    const { openRegisterDb } = await import('../store/db');
+    const node = await (await openRegisterDb()).get('register_nodes', id);
+    expect(node!.metadata.node_type === 'use_case' && node!.metadata.current_verdict_id).toBe('cr8-10f-newer-verdict');
   });
 });
+
