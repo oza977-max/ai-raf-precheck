@@ -630,6 +630,33 @@ export function planCorrectionWrites(
   return { toWrite, sinceLastResult: written.length + toWrite.length };
 }
 
+/** CR8-01 (P2 — an assumption is listed back only while the graph still holds
+ *  the value it assumed). Called when the person edits `field` on the review
+ *  screen (CORRECTION_APPLIED, JURISDICTIONS_SET): the edited field is removed
+ *  from each assumption's `fields`, and an assumption is dropped only when no
+ *  field is left — a Q6 assumption covering four fields keeps the other three
+ *  when one is edited (narrow, don't drop).
+ *  - An assumption with absent/empty `fields` (a draft saved by an older build)
+ *    cannot be matched to a field, so any edit drops it: the safe direction.
+ *  - Accepted limit: a description-path assumption carries no node id, so an
+ *    edit of that field on one node narrows the assumption for any node. It is
+ *    only over-removal when the field exists on more than one node; the
+ *    honest direction (we list less, never a stale claim). A node id is NOT
+ *    added to Assumption — the hand-off schema would strip it (BC-002).
+ *  - ANSWER_SUBMITTED removes only the exact `field:X` id of the question just
+ *    answered; that is a different action and is deliberately left as it is.
+ *  - The Undo snapshot is questionnaire-only, so Undo cannot resurrect an
+ *    assumption this removes on the review screen. */
+function narrowAssumptions(assumptions: Assumption[] | undefined, field: string): Assumption[] | undefined {
+  if (!assumptions) return assumptions;
+  return assumptions.flatMap((a) => {
+    if (!a.fields || a.fields.length === 0) return [];
+    if (!a.fields.includes(field)) return [a];
+    const rest = a.fields.filter((f) => f !== field);
+    return rest.length === 0 ? [] : [{ ...a, fields: rest }];
+  });
+}
+
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
   switch (action.type) {
     case 'DESCRIPTION_CHANGED':
@@ -874,6 +901,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
+        // CR8-01 (P2): the edited field no longer holds the assumed value.
+        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, action.correction.field) } : {}),
         // R5-GR-2: a correction is stronger evidence of review than a
         // Confirm click — the human read the value closely enough to
         // change it. The corrected node needs no second confirmation.
@@ -919,6 +948,9 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         graph: action.updatedGraph,
         graphVersion: action.updatedGraph.version,
         corrections: [...state.corrections, action.correction],
+        // CR8-01 (P2): the countries were just set by the person — the
+        // CR7-23 "elsewhere, not sure" assumption about them no longer holds.
+        ...(state.assumptions ? { assumptions: narrowAssumptions(state.assumptions, 'jurisdictions') } : {}),
         ...(state.jurisdictionsConfirmed !== undefined ? { jurisdictionsConfirmed: true } : {}),
       };
 
