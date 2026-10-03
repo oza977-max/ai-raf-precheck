@@ -128,8 +128,11 @@ rebuilds the earlier step without it. The case then reaches the result unasked o
 (the reducer's step × action table) and, for each, a test that starts from a state holding every safety/honesty field and
 asserts they survive the round trip — or that the step is rebuilt fail-safe (re-asks). A fix whose text names several
 paths has one test per named path. Prefer making the fields required on the step's type so a dropped field fails to compile.
+**The converse (added after code review 008):** for every field a fix carries forward, list the actions
+that must REMOVE or RESET it (an edit that makes an assumption untrue, a step that ends a guard's
+reason) and test each — CR8-01 was a carried assumption no card edit removed.
 
-**Last triggered:** code review 007, 2026-10-03.
+**Last triggered:** code review 008, 2026-10-04 (CR8-01, CR8-03, CR8-08).
 
 ---
 
@@ -149,10 +152,13 @@ describes data the screen never reads.
 | Round | Instance |
 |---|---|
 | code review 005/006 | CR6-15's "probably confirmed in another tab or window" for a same-tab completion; earlier "immutable" trail copy. |
+| code review 008 (2026-10-04) | CR8-02 "You can start" in next steps under a "no sign-off on record" headline; CR8-04 "verified … unbroken" / "would show as a break" when deleting the newest entries passes the check. |
 | code review 007 (2026-10-03) | CR7-09 "no sign-off needed — self-service" on a case 2LoD signed off; CR7-22 "corrections are preserved in the audit trail" when only a count is written; CR7-40 "machine-verified" for evidence typed into the policy file; CR7-38 "not yet signed off" hard-coded for every pack. |
 
 **Acceptance criterion.** Every new or changed user-visible sentence that asserts a fact about the case, the trail or the
 policy names (in a code comment or the spec) the field or event it is derived from, and a test renders it in the state where
 the claim would be FALSE and asserts it is absent. Fixed strings that describe data are computed from that data.
+Every surface that renders the same fact (headline, next steps, stage note, banner, confirm notice) is checked
+together — CR8-02's next steps contradicted the fixed headline.
 
-**Last triggered:** code review 007, 2026-10-03.
+**Last triggered:** code review 008, 2026-10-04 (CR8-02, CR8-04).
