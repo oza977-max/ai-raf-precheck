@@ -64,7 +64,9 @@ describe('localChatJson', () => {
     // /no_think stops a reasoning model deliberating for 16k tokens, and
     // num_predict is the hard backstop if a model ignores the switch.
     expect(body.messages[0].content.startsWith('/no_think\n')).toBe(true);
-    expect(body.options.num_predict).toBe(1024);
+    // 2048 since 2026-10-03 (a three-sentence description overran 1024 —
+    // see local-provider.ts); still a hard bound.
+    expect(body.options.num_predict).toBe(2048);
   });
 
   it('strips <think> deliberation before parsing (reasoning models)', async () => {

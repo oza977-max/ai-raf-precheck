@@ -98,7 +98,7 @@ describe('intakeReducer', () => {
       useCaseId: 'uc-1',
     };
     const questions = [
-      { id: 'Q1', text: 'x?', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
+      { id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
     ];
     const next = intakeReducer(state, { type: 'QUESTIONS_GENERATED', questions });
     expect(next).toEqual({
@@ -132,8 +132,13 @@ describe('intakeReducer', () => {
     const answer = { questionId: 'Q1', value: 'yes' };
     const next = intakeReducer(state, { type: 'ANSWER_SUBMITTED', answer });
     // v0.7.1: the answer also snapshots the pre-answer graph for one-level
-    // undo.
-    expect(next).toEqual({ ...state, answers: [answer], undo: { graph: g, correctionsLen: 0 } });
+    // undo. R16-E §3: the snapshot also carries `questions` (an answer can
+    // insert a follow-up right after itself) and `assumptionsLen`.
+    expect(next).toEqual({
+      ...state,
+      answers: [answer],
+      undo: { graph: g, correctionsLen: 0, questions: [], assumptionsLen: 0 },
+    });
   });
 
   it('questionnaire → contradiction_review on CONTRADICTIONS_DETECTED, carrying corrections/useCaseId forward', () => {
@@ -703,7 +708,7 @@ describe('intakeReducer — uncertainNodeIds threads forward unchanged from QUES
     };
     const questionnaire = intakeReducer(reviewState, {
       type: 'QUESTIONS_GENERATED',
-      questions: [{ id: 'Q1', text: 'x?', field: 'vendor', triggered_by: [], answer_type: 'text' }],
+      questions: [{ id: 'Q1', field: 'vendor', triggered_by: [], answer_type: 'text' }],
     });
     expect(questionnaire).toMatchObject({ step: 'questionnaire', uncertainNodeIds: ['n1', 'n2'] });
     if (questionnaire.step !== 'questionnaire') throw new Error('unreachable');
@@ -730,7 +735,7 @@ describe('intakeReducer — uncertainNodeIds threads forward unchanged from QUES
 describe('nextReviewStep (F-6, DR7-13)', () => {
   it('TC-R16-F-55: questions present wins regardless of contradictions', async () => {
     const { nextReviewStep } = await import('./intake-state');
-    const q = [{ id: 'Q1', text: 'x?', field: 'f', triggered_by: [], answer_type: 'text' as const }];
+    const q = [{ id: 'Q1', field: 'f', triggered_by: [], answer_type: 'text' as const }];
     expect(nextReviewStep(q, [])).toBe('questionnaire');
     expect(nextReviewStep(q, [{ field: 'f', description_says: 'a', graph_says: 'b' } as never])).toBe('questionnaire');
   });
@@ -781,7 +786,7 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
   it('TC-R16-W-19: with questions present, goes to questionnaire — never graph_review', () => {
     const g = graph({ intake_method: 'structured_form' });
     const questions = [
-      { id: 'Q1', text: 'x?', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
+      { id: 'Q1', field: 'autonomy_level', triggered_by: ['INV-1'], answer_type: 'text' as const },
     ];
     const next = intakeReducer(formState(), {
       type: 'FORM_SUBMITTED',
@@ -1182,5 +1187,101 @@ describe('R16-D2 §5 (v2.1): a correction without its form answers never returns
       assumptions: [],
     };
     expect(intakeReducer(state, { type: 'CHANGE_ANSWER' })).toMatchObject({ step: 'graph_extraction', method: 'form' });
+  });
+});
+
+// R16-E §3 (D-102). ANSWER_SUBMITTED gains `insertQuestions` (a follow-up
+// question inserted right after the one just answered — decision_type
+// "other", a supplier/model not on the firm's list) and `assumption` (a
+// "Not sure" answer, accumulated into state.assumptions). ANSWER_UNDONE
+// reverses both, once.
+describe('intakeReducer — ANSWER_SUBMITTED insertQuestions/assumption (R16-E §3, D-102)', () => {
+  const base = (): Extract<IntakeState, { step: 'questionnaire' }> => ({
+    step: 'questionnaire',
+    description: 'd',
+    graph: graph(),
+    questions: [{ id: 'Q1', field: 'decision_type', triggered_by: [], answer_type: 'select' }],
+    answers: [],
+    resolutionNotes: [],
+    corrections: [],
+    useCaseId: 'uc-1',
+  });
+
+  it('TC-R16-E-21: insertQuestions splices the follow-up right after the answered question', () => {
+    const followUp = { id: 'Q1-other', field: 'decision_type_other', triggered_by: [], answer_type: 'text' as const };
+    const next = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'other' },
+      insertQuestions: [followUp],
+    });
+    expect(next.step).toBe('questionnaire');
+    if (next.step !== 'questionnaire') return;
+    expect(next.questions.map((q) => q.id)).toEqual(['Q1', 'Q1-other']);
+  });
+
+  it('TC-R16-E-22: a "Not sure" assumption is accumulated into state.assumptions, created on first use', () => {
+    const assumption = {
+      questionId: 'field:output_reversibility',
+      question: 'Can the mistake be caught?',
+      shortLabel: 'whether a mistake can be put right',
+      assumption: 'it can’t be undone — the strictest case',
+      fields: ['output_reversibility'],
+    };
+    const next = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'irreversible' },
+      assumption,
+    });
+    expect(next.step).toBe('questionnaire');
+    if (next.step !== 'questionnaire') return;
+    expect(next.assumptions).toEqual([assumption]);
+  });
+
+  it('TC-R16-E-23: a second "Not sure" answer appends to the existing assumptions list', () => {
+    const first = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'irreversible' },
+      assumption: { questionId: 'field:a', question: 'q', shortLabel: 's', assumption: 'x', fields: ['a'] },
+    });
+    if (first.step !== 'questionnaire') throw new Error('unreachable');
+    const withSecondQuestion = {
+      ...first,
+      questions: [...first.questions, { id: 'Q2', field: 'b', triggered_by: [], answer_type: 'boolean' as const }],
+    };
+    const next = intakeReducer(
+      withSecondQuestion,
+      {
+        type: 'ANSWER_SUBMITTED',
+        answer: { questionId: 'Q2', value: true },
+        assumption: { questionId: 'field:b', question: 'q2', shortLabel: 's2', assumption: 'y', fields: ['b'] },
+      },
+    );
+    expect(next.step).toBe('questionnaire');
+    if (next.step !== 'questionnaire') return;
+    expect(next.assumptions?.map((a) => a.fields[0])).toEqual(['a', 'b']);
+  });
+
+  it('TC-R16-E-24: ANSWER_UNDONE removes the inserted follow-up and the recorded assumption together', () => {
+    const followUp = { id: 'Q1-other', field: 'decision_type_other', triggered_by: [], answer_type: 'text' as const };
+    const answered = intakeReducer(base(), {
+      type: 'ANSWER_SUBMITTED',
+      answer: { questionId: 'Q1', value: 'other' },
+      insertQuestions: [followUp],
+      assumption: { questionId: 'field:decision_type', question: 'q', shortLabel: 's', assumption: 'x', fields: ['decision_type'] },
+    });
+    const undone = intakeReducer(answered, { type: 'ANSWER_UNDONE' });
+    expect(undone.step).toBe('questionnaire');
+    if (undone.step !== 'questionnaire') return;
+    expect(undone.questions.map((q) => q.id)).toEqual(['Q1']);
+    expect(undone.assumptions ?? []).toEqual([]);
+  });
+
+  it('TC-R16-E-25: no insertQuestions/assumption leaves the reducer\'s existing, unchanged behaviour exactly as before', () => {
+    const next = intakeReducer(base(), { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'operational' } });
+    expect(next).toEqual({
+      ...base(),
+      answers: [{ questionId: 'Q1', value: 'operational' }],
+      undo: { graph: graph(), correctionsLen: 0, questions: base().questions, assumptionsLen: 0 },
+    });
   });
 });

@@ -79,12 +79,18 @@ async function clickThroughToConfirm(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('button', { name: /confirm and evaluate/i });
 }
 
+// The wait for the result gets 5s, not the 1s default (the precedent is
+// GraphReview.r6's verdict wait). Confirm runs the case lock, several
+// hash-chained appends and the register writes; alone that is well under a
+// second, but on a machine running the whole suite in parallel it
+// occasionally ran past 1s and this test failed about 1 run in 13
+// (2026-10-03, verifying R16-E) — the assertions themselves never changed.
 async function confirmAndReachVerdict(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /^continue$/i }));
   await screen.findByText(/here.s what we understood/i);
   await clickThroughToConfirm(user);
   await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
-  await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
+  await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
 }
 
 describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR7-17/DR7-22)', () => {
@@ -231,7 +237,7 @@ describe('R16-D2 §5: correcting a form-built verdict through the form (D-82, DR
     // Two synchronous clicks, no await between them — the explore-001
     // D-001 race this guard exists for.
     await Promise.all([user.click(confirmButton), user.click(confirmButton)]);
-    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
 
     const events = await getAll(useCase.use_case_id);
     expect(events.filter((e) => e.payload.type === 'verdict_corrected')).toHaveLength(1);

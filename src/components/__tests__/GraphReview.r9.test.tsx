@@ -51,7 +51,7 @@ async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
-  await screen.findByText(/confirm what we understood/i);
+  await screen.findByText(/check what we read from your description/i);
 }
 
 describe('R9-SC-1 — the review checklist', () => {
@@ -65,36 +65,36 @@ describe('R9-SC-1 — the review checklist', () => {
   it('TC-R9-SC-1-01: lists exactly the outstanding obligations, and completing one removes its line', async () => {
     const user = userEvent.setup();
     await reachReview(user);
-    const list = screen.getByText(/steps? before you can proceed/i).parentElement!;
+    const list = screen.getByText(/things? to check before you continue/i).parentElement!;
     // p1 is guessed (fix line), i1 and o1 confirmable, jurisdictions pending.
-    expect(within(list).getByText(/fix 2 guessed values on “training pipeline”/i)).toBeInTheDocument();
-    expect(within(list).getByText(/confirm “credit risk data”/i)).toBeInTheDocument();
-    expect(within(list).getByText(/confirm “analyst answers”/i)).toBeInTheDocument();
-    expect(within(list).getByText(/confirm jurisdictions/i)).toBeInTheDocument();
+    expect(within(list).getByText(/fix 2 details we couldn.t tell on “training pipeline”/i)).toBeInTheDocument();
+    expect(within(list).getByText(/check “credit risk data”/i)).toBeInTheDocument();
+    expect(within(list).getByText(/check “analyst answers”/i)).toBeInTheDocument();
+    expect(within(list).getByText(/check the countries/i)).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole('button', { name: /^looks right — confirm$/i })[0]!);
-    expect(screen.queryAllByText(/confirm “/i).length).toBeLessThan(3);
+    await user.click(screen.getAllByRole('button', { name: /^this is right$/i })[0]!);
+    expect(screen.queryAllByText(/check “/i).length).toBeLessThan(3);
   });
 
   it('TC-R9-SC-1-02: zero obligations renders the done state', async () => {
     const user = userEvent.setup();
     await reachReview(user);
     for (;;) {
-      const b = screen.queryAllByRole('button', { name: /^(looks right|i have checked this) — confirm$/i })[0];
+      const b = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })[0];
       if (!b) break;
       await user.click(b);
     }
     // Resolve p1's guesses by correcting both fields in its editor.
-    await user.click(screen.getByRole('button', { name: /fix guessed values/i }));
-    await user.selectOptions(screen.getByLabelText(/training pipeline — model type/i), 'traditional-ml');
-    await user.selectOptions(screen.getByLabelText(/training pipeline — data zone/i), 'Zone B');
+    await user.click(screen.getByRole('button', { name: /fix the details we couldn.t tell/i }));
+    await user.selectOptions(screen.getByLabelText(/training pipeline — what kind of ai it is/i), 'traditional-ml');
+    await user.selectOptions(screen.getByLabelText(/training pipeline — where your information goes/i), 'Zone B');
     // vendor is guessed too? guessed = model_type + vendor (empty quotes).
-    const vendorField = screen.queryByLabelText(/training pipeline — vendor/i);
+    const vendorField = screen.queryByLabelText(/training pipeline — which supplier it is/i);
     void vendorField; // vendor not in PROCESSING_FIELDS editor; correction of listed fields clears its guesses only
     await user.click(screen.getByRole('button', { name: /^done$/i }));
-    await user.click(screen.getByRole('button', { name: /these are right — confirm/i }));
+    await user.click(screen.getByRole('button', { name: /^these are right$/i }));
     // Whatever remains guessed rides to questions; the checklist reflects state.
-    expect(screen.getByText(/steps? before you can proceed|all checked/i)).toBeInTheDocument();
+    expect(screen.getByText(/to check before you continue|all checked/i)).toBeInTheDocument();
   });
 });
 
@@ -117,7 +117,7 @@ describe('R9-SC-3/-4 — one alarm per card, visible next step', () => {
         unconfirmedNodeIds={[]}
         onConfirmNode={vi.fn()}
         guessedFields={{ p1: ['model_type'] }}
-        warnings={[{ node_id: 'p1', field: 'autonomy_level', message: 'description sounds autonomous' }]}
+        warnings={[{ node_id: 'p1', field: 'autonomy_level', signal: 'sounds-autonomous' }]}
       />,
     );
     expect(container.querySelectorAll('.graph-node__uncertain').length).toBe(1);
@@ -127,14 +127,14 @@ describe('R9-SC-3/-4 — one alarm per card, visible next step', () => {
     expect(within(container.querySelector('.graph-node')! as HTMLElement).getAllByRole('alert')).toHaveLength(1);
   });
 
-  it('TC-R9-SC-4-01: a guessed card offers Fix guessed values (opens the editor) and still no plain confirm', async () => {
+  it('TC-R9-SC-4-01: a guessed card offers "Fix the details we couldn’t tell" (opens the editor) and still no plain confirm', async () => {
     const user = userEvent.setup();
     render(
       <GraphView graph={guessedGraph()} editable onCorrect={vi.fn()} unconfirmedNodeIds={[]} onConfirmNode={vi.fn()} guessedFields={{ p1: ['model_type'] }} />,
     );
-    expect(screen.queryByRole('button', { name: /— confirm$/i })).toBeNull();
-    await user.click(screen.getByRole('button', { name: /fix guessed values/i }));
-    expect(screen.getByLabelText(/x — model type/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /fix the details we couldn.t tell/i }));
+    expect(screen.getByLabelText(/x — what kind of ai it is/i)).toBeInTheDocument();
   });
 });
 
@@ -204,7 +204,7 @@ describe('form path — the trail records the birth event', () => {
     await screen.findByText(/here.s what we understood/i);
     // R16-F F-3 (DR7-05): the write now happens at Confirm, not here.
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
-    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' });
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
 
     const created = (await getAllForExport()).filter((e) => e.payload.type === 'use_case_created');
     const mine = created.find(

@@ -8,42 +8,36 @@ import {
   EXPOSURES,
   MODEL_TYPES,
 } from '../engine/canonical-vocabulary';
-import type { DataFlowGraph, InputNode, OutputNode, ProcessingNode, SystemAccessScope } from '../engine/types';
+import type { DataFlowGraph, InputNode, OutputNode, PolicyFile, ProcessingNode, SystemAccessScope } from '../engine/types';
 import type { PlausibilityWarning } from '../engine/plausibility';
 import { normaliseAccessScope } from '../engine/access-scope';
-// §4 (DR7-11). Plain wording for THIS ONE EDITOR only — the Q13 option
-// text (src/components/plain-copy.ts), so a reviewer correcting this field
-// sees the exact same words the submitter answered against. The rest of
-// this screen keeps its own (reviewer) vocabulary unchanged — a component
-// importing plain-copy.ts is an ordinary component-to-component import,
-// not an engine/screen boundary crossing (cross-cutting.md §7 forbids
-// engine -> ui, never ui -> ui).
-import { ACCESS_SCOPE_REFUSAL_TEXT, findOption } from './plain-copy';
+// §4 (D-103, DR7-26). The review screen now speaks QUESTIONNAIRE_COPY
+// throughout — the same table the targeted questionnaire (chunk E) reads —
+// so the words a person edits here are the words they'd have answered.
+// field-copy.ts's codes-and-labels stay for the REVIEWER's own grid
+// (graph-summary.ts, VerdictDisplay's "Record & provenance") — that is a
+// component-to-component import, not an engine/screen boundary crossing.
 import {
-  ACTION_TYPE_LABELS,
-  AUTONOMY_LABELS,
-  BINDINGNESS_LABELS,
-  DATA_CLASS_LABELS,
-  DATA_ZONE_LABELS,
-  DECISION_TYPE_LABELS,
-  EXPOSURE_LABELS,
-  FIELD_CONSEQUENCES,
-  GRAPH_FIELD_LABELS,
-  MODEL_TYPE_LABELS,
-  MULTI_INSTANCE_LABELS,
-  SYSTEM_ACCESS_LABELS,
-  REVERSIBILITY_LABELS,
-  SCALE_LABELS,
-} from './field-copy';
+  ACCESS_SCOPE_REFUSAL_TEXT,
+  GRAPH_REVIEW_CARD_TITLES,
+  findOption,
+  plausibilityMessageForDescription,
+  questionnaireCopyForField,
+  SUMMARY_REVERSIBILITY,
+  SUMMARY_MULTI_INSTANCE,
+  supplierDisplayName,
+} from './plain-copy';
+import { FIELD_CONSEQUENCES } from './field-copy';
 
-// V1.1-C01, rebuilt for R5 (intake-flow.md §15). Rule 4 (cross-cutting.md
-// §7): presentation-only — renders the data-flow graph the engine actually
-// evaluates, hosts the per-field correction editor, and (R5) explains every
-// decision-bearing value in plain English so a submitter can catch a wrong
-// one without knowing the rulebook. Every edit still dispatches through the
-// caller's handleCorrectNode → CORRECTION_APPLIED reducer path
-// (BC-V11C01-03: no parallel state, no direct graph mutation here); node
-// confirmation (R5-GR-2) likewise goes through the caller → NODE_CONFIRMED.
+// V1.1-C01, rebuilt for R5 (intake-flow.md §15), reworded for R16-E §4
+// (D-103). Rule 4 (cross-cutting.md §7): presentation-only — renders the
+// data-flow graph the engine actually evaluates, hosts the per-field
+// correction editor, and explains every decision-bearing value in plain
+// English so a submitter can catch a wrong one without knowing the
+// rulebook. Every edit still dispatches through the caller's
+// handleCorrectNode → CORRECTION_APPLIED reducer path (BC-V11C01-03: no
+// parallel state, no direct graph mutation here); node confirmation
+// (R5-GR-2) likewise goes through the caller → NODE_CONFIRMED.
 interface GraphViewProps {
   graph: DataFlowGraph;
   editable?: boolean;
@@ -58,6 +52,9 @@ interface GraphViewProps {
   guessedFields?: Record<string, string[]>;
   // R5-GX-1. Extractor jurisdictions the policy did not recognise.
   ignoredJurisdictions?: string[];
+  // R16-E review pass 2: the firm's registry, so a recorded supplier shows
+  // its plain name — never its internal id.
+  policy?: PolicyFile;
 }
 
 const REVERSIBILITY = ['reversible', 'irreversible', 'unknown'] as const;
@@ -65,98 +62,87 @@ const SCALE = ['limited', 'at_scale'] as const;
 
 interface FieldSpec {
   field: string;
-  label: string;
   options: readonly (string | number)[];
   numeric?: boolean;
   boolean?: boolean;
-  /** R5-GR-1: plain-English meaning per value. */
-  meanings?: Record<string, string>;
-  optionLabel?: (v: string | number) => string;
   /** Optional engine fields (decision_type, hitl) may be absent. */
   optional?: boolean;
 }
 
-const AUTONOMY_MEANINGS: Record<string, string> = Object.fromEntries(
-  Object.entries(AUTONOMY_LABELS).map(([k, v]) => [`${k}`, v]),
-);
-
-const HITL_MEANINGS: Record<string, string> = {
-  true: 'A person checks the output before anything happens (HITL: yes)',
-  false: 'No person checks the output before it takes effect (HITL: no)',
+// DR7-29: `lending-decision` is a legal engine value (older extractions)
+// but the targeted question's own Q8 text offers only `credit-decision`
+// going forward, so it has no entry in QUESTIONNAIRE_COPY's own options —
+// a node still carrying it must display a plain label all the same
+// (principle 1), never the bare code. GraphView-only: this never feeds a
+// choosable button anywhere.
+const LEGACY_VALUE_LABEL: Record<string, string> = {
+  'lending-decision': 'Whether to lend to someone, or on what terms',
 };
 
+// R16-E review pass 1: values a node can CARRY but nobody can CHOOSE as a
+// button. QUESTIONNAIRE_COPY's options are the choosable answers, and
+// 'unknown' is deliberately not one — but a node holds it after a model
+// reading or after "Not sure" on the copies question, and the row printed the
+// bare word "unknown". The wording is the summary's own, one source per fact.
+const DISPLAY_ONLY_VALUE_LABEL: Record<string, Record<string, string>> = {
+  output_reversibility: { unknown: SUMMARY_REVERSIBILITY.unknown },
+  multi_instance_coordination: { unknown: SUMMARY_MULTI_INSTANCE.unknown },
+};
+
+/** Every decision-bearing value on this screen reads from the ONE
+ *  QUESTIONNAIRE_COPY table (§2) — never a second, field-copy.ts label a
+ *  submitter would read differently from how they'd have answered. */
+function fieldValueLabel(field: string, value: string | number): string {
+  const key = String(value);
+  return (
+    questionnaireCopyForField(field).options[key] ?? DISPLAY_ONLY_VALUE_LABEL[field]?.[key] ?? LEGACY_VALUE_LABEL[key] ?? key
+  );
+}
+
 const INPUT_FIELDS: FieldSpec[] = [
-  { field: 'data_class', label: 'data class', options: DATA_CLASSES, meanings: DATA_CLASS_LABELS },
-  { field: 'data_zone', label: 'data zone', options: DATA_ZONES, meanings: DATA_ZONE_LABELS },
+  { field: 'data_class', options: DATA_CLASSES },
+  { field: 'data_zone', options: DATA_ZONES },
 ];
 
 const PROCESSING_FIELDS: FieldSpec[] = [
-  { field: 'model_type', label: 'model type', options: MODEL_TYPES, meanings: MODEL_TYPE_LABELS },
-  {
-    field: 'autonomy_level',
-    label: 'autonomy level',
-    options: [0, 1, 2, 3, 4],
-    numeric: true,
-    meanings: AUTONOMY_MEANINGS,
-    optionLabel: (v) => AUTONOMY_LABELS[v as 0 | 1 | 2 | 3 | 4],
-  },
-  { field: 'data_zone', label: 'data zone', options: DATA_ZONES, meanings: DATA_ZONE_LABELS },
-  // v1.4 agentic infrastructure-access fields — optional on the engine type;
-  // absent renders "not stated", same honest-weaker-claim rule as
+  { field: 'model_type', options: MODEL_TYPES },
+  { field: 'autonomy_level', options: [0, 1, 2, 3, 4], numeric: true },
+  { field: 'data_zone', options: DATA_ZONES },
+  // v1.4 agentic infrastructure-access fields — optional on the engine
+  // type; absent renders "not stated", same honest-weaker-claim rule as
   // decision_type/hitl below.
   {
     field: 'system_access_scope',
-    label: 'system access',
     options: ['none', 'shared_infrastructure', 'credentialed_systems', 'deployment_authority'],
-    meanings: SYSTEM_ACCESS_LABELS,
     optional: true,
   },
-  {
-    field: 'multi_instance_coordination',
-    label: 'instance coordination',
-    options: ['no', 'yes', 'unknown'],
-    meanings: MULTI_INSTANCE_LABELS,
-    optional: true,
-  },
+  { field: 'multi_instance_coordination', options: ['no', 'yes', 'unknown'], optional: true },
 ];
 
 const OUTPUT_FIELDS: FieldSpec[] = [
-  { field: 'action_type', label: 'action type', options: ACTION_TYPES, meanings: ACTION_TYPE_LABELS },
-  { field: 'exposure', label: 'exposure', options: EXPOSURES, meanings: EXPOSURE_LABELS },
-  {
-    field: 'decision_bindingness',
-    label: 'decision bindingness',
-    options: DECISION_BINDINGNESS,
-    meanings: BINDINGNESS_LABELS,
-  },
-  {
-    field: 'output_reversibility',
-    label: 'output reversibility',
-    options: REVERSIBILITY,
-    meanings: REVERSIBILITY_LABELS,
-  },
-  { field: 'scale', label: 'output scale', options: SCALE, meanings: SCALE_LABELS },
+  { field: 'action_type', options: ACTION_TYPES },
+  { field: 'exposure', options: EXPOSURES },
+  { field: 'decision_bindingness', options: DECISION_BINDINGNESS },
+  { field: 'output_reversibility', options: REVERSIBILITY },
+  { field: 'scale', options: SCALE },
   // R5-GR-1: decision-bearing and previously invisible here. Optional on
-  // the engine type — absent renders as "not stated", which is a weaker
-  // and honest claim, not a default.
-  {
-    field: 'decision_type',
-    label: 'decision type',
-    options: DECISION_TYPES,
-    meanings: DECISION_TYPE_LABELS,
-    optional: true,
-  },
-  {
-    field: 'hitl',
-    label: 'human in the loop',
-    options: ['true', 'false'],
-    boolean: true,
-    meanings: HITL_MEANINGS,
-    optional: true,
-  },
+  // the engine type — absent renders as "not stated", a weaker and honest
+  // claim, not a default.
+  { field: 'decision_type', options: DECISION_TYPES, optional: true },
+  { field: 'hitl', options: ['true', 'false'], boolean: true, optional: true },
 ];
 
 type AnyNode = InputNode | ProcessingNode | OutputNode;
+
+type NodeKind = 'input' | 'processing' | 'output';
+
+/** §4 (v2.1, F1B-1): the description path's own plausibility wording names
+ *  the card and row this screen itself defines — never a form question it
+ *  never shows. `kind` is passed down from the column loop (each column
+ *  already knows which card it is), so no graph traversal is needed here. */
+function cardTitleFor(kind: NodeKind): string {
+  return GRAPH_REVIEW_CARD_TITLES[kind];
+}
 
 // R15-C5 (proposal §3.6, dissent #13 in §4): a long provenance quote may
 // truncate with a way to expand it, but this is only ever applied to the
@@ -171,7 +157,7 @@ function ProvenanceQuote({ text }: { text: string }) {
   const shown = !long || expanded ? text : `${text.slice(0, QUOTE_TRUNCATE_AT).trimEnd()}…`;
   return (
     <>
-      based on: &ldquo;{shown}&rdquo;
+      From your description: &ldquo;{shown}&rdquo;
       {long && (
         <button
           type="button"
@@ -186,26 +172,27 @@ function ProvenanceQuote({ text }: { text: string }) {
   );
 }
 
-// R15-C5 (proposal §3.6, dissent #6 / IxD ID-6 overruled): "not found in
-// your text — worth a second look" and "guessed" share a badge FAMILY
-// (.graph-node__badge — same shape/visual language) so a reviewer's eye
-// groups them as "look again" states, but each keeps its own class and its
-// own text — they are not merged into one label or one meaning. The
+// R15-C5 (proposal §3.6, dissent #6 / IxD ID-6 overruled): "not in your
+// description" and "check this, or it becomes a question" share a badge
+// FAMILY (.graph-node__badge — same shape/visual language) so a reviewer's
+// eye groups them as "look again" states, but each keeps its own class and
+// its own text — they are not merged into one label or one meaning. The
 // three-state provenance logic above (quoted / guessed / confident-no-basis)
 // and the no-plain-confirm gate for guessed cards are unchanged; this
-// component only renders what that existing logic decided.
+// component only renders what that existing logic decided. §4 (F1B-1):
+// reworded off "guessed"/"not found in your text" — engine vocabulary.
 function ProvenanceBadge({ kind }: { kind: 'guessed' | 'no-basis' | 'not-stated' }) {
   if (kind === 'guessed') {
     return (
       <span className="graph-node__badge graph-node__badge--guessed graph-node__guessed-badge">
-        guessed — the description does not say. Correct it, or it becomes a question.
+        Not in your description — check this, or it becomes a question
       </span>
     );
   }
   if (kind === 'no-basis') {
     return (
       <span className="graph-node__badge graph-node__badge--no-basis">
-        not found in your text — worth a second look
+        Not in your description — please check this
       </span>
     );
   }
@@ -243,7 +230,8 @@ const ACCESS_SCOPE_VALUES: SystemAccessScope[] = [
 // `coerceAnswerValue` all call — before it is written; a refusal (e.g.
 // unticking the only remaining kind, leaving nothing selected) shows the
 // reason and writes nothing, leaving the prior, still-valid value in
-// place and still displayed.
+// place and still displayed. R16-E (§4): unchanged by this round — the
+// words were already plain (Q13's own), the values keep their meaning.
 function AccessScopeEditor({
   node,
   record,
@@ -281,7 +269,8 @@ function AccessScopeEditor({
   // the legend names the group (WCAG 1.3.1).
   return (
     <fieldset className="graph-node__field graph-node__access-scope-editor">
-      <legend>system access</legend>
+      {/* The screen's own plain label for this row (R16-E review pass 3). */}
+      <legend>{questionnaireCopyForField('system_access_scope').shortLabel}</legend>
       {ACCESS_SCOPE_VALUES.map((scope) => {
         const text = findOption('13', Q13_OPTION_KEY_FOR_SCOPE[scope])?.text ?? scope;
         return (
@@ -308,6 +297,7 @@ function AccessScopeEditor({
 function NodeCard({
   node,
   fields,
+  cardTitle,
   editable,
   editing,
   unconfirmed,
@@ -317,9 +307,11 @@ function NodeCard({
   onToggleEdit,
   onCorrect,
   onConfirm,
+  policy,
 }: {
   node: AnyNode;
   fields: FieldSpec[];
+  cardTitle: string;
   editable: boolean;
   editing: boolean;
   unconfirmed: boolean;
@@ -329,6 +321,7 @@ function NodeCard({
   onToggleEdit: () => void;
   onCorrect?: (nodeId: string, field: string, value: unknown) => void;
   onConfirm?: (nodeId: string) => void;
+  policy?: PolicyFile;
 }) {
   const [labelDraft, setLabelDraft] = useState(node.label);
   // R9-SC-2 (ADR-IF-R9-1): consequences one click away, per card.
@@ -356,7 +349,7 @@ function NodeCard({
         <p className="graph-node__uncertain" role="alert">
           The model was <strong>not confident</strong> about this part —{' '}
           {guessed.length > 0
-            ? <>especially: {guessed.map((fld) => fld.replace(/_/g, ' ')).join(', ')}.</>
+            ? <>especially: {guessed.map((fld) => questionnaireCopyForField(fld).shortLabel).join(', ')}.</>
             : 'check every value on this card.'}
         </p>
       )}
@@ -373,19 +366,17 @@ function NodeCard({
             // no meanings map is keyed by a comma-joined value).
             const meaning = has
               ? Array.isArray(raw)
-                ? raw.map((v) => spec.meanings?.[String(v)] ?? String(v)).join(', ')
-                : spec.meanings?.[String(raw)] ?? String(raw)
+                ? raw.map((v) => fieldValueLabel(spec.field, v)).join(', ')
+                : fieldValueLabel(spec.field, raw as string | number)
               : null;
             const fieldWarnings = warnings.filter((w) => w.field === spec.field);
-            // R15-C5 (proposal §3.6): the label reuses the guided form's
-            // question words; the engine field name stays as quiet code
-            // beside it rather than being deleted (three-class code rule).
-            const plainLabel = GRAPH_FIELD_LABELS[spec.field] ?? spec.label;
+            // §4 (D-103): the row's own label is QUESTIONNAIRE_COPY's
+            // shortLabel — the same question a person would have answered
+            // — with no code of any kind beside it (principle 1).
+            const plainLabel = questionnaireCopyForField(spec.field).shortLabel;
             return (
               <div key={spec.field} className="graph-node__meaning-row">
-                <dt>
-                  {plainLabel} <code className="graph-node__field-code">{spec.field}</code>
-                </dt>
+                <dt>{plainLabel}</dt>
                 <dd>
                   {has ? (
                     <>
@@ -430,8 +421,11 @@ function NodeCard({
                   {fieldWarnings.map((w) => (
                     // R9-SC-3: advisory identity, visually distinct from the
                     // blocking warn styling — advisory never blocks (R5-GR-4).
-                    <span key={w.message} className="graph-node__advisory" role="note">
-                      ⚠ {w.message}
+                    // §4 (v2.1): the description path's own wording — names
+                    // this card and this row, never a form question that
+                    // path never shows.
+                    <span key={w.signal} className="graph-node__advisory" role="note">
+                      ⚠ {plausibilityMessageForDescription(w.signal, cardTitle, plainLabel)}
                     </span>
                   ))}
                 </dd>
@@ -440,9 +434,9 @@ function NodeCard({
           })}
           {vendor !== null && (
             <div className="graph-node__meaning-row">
-              <dt>vendor</dt>
+              <dt>{questionnaireCopyForField('vendor').shortLabel}</dt>
               <dd>
-                <span className="graph-node__meaning">{vendor}</span>
+                <span className="graph-node__meaning">{supplierDisplayName(vendor, policy).name}</span>
                 {/* R9 live-verify finding: this custom row missed both the
                     consequence gating AND the badge — and the first live
                     case's guessed field was exactly `vendor`. Same rules as
@@ -465,7 +459,7 @@ function NodeCard({
           )}
           {declaredModelId !== null && (
             <div className="graph-node__meaning-row">
-              <dt>model</dt>
+              <dt>{questionnaireCopyForField('declared_model_id').shortLabel}</dt>
               <dd>
                 <span className="graph-node__meaning">{declaredModelId}</span>
                 {quotes.declared_model_id ? (
@@ -516,9 +510,9 @@ function NodeCard({
               <AccessScopeEditor key={spec.field} node={node} record={record} onCorrect={onCorrect} />
             ) : (
               <label key={spec.field} className="graph-node__field">
-                <span>{spec.label}</span>
+                <span>{questionnaireCopyForField(spec.field).shortLabel}</span>
                 <select
-                  aria-label={`${node.label} — ${spec.label}`}
+                  aria-label={`${node.label} — ${questionnaireCopyForField(spec.field).shortLabel}`}
                   value={String(record[spec.field] ?? '')}
                   onChange={(e) =>
                     onCorrect(
@@ -529,13 +523,18 @@ function NodeCard({
                   }
                 >
                   {spec.optional && record[spec.field] === undefined && <option value="">not stated</option>}
-                  {spec.options.map((o) => (
-                    <option key={String(o)} value={String(o)}>
-                      {spec.optionLabel
-                        ? spec.optionLabel(o)
-                        : spec.meanings?.[String(o)] ?? String(o)}
-                    </option>
-                  ))}
+                  {spec.options
+                    // R16-E review pass 2: the legacy 'lending-decision' reads
+                    // exactly like 'credit-decision', so offering both showed
+                    // two identical choices. It is listed only when it is the
+                    // value already recorded, marked as the older answer.
+                    .filter((o) => o !== 'lending-decision' || record[spec.field] === 'lending-decision')
+                    .map((o) => (
+                      <option key={String(o)} value={String(o)}>
+                        {fieldValueLabel(spec.field, o)}
+                        {o === 'lending-decision' ? ' (older answer)' : ''}
+                      </option>
+                    ))}
                 </select>
               </label>
             ),
@@ -560,27 +559,31 @@ function NodeCard({
         </button>
       )}
       {/* R9-SC-4: the card that most needs action must not be the one with
-          no button. Opens the editor; ADR-IF-R6-2's no-plain-confirm holds. */}
+          no button. Opens the editor; ADR-IF-R6-2's no-plain-confirm holds.
+          §8's guard test bans "guessed" on any screen a submitter sees —
+          found while verifying this chunk's own guard test. */}
       {editable && !editing && guessed.length > 0 && (
         <button type="button" className="graph-node__fix-guessed" onClick={onToggleEdit}>
-          Fix guessed values
+          Fix the details we couldn’t tell
         </button>
       )}
       {/* ADR-IF-R6-2: a guessed card renders NO plain confirm — cards with
           guessed fields are excluded from the unconfirmed set and resolve
-          via correction or the questionnaire. */}
+          via correction or the questionnaire. §4 (D-103): both confirm
+          forms keep their meaning — the stronger wording stays where the
+          person must actually look. */}
       {unconfirmed && !editing && onConfirm && guessed.length === 0 && (
         <button type="button" className="graph-node__confirm" onClick={() => onConfirm(node.id)}>
-          {uncertain ? 'I have checked this — confirm' : 'Looks right — confirm'}
+          {uncertain ? 'I’ve checked this — it’s right' : 'This is right'}
         </button>
       )}
       {/* Honesty review 004 finding 1: a guessed card is EXCLUDED from the
           confirm set (ADR-IF-R6-2), so !unconfirmed alone would claim
-          "Confirmed by you." with zero human acts. The note is earned only
+          "Checked by you." with zero human acts. The note is earned only
           when no guessed fields remain — at which point it is true either
           via a confirm click or via corrections. */}
       {!unconfirmed && editable && onConfirm && guessed.length === 0 && (
-        <p className="graph-node__confirmed-note">Confirmed by you.</p>
+        <p className="graph-node__confirmed-note">Checked by you.</p>
       )}
     </div>
   );
@@ -596,6 +599,7 @@ export default function GraphView({
   provenance = {},
   guessedFields = {},
   ignoredJurisdictions = [],
+  policy,
 }: GraphViewProps) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const gated = unconfirmedNodeIds !== undefined;
@@ -603,12 +607,13 @@ export default function GraphView({
   const column = (title: string, nodes: AnyNode[], fields: FieldSpec[]) => (
     <div className="graph-view__col">
       <div className="graph-view__col-title">{title}</div>
-      {nodes.length === 0 && <p className="graph-view__empty">None extracted</p>}
+      {nodes.length === 0 && <p className="graph-view__empty">Nothing found in your description</p>}
       {nodes.map((node) => (
         <NodeCard
           key={node.id}
           node={node}
           fields={fields}
+          cardTitle={title}
           editable={editable}
           editing={editingNodeId === node.id}
           unconfirmed={gated && (unconfirmedNodeIds?.includes(node.id) ?? false)}
@@ -618,6 +623,7 @@ export default function GraphView({
           onToggleEdit={() => setEditingNodeId(editingNodeId === node.id ? null : node.id)}
           onCorrect={onCorrect}
           onConfirm={gated ? onConfirmNode : undefined}
+          policy={policy}
         />
       ))}
     </div>
@@ -625,20 +631,21 @@ export default function GraphView({
 
   return (
     <div className="graph-view-wrap">
-      {/* R5-GR-2: the contract of this screen, stated where the work happens. */}
+      {/* R5-GR-2 (reworded §4, D-103): the contract of this screen, stated
+          where the work happens — no "model", no "proposed", no "graph". */}
       {gated && (
         <p className="graph-view__gate-note">
-          The model <strong>proposed</strong> everything below from your description — nothing is
-          scored until you confirm or correct each card. Each value shows what it means and why it
-          matters.
+          We read these details from your description — nothing is decided until you&rsquo;ve checked or
+          corrected each one.
         </p>
       )}
       {/* R5-GX-1: a dropped value must be visible, or the drop is a silent edit. */}
       {ignoredJurisdictions.length > 0 && (
         <p className="graph-view__ignored" role="status">
-          Ignored from the model&rsquo;s reading: {ignoredJurisdictions.map((j) => `“${j}”`).join(', ')} —
-          not {ignoredJurisdictions.length === 1 ? 'a recognised jurisdiction' : 'recognised jurisdictions'}.
-          Jurisdictions are asked explicitly later in the flow.
+          {ignoredJurisdictions.length === 1
+            ? `We ignored “${ignoredJurisdictions[0]}” — it isn’t one of the countries your firm’s rules cover.`
+            : `We ignored ${ignoredJurisdictions.map((j) => `“${j}”`).join(', ')} — they aren’t among the countries your firm’s rules cover.`}
+          {' '}Countries are asked explicitly later in the flow.
         </p>
       )}
       {/* design-review round 4 (Panel G — Intake: Graph review, Important):
@@ -646,23 +653,21 @@ export default function GraphView({
           but nothing narrated that for a first-time reader — it was
           presented as self-evident. This always renders, unlike the
           conditional gate-note above (which is honestly about confirmation
-          state, not the layout itself). Also renamed the region's aria
-          label away from "Data-flow graph" — the same unexplained term the
-          heading and loading state used to use (Critical, fixed above). */}
+          state, not the layout itself). */}
       <p className="graph-view__narration">
         Each card below is one piece of your use case: what goes in, what happens to it, and what
         comes out.
       </p>
       <div className="graph-view" aria-label="What goes in, what happens, what comes out">
-        {column('Input data', graph.input_nodes, INPUT_FIELDS)}
+        {column(cardTitleFor('input'), graph.input_nodes, INPUT_FIELDS)}
         <div className="graph-view__arrow" aria-hidden="true">
           →
         </div>
-        {column('Processing', graph.processing_nodes, PROCESSING_FIELDS)}
+        {column(cardTitleFor('processing'), graph.processing_nodes, PROCESSING_FIELDS)}
         <div className="graph-view__arrow" aria-hidden="true">
           →
         </div>
-        {column('Output', graph.output_nodes, OUTPUT_FIELDS)}
+        {column(cardTitleFor('output'), graph.output_nodes, OUTPUT_FIELDS)}
       </div>
       {/* R5-GR-5: a count, not a heuristic. */}
       {editable && graph.processing_nodes.length >= 2 && (

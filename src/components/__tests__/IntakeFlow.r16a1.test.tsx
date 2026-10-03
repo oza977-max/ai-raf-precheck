@@ -103,7 +103,7 @@ describe('IntakeFlow — first evaluation gate refuses on a policy reference err
     render(<App />);
 
     const user = userEvent.setup();
-    const proceed = await screen.findByRole('button', { name: /^proceed$/i });
+    const proceed = await screen.findByRole('button', { name: /^continue$/i });
     await user.click(proceed);
 
     // Two banners legitimately match "Policy file invalid" here: App's own
@@ -118,6 +118,6 @@ describe('IntakeFlow — first evaluation gate refuses on a policy reference err
     ).toBeGreaterThan(0);
     // Still on graph_review — the Proceed button is still there, the
     // questionnaire/confirmation screens never mounted.
-    expect(screen.getByRole('button', { name: /^proceed$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
   });
 });

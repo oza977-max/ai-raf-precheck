@@ -99,8 +99,11 @@ export type IntakeState =
       // v0.7.1: single-level undo — the graph and corrections length as
       // they stood BEFORE the most recent answer. Cleared by the next
       // answer. Ephemeral review state; the trail records only what is
-      // attested.
-      undo?: { graph: DataFlowGraph; correctionsLen: number };
+      // attested. R16-E §3: also snapshots `questions` (an answer can
+      // insert a follow-up right after itself — undoing it must remove
+      // that follow-up too, not just the answer) and the assumptions
+      // length (a "Not sure" answer can append one).
+      undo?: { graph: DataFlowGraph; correctionsLen: number; questions: IntakeQuestion[]; assumptionsLen: number };
       // W-3/W-4 (R16-W §1). Present only when this questionnaire was
       // reached via FORM_SUBMITTED (the form path's own questions, if
       // any) — carried so a form-path STEP_BACK can return to the form
@@ -213,6 +216,12 @@ export type IntakeAction =
       provenance?: Record<string, Record<string, string>>;
       guessedFields?: Record<string, string[]>;
     }
+  // R16-E §5 (D-104, DR7-30/AB-1). "Answer the questions instead" — a
+  // failed extraction's own second button. Valid only from the LLM path's
+  // graph_extraction; `description` is already there and StructuredForm
+  // already pre-fills from it (`initialDescription`), so this is a pure
+  // method flip, not a new carrier of state.
+  | { type: 'SWITCH_TO_FORM' }
   // W-3 (R16-W §1, D-69). Valid only from graph_extraction with
   // method: 'form' — GRAPH_EXTRACTED (above) stays the description path's
   // own action; the form path's screen-after-screen field-card review
@@ -253,7 +262,22 @@ export type IntakeAction =
   // R6-QN-1 (ADR-IF-R6-3): an answer that differs from the graph IS a
   // correction — carried with the answer so the reducer applies both
   // atomically, and the engine finally sees what the user answered.
-  | { type: 'ANSWER_SUBMITTED'; answer: QuestionAnswer; correction?: GraphCorrection; updatedGraph?: DataFlowGraph }
+  // R16-E §3 (D-102). `assumption`: a "Not sure" answer carries D2's
+  // Assumption shape straight through — accumulated into
+  // `state.assumptions` (created on first use; every other step already
+  // carries this field optionally, so the shape was always there). `
+  // insertQuestions`: the decision-type-other / vendor / model follow-up
+  // questions, inserted into `state.questions` right after the one just
+  // answered — e.g. picking "Something else" for what it helps decide, or
+  // "Not on this list" for the supplier.
+  | {
+      type: 'ANSWER_SUBMITTED';
+      answer: QuestionAnswer;
+      correction?: GraphCorrection;
+      updatedGraph?: DataFlowGraph;
+      assumption?: Assumption;
+      insertQuestions?: IntakeQuestion[];
+    }
   // v0.7.1: take back the most recent answer (and its write-back), once.
   | { type: 'ANSWER_UNDONE' }
   | { type: 'CONTRADICTIONS_DETECTED'; contradictions: Contradiction[] }
@@ -468,6 +492,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           : {}),
       };
 
+    // R16-E §5. A pure method flip — `description` (and, on a correction,
+    // `originalVerdictId`/`originalGraph`) are already on this state and
+    // need no change; StructuredForm's own `initialDescription` prop picks
+    // up the carried description unchanged.
+    case 'SWITCH_TO_FORM':
+      if (state.step !== 'graph_extraction' || state.method !== 'llm') return state;
+      return { ...state, method: 'form' };
+
     case 'FORM_SUBMITTED': {
       // W-3 (R16-W §1, D-69): valid only from the form's own
       // graph_extraction — GRAPH_EXTRACTED (above) is the description
@@ -609,22 +641,44 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         uncertainNodeIds: Object.keys(state.guessedFields ?? {}),
       };
 
-    case 'ANSWER_SUBMITTED':
+    case 'ANSWER_SUBMITTED': {
       if (state.step !== 'questionnaire') return state;
       // v0.7.1 double-submit guard: a question already answered is refused
       // at the reducer, so a double-click cannot record twice and skip the
       // next question (same layering as the R5/R6 gates).
       if (state.answers.some((a) => a.questionId === action.answer.questionId)) return state;
+      // R16-E §3 (D-102): a follow-up question (decision_type_other, a
+      // supplier/model not on the firm's list) is inserted right after the
+      // one just answered — found by id, never by index, so this stays
+      // correct regardless of where in the list the current question sits.
+      const currentIndex = state.questions.findIndex((q) => q.id === action.answer.questionId);
+      const questions =
+        action.insertQuestions && action.insertQuestions.length > 0 && currentIndex !== -1
+          ? [
+              ...state.questions.slice(0, currentIndex + 1),
+              ...action.insertQuestions,
+              ...state.questions.slice(currentIndex + 1),
+            ]
+          : state.questions;
+      const assumptions = action.assumption ? [...(state.assumptions ?? []), action.assumption] : state.assumptions;
       // ADR-IF-R6-3: when the answer differs from the graph, the caller
       // sends the correction and the updated graph with it — applied here
       // so the attested, evaluated graph is the one the user answered.
       return {
         ...state,
+        questions,
         answers: [...state.answers, action.answer],
-        undo: { graph: state.graph, correctionsLen: state.corrections.length },
+        undo: {
+          graph: state.graph,
+          correctionsLen: state.corrections.length,
+          questions: state.questions,
+          assumptionsLen: state.assumptions?.length ?? 0,
+        },
         ...(action.updatedGraph ? { graph: action.updatedGraph } : {}),
         ...(action.correction ? { corrections: [...state.corrections, action.correction] } : {}),
+        ...(assumptions ? { assumptions } : {}),
       };
+    }
 
     case 'ANSWER_UNDONE': {
       if (state.step !== 'questionnaire' || !state.undo || state.answers.length === 0) return state;
@@ -634,6 +688,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         answers: state.answers.slice(0, -1),
         graph: undo.graph,
         corrections: state.corrections.slice(0, undo.correctionsLen),
+        questions: undo.questions,
+        ...(state.assumptions ? { assumptions: state.assumptions.slice(0, undo.assumptionsLen) } : {}),
       };
     }
 

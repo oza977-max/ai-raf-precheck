@@ -141,9 +141,14 @@ export async function localChatJson(
         // temperature 0: the extraction edge should be as repeatable as a
         // sampling model allows. NOT a determinism claim — the deterministic
         // engine never sees this output except via a human-confirmed graph.
-        // num_predict mirrors the Claude path's max_tokens 1024 and is the
-        // backstop against the runaway-generation pathology above.
-        options: { temperature: 0, num_predict: 1024 },
+        // num_predict mirrors the Claude path's max_tokens and is the
+        // backstop against the runaway-generation pathology above. Raised
+        // 1024 → 2048 (2026-10-03, R16-E walkthrough): a small model copies
+        // the WHOLE description into each of a dozen evidence quotes, so a
+        // three-sentence description overran 1024 tokens, the JSON came back
+        // cut off (done_reason "length") and every attempt failed as "we
+        // couldn't read your description". Still bounded.
+        options: { temperature: 0, num_predict: 2048 },
       }),
     });
     if (!res.ok) {

@@ -330,7 +330,11 @@ describe('UnderstoodSummary — assumptions (form path) vs uncertain nodes (desc
 
   it('TC-R16-C-08: description path — uncertain nodes appear under "Things we couldn’t tell from your description"', () => {
     render(
-      <UnderstoodSummary graph={graph()} uncertainNodeIds={['p1']} onChangeAnswer={vi.fn()} />,
+      <UnderstoodSummary
+        graph={graph({ intake_method: 'llm' })}
+        uncertainNodeIds={['p1']}
+        onChangeAnswer={vi.fn()}
+      />,
     );
     const section = sectionFor(/things we couldn’t tell from your description/i);
     expect(within(section).getByText(/Drafting model/)).toBeInTheDocument();
@@ -341,6 +345,27 @@ describe('UnderstoodSummary — assumptions (form path) vs uncertain nodes (desc
     render(<UnderstoodSummary graph={graph()} onChangeAnswer={vi.fn()} />);
     expect(screen.queryByText(/things we assumed/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/things we couldn’t tell/i)).not.toBeInTheDocument();
+  });
+
+  // R16-E §7 (D-106, DR7-24/BB-1). On the description path, the extractor's
+  // own uncertain nodes and the targeted questionnaire's "Not sure"
+  // assumptions are genuinely two different sources of the same fact
+  // ("things we couldn't tell") — merged into ONE list, chosen by
+  // `graph.intake_method`, never by which source happens to be empty.
+  it('TC-R16-E-71: the description path merges BOTH the uncertain nodes and the questionnaire\'s "Not sure" assumptions into one list', () => {
+    render(
+      <UnderstoodSummary
+        graph={graph({ intake_method: 'llm' })}
+        uncertainNodeIds={['p1']}
+        assumptions={ASSUMPTIONS}
+        onChangeAnswer={vi.fn()}
+      />,
+    );
+    const section = sectionFor(/things we couldn’t tell from your description/i);
+    expect(within(section).getByText(/Drafting model/)).toBeInTheDocument();
+    expect(within(section).getByText(/it can’t be undone — the strictest case/)).toBeInTheDocument();
+    // The form-path heading never appears on this path.
+    expect(screen.queryByText(/things we assumed because you weren’t sure/i)).not.toBeInTheDocument();
   });
 });
 
@@ -478,5 +503,23 @@ describe('UnderstoodSummary — handles a sparse/hand-built graph without crashi
         />,
       ),
     ).not.toThrow();
+  });
+});
+
+// R16-E review pass 2 / verification: on the description path the summary's
+// "Please double-check" names the card from the ONE shared table (it used to
+// re-type the three titles) and says why, not only where to look.
+describe('UnderstoodSummary — the description path\'s double-check says why and names the shared card', () => {
+  it('TC-R16-E-80: a description at odds with what we read gives the reason and the card from GRAPH_REVIEW_CARD_TITLES', async () => {
+    const { GRAPH_REVIEW_CARD_TITLES } = await import('../plain-copy');
+    const g = graph({
+      intake_method: 'llm',
+      input_nodes: [{ ...graph().input_nodes[0]!, data_zone: 'Zone C' }],
+      processing_nodes: [{ ...graph().processing_nodes[0]!, data_zone: 'Zone A' }],
+    });
+    render(<UnderstoodSummary graph={g} description="This runs on our firm's own internal platform." onChangeAnswer={vi.fn()} />);
+    const section = sectionFor(/please double-check/i);
+    expect(section.textContent).toContain('we read that your information goes outside the firm');
+    expect(section.textContent).toContain(`on the card “${GRAPH_REVIEW_CARD_TITLES.processing}”`);
   });
 });

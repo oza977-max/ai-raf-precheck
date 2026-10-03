@@ -180,7 +180,7 @@ describe('IntakeFlow — contradictions are caught on the zero-questions path (U
     // review" for assistive tech, which is what this now asserts against.
     expect(await screen.findByRole('region', { name: /contradiction review/i })).toBeInTheDocument();
     // Both halves of the contradiction are stated, per UC-5.
-    expect(screen.getAllByText(/no client\/personal data/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/no personal information is involved/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /confirm and evaluate/i })).toBeNull();
   });
 });
@@ -233,7 +233,7 @@ describe('IntakeFlow — resolving a contradiction cannot dead-end (UC-5)', () =
     // Contradiction review appears; resolve it.
     const explain = await screen.findByRole('textbox', { name: /explain|resolution|why/i });
     await user.type(explain, 'The description was wrong; the form is right.');
-    await user.click(screen.getByRole('button', { name: /resolve and continue/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     // The old behaviour stranded the user at "All questions answered." with
     // no control. The flow must reach the attestation.

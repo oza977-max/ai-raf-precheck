@@ -17,21 +17,26 @@ interface SignalPair {
   statement2Template: string;
 }
 
+// R16-E §6 (D-105, DR7-30/F1B-3). Plain words, no quotation marks, and no
+// claim to quote the person — `statement1` and `statement2` are both read
+// as independent sentences, not as "you said X but also Y". Previously
+// these named the engine's own vocabulary verbatim ("Client PII or MNPI",
+// "autonomy level 3 or higher", "Extracted graph").
 const SIGNAL_PAIRS: SignalPair[] = [
   {
     descriptionPattern: /no (client|personal) data|does not (touch|use|process) (client|personal) data/i,
     field: 'data_class',
     graphContradicts: (graph) =>
       graph.input_nodes.some((n) => n.data_class === 'Client PII' || n.data_class === 'MNPI'),
-    statement1: 'Description states no client/personal data is involved.',
-    statement2Template: 'Extracted graph shows a data node classified as Client PII or MNPI.',
+    statement1: 'Your description says no personal information is involved.',
+    statement2Template: 'but your answers say it uses information about people.',
   },
   {
     descriptionPattern: /no autonomy|fully manual|human (approves|reviews) every|always requires human/i,
     field: 'autonomy_level',
     graphContradicts: (graph) => graph.processing_nodes.some((n) => n.autonomy_level >= 3),
-    statement1: 'Description states the system requires human approval for every action (no autonomy).',
-    statement2Template: 'Extracted graph shows a processing node with autonomy level 3 or higher.',
+    statement1: 'Your description says a person approves everything it does.',
+    statement2Template: 'but your answers say it acts by itself.',
   },
 ];
 

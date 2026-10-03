@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GraphView from '../GraphView';
-import { GRAPH_FIELD_LABELS, DATA_CLASS_LABELS } from '../field-copy';
+import { QUESTIONNAIRE_COPY } from '../plain-copy';
 import type { DataFlowGraph } from '../../engine/types';
 
 // R15-C5 (proposal §3.6): traceability tests for the graph-review label,
@@ -10,6 +10,14 @@ import type { DataFlowGraph } from '../../engine/types';
 // renegotiated. See test-cases/test-cases-015.md's R15-C5 section for the
 // exact case text each test below proves — these four (C5-01, C5-03, C5-06,
 // C5-07) had no prior automated test to renegotiate.
+//
+// R16-E §4 (D-103) retired TC-R15-C5-01's own premise: the review screen's
+// field rows no longer carry the engine field name as quiet code beside
+// the label at all ("No code beside any label") — see
+// test-cases/test-cases-024.md's Superseded section. The row label itself
+// is now QUESTIONNAIRE_COPY's own shortLabel, asserted directly in
+// GraphReview.r6/r9's existing coverage of this screen, so this file does
+// not re-add a replacement case for the same fact.
 
 function makeFullGraph(): DataFlowGraph {
   return {
@@ -47,22 +55,6 @@ function makeFullGraph(): DataFlowGraph {
     jurisdictions: [],
   };
 }
-
-describe('TC-R15-C5-01 — graph field rows use the guided-form plain label, engine name kept as quiet code', () => {
-  it('TC-R15-C5-01: data_class, decision_bindingness, output_reversibility and autonomy_level render their GRAPH_FIELD_LABELS text, with the engine field name still present in a <code class="graph-node__field-code">', () => {
-    render(<GraphView graph={makeFullGraph()} />);
-
-    for (const field of ['data_class', 'decision_bindingness', 'output_reversibility', 'autonomy_level'] as const) {
-      // The engine field name is its own <code> element, not folded into the
-      // plain-label text — getByText's default matcher only matches an
-      // element's own direct text nodes, so this uniquely finds the code tag.
-      const code = screen.getByText(field, { selector: 'code.graph-node__field-code' });
-      const row = code.closest('dt');
-      expect(row).not.toBeNull();
-      expect(row).toHaveTextContent(GRAPH_FIELD_LABELS[field]!);
-    }
-  });
-});
 
 describe('TC-R15-C5-03 — guessed and no-basis badges share a base class but keep distinct modifiers and text', () => {
   function makeGraph(): DataFlowGraph {
@@ -104,8 +96,9 @@ describe('TC-R15-C5-03 — guessed and no-basis badges share a base class but ke
     expect(guessedBadge!.classList.contains('graph-node__badge--no-basis')).toBe(false);
     expect(noBasisBadge!.classList.contains('graph-node__badge--guessed')).toBe(false);
     // ...and their own, distinct text — never merged into one label.
-    expect(guessedBadge!.textContent).toMatch(/guessed — the description does not say/i);
-    expect(noBasisBadge!.textContent).toMatch(/not found in your text — worth a second look/i);
+    // R16-E §4 (F1B-1): reworded off "guessed"/"not found in your text".
+    expect(guessedBadge!.textContent).toMatch(/not in your description — check this, or it becomes a question/i);
+    expect(noBasisBadge!.textContent).toMatch(/not in your description — please check this/i);
     expect(guessedBadge!.textContent).not.toBe(noBasisBadge!.textContent);
   });
 });
@@ -165,7 +158,7 @@ describe('TC-R15-C5-07 — provenance quote truncation never touches the field v
     // Before expansion: the value renders in full, the quote does not.
     const meaningBefore = container.querySelector('.graph-node__meaning');
     expect(meaningBefore).not.toBeNull();
-    expect(meaningBefore!.textContent).toBe(DATA_CLASS_LABELS['Client PII']);
+    expect(meaningBefore!.textContent).toBe(QUESTIONNAIRE_COPY.data_class!.options['Client PII']);
     expect(container.textContent).not.toContain(LONG_QUOTE);
 
     const expandButton = screen.getByRole('button', { name: /show full quote/i });
@@ -178,6 +171,6 @@ describe('TC-R15-C5-07 — provenance quote truncation never touches the field v
     expect(container.textContent).toContain(LONG_QUOTE);
     expect(screen.getByRole('button', { name: /show less/i })).toHaveAttribute('aria-expanded', 'true');
     const meaningAfter = container.querySelector('.graph-node__meaning');
-    expect(meaningAfter!.textContent).toBe(DATA_CLASS_LABELS['Client PII']);
+    expect(meaningAfter!.textContent).toBe(QUESTIONNAIRE_COPY.data_class!.options['Client PII']);
   });
 });

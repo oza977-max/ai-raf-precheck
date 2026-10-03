@@ -150,10 +150,11 @@ describe('R6-PV-3/-4 — provenance on the review screen (GraphView)', () => {
         guessedFields={{ i1: ['data_zone'] }}
       />,
     );
-    expect(screen.getByText(/based on: “credit risk data”/)).toBeInTheDocument();
+    expect(screen.getByText(/from your description: “credit risk data”/i)).toBeInTheDocument();
     // R9-SC-3: the per-field marker is a quiet badge; the card banner is
     // the alarm. Both renderings still appear (R6 fit criterion holds).
-    expect(screen.getByText(/guessed — the description does not say/i)).toBeInTheDocument();
+    // R16-E §4 (F1B-1): reworded off "guessed".
+    expect(screen.getByText(/not in your description — check this, or it becomes a question/i)).toBeInTheDocument();
   });
 
   it('TC-R6-PV-4-01: a card with a guessed field renders no plain confirm action', () => {
@@ -166,7 +167,7 @@ describe('R6-PV-3/-4 — provenance on the review screen (GraphView)', () => {
         guessedFields={{ i1: ['data_zone'] }}
       />,
     );
-    expect(screen.queryByRole('button', { name: /confirm$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })).toBeNull();
   });
 });
 
@@ -246,34 +247,43 @@ describe('R6 — flow level: guessed fields ride to the questionnaire and the an
     await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i }));
-    await screen.findByText(/confirm what we understood/i);
+    await screen.findByText(/check what we read from your description/i);
 
     // p1 has guessed fields → no confirm button on it; i1 and o1 are fully
     // quoted → confirm them.
     for (;;) {
-      const buttons = screen.queryAllByRole('button', { name: /confirm$/i });
+      const buttons = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i });
       if (buttons.length === 0) break;
       await user.click(buttons[0]!);
     }
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
+    // §4 (D-103): the jurisdiction confirm no longer shares a "— confirm"
+    // suffix with the node buttons above, so it needs its own click
+    // (MOCK_INPUT declares no jurisdictions at all).
+    await user.click(screen.getByRole('button', { name: /^none of these — continue$/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
     // The guessed fields arrive as questions. Answer model_type with a
     // DIFFERENT value than extracted (llm → traditional-ml), with context.
-    await screen.findByText(/what type of ai\/ml model is this/i);
+    // R16-E §2: the question's own words now come from QUESTIONNAIRE_COPY,
+    // not a second, separately-invented QUESTION_TEXT map.
+    await screen.findByText(/what kind of ai is it/i);
     await user.type(
       // NOT the R16-W-reworded ConfirmationStep label — this is
-      // QuestionnaireStep's own PER-ANSWER context field, unrelated and
-      // unchanged by R16-W (which only reworded ConfirmationStep's note).
-      screen.getByLabelText(/anything the reviewer should know about this answer/i),
+      // QuestionnaireStep's own PER-ANSWER context field. R16-E §3
+      // (F1B-6): "reviewer" renamed to "your AI risk team".
+      screen.getByLabelText(/anything your ai risk team should know about this answer/i),
       'Confirmed with the platform team.',
     );
-    // v0.7.1: option buttons now carry the shared plain-English labels.
-    await user.click(screen.getByRole('button', { name: /trained on historical data to predict or score/i }));
+    // R16-E §2: option buttons now carry QUESTIONNAIRE_COPY's own words —
+    // model_type's targeted question flattens Q4/Q4a into one option per
+    // leaf kind.
+    await user.click(screen.getByRole('button', { name: /the people who built it can show which factors drove each result/i }));
 
-    // vendor question (text answer).
-    await screen.findByText(/confirm the value for "vendor"/i);
-    await user.type(screen.getByLabelText(/your answer/i), 'internal-platform');
-    await user.click(screen.getByRole('button', { name: /submit answer/i }));
+    // vendor question — R16-E §2 (DR7-28): a select, not free text; "I
+    // don't know" resolves to its own value (an assumption), a different
+    // value than the extracted "open source" guess, so it is a correction.
+    await screen.findByText(/which supplier is it/i);
+    await user.click(screen.getByRole('button', { name: /^i.*don.t know$/i }));
 
     // Attest.
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));

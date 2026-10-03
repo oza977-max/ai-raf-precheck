@@ -1343,3 +1343,30 @@ describe('R16-D2 verification — a registry name reads naturally mid-sentence',
     expect(proper.inPlaceScopeName).toBe('Microsoft Copilot');
   });
 });
+
+describe('R16-D2 review pass 1 — "the" before a country name', () => {
+  it('TC-R16-D2-66: names shaped "X of Y" take "the" too ("the Republic of Ireland"), and names that take none stay bare', () => {
+    const pack = (code: string) => [
+      makePack({
+        jurisdiction: code,
+        rules: [
+          { id: 'PACK-HL-02', title: 't', source: { document: 'd', section: 's', text: 't' }, effect: { type: 'hard_line', reason: 'r', plain_reason: 'it would act alone' }, condition: { autonomy_level: { gte: 4 } }, basis: 'verbatim' },
+        ],
+      }),
+    ];
+    const policy = makePolicy({
+      jurisdictions: [
+        { code: 'IE', name: 'Republic of Ireland', pack_files: [] },
+        { code: 'SA', name: 'Kingdom of Saudi Arabia', pack_files: [] },
+        { code: 'IM', name: 'Isle of Man', pack_files: [] },
+        { code: 'SG', name: 'Singapore', pack_files: [] },
+      ],
+    });
+    const reasonFor = (code: string) =>
+      buildVerdictView(makeVerdict({ status: 'rejected', controls: [], binding_constraint: 'PACK-HL-02' }), policy, undefined, undefined, undefined, undefined, { packs: pack(code) }).no?.reason;
+    expect(reasonFor('IE')).toContain('adopted for the Republic of Ireland,');
+    expect(reasonFor('SA')).toContain('adopted for the Kingdom of Saudi Arabia,');
+    expect(reasonFor('IM')).toContain('adopted for the Isle of Man,');
+    expect(reasonFor('SG')).toContain('adopted for Singapore,');
+  });
+});

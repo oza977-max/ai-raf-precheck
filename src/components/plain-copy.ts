@@ -36,12 +36,12 @@ import type {
   OutputReversibility,
   SystemAccessScope,
 } from '../engine/types';
+import type { PlausibilitySignal } from '../engine/plausibility';
 // R16-F §5 (DR7-06). QuestionId/PlainAnswers are now engine-owned (ids and
 // keys only, no words) — re-exported here so every existing component
 // import of them from `./plain-copy` keeps working unchanged.
-import type { AssumptionRef } from '../engine/plain-questions';
-export type { QuestionId, PlainAnswers } from '../engine/plain-questions';
-import type { QuestionId, PlainAnswers } from '../engine/plain-questions';
+import type { AssumptionRef, QuestionId, PlainAnswers } from '../engine/plain-questions';
+export type { QuestionId, PlainAnswers };
 
 // R16-D2 §1 (D-95). `questionId` is widened to `string` (not `QuestionId`)
 // because a questionnaire answer (chunk E, not yet built) will carry
@@ -448,6 +448,397 @@ export function findOption(id: QuestionId, key: string): PlainOption | undefined
 // reach has the same fix, so one sentence covers them all.
 export const ACCESS_SCOPE_REFUSAL_TEXT =
   'Tick at least one option. “Nothing beyond what it’s given for the task” goes on its own — it can’t be ticked with the others.';
+
+// ---------------------------------------------------------------------------
+// R16-E §2 (D-101, DR7-26/28/29/31). ONE source for the targeted
+// questionnaire's (chunk E, QuestionnaireStep) questions and option labels
+// AND the review screen's (§4, GraphView's graph_review cards) field labels
+// and value words — so the words a person edits are the words they'd have
+// answered. Keyed by the GRAPH field (src/engine/types.ts's own names),
+// unlike PLAIN_QUESTIONS above, which is keyed by the guided FORM's own
+// question id. The description path never shows the form's situational
+// Q1-14; this table is its field-level vocabulary instead.
+export interface QuestionnaireFieldCopy {
+  question: string;
+  help?: string;
+  /** A short phrase for a sentence — "Check \"{shortLabel}\" on the card
+   *  …", "answers you weren't sure about: {shortLabel}" — never the full
+   *  question text re-run into a list. */
+  shortLabel: string;
+  /** value -> label, keyed by the ENGINE value (e.g. 'Client PII', '2',
+   *  'true') — both the targeted questionnaire's `IntakeQuestion.options`
+   *  and GraphView's node fields carry engine values directly, never the
+   *  form's own internal option keys ('people', 'score', …). */
+  options: Record<string, string>;
+  /** The stricter value "Not sure" sets, and the sentence completing "we
+   *  assumed ___" when it does. Absent where the field offers no "Not
+   *  sure" at all (decision_type, scale — the form has none either) or
+   *  where the stricter answer is reached through its own named choice
+   *  instead (vendor's "I don't know", declared_model_id's "I don't
+   *  know" — see VENDOR_UNSURE_* below). */
+  notSure?: { value: unknown; assumption: string };
+}
+
+export const QUESTIONNAIRE_COPY: Record<string, QuestionnaireFieldCopy> = {
+  data_class: {
+    question: 'What’s the most sensitive information it will see or use?',
+    shortLabel: 'what information it uses',
+    options: {
+      'Client PII':
+        'Information about people — clients, applicants, staff or anyone else who can be identified',
+      MNPI: 'Price-sensitive information — anything that could move a share price',
+      Confidential: 'Confidential firm information',
+      Internal: 'Everyday work information, or only what you type in yourself',
+      Public: 'Only public information',
+    },
+    notSure: { value: 'Confidential', assumption: 'confidential firm information — the stricter case' },
+  },
+  data_zone: {
+    question: 'Where will your information go?',
+    shortLabel: 'where your information goes',
+    options: {
+      'Zone A': 'An outside website or service, outside your firm’s control',
+      'Zone B': 'A supplier’s systems, outside your firm’s own',
+      'Zone C': 'Your firm’s own systems',
+    },
+    notSure: { value: 'Zone A', assumption: 'an outside website with no contract — the strictest case' },
+  },
+  model_type: {
+    question:
+      'What kind of AI is it? If more than one fits — for example, something that turns speech into text and writes a summary of it — pick the one nearest the bottom of this list.',
+    help:
+      'Different kinds of AI go wrong in different ways. (Whether it acts by itself is asked separately, in question 6.)',
+    shortLabel: 'what kind of AI it is',
+    options: {
+      statistical:
+        'Gives a score, ranking, flag, category or forecast — and follows fixed, written-down rules, like a scorecard',
+      'traditional-ml':
+        'Gives a score, ranking, flag, category or forecast — and the people who built it can show which factors drove each result',
+      ml: 'Gives a score, ranking, flag, category or forecast — and no one can easily show why it gave a particular result',
+      'deep-learning': 'Recognises things in images, sound or documents — e.g. reads cheques, transcribes calls',
+      llm: 'Reads, summarises, translates, writes or answers questions in words',
+      'generative-ai': 'Creates images, audio, video or code',
+      agentic:
+        'An AI agent that works through tasks on its own, using other tools or systems — e.g. sends messages, books things, updates records, changes code',
+    },
+    notSure: {
+      value: 'agentic',
+      assumption:
+        'an AI agent that can work on its own — the strictest case, because agents need the most safeguards. Change it if you can.',
+    },
+  },
+  action_type: {
+    question: 'What happens with what it produces?',
+    shortLabel: 'what it does with what it produces',
+    options: {
+      read: 'It finds or summarises things for people to read',
+      inform: 'It answers people’s questions directly',
+      draft: 'It creates drafts',
+      recommend: 'It suggests, ranks or flags things',
+      execute: 'It carries out actions — sends, books, updates records or deploys changes',
+      trade: 'It places or changes trades',
+      approve: 'It makes yes-or-no decisions, like accepting an application',
+    },
+    notSure: { value: 'execute', assumption: 'it carries out actions by itself — the stricter case' },
+  },
+  autonomy_level: {
+    question: 'How much does it do without a person?',
+    shortLabel: 'how much it does without a person',
+    options: {
+      '0': 'Nothing by itself — people decide what to do with what it produces',
+      '1': 'A person checks or approves each thing before it happens',
+      '2': 'It decides or acts by itself, and a person reviews afterwards',
+      '3': 'It acts by itself within limits someone set, with no routine review',
+      '4': 'It acts entirely by itself, with no person involved at any point',
+    },
+    notSure: {
+      value: '4',
+      assumption:
+        'it acts entirely by itself with no person involved at any point — the strictest case. This changes the result a lot; change it if you can.',
+    },
+  },
+  hitl: {
+    question: 'Does a person check what it produces before anything happens?',
+    shortLabel: 'whether a person checks it first',
+    options: { true: 'Yes', false: 'No' },
+    notSure: { value: false, assumption: 'nobody checks it first — the stricter case' },
+  },
+  decision_bindingness: {
+    question: 'How much weight does what it produces carry?',
+    shortLabel: 'how much weight what it produces carries',
+    options: {
+      'non-binding':
+        'Little — it’s routine work, like an email, a picture or a first draft; nobody makes an important decision from it',
+      advisory: 'It’s one input among several when someone makes a decision',
+      material: 'It’s usually what a decision is based on — people tend to go with it',
+      binding: 'It’s acted on without a person deciding',
+    },
+    notSure: { value: 'material', assumption: 'usually what a decision is based on — the stricter case' },
+  },
+  exposure: {
+    question:
+      'Who ends up seeing or receiving what it produces, in its final form? If more than one, pick the widest.',
+    help: 'If it changes code, records or systems instead, think about who is affected by those changes.',
+    shortLabel: 'who sees what it produces',
+    options: {
+      'internal-only': 'Only me or my own team',
+      'internal-shared': 'Other teams in the firm',
+      'client-facing': 'Clients or customers — including people applying to us',
+      'market-facing': 'The public, the market or regulators — e.g. public social media, published reports',
+    },
+    notSure: {
+      value: 'market-facing',
+      assumption: 'the public or the market — the widest audience. Change it if the real audience is narrower.',
+    },
+  },
+  // DR7-29: ONE lending option (Q8's own credit/lending text); `lending-
+  // decision` stays a legal engine value (extraction, older data) but is
+  // not offered here — both are in CANONICAL_VOCABULARY and the generator
+  // copies them all, so the engine still accepts either. "Something else"
+  // (DR7-29) leaves `decision_type` unset and inserts a follow-up text
+  // question for `decision_type_other` right after — dropping it would
+  // give this path a lighter route than the form's own 8other.
+  decision_type: {
+    question: 'Which of these does it help decide, if any? Pick the closest.',
+    shortLabel: 'what it helps decide',
+    options: {
+      'credit-decision': 'Whether to lend to someone, or on what terms',
+      hiring:
+        'Who to hire or promote — including tools that only produce notes, transcripts or summaries a person later uses to decide',
+      pricing: 'What to charge a client, or how something is priced or valued',
+      trading: 'Buying or selling investments',
+      'fraud-detection': 'Spotting fraud or financial crime',
+      'regulatory-reporting': 'Figures or statements sent to a regulator',
+      operational: 'None of these — it’s for day-to-day work',
+      // Pseudo-value: never a legal DecisionType. QuestionnaireStep
+      // recognises it and inserts the decision_type_other follow-up
+      // instead of writing it onto the graph.
+      other: 'Something else — describe it',
+    },
+    // No "Not sure" — the form has none either.
+  },
+  decision_type_other: {
+    question: 'What does it help decide?',
+    shortLabel: 'what it helps decide',
+    options: {},
+  },
+  output_reversibility: {
+    question:
+      'If it gets something wrong, can the mistake be caught and put right before it does lasting harm — to anyone?',
+    shortLabel: 'whether a mistake can be put right',
+    options: {
+      reversible: 'Yes',
+      irreversible: 'No — once it happens, it can’t be taken back',
+    },
+    notSure: {
+      value: 'irreversible',
+      assumption: 'it can’t be undone — the strictest case. Change it if a mistake can actually be caught and fixed.',
+    },
+  },
+  scale: {
+    question: 'How widely will it be used?',
+    help: 'Think about how much of the work it covers, not just how many people use it.',
+    shortLabel: 'how widely it’s used',
+    options: {
+      limited: 'Just me, or a small trial',
+      at_scale:
+        'My team, as part of normal work, or wider — several teams, the whole business, or every case of a kind (e.g. all applications)',
+    },
+    // No "Not sure" — the form has none either.
+  },
+  replaces_prior_model: {
+    question:
+      'Does it replace something you already use for the same job — a model, scorecard, rules or a spreadsheet calculation?',
+    shortLabel: 'whether it replaces something you use',
+    options: { true: 'Yes', false: 'No' },
+    notSure: {
+      value: true,
+      assumption: 'it replaces something you already use — the stricter case. Change it if nothing is being replaced.',
+    },
+  },
+  system_access_scope: {
+    question: 'What can it get into by itself? Tick all that apply.',
+    shortLabel: 'what it can get into by itself',
+    options: {
+      none: 'Nothing beyond what it’s given for the task',
+      credentialed_systems: 'It has its own logins, passwords or access tokens for other systems',
+      deployment_authority: 'It can change software or settings, or deploy updates, without a person',
+      shared_infrastructure: 'It runs on computers or servers shared with other automated tools',
+    },
+    notSure: {
+      value: ['shared_infrastructure', 'credentialed_systems', 'deployment_authority'],
+      assumption:
+        'it can reach other systems with its own logins, can deploy changes, and runs on shared infrastructure — the strictest case',
+    },
+  },
+  multi_instance_coordination: {
+    question: 'Can copies of it, or other AI agents, pass work or messages to each other?',
+    shortLabel: 'whether copies of it work together',
+    options: { no: 'No — it works alone', yes: 'Yes' },
+    notSure: {
+      value: 'unknown',
+      assumption:
+        'whether copies of it can pass work to each other isn’t known — treated as if they can, since that’s the stricter case',
+    },
+  },
+  // DR7-28. Registry options (one per policy vendor of kind `supplier`) are
+  // merged in by the caller (QuestionnaireStep, which has the policy) —
+  // this table holds only the two fixed choices every vendor question
+  // offers regardless of the firm's own list. See VENDOR_UNSURE_* below for
+  // "I don't know"'s own value/assumption pair.
+  vendor: {
+    question: 'Which supplier is it?',
+    help:
+      'Only pick a name if you’re sure it’s the one you use. If you’re not certain, choose "I don’t know" rather than guess — picking the wrong one could miss checks your actual tool needs.',
+    shortLabel: 'which supplier it is',
+    options: { 'not-on-list': 'Not on this list', 'dont-know': 'I don’t know' },
+  },
+  vendor_name: {
+    question: 'What is it called?',
+    help: '(optional)',
+    shortLabel: 'which supplier it is',
+    options: {},
+  },
+  // DR7-28. "I don't know" here leaves the field unset — "none declared" —
+  // the same honest-absence rule the form's own Q3model already follows
+  // (D-27); no assumption is recorded, because nothing was assumed.
+  declared_model_id: {
+    question: 'Model name, if you know it',
+    help: '(optional — your AI risk team can confirm)',
+    shortLabel: 'which model it is',
+    options: { 'not-on-list': 'Not on the list', 'dont-know': 'I don’t know' },
+  },
+  declared_model_id_name: {
+    question: 'What is it called?',
+    help: '(optional)',
+    shortLabel: 'which model it is',
+    options: {},
+  },
+};
+
+// DR7-28. vendor's "I don't know" branch: the value written onto the graph
+// (a plain, human-readable sentence, D-72's own style — never a bare
+// "unregistered" sentinel) and the assumption sentence listed back, which
+// is deliberately a DIFFERENT, more explanatory phrase — exactly as the
+// form's own Q3supplier "dont-know" case already does (plain-intake.ts /
+// ASSUMPTION_TEXT['3supplier:dont-know']) — so the two paths read alike.
+export const VENDOR_UNSURE_VALUE = 'a supplier you weren’t sure of';
+export const VENDOR_UNSURE_ASSUMPTION = 'a supplier your firm hasn’t assessed — the stricter case';
+
+/** DR7-28. vendor's "Not on this list" branch, resolved once the follow-up
+ *  text is in hand (or left blank) — mirrors plain-intake.ts's Q3supplier
+ *  "not-on-list" case (D-64) exactly, so the same typed name reads the
+ *  same way on both paths. */
+export function vendorNotOnListValue(text: string): string {
+  const trimmed = text.trim();
+  return trimmed ? `${trimmed} (not on your firm’s list)` : 'An unlisted supplier (not on your firm’s list)';
+}
+
+/** R16-E review pass 2. The words for a recorded supplier: the registry's
+ *  plain name for a registered one (its id is internal — "VENDOR-APPROVED-LLM"
+ *  must never reach a submitter's screen), plain words for "built inside the
+ *  firm", and anything else as written (a typed or model-read name). One
+ *  lookup, used by the review screen and the summary's "Through:" line. */
+export function supplierDisplayName(
+  vendor: string,
+  policy: { platforms?: Array<{ id: string; plain_name?: string }>; vendors?: Array<{ id: string; plain_name?: string }> } | undefined,
+): { name: string; registered: boolean } {
+  if (vendor === 'internal') return { name: 'None — your firm built it', registered: false };
+  const match = [...(policy?.platforms ?? []), ...(policy?.vendors ?? [])].find((r) => r.id === vendor);
+  if (match) return { name: match.plain_name ?? 'a supplier on your firm’s list', registered: true };
+  return { name: vendor, registered: false };
+}
+
+/** §2's catch-all (D-20's "no bare code ever reaches the first screen",
+ *  extended to the targeted questionnaire): every field the generator can
+ *  emit has an explicit entry above, proved by a guard test — this exists
+ *  only so a field nobody anticipated still renders a safe, honest
+ *  question instead of a crash or the bare field id. `label` is the
+ *  caller's own best name for the field (its GraphView row label, or an
+ *  R16-W SUMMARY_LABELS heading) when it has one. */
+export function questionnaireCopyForField(field: string, label?: string): QuestionnaireFieldCopy {
+  const known = QUESTIONNAIRE_COPY[field];
+  if (known) return known;
+  const name = label ?? field.replace(/_/g, ' ');
+  return {
+    question: `Please check this detail: ${name}.`,
+    shortLabel: name,
+    options: {},
+  };
+}
+
+// R16-E §4 (DR7-26). The description-path review screen's three card
+// titles — shared with `plausibilityMessageForDescription` below and with
+// GraphView.tsx's own column headings, so neither can drift from the
+// other.
+export const GRAPH_REVIEW_CARD_TITLES = {
+  input: 'What it uses',
+  processing: 'The AI',
+  output: 'What comes out',
+} as const;
+
+// R16-E §4 (v2.1, F1B-1). The two paths' own wording for a plausibility
+// reference (src/engine/plausibility.ts's PlausibilitySignal — the engine
+// returns a reference only, never a sentence). The form path names its
+// own question (unchanged from R16-F); the description path names the
+// review screen's card and row instead, since it never shows the form's
+// questions. No sentence is split between the engine and either screen,
+// and no field code or card id ever reaches the screen.
+const PLAUSIBILITY_FORM_TEXT: Record<PlausibilitySignal, string> = {
+  'sounds-internal':
+    'Your description sounds like the AI runs on your firm’s own systems, but your answers say your information goes outside the firm. Check “Where does the AI come from?” — it affects several rules.',
+  'mentions-training':
+    'Your description mentions training or fine-tuning, which isn’t something we ask about directly. Check “What happens with what it produces?” — pick the option that describes what the finished tool does, not the training itself.',
+  'says-person-reviews':
+    'Your description says a person reviews this, but your answers say it acts without that review. Check “What happens with what it produces?” — pick the option that matches whether someone reviews it.',
+  'sounds-autonomous':
+    'Your description sounds like it acts without a person involved, but your answers say a person is involved. Check “What happens with what it produces?” — pick the option that matches how much it does on its own.',
+};
+
+export function plausibilityMessageForForm(signal: PlausibilitySignal): string {
+  return PLAUSIBILITY_FORM_TEXT[signal];
+}
+
+// What looks inconsistent, in the description path's own terms ("we read",
+// not "your answers" — on this path the values were read from the
+// description). Verifying R16-E: the first version kept only the "where to
+// look" half, so a submitter was told to check something without being told
+// why — the R16-F messages it replaced had always said why.
+const PLAUSIBILITY_DESCRIPTION_REASON: Record<PlausibilitySignal, string> = {
+  'sounds-internal':
+    'Your description sounds like the AI runs on your firm’s own systems, but we read that your information goes outside the firm.',
+  'mentions-training':
+    'Your description mentions training or fine-tuning, which isn’t something we ask about directly — what matters here is what the finished tool does.',
+  'says-person-reviews': 'Your description says a person reviews this, but we read that it acts without that review.',
+  'sounds-autonomous':
+    'Your description sounds like it acts without a person involved, but we read that a person is involved.',
+};
+
+/** The description path's own wording (v2.1): why it looks inconsistent,
+ *  then the review screen's card and row to check — never a form question
+ *  this path does not show. */
+export function plausibilityMessageForDescription(signal: PlausibilitySignal, card: string, row: string): string {
+  return `${PLAUSIBILITY_DESCRIPTION_REASON[signal]} Check “${row}” on the card “${card}”.`;
+}
+
+// R16-E §5 (D-104, DR7-30/AB-1). The extraction error has TWO call sites
+// (IntakeFlow.tsx's handleConfirmNewUseCase and handleRetryExtraction) —
+// both read this one function, so the two can never drift apart (a v2.1
+// fix-verification finding: an earlier plan would have let them). Typed as
+// the literal union rather than importing `LlmError` from `src/llm/*` — a
+// components file reads its own words, not the SDK layer's error type.
+export function extractionErrorMessage(kind: 'no-api-key' | 'network-error' | 'parse-error'): string {
+  switch (kind) {
+    case 'no-api-key':
+      return 'The description reader isn’t set up on this computer.';
+    case 'network-error':
+      return 'We couldn’t reach the description reader just now.';
+    case 'parse-error':
+      return 'We couldn’t read your description reliably.';
+  }
+}
+
+export const EXTRACTION_ERROR_HELP = 'You can try again, or answer the questions yourself instead.';
 
 // A worked case's answers (backtest/worked-case-answers.json) were typed
 // independently of this file and use plain ASCII apostrophes throughout

@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { describeAssumptions, summaryDestinationLine, SUMMARY_DESTINATION } from './plain-copy';
+import {
+  describeAssumptions,
+  summaryDestinationLine,
+  SUMMARY_DESTINATION,
+  QUESTIONNAIRE_COPY,
+  questionnaireCopyForField,
+  vendorNotOnListValue,
+  extractionErrorMessage,
+  EXTRACTION_ERROR_HELP,
+  plausibilityMessageForForm,
+  plausibilityMessageForDescription,
+  GRAPH_REVIEW_CARD_TITLES,
+} from './plain-copy';
 import type { AssumptionRef } from '../engine/plain-questions';
 
 // R16-F §5 (DR7-06). plain-intake.ts (the engine) now returns assumption
@@ -107,5 +119,152 @@ describe('summaryDestinationLine (F-9, DR7-09)', () => {
 
   it('a description-path call (plainAnswers undefined) never attributes', () => {
     expect(summaryDestinationLine('Zone A', undefined)).toBe(SUMMARY_DESTINATION['Zone A']);
+  });
+});
+
+// R16-E §2 (D-101, DR7-31). QUESTIONNAIRE_COPY is the one source for the
+// targeted questionnaire's questions/options AND the review screen's field
+// labels and value words. Every field the generator can actually emit —
+// every QUOTE_FIELDS entry (graph-extractor.ts) plus every condition-key
+// field the real policy uses (verified against policy/appetite.yaml) —
+// must have an explicit entry; a test fails otherwise (D-20's "no bare
+// code ever reaches the first screen", extended to this screen).
+describe('QUESTIONNAIRE_COPY (R16-E §2, D-101/DR7-31)', () => {
+  const EVERY_FIELD_THE_GENERATOR_CAN_EMIT = [
+    'data_class',
+    'data_zone',
+    'model_type',
+    'action_type',
+    'autonomy_level',
+    'hitl',
+    'decision_bindingness',
+    'exposure',
+    'decision_type',
+    'output_reversibility',
+    'scale',
+    'replaces_prior_model',
+    'system_access_scope',
+    'multi_instance_coordination',
+    'vendor',
+    'declared_model_id',
+  ];
+
+  it('TC-R16-E-11: every field the generator can emit has an entry with a non-empty question and shortLabel', () => {
+    for (const field of EVERY_FIELD_THE_GENERATOR_CAN_EMIT) {
+      const copy = QUESTIONNAIRE_COPY[field];
+      expect(copy, `missing QUESTIONNAIRE_COPY entry for "${field}"`).toBeDefined();
+      expect(copy!.question.length).toBeGreaterThan(0);
+      expect(copy!.shortLabel.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('TC-R16-E-12: data_class renders its exact question and five option labels, "Not sure" → Confidential', () => {
+    const copy = QUESTIONNAIRE_COPY.data_class!;
+    expect(copy.question).toBe('What’s the most sensitive information it will see or use?');
+    expect(Object.keys(copy.options).sort()).toEqual(
+      ['Client PII', 'Confidential', 'Internal', 'MNPI', 'Public'].sort(),
+    );
+    expect(copy.notSure?.value).toBe('Confidential');
+  });
+
+  it('TC-R16-E-13: decision_type offers exactly one lending option (credit-decision) and a "Something else" pseudo-option, never lending-decision, and no "Not sure"', () => {
+    const copy = QUESTIONNAIRE_COPY.decision_type!;
+    expect(copy.options['credit-decision']).toMatch(/whether to lend/i);
+    expect(copy.options['lending-decision']).toBeUndefined();
+    expect(copy.options.other).toMatch(/something else/i);
+    expect(copy.notSure).toBeUndefined();
+  });
+
+  it('TC-R16-E-14: output_reversibility offers Q9\'s two real options only (never "unknown"), "Not sure" → irreversible', () => {
+    const copy = QUESTIONNAIRE_COPY.output_reversibility!;
+    expect(Object.keys(copy.options).sort()).toEqual(['irreversible', 'reversible']);
+    expect(copy.notSure?.value).toBe('irreversible');
+  });
+
+  it('TC-R16-E-15: system_access_scope\'s "Not sure" is all three non-none values, canonically ordered', () => {
+    expect(QUESTIONNAIRE_COPY.system_access_scope!.notSure?.value).toEqual([
+      'shared_infrastructure',
+      'credentialed_systems',
+      'deployment_authority',
+    ]);
+  });
+
+  it('TC-R16-E-16: scale and decision_type offer no "Not sure" — the form has none either', () => {
+    expect(QUESTIONNAIRE_COPY.scale!.notSure).toBeUndefined();
+    expect(QUESTIONNAIRE_COPY.decision_type!.notSure).toBeUndefined();
+  });
+
+  it('TC-R16-E-17: vendor and declared_model_id each offer "not-on-list" and "dont-know" static choices, with their own help text', () => {
+    expect(QUESTIONNAIRE_COPY.vendor!.options['not-on-list']).toBe('Not on this list');
+    expect(QUESTIONNAIRE_COPY.vendor!.options['dont-know']).toMatch(/don.t know/i);
+    expect(QUESTIONNAIRE_COPY.vendor!.help).toMatch(/don.t know/i);
+    expect(QUESTIONNAIRE_COPY.declared_model_id!.options['not-on-list']).toBe('Not on the list');
+    expect(QUESTIONNAIRE_COPY.declared_model_id!.help).toMatch(/optional/i);
+  });
+
+  it('TC-R16-E-18: questionnaireCopyForField falls back to "Please check this detail" for a field with no entry — never the bare field id alone', () => {
+    const copy = questionnaireCopyForField('some_future_field');
+    expect(copy.question).toBe('Please check this detail: some future field.');
+    expect(copy.options).toEqual({});
+  });
+
+  it('TC-R16-E-19: questionnaireCopyForField\'s fallback prefers a caller-supplied label over the bare field id', () => {
+    const copy = questionnaireCopyForField('some_future_field', 'a thing we check');
+    expect(copy.question).toBe('Please check this detail: a thing we check.');
+  });
+
+  it('TC-R16-E-20: vendorNotOnListValue wraps typed text, and falls back to an unlisted-supplier sentence when left blank', () => {
+    // Curly apostrophe, as on the guided form (plain-intake.ts) — the straight
+    // one this assertion first pinned was the inconsistency review pass 1 found.
+    expect(vendorNotOnListValue('Acme Corp')).toBe('Acme Corp (not on your firm’s list)');
+    expect(vendorNotOnListValue('')).toMatch(/an unlisted supplier/i);
+    expect(vendorNotOnListValue('   ')).toMatch(/an unlisted supplier/i);
+  });
+});
+
+// R16-E §5 (D-104, DR7-30/AB-1). One shared function for both extraction
+// error call sites (IntakeFlow.tsx) — never two independently-worded copies.
+describe('extractionErrorMessage (R16-E §5, D-104)', () => {
+  it('TC-R16-E-51: no-api-key reads as the description reader not being set up', () => {
+    expect(extractionErrorMessage('no-api-key')).toBe('The description reader isn’t set up on this computer.');
+  });
+
+  it('TC-R16-E-52: network-error reads as not being able to reach the description reader', () => {
+    expect(extractionErrorMessage('network-error')).toMatch(/couldn.t reach the description reader/i);
+  });
+
+  it('TC-R16-E-53: parse-error reads as not being able to read the description reliably', () => {
+    expect(extractionErrorMessage('parse-error')).toMatch(/couldn.t read your description reliably/i);
+  });
+
+  it('TC-R16-E-54: the shared help line offers both recovery paths', () => {
+    expect(EXTRACTION_ERROR_HELP).toMatch(/try again/i);
+    expect(EXTRACTION_ERROR_HELP).toMatch(/answer the questions/i);
+  });
+});
+
+// R16-E §4 (v2.1, F1B-1). The two paths' own wording for the same
+// plausibility reference (src/engine/plausibility.ts returns a reference
+// only — a signal name — never a sentence).
+describe('plausibility wording, by path (R16-E §4, v2.1)', () => {
+  it('TC-R16-E-55: the form path names its own question — unchanged from R16-F', () => {
+    expect(plausibilityMessageForForm('sounds-internal')).toMatch(/where does the ai come from/i);
+    expect(plausibilityMessageForForm('mentions-training')).toMatch(/what happens with what it produces/i);
+    expect(plausibilityMessageForForm('says-person-reviews')).toMatch(/what happens with what it produces/i);
+    expect(plausibilityMessageForForm('sounds-autonomous')).toMatch(/what happens with what it produces/i);
+  });
+
+  it('TC-R16-E-56: the description path names the review screen\'s own card and row — never a form question', () => {
+    const message = plausibilityMessageForDescription('sounds-internal', 'The AI', 'where your information goes');
+    // Why, then where — the pointer alone (what this case first pinned) told
+    // a submitter to check something without saying what looked wrong.
+    expect(message).toBe(
+      'Your description sounds like the AI runs on your firm’s own systems, but we read that your information goes outside the firm. Check “where your information goes” on the card “The AI”.',
+    );
+    expect(message).not.toMatch(/where does the ai come from/i);
+  });
+
+  it('TC-R16-E-57: the three card titles are shared between this wording and GraphView\'s own column headings', () => {
+    expect(GRAPH_REVIEW_CARD_TITLES).toEqual({ input: 'What it uses', processing: 'The AI', output: 'What comes out' });
   });
 });

@@ -55,6 +55,10 @@ interface ConfirmationStepProps {
    *  still-stale precondition and refuse again, so Confirm disables
    *  itself rather than inviting a click that can only fail the same way. */
   confirmDisabled?: boolean;
+  /** R16-F review pass 4: a confirm is under way (the case lock and the
+   *  record check have not answered yet) — Confirm and "Change an answer"
+   *  are disabled and a status says so. */
+  pending?: boolean;
 }
 
 export default function ConfirmationStep({
@@ -69,6 +73,7 @@ export default function ConfirmationStep({
   onChangeAnswer,
   onConfirm,
   confirmDisabled = false,
+  pending = false,
 }: ConfirmationStepProps) {
   const [note, setNote] = useState('');
 
@@ -93,6 +98,7 @@ export default function ConfirmationStep({
         description={description}
         plainAnswers={plainAnswers}
         onChangeAnswer={onChangeAnswer}
+        changeAnswerDisabled={pending}
       />
 
       {/* R16-W W-3 (§1): same collapsed panel and posture line graph_review
@@ -142,9 +148,14 @@ export default function ConfirmationStep({
         By confirming, you&rsquo;re saying these answers are accurate, as far as you know.
       </p>
 
-      <button type="button" onClick={() => onConfirm(note.trim() || undefined)} disabled={confirmDisabled}>
+      <button type="button" onClick={() => onConfirm(note.trim() || undefined)} disabled={confirmDisabled || pending}>
         Confirm and evaluate
       </button>
+      {pending && (
+        <p className="confirmation-step__pending" role="status">
+          Confirming…
+        </p>
+      )}
     </section>
   );
 }

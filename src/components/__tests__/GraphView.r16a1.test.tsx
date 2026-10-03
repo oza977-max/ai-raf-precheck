@@ -36,15 +36,16 @@ function makeGraph(systemAccessScope: unknown): DataFlowGraph {
 describe('GraphView — system access display (list-valued, R16-A1)', () => {
   it('TC-R16-A1-26: a single system_access_scope value renders its meaning, as before', () => {
     render(<GraphView graph={makeGraph('shared_infrastructure')} />);
-    expect(screen.getByText(/shared infrastructure/i)).toBeInTheDocument();
+    // R16-E §4: QUESTIONNAIRE_COPY's own words (Q13's), not field-copy.ts's.
+    expect(screen.getByText(/it runs on computers or servers shared with other automated tools/i)).toBeInTheDocument();
   });
 
   it('TC-R16-A1-27: a list of system_access_scope values renders without crashing and names every value', () => {
     expect(() =>
       render(<GraphView graph={makeGraph(['shared_infrastructure', 'credentialed_systems'])} />),
     ).not.toThrow();
-    expect(screen.getByText(/shared infrastructure/i)).toBeInTheDocument();
-    expect(screen.getByText(/credentialed systems/i)).toBeInTheDocument();
+    expect(screen.getByText(/it runs on computers or servers shared with other automated tools/i)).toBeInTheDocument();
+    expect(screen.getByText(/its own logins, passwords or access tokens for other systems/i)).toBeInTheDocument();
   });
 
   it('does not crash in the editable/editing state either, with a list value', () => {

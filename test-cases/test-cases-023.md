@@ -46,6 +46,7 @@ this section's pack tests also cover.
 | TC-R16-D2-03 | A pack hard line with plain fields names the pack's own jurisdiction in the reason — `verdict-view-model.test.ts` |
 | TC-R16-D2-04 | A pack hard line with neither field names the jurisdiction in the fallback reason, plus the pointer line — `verdict-view-model.test.ts` |
 | TC-R16-D2-62 | A pack's jurisdiction is named in words from the policy's own list — "the European Union", but "Canada" — and a code the policy does not list is never shown (found while verifying: the first build printed the code, and its tests passed only because their sample packs spelled codes out as words) — `verdict-view-model.test.ts` |
+| TC-R16-D2-66 | Country names shaped "X of Y" take "the" too ("the Republic of Ireland", "the Kingdom of Saudi Arabia", "the Isle of Man"); names that take none stay bare (found by review pass 1) — `verdict-view-model.test.ts` |
 | TC-R16-D2-05 | CS-2 (unsatisfiable invariant), no `plain_reason` — the invariant's description + pointer, plus the no-safeguard clause and the CS-2 change text, with no stray period-comma — `verdict-view-model.test.ts` |
 | TC-R16-D2-05b | CS-2 with a `plain_reason` present uses it, still with the no-safeguard clause — `verdict-view-model.test.ts` |
 | TC-R16-D2-06 | An id found nowhere loaded never renders the bare id, and offers no "what would change" line (`change` is `undefined`) — `verdict-view-model.test.ts` |
@@ -170,6 +171,7 @@ end-to-end flow.
 |---|---|
 | 2026-10-03 | Written for R16-D2 (the "No" screen, saved assumptions, correcting a form answer). |
 | 2026-10-03 | Verification pass: TC-R16-D2-59 to -65 added (a correction without its form answers never returns to an empty form; country names in words; no internal id in the evidence note); TC-R16-D2-02 and -48 strengthened. |
+| 2026-10-03 | Review pass 1 (GVM build convergence loop): 0 Critical/Important, 1 Minor — TC-R16-D2-66 added (the "the" rule missed "X of Y" names). |
 
 ---
 

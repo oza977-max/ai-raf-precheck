@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Round R16-E &middot; Counterpoise &mdash; Test Cases</title>
+    <style>
+        /* Tufte/Few Design System */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #fffff8;
+            font-family: "ET Book", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Sticky TOC Navigation */
+        .toc-nav {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #fafaf8;
+            border-right: 2px solid #e8e8e0;
+            padding: 2rem 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .toc-nav h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: #555;
+        }
+
+        .toc-nav ul {
+            list-style: none;
+        }
+
+        .toc-nav li {
+            margin: 0.5rem 0;
+        }
+
+        .toc-nav a {
+            text-decoration: none;
+            color: #666;
+            border-left: 2px solid transparent;
+            display: block;
+            padding: 0.25rem 0 0.25rem 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .toc-nav a:hover {
+            color: #1a1a1a;
+            border-left-color: #4a90e2;
+        }
+
+        .toc-nav a.active {
+            color: #1a1a1a;
+            border-left-color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 960px;
+            padding: 2rem 3rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 300;
+            margin: 2rem 0 1rem 0;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            font-weight: 400;
+            margin: 2.5rem 0 1.25rem 0;
+            border-top: 1px solid #e8e8e0;
+            padding-top: 1.5rem;
+        }
+
+        h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #555;
+        }
+
+        p {
+            margin-bottom: 0.8rem;
+            text-align: justify;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code block */
+        code {
+            font-family: "Courier New", monospace;
+            background-color: #f7f7f2;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #fff;
+            color: #333;
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #333;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e8e8e0;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f7f7f2;
+        }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e8e8e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-nav {
+                width: 150px;
+                padding: 1.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .toc-nav {
+                position: relative;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #e8e8e0;
+                display: none;
+            }
+
+            .main-content {
+                padding: 1.5rem 1.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .toc-nav {
+                display: none;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            body {
+                font-size: 10pt;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+<nav class="toc-nav"><h3>Contents</h3><ul>
+                <li><a href="#1-extraction-can-carry-the-agent-fields-checked-">&sect;1 &mdash; Extraction can carry the agent fields, checked through the single gate (D-100; DR7-25)</a></li>
+                <li><a href="#2-one-copy-table-for-every-questionnaire-field-d">&sect;2 &mdash; One copy table for every questionnaire field (D-101; DR7-26/28/29/31)</a></li>
+                <li><a href="#3-answering-multi-select-not-sure-and-three-foll">&sect;3 &mdash; Answering: multi-select, "Not sure", and three follow-ups (D-102; DR7-24/27/28/29)</a></li>
+                <li><a href="#4-the-review-screen-graphview-and-the-graph-revi">&sect;4 &mdash; The review screen: <code>GraphView</code> and the <code>graph_review</code> block (D-103; DR7-26/30/33)</a></li>
+                <li><a href="#5-the-description-screen-s-own-failures-d-104-dr">&sect;5 &mdash; The description screen's own failures (D-104; DR7-30/AB-1)</a></li>
+                <li><a href="#6-the-contradiction-screen-d-105-dr7-30-f1b-3">&sect;6 &mdash; The contradiction screen (D-105; DR7-30/F1B-3)</a></li>
+                <li><a href="#7-things-we-couldn-t-tell-on-the-summary-d-106-d">&sect;7 &mdash; "Things we couldn't tell" on the summary (D-106; DR7-24/BB-1)</a></li>
+                <li><a href="#8-the-guard-test-no-engine-vocabulary-on-any-scr">&sect;8 &mdash; The guard test (no engine vocabulary on any screen a submitter sees)</a></li>
+                <li><a href="#untested-behaviours">Untested behaviours</a></li>
+                <li><a href="#changelog">Changelog</a></li>
+</ul></nav>
+<main class="main-content">
+<header>
+<h1>Counterpoise &mdash; Test Cases, Round R16-E</h1>
+<p class="metadata">3 October 2026 &middot; Generated from test-cases-024.md &mdash; do not hand-edit</p>
+</header>
+<p><em>Written 2026-10-03. <code>build/prompts/R16-E.md</code> v2.2 &mdash; the description-first path speaks the form's words: the extractor gains the agent fields, one <code>QUESTIONNAIRE_COPY</code> table drives the questionnaire AND the review screen, "Not sure" answers on this path become assumptions in R16-D2's shape, the review screen is reworded and works in a narrow window, extraction errors and the contradiction screen are reworded, "Please double-check" names what each path shows, and the summary merges this path's "couldn't tell" list. Built on top of R16-F (commit <code>52b2edf</code>) and R16-D2 (commit <code>2acea83</code>).</em></p>
+<p>Test files: <code>src/llm/graph-extractor.test.ts</code>, <code>src/components/plain-copy.test.ts</code>, <code>src/components/intake-state.test.ts</code>, <code>src/components/__tests__/QuestionnaireStep.r16e.test.tsx</code>, <code>src/components/__tests__/GraphView.r16e.test.tsx</code>, <code>src/components/__tests__/ContradictionReview.r16e.test.tsx</code>, <code>src/components/__tests__/UnderstoodSummary.test.tsx</code>, <code>src/components/__tests__/IntakeFlow.r16e.test.tsx</code>, <code>src/engine/contradiction.test.ts</code>.</p>
+
+<section id="1-extraction-can-carry-the-agent-fields-checked-">
+<h2>&sect;1 &mdash; Extraction can carry the agent fields, checked through the single gate (D-100; DR7-25)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-01</td><td>A valid list of several <code>system_access_scope</code> values is accepted and canonically ordered &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-02</td><td>A single-element list is accepted &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-03</td><td><code>"none"</code> combined with another value fails the whole extraction (rejected) &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-04</td><td>A duplicate value fails the whole extraction (rejected) &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-05</td><td>A value outside the four legal values fails the whole extraction (rejected) &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-06</td><td>Absent on a non-agent is accepted and not guessed &mdash; no claim, no question &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-07</td><td>Absent on an agentic node is forced guessed &mdash; an agent's reach is never silently "not stated" &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-08</td><td>A legal value with no verified quote is guessed, same mechanism as every other field &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-09</td><td><code>multi_instance_coordination</code> accepts its three legal values and rejects anything else &mdash; <code>graph-extractor.test.ts</code></td></tr>
+<tr><td>TC-R16-E-10</td><td>A verified quote keeps the field out of guessed, same as any other field &mdash; <code>graph-extractor.test.ts</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="2-one-copy-table-for-every-questionnaire-field-d">
+<h2>&sect;2 &mdash; One copy table for every questionnaire field (D-101; DR7-26/28/29/31)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-11</td><td>Every field the generator can emit has a <code>QUESTIONNAIRE_COPY</code> entry with a non-empty question and shortLabel &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-12</td><td><code>data_class</code> renders its exact question and five option labels; "Not sure" &rarr; <code>Confidential</code> &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-13</td><td><code>decision_type</code> offers exactly one lending option (<code>credit-decision</code>) and a "Something else" pseudo-option, never <code>lending-decision</code>, and no "Not sure" &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-14</td><td><code>output_reversibility</code> offers Q9's two real options only (never <code>unknown</code>); "Not sure" &rarr; <code>irreversible</code> &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-15</td><td><code>system_access_scope</code>'s "Not sure" is all three non-none values, canonically ordered &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-16</td><td><code>scale</code> and <code>decision_type</code> offer no "Not sure" &mdash; the form has none either &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-17</td><td><code>vendor</code> and <code>declared_model_id</code> each offer their own two fixed static choices, with their own help text &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-18</td><td><code>questionnaireCopyForField</code>'s fallback reads "Please check this detail: &hellip;" for a field with no entry &mdash; never the bare field id alone &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-19</td><td>The fallback prefers a caller-supplied label over the bare field id &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-20</td><td><code>vendorNotOnListValue</code> wraps typed text &mdash; with the curly apostrophe the guided form uses (the straight one this case first pinned was the inconsistency review pass 1 found) &mdash; and falls back to an unlisted-supplier sentence when left blank &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-26</td><td>The multi-select renders a <code>&lt;fieldset&gt;</code> with a <code>&lt;legend&gt;</code>, one <code>&lt;label&gt;</code> per option, and "Done" disabled until something is ticked &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-30</td><td><code>decision_type</code> offers "Something else &mdash; describe it" alongside the real options, excluding <code>lending-decision</code> &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-31</td><td><code>vendor</code> renders the firm's registered supplier plus "Not on this list" and "I don't know" (never a free-text box) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-31b</td><td><code>declared_model_id</code> renders the firm's approved model plus its own two fixed choices &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-31c</td><td><code>vendor_name</code> (the "Not on this list" follow-up) is optional free text &mdash; Submit is enabled even blank &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-68</td><td>End to end: picking "Something else" and typing a description leaves <code>decision_type</code> unset and records <code>decision_type_other</code>, reaching the evaluated verdict's provisional "could still change" line &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-69</td><td>End to end: vendor "Not on this list", typing a name wraps it as <code>"{name} (not on your firm's list)"</code> &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="3-answering-multi-select-not-sure-and-three-foll">
+<h2>&sect;3 &mdash; Answering: multi-select, "Not sure", and three follow-ups (D-102; DR7-24/27/28/29)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-21</td><td><code>insertQuestions</code> splices the follow-up right after the answered question &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-E-22</td><td>A "Not sure" <code>assumption</code> is accumulated into <code>state.assumptions</code>, created on first use &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-E-23</td><td>A second "Not sure" answer appends to the existing assumptions list &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-E-24</td><td><code>ANSWER_UNDONE</code> removes the inserted follow-up and the recorded assumption together &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-E-25</td><td>No <code>insertQuestions</code>/<code>assumption</code> leaves the reducer's existing, unchanged behaviour exactly as before &mdash; <code>intake-state.test.ts</code></td></tr>
+<tr><td>TC-R16-E-27</td><td>Ticking two kinds then "Done" submits both (canonical ORDERING is <code>normaliseAccessScope</code>'s job downstream, proved end to end at TC-R16-E-72) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-27b</td><td>Ticking "Nothing beyond&hellip;" clears any other tick, same exclusivity as the form's Q13 &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-28</td><td>A multi-select question also offers "Not sure", submitting the strictest array directly (no ticking required) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-29</td><td>A select-type field offers "Not sure", submitting <code>QUESTIONNAIRE_COPY</code>'s stricter value with <code>notSure=true</code> &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-29b</td><td>A boolean-type field also offers "Not sure" &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-29c</td><td><code>decision_type</code> and <code>scale</code> offer no "Not sure" button at all &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-32</td><td>A scalar answer's "Recorded:" line shows the option LABEL, never the raw value (BC-4) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-33</td><td>A multi-select answer's "Recorded:" line joins labels "a, b and c" &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-34</td><td>A guessed-field question introduces itself with the exact sentence "We couldn't tell this from your description:" &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-35</td><td>A triggering rule with a <code>plain_reason</code> renders "Why we ask:", with <code>{audience}</code>/<code>{destination}</code> placeholders resolved &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-35b</td><td>A triggering rule with no <code>plain_reason</code> renders no "why we ask" line &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-35c</td><td>A purely guessed question (no real rule) renders no "why we ask" line either &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-36</td><td>The per-answer context label names "your AI risk team", not "the reviewer" (F1B-6) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-37</td><td>The progress line never mentions a budget or a tier &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-38</td><td>Answering a question moves focus to the next question's own heading &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-77</td><td>When focus moves to a question the description did not answer, the focused element includes "We couldn&rsquo;t tell this from your description" &mdash; a screen reader hears both (review pass 1) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-80</td><td>On the description path the summary's double-check gives the reason ("we read that&hellip;") and names the card from the shared <code>GRAPH_REVIEW_CARD_TITLES</code> (review pass 2: the card-title fix had no test) &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-75</td><td>One question asked because the description didn't say reads "This is asked because your description didn&rsquo;t say." &mdash; no "All 1", no model talk (found in the walkthrough) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-75b</td><td>A mix of rule questions and "didn't say" questions counts each, in plain words &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-67</td><td>End to end (BC-3): ticking the identical set the extractor already guessed, via the tick-all control, records no correction &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-70</td><td>End to end: a "Not sure" answer on <code>output_reversibility</code> trips HL-001, and the "No" screen's "answers you weren't sure about" line names it &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-72</td><td>End to end: ticking <code>deployment_authority</code> before <code>shared_infrastructure</code> still records the canonical order on the evaluated graph &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="4-the-review-screen-graphview-and-the-graph-revi">
+<h2>&sect;4 &mdash; The review screen: <code>GraphView</code> and the <code>graph_review</code> block (D-103; DR7-26/30/33)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-40</td><td>The three columns are titled "What it uses" / "The AI" / "What comes out" &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-41</td><td><code>data_class</code>'s row label is <code>QUESTIONNAIRE_COPY</code>'s shortLabel, with no <code>&lt;code&gt;</code> element anywhere on the card &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-76</td><td>A value a node can carry but nobody chooses &mdash; "unknown" on whether a mistake can be put right, and on whether copies work together &mdash; reads in the summary's own words, never the bare value (review pass 1; shown failing without the fix) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-78</td><td>A recorded supplier reads as a name: a registered one by its plain name (never its internal id), built in-house as "None &mdash; your firm built it" (never "internal"), a typed name as written &mdash; one shared lookup (<code>supplierDisplayName</code>) for the review screen and the summary (review pass 2) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-82</td><td>The questionnaire's "Recorded:" line names a supplier exactly as the button the person clicked did ("Supplier 1" when the firm gave no plain name) &mdash; never its registry id (review pass 3; shown failing with the old code) &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-79</td><td>The decision menu never offers two identical choices: the legacy lending value is listed only when it is the recorded value, marked "(older answer)" (review pass 2) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-81</td><td>A card column the description gave nothing for reads "Nothing found in your description" &mdash; it said "None extracted" (found verifying pass 2's fixes) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-41b</td><td><code>vendor</code>/<code>declared_model_id</code> rows use their own shortLabel, never the bare word "vendor"/"model" &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-42</td><td>A verified quote reads <code>From your description: "{quote}"</code> &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-43</td><td>A guessed field reads "Not in your description &mdash; check this, or it becomes a question" &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-44</td><td>A confident-but-unquoted field reads "Not in your description &mdash; please check this" &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-45</td><td>An ordinary card reads "This is right"; an uncertain card reads "I've checked this &mdash; it's right" &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-46</td><td>A confirmed card reads "Checked by you." &mdash; never "Confirmed by you." &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-47</td><td>The gate note reads "We read these details from your description &mdash; nothing is decided until you've checked or corrected each one." &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-48</td><td>A single ignored jurisdiction reads <code>We ignored "{x}" &mdash; it isn't one of the countries your firm's rules cover.</code> &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-49</td><td>The review screen's plausibility note says why ("&hellip;but we read that a person is involved.") and names the card and the row &mdash; never a form question (the first version gave only where to look) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-50</td><td><code>App.css</code> stacks the cards in one column below 480px and no longer lets the graph scroll sideways &mdash; <code>GraphView.r16e.test.tsx</code> (it now checks exactly the 480px block, up to its own closing brace &mdash; review pass 3)</td></tr>
+<tr><td>TC-R16-E-55</td><td><code>plausibilityMessageForForm</code> keeps the form path's own question wording, unchanged from R16-F, for all four signals &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-56</td><td>The description path's wording gives the reason in its own terms ("we read"), then the review screen's card and row &mdash; never a form question (it first gave only the pointer) &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-57</td><td>The three card titles (<code>GRAPH_REVIEW_CARD_TITLES</code>) are shared between this wording and <code>GraphView</code>'s own column headings &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-66</td><td>The <code>graph_review</code> screen's heading reads identically on a fresh entry &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-66b</td><td>&hellip;on a correction re-entry (<code>originalVerdictId</code> set) &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-66c</td><td>&hellip;on an evaluation-failure re-entry (<code>afterFailedEvaluation</code> set) &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-66d</td><td>A genuine evaluation failure on the description path re-enters <code>graph_review</code> with the new plain message ("Something went wrong working out the result: &hellip; Check the details below and try again.") &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="5-the-description-screen-s-own-failures-d-104-dr">
+<h2>&sect;5 &mdash; The description screen's own failures (D-104; DR7-30/AB-1)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-51</td><td><code>no-api-key</code> reads as the description reader not being set up on this computer &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-52</td><td><code>network-error</code> reads as not being able to reach the description reader just now &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-53</td><td><code>parse-error</code> reads as not being able to read the description reliably &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-54</td><td>The shared help line offers both recovery paths ("try again" / "answer the questions") &mdash; <code>plain-copy.test.ts</code></td></tr>
+<tr><td>TC-R16-E-64</td><td>End to end: a fresh extraction failure and a retry failure show the identical plain message for the same error kind, plus "Answer the questions instead"; the retry button reads "Try again" (it said "Try extraction again" until the walkthrough) &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-65</td><td>End to end: "Answer the questions instead" switches to the guided form with the typed description carried into question 2 &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="6-the-contradiction-screen-d-105-dr7-30-f1b-3">
+<h2>&sect;6 &mdash; The contradiction screen (D-105; DR7-30/F1B-3)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-58</td><td><code>detectContradictions</code>' personal-information pair reads in plain words, with no engine vocabulary &mdash; <code>contradiction.test.ts</code></td></tr>
+<tr><td>TC-R16-E-59</td><td>&hellip;the person-approval pair likewise &mdash; <code>contradiction.test.ts</code></td></tr>
+<tr><td>TC-R16-E-60</td><td>The screen's heading reads "Your description and your answers don't match" &mdash; <code>ContradictionReview.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-61</td><td>Both statements render as independent sentences &mdash; no "You said" / "but also" quoting wrapper &mdash; <code>ContradictionReview.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-62</td><td>No field code or label renders anywhere on the screen &mdash; <code>ContradictionReview.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-62b</td><td>The screen renders with none of &sect;8's banned words, for either signal pair &mdash; <code>ContradictionReview.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-63</td><td>The field label reads "Which is right, and why?" and the button reads "Continue" &mdash; <code>ContradictionReview.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="7-things-we-couldn-t-tell-on-the-summary-d-106-d">
+<h2>&sect;7 &mdash; "Things we couldn't tell" on the summary (D-106; DR7-24/BB-1)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-71</td><td>The description path merges BOTH the uncertain nodes and the questionnaire's "Not sure" assumptions into one list under "Things we couldn't tell from your description", chosen by <code>graph.intake_method</code> &mdash; <code>UnderstoodSummary.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="8-the-guard-test-no-engine-vocabulary-on-any-scr">
+<h2>&sect;8 &mdash; The guard test (no engine vocabulary on any screen a submitter sees)</h2>
+<table>
+<thead><tr><th>ID</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td>TC-R16-E-39</td><td>Every closed-vocabulary field's targeted question renders with none of the banned words &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-39b</td><td>The multi-select screen (<code>system_access_scope</code>) renders with none of the banned words &mdash; <code>QuestionnaireStep.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-39c</td><td>A fully-populated <code>GraphView</code> graph (agentic, every badge/warning/checklist path at once) renders with none of the banned words &mdash; with every card's "Why these values matter" lines opened first (review pass 4) &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-73</td><td>The whole <code>graph_review</code> block (heading, checklist, cards, jurisdictions panel, together) renders with none of the banned words &mdash; with every card's "Why these values matter" lines opened first (review pass 4) &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-74</td><td>The extraction-error screen renders with none of the banned words &mdash; <code>IntakeFlow.r16e.test.tsx</code></td></tr>
+<tr><td>TC-R16-E-83</td><td>Every "Why these values matter" line (all of <code>FIELD_CONSEQUENCES</code>, not only the ones a fixture shows) carries none of the banned words and none of the reviewer's or engine's own terms ("registry", "floors", "severity", "instances", "incident", "Levels 3&ndash;4", "hard lines", "zone", "vendor", "governance", "appetite", "exposure", the two reserved verdict words) &mdash; review pass 4; shown failing with the old wording &mdash; <code>GraphView.r16e.test.tsx</code></td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="untested-behaviours">
+<h2>Untested behaviours</h2>
+<ul>
+<li><strong>The local-model (Ollama) extraction path's own handling of <code>system_access_scope</code>/<code>multi_instance_coordination</code>.</strong> &sect;1's tests all drive the Anthropic-SDK path (<code>mockCreate</code>, the same mock boundary every other extraction test in this codebase uses). <code>localChatJson</code> (<code>src/llm/local-provider.ts</code>) feeds the identical <code>parseExtraction</code>/zod gate, so the same validation applies, but no test here drives that specific provider with these two fields &mdash; not a new gap this chunk introduces (the local-provider tests pre-date these two fields and were not in this chunk's file list).</li>
+<li><strong><code>declared_model_id</code>'s own "Not on the list" follow-up, end to end.</strong> <code>QuestionnaireStep.r16e.test.tsx</code> (TC-R16-E-31b) proves the registry option and the two fixed choices render; the follow-up's own text-input behaviour is proved generically by <code>vendor_name</code>'s identical mechanism (TC-R16-E-31c) and by code reading (<code>declared_model_id_name</code> is handled by the exact same <code>textOptional</code> branch) &mdash; not separately driven end to end through the real App, unlike <code>vendor_name</code> (TC-R16-E-69).</li>
+<li><strong>Every one of the fourteen closed-vocabulary fields' own <code>QUESTIONNAIRE_COPY</code> question/option text, individually.</strong> TC-R16-E-11 proves every field has a non-empty entry; TC-R16-E-12/13/14/15/16/17 spot-check six of them (the ones with the least-obvious mapping &mdash; the single lending option, the two-option reversibility, the all-three-ticked multi-select "Not sure", the two fields with no "Not sure" at all, and vendor/model's own static choices). The other eight fields' exact wording is exercised incidentally by <code>QuestionnaireStep.r16e.test.tsx</code>'s guard test (TC-R16-E-39, which renders each field's targeted question) and by the end-to-end tests, but their precise option strings are not individually pinned by a dedicated assertion the way the six above are.</li>
+<li><strong>A description-path case that reaches <code>contradiction_review</code>.</strong> &sect;6's screen-level tests (TC-R16-E-60 to -63) render <code>ContradictionReview</code> directly from fixtures (the component-level pattern this codebase's own test files already use for this screen); no new end-to-end test here drives a real extracted graph all the way into a contradiction on the description path specifically &mdash; the pre-existing <code>IntakeFlow.back.test.tsx</code> case for this screen is on the form path, and was updated (not duplicated) for this chunk's wording change.</li>
+</ul>
+</section>
+
+<section id="changelog">
+<h2>Changelog</h2>
+<table>
+<thead><tr><th>Date</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td>2026-10-03</td><td>Written for R16-E (the description-first path speaks the form's words).</td></tr>
+<tr><td>2026-10-03</td><td>Verification and review pass 1: TC-R16-E-75/75b (plain question-count note), TC-R16-E-76 ("unknown" in words), TC-R16-E-77 (focus includes the intro) added; TC-R16-E-20 and -64 corrected; the &sect;8 guard's banned list now catches word forms (<code>extract&hellip;</code>, <code>guessed</code>/<code>guessing</code>, <code>local model</code>).</td></tr>
+<tr><td>2026-10-03</td><td>Review pass 2: TC-R16-E-78 (supplier names, never ids), -79 (no duplicate decision choices), -80 (summary warning: reason + shared card title), -81 ("Nothing found in your description") added; -49 and -56 corrected &mdash; the description path's warning gave only where to look, never why.</td></tr>
+<tr><td>2026-10-03</td><td>Review pass 3: TC-R16-E-82 added (the Recorded line could show a supplier's registry id); TC-R16-E-50 tightened to its own CSS block; the agent-access editor's group heading now uses the screen's plain label.</td></tr>
+<tr><td>2026-10-03</td><td>Review pass 4: the "Why these values matter" lines were hidden until clicked, so the guard never read them &mdash; and one said "binding". Every line reworded in plain words; TC-R16-E-39c and -73 now open every card's lines before scanning; TC-R16-E-83 added.</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
+</html>

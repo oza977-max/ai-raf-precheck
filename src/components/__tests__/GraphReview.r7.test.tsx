@@ -62,14 +62,14 @@ async function reachReview(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/what ai tool do you want to use/i), DESCRIPTION);
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
-  await screen.findByText(/confirm what we understood/i);
+  await screen.findByText(/check what we read from your description/i);
 }
 
 async function confirmAllCards(user: ReturnType<typeof userEvent.setup>) {
   for (;;) {
     // Card confirms ONLY — the jurisdiction confirm also ends "— confirm"
     // and clicking it here would defeat the gate this file tests.
-    const buttons = screen.queryAllByRole('button', { name: /^(looks right|i have checked this) — confirm$/i });
+    const buttons = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i });
     if (buttons.length === 0) return;
     await user.click(buttons[0]!);
   }
@@ -83,11 +83,12 @@ describe('R7-JC — jurisdiction confirmation on the LLM path', () => {
     mockCreate.mockClear();
   });
 
-  it('TC-R7-JC-1-01: the hallucinated code renders named, framed as model-proposed', async () => {
+  it('TC-R7-JC-1-01: the hallucinated code renders named, by country name, framed as read from the description', async () => {
     const user = userEvent.setup();
     await reachReview(user);
-    expect(screen.getByText(/united states.*\(US\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/proposed by the model/i)).toBeInTheDocument();
+    // §4 (D-103): options by country name only — no bare code beside it.
+    expect(screen.getByText(/^united states$/i)).toBeInTheDocument();
+    expect(screen.getByText(/we read these from your description/i)).toBeInTheDocument();
     expect((screen.getByRole('checkbox', { name: /united states/i }) as HTMLInputElement).checked).toBe(true);
   });
 
@@ -96,13 +97,13 @@ describe('R7-JC — jurisdiction confirmation on the LLM path', () => {
     await reachReview(user);
     await confirmAllCards(user);
 
-    await user.click(screen.getByRole('button', { name: /^proceed$/i }));
-    expect(await screen.findByText(/confirm the jurisdictions before proceeding/i)).toBeInTheDocument();
-    expect(screen.getByText(/confirm what we understood/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(await screen.findByText(/check the countries before continuing/i)).toBeInTheDocument();
+    expect(screen.getByText(/check what we read from your description/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /these are right — confirm/i }));
-    await user.click(screen.getByRole('button', { name: /^proceed$/i }));
-    expect(screen.queryByText(/confirm what we understood/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^these are right$/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(screen.queryByText(/check what we read from your description/i)).toBeNull();
   });
 
   it('TC-R7-JC-3-01: unchecking the hallucinated code records a correction and confirms implicitly', async () => {
@@ -112,8 +113,8 @@ describe('R7-JC — jurisdiction confirmation on the LLM path', () => {
 
     await user.click(screen.getByRole('checkbox', { name: /united states/i }));
     // Edit = confirmation (ADR-IF-R5-1 rule carried over): Proceed opens.
-    await user.click(screen.getByRole('button', { name: /^proceed$/i }));
-    expect(screen.queryByText(/confirm what we understood/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(screen.queryByText(/check what we read from your description/i)).toBeNull();
   });
 });
 

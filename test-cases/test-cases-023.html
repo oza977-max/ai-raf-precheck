@@ -275,6 +275,7 @@
 <tr><td>TC-R16-D2-03</td><td>A pack hard line with plain fields names the pack's own jurisdiction in the reason &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 <tr><td>TC-R16-D2-04</td><td>A pack hard line with neither field names the jurisdiction in the fallback reason, plus the pointer line &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 <tr><td>TC-R16-D2-62</td><td>A pack's jurisdiction is named in words from the policy's own list &mdash; "the European Union", but "Canada" &mdash; and a code the policy does not list is never shown (found while verifying: the first build printed the code, and its tests passed only because their sample packs spelled codes out as words) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
+<tr><td>TC-R16-D2-66</td><td>Country names shaped "X of Y" take "the" too ("the Republic of Ireland", "the Kingdom of Saudi Arabia", "the Isle of Man"); names that take none stay bare (found by review pass 1) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 <tr><td>TC-R16-D2-05</td><td>CS-2 (unsatisfiable invariant), no <code>plain_reason</code> &mdash; the invariant's description + pointer, plus the no-safeguard clause and the CS-2 change text, with no stray period-comma &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 <tr><td>TC-R16-D2-05b</td><td>CS-2 with a <code>plain_reason</code> present uses it, still with the no-safeguard clause &mdash; <code>verdict-view-model.test.ts</code></td></tr>
 <tr><td>TC-R16-D2-06</td><td>An id found nowhere loaded never renders the bare id, and offers no "what would change" line (<code>change</code> is <code>undefined</code>) &mdash; <code>verdict-view-model.test.ts</code></td></tr>
@@ -422,6 +423,7 @@
 <tbody>
 <tr><td>2026-10-03</td><td>Written for R16-D2 (the "No" screen, saved assumptions, correcting a form answer).</td></tr>
 <tr><td>2026-10-03</td><td>Verification pass: TC-R16-D2-59 to -65 added (a correction without its form answers never returns to an empty form; country names in words; no internal id in the evidence note); TC-R16-D2-02 and -48 strengthened.</td></tr>
+<tr><td>2026-10-03</td><td>Review pass 1 (GVM build convergence loop): 0 Critical/Important, 1 Minor &mdash; TC-R16-D2-66 added (the "the" rule missed "X of Y" names).</td></tr>
 </tbody>
 </table>
 </section>

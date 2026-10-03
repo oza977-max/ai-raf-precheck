@@ -37,6 +37,7 @@ now returns assumption *references* (`{questionId, optionKey}`, plus a
 |---|---|
 | TC-R16-F-01 | No production file under `src/engine/` imports from `src/components/` — `engine-boundary.test.ts` |
 | TC-R16-F-02 | The scan itself would flag a `components/` import if one existed (proves the guard can fail) — `engine-boundary.test.ts` |
+| TC-R16-F-66 | An import written across several lines, or loaded on demand (`import()`), is caught too — the guard reads imports with TypeScript's own pre-processor, not line by line (found by review pass 1) — `engine-boundary.test.ts` |
 | TC-R16-F-03 | `describeAssumptions([])` returns `[]` — `plain-copy.test.ts` |
 | TC-R16-F-04 | A generic reference resolves to the exact worded assumption and question text (moved from `plain-intake.test.ts`) — `plain-copy.test.ts` |
 | TC-R16-F-05 | A reference with no `ASSUMPTION_TEXT` entry is dropped silently, same as `makeAssumption()` — `plain-copy.test.ts` |
@@ -143,6 +144,11 @@ written out twice.
 | TC-R16-F-56 | `nextReviewStep`: no questions, a contradiction present → `'contradiction_review'` — `intake-state.test.ts` |
 | TC-R16-F-57 | `nextReviewStep`: neither present → `'confirmation'` — `intake-state.test.ts` |
 | TC-R16-F-59 | A `covers_reviews` reference error on the FORM path's own Continue shows the message and never dispatches `FORM_SUBMITTED` (mirrors TC-R16-A1-63's `graph_review` coverage) — `IntakeFlow.r16f.test.tsx` |
+| TC-R16-F-67 | A draft reopened at Confirm under a broken policy writes nothing and shows why, instead of hanging on "Evaluating…" — the confirm step checks the policy before any write (found by review pass 1; shown failing without the fix) — `IntakeFlow.r16f.test.tsx` |
+| TC-R16-F-68 | The record check before Confirm failing (a browser-storage read error) writes nothing, says so in plain words, leaves Confirm usable, and a second press goes through — it used to leave Confirm dead with no message (found by review pass 2; shown failing without the fix) — `IntakeFlow.r16f.test.tsx` |
+| TC-R16-F-69 | After a failed record check, "Change an answer" and back to Confirm shows no stale "couldn't check" message — the transient message is cleared when the confirm step is left; the two permanent refusals stay (review pass 3; shown failing without the fix) — `IntakeFlow.r16f.test.tsx` |
+| TC-R16-F-70 | While the case lock and record check are pending, Confirm, "Change an answer" and "Start over instead" are disabled and "Confirming…" shows; then the result arrives with the answers that were confirmed — closes the window where a superseded attempt could record the old answers (review pass 4; shown failing without the fix) — `IntakeFlow.r16f.test.tsx` |
+| TC-R16-F-71 | While the result is being worked out (after Confirm has been recorded), "Start over instead" stays disabled, and it re-enables once the result is shown — the pending state used to end the moment the step moved on, re-opening the window for a second attempt mid-evaluation (review pass 5; shown failing without the fix) — `IntakeFlow.r16f.test.tsx` |
 
 ## F-7 (DR7-07) — the "couldn't tell" list survives a refresh
 
@@ -311,6 +317,11 @@ forced evaluation failure on the form path.
 |---|---|
 | 2026-10-03 | Written for R16-F (design review 007, Group 1: DR7-01 to DR7-14). |
 | 2026-10-03 | Verification pass: TC-R16-F-60 to -65 added (nested hand-off passthrough, plain refusal wording, tick-all editor labels, the real correction handler, one double-check sentence per message); the "exercised indirectly" note corrected. |
+| 2026-10-03 | Review pass 1 (GVM build convergence loop): TC-R16-F-66 added — the boundary guard missed multi-line imports; TC-R16-F-67 added — the confirm step checked the policy only after writing. |
+| 2026-10-03 | Review pass 2: both pass-1 fixes verified; TC-R16-F-68 added — a failed record check before Confirm left the button dead with no message. |
+| 2026-10-03 | Review pass 3: the pass-2 fix verified; TC-R16-F-69 added — the failed-check message outlived the attempt it described; the failure is now also logged. |
+| 2026-10-03 | Review pass 4: the pass-3 fix verified; TC-R16-F-70 added — nothing can change the answers while a confirm is under way. |
+| 2026-10-03 | Review pass 5: the pass-4 fix verified; TC-R16-F-71 added — the pending state now lasts until the result is shown, not just until Confirm is recorded. Loop closed by owner decision at pass 5 (counts 1,1,1,1,1 — each pass a new, smaller window, every one fixed). |
 
 ---
 

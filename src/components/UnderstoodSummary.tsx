@@ -1,5 +1,6 @@
 import { graphSummaryRows, dataClassesBySeverity } from './graph-summary';
 import {
+  GRAPH_REVIEW_CARD_TITLES,
   SUMMARY_LABELS,
   SUMMARY_DATA_CLASS,
   SUMMARY_MODEL_TYPE,
@@ -14,10 +15,15 @@ import {
   summaryShowsWeight,
   summaryDecisionLine,
   summaryDestinationLine,
+  plausibilityMessageForForm,
+  plausibilityMessageForDescription,
+  questionnaireCopyForField,
+  supplierDisplayName,
 } from './plain-copy';
 import type { Assumption, PlainAnswers } from './plain-copy';
 import { Fold } from './Fold';
 import { plausibilityWarnings } from '../engine/plausibility';
+import type { PlausibilityWarning } from '../engine/plausibility';
 import type { DataFlowGraph, PolicyFile, SystemAccessScope } from '../engine/types';
 
 // R16-C (UC-9, UC-12; build/prompts/R16.md v2.1 §3), rewritten for R16-W §2
@@ -50,12 +56,8 @@ function throughSupplierLine(
   policy: PolicyFile | undefined,
 ): { through?: string; unregistered: boolean } {
   if (!vendor || vendor === 'internal') return { unregistered: false };
-  const registry = [...(policy?.platforms ?? []), ...(policy?.vendors ?? [])];
-  const match = registry.find((r) => r.id === vendor);
-  if (match) {
-    return { through: `Through: ${match.plain_name ?? 'a supplier on your firm’s list'}.`, unregistered: false };
-  }
-  return { through: `Through: ${vendor}.`, unregistered: true };
+  const { name, registered } = supplierDisplayName(vendor, policy);
+  return { through: `Through: ${name}.`, unregistered: !registered };
 }
 
 /** §2 "Runs on: {platform plain_name}." (D-71). Falls back to a neutral
@@ -65,6 +67,31 @@ function runsOnLine(platformId: string | undefined, policy: PolicyFile | undefin
   if (!platformId) return undefined;
   const match = policy?.platforms?.find((p) => p.id === platformId);
   return `Runs on: ${match?.plain_name ?? 'your firm’s platform'}.`;
+}
+
+// R16-E §4 (v2.1, F1B-1). The description path's own plausibility wording
+// names the review screen's card and row — this is the one place outside
+// GraphView.tsx that needs to resolve WHICH card a warning's node belongs
+// to, since this screen has no per-column loop to read it off directly.
+// R16-E review pass 1: the card titles come from the ONE shared table
+// GraphView's own columns use, so the two can never drift apart.
+function cardTitleForNode(graph: DataFlowGraph, nodeId: string): string {
+  if (graph.input_nodes.some((n) => n.id === nodeId)) return GRAPH_REVIEW_CARD_TITLES.input;
+  if (graph.processing_nodes.some((n) => n.id === nodeId)) return GRAPH_REVIEW_CARD_TITLES.processing;
+  return GRAPH_REVIEW_CARD_TITLES.output;
+}
+
+/** F-9 (DR7-09), reworded for R16-E §4 (v2.1): each path speaks its own
+ *  wording for the same plausibility reference — the form path still
+ *  names its own question; the description path names this screen's own
+ *  card/row vocabulary, never a form question it never showed. */
+function plausibilityMessage(w: PlausibilityWarning, graph: DataFlowGraph): string {
+  if (graph.intake_method === 'structured_form') return plausibilityMessageForForm(w.signal);
+  return plausibilityMessageForDescription(
+    w.signal,
+    cardTitleForNode(graph, w.node_id),
+    questionnaireCopyForField(w.field).shortLabel,
+  );
 }
 
 interface UnderstoodSummaryProps {
@@ -89,6 +116,8 @@ interface UnderstoodSummaryProps {
    *  existing correction flow (description path, UC-7). No write of its
    *  own; the one write stays the Confirm button and its in-flight guard. */
   onChangeAnswer: () => void;
+  /** R16-F review pass 4: true while a confirm is under way. */
+  changeAnswerDisabled?: boolean;
 }
 
 export default function UnderstoodSummary({
@@ -99,6 +128,7 @@ export default function UnderstoodSummary({
   description = '',
   plainAnswers,
   onChangeAnswer,
+  changeAnswerDisabled = false,
 }: UnderstoodSummaryProps) {
   const processing = graph.processing_nodes[0];
   const output = graph.output_nodes[0];
@@ -115,7 +145,9 @@ export default function UnderstoodSummary({
   // carrier of this check. The check flags each affected part of the case
   // separately (right for the field cards, one card each), so the same
   // sentence can come back several times — the summary shows each once.
-  const doubleCheckWarnings = [...new Set(plausibilityWarnings(description, graph).map((w) => w.message))];
+  const doubleCheckWarnings = [
+    ...new Set(plausibilityWarnings(description, graph).map((w) => plausibilityMessage(w, graph))),
+  ];
 
   const uncertainLabels = uncertainNodeIds
     .map(
@@ -224,31 +256,45 @@ export default function UnderstoodSummary({
         </section>
       )}
 
-      {assumptions.length > 0 && (
-        <section className="understood-summary__section understood-summary__assumptions">
-          <h3>{SUMMARY_LABELS.assumptionsFormPath}</h3>
-          <ul>
-            {assumptions.map((a) => (
-              <li key={a.questionId}>
-                <strong>{a.question}</strong> &mdash; we assumed {a.assumption.replace(/\.+$/, '')}.
-              </li>
-            ))}
-          </ul>
-        </section>
+      {/* §7 (D-106, DR7-24/BB-1): chosen by `graph.intake_method`, never by
+          which list happens to be empty — the form path keeps its own,
+          unchanged section; the description path merges BOTH the
+          extractor's own uncertain nodes and the questionnaire's "Not
+          sure" assumptions (R16-E's own addition) into one list, since
+          both are genuinely "things we couldn't tell from your
+          description". */}
+      {graph.intake_method === 'structured_form' ? (
+        assumptions.length > 0 && (
+          <section className="understood-summary__section understood-summary__assumptions">
+            <h3>{SUMMARY_LABELS.assumptionsFormPath}</h3>
+            <ul>
+              {assumptions.map((a) => (
+                <li key={a.questionId}>
+                  <strong>{a.question}</strong> &mdash; we assumed {a.assumption.replace(/\.+$/, '')}.
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      ) : (
+        (uncertainLabels.length > 0 || assumptions.length > 0) && (
+          <section className="understood-summary__section understood-summary__assumptions">
+            <h3>{SUMMARY_LABELS.assumptionsDescriptionPath}</h3>
+            <ul>
+              {uncertainLabels.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+              {assumptions.map((a) => (
+                <li key={a.questionId}>
+                  <strong>{a.question}</strong> &mdash; we assumed {a.assumption.replace(/\.+$/, '')}.
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
       )}
 
-      {assumptions.length === 0 && uncertainLabels.length > 0 && (
-        <section className="understood-summary__section understood-summary__assumptions">
-          <h3>{SUMMARY_LABELS.assumptionsDescriptionPath}</h3>
-          <ul>
-            {uncertainLabels.map((label) => (
-              <li key={label}>{label}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <button type="button" className="understood-summary__change" onClick={onChangeAnswer}>
+      <button type="button" className="understood-summary__change" onClick={onChangeAnswer} disabled={changeAnswerDisabled}>
         {SUMMARY_LABELS.changeAnswer}
       </button>
 

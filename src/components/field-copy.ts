@@ -143,31 +143,38 @@ export const MULTI_INSTANCE_LABELS: Record<'yes' | 'no' | 'unknown', string> = {
 // value: a per-value consequence would re-derive rule behaviour in copy,
 // which drifts the first time a rule changes. These say WHY the field
 // matters, in words that stay true across policy edits.
+// R16-E review pass 4: every line reworded for a newcomer. The old lines
+// spoke in the engine's and a reviewer's terms ("binding", "Levels 3–4",
+// "registry", "floors", "severity", "instances", an incident name) on a
+// screen that otherwise uses the form's own words — so each now opens with
+// the form's own short label (QUESTIONNAIRE_COPY) and names options the way
+// the form does. Still claim-safe: each says what the answer affects, never
+// promises an outcome. Reserved-word discipline (CLAUDE.md,
+// /approved|rejected/i) still holds — "accepted" stands in for the banned
+// word on declared_model_id (R11-MG-2).
 export const FIELD_CONSEQUENCES: Record<string, string> = {
-  data_class: 'How sensitive the data is. The strictest rules key off personal client data and price-sensitive information.',
-  data_zone: 'Where the data lives or the processing runs. Hard lines and zone rules read this field — the open internet is the harshest case.',
-  model_type: 'What kind of AI this is. Generative and agentic models attract extra oversight rules.',
-  autonomy_level: 'How much happens without a person. Levels 3–4 trigger the strictest oversight.',
-  vendor: 'Ties the case to vendor approval status — an unapproved vendor changes the outcome.',
-  // R11-MG-2. Reserved-word discipline (CLAUDE.md, /approved|rejected/i):
-  // "on the firm's model registry within appetite" says the same thing as
-  // "approved" without the banned word reaching a rendered string.
-  declared_model_id: 'Ties the case to the model governance registry — a model not on the firm\'s registry within appetite triggers a review.',
-  action_type: 'What the output does in the world. Acting or signing off alone is treated far more strictly than drafting or suggesting.',
-  exposure: 'Who sees the output. Client- and market-facing exposure raises the stakes.',
-  decision_bindingness: 'How much the output drives the decision. Binding output is treated as the decision itself.',
-  output_reversibility: 'Whether a wrong output can be caught and corrected. Irreversible raises severity.',
-  scale: 'A pilot mistake and an everywhere-at-once mistake are different risks.',
-  decision_type: 'Names the decision the rulebook must cover. Credit and lending decisions carry the highest floors.',
-  hitl: 'Whether a person checks the output before anything happens as a result of it.',
+  data_class: 'How sensitive the information is. Your firm’s strictest rules cover information about people and anything price-sensitive.',
+  data_zone: 'Where your information goes. Some of the lines your firm never crosses depend on this — an outside website is treated most strictly.',
+  model_type: 'What kind of AI it is. AI that writes or creates things, and AI agents that work through tasks on their own, come under extra rules.',
+  autonomy_level: 'How much it does without a person. Once it acts by itself with no routine review, the strictest checks apply.',
+  vendor: 'Which supplier it is. A supplier that isn’t on your firm’s list can change the result.',
+  declared_model_id: 'Which model it is. A model that isn’t on your firm’s list of accepted models gets its own extra check.',
+  action_type: 'What happens with what it produces. Carrying out actions or making yes-or-no decisions is treated far more strictly than drafting or suggesting.',
+  exposure: 'Who sees what it produces. If clients, the public or the market see it, more is at stake.',
+  decision_bindingness: 'How much weight what it produces carries. If it’s acted on without a person deciding, it’s treated as the decision itself.',
+  output_reversibility: 'Whether a mistake can be put right. A mistake that can’t be taken back is treated as more serious.',
+  scale: 'How widely it’s used. A mistake in a small trial and a mistake everywhere at once are different risks.',
+  decision_type: 'What it helps decide. Some decisions — lending is one — always put a case in the most serious category.',
+  hitl: 'Whether a person checks what it produces before anything happens as a result of it.',
   // 2026-08-31 — grounded in the August 2026 OpenAI/Hugging Face incident
   // (grounding/proposed-rules/agentic-infrastructure-access.md): the harm
   // path ran through shared infrastructure and credentials, not through any
   // business decision. These two fields let the rulebook see that dimension.
+  // The rendered line no longer names the incident — a newcomer can't use it.
   system_access_scope:
-    'What the system can reach beyond its own data. Shared infrastructure, standing credentials and deployment access are how contained systems become uncontained — the documented mechanism of the 2026 agent-collective incident.',
+    'What it can get into by itself, beyond what it’s given. Its own logins, the power to change software, and computers shared with other automated tools are how a contained tool ends up reaching much further than intended.',
   multi_instance_coordination:
-    'Whether instances can talk to each other. Coordinating agents can combine small permissions into a path no single instance had — and "not sure" is itself worth a reviewer\'s attention.',
+    'Whether copies of it work together. Copies that pass work to each other can combine small permissions into something none of them could do alone — and “not sure” is worth a reviewer’s attention too.',
 };
 
 // Round-5 follow-up (user: "how would a user know what is Zone A? what is

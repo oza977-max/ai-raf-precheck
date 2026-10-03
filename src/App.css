@@ -2321,14 +2321,21 @@ details input {
   }
 }
 
-/* Very narrow (small phones). The graph is the one thing that genuinely
-   cannot reflow — it is a left-to-right flow of three node columns — so it
-   scrolls horizontally inside its own container rather than being squashed
-   into illegibility. */
+/* R16-E §4 (v2.1, WCAG 2.1 AA 1.4.10 reflow). REPLACES the rule this block
+   used to hold: below this width the three review cards shrink until
+   words break one letter per line (seen in the R16-F walkthrough at about
+   640px). The columns stack in one column and the arrows between them
+   turn downwards, so nothing needs sideways scrolling even at 320px wide
+   — these cards reflow fine; the older, opposite claim this block made is
+   retired along with its own rule. */
 @media (max-width: 480px) {
-  .graph-view,
-  .graph-view__flow {
-    overflow-x: auto;
+  .graph-view {
+    flex-direction: column;
+  }
+
+  .graph-view__arrow {
+    align-self: center;
+    transform: rotate(90deg);
   }
 }
 
@@ -2776,6 +2783,12 @@ details input {
 }
 
 /* v0.7.1 — questionnaire clarity. */
+/* R16-E review pass 1: the intro now sits inside the focused question
+   paragraph (so a screen reader hears both); it still shows on its own line. */
+.questionnaire__guessed-intro {
+  display: block;
+}
+
 .questionnaire__count-note {
   font-size: 0.82rem;
   color: var(--ink-faint);

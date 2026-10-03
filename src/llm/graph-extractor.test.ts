@@ -193,3 +193,157 @@ describe('extractGraph — local open-model provider dispatch', () => {
     if (!result.ok) expect(result.error.kind).toBe('no-api-key');
   });
 });
+
+// R16-E §1 (D-08, D-65, DR7-25). system_access_scope/multi_instance_coordination
+// join the tool schema and its zod gate — the SAME normaliseAccessScope gate
+// the form, GraphView and the questionnaire call (EC-6: no re-encoding).
+describe('extractGraph — agent-reach fields (R16-E §1, D-08/D-65)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('aigate:api-key', 'test-key');
+  });
+
+  function processingNode(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'p1',
+      label: 'agent',
+      model_type: 'agentic',
+      autonomy_level: 2,
+      data_zone: 'Zone C',
+      vendor: 'internal',
+      replaces_prior_model: false,
+      basis_quotes: { model_type: '', autonomy_level: '', data_zone: '', vendor: '' },
+      ...overrides,
+    };
+  }
+
+  function mockWith(processingNodes: unknown[]) {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: { ...MOCK_GRAPH_INPUT, processing_nodes: processingNodes },
+        },
+      ],
+    });
+  }
+
+  it('TC-R16-E-01: a valid list of several values is accepted and canonically ordered', async () => {
+    mockWith([
+      processingNode({ system_access_scope: ['deployment_authority', 'shared_infrastructure'] }),
+    ]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.graph.processing_nodes[0]?.system_access_scope).toEqual([
+        'shared_infrastructure',
+        'deployment_authority',
+      ]);
+    }
+  });
+
+  it('TC-R16-E-02: a single-element list is accepted', async () => {
+    mockWith([processingNode({ system_access_scope: ['credentialed_systems'] })]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.graph.processing_nodes[0]?.system_access_scope).toEqual(['credentialed_systems']);
+    }
+  });
+
+  it('TC-R16-E-03: "none" combined with another value fails the whole extraction (rejected)', async () => {
+    mockWith([processingNode({ system_access_scope: ['none', 'shared_infrastructure'] })]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('parse-error');
+  });
+
+  it('TC-R16-E-04: a duplicate value fails the whole extraction (rejected)', async () => {
+    mockWith([processingNode({ system_access_scope: ['shared_infrastructure', 'shared_infrastructure'] })]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('parse-error');
+  });
+
+  it('TC-R16-E-05: a value outside the four legal values fails the whole extraction (rejected)', async () => {
+    mockWith([processingNode({ system_access_scope: ['root-access'] })]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('parse-error');
+  });
+
+  it('TC-R16-E-06: absent on a non-agent is accepted and not guessed — no claim, no question', async () => {
+    mockWith([processingNode({ model_type: 'llm' })]);
+    const result = await extractGraph('a chat assistant');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.graph.processing_nodes[0]?.system_access_scope).toBeUndefined();
+      expect(result.value.guessed.p1 ?? []).not.toContain('system_access_scope');
+      expect(result.value.guessed.p1 ?? []).not.toContain('multi_instance_coordination');
+    }
+  });
+
+  it('TC-R16-E-07: absent on an agentic node is forced guessed — an agent\'s reach is never silently "not stated"', async () => {
+    mockWith([processingNode({ model_type: 'agentic' })]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.graph.processing_nodes[0]?.system_access_scope).toBeUndefined();
+      expect(result.value.guessed.p1).toContain('system_access_scope');
+      expect(result.value.guessed.p1).toContain('multi_instance_coordination');
+    }
+  });
+
+  it('TC-R16-E-08: a legal value with no verified quote is guessed, same mechanism as every other field', async () => {
+    mockWith([
+      processingNode({
+        system_access_scope: ['shared_infrastructure'],
+        basis_quotes: { model_type: '', autonomy_level: '', data_zone: '', vendor: '', system_access_scope: '' },
+      }),
+    ]);
+    const result = await extractGraph('an agent');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.graph.processing_nodes[0]?.system_access_scope).toEqual(['shared_infrastructure']);
+      expect(result.value.guessed.p1).toContain('system_access_scope');
+    }
+  });
+
+  it('TC-R16-E-09: multi_instance_coordination accepts its three legal values and rejects anything else', async () => {
+    mockWith([processingNode({ multi_instance_coordination: 'unknown' })]);
+    const ok = await extractGraph('an agent');
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.value.graph.processing_nodes[0]?.multi_instance_coordination).toBe('unknown');
+
+    mockWith([processingNode({ multi_instance_coordination: 'sometimes' })]);
+    const bad = await extractGraph('an agent');
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error.kind).toBe('parse-error');
+  });
+
+  it('TC-R16-E-10: a verified quote keeps the field out of guessed, same as any other field', async () => {
+    mockWith([
+      processingNode({
+        system_access_scope: ['credentialed_systems'],
+        multi_instance_coordination: 'no',
+        basis_quotes: {
+          model_type: 'an AI agent',
+          autonomy_level: 'acts on its own',
+          data_zone: 'our own systems',
+          vendor: 'built in-house',
+          system_access_scope: 'its own service account',
+          multi_instance_coordination: 'runs alone',
+        },
+      }),
+    ]);
+    const result = await extractGraph(
+      'An AI agent that acts on its own, built in-house, running on our own systems with its own service account and runs alone.',
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.guessed.p1 ?? []).not.toContain('system_access_scope');
+      expect(result.value.guessed.p1 ?? []).not.toContain('multi_instance_coordination');
+    }
+  });
+});

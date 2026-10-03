@@ -12,6 +12,7 @@ import {
   EXPOSURES,
   MODEL_TYPES,
 } from '../engine/canonical-vocabulary';
+import { ACCESS_SCOPE_CANONICAL_ORDER, normaliseAccessScope } from '../engine/access-scope';
 
 // Rule 2 (cross-cutting.md §7): src/llm/* is the ONLY place the Anthropic SDK is imported.
 //
@@ -65,9 +66,18 @@ const EXTRACT_GRAPH_SCHEMA = {
           declared_model_id: { type: 'string' },
           replaces_prior_model: { type: 'boolean' },
           uncertain: { type: 'boolean' },
+          // R16-E §1 (D-08, D-65). Both optional and both subject to the
+          // same guessed/question machinery as every other field above —
+          // never a hard extraction failure. A list, not a single enum: an
+          // agent can both hold its own credentials AND run on shared
+          // infrastructure at once. `enum` here is steering only (the API's
+          // tool_choice forcing is best-effort, same note as every other
+          // enum in this schema) — the real gate is the zod schema below.
+          system_access_scope: { type: 'array', items: { type: 'string', enum: ACCESS_SCOPE_CANONICAL_ORDER } },
+          multi_instance_coordination: { type: 'string', enum: ['no', 'yes', 'unknown'] },
           basis_quotes: {
           type: 'object',
-          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' },declared_model_id: { type: 'string' } },
+          properties: { model_type: { type: 'string' },autonomy_level: { type: 'string' },data_zone: { type: 'string' },vendor: { type: 'string' },declared_model_id: { type: 'string' },system_access_scope: { type: 'string' },multi_instance_coordination: { type: 'string' } },
           required: ['model_type', 'autonomy_level', 'data_zone', 'vendor'],
         },
         },
@@ -183,6 +193,26 @@ const ProcessingNodeSchema = z.object({
   declared_model_id: z.string().optional(),
   replaces_prior_model: z.boolean(),
   uncertain: z.boolean().optional(),
+  // R16-E §1 (D-08, D-65, EC-6). The gate CALLS normaliseAccessScope — the
+  // SAME single implementation the form, GraphView's correction editor and
+  // the questionnaire's multi-select all call — rather than re-encoding its
+  // rules (non-empty, one of the four known values, no duplicates, `none`
+  // never with another value, canonical order). A `{ ok: false }` raises a
+  // zod issue, so an illegal list fails the whole extraction the same way
+  // an out-of-enum value on any other field does — never silently narrowed.
+  system_access_scope: z
+    .array(z.string())
+    .optional()
+    .transform((val, ctx) => {
+      if (val === undefined) return undefined;
+      const result = normaliseAccessScope(val);
+      if (!result.ok) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: result.reason });
+        return z.NEVER;
+      }
+      return result.value;
+    }),
+  multi_instance_coordination: z.enum(['no', 'yes', 'unknown']).optional(),
   basis_quotes: z.record(z.string()).optional(),
 });
 
@@ -224,9 +254,29 @@ export interface GraphExtraction {
 
 const QUOTE_FIELDS: Record<'input' | 'processing' | 'output', string[]> = {
   input: ['data_class', 'data_zone'],
-  processing: ['model_type', 'autonomy_level', 'data_zone', 'vendor', 'declared_model_id'],
+  processing: [
+    'model_type',
+    'autonomy_level',
+    'data_zone',
+    'vendor',
+    'declared_model_id',
+    // R16-E §1 (D-08, D-65): a value with no verified quote is guessed,
+    // same as every other field in this list — the question machinery
+    // picks it up from here with no further change.
+    'system_access_scope',
+    'multi_instance_coordination',
+  ],
   output: ['action_type', 'exposure', 'decision_bindingness', 'output_reversibility', 'scale', 'decision_type', 'hitl'],
 };
+
+// R16-E §1. Both new fields are OPTIONAL on the schema, so an absent value
+// is ordinarily honest-absence, not a guess (verifyQuotes' own rule for
+// decision_type/hitl, unchanged below). An agentic node is the one
+// exception: its reach is never silently "not stated" — if the model
+// extracted `model_type: 'agentic'` and said nothing about either field,
+// that silence is itself the gap R6's question machinery exists to close,
+// so both are pushed into `guessed` even though neither has a value yet.
+const AGENT_REACH_FIELDS = ['system_access_scope', 'multi_instance_coordination'] as const;
 
 /** R6-PV-2. Case- and whitespace-insensitive; no fuzzy matching, no
  *  semantics. The machine only answers "did the user actually write these
@@ -261,6 +311,18 @@ function verifyQuotes(
       // Empty OR fabricated: either way there is no basis, and a fabricated
       // quote must never render as provenance (R6-PV-2).
       guessed.push(field);
+    }
+  }
+  // R16-E §1 (D-08): an agent's reach is never silently "not stated" — push
+  // the two agent-reach fields into `guessed` even when absent, so a
+  // question is still asked. Deduplicated against the loop above (a
+  // present-but-unquoted value is already guessed; this only adds the
+  // absent case).
+  if (kind === 'processing' && node.model_type === 'agentic') {
+    for (const field of AGENT_REACH_FIELDS) {
+      if ((node[field] === undefined || node[field] === null) && !guessed.includes(field)) {
+        guessed.push(field);
+      }
     }
   }
   return { verified, guessed };
@@ -332,7 +394,7 @@ export async function extractGraph(description: string): Promise<LlmResult<Graph
     const client = createClient(apiKey);
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 2048, // mirrors local-provider.ts's num_predict — see the note there
       tools: [
         {
           name: 'extract_graph',

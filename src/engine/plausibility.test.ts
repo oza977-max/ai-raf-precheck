@@ -56,14 +56,13 @@ describe('plausibilityWarnings', () => {
     });
     const result = plausibilityWarnings('The drafting model runs on our approved internal platform.', g);
     expect(result).toHaveLength(1);
+    // R16-E §4 (v2.1): the engine returns a REFERENCE only — which signal
+    // matched — never the finished sentence. plain-copy.test.ts covers the
+    // two paths' own wording (plausibilityMessageForForm/ForDescription).
     expect(result[0]).toEqual({
       node_id: 'p1',
       field: 'data_zone',
-      // F-9 (DR7-09): plain words — no zone letter, no field name, no
-      // "graph" — and the form's own question wording, so a submitter
-      // reading this knows exactly which question to revisit.
-      message:
-        'Your description sounds like the AI runs on your firm’s own systems, but your answers say your information goes outside the firm. Check “Where does the AI come from?” — it affects several rules.',
+      signal: 'sounds-internal',
     });
   });
 
@@ -88,10 +87,7 @@ describe('plausibilityWarnings', () => {
     expect(result.map((w) => w.node_id)).toEqual(['o1', 'o2']);
     for (const w of result) {
       expect(w.field).toBe('action_type');
-      // F-9 (DR7-09): plain words, pointing at the question that drives
-      // this field — no field name, no "graph".
-      expect(w.message).toMatch(/training or fine-tuning/i);
-      expect(w.message).not.toMatch(/graph|action_type|action type/i);
+      expect(w.signal).toBe('mentions-training');
     }
   });
 
@@ -108,9 +104,7 @@ describe('plausibilityWarnings', () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.node_id).toBe('o1');
     expect(result[0]?.field).toBe('hitl');
-    // F-9 (DR7-09): plain words — no field name, no "graph", no zone letter.
-    expect(result[0]?.message).not.toMatch(/\bhitl\b|\bgraph\b|Zone [ABC]/);
-    expect(result[0]?.message).toMatch(/What happens with what it produces/);
+    expect(result[0]?.signal).toBe('says-person-reviews');
   });
 
   it('TC-R5-GR-4-03b: fires when description says a human reviews but processing autonomy_level >= 3', () => {
@@ -137,8 +131,7 @@ describe('plausibilityWarnings', () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.node_id).toBe('p1');
     expect(result[0]?.field).toBe('autonomy_level');
-    // F-9 (DR7-09): plain words — no field name, no "graph", no zone letter.
-    expect(result[0]?.message).not.toMatch(/autonomy_level|\bgraph\b|Zone [ABC]/);
+    expect(result[0]?.signal).toBe('sounds-autonomous');
   });
 
   it('TC-R5-GR-4-04b: does not fire on a neutral description', () => {

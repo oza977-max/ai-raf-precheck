@@ -238,11 +238,19 @@ export type Condition = Record<string, ConditionValue>;
 // from src/components/* (one-way dependency, cross-cutting.md §7).
 export interface IntakeQuestion {
   id: string;
-  text: string;
   field: string;
   node_id?: string;
   triggered_by: string[];
-  answer_type: 'boolean' | 'select' | 'text';
+  // R16-E §2 (DR7-31): `text` is retired — a question's words are no longer
+  // carried on the engine object at all. `src/components/plain-copy.ts`'s
+  // QUESTIONNAIRE_COPY is the one source for every question's text, keyed
+  // by `field`; a question that reaches the screen with no matching entry
+  // is a defect the guard test (QuestionnaireStep's own suite) catches,
+  // not something this type can default its way out of.
+  // 'multi_select' (R16-A1 §1.1, D-65): tick-all, for `system_access_scope`
+  // — the one field whose legal value is a LIST. `coerceAnswerValue` routes
+  // it through `normaliseAccessScope`, never the generic closed-set compare.
+  answer_type: 'boolean' | 'select' | 'multi_select' | 'text';
   options?: string[];
 }
 

@@ -38,6 +38,7 @@ against.
 | 1 | 2026-10-02 | design | A,B,C,D,E + F (comprehension sub-panel, utility-tree H/H leaf NF-12), liberal | 15 | 19 | 13 | **Build with caveats** (round 2 strict: 42/47 closed, 5 partly, 19 new incl. 4 C — all written into v2.1, not re-reviewed; owner: start building) (build contract R16 for the plain-language intake + verdict, before any code; 3 owner decisions: two team names, review plain names approved, Q6/Q7 'Not sure' → strictest) |
 | 3 | 2026-10-02 | design | A,B,C,D,E,F1,F2 ×2 (DUAL: calibrated + blind), strict — design review 007 | 10 | 23 | 5 | **Do not build** (as written — R16-W built without a cleared review, checked retroactively; R16-D2 and R16-E plans before build. 108 raw → 34 + 1 minor batch; 15 of 34 rest on blind-only reports. Owner triage: fix all 14 built-code findings after renaming the product to Counterpoise; rewrite both plans with every fix and build D2 then E in order; adopt WCAG 2.1 AA for new and changed screens; NF-12 gate amended to cover a "No"; pack-rule "No" limitation NOT approved → fix in D2. Rewritten plans get a fix-verification pass, then a verdict for build) |
 | 3v | 2026-10-03 | design | fix verification — one independent read-only reviewer (Sonnet) on R16-D2/R16-E v2.1 against DR7-15..34 and the built R16-F code; every claim spot-checked by the main loop | 0 | 7 | 8 | **Build with caveats** (19 of 20 plan findings closed, DR7-34 partial → closed in v2.2; 7 builder-would-go-wrong gaps (3 in E: per-question focus credited to a step-only mechanism, a second extraction-error call site, an opposite narrow-screen CSS rule; 4 in D2: unspecified "fields" method, §2-vs-§4b contradiction, unnamed evidence helpers, DR7-34 doubled note) + 21 stale citations (19 wrong, 2 approximate) + 8 clarity items. Owner: "apply all, then build" — all applied as v2.2. Not a 4th review round: verification of round-3 fixes. Caveats: D2 before E; re-find citations at build; single reviewer, not a panel) |
+| — | 2026-10-03 | build loop | /gvm-build Hard Gate 3 — one fresh Sonnet reviewer per pass, per chunk (R16-F, R16-D2, R16-E); every finding re-checked by the main loop | 0 | 10 | 10 | R16-F `[(1,1),(2,1),(3,1),(4,1),(5,1)]` — stalled, stopped at pass 5, closed by owner decision after fixing pass 5; R16-D2 `[(1,0)]` — converged; R16-E `[(1,2),(2,1),(3,1),(4,1)]` — closed by owner decision after fixing pass 4. Every C/I fixed with a test shown failing without the fix. Two loops have no `(final, 0)` terminator — recorded as such, not padded; the multi-panel `/gvm-code-review` of the whole R16 range follows |
 
 ## Round 1 measurements
 
@@ -836,6 +837,54 @@ over, every claim true) — the main loop must check the substance. The same day
 a model-written set of HTML twins passed its own id-count check while dropping
 paragraphs and table rows; it was replaced by a deterministic converter
 (`scripts/test-cases-html.py`) verified word for word.
+## Build review loops (2026-10-03) — R16-F, R16-D2, R16-E
+
+**Shape.** The `/gvm-build` independent review loop, run for the first time in
+this project as the skill specifies (it had been skipped for earlier R16
+chunks — the owner caught it by asking "following GVM?"). One fresh Sonnet
+reviewer per pass per chunk, told what earlier passes found and fixed, held to
+the Finding Quality Gate, reading code at the commit or in the working tree.
+The main loop re-checked every finding against the code before fixing it.
+
+**Measurements.**
+- R16-F: `[(1,1),(2,1),(3,1),(4,1),(5,1)]`. Stalled — the stall rule fired at
+  pass 5 and the owner was asked. Each finding was narrower than the last:
+  a guard blind to multi-line imports → a dead Confirm button after a failed
+  read → a stale "couldn't check" message → a millisecond-wide window where an
+  old attempt could record old answers → a pre-existing, display-only window
+  while the result was worked out.
+- R16-D2: `[(1,0)]`. Converged on the first pass (one Minor, fixed).
+- R16-E: `[(1,2),(2,1),(3,1),(4,1)]`. Each pass found a smaller wording gap on
+  the description path; closed by the owner after the pass-4 fix.
+
+**Anchor examples:**
+- Best catch, R16-E pass 4: the review screen's "Why these values matter"
+  lines are hidden until clicked, so every guard test — which scanned the
+  screen as first drawn — never read them; one said "binding". Rendered-text
+  guards must open every disclosure before scanning, and the copy tables
+  themselves should be checked directly (TC-R16-E-83 does both now).
+- Best catch, R16-F pass 2: a storage read outside any error handling left
+  Confirm dead with no message and an unhandled rejection.
+- Weakest evidence, R16-D2 pass 1: the reviewer cited line numbers that cannot
+  exist in the files it named (`verdict-view-model.ts:948-4069`). Its claims
+  were right, but only reading the code showed that — never trust a
+  sub-agent's line numbers as evidence.
+
+**Recurring pattern — the async gap.** All five R16-F findings after pass 1
+sit in one place: the time between a person's click and the next screen. The
+fix for each pass (an await added before a state change) opened the next
+window. One pass over the whole lifecycle — every control a person can use,
+from the click until the result is on screen — would have found passes 3–5
+together. Use that as the check whenever a fix adds an await before a state
+transition.
+
+**Lesson, again: the main loop finds what the builder does not report.**
+After each build agent reported "all done, nothing skipped", the main loop's
+own verification found more (R16-E: machine talk in a note, a button the guard
+missed, and a pre-existing output limit that made the description path fail
+on a three-sentence description with the real local model). The live
+walkthrough found the last of these; no test could have.
+
 ## Parity Check History
 
 | Date | Total | Per rule | Δ vs previous |

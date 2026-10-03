@@ -3,6 +3,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { addNode, updateUseCaseVerdictSummary } from '../../store/register';
+import * as registerModule from '../../store/register';
+import * as traceModule from '../../llm/reasoning-trace';
 import { append as appendAuditEvent, getAll } from '../../store/audit';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
@@ -472,5 +474,271 @@ describe('§4 (DR7-11): the tick-all editor through the real correction handler'
     expect(within(card).getByRole('checkbox', { name: /runs on computers or servers shared/i })).toBeChecked();
     expect(within(card).getByRole('checkbox', { name: /its own logins, passwords or access tokens/i })).toBeChecked();
     sessionStorage.clear();
+  });
+});
+
+// Found by R16-F review pass 1 (GVM build convergence loop): the confirm
+// step checked the policy's references only AFTER writing use_case_created
+// and graph_confirmed, and on an error returned silently — the screen sat on
+// "Evaluating…" and the trail kept an attestation with no verdict. Reachable
+// by reopening a saved draft at Confirm after the policy was edited.
+describe('R16-F review pass 1: the confirm step checks the policy before writing anything', () => {
+  it('TC-R16-F-67: a draft reopened at Confirm under a broken policy writes nothing and shows why, instead of hanging on "Evaluating…"', async () => {
+    const useCaseId = 'uc-r16f-broken-policy-at-confirm';
+    setCurrentPolicyYaml(`
+version: "1.0"
+policy_id: "RAF-001"
+firm_name: "Test Bank"
+translation_attestation:
+  attested_by: "x"
+  role: "x"
+  date: "2026-01-01"
+  raf_version_checked: "x"
+hard_lines: []
+tracks:
+  - id: "TRACK-I"
+    name: "Track I"
+    description: "d"
+    conditions: []
+    short_circuit: true
+    regulatory_basis: "x"
+tiers:
+  - id: "TIER-LOW"
+    name: "Low"
+    triggers: []
+invariants: []
+controls:
+  - id: "CTRL-TPRM-01"
+    name: "n"
+    description: "d"
+    resolves: []
+    burden: 1
+    verification: "v"
+    covers_reviews: ["DR-VENDR-01"]
+kri_thresholds: {}
+jurisdictions: []
+roles: {}
+tier_workflow:
+  Critical: "x"
+  High: "x"
+  Medium: "x"
+  Low: "x"
+safety_margin: 0.1
+`);
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A tool confirmed after the policy broke.',
+        graph: makeGraph(),
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+        useCaseId,
+        plainAnswers: { '1': 'Tool' },
+        assumptions: [],
+      }),
+    );
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+    // Not stuck: the reason is shown and the person is back at their answers.
+    expect(await screen.findByText(/evaluation could not complete: policy file invalid/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Evaluating…$/)).not.toBeInTheDocument();
+    // Nothing reached the append-only trail.
+    expect(await getAll(useCaseId)).toEqual([]);
+    sessionStorage.clear();
+  });
+});
+
+// Found by R16-F review pass 2: the record check before Confirm
+// (confirmationPrecondition) sat outside any error handling. A browser-storage
+// read failure there escaped as an unhandled rejection and left the in-flight
+// guard set — Confirm went dead with no message. The store is this app's I/O
+// boundary, so the failure is simulated there.
+describe('R16-F review pass 2: a failed record check before Confirm is shown, and Confirm stays usable', () => {
+  it('TC-R16-F-68: the record check failing writes nothing, says so in plain words, and a second press goes through', async () => {
+    const useCaseId = 'uc-r16f-check-failed';
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A tool whose record check fails once.',
+        graph: makeGraph(),
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+        useCaseId,
+        plainAnswers: { '1': 'Tool' },
+        assumptions: [],
+      }),
+    );
+    const spy = vi
+      .spyOn(registerModule, 'confirmationPrecondition')
+      .mockRejectedValueOnce(new Error('simulated storage read failure'));
+    try {
+      render(<App />);
+      await userEvent.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+      expect(await screen.findByText(/couldn.t check this case.s record just now, so nothing was saved/i)).toBeInTheDocument();
+      expect(await getAll(useCaseId)).toEqual([]);
+      const confirm = screen.getByRole('button', { name: /confirm and evaluate/i });
+      expect(confirm).toBeEnabled();
+
+      // Transient: the next press runs the real check and goes through.
+      await userEvent.click(confirm);
+      await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+      expect((await getAll(useCaseId)).map((e) => e.event_type)).toEqual(['use_case_created', 'graph_confirmed', 'verdict_produced']);
+    } finally {
+      spy.mockRestore();
+      sessionStorage.clear();
+    }
+  });
+});
+
+// Found by R16-F review pass 3: the transient 'check-failed' message survived
+// "Change an answer", so on returning to Confirm the person saw "We couldn't
+// check this case's record just now" about a check that had not been run on
+// this visit — a false claim.
+describe('R16-F review pass 3: a failed-check message does not outlive the attempt it describes', () => {
+  it('TC-R16-F-69: after a failed record check, "Change an answer" and back to Confirm shows no stale message', async () => {
+    const useCaseId = 'uc-r16f-stale-check-message';
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A tool whose record check fails once.',
+        graph: makeGraph(),
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+        useCaseId,
+        plainAnswers: {
+          '1': 'Stale message probe', '2': 'A tool whose record check fails once.', '3': 'firm-built', '4': 'llm',
+          '5': ['everyday'], '6': 'read', '7': 'me-or-team', '8': 'operational', '9': 'yes',
+          '10': 'small', '11': ['elsewhere-not-sure'], '12': 'no',
+        },
+        assumptions: [],
+      }),
+    );
+    const spy = vi
+      .spyOn(registerModule, 'confirmationPrecondition')
+      .mockRejectedValueOnce(new Error('simulated storage read failure'));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+      expect(await screen.findByText(/couldn.t check this case.s record just now/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /change an answer/i }));
+      await user.click(await screen.findByRole('button', { name: /^continue$/i }));
+      await screen.findByRole('button', { name: /confirm and evaluate/i });
+
+      expect(screen.queryByText(/couldn.t check this case.s record just now/i)).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      sessionStorage.clear();
+    }
+  });
+});
+
+// Found by R16-F review pass 4: F-1 put the case lock and the record check
+// BEFORE the step leaves 'confirmation'. While they ran, "Change an answer"
+// stayed usable, so a superseded attempt could still record the OLD answers.
+describe('R16-F review pass 4: nothing can change the answers while a confirm is under way', () => {
+  it('TC-R16-F-70: while the record check is pending, Confirm and "Change an answer" are disabled and "Confirming…" shows; then the result arrives', async () => {
+    const useCaseId = 'uc-r16f-confirm-pending';
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A tool whose record check is slow.',
+        graph: makeGraph(),
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+        useCaseId,
+        plainAnswers: { '1': 'Tool' },
+        assumptions: [],
+      }),
+    );
+    let release: (v: 'ok') => void = () => {};
+    const spy = vi
+      .spyOn(registerModule, 'confirmationPrecondition')
+      .mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+
+      expect(await screen.findByText('Confirming…')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /confirm and evaluate/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /change an answer/i })).toBeDisabled();
+      // The resumed-draft banner's own way out is shut too (review pass 5).
+      expect(screen.getByRole('button', { name: /start over instead/i })).toBeDisabled();
+
+      release('ok');
+      await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+      expect((await getAll(useCaseId)).map((e) => e.event_type)).toEqual(['use_case_created', 'graph_confirmed', 'verdict_produced']);
+    } finally {
+      spy.mockRestore();
+      sessionStorage.clear();
+    }
+  });
+});
+
+// Found by R16-F review pass 5: "pending" ended the moment the step left
+// 'confirmation', but the case lock — and the evaluation and its writes — run
+// on through 'evaluation_pending'. "Start over instead" re-enabled there, so a
+// second case could begin while the first was still running.
+describe('R16-F review pass 5: nothing can start a new case while the result is being worked out', () => {
+  it('TC-R16-F-71: while the result is being worked out, "Start over instead" stays disabled; it re-enables once the result is shown', async () => {
+    const useCaseId = 'uc-r16f-evaluating-start-over';
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        step: 'confirmation',
+        description: 'A tool whose result takes a while.',
+        graph: makeGraph(),
+        graphVersion: 1,
+        corrections: [],
+        answers: [],
+        resolutionNotes: [],
+        useCaseId,
+        plainAnswers: { '1': 'Tool' },
+        assumptions: [],
+      }),
+    );
+    // A gate created up front, so releasing it can never be lost — even if
+    // the release runs before the app reaches the held step (the first
+    // version of this test assigned the release inside the mock and raced).
+    let releaseTrace!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseTrace = resolve; });
+    const spy = vi
+      .spyOn(traceModule, 'generateReasoningTraceForVerdict')
+      .mockImplementationOnce(async () => {
+        await gate;
+        return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
+      });
+    try {
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
+      // Held inside the evaluation itself: the trace step has started.
+      await vi.waitFor(() => expect(spy).toHaveBeenCalled());
+      expect(screen.getByText('Evaluating…')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /start over instead/i })).toBeDisabled();
+
+      releaseTrace();
+      await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+      expect(screen.getByRole('button', { name: /start over instead/i })).toBeEnabled();
+    } finally {
+      spy.mockRestore();
+      sessionStorage.clear();
+    }
   });
 });

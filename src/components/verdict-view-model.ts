@@ -223,7 +223,12 @@ function resolveDestination(graph: DataFlowGraph | undefined): string {
   return least ? DESTINATION_LABELS[least] : DESTINATION_UNKNOWN;
 }
 
-function fillPlaceholders(text: string, graph: DataFlowGraph | undefined): string {
+// Exported (R16-E §3) so QuestionnaireStep's "why we ask" line can resolve
+// a triggering invariant's own `plain_reason` the same way the verdict
+// screen does — one computation per fact (R16.md §0 D-02), not a second,
+// independently-maintained copy of the {audience}/{destination} resolution
+// rule living beside this one.
+export function fillPlaceholders(text: string, graph: DataFlowGraph | undefined): string {
   return text.replaceAll('{audience}', resolveAudience(graph)).replaceAll('{destination}', resolveDestination(graph));
 }
 
@@ -674,7 +679,11 @@ function hardLineChange(plainChange: string | undefined): string {
  *  but "Canada"). A code the policy does not list never reaches the screen
  *  as itself. (Verifying R16-D2: the first build used the code, and its
  *  tests passed only because their sample packs spelled the code as words.) */
-const NEEDS_THE = /^(United |European )|(Union|Kingdom|States|Republic|Islands|Emirates|Netherlands|Philippines)$/;
+// Starts with a word that takes "the", contains " of " ("the Republic of
+// Ireland", "the Isle of Man"), or ends with one (R16-D2 review pass 1: the
+// first version missed every "X of Y" name).
+const NEEDS_THE =
+  /^(United |European |Republic |Kingdom |Commonwealth |Federation |Federal |Isle |State of )| of |(Union|Kingdom|States|Republic|Islands|Emirates|Netherlands|Philippines|Bahamas|Gambia|Maldives)$/;
 function countryPhrase(code: string, policy: PolicyFile | undefined): string {
   const name = policy?.jurisdictions.find((j) => j.code === code)?.name;
   if (!name) return 'the countries it involves';

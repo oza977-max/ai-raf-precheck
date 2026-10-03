@@ -13,10 +13,17 @@ import { setCurrentPolicyYaml } from '../../store/policy-source';
 // No-ops on the form path (no confirm buttons render there).
 async function confirmAllNodes(user: { click: (el: Element) => Promise<void> }) {
   for (;;) {
-    const buttons = screen.queryAllByRole('button', { name: /confirm$/i });
-    if (buttons.length === 0) return;
+    const buttons = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i });
+    if (buttons.length === 0) break;
     await user.click(buttons[0]!);
   }
+  // R16-E §4 (D-103): the jurisdiction confirm button no longer shares a
+  // "— confirm" suffix with the node buttons above (that shared suffix
+  // used to let this same loop catch both by accident) — every caller
+  // already assumes this helper clears the WHOLE review gate before
+  // clicking Proceed/Continue, so it is confirmed here too.
+  const jurisdictionButton = screen.queryByRole('button', { name: /^(these are right|none of these — continue)$/i });
+  if (jurisdictionButton) await user.click(jurisdictionButton);
 }
 
 // Every caller of confirmAllNodes goes on to click "Proceed" — always via
@@ -92,7 +99,7 @@ describe('Walking Skeleton', () => {
     // flow lands directly on the real confirmation/attestation screen
     // (P4-C04, no more silent pass-through).
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
 
     expect(await screen.findByRole('heading', { name: /confirm and evaluate/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
@@ -249,7 +256,7 @@ describe('Walking Skeleton', () => {
 
     expect((await screen.findAllByText(/risk scoring model/i)).length).toBeGreaterThan(0);
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
 
     // A real targeted question renders — not a skipped/fake step. V1.2-B:
     // the progress line now carries the budget + provisional tier.
@@ -332,7 +339,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -418,7 +425,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
 
     const confirm = await screen.findByRole('button', { name: /confirm and evaluate/i });
     // Two clicks with NO await between them — the real double-click, where
@@ -492,12 +499,12 @@ describe('Walking Skeleton', () => {
     // a genuine field edit through the correction editor, not the old
     // stub that appended " (corrected)" to the label.
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
-    const zoneSelect = await screen.findByLabelText(`${uniqueLabel} — data zone`);
+    const zoneSelect = await screen.findByLabelText(`${uniqueLabel} — where your information goes`);
     await user.selectOptions(zoneSelect, 'Zone B');
     expect(zoneSelect).toHaveValue('Zone B');
 
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -558,7 +565,7 @@ describe('Walking Skeleton', () => {
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
     expect(await screen.findByText(uniqueLabel)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -580,13 +587,13 @@ describe('Walking Skeleton', () => {
 
     // Click "Correct this classification?" — re-enters graph_review.
     await user.click(screen.getByRole('button', { name: /correct this classification/i }));
-    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
+    expect(await screen.findByText(/check what we read from your description/i)).toBeInTheDocument();
 
     // Make a real field correction, then walk back through to a new verdict.
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0]!);
-    await user.selectOptions(await screen.findByLabelText(`${uniqueLabel} — data zone`), 'Zone B');
+    await user.selectOptions(await screen.findByLabelText(`${uniqueLabel} — where your information goes`), 'Zone B');
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();
 
@@ -763,9 +770,9 @@ describe('Walking Skeleton', () => {
     await user.type(input, 'Zxqvw plumbing inventory forecaster xyzzy');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /continue →/i}));
-    expect(await screen.findByText(/confirm what we understood/i)).toBeInTheDocument();
+    expect(await screen.findByText(/check what we read from your description/i)).toBeInTheDocument();
     await confirmAllNodes(user);
-    await user.click(await screen.findByRole('button', { name: /proceed/i }));
+    await user.click(await screen.findByRole('button', { name: /^continue$/i }));
     await user.click(await screen.findByRole('button', { name: /confirm and evaluate/i }));
 
     expect(await screen.findByText('Verdict', { selector: '.verdict__eyebrow' })).toBeInTheDocument();

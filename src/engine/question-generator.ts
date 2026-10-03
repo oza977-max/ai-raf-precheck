@@ -9,6 +9,7 @@ import type {
   Tier,
 } from './types';
 import { assignTier } from './tier';
+import { normaliseAccessScope } from './access-scope';
 
 // UC-4 (intake-flow.md §6). Pure — no I/O, no LLM, same src/engine/* rule.
 //
@@ -22,23 +23,6 @@ function budgetForTier(tier: Tier): number {
   if (tier === 'Medium') return 10;
   return 15; // High or Critical
 }
-
-const QUESTION_TEXT: Record<string, string> = {
-  autonomy_level: 'What level of human oversight does this AI system have?',
-  data_class: 'What is the most sensitive class of data this system touches?',
-  data_zone: 'Which data zone does this processing occur in?',
-  exposure: 'Who is exposed to this system’s output?',
-  decision_type: 'What kind of decision does this system inform or make?',
-  hitl: 'Is there a human in the loop before this system acts?',
-  output_reversibility: 'Can the action this system takes be reversed?',
-  model_type: 'What type of AI/ML model is this?',
-  action_type: 'What does this system’s output do?',
-  decision_bindingness: 'How binding is the decision this system produces?',
-  scale: 'Does this system operate at limited or full scale?',
-  replaces_prior_model: 'Does this system replace an existing model or process?',
-  system_access_scope: 'What can this system reach and touch, beyond the data it processes?',
-  multi_instance_coordination: 'Can this system communicate or coordinate with other AI instances?',
-};
 
 // v0.7.1 (user bug report, live-reproduced): fields OUTSIDE the canonical
 // vocabulary but with a closed value set fell through to answer_type
@@ -70,13 +54,26 @@ function questionForField(
   triggeredBy: string[],
 ): IntakeQuestion {
   const canonicalOptions = CANONICAL_VOCABULARY[field] ?? EXTRA_QUESTION_OPTIONS[field];
+  // R16-E §3 (D-101): system_access_scope is the one field whose legal
+  // value is a LIST — a single <select> can only ever narrow a genuine
+  // multi-value answer, so it gets its own answer_type instead of 'select'.
+  // `src/components/plain-copy.ts`'s QUESTIONNAIRE_COPY/QuestionnaireStep
+  // supply the question's words and option labels; this object carries
+  // only ids, the field, and the legal value set.
+  const answerType: IntakeQuestion['answer_type'] =
+    field === 'system_access_scope'
+      ? 'multi_select'
+      : canonicalOptions
+        ? 'select'
+        : field === 'hitl' || field === 'replaces_prior_model'
+          ? 'boolean'
+          : 'text';
   return {
     id: `Q-${field}-${nodeId ?? 'graph'}`,
-    text: QUESTION_TEXT[field] ?? `Please confirm the value for "${field}".`,
     field,
     node_id: nodeId,
     triggered_by: [...triggeredBy],
-    answer_type: canonicalOptions ? 'select' : field === 'hitl' || field === 'replaces_prior_model' ? 'boolean' : 'text',
+    answer_type: answerType,
     options: canonicalOptions ? [...canonicalOptions] : undefined,
   };
 }
@@ -98,6 +95,17 @@ export function coerceAnswerValue(
     if (typeof value === 'boolean') return { ok: true, value };
     if (value === 'true' || value === 'false') return { ok: true, value: value === 'true' };
     return { ok: false, reason: `${field} must be yes or no` };
+  }
+  // R16-E §3 (D-101, EC-1): system_access_scope is list-valued — the
+  // generic closed-set branch below does `closed.includes(String(value))`,
+  // which `String(['a','b'])` ("a,b") would never match, rejecting every
+  // array. Routed through the SAME single checker every other caller uses
+  // (the form, GraphView's editor, the questionnaire's multi-select) so
+  // the four legal values, their order and the `none`-exclusivity rule
+  // never drift between call sites.
+  if (field === 'system_access_scope') {
+    const result = normaliseAccessScope(value);
+    return result.ok ? { ok: true, value: result.value } : { ok: false, reason: result.reason };
   }
   const closed = CANONICAL_VOCABULARY[field] ?? EXTRA_QUESTION_OPTIONS[field];
   if (closed) {

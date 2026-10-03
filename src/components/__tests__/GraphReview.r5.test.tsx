@@ -54,21 +54,27 @@ describe('R5-GR-1 — every decision-bearing field explains itself', () => {
   it('TC-R5-GR-1-01: meanings render by default; consequences reveal in one click (criterion amended by R9-SC-2)', async () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     const { container } = render(<GraphView graph={makeGraph()} />);
-    // The meaning, not (only) the enum: Zone C's plain-English reading.
-    expect(screen.getAllByText(/inside the firm only/i).length).toBeGreaterThan(0);
+    // The meaning, not (only) the enum: Zone C's plain-English reading
+    // (R16-E §4: QUESTIONNAIRE_COPY's own words, not field-copy.ts's).
+    expect(screen.getAllByText(/your firm.s own systems/i).length).toBeGreaterThan(0);
     // R9-SC-2: consequences are one interaction away, per card.
-    expect(screen.queryByText(/hard lines and zone rules read this field/i)).toBeNull();
+    // (R16-E review pass 4 reworded the line in plain words.)
+    expect(screen.queryByText(/lines your firm never crosses depend on this/i)).toBeNull();
     for (const b of screen.getAllByRole('button', { name: /why these values matter/i })) await user.click(b);
-    expect(screen.getAllByText(/hard lines and zone rules read this field/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/lines your firm never crosses depend on this/i).length).toBeGreaterThan(0);
     expect(container.querySelectorAll('.graph-node__consequence').length).toBeGreaterThanOrEqual(12);
   });
 
   it('TC-R5-GR-1-02: a changed value shows the changed meaning', () => {
     const zoneA = makeGraph();
     zoneA.input_nodes[0]!.data_zone = 'Zone A';
-    render(<GraphView graph={zoneA} />);
-    expect(screen.getByText(/on the open internet/i)).toBeInTheDocument();
-    expect(screen.queryByText(/inside the firm only.*zone c.*inside the firm/i)).toBeNull();
+    const { container } = render(<GraphView graph={zoneA} />);
+    // Scoped to the changed (input) card — the fixture's processing node
+    // is still Zone C, which legitimately shows the unchanged meaning on
+    // its OWN card; this checks the INPUT card specifically changed.
+    const inputCard = container.querySelector('.graph-node')!;
+    expect(within(inputCard as HTMLElement).getByText(/an outside website or service/i)).toBeInTheDocument();
+    expect(within(inputCard as HTMLElement).queryByText(/your firm.s own systems/i)).toBeNull();
   });
 
   it('TC-R15-C5-05 / TC-R5-GR-1-03: absent optional fields say "not stated" rather than defaulting', () => {
@@ -91,9 +97,9 @@ describe('R5-GR-3 — uncertainty is loud (GraphView)', () => {
     const card = container.querySelector('[data-uncertain="true"]')!;
     expect(within(card as HTMLElement).getByRole('alert')).toHaveTextContent(/not confident/i);
     // The uncertain card's confirm is its own, worded as a check.
-    expect(within(card as HTMLElement).getByRole('button', { name: /i have checked this — confirm/i })).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole('button', { name: /i.ve checked this — it.s right/i })).toBeInTheDocument();
     // Three cards, three separate confirm actions — nothing en bloc.
-    expect(screen.getAllByRole('button', { name: /confirm$/i })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })).toHaveLength(3);
   });
 });
 
@@ -215,7 +221,7 @@ async function reachGraphReview(user: ReturnType<typeof userEvent.setup>) {
   );
   await user.click(screen.getByRole('button', { name: /^next/i }));
   await user.click(await screen.findByRole('button', { name: /continue →/i }));
-  await screen.findByText(/confirm what we understood/i);
+  await screen.findByText(/check what we read from your description/i);
 }
 
 describe('R5-GR-2 / R5-GX-1 — flow level', () => {
@@ -230,30 +236,35 @@ describe('R5-GR-2 / R5-GX-1 — flow level', () => {
     const user = userEvent.setup();
     await reachGraphReview(user);
 
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
-    expect(await screen.findByText(/3 cards still need your confirmation/i)).toBeInTheDocument();
-    expect(screen.getByText(/confirm what we understood/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(await screen.findByText(/3 cards still need checking/i)).toBeInTheDocument();
+    expect(screen.getByText(/check what we read from your description/i)).toBeInTheDocument();
 
     // Confirm all three; the gate opens.
     for (;;) {
-      const buttons = screen.queryAllByRole('button', { name: /confirm$/i });
+      const buttons = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i });
       if (buttons.length === 0) break;
       await user.click(buttons[0]!);
     }
-    await user.click(screen.getByRole('button', { name: /proceed/i }));
-    expect(screen.queryByText(/confirm what we understood/i)).toBeNull();
+    // §4 (D-103): the jurisdiction confirm button no longer shares a
+    // "— confirm" suffix with the node confirm buttons above (R16-F's own
+    // behaviour let one generic selector catch both by accident) — it
+    // needs its own explicit click now.
+    await user.click(screen.getByRole('button', { name: /^these are right$/i }));
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    expect(screen.queryByText(/check what we read from your description/i)).toBeNull();
   });
 
   it('TC-R5-GR-2-02: the review screen states that values are proposed, not scored', async () => {
     const user = userEvent.setup();
     await reachGraphReview(user);
-    expect(screen.getByText(/nothing is\s+scored until you confirm or correct each card/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing is\s+decided until you.ve checked or corrected each one/i)).toBeInTheDocument();
   });
 
   it('TC-R5-GX-1-01: an unrecognised jurisdiction is dropped from the graph and surfaced by name', async () => {
     const user = userEvent.setup();
     await reachGraphReview(user);
-    const notice = screen.getByText(/ignored from the model/i);
+    const notice = screen.getByText(/we ignored/i);
     expect(notice).toHaveTextContent('“Internal”');
     // The recognised one was NOT dropped — the notice names only the junk.
     expect(notice.textContent).not.toContain('“UK”');

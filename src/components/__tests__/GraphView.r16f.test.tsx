@@ -120,7 +120,9 @@ describe('GraphView — the system-access tick-all editor (R16-F §4, DR7-11)', 
     await user.click(screen.getByText(/it can change software or settings, or deploy updates, without a person/i));
     expect(onCorrect).toHaveBeenCalledTimes(1);
     expect(onCorrect).toHaveBeenCalledWith('p1', 'system_access_scope', ['deployment_authority']);
-    expect(screen.getByRole('group', { name: /system access/i })).toBeInTheDocument();
+    // The group's name is the screen's plain row label (R16-E review pass 3:
+    // it was "system access").
+    expect(screen.getByRole('group', { name: /what it can get into by itself/i })).toBeInTheDocument();
   });
 
   it('a single bare (non-array) stored value — e.g. from before this editor existed — still shows as ticked', async () => {

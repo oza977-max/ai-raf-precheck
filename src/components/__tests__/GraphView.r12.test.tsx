@@ -31,7 +31,7 @@ describe('R12-BD-1 — badge recalibration', () => {
         provenance={{ i1: { data_class: 'credit risk data' } }}
       />,
     );
-    const basis = screen.getByText(/based on: “credit risk data”/);
+    const basis = screen.getByText(/from your description: “credit risk data”/i);
     expect(basis).toHaveAttribute('title', expect.stringMatching(/found word-for-word.*check it supports the value/i));
   });
 
@@ -44,8 +44,9 @@ describe('R12-BD-1 — badge recalibration', () => {
         onConfirmNode={vi.fn()}
       />,
     );
-    // R15-C5 (proposal §3.6): reworded toward action; same badge, new text.
-    expect(screen.getAllByText(/not found in your text — worth a second look/i).length).toBeGreaterThan(0);
+    // R15-C5 (proposal §3.6): reworded toward action; same badge, new
+    // text (R16-E §4, F1B-1: "guessed"/"not found in your text" retired).
+    expect(screen.getAllByText(/not in your description — please check this/i).length).toBeGreaterThan(0);
   });
 
   it('TC-R15-C5-02 / TC-R12-BD-1-03: a quoted field does not also render the combined marker', () => {
@@ -58,6 +59,6 @@ describe('R12-BD-1 — badge recalibration', () => {
         provenance={{ i1: { data_class: 'credit risk data', data_zone: 'Zone C' } }}
       />,
     );
-    expect(screen.queryByText(/not found in your text — worth a second look/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not in your description — please check this/i)).not.toBeInTheDocument();
   });
 });
