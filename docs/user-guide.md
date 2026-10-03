@@ -31,30 +31,40 @@ consistently wrong, which is at least a solvable problem.
 
 You need nothing installed and no API key.
 
-1. Open the app. The **New pre-check** screen is the default.
-2. Type a description of the use case in plain language. Two or three sentences
-   is enough — what it does, what data it touches, what it decides or actions.
-3. Click **Read & extract**. With no model configured you go to a guided
-   form instead of an AI extraction; this is the normal path and the better
-   one for a first run. One model slot exists under **Settings**: a **local
+1. Open the app. The **New pre-check** screen is the default. The step tracker
+   across the top shows where you are: Describe, Similar checks, Your answers,
+   Questions, Confirm, Result.
+2. **Describe.** Type what AI tool you want to use and what it will do for you.
+   Two or three sentences is enough. Click **Next →**. Nothing is final yet —
+   you can check and change everything before anything is decided.
+3. **Similar checks.** Counterpoise looks through the register for a similar
+   tool your firm has already checked and tells you how many earlier checks it
+   looked through. If nothing similar turns up, press **Continue →**. If
+   something does, you can **Use the earlier result** (this skips the questions)
+   or press **Mine is different — continue →**.
+4. **The questions.** With no model configured you go to a guided form of
+   plain-English questions on one page — this is the normal path and the better
+   one for a first run. Every question is in business words: *"Information
+   about people — clients, applicants, staff or anyone else…"*, not
+   `data_class: Client PII`. Required questions are marked, and **Continue**
+   stays disabled until they are all answered; the line beside it says which are
+   still missing. "Not sure" is always fine — you are shown the careful
+   assumption it was given. One model slot exists under **Settings**: a **local
    open model** running on your own machine (free, no key, the description
-   never leaves your computer — live since 16 August 2026; expect to correct
-   a field or two on the review screen). Frontier models draft better; the
-   demo ships the free local option. The form remains the most-verified
-   path.
-4. Answer the duplicate check. Counterpoise searches the register for a use case with
-   overlapping characteristics and tells you how many entries it checked.
-5. Fill the guided form. Every field is a business question with plain-English
-   options — *"Personal details of clients"*, not `data_class: Client PII`.
-   Required fields are marked, and **Continue** stays disabled until they are
-   answered.
-6. Review the graph. Your original description is shown back to you under
-   **What you told us**, above the three-node graph the answers produced. Edit
-   any node that is wrong.
-7. Answer any follow-up questions. How many you get depends on the risk signals
-   in what you have already said. Contradictions are flagged here, not later.
-8. Confirm. This is your attestation, it is timestamped, and it is permanent.
-9. Read the verdict.
+   never leaves your computer — live since 16 August 2026). With it, the
+   description is read for you instead, and you land on **Check what we read from
+   your description**: your words shown back under **What you wrote**, above the
+   cards the reading produced. Correct any card that is wrong, then press
+   **Continue**. Frontier models draft better; the demo ships the free local
+   option. The form remains the most-verified path.
+5. **Follow-up questions.** Depending on the risk signals in what you have
+   already said you may be asked a few more. Contradictions are flagged here,
+   not later. Often there are none.
+6. **Confirm and evaluate.** You see a summary of what was understood, with a
+   **Change an answer** link, and can leave an optional note for your AI risk
+   team (it never changes the result). **Confirm and evaluate** is your
+   attestation: it is recorded with the date and time and cannot be undone.
+7. **Result.** Read the verdict.
 
 **Shortcut for a demo:** in the sidebar, **Demo data → Load sample use cases**
 seeds six worked examples spanning Low to Critical, in and out of appetite, all
