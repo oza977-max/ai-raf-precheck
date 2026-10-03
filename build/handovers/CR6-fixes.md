@@ -83,9 +83,10 @@ Format: `[(pass, Critical+Important found)]`.
     - Every real company name used as sample data in this round's tests and docs was replaced with an invented one
       (the repo is public). The commit that first added them was folded into its fix before anything was pushed, so
       no commit on the branch carries them.
-    - The fold summary now says "N controls still inherited from the listed one".
-    - TC-CR6-11c: when the listed component itself inherits nothing, the entry says its approval does not cover this
-      use case.
+    - The fold summary's "from the rest" was reworded (its first rewording trailed off; corrected in the final
+      review below).
+    - TC-CR6-11c: when the listed component itself inherits nothing, the entry now says so (its first wording named
+      one cause; corrected in the final review below).
 
 ## Final review of the main loop's own fixes
 
@@ -97,7 +98,11 @@ The fixes the main loop wrote itself after each chunk converged had one more ind
 - **Minor:** a failed-save message could carry over to the next case (TC-CR6-02m), and the dismiss save's error handler
   is now narrowed to that single save.
 - **Minor:** TC-R16-F-71's last step was empty. It now clicks "+ New pre-check" and checks that a fresh case starts.
-- **Minor:** the "no envelope" line now claims only that the approval does not cover this use case.
+- **Minor:** the "no envelope" lines now claim only that the approval does not cover this use case.
+- Pass 2 of this review: PASS, 0 Critical/Important. Its 2 Minors were fixed:
+  - TC-CR6-11d: the same single-cause claim, "falls outside the covered envelope", was reworded in the two other
+    "nothing inherited" lines.
+  - These two bullets above were re-credited to the pass that actually produced them.
 
 ## Live walkthrough (2026-10-03)
 

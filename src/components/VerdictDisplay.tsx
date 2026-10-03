@@ -2194,7 +2194,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               {entry.inheritedControls.length === 0 && !entry.unresolvedIds && (
                 entry.resolved ? (
                   <p className="verdict__chain-derived">
-                    Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
+                    Nothing inherited:&ensp;its approval does not cover this use case, so its
                     controls are assessed from scratch.
                   </p>
                 ) : (
@@ -2218,7 +2218,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               )}
               {entry.inheritedControls.length === 0 && entry.unresolvedIds && entry.unresolvedIds.length === 0 && (
                 <p className="verdict__chain-derived">
-                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
+                  Nothing inherited:&ensp;their approval does not cover this use case, so its
                   controls are assessed from scratch.
                 </p>
               )}

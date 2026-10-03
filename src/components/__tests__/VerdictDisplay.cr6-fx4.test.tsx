@@ -78,6 +78,17 @@ describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no
     expect(fold).not.toMatch(/which is\s*$/);
   });
 
+  it('TC-CR6-11d: both listed but nothing inherited — the entry claims no single cause ("approval does not cover"), never "falls outside the covered envelope"', () => {
+    const policy = realPolicy();
+    const verdict = verdictFor('PLAT-CLOUD-LLM', 'VENDOR-APPROVED-LLM', policy, 'Confidential');
+    expect(verdict.inheritance!.unresolved_components).toEqual([]);
+    expect(verdict.inheritance!.inherited_controls).toEqual([]);
+    const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
+    const entry = container.querySelector('.verdict__chain-entry')!;
+    expect(entry.textContent).toMatch(/Nothing inherited:\s*their approval does not cover this use case/);
+    expect(entry.textContent).not.toMatch(/falls outside the covered envelope/);
+  });
+
   it('TC-CR6-11c: listed platform OUTSIDE its envelope + unlisted supplier — says why the listed one inherits nothing', () => {
     const policy = realPolicy();
     // PLAT-CLOUD-LLM's approved envelope stops at Internal data, so a

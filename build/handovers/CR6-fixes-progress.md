@@ -128,3 +128,8 @@ Contract: build/prompts/CR6-fixes.md v2 (base commit fe29bfb). Review: code-revi
   review pass over the main-loop-authored fixes (6d7146d, 86f3c36, 94015ca, 4b00c47) is running BEFORE merge.
 - NEXT: if that pass is clean → fast-forward main to cr6-fixes, push, check CI; then remind the owner and release the
   waiting "random id" session (see OWNER INSTRUCTION above). Then the owner's second full review round, then /gvm-test.
+- Final review of main-loop fixes, pass 1: FAIL 2 Important (truncated fold sentence; real names in an unpushed commit's
+  history) + 3 Minor → fixed 7fe9165; branch history rebuilt (e8dab43 = FX-4 pass-1 fix + name replacement folded;
+  end tree identical, verified). Ritual ×3 1534 green. Pass 2 running. If clean → merge to main + push + CI.
+- Final review pass 2: PASS (0 Critical/Important); 2 Minors fixed (TC-CR6-11d wording; handover re-credit).
+  Ritual ×3 1535 green. → merged to main and pushed (see git log). Round DONE; next: owner's second full review round.
