@@ -30,7 +30,7 @@ function supplierVendorOptions(policy: PolicyFile | undefined): Array<{ value: s
 function approvedModelOptions(policy: PolicyFile | undefined): Array<{ value: string; label: string }> {
   return (policy?.approved_models ?? [])
     .filter((m) => !m.is_family)
-    .map((m) => ({ value: m.model_id, label: m.model_id }));
+    .map((m) => ({ value: m.model_id, label: m.plain_name ?? m.model_id }));
 }
 
 /** The "Recorded:" line (BC-4): the chosen option LABEL(s), never the raw
@@ -45,6 +45,11 @@ function recordedAnswerLabel(field: string, value: unknown, policy: PolicyFile |
   }
   const fromTable = copy.options[String(value)];
   if (fromTable) return fromTable;
+  if (field === 'declared_model_id') {
+    // CR6-19: the label of the button the person clicked, never the raw id.
+    const clicked = approvedModelOptions(policy).find((o) => o.value === value);
+    if (clicked) return clicked.label;
+  }
   if (field === 'vendor') {
     // R16-E review pass 3: the label of the very button the person clicked
     // (a numbered "Supplier n" when the firm gave no plain name), never the

@@ -21,6 +21,7 @@ import { maxBy } from '../engine/envelope';
 // a same-layer import, not a new boundary (unlike src/store/types.ts,
 // which declares its own copy rather than import from here — Rule 3).
 import type { Assumption } from './plain-copy';
+import { lookupCountryName } from './plain-copy';
 
 export type SafeguardStatus = 'verified' | 'attested' | 'outstanding' | 'unknown';
 
@@ -459,12 +460,12 @@ interface ReviewInstance {
 const PV_UNREGISTERED_PLAIN = { name: "adding the supplier to your firm's list", owner: 'your vendor-risk team' };
 const MODEL_REGISTRY_PLAIN = { name: "adding the model to your firm's list of known models", owner: 'your AI risk team' };
 // §4.4: "pack review → 'a regulatory review required for this kind of use —
-// ask your AI risk team which'" (D-15). buildVerdictView has no packs
-// parameter (§4.1's signature is fixed), so a pack rule's own plain_name
-// (policy-authored, confirmed present in the shipped packs) cannot be
-// resolved here — every base id that is neither a firm downstream_reviews
-// id nor one of the two sentinels is, by §1.3's four-source enumeration, a
-// pack rule id, and always takes this fallback.
+// ask your AI risk team which'" (D-15). Every base id that is neither a firm
+// downstream_reviews id nor one of the two sentinels is, by §1.3's
+// four-source enumeration, a pack rule id. CR6-13: when the loaded packs
+// are available (options.packs) and the rule is a required_review with its
+// own plain_name / plain_owner, those words are used; this generic line is
+// only the fallback for a pack not loaded or a rule without them.
 const PACK_REVIEW_FALLBACK_NAME = 'a regulatory review required for this kind of use — ask your AI risk team which';
 const PACK_REVIEW_FALLBACK_OWNER = 'your AI risk team';
 
@@ -473,7 +474,11 @@ function baseReviewId(ruleId: string): string {
   return idx === -1 ? ruleId : ruleId.slice(0, idx);
 }
 
-function resolveReviewPlain(baseId: string, policy: PolicyFile | undefined): { name: string; owner: string } {
+function resolveReviewPlain(
+  baseId: string,
+  policy: PolicyFile | undefined,
+  packs: JurisdictionPack[] = [],
+): { name: string; owner: string } {
   if (baseId === 'PV-UNREGISTERED') return PV_UNREGISTERED_PLAIN;
   if (baseId === 'MODEL-REGISTRY') return MODEL_REGISTRY_PLAIN;
   const firmRule: DownstreamReviewRule | undefined = policy?.downstream_reviews?.find((r) => r.id === baseId);
@@ -483,6 +488,17 @@ function resolveReviewPlain(baseId: string, policy: PolicyFile | undefined): { n
       owner: firmRule.plain_owner ?? PACK_REVIEW_FALLBACK_OWNER,
     };
   }
+  // CR6-13: first match across packs in the packs array's own order
+  // (loadPacks sorts by pack_id — deterministic, as findPackHardLineRule).
+  for (const pack of packs) {
+    const rule = pack.rules.find((r) => r.id === baseId && r.effect.type === 'required_review');
+    if (rule && rule.effect.type === 'required_review') {
+      return {
+        name: rule.effect.plain_name ?? PACK_REVIEW_FALLBACK_NAME,
+        owner: rule.effect.plain_owner ?? PACK_REVIEW_FALLBACK_OWNER,
+      };
+    }
+  }
   return { name: PACK_REVIEW_FALLBACK_NAME, owner: PACK_REVIEW_FALLBACK_OWNER };
 }
 
@@ -490,12 +506,12 @@ function resolveReviewPlain(baseId: string, policy: PolicyFile | undefined): { n
  *  separately; nothing folded away." A legacy instance's baseId is '' —
  *  deliberately never matched by any real covers_reviews entry, so it can
  *  never be folded into a safeguard. */
-function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined): ReviewInstance[] {
+function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, packs: JurisdictionPack[] = []): ReviewInstance[] {
   const sources = verdict.downstream_review_sources;
   if (sources !== undefined) {
     return sources.map((s) => {
       const baseId = baseReviewId(s.rule_id);
-      const { name, owner } = resolveReviewPlain(baseId, policy);
+      const { name, owner } = resolveReviewPlain(baseId, policy, packs);
       return { baseId, formalName: s.review, plainName: name, ownerText: owner };
     });
   }
@@ -667,9 +683,10 @@ function withPointerIfFallback(sentence: string, fallback: boolean): string {
 
 /** "What would change the answer: …" — shared by a firm and a pack hard
  *  line (§2 item 4 draws no distinction between them here). */
-function hardLineChange(plainChange: string | undefined): string {
+function hardLineChange(plainChange: string | undefined, graph: DataFlowGraph | undefined): string {
+  // A-2: {audience}/{destination} are filled here exactly as plain_reason's are.
   return plainChange
-    ? `${asSentence(plainChange)} Then check again.`
+    ? `${asSentence(fillPlaceholders(plainChange, graph))} Then check again.`
     : `change how it would be used, then check again. ${POINTER_MEANS_FOR_YOU}`;
 }
 
@@ -685,7 +702,7 @@ function hardLineChange(plainChange: string | undefined): string {
 const NEEDS_THE =
   /^(United |European |Republic |Kingdom |Commonwealth |Federation |Federal |Isle |State of )| of |(Union|Kingdom|States|Republic|Islands|Emirates|Netherlands|Philippines|Bahamas|Gambia|Maldives)$/;
 function countryPhrase(code: string, policy: PolicyFile | undefined): string {
-  const name = policy?.jurisdictions.find((j) => j.code === code)?.name;
+  const name = lookupCountryName(code, policy);
   if (!name) return 'the countries it involves';
   return NEEDS_THE.test(name) ? `the ${name}` : name;
 }
@@ -737,24 +754,32 @@ function buildNoScreen(
   if (firmHardLine) {
     kind = 'hard_line';
     const core = reasonCore(firmHardLine.plain_reason, firmHardLine.description, graph);
-    reason = withPointerIfFallback(`${core.text}. ${HARD_LINE_CODA}`, core.fallback);
-    change = hardLineChange(firmHardLine.plain_change);
+    // CR6-18: an empty core (a blank description) must not leave a stray ". "
+    // in front of the coda — the sentence is composed without it.
+    reason = withPointerIfFallback(core.text ? `${core.text}. ${HARD_LINE_CODA}` : HARD_LINE_CODA, core.fallback);
+    change = hardLineChange(firmHardLine.plain_change, graph);
     condition = firmHardLine.condition;
   } else if (packMatch && packMatch.rule.effect.type === 'hard_line') {
     kind = 'pack_hard_line';
     const country = countryPhrase(packMatch.pack.jurisdiction, policy);
     const effect = packMatch.rule.effect;
-    reason = effect.plain_reason
-      ? `${withoutTrailingPeriod(fillPlaceholders(effect.plain_reason, graph).trim())}. It's one of the rules your firm has adopted for ${country}, and no safeguard can make up for it.`
-      : `one of the rules your firm has adopted for ${country} rules this out. ${POINTER_MEANS_FOR_YOU}`;
-    change = hardLineChange(effect.plain_change);
+    const packCore = effect.plain_reason ? withoutTrailingPeriod(fillPlaceholders(effect.plain_reason, graph).trim()) : '';
+    reason = packCore
+      ? `${packCore}. It's one of the rules your firm has adopted for ${country}, and no safeguard can make up for it.`
+      : effect.plain_reason
+        ? `It's one of the rules your firm has adopted for ${country}, and no safeguard can make up for it.`
+        : `one of the rules your firm has adopted for ${country} rules this out. ${POINTER_MEANS_FOR_YOU}`;
+    change = hardLineChange(effect.plain_change, graph);
     condition = packMatch.rule.condition;
   } else if (trippedMatch) {
     // CS-2: no control in the library resolves this tripped invariant.
     kind = 'unsatisfiable';
     const invariant = policy?.invariants.find((i) => i.id === bindingId);
     const core = reasonCore(invariant?.plain_reason, trippedMatch.description, graph);
-    reason = withPointerIfFallback(`${core.text}, and your firm has no safeguard that resolves it.`, core.fallback);
+    reason = withPointerIfFallback(
+      core.text ? `${core.text}, and your firm has no safeguard that resolves it.` : 'Your firm has no safeguard that resolves it.',
+      core.fallback,
+    );
     change = 'change how it would be used, or ask your AI risk team whether the firm can add a safeguard for this.';
     condition = policy?.invariants.find((i) => i.id === bindingId)?.condition;
   } else {
@@ -820,7 +845,7 @@ export function buildVerdictView(
   }
 
   const tripped = verdict.explanation?.tripped_invariants ?? [];
-  const reviewInstances = buildReviewInstances(verdict, policy);
+  const reviewInstances = buildReviewInstances(verdict, policy, options.packs ?? []);
 
   // Which base ids does ANY safeguard on this verdict cover? Used to split
   // review instances into covered (folded into a safeguard) vs. owed.

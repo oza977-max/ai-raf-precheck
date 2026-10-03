@@ -993,16 +993,21 @@ function SignOffChecklist({
 }
 
 interface InheritanceSourceEntry {
-  source: 'platform' | 'supplier';
+  // CR6-11: 'combined' = both a platform and a supplier were declared but the
+  // case's graph is not available (the register path), so the two cannot be
+  // split back apart — one entry, from the verdict's own merged inheritance.
+  source: 'platform' | 'supplier' | 'combined';
   declaredId: string;
   resolved: boolean;
   inheritedControls: string[];
   dimensions: EnvelopeDimensionFit[];
+  note?: string;
 }
 
 const INHERITANCE_SOURCE_LABEL: Record<InheritanceSourceEntry['source'], string> = {
   platform: 'Platform',
   supplier: 'Supplier',
+  combined: 'Platform and supplier',
 };
 
 /** PV-6 / D-61 (R16-D1, flagged in the A2 handover and in appetite.yaml's own
@@ -1046,7 +1051,22 @@ function inheritanceEntries(
   }
 
   // Both declared at once — split the merged result back out by source.
-  if (!graph) return [];
+  // CR6-11: without the graph that split cannot be recomputed. Returning no
+  // entries left the summary saying "N controls inherited" over an empty
+  // list; instead show ONE entry from the verdict's own (merged) inheritance
+  // and say plainly that this record does not keep the two apart.
+  if (!graph) {
+    return [
+      {
+        source: 'combined',
+        declaredId: `${inheritance.declared_platform} + ${inheritance.declared_vendor}`,
+        resolved: inheritance.resolved,
+        inheritedControls: inheritance.inherited_controls,
+        dimensions: inheritance.dimensions,
+        note: 'A platform and a supplier were both declared. This record does not keep the two apart, so what they cover is shown together.',
+      },
+    ];
+  }
   const entries: InheritanceSourceEntry[] = [];
   const platform = policy?.platforms?.find((p) => p.id === inheritance.declared_platform);
   const platformDims = platform ? fitsEnvelope(graph, platform.approved_envelope) : [];
@@ -1148,7 +1168,11 @@ function FirstScreen({
 
       {hasSafeguards && (
         <div className="verdict__first-safeguards">
-          <h3>Safeguards that must be in place before you start ({view.outstandingCount})</h3>
+          {/* G-8: a count of "(0)" above nothing is noise — the heading only
+              when something is outstanding; the lines below keep their own words. */}
+          {view.outstandingCount > 0 && (
+            <h3>Safeguards that must be in place before you start ({view.outstandingCount})</h3>
+          )}
           {view.outstandingSafeguards.length > 0 && (
             <ul className="verdict__first-safeguard-list">
               {view.outstandingSafeguards.map((s: SafeguardView) => (
@@ -2109,7 +2133,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
 
       {verdict.inheritance && (
         <Fold
-          title="Platform & vendor inheritance"
+          title="Platform & supplier inheritance"
           summary={
             verdict.inheritance
               ? verdict.inheritance.resolved
@@ -2120,7 +2144,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
         ><div className="verdict__chain">
 
           <p className="verdict__chain-sub">
-            What an existing platform or vendor approval already covered, and the envelope that
+            What an existing platform or supplier approval already covered, and the envelope that
             justified it. Controls are inherited only where this use case sits inside the covered
             envelope.
           </p>
@@ -2139,6 +2163,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                   {entry.resolved ? 'On the covered registry' : 'Not on the registry'}
                 </span>
               </div>
+
+              {entry.note && <p className="verdict__chain-derived">{entry.note}</p>}
 
               {entry.resolved ? (
                 entry.inheritedControls.length > 0 ? (
@@ -2159,7 +2185,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
               ) : (
                 <p className="verdict__chain-derived">
                   Nothing inherited:&ensp;this component is not on the covered registry. A full
-                  vendor and platform risk assessment is required.
+                  supplier and platform risk assessment is required.
                 </p>
               )}
 

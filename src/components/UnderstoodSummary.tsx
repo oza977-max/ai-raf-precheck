@@ -12,6 +12,7 @@ import {
   SUMMARY_ACCESS_SCOPE,
   SUMMARY_MULTI_INSTANCE,
   summaryBehaviourLine,
+  countryName,
   summaryShowsWeight,
   summaryDecisionLine,
   summaryDestinationLine,
@@ -135,9 +136,8 @@ export default function UnderstoodSummary({
   const dataClasses = dataClassesBySeverity(graph);
   const through = throughSupplierLine(processing?.vendor, policy);
   const runsOn = runsOnLine(processing?.platform, policy);
-  const countryNames = graph.jurisdictions.map(
-    (code) => policy?.jurisdictions.find((j) => j.code === code)?.name ?? code,
-  );
+  // CR6-23: never a bare code — the policy's own name, or a neutral phrase.
+  const countryNames = graph.jurisdictions.map((code) => countryName(code, policy));
   // F-9 (DR7-09). Pure, computed at render from the description and the
   // graph already in hand — no new state. Runs for BOTH paths: this
   // component is the one point the form path reaches that the field-card

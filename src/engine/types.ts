@@ -557,6 +557,9 @@ export interface GovernanceMappingEntry {
 // never itself a hardcoded penalty (requirements-011.md R11-MG-2).
 export interface ApprovedModel {
   model_id: string;
+  // CR6-19: the model in a submitter's own words, for screens that must not
+  // show a raw id. Optional; screens use `plain_name ?? model_id`.
+  plain_name?: string;
   vendor: string;
   provenance_class: 'vendor_hosted' | 'open_weights_self_hosted' | 'fine_tuned_in_house';
   is_approved: boolean;

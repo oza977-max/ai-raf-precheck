@@ -746,7 +746,31 @@ export function supplierDisplayName(
   if (vendor === 'internal') return { name: 'None — your firm built it', registered: false };
   const match = [...(policy?.platforms ?? []), ...(policy?.vendors ?? [])].find((r) => r.id === vendor);
   if (match) return { name: match.plain_name ?? 'a supplier on your firm’s list', registered: true };
+  // G-7: an id-shaped value (capitals, digits, hyphens/underscores, no
+  // spaces — "VENDOR-GONE-01", "VENDOR-LLM-v1") that matches nothing is an
+  // internal id for something not on the list; it never reaches a screen
+  // raw. An ordinary name a person typed ("Anthropic") shows as written.
+  if (ID_SHAPED.test(vendor)) return { name: 'a supplier not on your firm’s list', registered: false };
   return { name: vendor, registered: false };
+}
+
+const ID_SHAPED = /^[A-Z][A-Z0-9]*(?:[-_][A-Za-z0-9]+)+$/;
+
+/** CR6-23: a jurisdiction code as the policy's own country name; a code the
+ *  policy does not list is never shown as itself. The one lookup behind the
+ *  summary's country list and the "No" screen's countryPhrase. */
+export const UNLISTED_COUNTRY = 'another country';
+export function lookupCountryName(
+  code: string,
+  policy: { jurisdictions?: Array<{ code: string; name: string }> } | undefined,
+): string | undefined {
+  return policy?.jurisdictions?.find((j) => j.code === code)?.name;
+}
+export function countryName(
+  code: string,
+  policy: { jurisdictions?: Array<{ code: string; name: string }> } | undefined,
+): string {
+  return lookupCountryName(code, policy) ?? UNLISTED_COUNTRY;
 }
 
 /** §2's catch-all (D-20's "no bare code ever reaches the first screen",
@@ -1063,6 +1087,12 @@ const SUMMARY_AUTONOMOUS_BASE: Record<2 | 3 | 4, string> = {
   4: 'It acts entirely by itself, with no person involved at any point',
 };
 const SUMMARY_AUTONOMOUS_ACTION_CLAUSE: Partial<Record<ActionType, string>> = {
+  // CR6-16: an AI acting by itself with these four used to read as the bare
+  // base line, silently omitting what it actually does.
+  read: ' — it finds or summarises things for people to read',
+  inform: ' — it answers people’s questions directly',
+  draft: ' — it creates drafts',
+  recommend: ' — it suggests, ranks or flags things',
   trade: ' — it places or changes trades',
   approve: ' — it makes yes-or-no decisions, like accepting an application',
   execute: ' — it sends, books, updates records or deploys changes',

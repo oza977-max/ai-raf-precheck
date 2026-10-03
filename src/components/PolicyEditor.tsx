@@ -318,7 +318,7 @@ export default function PolicyEditor({ onSaved }: PolicyEditorProps) {
         <div className="policy-view__panel">
           <h3>Hard lines — no control set can fix</h3>
           <p className="policy-view__panel-sub">
-            Checked first. A use case crossing one is rejected immediately.
+            Checked first. A use case crossing one is ruled out straight away.
           </p>
           <ul className="policy-view__hardlines">
             {livePolicy.hard_lines.map((hl) => (

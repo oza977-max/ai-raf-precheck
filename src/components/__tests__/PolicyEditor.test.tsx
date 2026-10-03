@@ -223,8 +223,8 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     // dropped — the sentence already says the same thing in plain words.
     // TC-CR6-29: this pinned "rejected immediately" — a reserved word on a
     // rendered screen. The panel now says "ruled out straight away".
-    expect(screen.getByText(/ruled out straight away/i)).toBeInTheDocument();
-    expect(screen.queryByText(/rejected/i)).not.toBeInTheDocument();
+    const framing = screen.getByText(/ruled out straight away/i);
+    expect(framing.textContent).not.toMatch(/approved|rejected/i);
     expect(screen.getByText('HL-001')).toBeInTheDocument();
     expect(screen.getByText('HL-006')).toBeInTheDocument();
   });

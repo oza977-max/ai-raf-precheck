@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 // CR6-09 / CR6-20 / CR6-21 / CR6-22 (code review 006). Styles are real
 // requirements here: contrast is measured from the CSS tokens themselves, and
 // the rules a render depends on must exist.
-const css = readFileSync(resolve(__dirname, '../../App.css'), 'utf-8');
+const css = readFileSync(resolve(__dirname, '../../App.css'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 function rulesFor(selector: string): string[] {
   const out: string[] = [];

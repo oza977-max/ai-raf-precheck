@@ -37,6 +37,12 @@ interface RegisterDetailProps {
 // Per-type detail lines derived from the real payload union — never a
 // generic JSON dump (build/prompts/V1.2-A.md scope decision 6). Exported for
 // the fallback test only (code-review-005 F13).
+const CORRECTION_SOURCE_WORDS: Record<string, string> = {
+  form: 'the form',
+  review: 'the review screen',
+  question: 'an answer to a question',
+};
+
 export function eventDetail(event: AuditEvent): string {
   const p = event.payload as AuditEvent['payload'] | undefined | null;
   // code-review-005 F13: a damaged record can lack its payload entirely —
@@ -52,7 +58,11 @@ export function eventDetail(event: AuditEvent): string {
           : ''
       }`;
     case 'graph_corrected':
-      return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}`;
+      // CR6-10: where the correction was made, in plain words; nothing when
+      // the record predates the field.
+      return `${p.correction.field} corrected: ${String(p.correction.original_value)} → ${String(p.correction.corrected_value)}${
+        p.correction.correction_source ? ` (from ${CORRECTION_SOURCE_WORDS[p.correction.correction_source] ?? 'an unrecorded place'})` : ''
+      }`;
     case 'verdict_produced':
       return `${STATUS_LABEL[p.verdict.status] ?? p.verdict.status} · ${p.verdict.tier} · Track ${p.verdict.track}.${
         p.verdict.binding_constraint ? ` Binding: ${p.verdict.binding_constraint}.` : ''
@@ -762,7 +772,8 @@ export default function RegisterDetail({ useCaseId, role, policy, onBack }: Regi
         },
       });
       await updateLifecycleStage(useCaseId, 'approved', role);
-      setActionResult('Approved by 2LoD — lifecycle advanced to Approved. Recorded in the audit trail.');
+      // CR6-29: never the reserved word — ACTION_LABEL / STAGE_LABELS say "Cleared".
+      setActionResult(`${ACTION_LABEL.approved} by 2LoD — lifecycle advanced to ${STAGE_LABELS.approved}. Recorded in the audit trail.`);
       setNotes('');
       setAttestedByName('');
       await load();

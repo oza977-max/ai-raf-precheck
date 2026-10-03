@@ -1451,7 +1451,8 @@ details input {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ink-faint);
+  /* CR6-09: --ink-faint is 3.85:1 on the card; --ink-soft clears 4.5:1. */
+  color: var(--ink-soft);
   margin-bottom: 0.15rem;
 }
 
@@ -1767,6 +1768,16 @@ details input {
 
 .verdict__control-evidence--attested {
   color: var(--navy);
+}
+
+/* CR6-20: the evidence-scope caveat says the evidence does NOT cover this
+   tool — it must never look like the verified-evidence line above it.
+   A rule line and italics (not colour alone), still >= 4.5:1 on the card. */
+.verdict__control-evidence--scope {
+  color: var(--ink-soft);
+  font-style: italic;
+  border-left: 3px solid var(--ink-soft);
+  padding-left: 0.5rem;
 }
 
 /* ── Appetite framework view (V1.2-C) ── */
@@ -3461,6 +3472,15 @@ details input {
   color: var(--ink-soft);
 }
 
+/* CR6-22: the "No" screen's other paragraphs, consistent with the "Why" line. */
+.verdict__no-contributing,
+.verdict__no-change,
+.verdict__no-who-to-talk-to {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
 .verdict__first-next-steps,
 .verdict__first-safeguards,
 .verdict__first-owed-reviews,
@@ -3539,7 +3559,8 @@ details input {
 .verdict__first-also-covers {
   margin: 0.2rem 0;
   font-size: 0.85rem;
-  color: var(--ink-faint);
+  /* CR6-09: --ink-faint is 3.85:1 on the card; --ink-soft clears 4.5:1. */
+  color: var(--ink-soft);
 }
 
 .verdict__first-go-to {
@@ -3606,8 +3627,9 @@ details input {
   margin-right: 0.5rem;
   padding: 0.02rem 0.4rem;
   border-radius: 3px;
-  border: 1px solid var(--ink-faint);
-  color: var(--ink-faint);
+  /* CR6-09: --ink-faint is 3.20:1 on --paper; --ink-soft clears 4.5:1. */
+  border: 1px solid var(--ink-soft);
+  color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -3663,6 +3685,56 @@ details input {
 .plain-form__option input {
   margin-top: 0.2rem;
   flex-shrink: 0;
+}
+
+/* CR6-21: the targeted questions' tick-all list — the same fieldset reset
+   as the editor's, and rows that match .plain-form__option. */
+.questionnaire__multi-select {
+  border: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  min-width: 0;
+}
+
+.questionnaire__multi-select > legend {
+  padding: 0;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.questionnaire__multi-select-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.questionnaire__multi-select-option input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+/* CR6-07: text for assistive technology only (e.g. "(required)" after the
+   asterisk). Standard clip pattern — still read, never drawn. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* CR6-07: the line beside Continue saying what is still missing. */
+.plain-form__missing {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
 }
 
 .understood-summary {

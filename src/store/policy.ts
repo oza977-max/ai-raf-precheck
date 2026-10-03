@@ -192,6 +192,8 @@ const RegistryEntrySchema = z.object({
 // values are rejected by the enum — no unlisted class silently passes.
 const ApprovedModelSchema = z.object({
   model_id: z.string().min(1),
+  // CR6-19: optional plain-language name (see ApprovedModel.plain_name).
+  plain_name: z.string().min(1).optional(),
   vendor: z.string().min(1),
   provenance_class: z.enum(['vendor_hosted', 'open_weights_self_hosted', 'fine_tuned_in_house']),
   is_approved: z.boolean(),

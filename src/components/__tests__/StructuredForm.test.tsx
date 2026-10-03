@@ -409,8 +409,15 @@ describe('StructuredForm — required-field markers (adapted from R3-JU-5)', () 
     expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
     const markers = container.querySelectorAll('.required-marker');
     expect(markers.length).toBeGreaterThanOrEqual(12);
-    const requiredFieldsets = container.querySelectorAll('fieldset[aria-required="true"]');
-    expect(requiredFieldsets.length).toBeGreaterThanOrEqual(9); // the 9 single/multi-select base questions
+    // CR6-07: aria-required now sits where the role supports it — on each
+    // radiogroup (7 base single-selects), with the two base tick-all groups
+    // (Q5, Q11) saying so in their legend, and on the 2 free-text controls.
+    const requiredRadiogroups = container.querySelectorAll('[role="radiogroup"][aria-required="true"]');
+    expect(requiredRadiogroups.length).toBeGreaterThanOrEqual(7);
+    const tickLegends = [...container.querySelectorAll('legend')].filter((l) => /tick at least one/i.test(l.textContent ?? ''));
+    expect(tickLegends.length).toBeGreaterThanOrEqual(2);
+    const requiredFreeText = container.querySelectorAll('input[aria-required="true"][required], textarea[aria-required="true"][required]');
+    expect(requiredFreeText.length).toBeGreaterThanOrEqual(2);
   });
 
   it('TC-R3-JU-5-02: optional fields (3supplierName, 3model) carry neither signal', async () => {

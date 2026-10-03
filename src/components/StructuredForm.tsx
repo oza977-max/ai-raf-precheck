@@ -70,7 +70,10 @@ function RequiredMark({ id, requiredIds }: { id: QuestionId; requiredIds: Questi
   return requiredIds.includes(id) ? (
     <span className="required-marker" title="Required">
       {' '}
-      *
+      <span aria-hidden="true">*</span>
+      {/* CR6-07: the asterisk alone is a glyph for sighted users; this is
+          what assistive technology reads. */}
+      <span className="visually-hidden"> (required)</span>
     </span>
   ) : null;
 }
@@ -120,24 +123,28 @@ function SingleSelect({
   const baseOptions = restrictToKeys ? question.options.filter((o) => restrictToKeys.includes(o.key)) : question.options;
   const options = mergeOptions(baseOptions, extraOptions, extraOptionsAtIndex);
   return (
-    <fieldset className="plain-form__question" aria-required={requiredIds.includes(id) || undefined}>
-      <legend>
+    <fieldset className="plain-form__question">
+      <legend id={`pf-${id}-legend`}>
         {question.text}
         <RequiredMark id={id} requiredIds={requiredIds} />
       </legend>
       {question.help && <p className="field-help">{question.help}</p>}
-      {options.map((o) => (
-        <label key={o.key} className="plain-form__option">
-          <input
-            type="radio"
-            name={`pf-${id}`}
-            value={o.key}
-            checked={answers[id] === o.key}
-            onChange={() => onSingle(id, o.key)}
-          />
-          {o.text}
-        </label>
-      ))}
+      {/* CR6-07: a real radiogroup carries aria-required (a plain fieldset's
+          "group" role does not support it). */}
+      <div role="radiogroup" aria-labelledby={`pf-${id}-legend`} aria-required={requiredIds.includes(id) || undefined}>
+        {options.map((o) => (
+          <label key={o.key} className="plain-form__option">
+            <input
+              type="radio"
+              name={`pf-${id}`}
+              value={o.key}
+              checked={answers[id] === o.key}
+              onChange={() => onSingle(id, o.key)}
+            />
+            {o.text}
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }
@@ -148,9 +155,11 @@ function MultiSelect({ id, extraOptions = [], requiredIds, answers, onMulti }: Q
   const options = [...extraOptions, ...question.options];
   const current = toArray(answers[id]);
   return (
-    <fieldset className="plain-form__question" aria-required={requiredIds.includes(id) || undefined}>
+    <fieldset className="plain-form__question">
       <legend>
         {question.text}
+        {/* CR6-07: a tick-all group has no "required" role state, so say it. */}
+        {requiredIds.includes(id) && <span className="plain-form__tick-hint"> (tick at least one)</span>}
         <RequiredMark id={id} requiredIds={requiredIds} />
       </legend>
       {question.help && <p className="field-help">{question.help}</p>}
@@ -175,6 +184,7 @@ function FreeText({
   if (!question) return null;
   const value = (answers[id] as string | undefined) ?? '';
   const inputId = `pf-${id}`;
+  const isRequired = requiredIds.includes(id);
   return (
     <div className="plain-form__question">
       <label htmlFor={inputId}>
@@ -183,9 +193,9 @@ function FreeText({
       </label>
       {question.help && <p className="field-help">{question.help}</p>}
       {multiline ? (
-        <textarea id={inputId} value={value} onChange={(e) => onText(id, e.target.value)} />
+        <textarea id={inputId} value={value} required={isRequired} aria-required={isRequired || undefined} onChange={(e) => onText(id, e.target.value)} />
       ) : (
-        <input id={inputId} type="text" value={value} onChange={(e) => onText(id, e.target.value)} />
+        <input id={inputId} type="text" value={value} required={isRequired} aria-required={isRequired || undefined} onChange={(e) => onText(id, e.target.value)} />
       )}
     </div>
   );
@@ -382,7 +392,15 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   if (showQ8other) requiredIds.push('8other');
   if (isAgentic) requiredIds.push('13', '14');
 
-  const isComplete = requiredIds.every(isAnswered);
+  const missingIds = requiredIds.filter((id) => !isAnswered(id));
+  const isComplete = missingIds.length === 0;
+  // CR6-07: what is still missing, in the form's own words — the first few,
+  // then a count — shown beside Continue and tied to it with aria-describedby.
+  const missingTexts = missingIds.map((id) => findQuestion(id)?.text ?? id);
+  const missingLine =
+    missingTexts.length <= 3
+      ? missingTexts.join('; ')
+      : `${missingTexts.slice(0, 3).join('; ')}; and ${missingTexts.length - 3} more`;
 
   function handleSubmit() {
     if (!isComplete) return;
@@ -477,7 +495,17 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
 
       <p className="structured-form__scroll-note">One continuous scroll — no Next/Back paging.</p>
 
-      <button type="button" onClick={handleSubmit} disabled={!isComplete}>
+      {!isComplete && (
+        <p id="pf-missing" className="plain-form__missing">
+          Still to answer: {missingLine}.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={!isComplete}
+        aria-describedby={isComplete ? undefined : 'pf-missing'}
+      >
         Continue
       </button>
     </section>
