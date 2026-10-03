@@ -102,6 +102,7 @@ describe('IntakeFlow — a failed model-link write never strands a case (review 
     const confirm = await reachConfirm(user);
     // Spied only now: App's own seeding of the built-in example case (which
     // uses the same function) has long finished by this point.
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const linkSpy = vi.spyOn(registerModule, 'addUseCaseModelLink').mockRejectedValue(new Error('link write failed'));
     await user.click(confirm);
     await waitFor(() => expect(linkSpy).toHaveBeenCalled(), { timeout: 5000 });
@@ -125,7 +126,9 @@ describe('IntakeFlow — a failed model-link write never strands a case (review 
     const user = userEvent.setup();
     mockCreate.mockResolvedValue(extraction());
     const confirm = await reachConfirm(user);
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const linkSpy = vi.spyOn(registerModule, 'addUseCaseModelLink').mockRejectedValue(new Error('link write failed'));
+    // EBT exception (owner-accepted, code review 006/008): fault injection — a simulated storage failure the real store cannot be made to produce on demand
     const flagSpy = vi.spyOn(registerModule, 'updateUseCaseVerdictSummary').mockRejectedValue(new Error('flag write failed'));
     await user.click(confirm);
     await waitFor(() => expect(linkSpy).toHaveBeenCalled(), { timeout: 5000 });

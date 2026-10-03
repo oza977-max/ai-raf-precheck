@@ -37,6 +37,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 // CR7-17: the seed wait is the one seam this file lets a test make fail.
 let seedOverride: (() => Promise<unknown>) | null = null;
+// EBT exception (owner-accepted, code review 006/008): fault injection — lets CR7-17 make the self-assessment seed wait reject; otherwise the real seed runs
 vi.mock('../../seeds/aigate-self-assessment', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../seeds/aigate-self-assessment')>();
   return {
@@ -216,6 +217,7 @@ async function failNextEvaluation() {
     },
     { timeout: 10000 },
   );
+  // EBT exception (owner-accepted, code review 006/008): fault injection — makes ONE evaluation fail the way a gap in the firm's rules would; the real evaluate runs every other time
   vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({
     ok: false,
     error: { kind: 'no-track-match' },
@@ -461,6 +463,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
 
   it('TC-CR7-01a-1: the extractor is called exactly once and the review screen appears', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     extractingDraft();
     render(<App />);
@@ -471,6 +474,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
   it('TC-CR7-01a-2 (StrictMode): still exactly one call when mounted twice', async () => {
     const { StrictMode } = await import('react');
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     extractingDraft();
     render(
@@ -492,6 +496,7 @@ describe('CR7-01 — a restored description draft that was waiting on the extrac
 
   it('TC-CR7-01c: a fresh, non-restored description path calls the extractor exactly once', async () => {
     mockCreate.mockResolvedValue(notSureExtraction());
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const spy = vi.spyOn(graphExtractorModule, 'extractGraph');
     const user = userEvent.setup({ delay: null });
     await reachReview(user, NSDESC);
@@ -739,6 +744,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
       }),
     );
     const gate = held<void>();
+    // EBT exception (owner-accepted, code review 006/008): hold in flight — keeps the call open across a Start over / Back click, which the shared SDK mock cannot do per call
     const traceSpy = vi.spyOn(traceModule, 'generateReasoningTraceForVerdict').mockImplementationOnce(async () => {
       await gate.promise;
       return { ok: false, error: { kind: 'no-api-key', message: 'held' } } as never;
@@ -776,6 +782,7 @@ describe("CR7-16 — an abandoned confirm or adopt cannot wipe a newer case's dr
     // Spied only now: App's own demo seeding also calls addNode, and a spy
     // installed earlier would be consumed by (and hold up) that instead.
     const realAddNode = registerModule.addNode;
+    // EBT exception (owner-accepted, code review 006/008): call-count observation only — the real function still runs, nothing is replaced
     const addNodeSpy = vi.spyOn(registerModule, 'addNode');
     addNodeSpy.mockImplementationOnce(async (...args) => {
       await gate.promise;
