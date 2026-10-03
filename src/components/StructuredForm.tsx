@@ -10,7 +10,7 @@ import {
 import type { Assumption, PlainAnswers, PlainOption, QuestionId } from './plain-copy';
 import { plainAnswersToFormValues, platformZoneOptionKeys, resolveAccessScopeAnswer } from '../engine/plain-intake';
 import { buildGraphFromForm } from '../engine/build-graph-from-form';
-import { saveFormDraft, loadFormDraft, clearFormDraft, probeLegacyFormDraft } from './intake-draft';
+import { saveFormDraft, loadFormDraft, probeLegacyFormDraft } from './intake-draft';
 import type { DataFlowGraph, PolicyFile } from '../engine/types';
 
 // R16-B (UC-8, UC-10, UC-11; build/prompts/R16.md v2.1 §2.2). Rule 4
@@ -208,6 +208,17 @@ function FreeText({
   );
 }
 
+/** CR7-04. Whether the "Model name, if you know it" question is on screen for
+ *  this Q3 answer: the outside assistant, or either supplier option. A LOCAL
+ *  copy of the engine-side predicate FX7-3 exports (`q3ShowsModelQuestion` in
+ *  engine/plain-intake.ts, which takes the whole answers object) — the main
+ *  loop replaces this with that import at merge. The one rule, in one place
+ *  for this component: it decides both what renders and what a Q3 change must
+ *  clear. */
+function q3KeyShowsModelQuestion(q3: string | undefined): boolean {
+  return q3 === 'outside-assistant' || q3 === 'supplier-feature' || q3 === 'specialist-product';
+}
+
 export default function StructuredForm({ policy, initialDescription, initialAnswers, onSubmit }: StructuredFormProps) {
   const platformOptions = dynamicOptions(policy.platforms ?? [], neutralPlatformLabel);
   const supplierOptions = dynamicOptions(
@@ -261,6 +272,14 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
       // (§2.2 Details: "follow-ups are required when shown and cleared
       // when their trigger changes").
       if (id === '3') {
+        // CR7-04: the model name belongs to the Q3 answers that ask for it.
+        // Moving from one that shows the question to one that does not (e.g.
+        // "outside assistant" -> "something a team in your firm built") used to
+        // leave the typed name behind, hidden: it still reached the engine as
+        // a declared model for a tool that has none.
+        if (q3KeyShowsModelQuestion(typeof prev['3'] === 'string' ? prev['3'] : undefined) && !q3KeyShowsModelQuestion(key)) {
+          delete next['3model'];
+        }
         delete next['3a'];
         delete next['3aWhich'];
         delete next['3supplier'];
@@ -323,7 +342,7 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   // ---- visibility ----
   const q3 = typeof answers['3'] === 'string' ? (answers['3'] as string) : undefined;
   const showQ3Supplier = q3 === 'supplier-feature' || q3 === 'specialist-product';
-  const showQ3Model = q3 === 'outside-assistant' || showQ3Supplier;
+  const showQ3Model = q3KeyShowsModelQuestion(q3);
   const showQ3a = q3 === 'outside-assistant';
   const show3supplierName = answers['3supplier'] === 'not-on-list';
   const show3aWhich = answers['3a'] === 'firm-account' && companyAssistantOptions.length > 1;
@@ -418,7 +437,10 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   function handleSubmit() {
     if (!isComplete) return;
     const { values, assumptions } = plainAnswersToFormValues(answers, policy);
-    clearFormDraft();
+    // CR7-13: the saved form answers are NOT cleared here. The policy check
+    // (IntakeFlow.handleFormSubmitted) can still refuse this submit, and a
+    // person whose answers were wiped before that check lost them for good.
+    // IntakeFlow clears the form draft right after FORM_SUBMITTED is accepted.
     // R16-F §5 (DR7-06): the engine returns assumption REFERENCES; this is
     // the one, immediate conversion to the worded `Assumption[]` onSubmit's
     // callers (and the reducer state they carry) still expect.

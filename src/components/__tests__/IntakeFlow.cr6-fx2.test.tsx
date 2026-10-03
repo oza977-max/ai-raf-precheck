@@ -31,6 +31,12 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 const DRAFT_KEY = 'aigate:intake-draft';
 
+// CR7-10 (FX7-1): the adopted screen names the earlier case only to the 2LoD
+// view; every other view reads "An earlier result on your firm's register was
+// used." Both wordings are "the adopted screen" — the assertions below must
+// match either, or the absent-checks would pass for the wrong reason.
+const ADOPTED_SCREEN = /earlier result used from|earlier result on your firm.s register was used/i;
+
 function makeGraph(overrides: Partial<DataFlowGraph> = {}): DataFlowGraph {
   return {
     id: 'g1',
@@ -280,13 +286,13 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
 
     await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'Adopt-abandon probe assistant');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
   });
 
   it('TC-CR6-02d: rendered inside StrictMode, the duplicate check still completes and shows its result exactly once', async () => {
@@ -386,18 +392,21 @@ describe('C-3: Undo disappears once its one snapshot is used', () => {
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        step: 'questionnaire',
-        description: 'd',
-        graph: makeGraph({ intake_method: 'llm' }),
-        questions: [
-          { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
-          { id: 'Q2', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
-          { id: 'Q3', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
-        ],
-        answers: [],
-        resolutionNotes: [],
-        corrections: [],
-        useCaseId: 'uc-c3',
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        state: {
+          step: 'questionnaire',
+          description: 'd',
+          graph: makeGraph({ intake_method: 'llm' }),
+          questions: [
+            { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+            { id: 'Q2', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+            { id: 'Q3', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },
+          ],
+          answers: [],
+          resolutionNotes: [],
+          corrections: [],
+          useCaseId: 'uc-c3',
+        },
       }),
     );
     const user = userEvent.setup();
@@ -586,8 +595,11 @@ describe('CR6-15: navigating away mid-confirm leaves no stale confirmation scree
       });
 
       // The saved draft must be gone directly — not only via the (never
-      // fired, because unmounted) step === 'verdict' effect.
-      expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+      // fired, because unmounted) step === 'verdict' effect. The clear comes
+      // a few awaits AFTER verdict_produced is written (the register
+      // refresh), so it is waited for rather than read the instant the event
+      // appears — which raced on a loaded machine.
+      await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull());
 
       // Return to the intake screen: a fresh case, never the stale
       // confirmation screen for a case that was already decided.
@@ -704,7 +716,7 @@ describe('CR6-17: an invalid policy shows a message at the button instead of fai
     await user.click(screen.getByRole('radio', { name: /^no$/i }));
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
 
-    expect(await screen.findByText(/policy invalid/i, { selector: '.intake-flow__gate-error' })).toBeInTheDocument();
+    expect(await screen.findByText(/rules file has a problem/i, { selector: '.intake-flow__gate-error' })).toBeInTheDocument();
     // Never reached the summary — FORM_SUBMITTED was never dispatched.
     expect(screen.queryByText(/here.s what we understood/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
@@ -727,7 +739,7 @@ describe('CR6-17: an invalid policy shows a message at the button instead of fai
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: /^continue$/i }));
 
-    expect(await screen.findByText(/policy invalid/i, { selector: '.intake-flow__gate-error' })).toBeInTheDocument();
+    expect(await screen.findByText(/rules file has a problem/i, { selector: '.intake-flow__gate-error' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^continue$/i })).toBeInTheDocument();
   });
 });
@@ -765,15 +777,18 @@ describe('I-3 / B-10 rewritten: a contradiction is shown iff it still holds when
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        step: 'questionnaire',
-        description: 'The process is fully manual',
-        graph,
-        questions,
-        answers: [],
-        resolutionNotes: [],
-        corrections: [],
-        useCaseId: 'uc-b10',
-        ...extra,
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        state: {
+          step: 'questionnaire',
+          description: 'The process is fully manual',
+          graph,
+          questions,
+          answers: [],
+          resolutionNotes: [],
+          corrections: [],
+          useCaseId: 'uc-b10',
+          ...extra,
+        },
       }),
     );
 
@@ -822,14 +837,17 @@ describe('B-10c (pass 2): an explained contradiction is not raised again by the 
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        step: 'questionnaire',
-        description: 'The process is fully manual',
-        graph: contradictoryGraph(),
-        questions,
-        answers: [],
-        resolutionNotes: [],
-        corrections: [],
-        useCaseId: 'uc-b10c',
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        state: {
+          step: 'questionnaire',
+          description: 'The process is fully manual',
+          graph: contradictoryGraph(),
+          questions,
+          answers: [],
+          resolutionNotes: [],
+          corrections: [],
+          useCaseId: 'uc-b10c',
+        },
       }),
     );
     const user = userEvent.setup();
@@ -850,15 +868,18 @@ describe('B-10c (pass 2): an explained contradiction is not raised again by the 
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        step: 'questionnaire',
-        description: 'The process is fully manual',
-        graph: contradictoryGraph(),
-        questions,
-        answers: [],
-        resolutionNotes: ['already explained'],
-        explainedContradictions: ['some_other_field|A different statement.'],
-        corrections: [],
-        useCaseId: 'uc-b10c2',
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        state: {
+          step: 'questionnaire',
+          description: 'The process is fully manual',
+          graph: contradictoryGraph(),
+          questions,
+          answers: [],
+          resolutionNotes: ['already explained'],
+          explainedContradictions: ['some_other_field|A different statement.'],
+          corrections: [],
+          useCaseId: 'uc-b10c2',
+        },
       }),
     );
     const user = userEvent.setup();
@@ -879,13 +900,13 @@ describe('I-4: Start over after "Use the earlier result" leaves nothing of the a
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
 
     await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     await user.type(await screen.findByLabelText(/what ai tool do you want to use/i), 'A chatbot that helps interns book conference rooms');
     await user.click(screen.getByRole('button', { name: /^next/i }));
     await screen.findByRole('button', { name: /^continue →$/i });
-    expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADOPTED_SCREEN)).not.toBeInTheDocument();
   });
 });
 
@@ -945,7 +966,7 @@ describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can le
       expect(screen.queryByLabelText(/what ai tool do you want to use/i)).not.toBeInTheDocument();
 
       a.resolve();
-      await screen.findByText(/earlier result used from/i);
+      await screen.findByText(ADOPTED_SCREEN);
       expect(addNodeSpy).toHaveBeenCalledTimes(1);
       const created = (await getAllForExport()).filter(
         (e) => e.event_type === 'use_case_created' && (e.payload as { description?: string }).description === 'Adopt guard probe assistant',
@@ -971,7 +992,7 @@ describe('M-1 / I-1 (pass 2): while a decision write is in flight nothing can le
       expect(screen.queryByLabelText(/what ai tool do you want to use/i)).not.toBeInTheDocument();
       expect(addNodeSpy).toHaveBeenCalledTimes(1);
       a.resolve();
-      await screen.findByText(/earlier result used from/i);
+      await screen.findByText(ADOPTED_SCREEN);
       const adopted = (await getAllForExport()).filter(
         (e) => e.event_type === 'classification_adopted' && (e.payload as { adopted_from_label?: string }).adopted_from_label === 'Adopt back probe assistant',
       );
@@ -1010,7 +1031,7 @@ describe('I-2 (pass 2): a finished adoption is finished', () => {
     const user = userEvent.setup();
     const first = render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
     expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
     first.unmount();
 
@@ -1025,12 +1046,12 @@ describe('I-2 (pass 2): a finished adoption is finished', () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
     expect(screen.queryAllByRole('button', { name: /back/i })).toHaveLength(0);
 
     await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     expect(await screen.findByLabelText(/what ai tool do you want to use/i)).toBeInTheDocument();
-    expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADOPTED_SCREEN)).not.toBeInTheDocument();
   });
 });
 
@@ -1078,7 +1099,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
     render(<App />);
     expect(await screen.findByText(/picked up where you left off/i)).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: /use the earlier result/i }));
-    await screen.findByText(/earlier result used from/i);
+    await screen.findByText(ADOPTED_SCREEN);
     expect(screen.queryByText(/picked up where you left off/i)).not.toBeInTheDocument();
   });
 
@@ -1093,7 +1114,7 @@ describe('FX-2 pass 3 minors: the decision lock belongs to its own attempt; fini
       const msg = await screen.findByText(/could not be saved/i);
       expect(msg.closest('[role="alert"]')).not.toBeNull();
       expect(msg.textContent).toMatch(/check the register/i);
-      expect(screen.queryByText(/earlier result used from/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(ADOPTED_SCREEN)).not.toBeInTheDocument();
     } finally {
       addNodeSpy.mockRestore();
     }
@@ -1182,13 +1203,19 @@ describe('M-5: App guards IntakeFlow with the ErrorBoundary; an old-shape draft 
     }
   });
 
+  // CR7-28 (FX7-1): a bare (pre-CR6) questions draft on the DESCRIPTION path now
+  // restores as the review screen, so this test, which pins "the old undo shape
+  // is dropped and the questionnaire still works", uses the form path's
+  // questionnaire (plainAnswers present, the form's graph) — the one an old
+  // draft still restores as a questionnaire.
   it('TC-CR6-04a (UI): a draft saved with the old undo shape restores without a crash, offers no Undo for that answer, and Undo works for the next one', async () => {
-    const g = makeGraph({ intake_method: 'llm' });
+    const g = makeGraph();
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
         step: 'questionnaire',
         description: 'd',
+        plainAnswers: { '1': 'Tool' },
         graph: g,
         questions: [
           { id: 'Q1', field: 'replaces_prior_model', node_id: 'p1', triggered_by: ['INV-1'], answer_type: 'boolean' },

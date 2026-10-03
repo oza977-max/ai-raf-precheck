@@ -3,6 +3,7 @@
 // React Testing Library (Dan Vanderkam: typed discriminated unions).
 import type { Contradiction, DataFlowGraph, GraphCorrection, IntakeQuestion, QuestionAnswer } from '../engine/types';
 import type { Assumption, PlainAnswers } from './plain-copy';
+import type { AuditEvent } from '../store/types';
 
 export type { Contradiction, IntakeQuestion, QuestionAnswer };
 
@@ -93,6 +94,18 @@ export type IntakeState =
       // false here, exactly mirroring the correction-pass rule. Absent on
       // every other route into graph_review.
       afterFailedEvaluation?: boolean;
+      // CR7-02 (BC-004). The "Not sure" assumptions this case has recorded so
+      // far, carried onto the review screen by every way BACK into it that
+      // keeps the answers behind them: CHANGE_ANSWER, EVALUATION_FAILED and
+      // CORRECT_VERDICT. Deliberately NOT carried by STEP_BACK from the
+      // questionnaire — those answers are re-asked (CR7-03), and an
+      // assumption without its answer would be listed back as made.
+      assumptions?: Assumption[];
+      // CR7-02 (6). Set on CHANGE_ANSWER / EVALUATION_FAILED / CORRECT_VERDICT
+      // (this screen is being revisited, not read for the first time): the
+      // values on it were all stated or checked already, so GraphView must
+      // not label every one "no basis" (a false claim about the description).
+      reentry?: boolean;
     }
   | {
       step: 'questionnaire';
@@ -132,11 +145,18 @@ export type IntakeState =
       // defense in depth for anything that still does. CR6-03's own
       // `guessedFields` snapshot is newer still, optional for the
       // identical reason.
+      //
+      // CR7-02 (4): the snapshot holds the assumptions ARRAY, not its length.
+      // A "Not sure" re-answer now REPLACES an assumption in place (ANSWER_
+      // SUBMITTED), so slicing by a remembered length no longer undoes it.
+      // `assumptionsLen` stays optional only for a snapshot an older build
+      // wrote (ANSWER_UNDONE reads it as before when `assumptions` is absent).
       undo?: {
         graph: DataFlowGraph;
         correctionsLen: number;
         questions: IntakeQuestion[];
-        assumptionsLen: number;
+        assumptions?: Assumption[];
+        assumptionsLen?: number;
         guessedFields?: Record<string, string[]>;
       };
       // W-3/W-4 (R16-W §1). Present only when this questionnaire was
@@ -180,6 +200,34 @@ export type IntakeState =
       // (and threaded through a contradiction round trip) so Back restores
       // the "We ignored X" notice instead of silently dropping it.
       ignoredJurisdictions?: string[];
+      // CR7-03 (BC-004). What the review screen held at the moment the
+      // questions were generated, so Back puts the person where they started
+      // and every question — including a guessed supplier or model they
+      // rejected with "Not on this list" — is asked again from those values.
+      // Without these, Back kept the answered values on the graph and trimmed
+      // the guessed list, so a rejected guess silently reached the result.
+      // Set once at QUESTIONS_GENERATED and threaded through every step that
+      // can lead back (ANSWER_SUBMITTED, ANSWER_UNDONE, CONTRADICTIONS_DETECTED,
+      // CONTRADICTION_RESOLVED). Absent on a draft saved before this change:
+      // STEP_BACK then falls back to the previous behaviour (CR7-28 covers the
+      // old-draft hole).
+      backGraph?: DataFlowGraph;
+      backCorrections?: GraphCorrection[];
+      askedGuessedFields?: Record<string, string[]>;
+      // CR7-02 (6), carried so a Back from here to a REVISITED review screen
+      // (Change an answer -> Continue -> Back) is still marked as revisited;
+      // dropping it would bring back every "no basis" label.
+      reentry?: boolean;
+      // FX7-1 review pass 1 (I-2, I-3). The rest of what the review screen
+      // held when the questions were generated, for the same reason as
+      // backGraph: Back must put the person exactly where they were. The
+      // assumptions of an EARLIER round stay (their strict values are on the
+      // restored graph; dropping them would present those values as firmer than
+      // they are), the ones given in this round are re-asked; and a review
+      // re-entered after a failed evaluation stays one (Back from it is refused).
+      backAssumptions?: Assumption[];
+      backUncertainNodeIds?: string[];
+      backAfterFailedEvaluation?: boolean;
     }
   | {
       step: 'contradiction_review';
@@ -210,6 +258,15 @@ export type IntakeState =
       provenance?: Record<string, Record<string, string>>;
       unconfirmedNodeIds?: string[];
       jurisdictionsConfirmed?: boolean;
+      // CR7-03: see the questionnaire variant's comment.
+      backGraph?: DataFlowGraph;
+      backCorrections?: GraphCorrection[];
+      askedGuessedFields?: Record<string, string[]>;
+      reentry?: boolean;
+      // FX7-1 review pass 1: see the questionnaire variant's comment.
+      backAssumptions?: Assumption[];
+      backUncertainNodeIds?: string[];
+      backAfterFailedEvaluation?: boolean;
     }
   | {
       step: 'confirmation';
@@ -258,6 +315,10 @@ export type IntakeState =
       // onward exactly as any other confirmation re-entry does.
       plainAnswers?: PlainAnswers;
       assumptions?: Assumption[];
+      // CR7-02: carried from the confirmation state so EVALUATION_FAILED can
+      // hand the frozen "what the description did not say" list back to the
+      // review screen instead of dropping it.
+      uncertainNodeIds?: string[];
     }
   | { step: 'verdict'; verdictId: string };
 
@@ -364,7 +425,17 @@ export type IntakeAction =
   | { type: 'VERDICT_READY' }
   // VD-3 (verdict-audit.md §6): re-enters graph_review reusing the
   // ORIGINAL useCaseId, carrying the id of the verdict being corrected.
-  | { type: 'CORRECT_VERDICT'; graph: DataFlowGraph; useCaseId: string; originalVerdictId: string }
+  // CR7-02: `assumptions`/`uncertainNodeIds` — what the verdict being
+  // corrected was confirmed on (IntakeFlow's `lastConfirmed`), so the
+  // correction pass's own confirmation still lists the "Not sure" answers.
+  | {
+      type: 'CORRECT_VERDICT';
+      graph: DataFlowGraph;
+      useCaseId: string;
+      originalVerdictId: string;
+      assumptions?: Assumption[];
+      uncertainNodeIds?: string[];
+    }
   // R16-D2 §5 (D-82, DR7-17). The form-path counterpart to CORRECT_VERDICT
   // above: re-enters at the GUIDED FORM itself (graph_review is engine
   // vocabulary a form-built case has no business showing, principle 1),
@@ -435,6 +506,128 @@ function carriedDescription(state: IntakeState): string {
  *  detectContradictions is deterministic over the same description + graph. */
 export function contradictionKey(c: Contradiction): string {
   return `${c.field ?? ''}|${c.statement1}`;
+}
+
+/** Where a correction's (node, field) lives on the graph being evaluated:
+ *  `{found:true, value}` or `{found:false}` (never guessed). */
+export type ValueResolver = (nodeId: string, field: string) => { found: true; value: unknown } | { found: false };
+
+/** Resolver for planCorrectionWrites. Description path: by node id (`graph` is
+ *  the graph itself). Form path (`originalGraph` given): buildGraphFromForm
+ *  mints fresh ids every submission and formCorrections names the ORIGINAL
+ *  graph's ids, so they are mapped by role — the original processing node id to
+ *  processing_nodes[0], the original output node id to output_nodes[0], the
+ *  sentinel `inputs|data_classes` to the sorted distinct input data classes.
+ *
+ *  Assumption (M-3): the form builds exactly ONE processing node and ONE output
+ *  node (form-corrections.ts matches by the same rule). A multi-node form would
+ *  resolve nothing for the extra nodes — safe (nothing is written), but it would
+ *  drop their reverse corrections. */
+export function graphValueResolver(graph: DataFlowGraph, originalGraph?: DataFlowGraph): ValueResolver {
+  const asRec = (n: unknown) => n as Record<string, unknown> | undefined;
+  return (nodeId, field) => {
+    if (nodeId === 'graph') {
+      if (!(field in graph)) return { found: false };
+      const v = (graph as unknown as Record<string, unknown>)[field];
+      // Sorted, as formCorrections stores jurisdictions, so a synthesised
+      // correction and a form-diffed one read the same.
+      return { found: true, value: Array.isArray(v) && v.every((x) => typeof x === 'string') ? [...v].sort() : v };
+    }
+    let node: Record<string, unknown> | undefined;
+    if (originalGraph) {
+      if (nodeId === 'inputs' && field === 'data_classes') {
+        return { found: true, value: [...new Set(graph.input_nodes.map((n) => n.data_class))].sort() };
+      }
+      if (originalGraph.processing_nodes[0]?.id === nodeId) node = asRec(graph.processing_nodes[0]);
+      else if (originalGraph.output_nodes[0]?.id === nodeId) node = asRec(graph.output_nodes[0]);
+    } else {
+      node = asRec([...graph.input_nodes, ...graph.processing_nodes, ...graph.output_nodes].find((n) => n.id === nodeId));
+    }
+    return node ? { found: true, value: node[field] } : { found: false };
+  };
+}
+
+/** CR7-21/22, FX7-1 review passes 1-2 (M-3, M-4, I-A, M-B). Decides what a
+ *  confirm writes to the trail for its corrections, and how many corrections
+ *  the trail then holds for this attempt. Pure: the caller reads the events
+ *  inside the case lock.
+ *
+ *  The aim: for every (node, field) the trail's NET value — the last
+ *  `corrected_value` written since the last result — equals the value on the
+ *  graph being evaluated. The window is the events since the last
+ *  verdict_produced/verdict_corrected.
+ *   - A pending correction is skipped only when the LATEST value written for its
+ *     (node, field) already equals its `corrected_value` (a retry re-mints ids
+ *     for the same change). A->B, A->C, A->B writes the third: the form always
+ *     diffs against the ORIGINAL graph, so "A->B" is new information once C is
+ *     the latest.
+ *   - With `ctx` (a resolver for the graph being evaluated), a (node, field) the window has
+ *     corrected whose latest value differs from the graph — and that nothing
+ *     pending covers, e.g. a resubmit with the field back at its original value,
+ *     where the form finds nothing to correct — gets one correction from the
+ *     latest trail value to the graph value, with the same `correction_source`.
+ *   - Values compare as sets for lists (jurisdictions), `?? null` for absent.
+ *
+ *  `sinceLastResult` = the graph_corrected events in the window plus those about
+ *  to be written: what graph_confirmed/verdict_corrected should call its
+ *  `corrections_count`, so the number always follows from the same plan. */
+export function planCorrectionWrites(
+  corrections: GraphCorrection[],
+  events: AuditEvent[],
+  ctx?: {
+    resolve: ValueResolver;
+    version: number;
+    newId: () => string;
+    now: () => string;
+    by: string;
+  },
+): { toWrite: GraphCorrection[]; sinceLastResult: number } {
+  let lastDecided = -1;
+  events.forEach((e, i) => {
+    if (e.payload.type === 'verdict_produced' || e.payload.type === 'verdict_corrected') lastDecided = i;
+  });
+  const written: GraphCorrection[] = [];
+  for (const e of events.slice(lastDecided + 1)) {
+    if (e.payload.type === 'graph_corrected') written.push(e.payload.correction);
+  }
+  const norm = (v: unknown): string => {
+    const x = v ?? null;
+    return JSON.stringify(Array.isArray(x) ? [...x].map((i) => JSON.stringify(i)).sort() : x);
+  };
+  const key = (c: { node_id: string; field: string }) => `${c.node_id}|${c.field}`;
+  const latest = new Map<string, GraphCorrection>();
+  for (const w of written) latest.set(key(w), w);
+
+  const toWrite = corrections.filter((c) => {
+    const last = latest.get(key(c));
+    return !(last && norm(last.corrected_value) === norm(c.corrected_value));
+  });
+
+  if (ctx) {
+    const covered = new Set(corrections.map(key));
+    for (const [k, last] of latest) {
+      if (covered.has(k)) continue;
+      // I-1 (review pass 3): a (node, field) that cannot be found on the graph
+      // writes NOTHING. A `null` for "not found" would be a false value on an
+      // append-only trail.
+      const found = ctx.resolve(last.node_id, last.field);
+      if (!found.found) continue;
+      if (norm(found.value) === norm(last.corrected_value)) continue;
+      toWrite.push({
+        correction_id: ctx.newId(),
+        graph_version_before: last.graph_version_after,
+        graph_version_after: ctx.version,
+        node_id: last.node_id,
+        field: last.field,
+        original_value: last.corrected_value ?? null,
+        corrected_value: found.value ?? null,
+        corrected_by: ctx.by,
+        corrected_at: ctx.now(),
+        ...(last.correction_source ? { correction_source: last.correction_source } : {}),
+      });
+    }
+  }
+  return { toWrite, sinceLastResult: written.length + toWrite.length };
 }
 
 export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeState {
@@ -511,12 +704,24 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
               originalGraph: state.originalGraph,
             };
           }
+          // CR7-03 (BC-004). The graph, the corrections and the guessed list
+          // come back from the snapshot taken when the questions were
+          // generated — NOT from what the answers have since changed. Every
+          // question is therefore asked again from the pre-questionnaire
+          // values, including a guessed supplier or model the person rejected
+          // ("Not on this list") and a "Not sure" answer. CR7-02 (2): this
+          // return trip carries NO assumptions, because their answers are
+          // re-asked — keeping one would list a "Not sure" the person has not
+          // given this time. A questionnaire saved before the snapshot existed
+          // has none (`backGraph` absent): it steps back as it did before.
+          const backGraph = state.backGraph ?? state.graph;
+          const hasSnapshot = state.backGraph !== undefined;
           return {
             step: 'graph_review',
             description: carriedDescription(state),
-            graph: state.graph,
-            graphVersion: state.graph.version,
-            corrections: state.corrections,
+            graph: backGraph,
+            graphVersion: backGraph.version,
+            corrections: state.backCorrections ?? state.corrections,
             useCaseId: state.useCaseId,
             // A correction pass must stay a correction pass — dropping this
             // would orphan the verdict being corrected.
@@ -530,13 +735,23 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             // the form path, a correction, an evaluation-failure re-entry)
             // or the concrete "everything already checked" values — never
             // the gate reappearing non-empty/false.
-            guessedFields: state.guessedFields,
+            guessedFields: state.askedGuessedFields ?? state.guessedFields,
+            ...(state.reentry ? { reentry: true } : {}),
+            // FX7-1 review pass 1 (I-2, I-3): back to what the review held. An
+            // earlier round's assumptions return with their strict values; this
+            // round's are re-asked. Without a snapshot (an older draft) none.
+            ...(hasSnapshot && state.backAssumptions ? { assumptions: state.backAssumptions } : {}),
+            ...(hasSnapshot && state.backAfterFailedEvaluation ? { afterFailedEvaluation: true } : {}),
             provenance: state.provenance,
             unconfirmedNodeIds: state.unconfirmedNodeIds,
             jurisdictionsConfirmed: state.jurisdictionsConfirmed,
             // M-2: the notice and the frozen record both survive the trip.
             ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
-            ...(state.uncertainNodeIds ? { uncertainNodeIds: state.uncertainNodeIds } : {}),
+            // The frozen record (M-2, FX-2): what the first generation derived
+            // from the guessed list; the snapshot only matters if it differs.
+            ...((state.backUncertainNodeIds ?? state.uncertainNodeIds)
+              ? { uncertainNodeIds: state.backUncertainNodeIds ?? state.uncertainNodeIds }
+              : {}),
           };
         default:
           return state;
@@ -745,6 +960,18 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
         ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
+        // CR7-02: a re-entered review (Change an answer, a failed evaluation,
+        // a correction from the result) arrives holding the assumptions;
+        // they travel on to the confirmation.
+        ...(state.assumptions ? { assumptions: state.assumptions } : {}),
+        ...(state.reentry ? { reentry: true } : {}),
+        // CR7-03: the pre-questionnaire values Back returns to.
+        backGraph: state.graph,
+        backCorrections: state.corrections,
+        askedGuessedFields: state.guessedFields,
+        backAssumptions: state.assumptions,
+        backUncertainNodeIds: state.uncertainNodeIds,
+        ...(state.afterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'ANSWER_SUBMITTED': {
@@ -767,7 +994,30 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
               ...state.questions.slice(currentIndex + 1),
             ]
           : state.questions;
-      const assumptions = action.assumption ? [...(state.assumptions ?? []), action.assumption] : state.assumptions;
+      // CR7-02 (3). One assumption per question: a "Not sure" re-answer
+      // REPLACES the existing one (same questionId) in place, and a definite
+      // answer to a question that had one REMOVES it — otherwise Change an
+      // answer -> answer again duplicates the line or leaves a stale
+      // "assumed" claim the person has since contradicted (BC-005). The two
+      // follow-up questions write onto the field of the question that asked
+      // them (vendor_name -> vendor, declared_model_id_name ->
+      // declared_model_id), so they clear that field's assumption.
+      const answeredField =
+        answeredQuestion?.field === 'vendor_name'
+          ? 'vendor'
+          : answeredQuestion?.field === 'declared_model_id_name'
+            ? 'declared_model_id'
+            : answeredQuestion?.field;
+      let assumptions = state.assumptions;
+      if (action.assumption) {
+        const incoming = action.assumption;
+        const existing = state.assumptions ?? [];
+        assumptions = existing.some((a) => a.questionId === incoming.questionId)
+          ? existing.map((a) => (a.questionId === incoming.questionId ? incoming : a))
+          : [...existing, incoming];
+      } else if (state.assumptions && answeredField) {
+        assumptions = state.assumptions.filter((a) => a.questionId !== `field:${answeredField}`);
+      }
       // CR6-03 (Critical). A guessed field that has just been answered is
       // no longer "still to ask" — dropped from the carried guessedFields
       // (the same trim CORRECTION_APPLIED already does for graph_review's
@@ -797,7 +1047,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           graph: state.graph,
           correctionsLen: state.corrections.length,
           questions: state.questions,
-          assumptionsLen: state.assumptions?.length ?? 0,
+          // CR7-02 (4): the array itself (see the type's comment).
+          assumptions: state.assumptions ?? [],
           // CR6-03: the PRE-answer guessedFields, so ANSWER_UNDONE can put
           // an undone guessed field back among those still to ask.
           guessedFields: state.guessedFields,
@@ -823,9 +1074,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // crashes on. Falling back to the CURRENT questions is the honest
         // "nothing to undo for this part" behaviour, never a crash.
         questions: undo.questions ?? state.questions,
-        ...(state.assumptions
-          ? { assumptions: state.assumptions.slice(0, undo.assumptionsLen ?? state.assumptions.length) }
-          : {}),
+        // CR7-02 (4): restored from the snapshot's array. A snapshot an older
+        // build wrote has only `assumptionsLen` — sliced as before.
+        ...(undo.assumptions !== undefined
+          ? { assumptions: undo.assumptions }
+          : state.assumptions
+            ? { assumptions: state.assumptions.slice(0, undo.assumptionsLen ?? state.assumptions.length) }
+            : {}),
         // CR6-03: restores the pre-answer guessedFields too, so an undone
         // guessed-field answer is askable again via Back + Continue — only
         // when the snapshot actually has one (an old-shaped undo has
@@ -865,6 +1120,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
         ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
+        // CR7-03: threaded forward, never re-derived.
+        backGraph: state.backGraph,
+        backCorrections: state.backCorrections,
+        askedGuessedFields: state.askedGuessedFields,
+        ...(state.reentry ? { reentry: true } : {}),
+        backAssumptions: state.backAssumptions,
+        backUncertainNodeIds: state.backUncertainNodeIds,
+        ...(state.backAfterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -900,6 +1163,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         unconfirmedNodeIds: state.unconfirmedNodeIds,
         jurisdictionsConfirmed: state.jurisdictionsConfirmed,
         ...(state.ignoredJurisdictions ? { ignoredJurisdictions: state.ignoredJurisdictions } : {}),
+        // CR7-03: threaded forward, never re-derived.
+        backGraph: state.backGraph,
+        backCorrections: state.backCorrections,
+        askedGuessedFields: state.askedGuessedFields,
+        ...(state.reentry ? { reentry: true } : {}),
+        backAssumptions: state.backAssumptions,
+        backUncertainNodeIds: state.backUncertainNodeIds,
+        ...(state.backAfterFailedEvaluation ? { backAfterFailedEvaluation: true } : {}),
       };
 
     case 'PROCEED_TO_CONFIRMATION':
@@ -960,6 +1231,16 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             corrections: state.corrections,
             useCaseId: state.useCaseId,
             originalVerdictId: state.originalVerdictId,
+            // CR7-02 (BC-004). Everything the confirmation was based on
+            // travels with the person: the "Not sure" assumptions, the frozen
+            // uncertain list, and the countries gate as already passed (they
+            // were checked before this confirmation; the panel must still
+            // render, as it does after a failed evaluation). `reentry` tells
+            // GraphView not to label every value "no basis".
+            assumptions: state.assumptions,
+            uncertainNodeIds: state.uncertainNodeIds,
+            jurisdictionsConfirmed: true,
+            reentry: true,
           };
 
     case 'CONFIRMED':
@@ -977,6 +1258,8 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // graph straight back to the filled-in form.
         plainAnswers: state.plainAnswers,
         assumptions: state.assumptions,
+        // CR7-02: so EVALUATION_FAILED can hand it back.
+        uncertainNodeIds: state.uncertainNodeIds,
       };
 
     case 'VERDICT_READY':
@@ -1020,12 +1303,18 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // Review 004 finding 2: the failure most likely to land here is
         // jurisdiction/track-driven — the panel to FIX it must render.
         // Confirmed=true (it was confirmed before evaluation; re-entry is
-        // not a fresh attestation, the R5 rule), editable via the panel.
+        // not a fresh attestation, the R5 rule). The panel stays editable: a
+        // tick after this goes back through JURISDICTIONS_SET with its correction.
         jurisdictionsConfirmed: true,
         // F-2 (DR7-04): a re-entry after a genuine failure, not a fresh
         // submission — STEP_BACK must not walk out of it, mirroring the
         // correction-pass rule (see the STEP_BACK case above).
         afterFailedEvaluation: true,
+        // CR7-02 (BC-004): the second Confirm after a failed evaluation must
+        // still list the "Not sure" answers it is based on.
+        assumptions: state.assumptions,
+        uncertainNodeIds: state.uncertainNodeIds,
+        reentry: true,
       };
     }
 
@@ -1039,6 +1328,10 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         corrections: [],
         useCaseId: action.useCaseId,
         originalVerdictId: action.originalVerdictId,
+        // CR7-02 (BC-004): what the verdict being corrected was based on.
+        ...(action.assumptions ? { assumptions: action.assumptions } : {}),
+        ...(action.uncertainNodeIds ? { uncertainNodeIds: action.uncertainNodeIds } : {}),
+        reentry: true,
       };
 
     // R16-D2 §5 (D-82). The form-path counterpart to CORRECT_VERDICT above.

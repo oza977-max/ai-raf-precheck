@@ -37,7 +37,10 @@ function worthPersisting(state: IntakeState): boolean {
 // in-progress work (description, graph, answers, corrections) is kept.
 // Bumping the whole key, the way FORM_KEY does, would throw all of that
 // away for an incompatibility that affects one optional field.
-const DRAFT_VERSION = 2;
+// FX7-1 review pass 1 (M-2): 3. Version 3 is the first to carry the back
+// snapshot (backGraph …) a questionnaire needs for Back; an older description-path
+// questions draft has none and is migrated (see migrateOldQuestionnaire).
+const DRAFT_VERSION = 3;
 
 interface DraftEnvelope {
   version: number;
@@ -81,7 +84,52 @@ export function saveDraft(state: IntakeState): void {
   }
 }
 
-export function loadDraft(): IntakeState | null {
+/** CR7-28 (BC-002: persisted state carries a version and is migrated or
+ *  refused on mismatch, never read as if current). A questions draft saved
+ *  BEFORE the CR6 build — a bare state, version 1 — on the description path
+ *  has no `guessedFields`/`provenance`: restored as a questionnaire it would
+ *  carry on as if every guessed field had been asked, and the case could reach
+ *  the result with the model's guesses unchecked. So it is not restored as a
+ *  questionnaire at all. It comes back as the REVIEW screen, every card to be
+ *  checked again and the countries unchecked, carrying only what is certain
+ *  (the description, the graph, the corrections made so far, the case id and,
+ *  on a correction pass, the verdict being corrected). The answers given on
+ *  the old questionnaire are not kept — the person is told so (IntakeFlow
+ *  reads `migratedFromOldBuild`). The guided form's own questionnaire
+ *  (`plainAnswers` present, the form's graph) is untouched: it never had a
+ *  guessed list. */
+function migrateOldQuestionnaire(state: IntakeState): IntakeState | null {
+  if (state.step !== 'questionnaire' && state.step !== 'contradiction_review') return null;
+  if (state.plainAnswers !== undefined) return null;
+  if (state.graph?.intake_method === 'structured_form') return null;
+  // A draft that already carries its back snapshot was saved by a build that
+  // can step back from it correctly (version 2 drafts never have one).
+  if (state.backGraph !== undefined) return null;
+  const nodes = [...state.graph.input_nodes, ...state.graph.processing_nodes, ...state.graph.output_nodes];
+  return {
+    step: 'graph_review',
+    description: state.description,
+    graph: state.graph,
+    graphVersion: state.graph.version,
+    corrections: state.corrections,
+    useCaseId: state.useCaseId,
+    ...(state.originalVerdictId ? { originalVerdictId: state.originalVerdictId } : {}),
+    unconfirmedNodeIds: nodes.map((n) => n.id),
+    jurisdictionsConfirmed: false,
+    // M-1: what the old draft held and the person already said stays.
+    ...(state.assumptions ? { assumptions: state.assumptions } : {}),
+    ...(state.uncertainNodeIds ? { uncertainNodeIds: state.uncertainNodeIds } : {}),
+  };
+}
+
+export interface DraftInfo {
+  state: IntakeState;
+  /** True when `state` is NOT what was saved: a pre-CR6 description-path
+   *  questions draft was turned back into the review screen (CR7-28). */
+  migratedFromOldBuild: boolean;
+}
+
+export function loadDraftInfo(): DraftInfo | null {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;
@@ -95,10 +143,19 @@ export function loadDraft(): IntakeState | null {
     // Guard against a stale shape from an older build: an unrecognised step
     // would put the reducer in an unreachable state.
     if (typeof state?.step !== 'string') return null;
-    return envelope.version < DRAFT_VERSION ? dropIncompatibleUndo(state) : state;
+    if (envelope.version < DRAFT_VERSION) {
+      const migrated = migrateOldQuestionnaire(state);
+      if (migrated) return { state: migrated, migratedFromOldBuild: true };
+      return { state: dropIncompatibleUndo(state), migratedFromOldBuild: false };
+    }
+    return { state, migratedFromOldBuild: false };
   } catch {
     return null;
   }
+}
+
+export function loadDraft(): IntakeState | null {
+  return loadDraftInfo()?.state ?? null;
 }
 
 export function clearDraft(): void {
@@ -106,6 +163,37 @@ export function clearDraft(): void {
     sessionStorage.removeItem(KEY);
   } catch {
     /* nothing to do */
+  }
+}
+
+/** CR7-16. A confirm or an adopt can finish AFTER the person has left it and
+ *  started something else (both keep running when the screen unmounts —
+ *  CR6-15). The unconditional `clearDraft()` they ended with then wiped the
+ *  NEWER case's saved work. This clears only a draft that is this case's: the
+ *  stored draft is absent, or carries this `useCaseId`. A draft with a
+ *  different id, or none (a case just started), is left alone.
+ *
+ *  An adopt mints its id inside the handler, so the draft it came from — the
+ *  duplicate-check step, which carries no id — can never match by id. The
+ *  adopt passes the description it adopted on: a stored `duplicate_check`
+ *  draft with that same description is the adopt's own and is cleared too
+ *  (and only that one). */
+export function clearDraftIfCase(useCaseId: string, opts?: { duplicateCheckDescription?: string }): void {
+  const stored = loadDraft();
+  if (stored === null) {
+    clearDraft();
+    return;
+  }
+  if ('useCaseId' in stored && stored.useCaseId === useCaseId) {
+    clearDraft();
+    return;
+  }
+  if (
+    opts?.duplicateCheckDescription !== undefined &&
+    stored.step === 'duplicate_check' &&
+    stored.description === opts.duplicateCheckDescription
+  ) {
+    clearDraft();
   }
 }
 

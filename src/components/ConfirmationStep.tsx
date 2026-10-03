@@ -85,8 +85,10 @@ export default function ConfirmationStep({
           a later correction is still possible (and is itself recorded),
           rather than implying this is the one and only chance. */}
       <p className="confirmation__notice">
-        Check this carefully. When you confirm, your answers are recorded with the date and time and
-        can&rsquo;t be edited. If something turns out to be wrong later, you can correct it — the
+        Check this carefully. When you confirm, your answers are recorded with the date and time. A
+        later change to the record would show as a break in it, but the record is kept in this
+        browser with no outside check, so it can&rsquo;t rule out someone with access to this computer
+        rewriting all of it. If something turns out to be wrong later, you can correct it — the
         correction is recorded too.
       </p>
 

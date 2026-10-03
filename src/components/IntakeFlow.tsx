@@ -34,8 +34,8 @@ import KnowledgeLensPanel from './KnowledgeLensPanel';
 import { append as appendAuditEvent, getAll as getAuditEvents } from '../store/audit';
 import { generateReasoningTraceForVerdict } from '../llm/reasoning-trace';
 import { findRuleDescription } from '../engine/find-rule-description';
-import { intakeReducer, nextReviewStep, contradictionKey } from './intake-state';
-import { saveDraft, loadDraft, clearDraft, clearFormDraft } from './intake-draft';
+import { intakeReducer, nextReviewStep, contradictionKey, planCorrectionWrites, graphValueResolver } from './intake-state';
+import { saveDraft, loadDraft, loadDraftInfo, clearDraft, clearDraftIfCase, clearFormDraft } from './intake-draft';
 import type { IntakeState } from './intake-state';
 import StructuredForm from './StructuredForm';
 import type { Assumption, PlainAnswers } from './plain-copy';
@@ -83,6 +83,18 @@ const CONFIRMATION_REFUSAL_MESSAGE: Record<ConfirmationRefusal, string> = {
     "This result was corrected in another tab or window while you were working, so your correction wasn't saved. Open the case from the register to see the current result.",
 };
 
+// CR7-37. What a person is told when the firm's own rules file cannot be used.
+// Plain, and it says whose problem it is and who can fix it — the field paths
+// and reason strings (`invariants[3].condition: …`) are for whoever edits the
+// file, so they go to the console (see policyProblemDetail callers), never into
+// an alert a submitter reads. FX7-4 moves this sentence into plain-copy.ts
+// beside `engineErrorMessage`.
+const POLICY_PROBLEM_MESSAGE =
+  'Your firm’s rules file has a problem, so this can’t be checked right now. Nothing about your answers is at fault — your AI risk team can fix it in the Appetite framework screen.';
+
+// CR7-21/22 and the count of corrections on the trail: planCorrectionWrites
+// (intake-state.ts, pure and unit-tested).
+
 export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?: number } = {}) {
   // explore-001 D-002/D-003: restore any in-flight draft so a refresh,
   // browser Back, or a trip to the Register mid-intake no longer discards
@@ -113,10 +125,17 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // to, with no explanation — the same class of surprise NF-2 exists to
   // prevent. Say what happened and offer a way out.
   const [showResumed, setShowResumed] = useState(restoredDraft.current);
+  // CR7-28. True when the restored draft is NOT what was saved: a questions
+  // draft from before CR6 (description path) came back as the review screen
+  // (intake-draft.ts). Said plainly — the person was part-way through the
+  // questions and is now at the review screen again.
+  const [showMigrated, setShowMigrated] = useState(() => loadDraftInfo()?.migratedFromOldBuild === true);
 
   // CR6-02 (Critical). One "attempt" is one run through intake, from a
-  // fresh description to Start Over. Bumped ONLY by handleStartOver — the
-  // one place earlier work is explicitly abandoned. Every async handler
+  // fresh description to Start Over. Bumped by handleStartOver, by
+  // handleStepBack (CR7-34: Back abandons whatever check or decision was in
+  // flight) and by handleSubmitDescription (a new description is a new
+  // attempt) — the places earlier work is explicitly abandoned. Every async handler
   // below that can dispatch/setState after an await — and the duplicate-
   // check effect — captures this value when it STARTS, and before any
   // such call, checks the token is still the one it captured; if Start
@@ -157,6 +176,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // Final review M-1: a failed-save message belongs to the case it was
     // about — never carried onto the next one.
     setDecisionError(null);
+    // CR7-24: the previous screen's gate error line belongs to that screen.
+    setReviewGateError(null);
+    setShowMigrated(false);
     // CR6-02 (Critical). Bumped FIRST: any async handler/effect from the
     // abandoned attempt that resumes after this point (its own await
     // having been in flight when Start Over was clicked) will see its own
@@ -262,6 +284,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // while the first landed invisibly.
     attemptToken.current += 1;
     retryExtractionInFlight.current = false;
+    // CR7-24: the screen being left may have shown a gate error ("N cards
+    // still need checking"); it must not greet the next screen.
+    setReviewGateError(null);
     setAdoptedFrom(null);
     setDuplicateCheckDone(false);
     dupCheckInFlight.current = false;
@@ -281,9 +306,13 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // draft at the verdict step (see the saveDraft/clearDraft effect below),
   // and the register path (RegisterDetail) supplies the same facts from
   // the audit trail instead.
-  const [lastConfirmed, setLastConfirmed] = useState<{ assumptions: Assumption[]; plainAnswers?: PlainAnswers } | null>(
-    null,
-  );
+  const [lastConfirmed, setLastConfirmed] = useState<{
+    assumptions: Assumption[];
+    plainAnswers?: PlainAnswers;
+    // CR7-02: so a correction from the result can hand the frozen uncertain
+    // list back to the review screen along with the assumptions.
+    uncertainNodeIds?: string[];
+  } | null>(null);
   // V1.2-C (UC-2/RG-2 leak fix, design-gap C1): the match is stored with
   // both tier and label, but the LABEL is only ever rendered for 2LoD —
   // 1LoD gets the redacted card (tier + "contact AI Risk").
@@ -444,7 +473,14 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   const refreshRegister = useCallback(async () => {
     // O-002: wait for the self-assessment seeding before reading, so the
     // count reported to the user is one the product has actually established.
-    await selfAssessmentSeeded();
+    // CR7-17: a seed that FAILS must not leave the duplicate check waiting on
+    // `registerLoaded` forever — the register is read regardless, and what the
+    // check then reports is what is actually there.
+    try {
+      await selfAssessmentSeeded();
+    } catch (err) {
+      console.error('Counterpoise: the built-in example case could not be added; reading the register without it:', err);
+    }
     const rows = await getUseCases('all');
     setRegisterRows(rows);
     setRegisterLoaded(true);
@@ -570,6 +606,34 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // this is belt-and-braces now — kept so the handler cannot re-enter if an
   // await is ever added back.
   const formSubmitInFlight = useRef(false);
+
+  // CR7-28 (M-1): the migration notice belongs to the review screen it
+  // explains; once the person leaves it, it must not come back on return.
+  useEffect(() => {
+    if (state.step !== 'graph_review') setShowMigrated(false);
+  }, [state.step]);
+
+  // CR7-01 (BC-004: a restored draft). A draft saved while the description was
+  // being read — `graph_extraction` on the LLM path — restores to "Reading your
+  // description…" with nothing running and no control on screen: the extractor
+  // is called only from handleConfirmNewUseCase and handleRetryExtraction, and
+  // a reload kills the call that was in flight. So: once, on mount, and ONLY
+  // when this state came back from a saved draft, start the extraction again
+  // through the retry handler (which has its own synchronous in-flight guard,
+  // so StrictMode's double-invoked effect still makes exactly one call, and
+  // which shows the Try again panel if the key or local model has since gone).
+  // Known and accepted: if the component is REMOUNTED while that extraction is
+  // still in flight (a trip to the Register and back), the new mount starts a
+  // second call; the first one's result is orphaned and discarded by the
+  // attempt token / unmounted state, never dispatched into the new mount.
+  // It must NOT fire on the ordinary path: there handleConfirmNewUseCase
+  // dispatches NO_DUPLICATE_FOUND and then calls extractGraph itself.
+  useEffect(() => {
+    if (!restoredDraft.current) return;
+    if (state.step !== 'graph_extraction' || state.method !== 'llm') return;
+    void handleRetryExtraction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleConfirmNewUseCase() {
     if (state.step !== 'duplicate_check') return;
@@ -742,7 +806,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // step: nothing on the adopted screen changes reducer state, so the
       // draft effect cannot re-save it, and no reducer/draft-shape change is
       // needed.
-      clearDraft();
+      // CR7-16: only if the saved draft is still this adoption's own (this
+      // handler keeps running after a screen change, and the person may have
+      // started a different case since).
+      clearDraftIfCase(useCaseId, { duplicateCheckDescription: state.description });
       if (attemptToken.current === myAttempt) {
         setAdoptedFrom(source.label);
         setShowResumed(false);
@@ -862,8 +929,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       graph_version_after: updatedGraph.version,
       node_id: nodeId,
       field,
-      original_value: originalValue,
-      corrected_value: correctedValue,
+      // CR7-30: an absent value is recorded as null — `undefined` is dropped
+      // by the trail's serialisation and read back as the word "undefined".
+      original_value: originalValue ?? null,
+      corrected_value: correctedValue ?? null,
       corrected_by: getRole(),
       corrected_at: new Date().toISOString(),
       // R16-D2 §5 (CB-4): this is GraphView's own per-field editor.
@@ -887,12 +956,19 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
   // below instead, so both failure kinds reach the identical
   // setReviewGateError/render path.
   function checkPolicyGate(): string | undefined {
+    // CR7-37: the detail goes to the console for whoever edits the file; the
+    // person gets one plain sentence (POLICY_PROBLEM_MESSAGE).
     if (!policyResult.valid) {
-      return `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`;
+      console.error(
+        'Counterpoise: the firm policy is invalid:',
+        policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; '),
+      );
+      return POLICY_PROBLEM_MESSAGE;
     }
     const referenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
     if (referenceCheck.errors.length > 0) {
-      return `Policy file invalid — ${referenceCheck.errors.join(' ')} Evaluation is disabled until this is resolved.`;
+      console.error('Counterpoise: the firm policy has a broken reference:', referenceCheck.errors.join(' '));
+      return POLICY_PROBLEM_MESSAGE;
     }
     return undefined;
   }
@@ -1062,6 +1138,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         contradictions,
         corrections,
       });
+      // CR7-13: the saved form answers are cleared HERE — after the policy
+      // check above has accepted them and FORM_SUBMITTED is dispatched — not
+      // inside the form before that check could refuse them. (Start over,
+      // ErrorBoundary and the verdict still clear it as before.)
+      clearFormDraft();
     } finally {
       formSubmitInFlight.current = false;
     }
@@ -1150,7 +1231,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     confirmInFlight.current = true;
     setConfirmPending(true);
 
-    const { graph, corrections, useCaseId, originalVerdictId } = state;
+    const { graph, corrections, useCaseId, originalVerdictId, originalGraph } = state;
     // The confirmation step's state shape does not carry resolutionNotes —
     // they live on questionnaire/contradiction_review. By CONFIRMED time the
     // reducer has already folded them forward? It has NOT: confirmation's
@@ -1171,6 +1252,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // `assumptions` field.
     const confirmedAssumptions: Assumption[] = 'assumptions' in state && state.assumptions ? state.assumptions : [];
     const confirmedPlainAnswers: PlainAnswers | undefined = 'plainAnswers' in state ? state.plainAnswers : undefined;
+    // CR7-02: the frozen "what the description did not say" list, kept beside
+    // the assumptions so a correction from the result can hand both back.
+    const confirmedUncertainNodeIds: string[] = 'uncertainNodeIds' in state && state.uncertainNodeIds ? state.uncertainNodeIds : [];
 
     // F-1 (DR7-02, DR7-03). The whole confirm-and-evaluate sequence —
     // including the precondition read below and the CONFIRMED dispatch —
@@ -1214,6 +1298,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             answerContexts,
             confirmedAssumptions,
             confirmedPlainAnswers,
+            confirmedUncertainNodeIds,
+            originalGraph,
           );
         } catch (err) {
           // A legitimate engine/policy failure (e.g. no-track-match) must not
@@ -1249,6 +1335,8 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     answerContexts: string[] = [],
     confirmedAssumptions: Assumption[] = [],
     confirmedPlainAnswers?: PlainAnswers,
+    confirmedUncertainNodeIds: string[] = [],
+    originalGraph?: DataFlowGraph,
   ) {
     // Policy checks come FIRST, before any write (R16-F review pass 1). They
     // used to run after use_case_created/graph_confirmed (or graph_corrected)
@@ -1260,16 +1348,19 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // R16-A1 (§1.4, CF-5): the same reference-error gate as the first
     // evaluation gates (checkPolicyGate), repeated here because a restored
     // draft can reach Confirm after the policy was edited.
+    // CR7-37: one plain sentence for the person (see POLICY_PROBLEM_MESSAGE);
+    // the detail is for whoever edits the file, so it goes to the console.
     if (!policyResult.valid) {
-      throw new Error(
-        `Policy invalid: ${policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; ')}`,
+      console.error(
+        'Counterpoise: the firm policy is invalid:',
+        policyResult.errors.map((e) => `${e.field}: ${e.reason}`).join('; '),
       );
+      throw new Error(POLICY_PROBLEM_MESSAGE);
     }
     const confirmReferenceCheck = checkPolicyReferences(policyResult.policy, loadedPacks);
     if (confirmReferenceCheck.errors.length > 0) {
-      throw new Error(
-        `Policy file invalid — ${confirmReferenceCheck.errors.join(' ')} Evaluation is disabled until this is resolved.`,
-      );
+      console.error('Counterpoise: the firm policy has a broken reference:', confirmReferenceCheck.errors.join(' '));
+      throw new Error(POLICY_PROBLEM_MESSAGE);
     }
 
     // VD-3 (verdict-audit.md §6): a correction pass writes
@@ -1278,10 +1369,29 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // event is never modified (append-only, per-event UUIDs).
     const isCorrection = Boolean(originalVerdictId);
 
-    if (isCorrection) {
+    // CR7-21/22. Read once, inside the case lock: which of this confirm's
+    // corrections are NOT already on the trail since the last result (see
+    // correctionsNotOnTrail). They are written BEFORE evaluate(), not after —
+    // CONFIRMED drops `corrections` from the state and EVALUATION_FAILED
+    // returns `corrections: []`, so a failed evaluation would lose them for
+    // good if they waited for a result.
+    const existingEvents = await getAuditEvents(useCaseId);
+    const plan = planCorrectionWrites(corrections, existingEvents, {
+      resolve: graphValueResolver(graph, originalGraph),
+      version: graph.version,
+      newId: () => crypto.randomUUID(),
+      now: () => new Date().toISOString(),
+      by: getRole(),
+    });
+    const correctionsToWrite = plan.toWrite;
+    // M-4: what the trail holds for THIS attempt (written now, or already there
+    // from a failed attempt before it) — never `corrections.length`, which a
+    // retry after a failed evaluation resets to zero while the events remain.
+    const correctionsOnTrail = plan.sinceLastResult;
+    const writeCorrections = async () => {
       // BC-P5C01-02: one graph_corrected event per individual
       // GraphCorrection, matching the spec's singular payload shape.
-      for (const correction of corrections) {
+      for (const correction of correctionsToWrite) {
         await appendAuditEvent({
           event_id: crypto.randomUUID(),
           use_case_id: useCaseId,
@@ -1291,6 +1401,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           payload: { type: 'graph_corrected', correction },
         });
       }
+    };
+
+    if (isCorrection) {
+      await writeCorrections();
     } else {
       // F-3 (DR7-05): the creation record, written HERE — at Confirm,
       // inside the F-1 case lock — once per case. Both early writes this
@@ -1307,7 +1421,6 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       // second use_case_created — only a second, deliberate
       // graph_confirmed (below), recorded honestly as a second
       // attestation.
-      const existingEvents = await getAuditEvents(useCaseId);
       if (!existingEvents.some((e) => e.event_type === 'use_case_created')) {
         await appendAuditEvent({
           event_id: crypto.randomUUID(),
@@ -1322,6 +1435,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           },
         });
       }
+      // CR7-22 (BC-005). A fresh confirm wrote only a COUNT
+      // (`corrections_count`) while the confirmation screen says "corrections
+      // are preserved in the audit trail": the corrections themselves are
+      // written here, one graph_corrected each, so the trail backs the
+      // sentence (and the sign-off page can show them).
+      await writeCorrections();
       // UC-6 (intake-flow.md §9): graph_confirmed written BEFORE evaluate()
       // runs, verdict_produced written before the UI transitions to verdict
       // (BC-P4C04-02: sequential, not Promise.all). Order on the trail:
@@ -1336,7 +1455,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           type: 'graph_confirmed',
           graph_id: graph.id,
           graph_version: graph.version,
-          corrections_count: corrections.length,
+          corrections_count: correctionsOnTrail,
           // Spread-if-present, not `submitter_note: reviewerNote` — the audit
           // trail is append-only and permanent, and a record carrying
           // `submitter_note: undefined` serialises as a field somebody could
@@ -1396,7 +1515,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // "No" screen's contributing-assumption check and a later "Correct"
     // click both need what THIS confirmation was based on, which the bare
     // `verdict` reducer state does not carry.
-    setLastConfirmed({ assumptions: confirmedAssumptions, plainAnswers: confirmedPlainAnswers });
+    setLastConfirmed({
+      assumptions: confirmedAssumptions,
+      plainAnswers: confirmedPlainAnswers,
+      uncertainNodeIds: confirmedUncertainNodeIds,
+    });
 
     // R16-D2 §4b (D-97, W-7). The processing node's platform/vendor at
     // evaluation — carried beside the verdict (like
@@ -1460,7 +1583,7 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
           // wrote — a zero-correction resubmission writes none, and
           // eventDetail (RegisterDetail.tsx) reads this to render it as a
           // re-check rather than implying something changed.
-          corrections_count: corrections.length,
+          corrections_count: correctionsOnTrail,
           // F-4 (DR7-12, DR7-16): same spread-if-present discipline as
           // graph_confirmed below — a correction keeps what the person
           // typed, instead of dropping it the way only writing it on a
@@ -1570,7 +1693,11 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // already has a result. This call is a plain sessionStorage write, not
     // React state, so it has an effect whether or not anything is still
     // mounted to react to it.
-    clearDraft();
+    //
+    // CR7-16: only if the saved draft is still THIS case's. This function keeps
+    // running after the person has left; by the time it lands they may have
+    // started a different case, whose draft an unconditional clear would wipe.
+    clearDraftIfCase(useCaseId);
     dispatch({ type: 'VERDICT_READY' });
   }
 
@@ -1608,6 +1735,10 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
       graph: lastGraph,
       useCaseId: verdict.use_case_id,
       originalVerdictId: verdict.id,
+      // CR7-02: what this verdict was confirmed on, so the correction pass's
+      // own confirmation still lists the "Not sure" answers.
+      assumptions: lastConfirmed?.assumptions,
+      uncertainNodeIds: lastConfirmed?.uncertainNodeIds,
     });
   }
 
@@ -1744,8 +1875,9 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
             graph_version_after: updatedGraph.version,
             node_id: question.node_id,
             field: targetField,
-            original_value: originalValue,
-            corrected_value: value,
+            // CR7-30: see handleCorrectNode.
+            original_value: originalValue ?? null,
+            corrected_value: value ?? null,
             corrected_at: new Date().toISOString(),
             corrected_by: getRole(),
             // R16-D2 §5 (CB-4): a questionnaire answer that write-backs onto
@@ -1889,6 +2021,15 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
         </div>
       )}
 
+      {/* CR7-28: a questions draft saved before CR6 came back as the review
+          screen. Says only what is true: what changed, and what to do. */}
+      {showMigrated && state.step === 'graph_review' && (
+        <div className="intake-flow__resumed" role="status">
+          This was saved by an earlier version of this tool. The values from your earlier answers are
+          on the cards below — please check each one.
+        </div>
+      )}
+
       <StepTracker current={state.step} onBack={canStepBack ? handleStepBack : undefined} backDisabled={decisionPending} />
 
       <div className="card" ref={stepContainerRef} tabIndex={-1}>
@@ -1938,9 +2079,18 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                 and track"/"verdict" were engine vocabulary on a screen a
                 newcomer reaches with no questions of their own. */}
             <div className="questionnaire__tag">EARLIER RESULT USED</div>
+            {/* CR7-10: the matching case may belong to someone else, and the
+                duplicate check deliberately matches across all submitters. The
+                case NAME is shown only to the 2LoD view — the same rule as the
+                match card above. */}
             <p>
-              Earlier result used from {adoptedFrom}. This is on the register with the same risk
-              level and review route, and no questions were asked.
+              {getRole() === '2LoD' ? (
+                <>Earlier result used from {adoptedFrom}.</>
+              ) : (
+                <>An earlier result on your firm&rsquo;s register was used.</>
+              )}{' '}
+              This is on the register with the same risk level and review route, and no questions
+              were asked.
             </p>
             <p className="dup-gate__clear">
               Nothing was checked for this record, so it has no result of its own — its sign-off
@@ -2225,7 +2375,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
                     <input
                       type="checkbox"
                       checked={state.graph.jurisdictions.includes(j.code)}
-                      disabled={state.jurisdictionsConfirmed}
+                      /* FX7-1 review pass 1 (I-1): never locked. A re-entered
+                         review (Change an answer, a failed evaluation) shows
+                         this panel already checked, and the person must still
+                         be able to change a country; the edit goes through
+                         JURISDICTIONS_SET with its correction, as on a first
+                         reading. */
                       onChange={(e) => {
                         const next = e.target.checked
                           ? [...state.graph.jurisdictions, j.code]
