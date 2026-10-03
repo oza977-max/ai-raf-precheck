@@ -11,7 +11,7 @@ import { loadDraft } from '../intake-draft';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { Verdict } from '../../types/verdict';
 import type { DataFlowGraph } from '../../engine/types';
-import { fillText, SLOW_FLOW_MS } from './fillText';
+import { fillText, SLOW_FLOW_MS, DUP_CHECK_WAIT } from './fillText';
 
 // R16-F — design-review-007.html Group 1. Integration-level coverage for
 // the items that need the real App wiring to prove: F-1 (cross-tab
@@ -141,7 +141,7 @@ safety_margin: 0.1
     render(<App />);
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Form-path gate probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
 
     await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Gate probe tool');
     await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
@@ -351,7 +351,7 @@ describe('F-2 (DR7-04): an evaluation error never orphans the case', () => {
     const input = screen.getByLabelText(/what ai tool do you want to use/i);
     await fillText(user, input, 'Evaluation failure probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
 
     await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'No-track-match tool');
     await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');

@@ -13,7 +13,7 @@ import { append as appendAuditEvent, getAll, getAllForExport } from '../../store
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import type { DataFlowGraph } from '../../engine/types';
 import type { Verdict } from '../../types/verdict';
-import { fillText, SLOW_FLOW_MS } from './fillText';
+import { fillText, SLOW_FLOW_MS, DUP_CHECK_WAIT } from './fillText';
 
 // FX-2 (CR6-fixes.md v2) — abandoned work, navigation gates, announcements,
 // crash safety. TDD-2 mock budget would normally be 1 (the Anthropic SDK
@@ -131,7 +131,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
       const user = userEvent.setup({ delay: null });
       render(<App />);
 
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       // The abandoned case's extraction is now pending (held).
       await screen.findByText(/reading your description/i);
 
@@ -142,7 +142,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
       await user.click(screen.getByRole('button', { name: /^next/i }));
       // Before the fix, Continue here silently did nothing — confirmNewInFlight
       // was still true from the abandoned case's still-pending call.
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       await screen.findByText(/reading your description/i);
 
       second.resolve({
@@ -213,7 +213,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
         'A chatbot that helps interns book conference rooms',
       );
       await user.click(screen.getByRole('button', { name: /^next/i }));
-      await screen.findByRole('button', { name: /^continue →$/i });
+      await screen.findByRole('button', { name: /^continue →$/i }, DUP_CHECK_WAIT);
 
       // The abandoned case's LLM confirm now resolves late, "true" — it
       // must not retroactively show a match for the new, unrelated case.
@@ -241,7 +241,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
       const user = userEvent.setup({ delay: null });
       render(<App />);
 
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       await screen.findByRole('button', { name: /^try again$/i });
       // The abandoned case's OWN retry is now pending (held).
       await user.click(screen.getByRole('button', { name: /^try again$/i }));
@@ -252,7 +252,7 @@ describe('CR6-02: "Start over" abandons earlier in-flight work instead of leavin
 
       await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Case beta, fresh');
       await user.click(screen.getByRole('button', { name: /^next/i }));
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       await screen.findByRole('button', { name: /^try again$/i });
       // Before the fix, this click silently did nothing — retryExtractionInFlight
       // was still true from the abandoned case's still-pending retry.
@@ -360,7 +360,7 @@ describe('CR6-14: a stale extraction error does not leak onto the next case', ()
       const user = userEvent.setup({ delay: null });
       render(<App />);
 
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       expect(await screen.findByRole('alert')).toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: /start over instead/i }));
@@ -368,7 +368,7 @@ describe('CR6-14: a stale extraction error does not leak onto the next case', ()
 
       await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Fresh case, extraction pending');
       await user.click(screen.getByRole('button', { name: /^next/i }));
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
 
       // The fresh case's own extraction hasn't resolved yet — it must read
       // as pending, never as the abandoned case's old failure.
@@ -512,7 +512,7 @@ describe('CR6-08: the result does not arrive silently for screen-reader users', 
 
       // Drive on to evaluation_pending to check "Evaluating…" too.
       const user = userEvent.setup({ delay: null });
-      await user.click(await screen.findByRole('button', { name: /continue →/i }));
+      await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
       await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Status region tool');
       await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
       await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
@@ -704,7 +704,7 @@ describe('CR6-17: an invalid policy shows a message at the button instead of fai
 
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'Invalid-policy form probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
 
     await fillText(user, await screen.findByLabelText(/what do you want to call it/i), 'Gate probe tool');
     await fillText(user, screen.getByLabelText(/in a sentence or two/i), 'x');
@@ -909,7 +909,7 @@ describe('I-4: Start over after "Use the earlier result" leaves nothing of the a
     await user.click(screen.getByRole('button', { name: /new pre-check/i }));
     await fillText(user, await screen.findByLabelText(/what ai tool do you want to use/i), 'A chatbot that helps interns book conference rooms');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await screen.findByRole('button', { name: /^continue →$/i });
+    await screen.findByRole('button', { name: /^continue →$/i }, DUP_CHECK_WAIT);
     expect(screen.queryByText(ADOPTED_SCREEN)).not.toBeInTheDocument();
   });
 });
@@ -931,7 +931,7 @@ describe('I-5: going Back mid duplicate check abandons that check', () => {
       await user.clear(box);
       await fillText(user, box, 'A chatbot that helps interns book conference rooms');
       await user.click(screen.getByRole('button', { name: /^next/i }));
-      await screen.findByRole('button', { name: /^continue →$/i });
+      await screen.findByRole('button', { name: /^continue →$/i }, DUP_CHECK_WAIT);
 
       first.resolve(true);
       await new Promise((r) => setTimeout(r, 0));

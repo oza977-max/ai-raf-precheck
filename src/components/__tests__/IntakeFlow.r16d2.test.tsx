@@ -5,7 +5,7 @@ import App from '../../App';
 import { getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
 import type { GraphCorrection } from '../../engine/types';
-import { fillText } from './fillText';
+import { fillText, DUP_CHECK_WAIT } from './fillText';
 
 // R16-D2 §5 (D-82, DR7-17/DR7-22). Integration-level coverage for
 // correcting a form-built verdict THROUGH THE FORM: the correction stays
@@ -50,7 +50,7 @@ async function reachFormScreen(user: ReturnType<typeof userEvent.setup>, descrip
   render(<App />);
   await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByText(/new pre-check — tell us about the ai you want to use/i);
 }
 

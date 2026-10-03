@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { addNode, getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
-import { fillText } from './fillText';
+import { fillText, DUP_CHECK_WAIT } from './fillText';
 
 /** A register entry the duplicate check will match on, seeded before render so
  *  the row is present regardless of App's fire-and-forget seeding. */
@@ -73,7 +73,7 @@ describe('IntakeFlow — resuming a restored draft', () => {
     // R16-W §4 (D-74): no seeded match for this description, so the button
     // is the no-match screen's "Continue →", not the match-found screen's
     // "Mine is different — continue →".
-    expect(await screen.findByRole('button', { name: /continue →/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT)).toBeInTheDocument();
     expect(screen.queryByText(/checking the existing inventory/i)).not.toBeInTheDocument();
   });
 
@@ -101,7 +101,7 @@ describe('IntakeFlow — resuming a restored draft', () => {
     );
 
     render(<App />);
-    await screen.findByRole('button', { name: /continue →/i });
+    await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT);
 
     // Without the registerLoaded guard the restored check resolves against
     // an empty array and reports having checked nothing — a wrong answer

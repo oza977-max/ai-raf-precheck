@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../../App';
 import { getUseCases } from '../../store/register';
 import { getAll } from '../../store/audit';
-import { fillText } from './fillText';
+import { fillText, DUP_CHECK_WAIT } from './fillText';
 
 // FX-3 (CR6-fixes.md) — description-path coverage that needs the real
 // App/IntakeFlow wiring. Mock budget = 1: the Anthropic SDK boundary.
@@ -80,7 +80,7 @@ describe('CR6-05 — "replaces something you already use?" on the description pa
       'them, as one input among several, easily put right. It is a small trial.';
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByText('Check what we read from your description');
     for (;;) {
       const b = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })[0];

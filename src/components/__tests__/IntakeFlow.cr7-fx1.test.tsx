@@ -18,7 +18,7 @@ import { intakeReducer } from '../intake-state';
 import type { IntakeState } from '../intake-state';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { DataFlowGraph } from '../../engine/types';
-import { fillText } from './fillText';
+import { fillText, DUP_CHECK_WAIT } from './fillText';
 import { IB_PREFIX, ibCaseCount } from '../../seeds/ib-portfolio';
 import { AIGATE_USE_CASE_ID } from '../../seeds/aigate-self-assessment';
 
@@ -217,7 +217,7 @@ async function reachReview(user: User, description: string) {
   render(<App />);
   await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByText('Check what we read from your description');
 }
 
@@ -514,7 +514,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     const user = userEvent.setup({ delay: null });
     await provokeGateError(user);
     await user.click(screen.getByRole('button', { name: /back/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByText('Check what we read from your description');
     expect(document.querySelector('.intake-flow__gate-error')).toBeNull();
   }, 30000);
@@ -531,7 +531,7 @@ describe('CR7-24 — Start over and Back do not keep the previous screen\'s erro
     await user.click(screen.getByRole('button', { name: /start over instead/i }));
     await fillText(user, await screen.findByLabelText(/what ai tool do you want to use/i), NSDESC);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByText('Check what we read from your description');
     expect(document.querySelector('.intake-flow__gate-error')).toBeNull();
   }, 30000);
@@ -546,7 +546,7 @@ describe('CR7-37 — a policy problem reads as a plain sentence, not a field pat
     render(<App />);
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A policy-problem probe');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await fillMinimalForm(user, 'Policy problem tool', 'x');
     await user.click(screen.getByRole('button', { name: /^continue$/i }));
     const alert = await screen.findByText(/rules file has a problem/i);
@@ -610,7 +610,7 @@ async function reachForm(user: User, description: string) {
   render(<App />);
   await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByLabelText(/what do you want to call it/i);
 }
 

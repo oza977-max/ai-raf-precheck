@@ -5,7 +5,7 @@ import App from '../../App';
 import IntakeFlow from '../IntakeFlow';
 import { setCurrentPolicyYaml } from '../../store/policy-source';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
-import { fillText } from './fillText';
+import { fillText, DUP_CHECK_WAIT } from './fillText';
 
 // R16-E — the description-first path speaks the form's words. End-to-end
 // coverage for what only the real App/IntakeFlow wiring can prove: both
@@ -40,7 +40,7 @@ describe('R16-E §5 (D-104): both extraction-error call sites share one message'
     render(<App />);
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the extraction error screen.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
 
     expect(await screen.findByText('We couldn’t reach the description reader just now.')).toBeInTheDocument();
     expect(screen.getByText('You can try again, or answer the questions yourself instead.')).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('R16-E §5: "Answer the questions instead" (SWITCH_TO_FORM)', () => {
     const marker = 'A probe for switching to the form after an extraction failure.';
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), marker);
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByText('We couldn’t reach the description reader just now.');
 
     await user.click(screen.getByRole('button', { name: /answer the questions instead/i }));
@@ -205,7 +205,7 @@ describe('R16-E §4: the graph_review screen reads identically across its three 
       // substring of what is typed here.
       'No-track-match description probe: a deep learning image reader built in-house, in our own systems, with no autonomy, replacing no prior model. It reads documents, internal only, non-binding, reversible, at limited scale.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByText('Check what we read from your description');
     for (;;) {
       const b = screen.queryAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i })[0];
@@ -226,7 +226,7 @@ async function reachTargetedQuestion(user: ReturnType<typeof userEvent.setup>, d
   render(<App />);
   await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), description);
   await user.click(screen.getByRole('button', { name: /^next/i }));
-  await user.click(await screen.findByRole('button', { name: /continue →/i }));
+  await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
   await screen.findByText('Check what we read from your description');
   // Re-query every iteration — clicking one card's confirm button
   // re-renders and removes it, which can leave a snapshot array's later
@@ -673,7 +673,7 @@ describe('R16-E §8: the guard test, for the whole graph_review block and the ex
     const { container } = render(<App />);
     await fillText(user, screen.getByLabelText(/what ai tool do you want to use/i), 'A probe for the guard test.');
     await user.click(screen.getByRole('button', { name: /^next/i }));
-    await user.click(await screen.findByRole('button', { name: /continue →/i }));
+    await user.click(await screen.findByRole('button', { name: /continue →/i }, DUP_CHECK_WAIT));
     await screen.findByRole('button', { name: /answer the questions instead/i });
     expect(container.textContent).not.toMatch(BANNED);
   });
