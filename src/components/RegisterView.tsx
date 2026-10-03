@@ -144,7 +144,7 @@ export default function RegisterView({ role, currentPolicyVersion, policy, selec
       try {
         parsed = JSON.parse(await file.text());
       } catch {
-        setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not an Counterpoise hand-off bundle.' });
+        setHandoffMsg({ tone: 'error', text: 'That file is not valid JSON — it is not a Counterpoise hand-off bundle.' });
         return;
       }
       try {

@@ -670,13 +670,41 @@ const REPEAT_DIVERGED_MESSAGE =
 
 // Steps shared by import and replace so neither can skip a check: shape,
 // duplicate ids, seal, and the incoming chain's own internal integrity.
-async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } | { failure: ImportResult }> {
+//
+// CR6-01 (code review 006, Critical). This used to check the seal and the
+// hash chain — and callers used to STORE — zod's PARSED bundle
+// (`parsed.data`). zod's object parsing rebuilds every event, and every
+// nested payload, as a NEW object with keys in the SCHEMA's declaration
+// order (passthrough extras appended after); eventContent (audit.ts) hashes
+// `JSON.stringify(e.payload)` in whatever key order the object it is given
+// actually has. The real producer computed each event's stored `.hash` over
+// ITS OWN (insertion) key order — whatever order the application code that
+// called append() happened to write the payload literal in, which has no
+// reason to match the schema's declared field order and routinely does not
+// (e.g. IntakeFlow.tsx's verdict_corrected payload writes corrections_count
+// right after knowledge_lens_matched_entry_ids; the schema declares
+// corrections_count last). Re-hashing the schema-reordered copy therefore
+// recomputed a DIFFERENT string and never matched — every real, untampered
+// bundle was rejected as "tampered". The fix validates the SHAPE with the
+// schema exactly as before (parsed.data, below, is still used everywhere
+// only a field's VALUE is read — duplicate-id scan, register comparison,
+// message assembly), but hashes, verifies and — if accepted — stores the
+// RAW events exactly as the input wrote them: `raw`'s own audit_events,
+// parsed from JSON, which preserves the source text's key order. A stored
+// event must keep the order it was hashed in, or a LATER verifyChain() call
+// (reading it back from IndexedDB) would recompute over the stored,
+// reordered copy and report the chain broken all over again — so storage
+// (importTailIfContinuesWithinQueue, backupAndReplaceAllRawEventsWithinQueue)
+// takes these same raw events from each caller below, not parsed.data's.
+async function validateBundle(
+  raw: unknown,
+): Promise<{ bundle: HandoffBundle; rawEvents: AuditEvent[] } | { failure: ImportResult }> {
   // 1. format_version gets its own honest message (F3/F4/F13/F20) — checked
   //    before the strict schema, which would otherwise fail identically for
   //    "not a bundle at all" and "a bundle from a different app version".
   const envelope = bundleEnvelopeSchema.safeParse(raw);
   if (!envelope.success || envelope.data.format !== 'aigate-handoff') {
-    return { failure: { outcome: 'invalid_format', message: 'This file is not an Counterpoise hand-off bundle.', eventsAdded: 0 } };
+    return { failure: { outcome: 'invalid_format', message: 'This file is not a Counterpoise hand-off bundle.', eventsAdded: 0 } };
   }
   if (envelope.data.format_version !== HANDOFF_FORMAT_VERSION) {
     return {
@@ -693,9 +721,14 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   //    the known type sets, with each variant's own required fields checked.
   const parsed = handoffBundleSchema.safeParse(raw);
   if (!parsed.success) {
-    return { failure: { outcome: 'invalid_format', message: 'This file is not an Counterpoise hand-off bundle.', eventsAdded: 0 } };
+    return { failure: { outcome: 'invalid_format', message: 'This file is not a Counterpoise hand-off bundle.', eventsAdded: 0 } };
   }
   const bundle = parsed.data as HandoffBundle;
+
+  // Safe to read straight off `raw`: the safeParse above just confirmed it
+  // conforms to handoffBundleSchema at every level, including every field
+  // this relies on — see the CR6-01 comment above.
+  const rawEvents = (raw as { audit_events: unknown[] }).audit_events as AuditEvent[];
 
   // 3. Duplicate event ids inside one bundle (F3/F4/F13/F20) — a bundle
   //    cannot be internally self-consistent if it claims the same event
@@ -716,7 +749,8 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   }
 
   // 4. Tamper in transit: recompute the seal over the bundle's own contents.
-  const expectedSeal = await computeSeal(bundle.register, bundle.audit_events);
+  //    CR6-01: rawEvents, not bundle.audit_events — see the comment above.
+  const expectedSeal = await computeSeal(bundle.register, rawEvents);
   if (expectedSeal !== bundle.seal) {
     return {
       failure: {
@@ -731,7 +765,8 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
   //    local store — the FULL walk (linkage + each event's content hash), so
   //    a payload edited in transit is caught here even in the case the seal
   //    (which binds only the tip) would not cover.
-  const incoming = await verifyChainOf(bundle.audit_events);
+  //    CR6-01: rawEvents, not bundle.audit_events — see the comment above.
+  const incoming = await verifyChainOf(rawEvents);
   if (!incoming.ok) {
     return {
       failure: {
@@ -741,7 +776,7 @@ async function validateBundle(raw: unknown): Promise<{ bundle: HandoffBundle } |
       },
     };
   }
-  return { bundle };
+  return { bundle, rawEvents };
 }
 
 // round 2, N1's distinct, honest outcome for "the audit trail was replaced,
@@ -832,10 +867,13 @@ const REPLACED_MESSAGE = (auditEventCount: number) =>
 export async function replaceWithBundle(raw: unknown, expectedBackupTip?: AuditTip): Promise<ImportResult> {
   const v = await validateBundle(raw);
   if ('failure' in v) return v.failure;
-  const { bundle } = v;
+  const { bundle, rawEvents } = v;
 
   return withAuditQueue(async () => {
-    const auditResult = await backupAndReplaceAllRawEventsWithinQueue(bundle.audit_events, expectedBackupTip);
+    // CR6-01: rawEvents (as the input wrote them), not bundle.audit_events
+    // (zod-reparsed, schema key order) — what gets stored must stay the
+    // order it was hashed in. See validateBundle's comment above.
+    const auditResult = await backupAndReplaceAllRawEventsWithinQueue(rawEvents, expectedBackupTip);
     if (auditResult.kind === 'backup_out_of_date') {
       return {
         outcome: 'backup_out_of_date',
@@ -902,7 +940,7 @@ export async function finishRegisterReplace(raw: unknown): Promise<ImportResult>
 export async function importBundle(raw: unknown): Promise<ImportResult> {
   const v = await validateBundle(raw);
   if ('failure' in v) return v.failure;
-  const { bundle } = v;
+  const { bundle, rawEvents } = v;
 
   // code-review-005 F5, restructured round 2 (N3): read-the-local-chain,
   // check-the-prefix, and write-the-tail happen as one unbroken step
@@ -912,7 +950,10 @@ export async function importBundle(raw: unknown): Promise<ImportResult> {
   // replaceWithBundle uses, so a concurrent updateLifecycleStage() cannot
   // land between this function's audit step and its register step either.
   return withAuditQueue(async () => {
-    const tailResult = await importTailIfContinuesWithinQueue(bundle.audit_events);
+    // CR6-01: rawEvents (as the input wrote them), not bundle.audit_events
+    // (zod-reparsed, schema key order) — what gets stored must stay the
+    // order it was hashed in. See validateBundle's comment above.
+    const tailResult = await importTailIfContinuesWithinQueue(rawEvents);
 
     if (tailResult.kind === 'diverged') {
       return {
