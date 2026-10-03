@@ -734,6 +734,15 @@ function buildNextSteps(args: {
   return steps;
 }
 
+/** CR8-17. The stale sources that count for THIS verdict: only packs the verdict actually used, read from
+ *  verdict.pack_versions (the engine's record of the active packs). A legacy verdict with no pack_versions
+ *  has nothing saying a pack was used, so none count. `stale_sources` itself stays as recorded; this is a
+ *  display filter, shared by the first screen's line and the reviewer banner. */
+export function usedStaleSources(verdict: Verdict): NonNullable<Verdict['stale_sources']> {
+  const used = verdict.pack_versions ?? {};
+  return (verdict.stale_sources ?? []).filter((s) => Object.prototype.hasOwnProperty.call(used, s.pack_id));
+}
+
 function buildCouldStillChange(verdict: Verdict): string[] {
   const lines: string[] = [];
   const reasons = verdict.provisional_reasons;
@@ -756,7 +765,7 @@ function buildCouldStillChange(verdict: Verdict): string[] {
   }
   // CR7-39: the review-overdue banner lives in the collapsed reasoning section;
   // derived from verdict.stale_sources, so it is absent when there are none.
-  if ((verdict.stale_sources ?? []).length > 0) {
+  if (usedStaleSources(verdict).length > 0) {
     lines.push(
       "Some of the regulatory text behind this result is overdue for a fresh look — it was last checked longer ago than your firm's window allows. Your AI risk team can tell you which.",
     );

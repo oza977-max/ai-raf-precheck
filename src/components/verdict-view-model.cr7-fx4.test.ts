@@ -221,6 +221,8 @@ describe('CR7-29 — a firm review and a pack review sharing an id', () => {
 describe('CR7-39 — a stale source is on the first screen', () => {
   it('TC-CR7-39: stale_sources non-empty adds a "Could still change" line about overdue regulatory text', () => {
     const verdict = makeVerdict({
+      // CR8-17 (fixture change): the stale pack must be one the verdict used.
+      pack_versions: { 'EU-PACK': '1' },
       stale_sources: [{ pack_id: 'EU-PACK', days_overdue: 12, max_staleness_days: 90 }],
     } as Partial<Verdict>);
     const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined);

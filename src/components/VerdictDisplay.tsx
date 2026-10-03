@@ -20,7 +20,7 @@ import { Fold } from './Fold';
 // the verdict's first screen AND the four readers that need a safeguard's
 // status (this first screen, WhatToDo, SignOffChecklist, the evidence
 // panel below) — "one computation per fact" (principle 0.5).
-import { buildVerdictView, joinWithAnd, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
+import { buildVerdictView, joinWithAnd, usedStaleSources, type SafeguardStatus, type SafeguardView, type VerdictView } from './verdict-view-model';
 
 // verdict-audit.md §5. Rule 4 (cross-cutting.md §7): presentation-only —
 // static policy-description lookup for the reasoning-trace fallback is
@@ -1467,7 +1467,8 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
   // the type says required, but old audit-trail data may resurface.
   const explanation: VerdictExplanation | undefined = verdict.explanation ?? undefined;
 
-  const staleSources = verdict.stale_sources ?? [];
+  // CR8-17: only packs this verdict used (see usedStaleSources).
+  const staleSources = usedStaleSources(verdict);
 
   // code-review-005 F8: computed once, here, so the CS-1 evidence panel's
   // Fold summary, its collapse condition, and its per-control chip all agree
