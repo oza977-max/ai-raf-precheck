@@ -298,7 +298,7 @@ Since v0.4.0 the gate also has its first **feedback path**: a 2LoD reviewer who 
 Since v0.17.0 the loop closes after the verdict too:
 
 - **Controls get owners** — each outstanding control can be assigned to a named person with a target date; the page counts down, and flags it overdue.
-- **Controls get attested** — a reviewer records a control as in place with an evidence note. The sign-off checklist counts three tiers separately — *machine-verified*, *attested by a reviewer (not verified)*, *outstanding* — so a claim is never counted as a check.
+- **Controls get attested** — a reviewer records a control as in place with an evidence note. The sign-off checklist counts three tiers separately — *marked verified in your firm's policy file*, *attested by a reviewer (not verified)*, *outstanding* — so a claim is never counted as a check.
 - **Cases move between machines** — **Export hand-off bundle** writes the register and the full audit trail into one hand-off file; **Import hand-off bundle** on another machine re-verifies every audit entry and re-walks the chain before writing anything (see honest limits below for what that check can and can't prove).
 - **The audit trail is tamper-evident** — each entry carries a hash of the one before it, and the sign-off page shows whether the chain is intact.
 

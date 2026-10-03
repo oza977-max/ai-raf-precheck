@@ -189,14 +189,15 @@ testing impossible.
   you to confirm it saved), then **I have my backup — replace my
   register**; nothing is ever overwritten without that confirmation.
 - **The audit trail is tamper-evident, not tamper-proof.** Each entry is
-  chained to the one before it, so an edited or deleted entry shows as a
-  break. But it lives in your browser, and someone who rewrote *every*
-  entry consistently would not be caught. A real deployment needs a
+  chained to the one before it, so an edited entry, or a deleted one with
+  later entries after it, shows as a break. Removing the newest entries does
+  not, and it lives in your browser, so someone who rewrote *every* entry
+  consistently would not be caught either. A real deployment needs a
   server-held store.
 - **Attested is not verified.** When someone attests a control is in place,
   Counterpoise records their claim and their evidence note — it does not check
   the evidence. That's why it reads *attested — not verified*, and is
-  counted separately from machine-verified controls.
+  counted separately from controls marked verified in your firm's policy file.
 - **Jurisdiction packs are unadopted.** The EU AI Act and SS1/23 rules
   haven't been signed off by Legal or Compliance, so verdicts that depend on
   them are marked provisional. That labelling is intentional.
@@ -210,9 +211,11 @@ testing impossible.
 
 ## Starting over
 
-Sidebar → **Demo data** → **Clear all data and start over**. It deletes
-everything in this browser permanently — there's no server copy. Export
-first if you want to keep anything.
+Sidebar → **Demo data** → **Clear all data and start over**. It permanently
+deletes every case, verdict and audit entry in this browser, any unsaved
+intake draft and the hand-off sync record — there's no server copy. Your
+saved appetite framework and model settings are kept. Export first if you
+want to keep anything.
 
 
 ---

@@ -223,7 +223,7 @@ did the work, and the inheritance panel shows the envelope that justified it.*
 - **Which countries does it involve?** → *United Kingdom*
 
 **Expect:** **Approved with controls**, Tier High, Track II, **6 controls** and
-1 downstream review. **Nothing inherited.**
+2 downstream reviews (information security review and vendor risk assessment). **Nothing inherited.**
 
 *Compare directly against case 6. Same idea — an approved platform — opposite
 result. The cloud LLM platform is cleared for internal drafting on Internal
@@ -320,7 +320,7 @@ framework.*
 - **How widely will it be used?** → *Several teams, the whole business, or every case of a kind (e.g. all applications)*
 - **Which countries does it involve?** → *United Kingdom* and *European Union* (tick both)
 
-**Expect:** **Approved with controls**, Tier Critical, Track I, binding
+**Expect:** **Approved with controls**, Tier Critical, Track II, binding
 constraint **INV-AUTONOMY-01**, 7 controls, 2 downstream reviews, Provisional.
 
 *The demo case. It exercises everything at once: a jurisdictional override, an
