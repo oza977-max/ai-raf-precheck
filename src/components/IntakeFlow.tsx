@@ -1374,7 +1374,12 @@ export default function IntakeFlow({ newPrecheckNonce = 0 }: { newPrecheckNonce?
     // returns `corrections: []`, so a failed evaluation would lose them for
     // good if they waited for a result.
     const existingEvents = await getAuditEvents(useCaseId);
-    const plan = planCorrectionWrites(corrections, existingEvents);
+    const plan = planCorrectionWrites(corrections, existingEvents, {
+      graph,
+      newId: () => crypto.randomUUID(),
+      now: () => new Date().toISOString(),
+      by: getRole(),
+    });
     const correctionsToWrite = plan.toWrite;
     // M-4: what the trail holds for THIS attempt (written now, or already there
     // from a failed attempt before it) — never `corrections.length`, which a

@@ -508,25 +508,34 @@ export function contradictionKey(c: Contradiction): string {
   return `${c.field ?? ''}|${c.statement1}`;
 }
 
-/** CR7-21/22, FX7-1 review pass 1 (M-3, M-4). Decides what a confirm writes to
- *  the trail for its corrections, and how many corrections the trail then holds
- *  for this attempt. Pure: the caller reads the events inside the case lock.
+/** CR7-21/22, FX7-1 review passes 1-2 (M-3, M-4, I-A, M-B). Decides what a
+ *  confirm writes to the trail for its corrections, and how many corrections
+ *  the trail then holds for this attempt. Pure: the caller reads the events
+ *  inside the case lock.
  *
- *  The window is the events since the last verdict_produced/verdict_corrected.
- *  A correction already written in it (same node, field, both values, source;
- *  `?? null` on both sides because older events stored an absent value as
- *  undefined) is not written again — a retry re-mints ids for the same change.
- *  Unless something later in the window changed that field BACK (a written
- *  correction for the same node and field whose new value is this one's
- *  original value): then this correction is a new act (A->B, failure, B->A,
- *  A->B must put all three on the trail).
+ *  The aim: for every (node, field) the trail's NET value — the last
+ *  `corrected_value` written since the last result — equals the value on the
+ *  graph being evaluated. The window is the events since the last
+ *  verdict_produced/verdict_corrected.
+ *   - A pending correction is skipped only when the LATEST value written for its
+ *     (node, field) already equals its `corrected_value` (a retry re-mints ids
+ *     for the same change). A->B, A->C, A->B writes the third: the form always
+ *     diffs against the ORIGINAL graph, so "A->B" is new information once C is
+ *     the latest.
+ *   - With `ctx` (the graph being evaluated), a (node, field) the window has
+ *     corrected whose latest value differs from the graph — and that nothing
+ *     pending covers, e.g. a resubmit with the field back at its original value,
+ *     where the form finds nothing to correct — gets one correction from the
+ *     latest trail value to the graph value, with the same `correction_source`.
+ *   - Values compare as sets for lists (jurisdictions), `?? null` for absent.
  *
  *  `sinceLastResult` = the graph_corrected events in the window plus those about
  *  to be written: what graph_confirmed/verdict_corrected should call its
- *  `corrections_count`, so the number always matches the events. */
+ *  `corrections_count`, so the number always follows from the same plan. */
 export function planCorrectionWrites(
   corrections: GraphCorrection[],
   events: AuditEvent[],
+  ctx?: { graph: DataFlowGraph; newId: () => string; now: () => string; by: string },
 ): { toWrite: GraphCorrection[]; sinceLastResult: number } {
   let lastDecided = -1;
   events.forEach((e, i) => {
@@ -536,24 +545,43 @@ export function planCorrectionWrites(
   for (const e of events.slice(lastDecided + 1)) {
     if (e.payload.type === 'graph_corrected') written.push(e.payload.correction);
   }
-  const norm = (v: unknown) => JSON.stringify(v ?? null);
-  const same = (a: GraphCorrection, b: GraphCorrection) =>
-    a.node_id === b.node_id &&
-    a.field === b.field &&
-    a.correction_source === b.correction_source &&
-    norm(a.original_value) === norm(b.original_value) &&
-    norm(a.corrected_value) === norm(b.corrected_value);
+  const norm = (v: unknown): string => {
+    const x = v ?? null;
+    return JSON.stringify(Array.isArray(x) ? [...x].map((i) => JSON.stringify(i)).sort() : x);
+  };
+  const key = (c: { node_id: string; field: string }) => `${c.node_id}|${c.field}`;
+  const latest = new Map<string, GraphCorrection>();
+  for (const w of written) latest.set(key(w), w);
+
   const toWrite = corrections.filter((c) => {
-    let at = -1;
-    written.forEach((w, i) => {
-      if (same(w, c)) at = i;
-    });
-    if (at === -1) return true;
-    const reversed = written
-      .slice(at + 1)
-      .some((w) => w.node_id === c.node_id && w.field === c.field && norm(w.corrected_value) === norm(c.original_value));
-    return reversed;
+    const last = latest.get(key(c));
+    return !(last && norm(last.corrected_value) === norm(c.corrected_value));
   });
+
+  if (ctx) {
+    const g = ctx.graph;
+    const nodes = [...g.input_nodes, ...g.processing_nodes, ...g.output_nodes] as unknown as Array<Record<string, unknown>>;
+    const valueOnGraph = (nodeId: string, field: string): unknown =>
+      nodeId === 'graph' ? (g as unknown as Record<string, unknown>)[field] : nodes.find((n) => n.id === nodeId)?.[field];
+    const covered = new Set(corrections.map(key));
+    for (const [k, last] of latest) {
+      if (covered.has(k)) continue;
+      const now = valueOnGraph(last.node_id, last.field);
+      if (norm(now) === norm(last.corrected_value)) continue;
+      toWrite.push({
+        correction_id: ctx.newId(),
+        graph_version_before: last.graph_version_after,
+        graph_version_after: g.version,
+        node_id: last.node_id,
+        field: last.field,
+        original_value: last.corrected_value ?? null,
+        corrected_value: now ?? null,
+        corrected_by: ctx.by,
+        corrected_at: ctx.now(),
+        ...(last.correction_source ? { correction_source: last.correction_source } : {}),
+      });
+    }
+  }
   return { toWrite, sinceLastResult: written.length + toWrite.length };
 }
 
