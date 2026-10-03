@@ -242,9 +242,13 @@ export function applyJurisdictionOverrides(
     finalTier,
     appliedOverrides,
     addedControls: [...new Set(addedControls)].sort(),
-    // Each entry's rule_id is already unique by construction (one push per
-    // (pack, rule) visited, each rule id visited once) — no Set-based dedup
-    // needed, only the same deterministic rule_id sort every producer uses.
+    // C-5: rule_id is unique WITHIN one pack's own rules (one push per
+    // (pack, rule) visited here), but NOT guaranteed unique across every
+    // pack a firm loads together — two different packs can reuse the same
+    // id by coincidence. That cross-pack case is de-duplicated one level up,
+    // in evaluate.ts's combineReviewSources (the single choke point every
+    // producer, including this one, funnels through) — this list only needs
+    // its own deterministic rule_id sort, the same every producer uses.
     addedReviews: [...addedReviews].sort((a, b) => a.rule_id.localeCompare(b.rule_id)),
     chain,
     caveats,

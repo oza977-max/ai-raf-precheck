@@ -31,7 +31,6 @@ import type {
   Result,
   RuleRationale,
   TrippedInvariantDetail,
-  VerdictExplanation,
 } from './types';
 
 // Rule 1 (cross-cutting.md §7): engine is a pure island — no React, no idb, no SDK.
@@ -499,8 +498,22 @@ function sortedByModelId(items: ApprovedModel[]): ApprovedModel[] {
 // `downstream_reviews` has exactly one source of truth
 // (`downstream_review_sources`) at every one of evaluate()'s four return
 // sites, not four independent re-derivations that could drift.
+// C-5: two different firm-loaded packs can reuse the same rule id by
+// coincidence — a rule id is unique WITHIN one pack's own rules, never
+// guaranteed unique ACROSS every pack a firm loads together (and
+// checkPolicyReferences now warns when it happens, src/store/policy-
+// references.ts). Without de-duplication both entries would reach the
+// verdict even though `rule_id` promises one review requirement 1:1 with
+// one rule. First occurrence wins, in the FIXED order `producers` is always
+// called with (never Set-based on the review TEXT — reviewStringsFrom
+// already de-duplicates text separately, and two rules that share an id
+// must collapse to one SOURCE, not merely one rendered line).
 function combineReviewSources(...producers: DownstreamReviewSource[][]): DownstreamReviewSource[] {
-  return producers.flat().sort((a, b) => a.rule_id.localeCompare(b.rule_id));
+  const byRuleId = new Map<string, DownstreamReviewSource>();
+  for (const source of producers.flat()) {
+    if (!byRuleId.has(source.rule_id)) byRuleId.set(source.rule_id, source);
+  }
+  return [...byRuleId.values()].sort((a, b) => a.rule_id.localeCompare(b.rule_id));
 }
 
 function reviewStringsFrom(sources: DownstreamReviewSource[]): string[] {
@@ -620,7 +633,17 @@ function emptyResult(overrides: Partial<EvaluationResult>, graph: DataFlowGraph)
     margin_achieved: 1,
     margin_target: 0,
     single_covered_invariants: [],
-    explanation: emptyExplanation(),
+    // Stub flag inlined (was emptyExplanation(), a one-use helper) — no
+    // behaviour change, same literal, same single call site.
+    explanation: {
+      tier_rationale: null,
+      track_rationale: null,
+      hard_lines_checked: 0,
+      invariants_checked: 0,
+      tripped_invariants: [],
+      binding_reason: null,
+      binding_regulatory_basis: null,
+    },
     provisional_reasons: [],
     ...overrides,
   };
@@ -632,17 +655,5 @@ function emptyResult(overrides: Partial<EvaluationResult>, graph: DataFlowGraph)
     ...base,
     provisional_reasons: provisionalReasons(base.confidence_caveats, base.pack_versions, graph),
     unclassified_decision_types: unclassifiedDecisionTypes(graph),
-  };
-}
-
-function emptyExplanation(): VerdictExplanation {
-  return {
-    tier_rationale: null,
-    track_rationale: null,
-    hard_lines_checked: 0,
-    invariants_checked: 0,
-    tripped_invariants: [],
-    binding_reason: null,
-    binding_regulatory_basis: null,
   };
 }
