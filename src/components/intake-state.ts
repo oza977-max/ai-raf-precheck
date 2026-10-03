@@ -12,6 +12,13 @@ export type IntakeState =
   | {
       step: 'graph_extraction';
       description: string;
+      // D-1 (Minor): this is intake-flow's OWN method name, not the
+      // graph's — the engine's field (DataFlowGraph.intake_method,
+      // engine/types.ts) is 'llm' | 'structured_form'. Two spellings for
+      // the same concept; a test fixture once used the invalid value
+      // 'form' here and nothing caught it. Kept distinct on purpose
+      // (this one is a UI routing choice made before any graph exists),
+      // but read the two together before changing either.
       method: 'llm' | 'form';
       // W-4 (R16-W §1, D-70). Present only on a RESUBMISSION of the form —
       // CHANGE_ANSWER and the form-path STEP_BACK set these so the form
@@ -103,7 +110,24 @@ export type IntakeState =
       // insert a follow-up right after itself — undoing it must remove
       // that follow-up too, not just the answer) and the assumptions
       // length (a "Not sure" answer can append one).
-      undo?: { graph: DataFlowGraph; correctionsLen: number; questions: IntakeQuestion[]; assumptionsLen: number };
+      // CR6-04 (Critical, BC-002): `questions`/`assumptionsLen` were added
+      // at 9348882 — a draft saved by an older build has an `undo` with
+      // neither (the pre-9348882 shape was `{ graph, correctionsLen }`
+      // only). ANSWER_UNDONE below falls back rather than reading either
+      // as `undefined` and crashing QuestionnaireStep, which indexes
+      // `questions[answeredCount]`; intake-draft.ts's versioned envelope
+      // is the first layer (drops an incompatible `undo` on restore —
+      // never lets it reach here from an old draft at all) — this is
+      // defense in depth for anything that still does. CR6-03's own
+      // `guessedFields` snapshot is newer still, optional for the
+      // identical reason.
+      undo?: {
+        graph: DataFlowGraph;
+        correctionsLen: number;
+        questions: IntakeQuestion[];
+        assumptionsLen: number;
+        guessedFields?: Record<string, string[]>;
+      };
       // W-3/W-4 (R16-W §1). Present only when this questionnaire was
       // reached via FORM_SUBMITTED (the form path's own questions, if
       // any) — carried so a form-path STEP_BACK can return to the form
@@ -122,6 +146,34 @@ export type IntakeState =
       // dropped (the draft only ever persisted IntakeState). Absent/empty
       // on the form path, which never sets guessedFields.
       uncertainNodeIds?: string[];
+      // CR6-03 (Critical). Carried from graph_review's own guessedFields/
+      // provenance/unconfirmedNodeIds/jurisdictionsConfirmed at the SAME
+      // moment QUESTIONS_GENERATED captures uncertainNodeIds above — and
+      // restored on STEP_BACK, so Back does not turn off the R5-GR-2/
+      // R7-JC review gate it left behind. Unlike uncertainNodeIds (frozen:
+      // it records what the description did NOT say, which stays true
+      // after the person answers), guessedFields here means "still to
+      // ask" — ANSWER_SUBMITTED trims a field out of it the moment that
+      // field is answered, so a later Back + Continue does not regenerate
+      // a question for it. unconfirmedNodeIds/jurisdictionsConfirmed are
+      // threaded through UNCHANGED (QUESTIONS_GENERATED's own guard never
+      // lets a non-empty unconfirmedNodeIds or a false jurisdictionsConfirmed
+      // reach here, so what's carried is always either undefined — no
+      // gate, the form path and correction/evaluation-failure re-entries —
+      // or the concrete "everything already checked" values).
+      guessedFields?: Record<string, string[]>;
+      provenance?: Record<string, Record<string, string>>;
+      unconfirmedNodeIds?: string[];
+      jurisdictionsConfirmed?: boolean;
+      // B-10 (Minor). The contradictions detectContradictions already
+      // found at FORM SUBMISSION time (action.contradictions,
+      // FORM_SUBMITTED) — F-6 still routes to the questions first when
+      // both are present, but the submission-time contradictions must not
+      // simply be discarded: carried here so handleAnswerSubmitted
+      // (IntakeFlow.tsx) can still raise them once every question is
+      // answered, even if no single answer happens to re-trigger a live
+      // detectContradictions call. Consumed exactly once, at that point.
+      submissionContradictions?: Contradiction[];
     }
   | {
       step: 'contradiction_review';
@@ -141,6 +193,14 @@ export type IntakeState =
       assumptions?: Assumption[];
       // F-7: see the questionnaire variant's comment above.
       uncertainNodeIds?: string[];
+      // CR6-03: see the questionnaire variant's comment above — threaded
+      // through a contradiction-review round trip the same way
+      // uncertainNodeIds already is, so a Back from the questionnaire
+      // reached via CONTRADICTION_RESOLVED still restores the right gate.
+      guessedFields?: Record<string, string[]>;
+      provenance?: Record<string, Record<string, string>>;
+      unconfirmedNodeIds?: string[];
+      jurisdictionsConfirmed?: boolean;
     }
   | {
       step: 'confirmation';
@@ -445,6 +505,19 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             // A correction pass must stay a correction pass — dropping this
             // would orphan the verdict being corrected.
             originalVerdictId: state.originalVerdictId,
+            // CR6-03 (Critical). Restored from questionnaire's own carried
+            // copies (set once, at QUESTIONS_GENERATED) — never left
+            // undefined here, which used to silently turn OFF the R5-GR-2/
+            // R7-JC review gate on return. unconfirmedNodeIds/
+            // jurisdictionsConfirmed are whatever QUESTIONS_GENERATED's
+            // own guard already proved safe to carry: undefined (no gate —
+            // the form path, a correction, an evaluation-failure re-entry)
+            // or the concrete "everything already checked" values — never
+            // the gate reappearing non-empty/false.
+            guessedFields: state.guessedFields,
+            provenance: state.provenance,
+            unconfirmedNodeIds: state.unconfirmedNodeIds,
+            jurisdictionsConfirmed: state.jurisdictionsConfirmed,
           };
         default:
           return state;
@@ -534,6 +607,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             // node-level corrections already use, so runConfirmAndEvaluate
             // writes them with no change of its own.
             corrections: action.corrections,
+            // B-10 (Minor). F-6 still routes to the questions first, but a
+            // contradiction already found at FORM SUBMISSION time
+            // (action.contradictions) must not be silently dropped just
+            // because questions also exist — carried here so
+            // handleAnswerSubmitted (IntakeFlow.tsx) can still raise it
+            // once every question is answered, even if no single answer
+            // happens to re-trigger a live detectContradictions call.
+            ...(action.contradictions.length > 0 ? { submissionContradictions: action.contradictions } : {}),
           };
         case 'contradiction_review':
           return {
@@ -639,6 +720,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         // F-7 (DR7-07): captured once, here, from graph_review's own
         // guessedFields — the only step this field exists on.
         uncertainNodeIds: Object.keys(state.guessedFields ?? {}),
+        // CR6-03 (Critical). Carried forward so a later STEP_BACK can
+        // restore them — see the questionnaire type's own comment. The
+        // guard above already proved unconfirmedNodeIds/jurisdictionsConfirmed
+        // are safe to carry as-is (never non-empty/false here).
+        guessedFields: state.guessedFields,
+        provenance: state.provenance,
+        unconfirmedNodeIds: state.unconfirmedNodeIds,
+        jurisdictionsConfirmed: state.jurisdictionsConfirmed,
       };
 
     case 'ANSWER_SUBMITTED': {
@@ -652,6 +741,7 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
       // one just answered — found by id, never by index, so this stays
       // correct regardless of where in the list the current question sits.
       const currentIndex = state.questions.findIndex((q) => q.id === action.answer.questionId);
+      const answeredQuestion = currentIndex !== -1 ? state.questions[currentIndex] : undefined;
       const questions =
         action.insertQuestions && action.insertQuestions.length > 0 && currentIndex !== -1
           ? [
@@ -661,6 +751,24 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
             ]
           : state.questions;
       const assumptions = action.assumption ? [...(state.assumptions ?? []), action.assumption] : state.assumptions;
+      // CR6-03 (Critical). A guessed field that has just been answered is
+      // no longer "still to ask" — dropped from the carried guessedFields
+      // (the same trim CORRECTION_APPLIED already does for graph_review's
+      // own copy) so a later Back + Continue does not regenerate a
+      // question for it. uncertainNodeIds (F-7, above) is a DIFFERENT,
+      // frozen record of what the description did not say and is never
+      // touched here — an answered guessed field still belongs in it.
+      const guessedFields =
+        state.guessedFields && answeredQuestion?.node_id && answeredQuestion.field
+          ? Object.fromEntries(
+              Object.entries(state.guessedFields)
+                .map(([id, fields]) => [
+                  id,
+                  id === answeredQuestion.node_id ? fields.filter((fld) => fld !== answeredQuestion.field) : fields,
+                ])
+                .filter(([, fields]) => (fields as string[]).length > 0),
+            )
+          : state.guessedFields;
       // ADR-IF-R6-3: when the answer differs from the graph, the caller
       // sends the correction and the updated graph with it — applied here
       // so the attested, evaluated graph is the one the user answered.
@@ -673,10 +781,14 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
           correctionsLen: state.corrections.length,
           questions: state.questions,
           assumptionsLen: state.assumptions?.length ?? 0,
+          // CR6-03: the PRE-answer guessedFields, so ANSWER_UNDONE can put
+          // an undone guessed field back among those still to ask.
+          guessedFields: state.guessedFields,
         },
         ...(action.updatedGraph ? { graph: action.updatedGraph } : {}),
         ...(action.correction ? { corrections: [...state.corrections, action.correction] } : {}),
         ...(assumptions ? { assumptions } : {}),
+        ...(state.guessedFields ? { guessedFields } : {}),
       };
     }
 
@@ -688,8 +800,21 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         answers: state.answers.slice(0, -1),
         graph: undo.graph,
         corrections: state.corrections.slice(0, undo.correctionsLen),
-        questions: undo.questions,
-        ...(state.assumptions ? { assumptions: state.assumptions.slice(0, undo.assumptionsLen) } : {}),
+        // CR6-04 (Critical, BC-002): defensive fallback — a snapshot from
+        // before 9348882 has no `questions` at all (`undefined`), which
+        // QuestionnaireStep then indexes (`questions[answeredCount]`) and
+        // crashes on. Falling back to the CURRENT questions is the honest
+        // "nothing to undo for this part" behaviour, never a crash.
+        questions: undo.questions ?? state.questions,
+        ...(state.assumptions
+          ? { assumptions: state.assumptions.slice(0, undo.assumptionsLen ?? state.assumptions.length) }
+          : {}),
+        // CR6-03: restores the pre-answer guessedFields too, so an undone
+        // guessed-field answer is askable again via Back + Continue — only
+        // when the snapshot actually has one (an old-shaped undo has
+        // neither `guessedFields` NOR a reason to think the current,
+        // already-trimmed copy in `rest` is wrong, so it is left alone).
+        ...(undo.guessedFields !== undefined ? { guessedFields: undo.guessedFields } : {}),
       };
     }
 
@@ -714,6 +839,13 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         assumptions: state.assumptions,
         // F-7: threaded forward, never re-derived.
         uncertainNodeIds: state.uncertainNodeIds,
+        // CR6-03: threaded forward, same reasoning as uncertainNodeIds —
+        // a Back reached via CONTRADICTION_RESOLVED must still restore the
+        // right gate.
+        guessedFields: state.guessedFields,
+        provenance: state.provenance,
+        unconfirmedNodeIds: state.unconfirmedNodeIds,
+        jurisdictionsConfirmed: state.jurisdictionsConfirmed,
       };
 
     case 'CONTRADICTION_RESOLVED':
@@ -738,6 +870,11 @@ export function intakeReducer(state: IntakeState, action: IntakeAction): IntakeS
         assumptions: state.assumptions,
         // F-7: threaded forward, never re-derived.
         uncertainNodeIds: state.uncertainNodeIds,
+        // CR6-03: threaded forward — see CONTRADICTIONS_DETECTED's comment.
+        guessedFields: state.guessedFields,
+        provenance: state.provenance,
+        unconfirmedNodeIds: state.unconfirmedNodeIds,
+        jurisdictionsConfirmed: state.jurisdictionsConfirmed,
       };
 
     case 'PROCEED_TO_CONFIRMATION':

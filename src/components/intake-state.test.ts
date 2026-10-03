@@ -810,6 +810,12 @@ describe('intakeReducer — FORM_SUBMITTED (R16-W W-3, D-69)', () => {
       answers: [],
       resolutionNotes: [],
       corrections: [],
+      // B-10 (Minor), added after this test was first written: the
+      // submission-time contradiction used to be silently dropped here —
+      // F-6's routing (questions win) is unchanged, but the contradiction
+      // itself must survive, carried, so handleAnswerSubmitted can still
+      // raise it once the questions end.
+      submissionContradictions: [{ statement1: 'a', statement2: 'b', field: 'data_class' }],
     });
   });
 
@@ -1409,15 +1415,23 @@ describe('intakeReducer — guessedFields/provenance/gate values survive Back fr
     expect((back as { jurisdictionsConfirmed?: boolean }).jurisdictionsConfirmed).toBeUndefined();
   });
 
-  it('F-7 unaffected by CR6-03: uncertainNodeIds still names a node even after its guessed field is answered and leaves guessedFields', () => {
-    const questionnaire = intakeReducer(reviewState(), {
+  it('F-7 unaffected by CR6-03: uncertainNodeIds still names a node even after its one guessed field is answered and leaves guessedFields entirely', () => {
+    // Overridden to a single guessed field for n1 (reviewState()'s default
+    // has two) — answering it is then the LAST one for that node, so
+    // guessedFields drops the node entirely (not just the field), making
+    // the contrast with the still-present uncertainNodeIds unambiguous.
+    const questionnaire = intakeReducer(reviewState({ guessedFields: { n1: ['vendor'] } }), {
       type: 'QUESTIONS_GENERATED',
       questions: [{ id: 'Q1', field: 'vendor', node_id: 'n1', triggered_by: ['R6-PV-2:guessed'], answer_type: 'text' }],
     });
     expect(questionnaire).toMatchObject({ uncertainNodeIds: ['n1'] });
     const answered = intakeReducer(questionnaire, { type: 'ANSWER_SUBMITTED', answer: { questionId: 'Q1', value: 'acme' } });
     expect(answered).toMatchObject({ uncertainNodeIds: ['n1'] });
-    expect((answered as { guessedFields?: Record<string, string[]> }).guessedFields).toBeUndefined();
+    // {} , not absent — the same "a node with nothing left guessed just
+    // drops out of the map" shape CORRECTION_APPLIED's identical trim
+    // already produces; kept consistent rather than inventing a second
+    // convention for "nothing guessed any more".
+    expect((answered as { guessedFields?: Record<string, string[]> }).guessedFields).toEqual({});
   });
 });
 

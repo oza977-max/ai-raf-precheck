@@ -22,13 +22,58 @@ function worthPersisting(state: IntakeState): boolean {
   return true;
 }
 
+// CR6-04 (Critical, BC-002: "persisted state carries a version and is
+// migrated or refused on mismatch, never read as if current"). The
+// reducer's own `undo` snapshot (questionnaire step) gained
+// `questions`/`assumptionsLen` at 9348882 and `guessedFields` at CR6-03 —
+// a draft saved by an OLDER build has an `undo` missing one or both, and
+// reading it back as current hands ANSWER_UNDONE a value it cannot safely
+// use (QuestionnaireStep indexes `questions[answeredCount]`).
+//
+// Unlike FORM_KEY below (a whole-key bump, R16-B), this versions the draft
+// in an ENVELOPE instead: on an incompatible version, only the one unsafe
+// piece (`undo`) is dropped — Undo is then unavailable for that one
+// answer, which says nothing false — while the rest of the user's real,
+// in-progress work (description, graph, answers, corrections) is kept.
+// Bumping the whole key, the way FORM_KEY does, would throw all of that
+// away for an incompatibility that affects one optional field.
+const DRAFT_VERSION = 2;
+
+interface DraftEnvelope {
+  version: number;
+  state: IntakeState;
+}
+
+function isEnvelope(value: unknown): value is DraftEnvelope {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'version' in value &&
+    typeof (value as { version: unknown }).version === 'number' &&
+    'state' in value
+  );
+}
+
+/** Drops an `undo` snapshot that cannot be trusted as current — the ONE
+ *  piece of a `questionnaire` draft CR6-04 actually needs to protect.
+ *  Every other field is returned untouched: the version mismatch does not
+ *  mean the rest of the draft is unsafe, only that this one optional,
+ *  reducer-shape-sensitive field might not be. */
+function dropIncompatibleUndo(state: IntakeState): IntakeState {
+  if (state.step !== 'questionnaire' || !('undo' in state)) return state;
+  const { undo, ...rest } = state;
+  void undo;
+  return rest;
+}
+
 export function saveDraft(state: IntakeState): void {
   try {
     if (!worthPersisting(state)) {
       clearDraft();
       return;
     }
-    sessionStorage.setItem(KEY, JSON.stringify(state));
+    const envelope: DraftEnvelope = { version: DRAFT_VERSION, state };
+    sessionStorage.setItem(KEY, JSON.stringify(envelope));
   } catch {
     // Storage can be unavailable (private mode, quota). Losing the draft is
     // the pre-existing behaviour, so a failure here degrades to it rather
@@ -40,10 +85,17 @@ export function loadDraft(): IntakeState | null {
   try {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as IntakeState;
+    const parsed: unknown = JSON.parse(raw);
+    // A draft saved before this fix is the bare IntakeState itself, with no
+    // envelope at all — every field this function strips is, by
+    // construction, ALSO missing from one of those (they are all newer
+    // than this versioning itself), so it is treated as version 1.
+    const envelope: DraftEnvelope = isEnvelope(parsed) ? parsed : { version: 1, state: parsed as IntakeState };
+    const state = envelope.state;
     // Guard against a stale shape from an older build: an unrecognised step
     // would put the reducer in an unreachable state.
-    return typeof parsed?.step === 'string' ? parsed : null;
+    if (typeof state?.step !== 'string') return null;
+    return envelope.version < DRAFT_VERSION ? dropIncompatibleUndo(state) : state;
   } catch {
     return null;
   }
