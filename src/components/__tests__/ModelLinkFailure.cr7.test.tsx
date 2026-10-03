@@ -121,6 +121,21 @@ describe('IntakeFlow — a failed model-link write never strands a case (review 
     expect(view.container.textContent).not.toContain('No model was named');
   }, 40000);
 
+  it('TC-CR7-11j: the link write AND the flag write both reject — the verdict still shows and the case is saved', async () => {
+    const user = userEvent.setup();
+    mockCreate.mockResolvedValue(extraction());
+    const confirm = await reachConfirm(user);
+    const linkSpy = vi.spyOn(registerModule, 'addUseCaseModelLink').mockRejectedValue(new Error('link write failed'));
+    const flagSpy = vi.spyOn(registerModule, 'updateUseCaseVerdictSummary').mockRejectedValue(new Error('flag write failed'));
+    await user.click(confirm);
+    await waitFor(() => expect(linkSpy).toHaveBeenCalled(), { timeout: 5000 });
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 8000 });
+    expect(flagSpy).toHaveBeenCalled();
+    flagSpy.mockRestore();
+    const row = (await getUseCases('all')).find((r) => r.description === DESC);
+    expect(row).toBeDefined();
+  }, 40000);
+
   it('TC-CR7-11h-1: on success the link exists for the saved case (the order change loses nothing)', async () => {
     const user = userEvent.setup();
     mockCreate.mockResolvedValue(extraction());
