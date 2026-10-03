@@ -13,6 +13,7 @@ import * as registerModule from '../../store/register';
 import { getAll } from '../../store/audit';
 import { setRole } from '../../store/role';
 import { loadDraft } from '../intake-draft';
+import type { Assumption } from '../plain-copy';
 import appetiteYaml from '../../../policy/appetite.yaml?raw';
 import type { DataFlowGraph } from '../../engine/types';
 
@@ -894,14 +895,14 @@ describe('CR7-28 — a questions draft from before CR6 restores as the review sc
       corrections: [],
       useCaseId: 'uc-old-draft',
     };
-    return JSON.stringify(version2 ? { version: 2, state } : state);
+    return JSON.stringify(version2 ? { version: 3, state } : state);
   };
 
   it('TC-CR7-28: the review screen shows with every card to re-check, the countries unchecked, and the plain notice', async () => {
     sessionStorage.setItem(DRAFT_KEY, oldDraft(false));
     render(<App />);
     expect(await screen.findByText('Check what we read from your description')).toBeInTheDocument();
-    expect(screen.getByText(/saved by an earlier version of this tool/i)).toBeInTheDocument();
+    expect(screen.getByText(/this was saved by an earlier version of this tool\. the values from your earlier answers are on the cards below — please check each one\./i)).toBeInTheDocument();
     // Every card still needs checking; the countries are not yet checked.
     expect(screen.getAllByRole('button', { name: /^(this is right|i.ve checked this — it.s right)$/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /^(these are right|none of these — continue)$/i })).toBeInTheDocument();
@@ -915,5 +916,155 @@ describe('CR7-28 — a questions draft from before CR6 restores as the review sc
     render(<App />);
     expect(await screen.findByText(/question 1 of 1/i)).toBeInTheDocument();
     expect(screen.queryByText(/saved by an earlier version of this tool/i)).not.toBeInTheDocument();
+  }, 30000);
+});
+
+describe('CR7-28 (M-1): the migrated review keeps what the old draft held, and the notice goes when the step does', () => {
+  it('TC-CR7-28: the notice is gone once the person leaves the review screen', async () => {
+    const state = {
+      step: 'questionnaire',
+      description: 'A description the person typed earlier.',
+      graph: makeGraph({ intake_method: 'llm' }),
+      questions: [],
+      answers: [],
+      resolutionNotes: [],
+      corrections: [],
+      useCaseId: 'uc-old-draft2',
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(/this was saved by an earlier version of this tool/i);
+    await proceedFromReview(user);
+    await clickThroughToConfirm(user);
+    expect(screen.queryByText(/this was saved by an earlier version of this tool/i)).not.toBeInTheDocument();
+  }, 30000);
+});
+
+const NOT_SURE_SCALE: Assumption = {
+  questionId: 'field:scale',
+  question: 'How widely will it be used?',
+  shortLabel: 'how widely it is used',
+  assumption: 'wide — the stricter case.',
+  fields: ['scale'],
+};
+
+/** Turns the review screen the app has just saved into the questionnaire a
+ *  trip through "Continue" would have produced (what QUESTIONS_GENERATED
+ *  snapshots is exactly what the review held), plus one new "Not sure". Written
+ *  from the app's own saved draft, never typed by hand (BC-003). */
+function saveQuestionnaireFromReviewDraft() {
+  const review = loadDraft() as unknown as Record<string, unknown> & { assumptions?: Assumption[] };
+  const state: Record<string, unknown> = {
+    ...review,
+    step: 'questionnaire',
+    questions: [{ id: 'Q-scale', field: 'scale', node_id: 'o1', triggered_by: [], answer_type: 'select' }],
+    answers: [],
+    resolutionNotes: [],
+    assumptions: [...(review.assumptions ?? []), NOT_SURE_SCALE],
+    backGraph: review.graph,
+    backCorrections: review.corrections,
+    backAssumptions: review.assumptions,
+    backAfterFailedEvaluation: review.afterFailedEvaluation === true ? true : undefined,
+  };
+  delete state.afterFailedEvaluation;
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 3, state }));
+}
+
+describe('FX7-1 review pass 1 — Back from a re-entered review (I-2, I-3) and editable countries (I-1)', () => {
+  it('TC-CR7-02h: Not sure -> confirmation -> Change an answer -> Continue (questions) -> Back -> Continue -> Confirm keeps the earlier "Not sure" in graph_confirmed (and not the one given in the abandoned round)', async () => {
+    const user = userEvent.setup();
+    await reachNotSureConfirmation(user);
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Check what we read from your description');
+    saveQuestionnaireFromReviewDraft();
+    cleanup();
+    render(<App />);
+    await screen.findByText(/how widely will it be used/i);
+    await user.click(screen.getByRole('button', { name: /back/i }));
+    await screen.findByText('Check what we read from your description');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const confirmed = (await eventsOfType('graph_confirmed')).pop()!.payload as unknown as { assumptions?: AssumptionLike[] };
+    expect(confirmed.assumptions?.map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+  }, 30000);
+
+  it('TC-CR7-02h (correction): the same through a correction from the result — verdict_corrected keeps the earlier "Not sure"', async () => {
+    const user = userEvent.setup();
+    await reachNotSureConfirmation(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    await user.click(document.querySelector<HTMLButtonElement>('.verdict__first-correct')!);
+    await screen.findByText('Check what we read from your description');
+    saveQuestionnaireFromReviewDraft();
+    cleanup();
+    render(<App />);
+    await screen.findByText(/how widely will it be used/i);
+    await user.click(screen.getByRole('button', { name: /back/i }));
+    await screen.findByText('Check what we read from your description');
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await waitFor(async () => expect(await eventsOfType('verdict_corrected')).toHaveLength(1), { timeout: 5000 });
+    const corrected = (await eventsOfType('verdict_corrected'))[0]!.payload as unknown as { assumptions?: AssumptionLike[] };
+    expect(corrected.assumptions?.map((a) => a.questionId)).toEqual(['field:output_reversibility']);
+  }, 30000);
+
+  it('TC-CR7-03f: failed evaluation -> questions -> Back: Back from the review is still refused, and the case id is unchanged', async () => {
+    const user = userEvent.setup();
+    await reachNotSureConfirmation(user);
+    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText(/something went wrong working out the result/i);
+    const before = (loadDraft() as unknown as { useCaseId: string }).useCaseId;
+    saveQuestionnaireFromReviewDraft();
+    cleanup();
+    render(<App />);
+    await screen.findByText(/how widely will it be used/i);
+    await user.click(screen.getByRole('button', { name: /back/i }));
+    await screen.findByText('Check what we read from your description');
+    expect(screen.queryAllByRole('button', { name: /back/i })).toHaveLength(0);
+    expect((loadDraft() as unknown as { useCaseId: string }).useCaseId).toBe(before);
+  }, 30000);
+
+  it('TC-CR7-02c-edit: after Change an answer a country can be ticked; the graph changes, a jurisdictions correction is recorded and reaches the trail on Confirm', async () => {
+    const user = userEvent.setup();
+    await reachNotSureConfirmation(user);
+    await user.click(document.querySelector<HTMLButtonElement>('.understood-summary__change')!);
+    await screen.findByText('Which countries does it involve?');
+    const box = document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!;
+    expect(box.disabled).toBe(false);
+    expect(box.checked).toBe(false);
+    await user.click(box);
+    expect(document.querySelector<HTMLInputElement>('.jurisdictions-panel input[type=checkbox]')!.checked).toBe(true);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const hit = (await eventsOfType('graph_corrected'))
+      .map((e) => (e.payload as unknown as { correction: Record<string, unknown> }).correction)
+      .find((c) => c.field === 'jurisdictions');
+    expect(hit).toBeDefined();
+    expect((hit!.corrected_value as string[]).length).toBe(1);
+  }, 30000);
+});
+
+describe('FX7-1 review pass 1 — the correction count matches the events (M-4)', () => {
+  it('TC-CR7-21d: a description-path retry after a failed evaluation records corrections_count equal to the graph_corrected events on the trail', async () => {
+    const user = userEvent.setup();
+    await reachNotSureConfirmation(user);
+    vi.spyOn(evaluateModule, 'evaluate').mockReturnValueOnce({ ok: false, error: { kind: 'no-track-match' } } as never);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText(/something went wrong working out the result/i);
+    await user.click(screen.getByRole('button', { name: /^continue$/i }));
+    await clickThroughToConfirm(user);
+    await user.click(screen.getByRole('button', { name: /confirm and evaluate/i }));
+    await screen.findByText('Verdict', { selector: '.verdict__eyebrow' }, { timeout: 5000 });
+    const written = (await eventsOfType('graph_corrected')).length;
+    expect(written).toBeGreaterThan(0);
+    const counts = (await eventsOfType('graph_confirmed')).map((e) => (e.payload as unknown as { corrections_count: number }).corrections_count);
+    expect(counts).toEqual([written, written]);
   }, 30000);
 });

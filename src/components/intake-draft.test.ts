@@ -329,4 +329,28 @@ describe('a questions draft saved before CR6 restores without the guessed list â
     expect(loadDraft()?.step).toBe('questionnaire');
     expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
   });
+
+  it('TC-CR7-28 (M-1): the migrated review keeps the assumptions and the frozen uncertain list the old draft held', () => {
+    const a = { questionId: 'field:scale', question: 'q', shortLabel: 's', assumption: 'a', fields: ['scale'] };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...oldQuestionnaire('questionnaire'), assumptions: [a], uncertainNodeIds: ['o1'] }));
+    expect(loadDraft()).toMatchObject({ step: 'graph_review', assumptions: [a], uncertainNodeIds: ['o1'] });
+  });
+
+  it('TC-CR7-28b (M-2): the current draft version is 3, and a version-2 description-path questions draft with no back snapshot is migrated like a version-1 one', () => {
+    saveDraft({ step: 'description_entry', description: 'x' } as IntakeState);
+    expect(JSON.parse(sessionStorage.getItem(DRAFT_KEY)!).version).toBe(3);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 2, state: oldQuestionnaire('questionnaire') }));
+    expect(loadDraftInfo()).toMatchObject({ migratedFromOldBuild: true, state: { step: 'graph_review' } });
+  });
+
+  it('TC-CR7-28b (M-2): a version-2 draft that is on the form path, or that already has its back snapshot, is not migrated', () => {
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ version: 2, state: { ...oldQuestionnaire('questionnaire'), plainAnswers: { '1': 'Tool' }, graph: { ...oldGraph, intake_method: 'structured_form' } } }),
+    );
+    expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 2, state: { ...oldQuestionnaire('questionnaire'), backGraph: oldGraph } }));
+    expect(loadDraftInfo()?.migratedFromOldBuild).toBe(false);
+    expect(loadDraft()?.step).toBe('questionnaire');
+  });
 });

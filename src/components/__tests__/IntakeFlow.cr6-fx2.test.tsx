@@ -392,7 +392,7 @@ describe('C-3: Undo disappears once its one snapshot is used', () => {
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        version: 2, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
         state: {
           step: 'questionnaire',
           description: 'd',
@@ -777,7 +777,7 @@ describe('I-3 / B-10 rewritten: a contradiction is shown iff it still holds when
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        version: 2, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
         state: {
           step: 'questionnaire',
           description: 'The process is fully manual',
@@ -837,7 +837,7 @@ describe('B-10c (pass 2): an explained contradiction is not raised again by the 
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        version: 2, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
         state: {
           step: 'questionnaire',
           description: 'The process is fully manual',
@@ -868,7 +868,7 @@ describe('B-10c (pass 2): an explained contradiction is not raised again by the 
     sessionStorage.setItem(
       DRAFT_KEY,
       JSON.stringify({
-        version: 2, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
+        version: 3, // CR7-28: a draft the CURRENT build saved (a bare one is the old shape)
         state: {
           step: 'questionnaire',
           description: 'The process is fully manual',
