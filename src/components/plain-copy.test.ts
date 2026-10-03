@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   describeAssumptions,
   summaryDestinationLine,
@@ -13,6 +15,15 @@ import {
   GRAPH_REVIEW_CARD_TITLES,
 } from './plain-copy';
 import type { AssumptionRef } from '../engine/plain-questions';
+// CR6-25: the real sources TC-R16-E-11 derives its field list from, instead
+// of hand-typing it (BC-003) — the same pattern
+// src/store/plain-language-coverage.test.ts already uses for the policy
+// side of this question.
+import { QUOTE_FIELDS, AGENT_REACH_FIELDS } from '../llm/graph-extractor';
+import { loadPolicy } from '../store/policy';
+import { loadPacks } from '../store/packs';
+import { getPackSources } from '../store/pack-source';
+import type { JurisdictionPack, PolicyFile } from '../engine/types';
 
 // R16-F §5 (DR7-06). plain-intake.ts (the engine) now returns assumption
 // REFERENCES ({ questionId, optionKey }, plus the platform-zone case)
@@ -130,27 +141,43 @@ describe('summaryDestinationLine (F-9, DR7-09)', () => {
 // must have an explicit entry; a test fails otherwise (D-20's "no bare
 // code ever reaches the first screen", extended to this screen).
 describe('QUESTIONNAIRE_COPY (R16-E §2, D-101/DR7-31)', () => {
-  const EVERY_FIELD_THE_GENERATOR_CAN_EMIT = [
-    'data_class',
-    'data_zone',
-    'model_type',
-    'action_type',
-    'autonomy_level',
-    'hitl',
-    'decision_bindingness',
-    'exposure',
-    'decision_type',
-    'output_reversibility',
-    'scale',
-    'replaces_prior_model',
-    'system_access_scope',
-    'multi_instance_coordination',
-    'vendor',
-    'declared_model_id',
-  ];
+  // CR6-25 (BC-003): derived from the real sources at test time instead of
+  // hand-typed. questionsForGuessedFields (question-generator.ts) can only
+  // ever emit a field that appears in QUOTE_FIELDS/AGENT_REACH_FIELDS
+  // (graph-extractor.ts — the only place `guessed[nodeId]` entries come
+  // from); candidatesFromRules can only ever emit a field that is a
+  // condition key on the real shipped policy's invariants/hard lines or its
+  // loaded packs' rules. A hand-typed list could silently drift from
+  // either source without this test noticing — exactly the defect class
+  // that hid the CR6-05 gap (replaces_prior_model) until it was traced by
+  // hand.
+  let policy: PolicyFile;
+  let packs: JurisdictionPack[];
+
+  beforeAll(() => {
+    const yaml = readFileSync(resolve(__dirname, '../../policy/appetite.yaml'), 'utf-8');
+    const result = loadPolicy(yaml);
+    if (!result.valid) throw new Error('shipped policy invalid: ' + JSON.stringify(result.errors));
+    policy = result.policy;
+    const packResult = loadPacks(getPackSources());
+    if (packResult.errors.length > 0) throw new Error('shipped packs invalid: ' + JSON.stringify(packResult.errors));
+    packs = packResult.packs;
+  });
+
+  function everyFieldTheGeneratorCanEmit(): string[] {
+    const fromQuoteFields = [
+      ...QUOTE_FIELDS.input,
+      ...QUOTE_FIELDS.processing,
+      ...QUOTE_FIELDS.output,
+      ...AGENT_REACH_FIELDS,
+    ];
+    const fromPolicyConditions = [...policy.invariants, ...policy.hard_lines].flatMap((r) => Object.keys(r.condition));
+    const fromPackConditions = packs.flatMap((p) => p.rules).flatMap((r) => Object.keys(r.condition));
+    return [...new Set([...fromQuoteFields, ...fromPolicyConditions, ...fromPackConditions])];
+  }
 
   it('TC-R16-E-11: every field the generator can emit has an entry with a non-empty question and shortLabel', () => {
-    for (const field of EVERY_FIELD_THE_GENERATOR_CAN_EMIT) {
+    for (const field of everyFieldTheGeneratorCanEmit()) {
       const copy = QUESTIONNAIRE_COPY[field];
       expect(copy, `missing QUESTIONNAIRE_COPY entry for "${field}"`).toBeDefined();
       expect(copy!.question.length).toBeGreaterThan(0);

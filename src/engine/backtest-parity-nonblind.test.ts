@@ -117,7 +117,10 @@ function evalNamedSubset(graph: DataFlowGraph): NamedSubset {
 
 function translatedResult(answers: PlainAnswers): NamedSubset {
   const { values } = plainAnswersToFormValues(answers, policy);
-  return evalNamedSubset(buildGraphFromForm(values));
+  // B-15: buildGraphFromForm's timestamp is now a parameter — the same
+  // literal this file's ORIGINAL_GRAPHS fixture already uses, since
+  // extracted_at feeds no condition any of these parity outcomes depend on.
+  return evalNamedSubset(buildGraphFromForm(values, '2026-01-01T00:00:00Z'));
 }
 
 describe('R16-B parity (§2.3) — NON-blind: UC-9..13 recorded form values translated into answers', () => {

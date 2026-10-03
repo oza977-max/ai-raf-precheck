@@ -17,11 +17,13 @@ import VerdictDisplay from '../VerdictDisplay';
 it('C-6: single-match /approved|rejected/i holds WITH inheritance rendered', () => {
   const r = loadPolicy(readFileSync(resolve(__dirname, '../../../policy/appetite.yaml'), 'utf-8'));
   if (!r.valid) throw new Error('bad policy');
+  // B-15: buildGraphFromForm's timestamp is now a parameter — fixed here
+  // since nothing in this test depends on its value.
   const g = buildGraphFromForm({ useCaseName: 'x', description: 'y',
     inputDataClass: 'Internal', inputDataZone: 'Zone B', modelType: 'ml', autonomyLevel: 1,
     processingDataZone: 'Zone B', outputActionType: 'recommend', outputExposure: 'internal-shared',
     decisionBindingness: 'advisory', outputReversibility: 'reversible', outputScale: 'limited',
-    replacesPriorModel: false, jurisdictions: [] });
+    replacesPriorModel: false, jurisdictions: [] }, '2026-01-01T00:00:00.000Z');
   g.processing_nodes[0]!.platform = 'PLAT-INTERNAL-ML';
   const e = evaluate(g, r.policy);
   if (!e.ok) throw new Error('eval failed');

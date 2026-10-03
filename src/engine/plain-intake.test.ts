@@ -612,10 +612,116 @@ describe('plainAnswersToFormValues — Q12 (replaces something)', () => {
     expect(plainAnswersToFormValues({ ...BASE, '12': 'no' }, policy()).values.replacesPriorModel).toBe(false);
   });
 
-  it('"Not sure" -> true, listed as an assumption', () => {
+  it('TC-CR6-05b: "Not sure" -> true, recorded as an assumption and listed back — the same reading QUESTIONNAIRE_COPY.replaces_prior_model.notSure gives for the generated guessed-field question (plain-copy.ts:649-658)', () => {
     const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '12': 'not-sure' }, policy());
     expect(values.replacesPriorModel).toBe(true);
-    expect(assumptions.some((a) => a.questionId === '12')).toBe(true);
+    const a = assumptions.find((x) => x.questionId === '12');
+    expect(a).toEqual({ questionId: '12', optionKey: 'not-sure', fields: ['replaces_prior_model'] });
+  });
+});
+
+// CR6-06 (Critical) — stored answers outside the current options skip the
+// stricter-reading rule. A stale supplier/company-assistant/platform id (the
+// registry entry was removed or renamed) or an unrecognised value for Q4/6/7/
+// 12 (an old option key a draft or an older build still has on file) must
+// take that question's own "Not sure" path — the strictest value AND its
+// assumption — exactly as if the person had answered "Not sure" themselves.
+// Before this fix each of these silently fell through to a value with NO
+// assumption recorded, so a reviewer had no way to know the answer had been
+// reinterpreted at all.
+describe('plainAnswersToFormValues — CR6-06 (stale/unrecognised stored answers take the "Not sure" path)', () => {
+  it('TC-CR6-06a: a stale/removed Q3supplier id takes the same path as "I don\'t know" — same vendor label, listed as an assumption', () => {
+    const stale = plainAnswersToFormValues(
+      { ...BASE, '3': 'supplier-feature', '3supplier': 'VENDOR-SUPPLIER-REMOVED' },
+      policy(),
+    );
+    const dontKnow = plainAnswersToFormValues(
+      { ...BASE, '3': 'supplier-feature', '3supplier': 'dont-know' },
+      policy(),
+    );
+    expect(stale.values.vendor).toBe(dontKnow.values.vendor);
+    expect(stale.values.vendor).toBe('a supplier you weren’t sure of');
+    const a = stale.assumptions.find((x) => x.questionId === '3supplier');
+    expect(a).toEqual({ questionId: '3supplier', optionKey: 'dont-know', fields: ['vendor'] });
+  });
+
+  it('TC-CR6-06b: a stale/removed Q3 platform id takes the "Not sure" path — Zone A, the unregistered vendor label, listed as an assumption', () => {
+    const stale = plainAnswersToFormValues({ ...BASE, '3': 'PLAT-REMOVED-OLD' }, policy());
+    const notSure = plainAnswersToFormValues({ ...BASE, '3': 'not-sure' }, policy());
+    expect(stale.values.inputDataZone).toBe('Zone A');
+    expect(stale.values.vendor).toBe(notSure.values.vendor);
+    expect(stale.values.platform).toBeUndefined();
+    const a = stale.assumptions.find((x) => x.questionId === '3');
+    expect(a).toEqual({ questionId: '3', optionKey: 'not-sure', fields: ['data_zone', 'vendor'] });
+  });
+
+  it('a stale/removed Q3aWhich id (several company-assistant vendors registered) takes the "Not sure" path, listed as an assumption', () => {
+    const pol = policy({
+      vendors: [
+        { id: 'CA-1', name: 'A', approved_envelope: {}, satisfies_controls: [], kind: 'company_assistant' },
+        { id: 'CA-2', name: 'B', approved_envelope: {}, satisfies_controls: [], kind: 'company_assistant' },
+      ],
+    });
+    const stale = plainAnswersToFormValues(
+      { ...BASE, '3': 'outside-assistant', '3a': 'firm-account', '3aWhich': 'CA-REMOVED' },
+      pol,
+    );
+    const notSure = plainAnswersToFormValues(
+      { ...BASE, '3': 'outside-assistant', '3a': 'firm-account', '3aWhich': 'not-sure' },
+      pol,
+    );
+    expect(stale.values.vendor).toBe(notSure.values.vendor);
+    const a = stale.assumptions.find((x) => x.questionId === '3aWhich');
+    expect(a).toEqual({ questionId: '3aWhich', optionKey: 'not-sure', fields: ['vendor'] });
+  });
+
+  it('TC-CR6-06c: an unrecognised Q6 value takes the same path as "Not sure" — execute, level 4, no hitl, binding, listed as an assumption', () => {
+    const stale = plainAnswersToFormValues({ ...BASE, '6': 'some-removed-option' }, policy());
+    const notSure = plainAnswersToFormValues({ ...BASE, '6': 'not-sure' }, policy());
+    expect(stale.values.outputActionType).toBe(notSure.values.outputActionType);
+    expect(stale.values.autonomyLevel).toBe(notSure.values.autonomyLevel);
+    expect(stale.values.hitl).toBe(notSure.values.hitl);
+    expect(stale.values.decisionBindingness).toBe(notSure.values.decisionBindingness);
+    const a = stale.assumptions.find((x) => x.questionId === '6');
+    expect(a).toEqual({
+      questionId: '6',
+      optionKey: 'not-sure',
+      fields: ['action_type', 'autonomy_level', 'decision_bindingness', 'hitl'],
+    });
+  });
+
+  it('an unrecognised Q4 value takes the "Not sure" path — agentic, listed as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '4': 'some-removed-option' }, policy());
+    expect(values.modelType).toBe('agentic');
+    expect(assumptions.find((a) => a.questionId === '4')).toEqual({
+      questionId: '4',
+      optionKey: 'not-sure',
+      fields: ['model_type'],
+    });
+  });
+
+  it('an unrecognised Q7 value takes the "Not sure" path — market-facing, listed as an assumption (unlike the real "public-market" option, which is a definite answer and stays unassumed)', () => {
+    const stale = plainAnswersToFormValues({ ...BASE, '7': 'some-removed-option' }, policy());
+    expect(stale.values.outputExposure).toBe('market-facing');
+    expect(stale.assumptions.find((a) => a.questionId === '7')).toEqual({
+      questionId: '7',
+      optionKey: 'not-sure',
+      fields: ['exposure'],
+    });
+
+    const publicMarket = plainAnswersToFormValues({ ...BASE, '7': 'public-market' }, policy());
+    expect(publicMarket.values.outputExposure).toBe('market-facing');
+    expect(publicMarket.assumptions).toEqual([]);
+  });
+
+  it('an unrecognised Q12 value takes the "Not sure" path — true, listed as an assumption', () => {
+    const { values, assumptions } = plainAnswersToFormValues({ ...BASE, '12': 'some-removed-option' }, policy());
+    expect(values.replacesPriorModel).toBe(true);
+    expect(assumptions.find((a) => a.questionId === '12')).toEqual({
+      questionId: '12',
+      optionKey: 'not-sure',
+      fields: ['replaces_prior_model'],
+    });
   });
 });
 
@@ -765,7 +871,10 @@ describe('plainAnswersToFormValues — TC-R16-D2-19: the "Not sure" fields guard
   }
 
   function graphFor(answers: PlainAnswers, pol: PolicyFile): DataFlowGraph {
-    return buildGraphFromForm(plainAnswersToFormValues(answers, pol).values);
+    // B-15: buildGraphFromForm's timestamp is now a parameter — fixed here
+    // since extracted_at is not one of CANDIDATE_GRAPH_FIELDS and this
+    // guard never compares it.
+    return buildGraphFromForm(plainAnswersToFormValues(answers, pol).values, '2026-01-01T00:00:00.000Z');
   }
 
   // Every question fully answered with a definite, non-"Not sure" value —

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractGraph } from './graph-extractor';
+import { questionsForGuessedFields } from '../engine/question-generator';
 
 const MOCK_GRAPH_INPUT = {
   input_nodes: [{ id: 'i1', label: 'client relationship notes', data_class: 'Client PII', data_zone: 'Zone B' }],
@@ -345,5 +346,182 @@ describe('extractGraph — agent-reach fields (R16-E §1, D-08/D-65)', () => {
       expect(result.value.guessed.p1 ?? []).not.toContain('system_access_scope');
       expect(result.value.guessed.p1 ?? []).not.toContain('multi_instance_coordination');
     }
+  });
+});
+
+// CR6-05 ("replaces something you already use?" is never asked on the
+// description path). replaces_prior_model is required on every processing
+// node (so the model must always answer true/false) but, before this fix,
+// had no entry in QUOTE_FIELDS.processing or the tool schema's basis_quotes
+// properties — an unquoted value was silently treated as having a basis,
+// never guessed, never turned into a question, even though TRACK-II-REPLACE
+// routes on it (policy/appetite.yaml).
+describe('extractGraph — CR6-05 (replaces_prior_model is now quote-checked)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('aigate:api-key', 'test-key');
+  });
+
+  function mockWith(processingNodes: unknown[]) {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        { type: 'tool_use', name: 'extract_graph', input: { ...MOCK_GRAPH_INPUT, processing_nodes: processingNodes } },
+      ],
+    });
+  }
+
+  it('TC-CR6-05a: a realistic model reply with no quote for replaces_prior_model is guessed, and the real question generator turns it into a question', async () => {
+    // A realistic full node shape (every required field present, basis_quotes
+    // object present with real quotes for the OTHER fields) — only
+    // replaces_prior_model's own quote is left blank, exactly the shape a
+    // real model emits when it has no textual basis for that one field.
+    mockWith([
+      {
+        id: 'p1',
+        label: 'GPT-4 based email drafting model',
+        model_type: 'llm',
+        autonomy_level: 1,
+        data_zone: 'Zone B',
+        vendor: 'azure-openai-internal',
+        replaces_prior_model: true,
+        basis_quotes: {
+          model_type: 'GPT-4 based',
+          autonomy_level: '',
+          data_zone: '',
+          vendor: 'azure-openai-internal',
+        },
+      },
+    ]);
+    const result = await extractGraph('drafts client emails using the azure-openai-internal account');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.guessed.p1).toContain('replaces_prior_model');
+
+    const questions = questionsForGuessedFields(result.value.guessed, result.value.graph);
+    expect(questions.some((q) => q.field === 'replaces_prior_model' && q.node_id === 'p1')).toBe(true);
+  });
+
+  it('TC-CR6-05c: a reply that quotes replaces_prior_model verbatim from the description is verified, not guessed', async () => {
+    mockWith([
+      {
+        id: 'p1',
+        label: 'GPT-4 based email drafting model',
+        model_type: 'llm',
+        autonomy_level: 1,
+        data_zone: 'Zone B',
+        vendor: 'azure-openai-internal',
+        replaces_prior_model: true,
+        basis_quotes: {
+          model_type: 'GPT-4 based',
+          autonomy_level: '',
+          data_zone: '',
+          vendor: 'azure-openai-internal',
+          replaces_prior_model: 'replaces the old rules engine',
+        },
+      },
+    ]);
+    const result = await extractGraph(
+      'drafts client emails using the azure-openai-internal account; it replaces the old rules engine',
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.guessed.p1 ?? []).not.toContain('replaces_prior_model');
+    expect(result.value.provenance.p1?.replaces_prior_model).toBe('replaces the old rules engine');
+  });
+});
+
+// B-8 (a node with no quotes at all skips the guessed-field mechanism).
+// basis_quotes is required in the JSON tool schema but optional in the zod
+// gate (defence in depth for a less strict provider, e.g. the local
+// open-model path) — a node that omits the key entirely used to short-
+// circuit to "nothing guessed", silently granting every field on it the
+// same standing as a verified quote.
+describe('extractGraph — B-8 (missing basis_quotes guesses every field)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('aigate:api-key', 'test-key');
+  });
+
+  it('TC-CR6-B8: an input node with no basis_quotes object at all has every one of its quote fields guessed', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            ...MOCK_GRAPH_INPUT,
+            // Realistic shape minus the basis_quotes key — legal under the
+            // zod gate (optional), and the exact shape a less strict
+            // provider (e.g. the local open-model path) can still produce.
+            input_nodes: [{ id: 'i1', label: 'client relationship notes', data_class: 'Client PII', data_zone: 'Zone B' }],
+          },
+        },
+      ],
+    });
+
+    const result = await extractGraph('drafts client emails using relationship notes');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Both of input's quote fields (data_class, data_zone) have defined
+    // values and no quote at all — both must be guessed, in QUOTE_FIELDS'
+    // own order.
+    expect(result.value.guessed.i1).toEqual(['data_class', 'data_zone']);
+    expect(result.value.provenance.i1).toBeUndefined();
+  });
+});
+
+// B-9 (the extraction cannot mark an unclassified decision). decision_type_
+// other (engine/types.ts) was absent from both the tool schema and the zod
+// gate, so the description path could never populate it and the engine's
+// unclassified-decision safety net could never fire from an LLM-extracted
+// graph.
+describe('extractGraph — B-9 (decision_type_other reaches the graph)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('aigate:api-key', 'test-key');
+  });
+
+  function mockOutputNode(overrides: Record<string, unknown> = {}) {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          name: 'extract_graph',
+          input: {
+            ...MOCK_GRAPH_INPUT,
+            output_nodes: [
+              {
+                id: 'o1',
+                label: 'collections priority list',
+                action_type: 'recommend',
+                exposure: 'internal-only',
+                decision_bindingness: 'advisory',
+                output_reversibility: 'reversible',
+                scale: 'limited',
+                ...overrides,
+              },
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  it('TC-CR6-B9: a free-typed, unclassified decision label reaches the graph as decision_type_other, with no decision_type set', async () => {
+    mockOutputNode({ decision_type_other: 'collections prioritisation' });
+
+    const result = await extractGraph('ranks accounts for collections follow-up');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.graph.output_nodes[0]?.decision_type_other).toBe('collections prioritisation');
+    expect(result.value.graph.output_nodes[0]?.decision_type).toBeUndefined();
+  });
+
+  it('a decision_type_other longer than the bound fails the whole extraction (rejected), not silently truncated', async () => {
+    mockOutputNode({ decision_type_other: 'x'.repeat(201) });
+
+    const result = await extractGraph('ranks accounts for collections follow-up');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.kind).toBe('parse-error');
   });
 });

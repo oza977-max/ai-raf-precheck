@@ -123,6 +123,52 @@ describe('StructuredForm — the replacement form (UC-3a survives: no API key, s
   });
 });
 
+// CR6-06 (Critical, StructuredForm.tsx half): isAnswered used to count a
+// single-select answer the moment it held any non-empty string, regardless
+// of whether that string was still one of the question's CURRENT options.
+// A stale stored answer (a saved draft from before a registry entry was
+// renamed, or an option an older build offered) could reach Continue as if
+// it had been read and confirmed, when the submitter never saw or picked
+// the value now sitting there.
+describe('StructuredForm — CR6-06 (a stale single-select answer reads as unanswered)', () => {
+  const INITIAL_ANSWERS: PlainAnswers = {
+    '1': 'Test tool',
+    '2': 'A test description.',
+    '3': 'firm-built',
+    '4': 'language',
+    '5': ['everyday'],
+    '6': 'read',
+    '7': 'me-or-team',
+    '8': 'operational',
+    '9': 'some-removed-option', // stale — not one of yes/no/not-sure
+    '10': 'small',
+    '11': ['elsewhere-not-sure'],
+    '12': 'no',
+  };
+
+  it('TC-CR6-06d: a stale stored answer leaves Continue disabled until the question is re-picked', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} initialAnswers={INITIAL_ANSWERS} onSubmit={vi.fn()} />);
+
+    // Every OTHER required question is answered validly — only Q9 carries a
+    // value outside its current option set — so this isolates the bug: the
+    // old isAnswered counted ANY non-empty string, enabling Continue despite
+    // the stale Q9 value never having been picked from the rendered options.
+    expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+
+    await user.click(radioIn(/if it gets something wrong/i, /can.t be taken back/i));
+    expect(screen.getByRole('button', { name: /continue/i })).toBeEnabled();
+  });
+
+  it('a stale stored answer is not pre-selected on any of the question\'s rendered options', () => {
+    render(<StructuredForm policy={policy()} initialAnswers={INITIAL_ANSWERS} onSubmit={vi.fn()} />);
+    const group = screen.getByRole('group', { name: /if it gets something wrong/i });
+    for (const radio of within(group).getAllByRole('radio')) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+});
+
 describe('StructuredForm — no engine vocabulary on the first screen (principle 1, UC-8 fit criterion 1)', () => {
   it('TC-R16-B-08: no question or option renders a bare engine term or code', () => {
     render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);

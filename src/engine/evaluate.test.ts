@@ -953,4 +953,41 @@ describe('evaluate — R16-A1 review sources (§1.3)', () => {
     expect(sources.some((s) => s.rule_id.startsWith('DR-'))).toBe(true);
     expect(result.value.downstream_reviews).toContain('Test pack review');
   });
+
+  // C-5 (review sources can carry duplicate rule ids). Two different firm-
+  // loaded packs can reuse the same rule id by coincidence (different
+  // authors, no cross-pack coordination) — rule_id is unique WITHIN one
+  // pack's own rules, never guaranteed unique ACROSS every pack a firm
+  // loads together. Before this fix, both entries reached the verdict even
+  // though `rule_id` promises one review requirement 1:1 with one rule.
+  it('TC-CR6-C5a: two different packs sharing the same required_review rule id collapse to ONE source, keeping the first by the same deterministic pack order every other producer uses', () => {
+    const sharedRule = (review: string) => ({
+      id: 'SHARED-REV-01',
+      title: 'Shared id review',
+      source: { document: 'Test Doc', section: 'S1', text: 'test' },
+      effect: { type: 'required_review' as const, review },
+      condition: { data_zone: { in: ['Zone C'] } },
+      basis: 'verbatim' as const,
+    });
+    const packA = {
+      pack_id: 'AAA-PACK', version: '0.1', jurisdiction: 'UK', regulator: 'r', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: '[FIRM]', reviewer_role: '[FIRM]', sign_off_date: '[DATE]',
+      rules: [sharedRule('Review from pack AAA')],
+    };
+    const packZ = {
+      pack_id: 'ZZZ-PACK', version: '0.1', jurisdiction: 'UK', regulator: 'r', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: '[FIRM]', reviewer_role: '[FIRM]', sign_off_date: '[DATE]',
+      rules: [sharedRule('Review from pack ZZZ')],
+    };
+    const result = evaluate({ ...mnpiGraph(), jurisdictions: ['UK'] }, policy, [packA, packZ]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const sources = result.value.downstream_review_sources ?? [];
+    const shared = sources.filter((s) => s.rule_id === 'SHARED-REV-01');
+    expect(shared).toHaveLength(1);
+    // AAA-PACK sorts before ZZZ-PACK — the same pack_id order
+    // resolveActivePacks/applyJurisdictionOverrides already use — so its
+    // review is the one kept.
+    expect(shared[0]).toEqual({ review: 'Review from pack AAA', rule_id: 'SHARED-REV-01' });
+  });
 });

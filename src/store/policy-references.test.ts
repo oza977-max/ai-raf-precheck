@@ -320,4 +320,67 @@ describe('checkPolicyReferences (R16-A1 §1.4)', () => {
     expect(result.errors).toEqual([]);
     expect(result.warnings.length).toBeGreaterThan(0);
   });
+
+  // C-5 (review sources can carry duplicate rule ids). A rule id is unique
+  // WITHIN one pack's own rules — nothing stops two DIFFERENT packs reusing
+  // the same id by coincidence (no cross-pack authoring coordination),
+  // which is exactly what let two sources with the same rule_id reach a
+  // verdict (now fixed in evaluate.ts's combineReviewSources). This warns
+  // the reviewer at load time instead of leaving it to be noticed on a
+  // verdict.
+  it('TC-CR6-C5b: warns when two loaded packs share a rule id, naming both packs', () => {
+    const sharedRulePack = (packId: string) => ({
+      pack_id: packId, version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: 'SHARED-01', title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'required_review' as const, review: 'r' },
+        condition: {}, basis: 'verbatim' as const,
+      }],
+    });
+    const result = checkPolicyReferences(basePolicy(), [sharedRulePack('AAA-PACK'), sharedRulePack('ZZZ-PACK')]);
+    const warning = result.warnings.find((w) => /SHARED-01/.test(w));
+    expect(warning, 'expected a warning naming the shared rule id').toBeDefined();
+    expect(warning).toMatch(/AAA-PACK/);
+    expect(warning).toMatch(/ZZZ-PACK/);
+  });
+
+  it('two different pack rule ids, even with identical content otherwise, never warn', () => {
+    const pack = (packId: string, ruleId: string) => ({
+      pack_id: packId, version: '1', jurisdiction: 'UK', regulator: 'x', document: 'd',
+      effective_date: '2026-01-01', reviewer_name: 'x', reviewer_role: 'x', sign_off_date: '2026-01-01',
+      rules: [{
+        id: ruleId, title: 't', source: { document: 'd', section: 's', text: 't' },
+        effect: { type: 'required_review' as const, review: 'r' },
+        condition: {}, basis: 'verbatim' as const,
+      }],
+    });
+    const result = checkPolicyReferences(basePolicy(), [pack('AAA-PACK', 'A-01'), pack('ZZZ-PACK', 'Z-01')]);
+    expect(result.warnings.filter((w) => /is used by more than one loaded pack/.test(w))).toEqual([]);
+  });
+
+  // A-5 (platforms[].vendor_id is never checked). Referential, like
+  // applies_to above: a platform's vendor_id names the supplier behind it
+  // (engine/types.ts's RegistryEntry comment) and must resolve against the
+  // policy's own vendor registry, same checkable-with-no-packs status as
+  // applies_to (platforms/vendors are part of THIS policy file, never a
+  // pack) — so this is always an error, never gated on packs being loaded.
+  it("TC-CR6-A5: a platform's vendor_id that is not a registered vendor id is always an error", () => {
+    const policy = basePolicy({
+      platforms: [{ id: 'PLAT-GHOST-VENDOR', name: 'n', approved_envelope: {}, satisfies_controls: [], vendor_id: 'VENDOR-GHOST' }],
+    });
+    const result = checkPolicyReferences(policy, []);
+    expect(result.errors).toContain("platform PLAT-GHOST-VENDOR: vendor_id 'VENDOR-GHOST' is not a registered vendor id.");
+  });
+
+  it('a platform with a vendor_id that IS registered is not an error; a platform with no vendor_id at all is not an error', () => {
+    const policy = basePolicy({
+      platforms: [
+        { id: 'PLAT-X', name: 'n', approved_envelope: {}, satisfies_controls: [], vendor_id: 'VENDOR-X' },
+        { id: 'PLAT-Y', name: 'n', approved_envelope: {}, satisfies_controls: [] },
+      ],
+      vendors: [{ id: 'VENDOR-X', name: 'n', approved_envelope: {}, satisfies_controls: [] }],
+    });
+    expect(checkPolicyReferences(policy, []).errors).toEqual([]);
+  });
 });
