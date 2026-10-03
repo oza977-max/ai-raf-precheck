@@ -750,7 +750,16 @@ export function supplierDisplayName(
   // spaces — "VENDOR-GONE-01", "VENDOR-LLM-v1") that matches nothing is an
   // internal id for something not on the list; it never reaches a screen
   // raw. An ordinary name a person typed ("Anthropic") shows as written.
-  if (ID_SHAPED.test(vendor)) return { name: 'a supplier not on your firm’s list', registered: false };
+  // CR6-G7b: "id-shaped" is judged against the policy's OWN registry id
+  // shape (the prefix of its vendor/platform ids, e.g. "VENDOR-", "PLAT-").
+  // Real names like "Q-Corp" or "ACME-Vision" look the same in general, so
+  // with no policy to learn the shape from, the value shows as written.
+  const prefixes = new Set(
+    [...(policy?.platforms ?? []), ...(policy?.vendors ?? [])]
+      .map((r) => /^[A-Z][A-Z0-9]*[-_]/.exec(r.id)?.[0])
+      .filter((p): p is string => !!p),
+  );
+  if (ID_SHAPED.test(vendor) && [...prefixes].some((p) => vendor.startsWith(p))) return { name: 'a supplier not on your firm’s list', registered: false };
   return { name: vendor, registered: false };
 }
 
@@ -771,6 +780,25 @@ export function countryName(
   policy: { jurisdictions?: Array<{ code: string; name: string }> } | undefined,
 ): string {
   return lookupCountryName(code, policy) ?? UNLISTED_COUNTRY;
+}
+
+/** CR6-23b: a list of country names for display — the policy's own names in
+ *  order, with every unlisted code folded into one phrase ("another country"
+ *  or "N other countries") so the same phrase never repeats. */
+export function countryNameList(
+  codes: string[],
+  policy: { jurisdictions?: Array<{ code: string; name: string }> } | undefined,
+): string[] {
+  const listed: string[] = [];
+  let unlisted = 0;
+  for (const code of codes) {
+    const n = lookupCountryName(code, policy);
+    if (n === undefined) unlisted += 1;
+    else if (!listed.includes(n)) listed.push(n);
+  }
+  if (unlisted === 1) listed.push(UNLISTED_COUNTRY);
+  else if (unlisted > 1) listed.push(`${unlisted} other countries`);
+  return listed;
 }
 
 /** §2's catch-all (D-20's "no bare code ever reaches the first screen",

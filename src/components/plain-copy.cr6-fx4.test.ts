@@ -35,7 +35,8 @@ describe('plain-copy — G-7: an unmatched supplier id never reaches the screen 
       registered: false,
     });
     expect(supplierDisplayName('VENDOR-LLM-v1', policy).name).toBe('a supplier not on your firm’s list');
-    expect(supplierDisplayName('SUP_42', policy).name).toBe('a supplier not on your firm’s list');
+    // CR6-G7b: only the policy's own id shape (VENDOR-, from VENDOR-A) is an id.
+    expect(supplierDisplayName('SUP_42', policy).name).toBe('SUP_42');
     expect(supplierDisplayName('Anthropic', policy).name).toBe('Anthropic');
     expect(supplierDisplayName('Northwind Data Ltd', policy).name).toBe('Northwind Data Ltd');
     // A registered one still resolves, and "internal" is unchanged.
@@ -44,8 +45,21 @@ describe('plain-copy — G-7: an unmatched supplier id never reaches the screen 
   });
 });
 
+describe('plain-copy — G7b: real supplier names that look id-shaped are shown as written', () => {
+  const policy = { vendors: [{ id: 'VENDOR-A', plain_name: 'Acme Supplier' }], platforms: [{ id: 'PLAT-X', plain_name: 'P' }] };
+  it('TC-CR6-G7b: Q-Corp, V-Systems, ACME-Vision, ZED-AI, Q-ID, NOVA-Clara, AB12-Labs, K9-AI stay as written; a stale id with the policy prefix is still masked; no policy means as written', () => {
+    for (const n of ['Q-Corp', 'V-Systems', 'ACME-Vision', 'ZED-AI', 'Q-ID', 'NOVA-Clara', 'AB12-Labs', 'K9-AI']) {
+      expect(supplierDisplayName(n, policy).name).toBe(n);
+      expect(supplierDisplayName(n, undefined).name).toBe(n);
+    }
+    expect(supplierDisplayName('VENDOR-GONE-01', policy).name).toBe('a supplier not on your firm’s list');
+    expect(supplierDisplayName('PLAT-GONE-01', policy).name).toBe('a supplier not on your firm’s list');
+    expect(supplierDisplayName('VENDOR-GONE-01', undefined).name).toBe('VENDOR-GONE-01');
+  });
+});
+
 describe('plain-copy — CR6-23: a country code is never shown bare', () => {
-  it('TC-CR6-23: countryName gives the policy name, or a neutral phrase for an unlisted code', () => {
+  it('TC-CR6-23c: countryName gives the policy name, or a neutral phrase for an unlisted code', () => {
     const policy = { jurisdictions: [{ code: 'UK', name: 'United Kingdom' }] };
     expect(countryName('UK', policy)).toBe('United Kingdom');
     const unlisted = countryName('XX', policy);

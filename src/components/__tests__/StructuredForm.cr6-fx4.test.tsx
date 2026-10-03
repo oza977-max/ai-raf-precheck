@@ -55,6 +55,9 @@ describe('StructuredForm — CR6-07 required questions are announced', () => {
     const markers = container.querySelectorAll('.required-marker');
     expect(markers.length).toBeGreaterThanOrEqual(12);
     for (const m of markers) {
+      // Radiogroups announce requiredness via aria-required (07e), so their
+      // marker is the glyph only; every other marker carries the hidden text.
+      if (m.closest('[role="radiogroup"]')) continue;
       expect(m.querySelector('.visually-hidden')?.textContent).toMatch(/\(required\)/i);
     }
   });
@@ -74,5 +77,48 @@ describe('StructuredForm — CR6-07 required questions are announced', () => {
     await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
     expect(document.getElementById(describedBy!)!.textContent).not.toMatch(/what do you want to call it/i);
     expect(within(document.body).queryAllByText(/still to answer/i).length).toBe(1);
+  });
+
+  it('TC-CR6-07b: when the form is complete the line and the aria-describedby are both gone', async () => {
+    const user = userEvent.setup();
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    const inGroup = (g: RegExp, o: RegExp) =>
+      within(screen.getByRole('radiogroup', { name: g })).getByRole('radio', { name: o });
+    await user.type(screen.getByLabelText(/what do you want to call it/i), 'Test tool');
+    await user.type(screen.getByLabelText(/in a sentence or two/i), 'A test description.');
+    await user.click(screen.getByRole('radio', { name: /something a team in your firm built for this job/i }));
+    await user.click(screen.getByRole('radio', { name: /reads, summarises, translates, writes or answers questions in words/i }));
+    await user.click(screen.getByRole('checkbox', { name: /everyday work information/i }));
+    await user.click(screen.getByRole('radio', { name: /finds or summarises for people to read/i }));
+    await user.click(screen.getByRole('radio', { name: /^only me or my own team$/i }));
+    await user.click(screen.getByRole('radio', { name: /none of these — it.s for day-to-day work/i }));
+    await user.click(inGroup(/if it gets something wrong/i, /^yes$/i));
+    await user.click(screen.getByRole('radio', { name: /just me, or a small trial/i }));
+    await user.click(screen.getByRole('checkbox', { name: /somewhere else, or not sure/i }));
+    await user.click(inGroup(/does it replace something/i, /^no$/i));
+    const button = screen.getByRole('button', { name: /continue/i });
+    expect(button).toBeEnabled();
+    expect(button).not.toHaveAttribute('aria-describedby');
+    expect(document.getElementById('pf-missing')).toBeNull();
+  });
+
+  it('TC-CR6-07d: the still-to-answer line reads plainly — no doubled stops, a noun on the count, one final stop', () => {
+    render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    const text = document.getElementById('pf-missing')!.textContent!;
+    expect(text).not.toMatch(/[.?!];/); // "…it?; In a sentence…"
+    expect(text).not.toMatch(/\.\./);
+    expect(text).toMatch(/and \d+ more questions?\.$/);
+  });
+
+  it('TC-CR6-07e: a required single-select is announced as required once — the fieldset is the radiogroup, its name does not repeat "required"', () => {
+    const { container } = render(<StructuredForm policy={policy()} onSubmit={vi.fn()} />);
+    const groups = screen.getAllByRole('radiogroup');
+    for (const g of groups) {
+      expect(g.tagName).toBe('FIELDSET');
+      expect(g).toHaveAttribute('aria-required', 'true');
+      expect(g.querySelector('[role="radiogroup"]')).toBeNull();
+      expect(g).not.toHaveAccessibleName(/required/i);
+    }
+    expect(container.querySelectorAll('div[role="radiogroup"]')).toHaveLength(0);
   });
 });

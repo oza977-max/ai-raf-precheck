@@ -142,11 +142,16 @@ Test files: `src/store/handoff.test.ts`,
 | ID | Asserts |
 |---|---|
 | TC-CR6-07a | Free-text controls and radio groups carry `required` / `aria-required`; tick-all legends say "(tick at least one)"; the asterisk has hidden text "(required)" — `StructuredForm.cr6-fx4.test.tsx` |
-| TC-CR6-07b | A visible line by Continue says what is still missing and is tied to the button with `aria-describedby`; it goes when the form is complete — `StructuredForm.cr6-fx4.test.tsx` |
+| TC-CR6-07b | A visible line by Continue says what is still missing and is tied to the button with `aria-describedby`; once the form is truly complete both the line and the `aria-describedby` are gone — `StructuredForm.cr6-fx4.test.tsx` |
+| TC-CR6-07d | The "Still to answer" line has no doubled stops, a noun on the count ("and N more questions") and one final stop — `StructuredForm.cr6-fx4.test.tsx` |
+| TC-CR6-07e | A required single-select is a fieldset with `role="radiogroup"` and `aria-required`, named by its legend, and "required" is announced once — `StructuredForm.cr6-fx4.test.tsx` |
 | TC-CR6-07c | A visually-hidden helper class exists for the required-field text — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-09 | Each named faint-text rule (first-screen "also covers", the access-scope legend, the chain source) is at least 4.5:1 on its background, computed from the CSS tokens — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-10 | The register detail names the correction's source in plain words (form, review screen, or an answer to a question) and says nothing for an older record without one — `RegisterDetail.cr6-fx4.test.tsx` |
 | TC-CR6-11 | With both a platform and a model declared and no graph, one combined entry is built from the verdict's own inheritance, saying the record does not keep the two apart — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-CR6-11b | Real policy: PLAT-CLOUD-LLM (on the registry) + VENDOR-NOT-LISTED, no graph — the entry names only VENDOR-NOT-LISTED as not on the covered registry, still lists the inherited controls, and never says "nothing inherited"; the fold summary states the same split ("still inherited from the other one, which is") — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-CR6-11c | Real policy: PLAT-CLOUD-LLM with Confidential data (outside its Internal-only envelope) + VENDOR-NOT-LISTED, no graph — the entry reads "Partly on the registry", names the unlisted id, and says the listed one inherits nothing because the use case falls outside its covered envelope — `VerdictDisplay.cr6-fx4.test.tsx` |
+| TC-CR6-13b | Two packs sharing a rule id with different review text: each review's plain wording comes from the pack rule whose review text matches — `verdict-view-model.test.ts` |
 | TC-CR6-16 | Every action type at every autonomy level reads as a full line; at level 2 and above it names the action — `plain-copy.cr6-fx4.test.ts` |
 | TC-CR6-18 | With an empty core reason, no sentence starts with ". " or ", " and none carries a doubled stop — `verdict-view-model.test.ts` |
 | TC-CR6-19 | The model button label and the Recorded line use `plain_name`, falling back to `model_id` — `QuestionnaireStep.cr6-fx4.test.tsx` |
@@ -154,11 +159,14 @@ Test files: `src/store/handoff.test.ts`,
 | TC-CR6-20 | The evidence-scope caveat (`--scope`) has its own contrast-safe rule that differs from plain evidence text — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-21 | The questions' tick-all list resets the fieldset and styles each option like the form's — `app-css.cr6-fx4.test.ts` |
 | TC-CR6-22 | The "No" screen's paragraphs have spacing and size rules like the first-screen reason — `app-css.cr6-fx4.test.ts` |
-| TC-CR6-23 | A country code reads as the policy's own country name, or a neutral "another country" when the policy does not list it — never bare (`plain-copy.cr6-fx4.test.ts`, `UnderstoodSummary.test.tsx`) |
+| TC-CR6-23 | On the summary, a country code the policy does not list is never shown bare — `UnderstoodSummary.test.tsx` |
+| TC-CR6-23b | Two unlisted codes read "2 other countries", never "another country, another country"; listed names are de-duplicated — `UnderstoodSummary.test.tsx` |
+| TC-CR6-23c | `countryName` gives the policy's own country name, or the neutral "another country" for an unlisted code — `plain-copy.cr6-fx4.test.ts` |
 | TC-CR6-29 | The register's lifecycle banner and the policy screen's framing never render the reserved words: the banner reads "cleared by 2LoD" and the policy screen says "ruled out straight away" (assertions inside `RegisterView.test.tsx` and `PolicyEditor.test.tsx`) |
 | TC-CR6-A2 | `plain_change` placeholders are filled like `plain_reason`, for a firm hard line and a pack hard line — `verdict-view-model.test.ts` |
 | TC-CR6-D2 | The unregistered-component text says "supplier and platform risk assessment" — `VerdictDisplay.cr6-fx4.test.tsx` |
-| TC-CR6-G7 | An id-shaped value with no registry match reads "a supplier not on your firm's list"; ordinary words stay as written — `plain-copy.cr6-fx4.test.ts` |
+| TC-CR6-G7 | A value with the id shape AND a prefix the policy's own platform/vendor ids use, with no registry match, reads "a supplier not on your firm's list"; anything else (incl. `SUP_42`, with no policy prefix) is shown as written — `plain-copy.cr6-fx4.test.ts` |
+| TC-CR6-G7b | Real names that look like ids (Q-Corp, V-Systems, ACME-Vision, ZED-AI, Q-ID, NOVA-Clara, AB12-Labs, K9-AI) are shown as written, with or without a policy; `VENDOR-GONE-01` / `PLAT-GONE-01` are still masked — `plain-copy.cr6-fx4.test.ts` |
 | TC-CR6-G8 | When nothing is outstanding the count heading is absent; the in-place line keeps its own wording — `VerdictDisplay.cr6-fx4.test.tsx` |
 | TC-CR6-G8b | With something outstanding the count heading still shows — `VerdictDisplay.cr6-fx4.test.tsx` |
 

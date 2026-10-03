@@ -12,7 +12,6 @@ import {
   SUMMARY_ACCESS_SCOPE,
   SUMMARY_MULTI_INSTANCE,
   summaryBehaviourLine,
-  countryName,
   summaryShowsWeight,
   summaryDecisionLine,
   summaryDestinationLine,
@@ -20,6 +19,7 @@ import {
   plausibilityMessageForDescription,
   questionnaireCopyForField,
   supplierDisplayName,
+  countryNameList,
 } from './plain-copy';
 import type { Assumption, PlainAnswers } from './plain-copy';
 import { Fold } from './Fold';
@@ -137,7 +137,7 @@ export default function UnderstoodSummary({
   const through = throughSupplierLine(processing?.vendor, policy);
   const runsOn = runsOnLine(processing?.platform, policy);
   // CR6-23: never a bare code — the policy's own name, or a neutral phrase.
-  const countryNames = graph.jurisdictions.map((code) => countryName(code, policy));
+  const countryNames = countryNameList(graph.jurisdictions, policy);
   // F-9 (DR7-09). Pure, computed at render from the description and the
   // graph already in hand — no new state. Runs for BOTH paths: this
   // component is the one point the form path reaches that the field-card

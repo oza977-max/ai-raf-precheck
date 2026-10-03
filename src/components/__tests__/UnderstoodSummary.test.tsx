@@ -288,6 +288,15 @@ describe('UnderstoodSummary — behaviour, decisions, scale', () => {
     expect(text).toMatch(/another country/i);
   });
 
+  it('TC-CR6-23b: two unlisted codes read as "2 other countries", not "another country, another country"', () => {
+    const policy = { jurisdictions: [{ code: 'UK', name: 'United Kingdom', pack_files: [] }] } as unknown as PolicyFile;
+    render(<UnderstoodSummary graph={graph({ jurisdictions: ['UK', 'XX', 'YY'] })} policy={policy} onChangeAnswer={vi.fn()} />);
+    const text = sectionFor(/how widely it.s used, and where/i).textContent ?? '';
+    expect(text).not.toMatch(/another country, another country/i);
+    expect(text).toMatch(/United Kingdom, 2 other countries/);
+    expect(text).not.toMatch(/\b(XX|YY)\b/);
+  });
+
   it('states plainly whether it replaces something', () => {
     const { rerender } = render(
       <UnderstoodSummary

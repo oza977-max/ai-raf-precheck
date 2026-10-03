@@ -17,10 +17,10 @@ function realPolicy(): PolicyFile {
   return r.policy;
 }
 
-function verdictFor(platform: string | undefined, vendor: string | undefined, policy: PolicyFile): Verdict {
+function verdictFor(platform: string | undefined, vendor: string | undefined, policy: PolicyFile, inputDataClass: 'Internal' | 'Confidential' = 'Internal'): Verdict {
   const g = buildGraphFromForm(
     {
-      useCaseName: 'x', description: 'y', inputDataClass: 'Internal', inputDataZone: 'Zone B', modelType: 'ml',
+      useCaseName: 'x', description: 'y', inputDataClass, inputDataZone: 'Zone B', modelType: 'ml',
       autonomyLevel: 1, processingDataZone: 'Zone B', outputActionType: 'recommend', outputExposure: 'internal-shared',
       decisionBindingness: 'advisory', outputReversibility: 'reversible', outputScale: 'limited',
       replacesPriorModel: false, jurisdictions: [],
@@ -54,6 +54,40 @@ describe('VerdictDisplay — CR6-11: platform AND supplier declared, no graph (t
     expect(entries[0]!.textContent).toContain('VENDOR-APPROVED-LLM');
     // The summary promised N inherited controls; the list shows them.
     expect(entries[0]!.textContent).toMatch(/Inherited:/);
+  });
+});
+
+describe('VerdictDisplay — CR6-11b: platform on the registry, supplier not, no graph', () => {
+  it('TC-CR6-11b: names exactly the unlisted id, still lists what the listed one inherits, never says "nothing inherited"', () => {
+    const policy = realPolicy();
+    const verdict = verdictFor('PLAT-CLOUD-LLM', 'VENDOR-NOT-LISTED', policy);
+    expect(verdict.inheritance!.unresolved_components).toEqual(['VENDOR-NOT-LISTED']);
+    expect(verdict.inheritance!.inherited_controls.length).toBeGreaterThan(0);
+    const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
+    const entry = container.querySelector('.verdict__chain-entry')!;
+    expect(entry.textContent).toMatch(/Inherited:/);
+    expect(entry.textContent).toMatch(/Not on the covered registry:\s*VENDOR-NOT-LISTED/);
+    expect(entry.textContent).not.toMatch(/Nothing inherited/);
+    expect(entry.textContent).not.toMatch(/PLAT-CLOUD-LLM[^]*Not on the registry/);
+    const fold = container.textContent ?? '';
+    expect(fold).not.toMatch(/not on the covered registry — nothing inherited/);
+    expect(fold).toMatch(/1 declared component not on the covered registry/);
+    // FX-4 pass 2: with two components "the rest" is always exactly one.
+    expect(fold).toMatch(/still inherited from the other one, which is/);
+  });
+
+  it('TC-CR6-11c: listed platform OUTSIDE its envelope + unlisted supplier — says why the listed one inherits nothing', () => {
+    const policy = realPolicy();
+    // PLAT-CLOUD-LLM's approved envelope stops at Internal data, so a
+    // Confidential case inherits nothing from it (real policy, real engine).
+    const verdict = verdictFor('PLAT-CLOUD-LLM', 'VENDOR-NOT-LISTED', policy, 'Confidential');
+    expect(verdict.inheritance!.unresolved_components).toEqual(['VENDOR-NOT-LISTED']);
+    expect(verdict.inheritance!.inherited_controls).toEqual([]);
+    const { container } = render(<VerdictDisplay verdict={verdict} auditEvents={[]} policy={policy} onCorrect={vi.fn()} />);
+    const entry = container.querySelector('.verdict__chain-entry')!;
+    expect(entry.textContent).toMatch(/Partly on the registry/);
+    expect(entry.textContent).toMatch(/Not on the covered registry:\s*VENDOR-NOT-LISTED/);
+    expect(entry.textContent).toMatch(/falls outside the covered envelope/);
   });
 });
 

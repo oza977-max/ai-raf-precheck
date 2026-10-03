@@ -557,6 +557,24 @@ describe('buildVerdictView — TC-R16-D1-07: covered vs. owed reviews (covers_re
     expect(withPacks.owedReviews[0]!.ownerText).toBe("your firm's model validation team");
   });
 
+  it('TC-CR6-13b: two packs sharing a rule id with different review text — the rule whose review matches the verdict source is the one used', () => {
+    const mk = (pack_id: string, review: string, plain_name: string, plain_owner: string) =>
+      ({
+        pack_id, version: '1', jurisdiction: 'XX', regulator: 'r', document: 'd', effective_date: '2026-01-01',
+        reviewer_name: 'n', reviewer_role: 'r', sign_off_date: '2026-01-01',
+        rules: [{ id: 'SHARED-REV-01', effect: { type: 'required_review', review, plain_name, plain_owner } }],
+      }) as unknown as JurisdictionPack;
+    const packs = [mk('A-PACK', 'Review Alpha', 'alpha words', 'alpha team'), mk('B-PACK', 'Review Beta', 'beta words', 'beta team')];
+    const verdict = makeVerdict({
+      controls: [],
+      downstream_reviews: ['Review Beta'],
+      downstream_review_sources: [{ review: 'Review Beta', rule_id: 'SHARED-REV-01' }],
+    });
+    const view = buildVerdictView(verdict, undefined, undefined, undefined, undefined, undefined, { packs });
+    expect(view.owedReviews[0]!.plainName).toBe('beta words');
+    expect(view.owedReviews[0]!.ownerText).toBe('beta team');
+  });
+
   it('TC-R16-D1-07g: a firm review without plain_name falls back to its formal name + pointer (§4.4)', () => {
     const policy = makePolicy({
       downstream_reviews: [{ id: 'DR-X', review: 'Formal review name', condition: {} }],

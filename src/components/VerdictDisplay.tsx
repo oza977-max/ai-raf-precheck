@@ -1002,6 +1002,10 @@ interface InheritanceSourceEntry {
   inheritedControls: string[];
   dimensions: EnvelopeDimensionFit[];
   note?: string;
+  /** CR6-11b: the declared ids the verdict itself says are not on the
+   *  registry (only set for the combined entry, where one badge cannot say
+   *  which of the two). */
+  unresolvedIds?: string[];
 }
 
 const INHERITANCE_SOURCE_LABEL: Record<InheritanceSourceEntry['source'], string> = {
@@ -1063,6 +1067,7 @@ function inheritanceEntries(
         resolved: inheritance.resolved,
         inheritedControls: inheritance.inherited_controls,
         dimensions: inheritance.dimensions,
+        unresolvedIds: inheritance.unresolved_components,
         note: 'A platform and a supplier were both declared. This record does not keep the two apart, so what they cover is shown together.',
       },
     ];
@@ -2138,7 +2143,7 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
             verdict.inheritance
               ? verdict.inheritance.resolved
                 ? `On the covered registry — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} inherited`
-                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry — nothing inherited`
+                : `${verdict.inheritance.unresolved_components.length} declared component${verdict.inheritance.unresolved_components.length === 1 ? '' : 's'} not on the covered registry${verdict.inheritance.inherited_controls.length > 0 ? ` — ${verdict.inheritance.inherited_controls.length} control${verdict.inheritance.inherited_controls.length === 1 ? '' : 's'} still inherited from the other one, which is` : ' — nothing inherited'}`
               : ''
           }
         ><div className="verdict__chain">
@@ -2160,32 +2165,61 @@ export default function VerdictDisplay({ verdict, auditEvents, policy, graph, re
                 <span className="verdict__chain-source">{INHERITANCE_SOURCE_LABEL[entry.source]}</span>
                 <code>{entry.declaredId}</code>
                 <span className={`verdict__conf verdict__conf--${entry.resolved ? 'registered' : 'unregistered'}`}>
-                  {entry.resolved ? 'On the covered registry' : 'Not on the registry'}
+                  {entry.unresolvedIds && entry.unresolvedIds.length > 0
+                    ? entry.unresolvedIds.length === entry.declaredId.split(' + ').length
+                      ? 'Not on the registry'
+                      : 'Partly on the registry'
+                    : entry.resolved ? 'On the covered registry' : 'Not on the registry'}
                 </span>
               </div>
 
               {entry.note && <p className="verdict__chain-derived">{entry.note}</p>}
 
-              {entry.resolved ? (
-                entry.inheritedControls.length > 0 ? (
-                  <p className="verdict__chain-derived">
-                    {/* design-review-003 (Panel B): every other control list on
-                        this page resolves the id through policy.controls before
-                        showing it — this one used to print the raw id list. */}
-                    Inherited:&ensp;
-                    {entry.inheritedControls.map((id) => findControlName(policy, id) ?? id).join(', ')}{' '}
-                    — already satisfied by this approval, so not re-imposed here.
-                  </p>
-                ) : (
+              {entry.inheritedControls.length > 0 && (
+                <p className="verdict__chain-derived">
+                  {/* design-review-003 (Panel B): every other control list on
+                      this page resolves the id through policy.controls before
+                      showing it — this one used to print the raw id list. */}
+                  Inherited:&ensp;
+                  {entry.inheritedControls.map((id) => findControlName(policy, id) ?? id).join(', ')}{' '}
+                  — already satisfied by this approval, so not re-imposed here.
+                </p>
+              )}
+              {entry.unresolvedIds && entry.unresolvedIds.length > 0 && (
+                <p className="verdict__chain-derived">
+                  Not on the covered registry:&ensp;{entry.unresolvedIds.join(', ')}. A full
+                  supplier and platform risk assessment is required for {entry.unresolvedIds.length === 1 ? 'it' : 'them'}.
+                </p>
+              )}
+              {entry.inheritedControls.length === 0 && !entry.unresolvedIds && (
+                entry.resolved ? (
                   <p className="verdict__chain-derived">
                     Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
                     controls are assessed from scratch.
                   </p>
+                ) : (
+                  <p className="verdict__chain-derived">
+                    Nothing inherited:&ensp;this component is not on the covered registry. A full
+                    supplier and platform risk assessment is required.
+                  </p>
                 )
-              ) : (
+              )}
+              {/* FX-4 pass 2 (TC-CR6-11c): the listed component is on the
+                  registry but this use case sits outside its envelope — say
+                  why it inherits nothing, beside the unlisted one's line. */}
+              {entry.inheritedControls.length === 0 &&
+                entry.unresolvedIds &&
+                entry.unresolvedIds.length > 0 &&
+                entry.unresolvedIds.length < entry.declaredId.split(' + ').length && (
                 <p className="verdict__chain-derived">
-                  Nothing inherited:&ensp;this component is not on the covered registry. A full
-                  supplier and platform risk assessment is required.
+                  Nothing inherited from the listed one either:&ensp;this use case falls outside the
+                  covered envelope, so its controls are assessed from scratch.
+                </p>
+              )}
+              {entry.inheritedControls.length === 0 && entry.unresolvedIds && entry.unresolvedIds.length === 0 && (
+                <p className="verdict__chain-derived">
+                  Nothing inherited:&ensp;this use case falls outside the covered envelope, so its
+                  controls are assessed from scratch.
                 </p>
               )}
 

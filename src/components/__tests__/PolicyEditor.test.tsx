@@ -223,6 +223,9 @@ describe('PolicyEditor — appetite framework view (V1.2-C)', () => {
     // dropped — the sentence already says the same thing in plain words.
     // TC-CR6-29: this pinned "rejected immediately" — a reserved word on a
     // rendered screen. The panel now says "ruled out straight away".
+    // Scoped to the framing element, not page-wide: the YAML editor textarea
+    // on this screen shows policy comments that contain the word "rejected";
+    // this assertion covers rendered UI text only.
     const framing = screen.getByText(/ruled out straight away/i);
     expect(framing.textContent).not.toMatch(/approved|rejected/i);
     expect(screen.getByText('HL-001')).toBeInTheDocument();

@@ -478,6 +478,7 @@ function resolveReviewPlain(
   baseId: string,
   policy: PolicyFile | undefined,
   packs: JurisdictionPack[] = [],
+  formalReview?: string,
 ): { name: string; owner: string } {
   if (baseId === 'PV-UNREGISTERED') return PV_UNREGISTERED_PLAIN;
   if (baseId === 'MODEL-REGISTRY') return MODEL_REGISTRY_PLAIN;
@@ -491,7 +492,11 @@ function resolveReviewPlain(
   // CR6-13: first match across packs in the packs array's own order
   // (loadPacks sorts by pack_id — deterministic, as findPackHardLineRule).
   for (const pack of packs) {
-    const rule = pack.rules.find((r) => r.id === baseId && r.effect.type === 'required_review');
+    // CR6-13b: two packs may share a rule id with different review text —
+    // the rule whose own review is the one the verdict recorded is the match.
+    const rule = pack.rules.find(
+      (r) => r.id === baseId && r.effect.type === 'required_review' && (formalReview === undefined || r.effect.review === formalReview),
+    );
     if (rule && rule.effect.type === 'required_review') {
       return {
         name: rule.effect.plain_name ?? PACK_REVIEW_FALLBACK_NAME,
@@ -511,7 +516,7 @@ function buildReviewInstances(verdict: Verdict, policy: PolicyFile | undefined, 
   if (sources !== undefined) {
     return sources.map((s) => {
       const baseId = baseReviewId(s.rule_id);
-      const { name, owner } = resolveReviewPlain(baseId, policy, packs);
+      const { name, owner } = resolveReviewPlain(baseId, policy, packs, s.review);
       return { baseId, formalName: s.review, plainName: name, ownerText: owner };
     });
   }

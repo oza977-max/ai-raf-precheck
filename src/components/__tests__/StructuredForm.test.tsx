@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 function radioIn(groupName: RegExp, optionName: RegExp) {
-  return within(screen.getByRole('group', { name: groupName })).getByRole('radio', { name: optionName });
+  return within(screen.getByRole('radiogroup', { name: groupName })).getByRole('radio', { name: optionName });
 }
 
 // R16-B (build/prompts/R16.md v2.1 §2.2). Replaces the field-by-field form
@@ -178,7 +178,7 @@ describe('StructuredForm — CR6-06 (a stale single-select answer reads as unans
 
   it('a stale stored answer is not pre-selected on any of the question\'s rendered options', () => {
     render(<StructuredForm policy={policy()} initialAnswers={INITIAL_ANSWERS} onSubmit={vi.fn()} />);
-    const group = screen.getByRole('group', { name: /if it gets something wrong/i });
+    const group = screen.getByRole('radiogroup', { name: /if it gets something wrong/i });
     for (const radio of within(group).getAllByRole('radio')) {
       expect(radio).not.toBeChecked();
     }
@@ -552,7 +552,7 @@ describe('StructuredForm — W-9: the platform-zone follow-up (R16-W §1, D-79)'
       />,
     );
     await user.click(screen.getByRole('radio', { name: /multi-zone platform/i }));
-    const group = screen.getByRole('group', { name: /does your information stay on your firm.s own systems/i });
+    const group = screen.getByRole('radiogroup', { name: /does your information stay on your firm.s own systems/i });
     expect(within(group).getByRole('radio', { name: /the platform runs the AI on the firm.s own systems/i })).toBeInTheDocument();
     expect(within(group).getByRole('radio', { name: /the platform passes it to an outside supplier/i })).toBeInTheDocument();
     expect(within(group).queryByRole('radio', { name: /it goes out to a public website or service/i })).not.toBeInTheDocument();

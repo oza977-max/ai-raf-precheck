@@ -66,14 +66,14 @@ function dynamicOptions(
   return entries.map((e, i) => ({ key: e.id, text: e.plain_name ?? neutral(i + 1) }));
 }
 
-function RequiredMark({ id, requiredIds }: { id: QuestionId; requiredIds: QuestionId[] }) {
+function RequiredMark({ id, requiredIds, announce = true }: { id: QuestionId; requiredIds: QuestionId[]; announce?: boolean }) {
   return requiredIds.includes(id) ? (
     <span className="required-marker" title="Required">
       {' '}
       <span aria-hidden="true">*</span>
       {/* CR6-07: the asterisk alone is a glyph for sighted users; this is
           what assistive technology reads. */}
-      <span className="visually-hidden"> (required)</span>
+      {announce && <span className="visually-hidden"> (required)</span>}
     </span>
   ) : null;
 }
@@ -123,15 +123,22 @@ function SingleSelect({
   const baseOptions = restrictToKeys ? question.options.filter((o) => restrictToKeys.includes(o.key)) : question.options;
   const options = mergeOptions(baseOptions, extraOptions, extraOptionsAtIndex);
   return (
-    <fieldset className="plain-form__question">
+    <fieldset
+      className="plain-form__question"
+      role="radiogroup"
+      aria-labelledby={`pf-${id}-legend`}
+      aria-required={requiredIds.includes(id) || undefined}
+    >
       <legend id={`pf-${id}-legend`}>
         {question.text}
-        <RequiredMark id={id} requiredIds={requiredIds} />
+        {/* CR6-07e: aria-required on the radiogroup announces "required";
+            the hidden text would say it a second time. */}
+        <RequiredMark id={id} requiredIds={requiredIds} announce={false} />
       </legend>
       {question.help && <p className="field-help">{question.help}</p>}
-      {/* CR6-07: a real radiogroup carries aria-required (a plain fieldset's
-          "group" role does not support it). */}
-      <div role="radiogroup" aria-labelledby={`pf-${id}-legend`} aria-required={requiredIds.includes(id) || undefined}>
+      {/* CR6-07/07e: the fieldset itself is the radiogroup (a plain fieldset's
+          "group" role does not support aria-required). */}
+      <div>
         {options.map((o) => (
           <label key={o.key} className="plain-form__option">
             <input
@@ -396,11 +403,13 @@ export default function StructuredForm({ policy, initialDescription, initialAnsw
   const isComplete = missingIds.length === 0;
   // CR6-07: what is still missing, in the form's own words — the first few,
   // then a count — shown beside Continue and tied to it with aria-describedby.
-  const missingTexts = missingIds.map((id) => findQuestion(id)?.text ?? id);
+  // CR6-07d: strip each item's own trailing stop so the line has no doubled
+  // punctuation, and give the count its noun.
+  const missingTexts = missingIds.map((id) => (findQuestion(id)?.text ?? id).replace(/[\s.?!;:]+$/, ''));
   const missingLine =
     missingTexts.length <= 3
       ? missingTexts.join('; ')
-      : `${missingTexts.slice(0, 3).join('; ')}; and ${missingTexts.length - 3} more`;
+      : `${missingTexts.slice(0, 3).join('; ')}; and ${missingTexts.length - 3} more question${missingTexts.length - 3 === 1 ? '' : 's'}`;
 
   function handleSubmit() {
     if (!isComplete) return;
